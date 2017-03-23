@@ -44,14 +44,21 @@ int main(void)
 
 			/*AO1 FIFO*/
 			uint32_t timeout = 10000/* 10 seconds */;
-			uint32_t AOfifoRate = 1; //in us
+
+
+
+
+			uint32_t AOfifoRate = 160; //in tick=25ns. The min pulse length is 1us @tick=40. The measured pulse length is 1.15us 
+			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_AO1LoopPeriodus, AOfifoRate)); //rate
+
+
+
 			size_t r1; //empty elements remaining
 			size_t sizeAOfifo = AOFIFODEPTH;
 			int16_t AOfifo[AOFIFODEPTH]; //the analog output takes a signed 16-bit int
 			AOfifo[0] = _I16_MAX;
 			AOfifo[1] = _I16_MIN;
 			AOfifo[2] = _I16_MAX;
-			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_AO1LoopPeriodus, AOfifoRate)); //rate
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoI16_A0FIFO, AOfifo, sizeAOfifo, timeout, &r1));
 
 
@@ -67,8 +74,14 @@ int main(void)
 
 
 
+
 			/* run the FPGA application.*/
 			NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
+
+			NiFpga_Bool start = 1;
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_start,start));
+
+
 
 			/* close the session. THIS TURNS OFF THE OUTPUT OF THE FPGA */
 			NiFpga_MergeStatus(&status, NiFpga_Close(session, 0));

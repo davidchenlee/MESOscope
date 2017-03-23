@@ -37,15 +37,10 @@ int main(void)
 			getchar();
 			*/
 
-	/*		int16_t aa = 1;
+			/*		int16_t aa = 1;
 			printf("%i\n", aa);
 			getchar();*/
 
-			/*AO0*/
-			uint32_t freq = 1000000;
-			uint32_t AO0rate = 1; //in us
-			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_freq, freq)); //rate
-			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_AOLoopPeriodus, AO0rate));
 
 			/*AO1 FIFO*/
 			uint32_t timeout = 10000/* 10 seconds */;
@@ -60,22 +55,14 @@ int main(void)
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoI16_A0FIFO, AOfifo, sizeAOfifo, timeout, &r1));
 
 
-			/*DIO0*/
-			uint32_t DIOrate = 1; //in us
-			NiFpga_Bool DIO0 = 1;
-			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_DIOLoopPeriodus, DIOrate)); //rate
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Connector0DIO0, DIO0));
-			
 			/*DIO FIFO*/
-			uint32_t DIOfifoRate = 1; //in us
 			size_t r2; //empty elements remaining
 			size_t sizeDIOfifo = DIOFIFODEPTH;
 			NiFpga_Bool DIOfifo[DIOFIFODEPTH];
 			DIOfifo[0] = 1;
 			DIOfifo[1] = 0;
 			DIOfifo[2] = 1;
-
-			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_DOIFIFOLoopPeriodus, DIOfifoRate)); //rate
+		
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoBool(session, NiFpga_FPGA_HostToTargetFifoBool_DIOFIFO, DIOfifo, sizeDIOfifo, timeout, &r2));
 
 

@@ -4,6 +4,7 @@
 #include "NiFpga_FPGA.h"
 
 
+
 #define FIFODEPTH1 1 //number of elements in the FIFO1
 #define FIFODEPTH2 1
 

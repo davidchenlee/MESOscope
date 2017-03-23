@@ -3,8 +3,8 @@
 #include <limits.h>
 #include "NiFpga_FPGA.h"
 
-#define AOFIFODEPTH 1 //number of elements in the AO FIFO
-#define DIOFIFODEPTH 1 //number of elements in the DIO FIFO
+#define AOFIFODEPTH 2 //number of elements in the AO FIFO
+#define DIOFIFODEPTH 2 //number of elements in the DIO FIFO
 
 /*Define the full path of the bitfile*/
 static const char* const Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\DscopeVS\\LabView\\FPGA Bitfiles\\" NiFpga_FPGA_Bitfile;
@@ -50,10 +50,11 @@ int main(void)
 
 			/*AO1 FIFO*/
 			uint32_t AOfifoRate = 1; //in us
-			size_t r1;
+			size_t r1; //empty elements remaining
 			size_t sizeAOfifo = AOFIFODEPTH;
 			int16_t AOfifo[AOFIFODEPTH]; //the analog output takes a signed 16-bit int
 			AOfifo[0] = _I16_MAX;
+			AOfifo[0] = _I16_MIN;
 			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_AO1LoopPeriodus, AOfifoRate)); //rate
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoI16_A0FIFO, AOfifo, sizeAOfifo, timeout, &r1));
 
@@ -66,10 +67,12 @@ int main(void)
 			
 			/*DIO FIFO*/
 			uint32_t DIOfifoRate = 1; //in us
-			size_t r2;
+			size_t r2; //empty elements remaining
 			size_t sizeDIOfifo = DIOFIFODEPTH;
 			NiFpga_Bool DIOfifo[DIOFIFODEPTH];
 			DIOfifo[0] = 1;
+			DIOfifo[0] = 0;
+
 			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_DOIFIFOLoopPeriodus, DIOfifoRate)); //rate
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoBool(session, NiFpga_FPGA_HostToTargetFifoBool_DIOFIFO, DIOfifo, sizeDIOfifo, timeout, &r2));
 

@@ -1,10 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 //#include <ansi_c.h>
 #include <limits.h>
 #include "NiFpga_FPGA.h"
 
-#define AOFIFODEPTH 3 //number of elements in the AO FIFO
-#define DIOFIFODEPTH 3 //number of elements in the DIO FIFO
 
 /*Define the full path of the bitfile*/
 static const char* const Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\DscopeVS\\LabView\\FPGA Bitfiles\\" NiFpga_FPGA_Bitfile;
@@ -48,14 +47,14 @@ int main(void)
 
 
 
-			uint32_t AOfifoRate = 160; //in tick=25ns. The min pulse length is 1us @tick=40. The measured pulse length is 1.15us 
-			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_AO1LoopPeriodus, AOfifoRate)); //rate
+			uint32_t AOfifoRate = 160; //in tick=25ns. The min pulse length is 1us @tick=40. The measured pulse length is 1.1us 
+			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_LoopPeriodtick, AOfifoRate)); //rate
 
 
 
 			size_t r1; //empty elements remaining
-			size_t sizeAOfifo = AOFIFODEPTH;
-			int16_t AOfifo[AOFIFODEPTH]; //the analog output takes a signed 16-bit int
+			const size_t sizeAOfifo = 3;
+			int16_t *AOfifo = malloc(sizeAOfifo * sizeof(int16_t));
 			AOfifo[0] = _I16_MAX;
 			AOfifo[1] = _I16_MIN;
 			AOfifo[2] = _I16_MAX;
@@ -64,11 +63,11 @@ int main(void)
 
 			/*DIO FIFO*/
 			size_t r2; //empty elements remaining
-			size_t sizeDIOfifo = DIOFIFODEPTH;
-			NiFpga_Bool DIOfifo[DIOFIFODEPTH];
+			const size_t sizeDIOfifo = 3;
+			NiFpga_Bool *DIOfifo = malloc(sizeDIOfifo * sizeof(NiFpga_Bool));
 			DIOfifo[0] = 1;
 			DIOfifo[1] = 0;
-			DIOfifo[2] = 1;
+			DIOfifo[2] = 0;
 		
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoBool(session, NiFpga_FPGA_HostToTargetFifoBool_DIOFIFO, DIOfifo, sizeDIOfifo, timeout, &r2));
 
@@ -78,6 +77,7 @@ int main(void)
 			/* run the FPGA application.*/
 			NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
+			/*trigger the FPGA*/
 			NiFpga_Bool start = 1;
 			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_start,start));
 
@@ -85,6 +85,9 @@ int main(void)
 
 			/* close the session. THIS TURNS OFF THE OUTPUT OF THE FPGA */
 			NiFpga_MergeStatus(&status, NiFpga_Close(session, 0));
+
+			/*cleanup*/
+			free(AOfifo);
 		}
 
 

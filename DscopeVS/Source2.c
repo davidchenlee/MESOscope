@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdlib.h> //For malloc
+#include <time.h>
 //#include <ansi_c.h>
 #include <limits.h>
 #include "NiFpga_FPGA.h"
@@ -8,8 +9,29 @@
 /*Define the full path of the bitfile*/
 static const char* const Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\DscopeVS\\LabView\\FPGA Bitfiles\\" NiFpga_FPGA_Bitfile;
 
+
+
+/*Halt the program in seconds*/
+void delay(double dly) {
+	/* save start time */
+	const time_t start = time(NULL);
+
+	time_t current;
+	do {
+		/* get current time */
+		time(&current);
+
+		/* break loop when the requested number of seconds have elapsed */
+	} while (difftime(current, start) < dly);
+}
+
+
+
+
 int main(void)
 {
+
+
 	/* must be called before any other FPGA calls */
 	NiFpga_Status status = NiFpga_Initialize();
 
@@ -47,7 +69,7 @@ int main(void)
 
 
 
-			uint32_t AOfifoRate = 160; //in tick=25ns. The min pulse length is 1us @tick=40. The measured pulse length is 1.1us 
+			uint32_t AOfifoRate = 160; //a 40 MHZ clocle means 1 tick=25ns. The min pulse length is 1 us (tick=40) (the actual pulse length is 1.1us on the scope)
 			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_LoopPeriodtick, AOfifoRate)); //rate
 
 
@@ -61,15 +83,21 @@ int main(void)
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoI16_A0FIFO, AOfifo, sizeAOfifo, timeout, &r1));
 
 
-			/*DIO FIFO*/
+			/*DO FIFO*/
 			size_t r2; //empty elements remaining
-			const size_t sizeDIOfifo = 3;
-			NiFpga_Bool *DIOfifo = malloc(sizeDIOfifo * sizeof(NiFpga_Bool));
-			DIOfifo[0] = 1;
-			DIOfifo[1] = 0;
-			DIOfifo[2] = 0;
+			const size_t sizeDOfifo = 101;
+			NiFpga_Bool *DOfifo = malloc(sizeDOfifo * sizeof(NiFpga_Bool));
+			
+			for (int i = 0; i < sizeDOfifo; i++) { //initialize the array
+				DOfifo[i] = 0;
+			}
+			DOfifo[0] = 1;
+			DOfifo[sizeDOfifo - 2] = 1;
+			DOfifo[sizeDOfifo - 1] = 0;
+			
+
 		
-			NiFpga_MergeStatus(&status, NiFpga_WriteFifoBool(session, NiFpga_FPGA_HostToTargetFifoBool_DIOFIFO, DIOfifo, sizeDIOfifo, timeout, &r2));
+			NiFpga_MergeStatus(&status, NiFpga_WriteFifoBool(session, NiFpga_FPGA_HostToTargetFifoBool_DIOFIFO, DOfifo, sizeDOfifo, timeout, &r2));
 
 
 
@@ -82,12 +110,14 @@ int main(void)
 			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_start,start));
 
 
-
 			/* close the session. THIS TURNS OFF THE OUTPUT OF THE FPGA */
+			delay(1); //temp hack to let the program finish before shutting the FPGA down
 			NiFpga_MergeStatus(&status, NiFpga_Close(session, 0));
 
 			/*cleanup*/
 			free(AOfifo);
+			free(DOfifo);
+
 		}
 
 

@@ -24,7 +24,13 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGA_Signature = "EF815721D5559D2BE559B0CA76B20560";
+static const char* const NiFpga_FPGA_Signature = "BE3CD450744025EA859011C267D2D6D0";
+
+typedef enum
+{
+   NiFpga_FPGA_IndicatorU16_LongLoopticks = 0x8116,
+   NiFpga_FPGA_IndicatorU16_ShortLoopticks = 0x8112,
+} NiFpga_FPGA_IndicatorU16;
 
 typedef enum
 {
@@ -33,8 +39,8 @@ typedef enum
 
 typedef enum
 {
-   NiFpga_FPGA_ControlU8_DOFIFOdelayTicks = 0x8112,
-   NiFpga_FPGA_ControlU8_LoopPeriodtick = 0x8116,
+   NiFpga_FPGA_ControlU8_DOFIFOdelayTicks = 0x811A,
+   NiFpga_FPGA_ControlU8_LoopPeriodtick = 0x811E,
 } NiFpga_FPGA_ControlU8;
 
 typedef enum

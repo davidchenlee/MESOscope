@@ -24,12 +24,14 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGA_Signature = "226DA8FE91E7D14218988EA3F13C7C3A";
+static const char* const NiFpga_FPGA_Signature = "12A7EC43AC76E23EF0ED3AA9AC643ADA";
 
 typedef enum
 {
-   NiFpga_FPGA_IndicatorU16_LongLoopDelayticks = 0x8116,
-   NiFpga_FPGA_IndicatorU16_ShortLoopDelayticks = 0x8112,
+   NiFpga_FPGA_IndicatorU16_AOLongLoopDelaytick = 0x8126,
+   NiFpga_FPGA_IndicatorU16_AOShortLoopDelaytick = 0x8122,
+   NiFpga_FPGA_IndicatorU16_DOLongLoopDelaytick = 0x811A,
+   NiFpga_FPGA_IndicatorU16_DOShortLoopDelaytick = 0x8116,
 } NiFpga_FPGA_IndicatorU16;
 
 typedef enum
@@ -39,18 +41,20 @@ typedef enum
 
 typedef enum
 {
-   NiFpga_FPGA_ControlU8_DOFIFOdelayTicks = 0x811A,
-   NiFpga_FPGA_ControlU8_LoopPeriodtick = 0x811E,
+   NiFpga_FPGA_ControlU8_DOFIFOdelayTicks = 0x812A,
+   NiFpga_FPGA_ControlU8_LoopPeriodtick = 0x812E,
 } NiFpga_FPGA_ControlU8;
 
 typedef enum
 {
-   NiFpga_FPGA_HostToTargetFifoBool_DOFIFO = 0,
-} NiFpga_FPGA_HostToTargetFifoBool;
+   NiFpga_FPGA_ControlU16_setAOdelaytick = 0x811E,
+   NiFpga_FPGA_ControlU16_setDOdelaytick = 0x8112,
+} NiFpga_FPGA_ControlU16;
 
 typedef enum
 {
    NiFpga_FPGA_HostToTargetFifoU32_A0FIFO = 1,
+   NiFpga_FPGA_HostToTargetFifoU32_DOFIFO = 0,
 } NiFpga_FPGA_HostToTargetFifoU32;
 
 #endif

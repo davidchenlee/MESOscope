@@ -77,11 +77,15 @@ int main(void)
 			
 
 			/*DELAY. Sync AO and DO by delaying DO*/
-			uint8_t DOfifoDelayTick =95*tick;
+			uint8_t DOfifoDelayTick = 75 * tick;
+			uint16_t setAOdelaytick = 5 * tick;
+			uint16_t setDOdelaytick = 5 * tick;
 			NiFpga_MergeStatus(&status, NiFpga_WriteU8(session, NiFpga_FPGA_ControlU8_DOFIFOdelayTicks, DOfifoDelayTick));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_setAOdelaytick, DOfifoDelayTick));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_setDOdelaytick, DOfifoDelayTick));
 
 
-			const size_t sizeFifo = 3;
+			const size_t sizeFifo = 4;
 			/*AO1 FIFO*/
 			size_t r1; //empty elements remaining
 			int32_t *AOfifo = malloc(sizeFifo * sizeof(int32_t));
@@ -92,21 +96,24 @@ int main(void)
 			AOfifo[0] = 0x00007FFF;
 			AOfifo[1] = 0x00A00000;
 			AOfifo[2] = 0x00A03FFF;
-			//AOfifo[3] = 0x00A00000;
+			AOfifo[3] = 0x00A00000;
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_A0FIFO, AOfifo, sizeFifo, timeout, &r1)); //send AO
 
 
 			/*DO FIFO*/
 			size_t r2; //empty elements remaining
-			NiFpga_Bool *DOfifo = malloc(sizeFifo * sizeof(NiFpga_Bool));
+			uint32_t *DOfifo = malloc(sizeFifo * sizeof(int32_t));
 
 			for (int i = 0; i < sizeFifo; i++) { //initialize the array
 				DOfifo[i] = 0;
 			}
-			DOfifo[0] = 1;
-			DOfifo[1] = 0;
-			DOfifo[2] = 1;
-			NiFpga_MergeStatus(&status, NiFpga_WriteFifoBool(session, NiFpga_FPGA_HostToTargetFifoBool_DOFIFO, DOfifo, sizeFifo, timeout, &r2)); //send DO
+			DOfifo[0] = 0x00000003; //DO1
+			DOfifo[1] = 0x00A00000;
+			DOfifo[2] = 0x00A00003;
+			AOfifo[3] = 0x00A00000;
+			//NiFpga_MergeStatus(&status, NiFpga_WriteFifoBool(session, NiFpga_FPGA_HostToTargetFifoBool_DOFIFO, DOfifo, sizeFifo, timeout, &r2)); //send DO
+			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_DOFIFO, DOfifo, sizeFifo, timeout, &r2)); //send DO
+
 
 
 			/* run the FPGA application.*/

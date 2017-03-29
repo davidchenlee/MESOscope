@@ -81,7 +81,7 @@ int main(void)
 			NiFpga_MergeStatus(&status, NiFpga_WriteU8(session, NiFpga_FPGA_ControlU8_DOFIFOdelayTicks, DOfifoDelayTick));
 
 
-			const size_t sizeFifo = 4;
+			const size_t sizeFifo = 3;
 			/*AO1 FIFO*/
 			size_t r1; //empty elements remaining
 			int32_t *AOfifo = malloc(sizeFifo * sizeof(int32_t));
@@ -92,7 +92,7 @@ int main(void)
 			AOfifo[0] = 0x00007FFF;
 			AOfifo[1] = 0x00A00000;
 			AOfifo[2] = 0x00A03FFF;
-			AOfifo[3] = 0x00A00000;
+			//AOfifo[3] = 0x00A00000;
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_A0FIFO, AOfifo, sizeFifo, timeout, &r1)); //send AO
 
 

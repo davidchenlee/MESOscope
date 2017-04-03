@@ -4,11 +4,8 @@
 //#include <ansi_c.h>
 //#include <limits.h>
 #include "NiFpga_FPGA.h"
+#include "main.h"
 
-
-#define tickPerUs 40
-#define us 1
-#define tick 1
 
 /*Define the full path of the bitfile*/
 static const char* const Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\DscopeVS\\LabView\\FPGA Bitfiles\\" NiFpga_FPGA_Bitfile;
@@ -71,15 +68,8 @@ int main(void)
 
 			/*FIFO variables*/
 			uint32_t timeout = 1/* in ms */;
-			//uint8_t fifoRateTick = 4 * us * tickPerUs; //a 40 MHZ clock means 1 tick=25ns. uint32_t DOfifoDelayTick = 40
-			//NiFpga_MergeStatus(&status, NiFpga_WriteU8(session, NiFpga_FPGA_ControlU8_LoopPeriodtick, fifoRateTick)); //rate
-
 			
-
 			/*DELAY. Sync AO and DO by delaying DO*/
-			uint8_t DOfifoDelayTick = 80 * tick; //relative delay between AO and DO
-			uint16_t calibrateAOtiming = 40 * tick; //fine-tune the AO timing
-			uint16_t calibrateDOtiming = 5 * tick; //fine-tune the DO timing
 			NiFpga_MergeStatus(&status, NiFpga_WriteU8(session, NiFpga_FPGA_ControlU8_DOFIFODelayTicks, DOfifoDelayTick));
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_AOCalibratetick, calibrateAOtiming));
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOCalibratetick, calibrateDOtiming));

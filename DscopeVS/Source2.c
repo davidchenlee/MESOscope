@@ -77,12 +77,12 @@ int main(void)
 			
 
 			/*DELAY. Sync AO and DO by delaying DO*/
-			uint8_t DOfifoDelayTick = 76 * tick; //relative delay between AO and DO
-			uint16_t setAOdelaytick = 6 * tick; //fine-tune the AO timing
-			uint16_t setDOdelaytick = 6 * tick; //fine-tune the DO timing
+			uint8_t DOfifoDelayTick = 80 * tick; //relative delay between AO and DO
+			uint16_t calibrateAOtiming = 40 * tick; //fine-tune the AO timing
+			uint16_t calibrateDOtiming = 5 * tick; //fine-tune the DO timing
 			NiFpga_MergeStatus(&status, NiFpga_WriteU8(session, NiFpga_FPGA_ControlU8_DOFIFODelayTicks, DOfifoDelayTick));
-			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_AOShortDelaytick, setAOdelaytick));
-			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOShortDelaytick, setDOdelaytick));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_AOCalibratetick, calibrateAOtiming));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOCalibratetick, calibrateDOtiming));
 
 
 			const size_t sizeFifo = 5;
@@ -97,10 +97,9 @@ int main(void)
 			AOfifo[1] = 0x00A00000;
 			AOfifo[2] = 0x00A03FFF;
 			AOfifo[3] = 0x00A00000;
-			AOfifo[4] = 0xFFFF3FFF;
+			AOfifo[4] = 0x00A00000;
 			//AOfifo[5] = 0x00A00000;
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_A0FIFO, AOfifo, sizeFifo, timeout, &r1)); //send the AO data
-
 
 			/*DO FIFO*/
 			size_t r2; //empty elements remaining
@@ -112,8 +111,8 @@ int main(void)
 			DOfifo[0] = 0x00000001;
 			DOfifo[1] = 0x00A00000;
 			DOfifo[2] = 0x00A00001;
-			DOfifo[3] = 0x00A00000;
-			DOfifo[4] = 0xFFFF0001;
+			DOfifo[3] = 0x00A00001;
+			DOfifo[4] = 0x00A00000;
 			//DOfifo[5] = 0x00A00000;
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_DOFIFO, DOfifo, sizeFifo, timeout, &r2)); //send the DO data
 

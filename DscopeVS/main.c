@@ -43,8 +43,7 @@ int main(void)
 		NiFpga_Session session;
 
 		/* opens a session, downloads the bitstream, but does not run the FPGA */
-		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGA_Signature, "RIO0",
-			NiFpga_OpenAttribute_NoRun, &session));
+		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGA_Signature, "RIO0", NiFpga_OpenAttribute_NoRun, &session));
 
 		if (NiFpga_IsNotError(status))
 		{
@@ -66,11 +65,10 @@ int main(void)
 
 
 
-			/*FIFO variables*/
-			uint32_t timeout = 1/* in ms */;
-			
+			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_InitialWaittick, initialWait));
+
 			/*DELAY. Sync AO and DO by delaying DO*/
-			NiFpga_MergeStatus(&status, NiFpga_WriteU8(session, NiFpga_FPGA_ControlU8_DOFIFODelayTicks, DOfifoDelayTick));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOFIFODelaytick, DOfifoDelayTick));
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_AOCalibratetick, calibrateAOtiming));
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOCalibratetick, calibrateDOtiming));
 

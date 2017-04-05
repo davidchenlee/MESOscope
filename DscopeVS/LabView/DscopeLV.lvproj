@@ -21,6 +21,7 @@
 </CLIPDeclarationSet></Property>
 			<Property Name="NI.LV.FPGA.CompileConfigString" Type="Str">PCIe-7852R/Clk40/falsefalseFPGA_EXECUTION_MODEFPGA_TARGETFPGA_TARGET_CLASSPCIE_7852RFPGA_TARGET_FAMILYVIRTEX5TARGET_TYPEFPGA</Property>
 			<Property Name="NI.LV.FPGA.Version" Type="Int">6</Property>
+			<Property Name="niFpga_TopLevelVIID" Type="Path">/D/OwnCloud/Codes/Dscope/DscopeVS/LabView/FPGA.vi</Property>
 			<Property Name="Resource Name" Type="Str">RIO0</Property>
 			<Property Name="SWEmulationSubMode" Type="UInt">0</Property>
 			<Property Name="SWEmulationVIPath" Type="Path"></Property>

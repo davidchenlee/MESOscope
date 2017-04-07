@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LabView\FPGA Bitfiles\NiFpga.c">
-      <Filter>Header Files</Filter>
-    </ClCompile>
     <ClCompile Include="main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LabView\FPGA Bitfiles\NiFpga.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

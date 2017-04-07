@@ -1,3 +1,12 @@
+/*
+*Date: April 2017
+*Author: David Chen
+*Institution: Max Planck Institute for Cell Biology and Genetics
+*Description: Main program for controlling the DEEPscope via the NI 7852R card
+*
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h> //For malloc
 #include <time.h>

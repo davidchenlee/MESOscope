@@ -15,16 +15,11 @@
 /*Define the full path of the bitfile*/
 static const char* const Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\DscopeVS\\LabView\\FPGA Bitfiles\\" NiFpga_FPGA_Bitfile;
 
-/*
-void printHex(int)
+void printHex(int16_t input)
 {
-	int16_t test = 160;
-	printf("%i\n", test);
-	char hex[16];
-	sprintf(hex, "%x", ((test + (1 << Abits)) % (1 << Abits)));
-	puts(hex);
+	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
-*/
+
 
 void linearRamp(uint32_t *aa, tt_t ti, double Vi, tt_t tf, double Vf)
 {
@@ -102,8 +97,8 @@ int main()
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_AOCalibratetick, calibrateAOtiming));
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOCalibratetick, calibrateDOtiming));
 
-			tt_t ti = 0 * us;
-			tt_t tf = 40 * us;
+			tt_t ti = 0*us;
+			tt_t tf = 1000*us;
 			double vi = 0;
 			double vf = 10;
 			int nPoints = (int)((1.*tf - ti) / AO_dt);
@@ -113,31 +108,32 @@ int main()
 			size_t rAO1; //empty elements remaining
 
 
-			size_t sizeFifo = nPoints;
-			//size_t sizeFifo = 1;
+			//size_t sizeFifo = nPoints;
+			size_t sizeFifo = 4;
 			uint32_t *AOfifo = new uint32_t[sizeFifo];
 			for (int i = 0; i < sizeFifo; i++) { //initialize the array
 				AOfifo[i] = 0;
 			}
 
-			if (0)
+			if (1)
 			{
-				tt_t At0 = 0 * tick;
-				tt_t At1 = 160 * tick; //40 tick = 1 ms
-				tt_t At2 = 40 * tick; //40 tick = 1 ms
-				tt_t At3 = 40 * tick; //40 tick = 1 ms
+				tt_t At0 = us2tick(4*us);//40 tick = 1 us
+				tt_t At1 = us2tick(1000*us);
+				tt_t At2 = us2tick(4*us);
+				tt_t At3 = us2tick(4*us);
 				int16_t Vout0 = V2hex(10);
 				int16_t Vout1 = V2hex(0);
-				int16_t Vout2 = V2hex(7.5);
-				int16_t Vout3 = V2hex(10);
+				int16_t Vout2 = V2hex(10);
+				int16_t Vout3 = V2hex(0);
 
 				AOfifo[0] = (At0 << Abits) | (LSBmask & Vout0);
-				//AOfifo[1] = (t1 << Abits) | (LSBmask & Vout1);
-				//AOfifo[2] = (t2 << Abits) | (LSBmask & Vout2);
-				//AOfifo[3] = (t3 << Abits) | (LSBmask & Vout3);
+				AOfifo[1] = (At1 << Abits) | (LSBmask & Vout1);
+				AOfifo[2] = (At2 << Abits) | (LSBmask & Vout2);
+				AOfifo[3] = (At3 << Abits) | (LSBmask & Vout3);
 			}
-
-			linearRamp(AOfifo, ti, vi, tf, vf);
+			else {
+				linearRamp(AOfifo, ti, vi, tf, vf);
+			}
 			
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_A0FIFO, AOfifo, sizeFifo, timeout, &rAO1)); //send the AO data
 
@@ -149,10 +145,14 @@ int main()
 				DOfifo[i] = 0;
 			}
 			
-			tt_t Dt0 = 0 * tick; //40 tick = 1 ms
-			tt_t Dt1 = 160 * tick; //40 tick = 1 ms
+			tt_t Dt0 = us2tick(4*us); //40 tick = 1 us
+			tt_t Dt1 = us2tick(1000*us);
+			tt_t Dt2 = us2tick(4*us);
+			tt_t Dt3 = us2tick(4*us);
 			DOfifo[0] = (Dt0 << Abits) | (LSBmask & 0x0001);
 			DOfifo[1] = (Dt1 << Abits) | (LSBmask & 0x0000);
+			DOfifo[2] = (Dt2 << Abits) | (LSBmask & 0x0001);
+			DOfifo[3] = (Dt3 << Abits) | (LSBmask & 0x0000);
 
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_DOFIFO, DOfifo, sizeFifo, timeout, &rDO1)); //send the DO data
 

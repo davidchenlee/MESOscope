@@ -26,40 +26,51 @@ void printHex(int)
 }
 */
 
-void linearRamp(uint32_t *aa, tt_t ti, int16_t Vi, tt_t tf, int16_t Vf)
+void linearRamp(uint32_t *aa, tt_t ti, double Vi, tt_t tf, double Vf)
 {
-	tt_t dt = AO_dt;
-	int nPoints = (int) ((1.*tf-ti) / dt);
+
 	
-	tt_t *tPoints = new tt_t[nPoints ];
-	tt_t *tickPoints = new tt_t[nPoints];
-	double *vPoints = new double[nPoints];
+	tt_t dt = AO_dt;  //Analog output time increament in us
+	int nPoints = (int)((1.*tf - ti) / dt); //number of points
 
+	tt_t *tPoints = new tt_t[nPoints]; //time points in us
+	double *vPoints = new double[nPoints]; //voltage points in V
 
-	for (int ii = 0; ii < nPoints; ii++)
+	if (nPoints <= 1)
 	{
-		tPoints[ii] = ti + ii * dt;
-		vPoints[ii] = 1.* Vi + (1.*Vf-Vi)/(tf-ti)*(tPoints[ii] - ti) ;
-
-		aa[ii] = dt*tickPerUs << Abits | (LSBmask & VOUT(vPoints[ii]) );
+		aa[0] = 0;
+		std::cout << "ERROR: not enought points for the analog linear ramp\n";
+		std::cout << "nPoints: " << nPoints << "\n";
 	}
-	aa[0] = 0x0000 << Abits | (LSBmask & VOUT(vPoints[0])); //no wait time for the first point
-	//tPoints[nPoints] = tf;
-	//vPoints[nPoints] = Vf;
-	//aa[nPoints] = dt*tickPerUs << Abits | (LSBmask & VOUT(vPoints[nPoints]));
-	
-	std::cout << "nPoints: " << nPoints << "\n";
-	
-	//std::cout << "time \tticks \tv \tVOUT\n";
-	//for (int ii = 0; ii < nPoints; ii++)
-	//{
-		//std::cout << tPoints[ii] << "\t" << ii * dt*tickPerUs << "\t" << vPoints[ii] << "\t" << VOUT(vPoints[ii]) << "\n";
-		//std::cout << ii << "\t" << aa[ii] << "\n";
-	//}
-	//getchar();
 
-	delete[] tPoints;
-	delete[] vPoints;
+	else
+	{
+		for (int ii = 0; ii < nPoints; ii++)
+		{
+			tPoints[ii] = ti + ii * dt; //just for debugging 
+			vPoints[ii] = Vi + (Vf - Vi)*ii / (nPoints - 1);
+			aa[ii] = dt*tickPerUs << Abits | (LSBmask & V2hex(vPoints[ii]));
+		}
+		aa[0] = 0x0000 << Abits | (LSBmask & V2hex(Vi)); //overwrite: no wait for the first point
+
+		delete[] tPoints;
+		delete[] vPoints;
+	}
+
+	//for debugging
+	if (0)
+	{
+		std::cout << "nPoints: " << nPoints << "\n";
+
+		std::cout << "time \tticks \tv \n";
+		for (int ii = 0; ii < nPoints; ii++)
+		{
+			std::cout << tPoints[ii] << "\t" << ii * dt*tickPerUs << "\t" << vPoints[ii] << "\t" << "\n";
+			//std::cout << ii << "\t" << aa[ii] << "\n";
+		}
+		getchar();
+	}
+
 	
 }
 
@@ -92,19 +103,18 @@ int main()
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOCalibratetick, calibrateDOtiming));
 
 			tt_t ti = 0 * us;
-			tt_t tf = 100 * us;
-			uint16_t vi = 0;
-			uint16_t vf = 10;
+			tt_t tf = 40 * us;
+			double vi = 0;
+			double vf = 10;
 			int nPoints = (int)((1.*tf - ti) / AO_dt);
 			
-
 
 			/*AO1 FIFO*/
 			size_t rAO1; //empty elements remaining
 
 
 			size_t sizeFifo = nPoints;
-			//size_t sizeFifo = 4;
+			//size_t sizeFifo = 1;
 			uint32_t *AOfifo = new uint32_t[sizeFifo];
 			for (int i = 0; i < sizeFifo; i++) { //initialize the array
 				AOfifo[i] = 0;
@@ -112,17 +122,17 @@ int main()
 
 			if (0)
 			{
-				tt_t t0 = 0 * tick;
-				tt_t t1 = 160 * tick; //40 tick = 1 ms
-				tt_t t2 = 40 * tick; //40 tick = 1 ms
-				tt_t t3 = 40 * tick; //40 tick = 1 ms
-				int16_t Vout0 = VOUT(10);
-				int16_t Vout1 = VOUT(0);
-				int16_t Vout2 = VOUT(7.5);
-				int16_t Vout3 = VOUT(10);
+				tt_t At0 = 0 * tick;
+				tt_t At1 = 160 * tick; //40 tick = 1 ms
+				tt_t At2 = 40 * tick; //40 tick = 1 ms
+				tt_t At3 = 40 * tick; //40 tick = 1 ms
+				int16_t Vout0 = V2hex(10);
+				int16_t Vout1 = V2hex(0);
+				int16_t Vout2 = V2hex(7.5);
+				int16_t Vout3 = V2hex(10);
 
-				AOfifo[0] = (t0 << Abits) | (LSBmask & Vout0);
-				AOfifo[1] = (t1 << Abits) | (LSBmask & Vout1);
+				AOfifo[0] = (At0 << Abits) | (LSBmask & Vout0);
+				//AOfifo[1] = (t1 << Abits) | (LSBmask & Vout1);
 				//AOfifo[2] = (t2 << Abits) | (LSBmask & Vout2);
 				//AOfifo[3] = (t3 << Abits) | (LSBmask & Vout3);
 			}
@@ -138,13 +148,12 @@ int main()
 			for (int i = 0; i < sizeFifo; i++) { //initialize the array
 				DOfifo[i] = 0;
 			}
+			
+			tt_t Dt0 = 0 * tick; //40 tick = 1 ms
+			tt_t Dt1 = 160 * tick; //40 tick = 1 ms
+			DOfifo[0] = (Dt0 << Abits) | (LSBmask & 0x0001);
+			DOfifo[1] = (Dt1 << Abits) | (LSBmask & 0x0000);
 
-			DOfifo[0] = 0x00000001;
-			DOfifo[1] = 0x00A00000;
-			//DOfifo[2] = 0x00A00001;
-			//DOfifo[3] = 0x00A00001;
-			//DOfifo[4] = 0x00A00000;
-			//DOfifo[5] = 0x00A00000;
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_DOFIFO, DOfifo, sizeFifo, timeout, &rDO1)); //send the DO data
 
 			/* run the FPGA application.*/
@@ -187,9 +196,6 @@ printf("%i\n",data[i]);
 }
 getchar();
 */
-
-
-
 
 /*
 int16_t val = -32769;

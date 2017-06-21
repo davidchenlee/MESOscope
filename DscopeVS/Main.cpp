@@ -37,16 +37,14 @@ void linearRamp(uint32_t *aa, tt_t ti, double Vi, tt_t tf, double Vf)
 		std::cout << "ERROR: not enought points for the analog linear ramp\n";
 		std::cout << "nPoints: " << nPoints << "\n";
 	}
-
 	else
 	{
 		for (int ii = 0; ii < nPoints; ii++)
 		{
 			tPoints[ii] = ti + ii * dt; //just for debugging 
 			vPoints[ii] = Vi + (Vf - Vi)*ii / (nPoints - 1);
-			aa[ii] = dt*tickPerUs << Abits | (LSBmask & V2hex(vPoints[ii]));
+			aa[ii] = dt*tickPerUs << Abits | (LSBmask & v2hex(vPoints[ii]));
 		}
-		aa[0] = 0x0000 << Abits | (LSBmask & V2hex(Vi)); //overwrite: no wait for the first point
 
 		delete[] tPoints;
 		delete[] vPoints;
@@ -98,7 +96,7 @@ int main()
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOCalibratetick, calibrateDOtiming));
 
 			tt_t ti = 0*us;
-			tt_t tf = 1000*us;
+			tt_t tf = 6*us;
 			double vi = 0;
 			double vf = 10;
 			int nPoints = (int)((1.*tf - ti) / AO_dt);
@@ -121,10 +119,10 @@ int main()
 				tt_t At1 = us2tick(1000*us);
 				tt_t At2 = us2tick(4*us);
 				tt_t At3 = us2tick(4*us);
-				int16_t Vout0 = V2hex(10);
-				int16_t Vout1 = V2hex(0);
-				int16_t Vout2 = V2hex(10);
-				int16_t Vout3 = V2hex(0);
+				int16_t Vout0 = v2hex(10);
+				int16_t Vout1 = v2hex(0);
+				int16_t Vout2 = v2hex(10);
+				int16_t Vout3 = v2hex(0);
 
 				AOfifo[0] = (At0 << Abits) | (LSBmask & Vout0);
 				AOfifo[1] = (At1 << Abits) | (LSBmask & Vout1);
@@ -151,8 +149,8 @@ int main()
 			tt_t Dt3 = us2tick(4*us);
 			DOfifo[0] = (Dt0 << Abits) | (LSBmask & 0x0001);
 			DOfifo[1] = (Dt1 << Abits) | (LSBmask & 0x0000);
-			DOfifo[2] = (Dt2 << Abits) | (LSBmask & 0x0001);
-			DOfifo[3] = (Dt3 << Abits) | (LSBmask & 0x0000);
+			//DOfifo[2] = (Dt2 << Abits) | (LSBmask & 0x0001);
+			//DOfifo[3] = (Dt3 << Abits) | (LSBmask & 0x0000);
 
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_DOFIFO, DOfifo, sizeFifo, timeout, &rDO1)); //send the DO data
 

@@ -18,11 +18,11 @@ static const uint32_t timeout = 1; // in ms.
 
 
 /*DELAY. Sync AO and DO by delaying DO*/
-static const uint16_t DOfifoDelayTick = 40 * tick; //relative delay between AO and DO. This is because the AO takes longer than DO to write the output
-static const uint16_t calibrateAOtiming = 2 * tick;	//fine-tune the AO timing. This equals the number of ticks the FGPA needs to read and write the data.
+static const uint16_t DOfifoDelayTick = 38 * tick; //relative delay between AO and DO. This is because the AO takes longer than DO to write the output
+static const uint16_t calibrateAOtiming = 0 * tick;	//fine-tune the AO timing. This equals the number of ticks the FGPA needs to read and write the data.
 														//To calibrate, write two pulses (or anything) to the AO and measure the pulse separation on the oscilloscope
 														//Adjust this number till the measured delay coincides with the requested delay
-static const uint16_t calibrateDOtiming = 3 * tick; //fine-tune the DO timing. The same idea as with AO. I think a digital loops completes in 3 ticks
+static const uint16_t calibrateDOtiming = 6 * tick; //fine-tune the DO timing. The same idea as with AO. I think a digital loop completes in 3 ticks
 static const uint16_t initialWait = us2tick(1*ms); //Initial wait-time before the entire sequence starts
 
 

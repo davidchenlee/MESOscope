@@ -23,7 +23,7 @@ static const uint16_t calibrateAOtiming = 2 * tick;	//fine-tune the AO timing. T
 														//To calibrate, write two pulses (or anything) to the AO and measure the pulse separation on the oscilloscope
 														//Adjust this number till the measured delay coincides with the requested delay
 static const uint16_t calibrateDOtiming = 3 * tick; //fine-tune the DO timing. The same idea as with AO. I think a digital loops completes in 3 ticks
-static const uint16_t initialWait = 500 * tick; //Initial wait-time before the entire sequence starts
+static const uint16_t initialWait = us2tick(1*ms); //Initial wait-time before the entire sequence starts
 
 
 

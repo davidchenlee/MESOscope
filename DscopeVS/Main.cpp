@@ -96,7 +96,7 @@ int main()
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOCalibratetick, calibrateDOtiming));
 
 			tt_t ti = 0*us;
-			tt_t tf = 6*us;
+			tt_t tf = 1400*us;
 			double vi = 0;
 			double vf = 10;
 			int nPoints = (int)((1.*tf - ti) / AO_dt);
@@ -106,14 +106,14 @@ int main()
 			size_t rAO1; //empty elements remaining
 
 
-			//size_t sizeFifo = nPoints;
-			size_t sizeFifo = 4;
+			size_t sizeFifo = nPoints;
+			//size_t sizeFifo = 4;
 			uint32_t *AOfifo = new uint32_t[sizeFifo];
 			for (int i = 0; i < sizeFifo; i++) { //initialize the array
 				AOfifo[i] = 0;
 			}
 
-			if (1)
+			if (0)
 			{
 				tt_t At0 = us2tick(4*us);//40 tick = 1 us
 				tt_t At1 = us2tick(1000*us);
@@ -157,19 +157,21 @@ int main()
 			/* run the FPGA application.*/
 			NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
+
 			/*trigger the FPGA*/
 			NiFpga_Bool start = 1;
 			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_start, start));
 
 
 			/* close the session. THIS TURNS OFF THE OUTPUT OF THE FPGA */
-			Sleep(1500);//temp hack to let the FPGA finish before shutting it down
-		
-			NiFpga_MergeStatus(&status, NiFpga_Close(session, 0));
+			Sleep(1500);//in ms. temp hack to let the FPGA finish before shutting it down
+
 
 			/*cleanup*/
 			delete[] AOfifo;
 			delete[] DOfifo;
+
+			NiFpga_MergeStatus(&status, NiFpga_Close(session, 0));
 		}
 
 

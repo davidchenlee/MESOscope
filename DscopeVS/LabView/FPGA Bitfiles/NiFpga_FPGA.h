@@ -24,22 +24,23 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGA_Signature = "6E41AEDE566081898E179E79087682A2";
+static const char* const NiFpga_FPGA_Signature = "7DDB262F470CE43DE54B3574162E5BA2";
 
 typedef enum
 {
-   NiFpga_FPGA_ControlBool_start = 0x811A,
+   NiFpga_FPGA_ControlBool_start = 0x811E,
 } NiFpga_FPGA_ControlBool;
 
 typedef enum
 {
-   NiFpga_FPGA_ControlU16_DOFIFODelaytick = 0x8112,
-   NiFpga_FPGA_ControlU16_InitialWaittick = 0x8116,
+   NiFpga_FPGA_ControlU16_DOFIFODelaytick = 0x811A,
+   NiFpga_FPGA_ControlU16_InitialWaittick = 0x810E,
 } NiFpga_FPGA_ControlU16;
 
 typedef enum
 {
-   NiFpga_FPGA_ControlU32_NAO1 = 0x810C,
+   NiFpga_FPGA_ControlU32_NAO1 = 0x8114,
+   NiFpga_FPGA_ControlU32_NAO2 = 0x8110,
 } NiFpga_FPGA_ControlU32;
 
 typedef enum

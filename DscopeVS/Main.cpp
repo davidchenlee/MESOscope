@@ -69,7 +69,7 @@ void ADoutput(NiFpga_Status status, NiFpga_Session session)
 	DOfifo[2] = (Dt3 << Abits) | (LSBmask & 0x0001);
 	DOfifo[3] = (Dt3 << Abits) | (LSBmask & 0x0000);
 
-	NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_DOFIFO, DOfifo, sizeFifo, timeout, &rDO1)); //send the DO data
+	//NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_DOFIFO, DOfifo, sizeFifo, timeout, &rDO1)); //send the DO data
 
 	/*cleanup*/
 	delete[] AOfifo;
@@ -151,7 +151,6 @@ int main()
 
 		if (NiFpga_IsNotError(status))
 		{
-			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_InitialWaittick, initialWait));
 
 			/*DELAY. Sync AO and DO by delaying DO*/
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOFIFODelaytick, DOfifoDelayTick));
@@ -168,7 +167,7 @@ int main()
 
 
 			//uint32_t sizeFifo = nPoints;
-			uint32_t sizeFifo = 8;
+			uint32_t sizeFifo = 12;
 			uint32_t *AOfifo = new uint32_t[sizeFifo];
 			for (uint32_t i = 0; i < sizeFifo; i++) { //initialize the array
 				AOfifo[i] = 0;
@@ -177,6 +176,7 @@ int main()
 			//send out the size of the AO FIFO
 			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 4));
 			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO2, 4));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NDO1, 4));
 
 
 			if (1)
@@ -199,6 +199,21 @@ int main()
 				AOfifo[5] = (At1 << Abits) | (LSBmask & Vout1);
 				AOfifo[6] = (At2 << Abits) | (LSBmask & Vout2);
 				AOfifo[7] = (At3 << Abits) | (LSBmask & Vout3);
+
+
+				tt_t Dt0 = us2tick(4 * us); //40 tick = 1 us
+				tt_t Dt1 = us2tick(1400 * us);
+				tt_t Dt2 = us2tick(4 * us);
+				tt_t Dt3 = us2tick(4 * us);
+				AOfifo[8] = (Dt0 << Abits) | (LSBmask & 0x0001);
+				AOfifo[9] = (Dt1 << Abits) | (LSBmask & 0x0000);
+				AOfifo[10] = (Dt3 << Abits) | (LSBmask & 0x0001);
+				AOfifo[11] = (Dt3 << Abits) | (LSBmask & 0x0000);
+
+
+
+
+
 			}
 			else {
 				linearRamp(AOfifo, ti, vi, tf, vf);
@@ -224,7 +239,7 @@ int main()
 			DOfifo[2] = (Dt3 << Abits) | (LSBmask & 0x0001);
 			DOfifo[3] = (Dt3 << Abits) | (LSBmask & 0x0000);
 
-			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_DOFIFO, DOfifo, sizeFifo, timeout, &rDO1)); //send the DO data
+			//NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_DOFIFO, DOfifo, sizeFifo, timeout, &rDO1)); //send the DO data
 
 			/*cleanup*/
 			delete[] AOfifo;

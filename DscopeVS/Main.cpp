@@ -104,12 +104,16 @@ int main()
 			size_t rAO1; //empty elements remaining
 
 
-			//size_t sizeFifo = nPoints;
-			size_t sizeFifo = 4;
+			//uint32_t sizeFifo = nPoints;
+			uint32_t sizeFifo = 4;
 			uint32_t *AOfifo = new uint32_t[sizeFifo];
 			for (int i = 0; i < sizeFifo; i++) { //initialize the array
 				AOfifo[i] = 0;
 			}
+
+			//send out the size of the AO FIFO
+			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, sizeFifo));
+			
 
 			if (1)
 			{

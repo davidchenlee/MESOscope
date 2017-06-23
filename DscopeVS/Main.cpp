@@ -7,10 +7,13 @@
 //#include <concrt.h> 	//Concurrency::wait(2000);
 #include <limits.h>		//for _I16_MAX??
 #include "windows.h"	//the stages use this lib. also Sleep
-#include "NiFpga_FPGA.h"
 #include <iostream>
-#include "main.h"
+#include "NiFpga_FPGA.h"
+#include "FPGA.h"
 
+extern const uint16_t DOfifoDelayTick;
+extern const uint32_t timeout;
+typedef uint16_t tt_t;				// Time type
 
 
 /*Define the full path of the bitfile*/

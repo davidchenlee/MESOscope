@@ -18,7 +18,7 @@ static const uint32_t timeout = 1; // in ms.
 
 
 /*DELAY. Sync AO and DO by delaying DO*/
-static const uint16_t DOfifoDelayTick = 38 * tick; //relative delay between AO and DO. This is because the AO takes longer than DO to write the output
+static const uint16_t DOfifoDelayTick = 73 * tick; //relative delay between AO and DO. This is because the AO takes longer than DO to write the output
 
 
 

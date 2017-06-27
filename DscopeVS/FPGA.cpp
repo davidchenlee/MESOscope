@@ -69,8 +69,12 @@ void RunFPGA()
 		if (NiFpga_IsNotError(status))
 		{
 
-			
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Retrigger, 0));
+			//Initialize the FPGA
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 0));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO2, 0));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NDO1, 0));
+
 
 			/*DELAY. Sync AO and DO by delaying DO*/
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));
@@ -82,7 +86,7 @@ void RunFPGA()
 			int nPoints = (int)((1.*tf - ti) / AO_dt);
 
 			//FIFO
-			uint32_t timeout = 1; // in ms. 
+			uint32_t timeout = -1; // in ms. -1 means no timeout
 			size_t r; //empty elements remaining
 			//uint32_t sizeFifo = nPoints;
 			uint32_t sizeFifo = 12;
@@ -105,8 +109,8 @@ void RunFPGA()
 				tt_t At3 = us2tick(4*us);
 				int16_t Vout0 = AOUT(10);
 				int16_t Vout1 = AOUT(0);
-				int16_t Vout2 = AOUT(0);
-				int16_t Vout3 = AOUT(10);
+				int16_t Vout2 = AOUT(10);
+				int16_t Vout3 = AOUT(0);
 
 				//AO1
 				FIFO[0] = u32pack(At0,Vout0);
@@ -120,14 +124,14 @@ void RunFPGA()
 				FIFO[7] = u32pack(At3, Vout3);
 
 				//DO1
-				tt_t Dt0 = us2tick(4.0 * us); //40 tick = 1 us
-				tt_t Dt1 = us2tick(1400 * us);
-				tt_t Dt2 = us2tick(4 * us);
-				tt_t Dt3 = us2tick(4 * us);
+				tt_t Dt0 = us2tick(4*us); //40 tick = 1 us
+				tt_t Dt1 = us2tick(1400*us);
+				tt_t Dt2 = us2tick(4*us);
+				tt_t Dt3 = us2tick(4*us);
 				FIFO[8] = u32pack(Dt0, 0x0001);
 				FIFO[9] = u32pack(Dt1, 0x0000);
-				FIFO[10] = u32pack(Dt3, 0x0000);
-				FIFO[11] = u32pack(Dt3, 0x0001);
+				FIFO[10] = u32pack(Dt2, 0x0001);
+				FIFO[11] = u32pack(Dt3, 0x0000);
 			}
 			else {
 				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, sizeFifo));
@@ -135,55 +139,69 @@ void RunFPGA()
 			}
 			//send the data through FIFO
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFifo, timeout, &r));
+			Sleep(4);
 
-
-			/* run the FPGA application.*/
+			//run the FPGA application
 			NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
+			/*WHAT DOES RUN EXACTLY DO?????????????????????????????????????????????????????????????????????????????????*/
 
-			/*trigger the FPGA*/
-			NiFpga_Bool start = 1;
-			Sleep(10);
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_start, start));
 
-			Sleep(1);
-			
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 1));
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 0));
+
+
+
+
+
 			/*
+			
+			Sleep(4);
 			//SECOND ROUND
 			//send out the size of the AO FIFO
 			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 2));
 			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO2, 2));
 			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NDO1, 2));
-			tt_t At0 = us2tick(4 * us);//40 tick = 1 us
-			tt_t At1 = us2tick(4 * us);
+
+			uint32_t *FIFO2 = new uint32_t[6];
+			for (uint32_t i = 0; i < 6; i++) { //initialize the array
+				FIFO2[i] = 0;
+			}
+			
+			tt_t At0 = us2tick(4*us);//40 tick = 1 us
+			tt_t At1 = us2tick(4*us);
 			int16_t Vout0 = AOUT(10);
 			int16_t Vout1 = AOUT(0);
 
 			//AO1
-			FIFO[0] = u32pack(At0, Vout0);
-			FIFO[1] = u32pack(At1, Vout1);
+			FIFO2[0] = u32pack(At0, Vout0);
+			FIFO2[1] = u32pack(At1, Vout1);
 			//AO2
-			FIFO[2] = u32pack(At0, Vout0);
-			FIFO[3] = u32pack(At1, Vout1);
+			FIFO2[2] = u32pack(At0, Vout0);
+			FIFO2[3] = u32pack(At1, Vout1);
 			//DO1
-			FIFO[4] = u32pack(At0, 0x0000);
-			FIFO[5] = u32pack(At1, 0x0000);
-
+			FIFO2[4] = u32pack(At0, 0x0001);
+			FIFO2[5] = u32pack(At1, 0x0000);
+			
 			
 			//send the data through FIFO and re-trigger
-			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFifo, timeout, &r));
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Retrigger, 1));
+			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO2, 6, timeout, &r));
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 1));
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
+			Sleep(4);
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 1));
+			//NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 0));
+
 			*/
-			
 
 			/* Closes the session to the FPGA.The FPGA resets (Re-downloads the FPGA bitstream to the target)
 			unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.*/
-			
-			Sleep(2000);//Let the FPGA finish before shutting it down
+			Sleep(1000);//Let the FPGA finish before shutting it down
 			NiFpga_MergeStatus(&status, NiFpga_Close(session, 0));
 
 			/*cleanup*/
 			delete[] FIFO;
+			//delete[] FIFO2;
 		}
 
 

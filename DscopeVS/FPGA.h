@@ -8,22 +8,18 @@
 #define tick 1
 #define LSBmask 0x0000FFFF			// Select the 16 least significant bits
 #define Abits 16					// Number of bits of the analog output
-#define AO_dt 2*us					// Analog output time increament in us. AO takes 43 ticks (1us=40ticks) to read and write the data
-
-#define v2hex(x) (int16_t)(1.0 * x / 10 *_I16_MAX)		//converts voltage from +-10 to hex
-#define us2tick(x) (tt_t) (x * tickPerUs)				//converts us to ticks
+#define AO_dt 2*us					// Analog output time increament in us. AO takes 43 ticks (40ticks-1us) to read and write the data
 
 typedef uint16_t tt_t;				// Time type
 
-/*FIFO variables*/
-static const uint32_t timeout = 1; // in ms. 
-
 /*DELAY. Sync AO and DO by delaying DO*/
-static const uint16_t DOfifoDelayTick = 76 * tick; //relative delay between AO and DO. This is because the AO takes longer than DO to write the output
+static const uint16_t DODelayTick = 80 * tick; //relative delay between AO and DO. This is because the AO takes longer than DO to write the output
 
 /*Define the full path of the bitfile*/
 static const char* const Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\DscopeVS\\LabView\\FPGA Bitfiles\\" NiFpga_FPGA_Bitfile;
 
-
+//prototypes
 void RunFPGA();
-
+tt_t us2tick(double x);
+int16_t AOUT(double x);
+uint32_t u32pack(tt_t t, uint16_t x);

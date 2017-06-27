@@ -2,7 +2,7 @@
 #include <limits.h>		//for _I16_MAX??
 #include <iostream>
 #include "windows.h"	//the stages use this lib. also Sleep
-
+#include <queue>
 
 void printHex(int16_t input)
 {
@@ -29,9 +29,8 @@ void linearRamp(uint32_t *aa, tt_t ti, double Vi, tt_t tf, double Vf)
 		{
 			tPoints[ii] = ti + ii * dt; //just for debugging 
 			vPoints[ii] = Vi + (Vf - Vi)*ii / (nPoints - 1);
-			aa[ii] = dt*tickPerUs << Abits | (LSBmask & v2hex(vPoints[ii]));
+			aa[ii] = u32pack(dt*tickPerUs, AOUT(vPoints[ii]) );
 		}
-
 		delete[] tPoints;
 		delete[] vPoints;
 	}
@@ -49,8 +48,6 @@ void linearRamp(uint32_t *aa, tt_t ti, double Vi, tt_t tf, double Vf)
 		}
 		getchar();
 	}
-
-
 }
 
 
@@ -72,8 +69,11 @@ void RunFPGA()
 		if (NiFpga_IsNotError(status))
 		{
 
+			
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Retrigger, 0));
+
 			/*DELAY. Sync AO and DO by delaying DO*/
-			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOFIFODelaytick, DOfifoDelayTick));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));
 
 			tt_t ti = 0 * us;
 			tt_t tf = 1400 * us;
@@ -81,65 +81,61 @@ void RunFPGA()
 			double vf = 10;
 			int nPoints = (int)((1.*tf - ti) / AO_dt);
 
-
-			//AO FIFO
-			size_t rAO1; //empty elements remaining
-
-
-			uint32_t sizeFifo = nPoints;
-			//uint32_t sizeFifo = 12;
-			uint32_t *AOfifo = new uint32_t[sizeFifo];
+			//FIFO
+			uint32_t timeout = 1; // in ms. 
+			size_t r; //empty elements remaining
+			//uint32_t sizeFifo = nPoints;
+			uint32_t sizeFifo = 12;
+			uint32_t *FIFO = new uint32_t[sizeFifo];
 			for (uint32_t i = 0; i < sizeFifo; i++) { //initialize the array
-				AOfifo[i] = 0;
+				FIFO[i] = 0;
 			}
 
 
-			if (0)
+			if (1)
 			{
 				//send out the size of the AO FIFO
 				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 4));
 				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO2, 4));
 				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NDO1, 4));
 
-				tt_t At0 = us2tick(4 * us);//40 tick = 1 us
-				tt_t At1 = us2tick(1400 * us);
-				tt_t At2 = us2tick(4 * us);
-				tt_t At3 = us2tick(4 * us);
-				int16_t Vout0 = v2hex(10);
-				int16_t Vout1 = v2hex(0);
-				int16_t Vout2 = v2hex(10);
-				int16_t Vout3 = v2hex(0);
+				tt_t At0 = us2tick(4*us);//40 tick = 1 us
+				tt_t At1 = us2tick(1400*us);
+				tt_t At2 = us2tick(4*us);
+				tt_t At3 = us2tick(4*us);
+				int16_t Vout0 = AOUT(10);
+				int16_t Vout1 = AOUT(0);
+				int16_t Vout2 = AOUT(0);
+				int16_t Vout3 = AOUT(10);
 
-				AOfifo[0] = (At0 << Abits) | (LSBmask & Vout0);
-				AOfifo[1] = (At1 << Abits) | (LSBmask & Vout1);
-				AOfifo[2] = (At2 << Abits) | (LSBmask & Vout2);
-				AOfifo[3] = (At3 << Abits) | (LSBmask & Vout3);
+				//AO1
+				FIFO[0] = u32pack(At0,Vout0);
+				FIFO[1] = u32pack(At1, Vout1);
+				FIFO[2] = u32pack(At2, Vout2);
+				FIFO[3] = u32pack(At3, Vout3);
+				//AO2
+				FIFO[4] = u32pack(us2tick(5 * us), Vout0);
+				FIFO[5] = u32pack(At1, Vout1);
+				FIFO[6] = u32pack(At2, Vout2);
+				FIFO[7] = u32pack(At3, Vout3);
 
-				AOfifo[4] = (us2tick(5 * us) << Abits) | (LSBmask & Vout0);
-				AOfifo[5] = (At1 << Abits) | (LSBmask & Vout1);
-				AOfifo[6] = (At2 << Abits) | (LSBmask & Vout2);
-				AOfifo[7] = (At3 << Abits) | (LSBmask & Vout3);
-
-
-				tt_t Dt0 = us2tick(4 * us); //40 tick = 1 us
+				//DO1
+				tt_t Dt0 = us2tick(4.0 * us); //40 tick = 1 us
 				tt_t Dt1 = us2tick(1400 * us);
 				tt_t Dt2 = us2tick(4 * us);
 				tt_t Dt3 = us2tick(4 * us);
-				AOfifo[8] = (Dt0 << Abits) | (LSBmask & 0x0001);
-				AOfifo[9] = (Dt1 << Abits) | (LSBmask & 0x0000);
-				AOfifo[10] = (Dt3 << Abits) | (LSBmask & 0x0001);
-				AOfifo[11] = (Dt3 << Abits) | (LSBmask & 0x0000);
+				FIFO[8] = u32pack(Dt0, 0x0001);
+				FIFO[9] = u32pack(Dt1, 0x0000);
+				FIFO[10] = u32pack(Dt3, 0x0000);
+				FIFO[11] = u32pack(Dt3, 0x0001);
 			}
 			else {
 				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, sizeFifo));
-				linearRamp(AOfifo, ti, vi, tf, vf);
+				linearRamp(FIFO, ti, vi, tf, vf);
 			}
+			//send the data through FIFO
+			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFifo, timeout, &r));
 
-			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_A0FIFO, AOfifo, sizeFifo, timeout, &rAO1)); //send the AO data
-
-
-			/*cleanup*/
-			delete[] AOfifo;
 
 			/* run the FPGA application.*/
 			NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
@@ -147,20 +143,101 @@ void RunFPGA()
 
 			/*trigger the FPGA*/
 			NiFpga_Bool start = 1;
+			Sleep(10);
 			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_start, start));
 
+			Sleep(1);
+			
+			/*
+			//SECOND ROUND
+			//send out the size of the AO FIFO
+			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 2));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO2, 2));
+			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NDO1, 2));
+			tt_t At0 = us2tick(4 * us);//40 tick = 1 us
+			tt_t At1 = us2tick(4 * us);
+			int16_t Vout0 = AOUT(10);
+			int16_t Vout1 = AOUT(0);
 
-			/* close the session. THIS TURNS OFF THE OUTPUT OF THE FPGA */
-			Sleep(1500);//in ms. temp hack to let the FPGA finish before shutting it down
+			//AO1
+			FIFO[0] = u32pack(At0, Vout0);
+			FIFO[1] = u32pack(At1, Vout1);
+			//AO2
+			FIFO[2] = u32pack(At0, Vout0);
+			FIFO[3] = u32pack(At1, Vout1);
+			//DO1
+			FIFO[4] = u32pack(At0, 0x0000);
+			FIFO[5] = u32pack(At1, 0x0000);
 
+			
+			//send the data through FIFO and re-trigger
+			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFifo, timeout, &r));
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Retrigger, 1));
+			*/
+			
+
+			/* Closes the session to the FPGA.The FPGA resets (Re-downloads the FPGA bitstream to the target)
+			unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.*/
+			
+			Sleep(2000);//Let the FPGA finish before shutting it down
 			NiFpga_MergeStatus(&status, NiFpga_Close(session, 0));
+
+			/*cleanup*/
+			delete[] FIFO;
 		}
 
 
-		/* must be called after all other calls */
+		/* You must call this function after all other function calls if
+		NiFpga_Initialize succeeds.This function unloads the NiFpga library.*/
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 	}
 }
+
+//converts microseconds to ticks
+tt_t us2tick(double x)
+{
+	return (tt_t)(x * tickPerUs);
+}
+
+//converts voltage (range: -10 to 10) to signed int 16 (range: -32768 to 32767)
+int16_t AOUT(double x)
+{
+	return (int16_t)(x / 10 * _I16_MAX);		
+}
+
+//pack t as MSB and x as LSB
+uint32_t u32pack(tt_t t, uint16_t x)
+{
+	return (t << Abits) | (LSBmask & x);
+}
+
+
+void wait(tt_t gt, tt_t dt)
+{
+	gt += dt ;
+}
+
+void DOUT(int channel, int bit)
+{
+
+}
+
+
+/*for the digital channel, I will define the sequece as
+wait(t1)
+DOUT(channel, bit)
+wait(t2)
+DOUT(channel, bit)
+...etc
+
+I would like to convert it into the form
+
+DOUT(channel, duration, bit,)
+DOUT(channel, duration, bit,)
+...etc
+
+
+*/
 
 
 

@@ -107,21 +107,21 @@ void RunFPGA()
 				tt_t At1 = us2tick(1400*us);
 				tt_t At2 = us2tick(4*us);
 				tt_t At3 = us2tick(4*us);
-				int16_t Vout0 = AOUT(10);
-				int16_t Vout1 = AOUT(0);
-				int16_t Vout2 = AOUT(10);
-				int16_t Vout3 = AOUT(0);
+				int16_t VO0 = AOUT(5);
+				int16_t VO1 = AOUT(0);
+				int16_t VO2 = AOUT(0);
+				int16_t VO3 = AOUT(0);
 
 				//AO1
-				FIFO[0] = u32pack(At0,Vout0);
-				FIFO[1] = u32pack(At1, Vout1);
-				FIFO[2] = u32pack(At2, Vout2);
-				FIFO[3] = u32pack(At3, Vout3);
+				FIFO[0] = u32pack(At0, VO0);
+				FIFO[1] = u32pack(At1, VO1);
+				FIFO[2] = u32pack(At2, VO2);
+				FIFO[3] = u32pack(At3, VO3);
 				//AO2
-				FIFO[4] = u32pack(us2tick(5 * us), Vout0);
-				FIFO[5] = u32pack(At1, Vout1);
-				FIFO[6] = u32pack(At2, Vout2);
-				FIFO[7] = u32pack(At3, Vout3);
+				FIFO[4] = u32pack(us2tick(5 * us), VO0);
+				FIFO[5] = u32pack(At1, VO1);
+				FIFO[6] = u32pack(At2, VO2);
+				FIFO[7] = u32pack(At3, VO3);
 
 				//DO1
 				tt_t Dt0 = us2tick(4*us); //40 tick = 1 us
@@ -130,7 +130,7 @@ void RunFPGA()
 				tt_t Dt3 = us2tick(4*us);
 				FIFO[8] = u32pack(Dt0, 0x0001);
 				FIFO[9] = u32pack(Dt1, 0x0000);
-				FIFO[10] = u32pack(Dt2, 0x0001);
+				FIFO[10] = u32pack(Dt2, 0x0000);
 				FIFO[11] = u32pack(Dt3, 0x0000);
 			}
 			else {
@@ -141,22 +141,12 @@ void RunFPGA()
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFifo, timeout, &r));
 			Sleep(4);
 
-			//run the FPGA application
+			//run the FPGA application. WHAT DOES RUN EXACTLY DO?????????????????????????????????????????????????????????????????????????????????
 			NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
+			PulseStart(&status, session);
 
-			/*WHAT DOES RUN EXACTLY DO?????????????????????????????????????????????????????????????????????????????????*/
-
-
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 1));
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 0));
-
-
-
-
-
-			/*
-			
-			Sleep(4);
+	/*
+			Sleep(1);
 			//SECOND ROUND
 			//send out the size of the AO FIFO
 			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 2));
@@ -170,7 +160,7 @@ void RunFPGA()
 			
 			tt_t At0 = us2tick(4*us);//40 tick = 1 us
 			tt_t At1 = us2tick(4*us);
-			int16_t Vout0 = AOUT(10);
+			int16_t Vout0 = AOUT(0);
 			int16_t Vout1 = AOUT(0);
 
 			//AO1
@@ -180,17 +170,15 @@ void RunFPGA()
 			FIFO2[2] = u32pack(At0, Vout0);
 			FIFO2[3] = u32pack(At1, Vout1);
 			//DO1
-			FIFO2[4] = u32pack(At0, 0x0001);
-			FIFO2[5] = u32pack(At1, 0x0000);
+			FIFO2[4] = u32pack(At0, 0x0000);
+			FIFO2[5] = u32pack(At1, 0x0001);
 			
 			
 			//send the data through FIFO and re-trigger
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO2, 6, timeout, &r));
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 1));
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
-			Sleep(4);
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 1));
-			//NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 0));
+			PulseTrigger(&status, session);
+			Sleep(1);
+			PulseStart(&status, session);
 
 			*/
 
@@ -218,6 +206,9 @@ tt_t us2tick(double x)
 }
 
 //converts voltage (range: -10 to 10) to signed int 16 (range: -32768 to 32767)
+//0x7FFFF = 0d32767
+//0xFFFF = -1
+//0x8000 = -32768
 int16_t AOUT(double x)
 {
 	return (int16_t)(x / 10 * _I16_MAX);		
@@ -238,6 +229,18 @@ void wait(tt_t gt, tt_t dt)
 void DOUT(int channel, int bit)
 {
 
+}
+
+void PulseTrigger(NiFpga_Status* status, NiFpga_Session session)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
+}
+
+void PulseStart(NiFpga_Status* status, NiFpga_Session session)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 0));
 }
 
 

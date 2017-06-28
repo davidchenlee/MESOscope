@@ -23,3 +23,5 @@ void RunFPGA();
 tt_t us2tick(double x);
 int16_t AOUT(double x);
 uint32_t u32pack(tt_t t, uint16_t x);
+void PulseTrigger(NiFpga_Status* status, NiFpga_Session session);
+void PulseStart(NiFpga_Status* status, NiFpga_Session session);

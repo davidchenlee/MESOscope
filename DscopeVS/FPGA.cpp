@@ -68,6 +68,8 @@ void RunFPGA()
 
 		if (NiFpga_IsNotError(status))
 		{
+
+
 			//Initialize the FPGA
 			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
 			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 0));
@@ -95,6 +97,7 @@ void RunFPGA()
 			}
 
 
+
 			if (1)
 			{
 				//send out the size of the AO FIFO
@@ -106,7 +109,7 @@ void RunFPGA()
 				tt_t At1 = us2tick(1400 * us);
 				tt_t At2 = us2tick(4 * us);
 				tt_t At3 = us2tick(4 * us);
-				int16_t VO0 = AOUT(10);
+				int16_t VO0 = AOUT(5);
 				int16_t VO1 = AOUT(0);
 				int16_t VO2 = AOUT(0);
 				int16_t VO3 = AOUT(0);
@@ -121,6 +124,7 @@ void RunFPGA()
 				FIFO[5] = u32pack(At1, VO1);
 				FIFO[6] = u32pack(At2, VO2);
 				FIFO[7] = u32pack(At3, VO3);
+
 				//DO1
 				tt_t Dt0 = us2tick(4 * us); //40 tick = 1 us
 				tt_t Dt1 = us2tick(1400 * us);
@@ -130,15 +134,21 @@ void RunFPGA()
 				FIFO[9] = u32pack(Dt1, 0x0000);
 				FIFO[10] = u32pack(Dt2, 0x0001);
 				FIFO[11] = u32pack(Dt3, 0x0000);
+
+
 			}
 			else {
 				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, sizeFifo));
 				linearRamp(FIFO, ti, vi, tf, vf);
 			}
+
+
+
+
 			//send the data through FIFO
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFifo, timeout, &r));
 			PulseTrigger(&status, session);
-
+			//PulseStart(&status, session);
 
 			//SECOND ROUND
 			if (1)
@@ -155,7 +165,7 @@ void RunFPGA()
 
 				tt_t At0 = us2tick(4 * us);//40 tick = 1 us
 				tt_t At1 = us2tick(4 * us);
-				int16_t Vout0 = AOUT(5);
+				int16_t Vout0 = AOUT(8);
 				int16_t Vout1 = AOUT(0);
 
 				//AO1
@@ -170,8 +180,9 @@ void RunFPGA()
 
 
 				//send the data through FIFO
-				NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO2, 6, timeout, &r));
 				PulseTrigger(&status, session);
+				NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO2, 6, timeout, &r));
+				//PulseStart(&status, session);
 			}
 
 

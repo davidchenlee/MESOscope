@@ -68,13 +68,11 @@ void RunFPGA()
 
 		if (NiFpga_IsNotError(status))
 		{
-
-
 			//Initialize the FPGA
 			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
-			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 0));
-			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO2, 0));
-			NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NDO1, 0));
+			//NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 0));
+			//NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO2, 0));
+			//NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NDO1, 0));
 			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));//DELAY. Sync AO and DO by delaying DO
 
 		    //run the FPGA application
@@ -90,99 +88,97 @@ void RunFPGA()
 			uint32_t timeout = -1; // in ms. -1 means no timeout
 			size_t r; //empty elements remaining
 			//uint32_t sizeFifo = nPoints;
-			uint32_t sizeFifo = 12;
+			uint32_t sizeFifo = 12+3;
 			uint32_t *FIFO = new uint32_t[sizeFifo];
 			for (uint32_t i = 0; i < sizeFifo; i++) { //initialize the array
 				FIFO[i] = 0;
 			}
 
 
-
 			if (1)
 			{
 				//send out the size of the AO FIFO
-				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 4));
-				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO2, 4));
-				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NDO1, 4));
+				//NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 4));
+				//NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO2, 4));
+				//NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NDO1, 4));
 
 				tt_t At0 = us2tick(4 * us);//40 tick = 1 us
 				tt_t At1 = us2tick(1400 * us);
 				tt_t At2 = us2tick(4 * us);
 				tt_t At3 = us2tick(4 * us);
-				int16_t VO0 = AOUT(5);
+				int16_t VO0 = AOUT(10);
 				int16_t VO1 = AOUT(0);
 				int16_t VO2 = AOUT(0);
 				int16_t VO3 = AOUT(0);
 
 				//AO1
-				FIFO[0] = u32pack(At0, VO0);
-				FIFO[1] = u32pack(At1, VO1);
-				FIFO[2] = u32pack(At2, VO2);
-				FIFO[3] = u32pack(At3, VO3);
+				FIFO[0] = 0x00000004;
+				FIFO[1] = u32pack(At0, VO0);
+				FIFO[2] = u32pack(At1, VO1);
+				FIFO[3] = u32pack(At2, VO2);
+				FIFO[4] = u32pack(At3, VO3);
 				//AO2
-				FIFO[4] = u32pack(us2tick(5 * us), VO0);
-				FIFO[5] = u32pack(At1, VO1);
-				FIFO[6] = u32pack(At2, VO2);
-				FIFO[7] = u32pack(At3, VO3);
-
+				FIFO[5] = 0x00000004;
+				FIFO[6] = u32pack(us2tick(5 * us), VO0);
+				FIFO[7] = u32pack(At1, VO1);
+				FIFO[8] = u32pack(At2, VO2);
+				FIFO[9] = u32pack(At3, VO3);
 				//DO1
 				tt_t Dt0 = us2tick(4 * us); //40 tick = 1 us
 				tt_t Dt1 = us2tick(1400 * us);
 				tt_t Dt2 = us2tick(4 * us);
 				tt_t Dt3 = us2tick(4 * us);
-				FIFO[8] = u32pack(Dt0, 0x0001);
-				FIFO[9] = u32pack(Dt1, 0x0000);
-				FIFO[10] = u32pack(Dt2, 0x0001);
-				FIFO[11] = u32pack(Dt3, 0x0000);
-
-
+				FIFO[10] = 0x00000004;
+				FIFO[11] = u32pack(Dt0, 0x0001);
+				FIFO[12] = u32pack(Dt1, 0x0000);
+				FIFO[13] = u32pack(Dt2, 0x0001);
+				FIFO[14] = u32pack(Dt3, 0x0000);
 			}
 			else {
-				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, sizeFifo));
+				//NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, sizeFifo));
 				linearRamp(FIFO, ti, vi, tf, vf);
 			}
-
-
-
-
 			//send the data through FIFO
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFifo, timeout, &r));
 			PulseTrigger(&status, session);
-			//PulseStart(&status, session);
+
 
 			//SECOND ROUND
 			if (1)
 			{
 				//send out the size of the AO FIFO
-				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 2));
-				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO2, 2));
-				NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NDO1, 2));
+				//NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, 2));
+				//NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO2, 2));
+				//NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NDO1, 2));
 
-				uint32_t *FIFO2 = new uint32_t[6];
-				for (uint32_t i = 0; i < 6; i++) { //initialize the array
+				size_t sizeFifo2 = 6 + 3;
+				uint32_t *FIFO2 = new uint32_t[sizeFifo2];
+				for (uint32_t i = 0; i < sizeFifo2; i++) { //initialize the array
 					FIFO2[i] = 0;
 				}
 
 				tt_t At0 = us2tick(4 * us);//40 tick = 1 us
 				tt_t At1 = us2tick(4 * us);
-				int16_t Vout0 = AOUT(8);
+				int16_t Vout0 = AOUT(5);
 				int16_t Vout1 = AOUT(0);
 
 				//AO1
-				FIFO2[0] = u32pack(At0, Vout0);
-				FIFO2[1] = u32pack(At1, Vout1);
+				FIFO2[0] = 0x00000002;
+				FIFO2[1] = u32pack(At0, Vout0);
+				FIFO2[2] = u32pack(At1, Vout1);
 				//AO2
-				FIFO2[2] = u32pack(At0, Vout0);
-				FIFO2[3] = u32pack(At1, Vout1);
+				FIFO2[3] = 0x00000002;
+				FIFO2[4] = u32pack(At0, Vout0);
+				FIFO2[5] = u32pack(At1, Vout1);
 				//DO1
-				FIFO2[4] = u32pack(At0, 0x0001);
-				FIFO2[5] = u32pack(At1, 0x0000);
+				FIFO2[6] = 0x00000002;
+				FIFO2[7] = u32pack(At0, 0x0001);
+				FIFO2[8] = u32pack(At1, 0x0000);
 
 
 				//send the data through FIFO
+				NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO2, sizeFifo2, timeout, &r));
 				PulseTrigger(&status, session);
-				NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO2, 6, timeout, &r));
-				//PulseStart(&status, session);
 			}
 
 

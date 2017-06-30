@@ -116,18 +116,19 @@ void RunFPGA()
 
 
 
-
+			//linear output
 			std::queue<uint32_t> linearR = linearRamp(0 * us, 16 * us, 0, 10);
 			linearR.push(u32pack(4*us, 0));
+
 
 			//Merge the queues
 			std::queue<uint32_t> FIFOqueue;
 			//AO1
-			FIFOqueue.push(linearR.size()); //push the number of elements in the queue
-			while (!linearR.empty())
+			FIFOqueue.push(FIFOAO1.size()); //push the number of elements in the queue
+			while (!FIFOAO1.empty())
 			{
-				FIFOqueue.push(linearR.front());
-				linearR.pop();
+				FIFOqueue.push(FIFOAO1.front());
+				FIFOAO1.pop();
 			}
 			//AO2
 			FIFOqueue.push(FIFOAO2.size()); //push the number of elements in the queue
@@ -168,7 +169,7 @@ void RunFPGA()
 
 
 			//SECOND ROUND
-			if (0)
+			if (1)
 			{
 				tt_t At0 = us2tick(4 * us);//40 tick = 1 us
 				tt_t At1 = us2tick(4 * us);
@@ -186,8 +187,48 @@ void RunFPGA()
 				FIFODO1.push(u32pack(Dt1, 0x0000));
 
 
+
+				//Merge the queues
+				std::queue<uint32_t> FIFOqueue;
+				//AO1
+				FIFOqueue.push(FIFOAO1.size()); //push the number of elements in the queue
+				while (!FIFOAO1.empty())
+				{
+					FIFOqueue.push(FIFOAO1.front());
+					FIFOAO1.pop();
+				}
+				//AO2
+				FIFOqueue.push(FIFOAO2.size()); //push the number of elements in the queue
+				while (!FIFOAO2.empty())
+				{
+					FIFOqueue.push(FIFOAO2.front());
+					FIFOAO2.pop();
+				}
+				//DO1
+				FIFOqueue.push(FIFODO1.size()); //push the number of elements in the queue
+				while (!FIFODO1.empty())
+				{
+					FIFOqueue.push(FIFODO1.front());
+					FIFODO1.pop();
+				}
+				FIFOAO1, FIFOAO2, FIFODO1 = {}; //cleanup
+
+				
+				//transfer the queue to an array. THE ORDER DETERMINES THE TARGETED CHANNEL
+				size_t sizeFIFOqueue = FIFOqueue.size();
+				uint32_t *FIFOarray = new uint32_t[sizeFIFOqueue];
+				for (int i = 0; i < sizeFIFOqueue; i++)
+				{
+					FIFOarray[i] = FIFOqueue.front();
+					FIFOqueue.pop();
+				}
+				FIFOqueue = {}; //cleanup
+
+
 				//send the data through FIFO
-				//NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO2, sizeFifo2, timeout, &r));
+				NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFOarray, sizeFIFOqueue, timeout, &r));
+				PulseTrigger(&status, session);
+				delete[] FIFOarray;
 				PulseTrigger(&status, session);
 			}
 

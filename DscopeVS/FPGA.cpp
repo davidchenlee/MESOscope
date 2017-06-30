@@ -3,23 +3,25 @@
 #include <iostream>
 #include "windows.h"	//the stages use this lib. also Sleep
 #include <queue>
+using namespace std;
 
 void printHex(int16_t input)
 {
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
 
-void linearRamp(uint32_t *aa, tt_t ti, double Vi, tt_t tf, double Vf)
+std::queue<uint32_t> linearRamp(tt_t ti, tt_t tf, double Vi, double Vf)
 {
-	tt_t dt = AO_dt;  //Analog output time increament in us
-	int nPoints = (int)((1.*tf - ti) / dt); //number of points
+	std::queue<uint32_t> OUTqueue;
 
-	tt_t *tPoints = new tt_t[nPoints]; //time points in us
-	double *vPoints = new double[nPoints]; //voltage points in V
+	tt_t dt = AO_dt;							//Analog output time increament in us
+	int nPoints = (int)((1.*tf - ti) / dt);		//number of points
+
+	tt_t *tPoints = new tt_t[nPoints];			//time points in us
+	double *vPoints = new double[nPoints];		//voltage points in V
 
 	if (nPoints <= 1)
 	{
-		aa[0] = 0;
 		std::cout << "ERROR: not enought points for the analog linear ramp\n";
 		std::cout << "nPoints: " << nPoints << "\n";
 	}
@@ -29,10 +31,8 @@ void linearRamp(uint32_t *aa, tt_t ti, double Vi, tt_t tf, double Vf)
 		{
 			tPoints[ii] = ti + ii * dt; //just for debugging 
 			vPoints[ii] = Vi + (Vf - Vi)*ii / (nPoints - 1);
-			aa[ii] = u32pack(dt*tickPerUs, AOUT(vPoints[ii]));
+			OUTqueue.push( u32pack(dt*tickPerUs, AOUT(vPoints[ii])) );
 		}
-		delete[] tPoints;
-		delete[] vPoints;
 	}
 
 	//for debugging
@@ -48,6 +48,8 @@ void linearRamp(uint32_t *aa, tt_t ti, double Vi, tt_t tf, double Vf)
 		}
 		getchar();
 	}
+	delete[] tPoints, vPoints;
+	return OUTqueue;
 }
 
 
@@ -76,16 +78,10 @@ void RunFPGA()
 			//run the FPGA application
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-			tt_t ti = 0 * us;
-			tt_t tf = 1400 * us;
-			double vi = 0;
-			double vf = 10;
-			int nPoints = (int)((1.*tf - ti) / AO_dt);
 
+			std::queue<uint32_t> FIFOAO1, FIFOAO2, FIFODO1;
 
-			//uint32_t sizeFifo = nPoints;
-
-				//AO1
+			//AO1
 			tt_t At0 = us2tick(4 * us);//40 tick = 1 us
 			tt_t At1 = us2tick(1400 * us);
 			tt_t At2 = us2tick(4 * us);
@@ -95,14 +91,12 @@ void RunFPGA()
 			int16_t VO2 = AOUT(0);
 			int16_t VO3 = AOUT(0);
 
-			std::queue<uint32_t> FIFOAO1;
 			FIFOAO1.push(u32pack(At0, VO0));
 			FIFOAO1.push(u32pack(At1, VO1));
 			FIFOAO1.push(u32pack(At2, VO2));
 			FIFOAO1.push(u32pack(At3, VO3));
 
 			//AO2
-			std::queue<uint32_t> FIFOAO2;
 			FIFOAO2.push(u32pack(us2tick(5 * us), VO0));
 			FIFOAO2.push(u32pack(At1, VO1));
 			FIFOAO2.push(u32pack(At2, VO2));
@@ -110,29 +104,30 @@ void RunFPGA()
 
 			//DO1
 			tt_t Dt0 = us2tick(4 * us); //40 tick = 1 us
-			tt_t Dt1 = us2tick(1400 * us);
+			tt_t Dt1 = us2tick(1000 * us);
 			tt_t Dt2 = us2tick(4 * us);
 			tt_t Dt3 = us2tick(4 * us);
-
-			std::queue<uint32_t> FIFODO1;
+	
 			FIFODO1.push(u32pack(Dt0, 0x0001));
 			FIFODO1.push(u32pack(Dt1, 0x0000));
 			FIFODO1.push(u32pack(Dt2, 0x0001));
 			FIFODO1.push(u32pack(Dt3, 0x0000));
 
-			//NiFpga_MergeStatus(&status, NiFpga_WriteU32(session, NiFpga_FPGA_ControlU32_NAO1, sizeFifo));
-			//linearRamp(FIFO, ti, vi, tf, vf);
 
-			size_t Nchannels = 3; //Number of channels available. WARNING: This number has to match the implementation on the FPGA!
 
-			//create the FIFO queue
+
+
+			std::queue<uint32_t> linearR = linearRamp(0 * us, 16 * us, 0, 10);
+			linearR.push(u32pack(4*us, 0));
+
+			//Merge the queues
 			std::queue<uint32_t> FIFOqueue;
 			//AO1
-			FIFOqueue.push(FIFOAO1.size()); //push the number of elements in the queue
-			while (!FIFOAO1.empty())
+			FIFOqueue.push(linearR.size()); //push the number of elements in the queue
+			while (!linearR.empty())
 			{
-				FIFOqueue.push(FIFOAO1.front());
-				FIFOAO1.pop();
+				FIFOqueue.push(linearR.front());
+				linearR.pop();
 			}
 			//AO2
 			FIFOqueue.push(FIFOAO2.size()); //push the number of elements in the queue
@@ -148,6 +143,9 @@ void RunFPGA()
 				FIFOqueue.push(FIFODO1.front());
 				FIFODO1.pop();
 			}
+			FIFOAO1, FIFOAO2, FIFODO1 = {}; //cleanup
+
+
 
 			//transfer the queue to an array. THE ORDER DETERMINES THE TARGETED CHANNEL
 			size_t sizeFIFOqueue = FIFOqueue.size();
@@ -157,45 +155,39 @@ void RunFPGA()
 				FIFOarray[i] = FIFOqueue.front();
 				FIFOqueue.pop();
 			}
+			FIFOqueue = {}; //cleanup
 
 
-			//send the data through FIFO
+
+			//send the data to the FPGA through the FIFO
 			uint32_t timeout = -1; // in ms. -1 means no timeout
 			size_t r; //empty elements remaining
 			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFOarray, sizeFIFOqueue, timeout, &r));
 			PulseTrigger(&status, session);
+			delete[] FIFOarray;
 
 
 			//SECOND ROUND
 			if (0)
 			{
-				size_t sizeFifo2 = 6 + 3;
-				uint32_t *FIFO2 = new uint32_t[sizeFifo2];
-				for (uint32_t i = 0; i < sizeFifo2; i++) { //initialize the array
-					FIFO2[i] = 0;
-				}
-
 				tt_t At0 = us2tick(4 * us);//40 tick = 1 us
 				tt_t At1 = us2tick(4 * us);
 				int16_t Vout0 = AOUT(5);
 				int16_t Vout1 = AOUT(0);
 
 				//AO1
-				FIFO2[0] = 0x00000002;
-				FIFO2[1] = u32pack(At0, Vout0);
-				FIFO2[2] = u32pack(At1, Vout1);
+				FIFOAO1.push(u32pack(At0, VO0));
+				FIFOAO1.push(u32pack(At1, VO1));
 				//AO2
-				FIFO2[3] = 0x00000002;
-				FIFO2[4] = u32pack(At0, Vout0);
-				FIFO2[5] = u32pack(At1, Vout1);
+				FIFOAO2.push(u32pack(At0, VO0));
+				FIFOAO2.push(u32pack(At1, VO1));
 				//DO1
-				FIFO2[6] = 0x00000002;
-				FIFO2[7] = u32pack(At0, 0x0001);
-				FIFO2[8] = u32pack(At1, 0x0000);
+				FIFODO1.push(u32pack(Dt0, 0x0001));
+				FIFODO1.push(u32pack(Dt1, 0x0000));
 
 
 				//send the data through FIFO
-				NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO2, sizeFifo2, timeout, &r));
+				//NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO2, sizeFifo2, timeout, &r));
 				PulseTrigger(&status, session);
 			}
 
@@ -257,6 +249,36 @@ void PulseStart(NiFpga_Status* status, NiFpga_Session session)
 	//NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 1));
 	//NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 0));
 }
+
+
+std::queue<uint32_t> MergeQueues(std::queue<uint32_t> FIFOAO1, std::queue<uint32_t> FIFOAO2, std::queue<uint32_t> FIFODO1)
+{
+	//create the FIFO queue
+	std::queue<uint32_t> FIFOqueue;
+	//AO1
+	FIFOqueue.push((FIFOAO1).size()); //push the number of elements in the queue
+	while (!FIFOAO1.empty())
+	{
+		FIFOqueue.push(FIFOAO1.front());
+		FIFOAO1.pop();
+	}
+	//AO2
+	FIFOqueue.push(FIFOAO2.size()); //push the number of elements in the queue
+	while (!FIFOAO2.empty())
+	{
+		FIFOqueue.push(FIFOAO2.front());
+		FIFOAO2.pop();
+	}
+	//DO1
+	FIFOqueue.push(FIFODO1.size()); //push the number of elements in the queue
+	while (!FIFODO1.empty())
+	{
+		FIFOqueue.push(FIFODO1.front());
+		FIFODO1.pop();
+	}
+	return FIFOqueue;
+}
+
 
 
 /*for the digital channel, I will define the sequece as

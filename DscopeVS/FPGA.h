@@ -8,7 +8,7 @@
 #define tick 1
 #define LSBmask 0x0000FFFF			//Select the 16 least significant bits
 #define Abits 16					//Number of bits of the analog output
-#define AO_dt 4*us					//Analog output time increament in us. AO takes 43 ticks (40ticks-1us) to read and write the data
+#define AO_dt 4*us					//Analog output time increament in us. Currently, the AO works well with 4us or more.
 #define Nchannels 3					//Number of channels available. WARNING: This number has to match the implementation on the FPGA!
 
 typedef uint16_t tt_t;				//Time type

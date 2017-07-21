@@ -3,9 +3,7 @@
 //#include <concrt.h> 	//Concurrency::wait(2000);
 #include <iostream>
 #include "FPGA.h"
-#include <queue>
-
-using namespace std;
+//using namespace std;
 
 
 int main()
@@ -29,7 +27,7 @@ int main()
 	std::cout << "the current size is: " << aa[0].size() << "\n";
 	getchar();
 	*/
-	
+
 
 	return 0;
 }

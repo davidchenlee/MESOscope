@@ -1,10 +1,11 @@
 #pragma once
 #include "NiFpga_FPGA.h"
-
+#include <queue>
 
 #define tickPerUs 40				//Master clock. Number of ticks in 1 us
 #define _us 1
-#define _ms 1000
+#define _ms 1000*_us
+#define _s 1000000*_us
 #define _tick 1
 #define _V 1
 #define LSBmask 0x0000FFFF			//Select the 16 least significant bits
@@ -25,5 +26,7 @@ void RunFPGA();
 tt_t us2tick(double x);
 int16_t AOUT(double x);
 uint32_t u32pack(tt_t t, uint16_t x);
+void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);
 void PulseTrigger(NiFpga_Status* status, NiFpga_Session session);
-void PulseStart(NiFpga_Status* status, NiFpga_Session session);
+void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, std::queue<uint32_t>* Qarray);
+

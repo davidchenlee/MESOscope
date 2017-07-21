@@ -2,8 +2,7 @@
 #include <limits.h>		//for _I16_MAX??
 #include <iostream>
 #include "windows.h"	//the stages use this lib. also Sleep
-#include <queue>
-using namespace std;
+//using namespace std;
 
 void printHex(int16_t input)
 {
@@ -18,6 +17,7 @@ std::queue<uint32_t> linearRamp(tt_t dt, tt_t ti, tt_t tf, double Vi, double Vf)
 	{
 		std::cout << "WARNING: step size too small. Step size set to " << AO_dt << " us";
 		dt = AO_dt; //Analog output time increment in us
+		getchar();
 	}
 
 	uint32_t nPoints = (uint32_t)((tf - ti) / dt);		//number of points
@@ -29,6 +29,7 @@ std::queue<uint32_t> linearRamp(tt_t dt, tt_t ti, tt_t tf, double Vi, double Vf)
 	{
 		std::cout << "ERROR: not enought points for the analog linear ramp\n";
 		std::cout << "nPoints: " << nPoints << "\n";
+		getchar();
 	}
 	else
 	{
@@ -69,152 +70,86 @@ void RunFPGA()
 	{
 		NiFpga_Session session;
 
-		/* opens a session, downloads the bitstream, but does not run the FPGA */
+		/* opens a session, downloads the bitstream*/
 		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGA_Signature, "RIO0", 0, &session)); //1=no run, 0=run
 		std::cout << "FPGA open-session status: " << status << "\n";
 
 		if (NiFpga_IsNotError(status))
 		{
-			//Initialize the FPGA variables
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
-			NiFpga_MergeStatus(&status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFOtimeout, 80));
-			NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));//DELAY. Sync AO and DO by delaying DO
-			std::cout << "FPGA initialize-variables status: " << status << "\n";
+			InitializeFPGA(&status, session);
 
-			//run the FPGA application
+			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-			//Create an array of queues. A queue for each channel
-			std::queue<uint32_t>* FIFO = new std::queue<uint32_t>[Nchannels];
+			//Create an array of queues. Assigns a queue at each channel
+			std::queue<uint32_t>* Qarray = new std::queue<uint32_t>[Nchannels];
 
 			//AO1
 			tt_t At0 = us2tick(4 * _us);//40 tick = 1 us
 			tt_t At1 = us2tick(1400 * _us);
 			tt_t At2 = us2tick(4 * _us);
 			tt_t At3 = us2tick(4 * _us);
-			int16_t VO0 = AOUT(5*_V);
+			int16_t VO0 = AOUT(10*_V);
 			int16_t VO1 = AOUT(0*_V);
 			int16_t VO2 = AOUT(0*_V);
 			int16_t VO3 = AOUT(0*_V);
-
-			FIFO[0].push(u32pack(At0, VO0));
-			FIFO[0].push(u32pack(At1, VO1));
-			FIFO[0].push(u32pack(At2, VO2));
-			FIFO[0].push(u32pack(At3, VO3));
+			Qarray[0].push(u32pack(At0, VO0));
+			Qarray[0].push(u32pack(At1, VO1));
+			Qarray[0].push(u32pack(At2, VO2));
+			Qarray[0].push(u32pack(At3, VO3));
 
 			//AO2
-			FIFO[1].push(u32pack(us2tick(5 * _us), VO0));
-			FIFO[1].push(u32pack(At1, VO1));
-			FIFO[1].push(u32pack(At2, VO2));
-			FIFO[1].push(u32pack(At3, VO3));
+			Qarray[1].push(u32pack(us2tick(5 * _us), VO0));
+			Qarray[1].push(u32pack(At1, VO1));
+			Qarray[1].push(u32pack(At2, VO2));
+			Qarray[1].push(u32pack(At3, VO3));
 
 			//DO1
 			tt_t Dt0 = us2tick(4 * _us); //40 tick = 1 us
 			tt_t Dt1 = us2tick(1 * _ms);
 			tt_t Dt2 = us2tick(4 * _us);
 			tt_t Dt3 = us2tick(4 * _us);
-	
-			FIFO[2].push(u32pack(Dt0, 0x0001));
-			FIFO[2].push(u32pack(Dt1, 0x0000));
-			FIFO[2].push(u32pack(Dt2, 0x0000));
-			FIFO[2].push(u32pack(Dt3, 0x0000));
+			Qarray[2].push(u32pack(Dt0, 0x0001));
+			Qarray[2].push(u32pack(Dt1, 0x0000));
+			Qarray[2].push(u32pack(Dt2, 0x0001));
+			Qarray[2].push(u32pack(Dt3, 0x0000));
 
 
 			//linear output
-			std::queue<uint32_t> linearR = linearRamp(1*_us, 0 * _us, 1000 * _us, 0, 10*_V);
+			std::queue<uint32_t> linearR = linearRamp(4*_us, 0 * _us, 1 * _ms, 0, 10*_V);
 			linearR.push(u32pack(4*_us, 0));//return to zero
-			FIFO[0] = linearR;//overwrite FIFO[0] with a linear ramp
+			//Qarray[0] = linearR;//overwrites FIFO[0] with a linear ramp
 
 
-			//Merge the queues
-			std::queue<uint32_t> allFIFOs;
-			for (size_t i = 0; i < Nchannels; i++)
-			{
-				allFIFOs.push(FIFO[i].size()); //push the number of elements in each queue
-				while (!FIFO[i].empty())
-				{
-					allFIFOs.push(FIFO[i].front());
-					FIFO[i].pop();
-				}
-			}
-			delete[] FIFO; //cleanup
-
-
-
-			//transfer the queue to an array. THE ORDER DETERMINES THE TARGETED CHANNEL
-			size_t sizeFIFOqueue = allFIFOs.size();
-			uint32_t* FIFOarray = new uint32_t[sizeFIFOqueue];
-			for (size_t i = 0; i < sizeFIFOqueue; i++)
-			{
-				FIFOarray[i] = allFIFOs.front();
-				allFIFOs.pop();
-			}
-			allFIFOs = {}; //cleanup
-
-
-
-			//send the data to the FPGA through the FIFO
-			uint32_t timeout = -1; // in ms. -1 means no timeout
-			size_t r; //empty elements remaining
-			NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFOarray, sizeFIFOqueue, timeout, &r));
-			std::cout << "FPGA FIFO status: " << status << "\n";
+			SendOutQueue(&status, session, Qarray);
 			PulseTrigger(&status, session);
-			delete[] FIFOarray;
-
-
+			delete[] Qarray;//cleanup
+			
+	
 			//SECOND ROUND
-			if (0)
+			if (1)
 			{
-				std::queue<uint32_t>* FIFO = new std::queue<uint32_t>[Nchannels];
+				std::queue<uint32_t>* Qarray2 = new std::queue<uint32_t>[Nchannels];
 
 				tt_t At0 = us2tick(4 * _us);//40 tick = 1 us
 				tt_t At1 = us2tick(4 * _us);
-				int16_t Vout0 = AOUT(5*_V);
-				int16_t Vout1 = AOUT(0);
+				int16_t VO0 = AOUT(5*_V);
+				int16_t VO1 = AOUT(0);
 
 				//AO1
-				FIFO[0].push(u32pack(At0, VO0));
-				FIFO[0].push(u32pack(At1, VO1));
+				Qarray2[0].push(u32pack(At0, VO0));
+				Qarray2[0].push(u32pack(At1, VO1));
 				//AO2
-				FIFO[1].push(u32pack(At0, VO0));
-				FIFO[1].push(u32pack(At1, VO1));
+				Qarray2[1].push(u32pack(At0, VO0));
+				Qarray2[1].push(u32pack(At1, VO1));
 				//DO1
-				FIFO[2].push(u32pack(Dt0, 0x0001));
-				FIFO[2].push(u32pack(Dt1, 0x0000));
+				Qarray2[2].push(u32pack(Dt0, 0x0001));
+				Qarray2[2].push(u32pack(Dt1, 0x0000));
 
-
-				//Merge the queues
-				std::queue<uint32_t> allFIFOs;
-				for (size_t i = 0; i < Nchannels; i++)
-				{
-					allFIFOs.push(FIFO[i].size()); //push the number of elements in each queue
-					while (!FIFO[i].empty())
-					{
-						allFIFOs.push(FIFO[i].front());
-						FIFO[i].pop();
-					}
-
-				}
-				delete[] FIFO; //cleanup
-
-
-				
-				//transfer the queue to an array. THE ORDER DETERMINES THE TARGETED CHANNEL
-				size_t sizeFIFOqueue = allFIFOs.size();
-				uint32_t* FIFOarray = new uint32_t[sizeFIFOqueue];
-				for (size_t i = 0; i < sizeFIFOqueue; i++)
-				{
-					FIFOarray[i] = allFIFOs.front();
-					allFIFOs.pop();
-				}
-				allFIFOs = {}; //cleanup
-
-
-				//send the data through FIFO
-				NiFpga_MergeStatus(&status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFOarray, sizeFIFOqueue, timeout, &r));
-				std::cout << "FPGA FIFO status: " << status << "\n";
+				SendOutQueue(&status, session, Qarray2);
 				PulseTrigger(&status, session);
-				delete[] FIFOarray;
+
+				delete[] Qarray2;//cleanup
 			}
 
 
@@ -255,67 +190,55 @@ uint32_t u32pack(tt_t t, uint16_t x)
 	return (t << Abits) | (LSBmask & x);
 }
 
+void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
+{
+	//Initialize the FPGA variables
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFOtimeout, 80));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));//DELAY. Sync AO and DO by delaying DO
+	std::cout << "FPGA initialize-variables status: " << *status << "\n";
+}
+
 
 void PulseTrigger(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
+	std::cout << "Pulse trigger: " << *status << "\n";
 }
 
-void PulseStart(NiFpga_Status* status, NiFpga_Session session)
+
+void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, std::queue<uint32_t>* Qarray)
 {
-	//NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 1));
-	//NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start, 0));
+	//take an array of queues and return them as a single queue
+	std::queue<uint32_t> allQs;
+	for (size_t i = 0; i < Nchannels; i++)
+	{
+		allQs.push(Qarray[i].size()); //push the number of elements in the queue
+		while (!Qarray[i].empty())
+		{
+			allQs.push(Qarray[i].front());
+			Qarray[i].pop();
+		}
+	}
+	//transfer the queue to an array. THE ORDER DETERMINES THE TARGETED CHANNEL
+	size_t sizeFIFOqueue = allQs.size();
+	uint32_t* FIFO = new uint32_t[sizeFIFOqueue];
+	for (size_t i = 0; i < sizeFIFOqueue; i++)
+	{
+		FIFO[i] = allQs.front();
+		allQs.pop();
+	}
+	allQs = {};//cleanup
+
+	//send the data to the FPGA through the FIFO
+	uint32_t timeout = -1; // in ms. -1 means no timeout
+	size_t r; //empty elements remaining
+	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFIFOqueue, timeout, &r));
+
+	std::cout << "FPGA FIFO status: " << *status << "\n";
+	delete[] FIFO;//cleanup
 }
-
-
-std::queue<uint32_t> MergeQueues(std::queue<uint32_t> FIFOAO1, std::queue<uint32_t> FIFOAO2, std::queue<uint32_t> FIFODO1)
-{
-	//create the FIFO queue
-	std::queue<uint32_t> FIFOqueue;
-	//AO1
-	FIFOqueue.push((FIFOAO1).size()); //push the number of elements in the queue
-	while (!FIFOAO1.empty())
-	{
-		FIFOqueue.push(FIFOAO1.front());
-		FIFOAO1.pop();
-	}
-	//AO2
-	FIFOqueue.push(FIFOAO2.size()); //push the number of elements in the queue
-	while (!FIFOAO2.empty())
-	{
-		FIFOqueue.push(FIFOAO2.front());
-		FIFOAO2.pop();
-	}
-	//DO1
-	FIFOqueue.push(FIFODO1.size()); //push the number of elements in the queue
-	while (!FIFODO1.empty())
-	{
-		FIFOqueue.push(FIFODO1.front());
-		FIFODO1.pop();
-	}
-	return FIFOqueue;
-}
-
-
-
-/*for the digital channel, I will define the sequece as
-wait(t1)
-DOUT(channel, bit)
-wait(t2)
-DOUT(channel, bit)
-...etc
-
-I would like to convert it into the form
-
-DOUT(channel, duration, bit,)
-DOUT(channel, duration, bit,)
-...etc
-
-
-*/
-
-
 
 /*
 int i;

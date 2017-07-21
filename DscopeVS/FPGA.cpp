@@ -10,15 +10,20 @@ void printHex(int16_t input)
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
 
-std::queue<uint32_t> linearRamp(tt_t ti, tt_t tf, double Vi, double Vf)
+std::queue<uint32_t> linearRamp(tt_t dt, tt_t ti, tt_t tf, double Vi, double Vf)
 {
-	std::queue<uint32_t> OUTqueue;
+	std::queue<uint32_t> OUTqueue;					
+	
+	if (dt < AO_dt)
+	{
+		std::cout << "WARNING: step size too small. Step size set to " << AO_dt << " us";
+		dt = AO_dt; //Analog output time increment in us
+	}
 
-	tt_t dt = AO_dt;							//Analog output time increament in us
-	int nPoints = (int)((1.*tf - ti) / dt);		//number of points
+	uint32_t nPoints = (uint32_t)((tf - ti) / dt);		//number of points
 
-	tt_t* tPoints = new tt_t[nPoints];			//time points in us
-	double *vPoints = new double[nPoints];		//voltage points in V
+	tt_t* tPoints = new tt_t[nPoints];			//time (in us)
+	double *vPoints = new double[nPoints];		//voltage (in V)
 
 	if (nPoints <= 1)
 	{
@@ -27,7 +32,7 @@ std::queue<uint32_t> linearRamp(tt_t ti, tt_t tf, double Vi, double Vf)
 	}
 	else
 	{
-		for (int ii = 0; ii < nPoints; ii++)
+		for (uint32_t ii = 0; ii < nPoints; ii++)
 		{
 			tPoints[ii] = ti + ii * dt; //just for debugging 
 			vPoints[ii] = Vi + (Vf - Vi)*ii / (nPoints - 1);
@@ -41,7 +46,7 @@ std::queue<uint32_t> linearRamp(tt_t ti, tt_t tf, double Vi, double Vf)
 		std::cout << "nPoints: " << nPoints << "\n";
 
 		std::cout << "time \tticks \tv \n";
-		for (int ii = 0; ii < nPoints; ii++)
+		for (uint32_t ii = 0; ii < nPoints; ii++)
 		{
 			std::cout << tPoints[ii] << "\t" << ii * dt*tickPerUs << "\t" << vPoints[ii] << "\t" << "\n";
 			//std::cout << ii << "\t" << aa[ii] << "\n";
@@ -79,18 +84,18 @@ void RunFPGA()
 			//run the FPGA application
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-
+			//Create an array of queues. A queue for each channel
 			std::queue<uint32_t>* FIFO = new std::queue<uint32_t>[Nchannels];
 
 			//AO1
-			tt_t At0 = us2tick(4 * us);//40 tick = 1 us
-			tt_t At1 = us2tick(1400 * us);
-			tt_t At2 = us2tick(4 * us);
-			tt_t At3 = us2tick(4 * us);
-			int16_t VO0 = AOUT(10);
-			int16_t VO1 = AOUT(0);
-			int16_t VO2 = AOUT(0);
-			int16_t VO3 = AOUT(0);
+			tt_t At0 = us2tick(4 * _us);//40 tick = 1 us
+			tt_t At1 = us2tick(1400 * _us);
+			tt_t At2 = us2tick(4 * _us);
+			tt_t At3 = us2tick(4 * _us);
+			int16_t VO0 = AOUT(5*_V);
+			int16_t VO1 = AOUT(0*_V);
+			int16_t VO2 = AOUT(0*_V);
+			int16_t VO3 = AOUT(0*_V);
 
 			FIFO[0].push(u32pack(At0, VO0));
 			FIFO[0].push(u32pack(At1, VO1));
@@ -98,27 +103,27 @@ void RunFPGA()
 			FIFO[0].push(u32pack(At3, VO3));
 
 			//AO2
-			FIFO[1].push(u32pack(us2tick(5 * us), VO0));
+			FIFO[1].push(u32pack(us2tick(5 * _us), VO0));
 			FIFO[1].push(u32pack(At1, VO1));
 			FIFO[1].push(u32pack(At2, VO2));
 			FIFO[1].push(u32pack(At3, VO3));
 
 			//DO1
-			tt_t Dt0 = us2tick(4 * us); //40 tick = 1 us
-			tt_t Dt1 = us2tick(1000 * us);
-			tt_t Dt2 = us2tick(4 * us);
-			tt_t Dt3 = us2tick(4 * us);
+			tt_t Dt0 = us2tick(4 * _us); //40 tick = 1 us
+			tt_t Dt1 = us2tick(1 * _ms);
+			tt_t Dt2 = us2tick(4 * _us);
+			tt_t Dt3 = us2tick(4 * _us);
 	
 			FIFO[2].push(u32pack(Dt0, 0x0001));
 			FIFO[2].push(u32pack(Dt1, 0x0000));
-			FIFO[2].push(u32pack(Dt2, 0x0001));
+			FIFO[2].push(u32pack(Dt2, 0x0000));
 			FIFO[2].push(u32pack(Dt3, 0x0000));
 
 
 			//linear output
-			std::queue<uint32_t> linearR = linearRamp(0 * us, 1000 * us, 0, 10);
-			linearR.push(u32pack(4*us, 0));
-			FIFO[0] = linearR;
+			std::queue<uint32_t> linearR = linearRamp(1*_us, 0 * _us, 1000 * _us, 0, 10*_V);
+			linearR.push(u32pack(4*_us, 0));//return to zero
+			FIFO[0] = linearR;//overwrite FIFO[0] with a linear ramp
 
 
 			//Merge the queues
@@ -131,7 +136,6 @@ void RunFPGA()
 					allFIFOs.push(FIFO[i].front());
 					FIFO[i].pop();
 				}
-
 			}
 			delete[] FIFO; //cleanup
 
@@ -159,13 +163,13 @@ void RunFPGA()
 
 
 			//SECOND ROUND
-			if (1)
+			if (0)
 			{
 				std::queue<uint32_t>* FIFO = new std::queue<uint32_t>[Nchannels];
 
-				tt_t At0 = us2tick(4 * us);//40 tick = 1 us
-				tt_t At1 = us2tick(4 * us);
-				int16_t Vout0 = AOUT(5);
+				tt_t At0 = us2tick(4 * _us);//40 tick = 1 us
+				tt_t At1 = us2tick(4 * _us);
+				int16_t Vout0 = AOUT(5*_V);
 				int16_t Vout1 = AOUT(0);
 
 				//AO1
@@ -236,13 +240,13 @@ tt_t us2tick(double x)
 	return (tt_t)(x * tickPerUs);
 }
 
-//converts voltage (range: -10 to 10) to signed int 16 (range: -32768 to 32767)
+//converts voltage (range: -10V to 10V) to signed int 16 (range: -32768 to 32767)
 //0x7FFFF = 0d32767
 //0xFFFF = -1
 //0x8000 = -32768
 int16_t AOUT(double x)
 {
-	return (int16_t)(x / 10 * _I16_MAX);
+	return (int16_t)(x / 10*_V * _I16_MAX);
 }
 
 //pack t as MSB and x as LSB

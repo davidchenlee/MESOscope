@@ -1,17 +1,14 @@
 #include "FPGA.h"
-#include <limits.h>		//for _I16_MAX??
-#include <iostream>
-#include "windows.h"	//the stages use this lib. also Sleep
-//using namespace std;
 
 void printHex(int16_t input)
 {
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
 
-std::queue<uint32_t> linearRamp(tt_t dt, tt_t ti, tt_t tf, double Vi, double Vf)
+U32Q linearRamp(tt_t dt, tt_t ti, tt_t tf, double Vi, double Vf)
 {
-	std::queue<uint32_t> OUTqueue;					
+	U32Q queue;		
+	bool debug = false;
 	
 	if (dt < AO_dt)
 	{
@@ -22,9 +19,6 @@ std::queue<uint32_t> linearRamp(tt_t dt, tt_t ti, tt_t tf, double Vi, double Vf)
 
 	uint32_t nPoints = (uint32_t)((tf - ti) / dt);		//number of points
 
-	tt_t* tPoints = new tt_t[nPoints];			//time (in us)
-	double *vPoints = new double[nPoints];		//voltage (in V)
-
 	if (nPoints <= 1)
 	{
 		std::cout << "ERROR: not enought points for the analog linear ramp\n";
@@ -33,141 +27,29 @@ std::queue<uint32_t> linearRamp(tt_t dt, tt_t ti, tt_t tf, double Vi, double Vf)
 	}
 	else
 	{
+		if (debug)
+		{
+			std::cout << "nPoints: " << nPoints << "\n";
+			std::cout << "time \tticks \tv \n";
+		}
+
 		for (uint32_t ii = 0; ii < nPoints; ii++)
 		{
-			tPoints[ii] = ti + ii * dt; //just for debugging 
-			vPoints[ii] = Vi + (Vf - Vi)*ii / (nPoints - 1);
-			OUTqueue.push( u32pack(dt*tickPerUs, AOUT(vPoints[ii])) );
-		}
-	}
-
-	//for debugging
-	if (0)
-	{
-		std::cout << "nPoints: " << nPoints << "\n";
-
-		std::cout << "time \tticks \tv \n";
-		for (uint32_t ii = 0; ii < nPoints; ii++)
-		{
-			std::cout << tPoints[ii] << "\t" << ii * dt*tickPerUs << "\t" << vPoints[ii] << "\t" << "\n";
-			//std::cout << ii << "\t" << aa[ii] << "\n";
-		}
-		getchar();
-	}
-	delete[] tPoints, vPoints;
-	return OUTqueue;
-}
-
-
-void RunFPGA()
-{
-	/* must be called before any other FPGA calls */
-	NiFpga_Status status = NiFpga_Initialize();
-	std::cout << "FPGA initialize status: " << status << "\n";
-
-	/* check for any FPGA error */
-	if (NiFpga_IsNotError(status))
-	{
-		NiFpga_Session session;
-
-		/* opens a session, downloads the bitstream*/
-		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGA_Signature, "RIO0", 0, &session)); //1=no run, 0=run
-		std::cout << "FPGA open-session status: " << status << "\n";
-
-		if (NiFpga_IsNotError(status))
-		{
-			InitializeFPGA(&status, session);
-
-			//run the FPGA application if the FPGA was opened in 'no-run' mode
-			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
-
-			//Create an array of queues. Assigns a queue at each channel
-			std::queue<uint32_t>* Qarray = new std::queue<uint32_t>[Nchannels];
-
-			//AO1
-			tt_t At0 = us2tick(4 * _us);//40 tick = 1 us
-			tt_t At1 = us2tick(1400 * _us);
-			tt_t At2 = us2tick(4 * _us);
-			tt_t At3 = us2tick(4 * _us);
-			int16_t VO0 = AOUT(10*_V);
-			int16_t VO1 = AOUT(0*_V);
-			int16_t VO2 = AOUT(0*_V);
-			int16_t VO3 = AOUT(0*_V);
-			Qarray[0].push(u32pack(At0, VO0));
-			Qarray[0].push(u32pack(At1, VO1));
-			Qarray[0].push(u32pack(At2, VO2));
-			Qarray[0].push(u32pack(At3, VO3));
-
-			//AO2
-			Qarray[1].push(u32pack(us2tick(5 * _us), VO0));
-			Qarray[1].push(u32pack(At1, VO1));
-			Qarray[1].push(u32pack(At2, VO2));
-			Qarray[1].push(u32pack(At3, VO3));
-
-			//DO1
-			tt_t Dt0 = us2tick(4 * _us); //40 tick = 1 us
-			tt_t Dt1 = us2tick(1 * _ms);
-			tt_t Dt2 = us2tick(4 * _us);
-			tt_t Dt3 = us2tick(4 * _us);
-			Qarray[2].push(u32pack(Dt0, 0x0001));
-			Qarray[2].push(u32pack(Dt1, 0x0000));
-			Qarray[2].push(u32pack(Dt2, 0x0001));
-			Qarray[2].push(u32pack(Dt3, 0x0000));
-
-
-			//linear output
-			std::queue<uint32_t> linearR = linearRamp(4*_us, 0 * _us, 1 * _ms, 0, 10*_V);
-			linearR.push(u32pack(4*_us, 0));//return to zero
-			//Qarray[0] = linearR;//overwrites FIFO[0] with a linear ramp
-
-
-			SendOutQueue(&status, session, Qarray);
-			PulseTrigger(&status, session);
-			delete[] Qarray;//cleanup
+			tt_t tPoint = ti + ii * dt; 
+			double vPoint = Vi + (Vf - Vi)*ii / (nPoints - 1);
+			queue.push( u32pack(dt*tickPerUs, AOUT(vPoint)) );
 			
-	
-			//SECOND ROUND
-			if (1)
-			{
-				std::queue<uint32_t>* Qarray2 = new std::queue<uint32_t>[Nchannels];
-
-				tt_t At0 = us2tick(4 * _us);//40 tick = 1 us
-				tt_t At1 = us2tick(4 * _us);
-				int16_t VO0 = AOUT(5*_V);
-				int16_t VO1 = AOUT(0);
-
-				//AO1
-				Qarray2[0].push(u32pack(At0, VO0));
-				Qarray2[0].push(u32pack(At1, VO1));
-				//AO2
-				Qarray2[1].push(u32pack(At0, VO0));
-				Qarray2[1].push(u32pack(At1, VO1));
-				//DO1
-				Qarray2[2].push(u32pack(Dt0, 0x0001));
-				Qarray2[2].push(u32pack(Dt1, 0x0000));
-
-				SendOutQueue(&status, session, Qarray2);
-				PulseTrigger(&status, session);
-
-				delete[] Qarray2;//cleanup
-			}
-
-
-			//EVIL FUNCTION. DO NOT USE
-			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target)
-			unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.*/
-			//NiFpga_MergeStatus(&status, NiFpga_Close(session, 1)); //0 resets, 1 does not reset
-
-
+			if (debug)
+				std::cout << tPoint << "\t" << ii * dt*tickPerUs << "\t" << vPoint << "\t" << "\n";
 		}
 
+		if (debug)
+			getchar();
 
-		/* You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.*/
-		NiFpga_MergeStatus(&status, NiFpga_Finalize());
-		std::cout << "FPGA finalize status: " << status << "\n";
-		Sleep(2000);
 	}
+	return queue;
 }
+
 
 //converts microseconds to ticks
 tt_t us2tick(double x)
@@ -208,23 +90,23 @@ void PulseTrigger(NiFpga_Status* status, NiFpga_Session session)
 }
 
 
-void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, std::queue<uint32_t>* Qarray)
+void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 {
-	//take an array of queues and return them as a single queue
-	std::queue<uint32_t> allQs;
-	for (size_t i = 0; i < Nchannels; i++)
+	//take a vector of queues and return it as a single queue
+	U32Q allQs;
+	for (uint32_t i = 0; i < Nchannels; i++)
 	{
-		allQs.push(Qarray[i].size()); //push the number of elements in the queue
-		while (!Qarray[i].empty())
+		allQs.push(QV[i].size()); //push the number of elements in the queue
+		while (!QV[i].empty())
 		{
-			allQs.push(Qarray[i].front());
-			Qarray[i].pop();
+			allQs.push(QV[i].front());
+			QV[i].pop();
 		}
 	}
 	//transfer the queue to an array. THE ORDER DETERMINES THE TARGETED CHANNEL
-	size_t sizeFIFOqueue = allQs.size();
+	uint32_t sizeFIFOqueue = allQs.size();
 	uint32_t* FIFO = new uint32_t[sizeFIFOqueue];
-	for (size_t i = 0; i < sizeFIFOqueue; i++)
+	for (uint32_t i = 0; i < sizeFIFOqueue; i++)
 	{
 		FIFO[i] = allQs.front();
 		allQs.pop();
@@ -233,12 +115,24 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, std::queue<uint
 
 	//send the data to the FPGA through the FIFO
 	uint32_t timeout = -1; // in ms. -1 means no timeout
-	size_t r; //empty elements remaining
+	uint32_t r; //empty elements remaining
 	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFIFOqueue, timeout, &r));
 
 	std::cout << "FPGA FIFO status: " << *status << "\n";
 	delete[] FIFO;//cleanup
 }
+
+// ADD the 'tailQ' queue to the end of the 'headQ' queue
+U32Q ConcatenateQ(U32Q& headQ, U32Q& tailQ)
+{
+	while (!tailQ.empty())
+	{
+		headQ.push(tailQ.front());
+		tailQ.pop();
+	}
+	return headQ;
+}
+
 
 /*
 int i;

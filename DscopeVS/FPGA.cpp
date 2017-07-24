@@ -5,7 +5,8 @@ void printHex(int16_t input)
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
 
-U32Q linearRamp(tt_t dt, tt_t ti, tt_t tf, double Vi, double Vf)
+// time step, ramp length, initial voltage, final voltage
+U32Q linearRamp(double dt, double T, double Vi, double Vf)
 {
 	U32Q queue;		
 	bool debug = false;
@@ -17,7 +18,7 @@ U32Q linearRamp(tt_t dt, tt_t ti, tt_t tf, double Vi, double Vf)
 		getchar();
 	}
 
-	uint32_t nPoints = (uint32_t)((tf - ti) / dt);		//number of points
+	uint32_t nPoints = (uint32_t)(T / dt);		//number of points
 
 	if (nPoints <= 1)
 	{
@@ -35,12 +36,11 @@ U32Q linearRamp(tt_t dt, tt_t ti, tt_t tf, double Vi, double Vf)
 
 		for (uint32_t ii = 0; ii < nPoints; ii++)
 		{
-			tt_t tPoint = ti + ii * dt; 
-			double vPoint = Vi + (Vf - Vi)*ii / (nPoints - 1);
-			queue.push( u32pack(dt*tickPerUs, AOUT(vPoint)) );
+			double V = Vi + (Vf - Vi)*ii / (nPoints - 1);
+			queue.push(AnalogOut(dt, V));
 			
 			if (debug)
-				std::cout << tPoint << "\t" << ii * dt*tickPerUs << "\t" << vPoint << "\t" << "\n";
+				std::cout << (ii + 1) * dt << "\t" << (ii + 1) * us2tick(dt) << "\t" << V << "\t" << "\n";
 		}
 
 		if (debug)
@@ -52,9 +52,11 @@ U32Q linearRamp(tt_t dt, tt_t ti, tt_t tf, double Vi, double Vf)
 
 
 //converts microseconds to ticks
-tt_t us2tick(double x)
+fpga_t us2tick(double x)
 {
-	return (tt_t)(x * tickPerUs);
+	double aux = x * tickPerUs;
+	return (fpga_t) aux;
+	
 }
 
 //converts voltage (range: -10V to 10V) to signed int 16 (range: -32768 to 32767)
@@ -67,9 +69,19 @@ int16_t AOUT(double x)
 }
 
 //pack t as MSB and x as LSB
-uint32_t u32pack(tt_t t, uint16_t x)
+uint32_t u32pack(fpga_t t, uint16_t x)
 {
 	return (t << Abits) | (LSBmask & x);
+}
+
+uint32_t AnalogOut(double t, double V)
+{
+	return u32pack(us2tick(t), AOUT(V));
+}
+
+uint32_t DigitalOut(double t, uint16_t DO)
+{
+	return u32pack(us2tick(t), DO);
 }
 
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
@@ -103,7 +115,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 			QV[i].pop();
 		}
 	}
-	//transfer the queue to an array. THE ORDER DETERMINES THE TARGETED CHANNEL
+	//transfer the queue to an array to be sent to the FPGA. THE ORDER DETERMINES THE TARGETED CHANNEL
 	uint32_t sizeFIFOqueue = allQs.size();
 	uint32_t* FIFO = new uint32_t[sizeFIFOqueue];
 	for (uint32_t i = 0; i < sizeFIFOqueue; i++)
@@ -111,7 +123,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 		FIFO[i] = allQs.front();
 		allQs.pop();
 	}
-	allQs = {};//cleanup
+	allQs = {};//cleanup the queue in C++11
 
 	//send the data to the FPGA through the FIFO
 	uint32_t timeout = -1; // in ms. -1 means no timeout

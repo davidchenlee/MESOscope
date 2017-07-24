@@ -29,80 +29,75 @@ int main()
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
 			//Create a vector of queues. Assigns a queue to each channel
-			U32QV Qarray (Nchannels);
+			U32QV QV (Nchannels);
 
 			//AO1
-			tt_t At0 = us2tick(4 * _us);//40 tick = 1 us
-			tt_t At1 = us2tick(1400 * _us);
-			tt_t At2 = us2tick(4 * _us);
-			tt_t At3 = us2tick(4 * _us);
-			int16_t VO0 = AOUT(10 * _V);
-			int16_t VO1 = AOUT(0 * _V);
-			int16_t VO2 = AOUT(0 * _V);
-			int16_t VO3 = AOUT(0 * _V);
-			Qarray[0].push(u32pack(At0, VO0));
-			Qarray[0].push(u32pack(At1, VO1));
-			Qarray[0].push(u32pack(At2, VO2));
-			Qarray[0].push(u32pack(At3, VO3));
+			QV[0].push(AnalogOut(8*_us, 5*_V));
+			QV[0].push(AnalogOut(8*_us, 0*_V));
+			//QV[0].push(AnalogOut(1*_ms, 10*_V));
+			//QV[0].push(AnalogOut(1*_us, 0*_V);
+
+			U32Q linearRamp1 = linearRamp(8*_us, 1*_ms, 0*_V, 5*_V);
+			//QV[0] = ConcatenateQ(QV[0], linearRamp1);
+			QV[0].push(AnalogOut(8*_us, 10*_V));
+			QV[0].push(AnalogOut(8*_us, 0*_V));//go back to zero
+			linearRamp1 = {};
 
 			//AO2
-			Qarray[1].push(u32pack(us2tick(5 * _us), VO0));
-			Qarray[1].push(u32pack(At1, VO1));
-			Qarray[1].push(u32pack(At2, VO2));
-			Qarray[1].push(u32pack(At3, VO3));
+			//QV[1].push(u32pack(us2tick(5*_us), VO0));
+			//QV[1].push(u32pack(4*_ms, VO1));
+			//QV[1].push(u32pack(4*_us, VO2));
+			//QV[1].push(u32pack(4*_us, VO3));
 
 			//DO1
-			tt_t Dt0 = us2tick(4 * _us); //40 tick = 1 us
-			tt_t Dt1 = us2tick(1 * _ms);
-			tt_t Dt2 = us2tick(4 * _us);
-			tt_t Dt3 = us2tick(4 * _us);
-			Qarray[2].push(u32pack(Dt0, 0x0001));
-			Qarray[2].push(u32pack(Dt1, 0x0000));
-			Qarray[2].push(u32pack(Dt2, 0x0001));
-			Qarray[2].push(u32pack(Dt3, 0x0000));
+			QV[2].push(DigitalOut(8*_us, 0x0001));
+			QV[2].push(DigitalOut(8*_us, 0x0000));
+			//QV[2].push(u32pack(1*_ms, 0x0000));
+			QV[2].push(DigitalOut(8*_us, 0x0001));
+			QV[2].push(DigitalOut(8*_us, 0x0000));
 
-
+			/*
 			//linear output
-			U32Q linearRampUp = linearRamp(4 * _us, 0 * _us, 1 * _ms, 0*_V, 10 * _V);
-			U32Q linearRampDown = linearRamp(4 * _us, 0 * _us, 1 * _ms, 10*_V, 0 * _V);
-			Qarray[0] = ConcatenateQ(linearRampUp, linearRampDown);//overwrites FIFO[0] with a linear ramp
+			U32Q linearRamp1= linearRamp(4 * _ms, 1 * _s, 0*_V, -5 * _V);
+			U32Q linearRamp2 = linearRamp(4 * _ms, 1 * _s, -5*_V, 5 * _V);
+			U32Q linearRamp3 = linearRamp(4 * _ms, 1 * _s, 5 * _V, 0 * _V);
+			QV[0] = ConcatenateQ(ConcatenateQ(linearRamp1, linearRamp2), linearRamp3);//overwrites FIFO[0] with a linear ramp
+			linearRamp1, linearRamp2, linearRamp3 = {};
+			*/
 
-
-			SendOutQueue(&status, session, Qarray);
+			SendOutQueue(&status, session, QV);
 			PulseTrigger(&status, session);
 
 
 			//SECOND ROUND
-			if (1)
+			if (0)
 			{
-				U32QV Qarray2 (Nchannels);
+				U32QV QV2 (Nchannels);
 
-				tt_t At0 = us2tick(4 * _us);//40 tick = 1 us
-				tt_t At1 = us2tick(4 * _us);
-				int16_t VO0 = AOUT(5 * _V);
+				double At0 = 4 * _us;//40 tick = 1 us
+				double At1 = 4 * _us;
+				int16_t VO0 = AOUT(10 * _V);
 				int16_t VO1 = AOUT(0);
 
 				//AO1
-				Qarray2[0].push(u32pack(At0, VO0));
-				Qarray2[0].push(u32pack(At1, VO1));
+				QV2[0].push(u32pack(At0, VO0));
+				QV2[0].push(u32pack(At1, VO1));
 				//AO2
-				Qarray2[1].push(u32pack(At0, VO0));
-				Qarray2[1].push(u32pack(At1, VO1));
+				QV2[1].push(u32pack(At0, VO0));
+				QV2[1].push(u32pack(At1, VO1));
 				//DO1
-				Qarray2[2].push(u32pack(Dt0, 0x0001));
-				Qarray2[2].push(u32pack(Dt1, 0x0000));
+				QV2[2].push(u32pack(4*_us, 0x0001));
+				QV2[2].push(u32pack(4*_us, 0x0000));
 
-				SendOutQueue(&status, session, Qarray2);
+				SendOutQueue(&status, session, QV2);
 				PulseTrigger(&status, session);
 
 			}
-
 
 			//EVIL FUNCTION. DO NOT USE
 			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target)
 			unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.*/
 			//NiFpga_MergeStatus(&status, NiFpga_Close(session, 1)); //0 resets, 1 does not reset
-
 
 		}
 

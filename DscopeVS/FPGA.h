@@ -9,13 +9,14 @@
 
 #define _tick 1						//a tick of the FPGA's clock
 #define tickPerUs 40				//Number of ticks in 1 us. Depends on the FPGA hardware clock
+#define AOtickPerUs 40				//Number of ticks in 1 us. Depends on the FPGA hardware clock
 #define _us 1
 #define _ms 1000*_us				//millisecond
 #define _s 1000000*_us				//second
 #define _V 1						//volt
 #define LSBmask 0x0000FFFF			//Mast the 16 most significant bits
 #define Abits 16					//Number of bits of the analog output
-#define AO_dt 8*_us					//Analog output time increament in us. Currently, the AO works well with 4us or more.
+#define AO_dt 4*_us					//Analog output time increament in us. Currently, the AO works well with 4us or more.
 #define Nchannels 3					//Number of channels available. WARNING: This number has to match the implementation on the FPGA!
 
 typedef uint32_t tt_t;				//Time type
@@ -31,11 +32,11 @@ static const char* const Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\DscopeVS\\LabVi
 
 //prototypes
 U32Q linearRamp(double dt, double T, double Vi, double Vf);
-fpga_t us2tick(double x);
 int16_t AOUT(double x);
 uint32_t u32pack(fpga_t t, uint16_t x);
 uint32_t AnalogOut(double t, double V);
-uint32_t DigitalOut(double t, uint16_t DO);
+fpga_t us2tick(double x);
+uint32_t DigitalOut(double t, bool DO);
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);
 void PulseTrigger(NiFpga_Status* status, NiFpga_Session session);
 void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& Qarray);

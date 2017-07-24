@@ -51,13 +51,6 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 }
 
 
-//converts microseconds to ticks
-fpga_t us2tick(double x)
-{
-	double aux = x * tickPerUs;
-	return (fpga_t) aux;
-	
-}
 
 //converts voltage (range: -10V to 10V) to signed int 16 (range: -32768 to 32767)
 //0x7FFFF = 0d32767
@@ -74,14 +67,27 @@ uint32_t u32pack(fpga_t t, uint16_t x)
 	return (t << Abits) | (LSBmask & x);
 }
 
-uint32_t AnalogOut(double t, double V)
+
+//convert microseconds to ticks
+fpga_t us2tick(double t)
 {
-	return u32pack(us2tick(t), AOUT(V));
+	double aux = t * tickPerUs;
+	return (fpga_t)aux;
+
 }
 
-uint32_t DigitalOut(double t, uint16_t DO)
+uint32_t AnalogOut(double t, double V)
 {
-	return u32pack(us2tick(t), DO);
+	uint16_t AOcal = 2; //To adjust this calibration factor, generate a ramp on the AO and match the last step with the DO
+	return u32pack(us2tick(t) - AOcal, AOUT(V));
+}
+
+uint32_t DigitalOut(double t, bool DO)
+{
+	if (DO)
+		return u32pack(us2tick(t), 0x0001);
+	else
+		return  u32pack(us2tick(t), 0x0000);
 }
 
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
@@ -116,7 +122,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 		}
 	}
 	//transfer the queue to an array to be sent to the FPGA. THE ORDER DETERMINES THE TARGETED CHANNEL
-	uint32_t sizeFIFOqueue = allQs.size();
+	size_t sizeFIFOqueue = allQs.size();
 	uint32_t* FIFO = new uint32_t[sizeFIFOqueue];
 	for (uint32_t i = 0; i < sizeFIFOqueue; i++)
 	{
@@ -127,7 +133,8 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 
 	//send the data to the FPGA through the FIFO
 	uint32_t timeout = -1; // in ms. -1 means no timeout
-	uint32_t r; //empty elements remaining
+	size_t r = 1; //empty elements remaining
+
 	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFIFOqueue, timeout, &r));
 
 	std::cout << "FPGA FIFO status: " << *status << "\n";

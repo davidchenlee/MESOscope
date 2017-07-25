@@ -3,7 +3,9 @@
 //#include <concrt.h> 	//Concurrency::wait(2000);
 #include "windows.h"	//the stages use this lib. also Sleep
 #include "FPGA.h"
-#include "Seqs.h"
+#include "Sequences.h"
+#include "Seq.h"
+#include "Const.h"
 //using namespace std;
 
 
@@ -32,6 +34,9 @@ int main()
 			SendOutQueue(&status, session, Seq1());
 			PulseTrigger(&status, session);
 
+			//Seq ss;
+			//ss.print();
+
 			//SECOND ROUND
 			if (0)
 			{
@@ -43,14 +48,12 @@ int main()
 			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target)
 			unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.*/
 			//NiFpga_MergeStatus(&status, NiFpga_Close(session, 1)); //0 resets, 1 does not reset
-
 		}
-
 
 		/* You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.*/
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 		std::cout << "FPGA finalize status: " << status << "\n";
-		Sleep(2000);
+		Sleep(1000);
 	}
 
 	return 0;

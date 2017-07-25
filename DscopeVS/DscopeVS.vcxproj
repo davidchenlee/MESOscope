@@ -141,14 +141,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Const.cpp" />
     <ClCompile Include="FPGA.cpp" />
     <ClCompile Include="LabView\FPGA Bitfiles\NiFpga.c" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Seqs.cpp" />
+    <ClCompile Include="Seq.cpp" />
+    <ClCompile Include="Sequences.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Const.h" />
     <ClInclude Include="FPGA.h" />
-    <ClInclude Include="Seqs.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="Seq.h" />
+    <ClInclude Include="Sequences.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="DscopeVS.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

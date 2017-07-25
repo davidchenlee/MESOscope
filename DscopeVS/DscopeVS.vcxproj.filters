@@ -24,7 +24,13 @@
     <ClCompile Include="FPGA.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Seqs.cpp">
+    <ClCompile Include="Seq.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Sequences.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Const.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -32,8 +38,22 @@
     <ClInclude Include="FPGA.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Seqs.h">
+    <ClInclude Include="Seq.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Sequences.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Const.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="DscopeVS.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

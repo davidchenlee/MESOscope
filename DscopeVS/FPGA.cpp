@@ -1,11 +1,11 @@
 #include "FPGA.h"
 
-void printHex(int16_t input)
+void printHex(U16 input)
 {
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
 
-// time step, ramp length, initial voltage, final voltage
+// PARAMETERS: time step, ramp length, initial voltage, final voltage
 U32Q linearRamp(double dt, double T, double Vi, double Vf)
 {
 	U32Q queue;		
@@ -18,7 +18,7 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 		getchar();
 	}
 
-	uint32_t nPoints = (uint32_t)(T / dt);		//number of points
+	U32 nPoints = (U32)(T / dt);		//number of points
 
 	if (nPoints <= 1)
 	{
@@ -34,7 +34,7 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 			std::cout << "time \tticks \tv \n";
 		}
 
-		for (uint32_t ii = 0; ii < nPoints; ii++)
+		for (U32 ii = 0; ii < nPoints; ii++)
 		{
 			double V = Vi + (Vf - Vi)*ii / (nPoints - 1);
 			queue.push(AnalogOut(dt, V));
@@ -51,43 +51,42 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 }
 
 
+//time t and analog output x are encoded in 16 bits each. Pack t as MSB and x as LSB.
+U32 u32pack(U16 t, U16 x)
+{
+	return (t << 16) | (0x0000FFFF & x);
+}
+
+
+//convert microseconds to ticks
+U16 us2tick(double t)
+{
+	double aux = t * tickPerUs;
+	return (U16) aux;
+
+}
 
 //converts voltage (range: -10V to 10V) to signed int 16 (range: -32768 to 32767)
 //0x7FFFF = 0d32767
 //0xFFFF = -1
 //0x8000 = -32768
-int16_t AOUT(double x)
+I16 AOUT(double x)
 {
-	return (int16_t)(x / 10*_V * _I16_MAX);
+	return (U16)(x / 10 * _V * _I16_MAX);
 }
 
-//pack t as MSB and x as LSB
-uint32_t u32pack(fpga_t t, uint16_t x)
+U32 AnalogOut(double t, double V)
 {
-	return (t << Abits) | (LSBmask & x);
-}
-
-
-//convert microseconds to ticks
-fpga_t us2tick(double t)
-{
-	double aux = t * tickPerUs;
-	return (fpga_t)aux;
-
-}
-
-uint32_t AnalogOut(double t, double V)
-{
-	uint16_t AOcal = 2; //To adjust this calibration factor, generate a ramp on the AO and match the last step with the DO
+	U16 AOcal = 2; //To adjust this calibration factor, generate a ramp on the AO and match the last step with the DO
 	return u32pack(us2tick(t) - AOcal, AOUT(V));
 }
 
-uint32_t DigitalOut(double t, bool DO)
+U32 DigitalOut(double t, bool DO)
 {
 	if (DO)
 		return u32pack(us2tick(t), 0x0001);
 	else
-		return  u32pack(us2tick(t), 0x0000);
+		return u32pack(us2tick(t), 0x0000);
 }
 
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
@@ -112,7 +111,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 {
 	//take a vector of queues and return it as a single queue
 	U32Q allQs;
-	for (uint32_t i = 0; i < Nchannels; i++)
+	for (U32 i = 0; i < Nchannels; i++)
 	{
 		allQs.push(QV[i].size()); //push the number of elements in the queue
 		while (!QV[i].empty())
@@ -122,9 +121,9 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 		}
 	}
 	//transfer the queue to an array to be sent to the FPGA. THE ORDER DETERMINES THE TARGETED CHANNEL
-	size_t sizeFIFOqueue = allQs.size();
-	uint32_t* FIFO = new uint32_t[sizeFIFOqueue];
-	for (uint32_t i = 0; i < sizeFIFOqueue; i++)
+	U32 sizeFIFOqueue = allQs.size();
+	U32* FIFO = new U32[sizeFIFOqueue];
+	for (U32 i = 0; i < sizeFIFOqueue; i++)
 	{
 		FIFO[i] = allQs.front();
 		allQs.pop();
@@ -132,8 +131,8 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	allQs = {};//cleanup the queue in C++11
 
 	//send the data to the FPGA through the FIFO
-	uint32_t timeout = -1; // in ms. -1 means no timeout
-	size_t r = 1; //empty elements remaining
+	U32 timeout = -1; // in ms. -1 means no timeout
+	U32 r = 1; //empty elements remaining
 
 	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFIFOqueue, timeout, &r));
 
@@ -141,15 +140,22 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	delete[] FIFO;//cleanup
 }
 
-// ADD the 'tailQ' queue to the end of the 'headQ' queue
-U32Q ConcatenateQ(U32Q& headQ, U32Q& tailQ)
+// Create a new queue with 'headQ' and 'tailQ' combined
+U32Q NewConcatenatedQ(U32Q& headQ, U32Q& tailQ)
 {
+	U32Q newQ;
+	while (!headQ.empty())
+	{
+		newQ.push(headQ.front());
+		headQ.pop();
+	}
 	while (!tailQ.empty())
 	{
-		headQ.push(tailQ.front());
+		newQ.push(tailQ.front());
 		tailQ.pop();
 	}
-	return headQ;
+	headQ, tailQ = {};
+	return newQ;
 }
 
 

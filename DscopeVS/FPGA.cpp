@@ -85,10 +85,10 @@ I16 AOUT(double x)
 }
 
 
-U32 AnalogOut(double t, double V)
+U32 AnalogOut(double t, double val)
 {
 	U16 AOcal = 2; //To adjust this calibration factor, generate a ramp on the AO and match the last step with the DO
-	return u32pack(us2tick(t) - AOcal, AOUT(V));
+	return u32pack(us2tick(t) - AOcal, AOUT(val));
 }
 
 

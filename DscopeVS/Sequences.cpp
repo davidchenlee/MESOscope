@@ -50,6 +50,7 @@ U32QV Seq2()
 	return QV;
 }
 
+//this is a queue, not a vector of queues
 U32Q GalvoSeq()
 {
 	double Vmax = 5;
@@ -63,5 +64,15 @@ U32Q GalvoSeq()
 	PushQ(Q, linearRamp2);
 	PushQ(Q, linearRamp3);
 	return Q;
+}
+
+U32QV GalvoTest()
+{
+	U32QV QV(Nchan);
+
+	QV[2].push(DigitalOut(62.5 * us, 1));
+	QV[2].push(DigitalOut(4 * us, 0));
+
+	return QV;
 }
 

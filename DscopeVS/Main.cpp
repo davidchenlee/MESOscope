@@ -5,13 +5,21 @@
 #include "FPGA.h"
 #include "Sequences.h"
 #include "Seq.h"
-#include "Const.h"
 //using namespace std;
 
 
 int main()
 {
-	/* must be called before any other FPGA calls */
+	if (0)
+	{
+		Seq ss;
+		ss.shutter(1 * us, 1);
+		std::cout << "size of the vector" << ss.size() << "\n";
+		std::cout << "" << (ss.vector())[0].size() << "\n";
+		Sleep(1000);
+	}
+	else {
+			/* must be called before any other FPGA calls */
 	NiFpga_Status status = NiFpga_Initialize();
 	std::cout << "FPGA initialize status: " << status << "\n";
 
@@ -31,11 +39,8 @@ int main()
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-			SendOutQueue(&status, session, Seq1());
+			SendOutQueue(&status, session, GalvoTest());
 			PulseTrigger(&status, session);
-
-			//Seq ss;
-			//ss.print();
 
 			//SECOND ROUND
 			if (0)
@@ -55,6 +60,8 @@ int main()
 		std::cout << "FPGA finalize status: " << status << "\n";
 		Sleep(1000);
 	}
+	}
+
 
 	return 0;
 }

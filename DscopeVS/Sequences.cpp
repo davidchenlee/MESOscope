@@ -88,7 +88,7 @@ U32QV AnalogTimingCalib()
 	QV[0].push(AnalogOut(step, 0));//initial pulse
 	QV[0].push(AnalogOut(step, 0));
 	QV[0] = PushQ(QV[0], linearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
-	QV[0].push(AnalogOut(step, 10));//final pulse
+	QV[0].push(AnalogOut(step, 5));//final pulse
 	QV[0].push(AnalogOut(step, 0));
 
 	//DO1

@@ -43,7 +43,7 @@ int main()
 			PulseTrigger(&status, session);
 
 			//SECOND ROUND
-			if (0)
+			if (1)
 			{
 				SendOutQueue(&status, session, Seq2());
 				PulseTrigger(&status, session);

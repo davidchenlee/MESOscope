@@ -7,15 +7,15 @@ U32QV Seq1()
 
 	//AO1
 	QV[0].push(AnalogOut(4 * us, 10));
-	QV[0].push(AnalogOut(4 * us, 0));
+	QV[0].push(AnalogOut(100 * us, 0));
 	//QV[0].push(AnalogOut(1*ms, 10));
 	//QV[0].push(AnalogOut(1*us, 0);
-	QV[0] = PushQ(QV[0], linearRamp(4 * us, 1 * ms, 0, 5));
+	//QV[0] = PushQ(QV[0], linearRamp(4 * us, 1 * ms, 0, 5));
 	//QV[0].push(AnalogOut(1*_ms, 0));
 	QV[0].push(AnalogOut(4 * us, 5));
 	QV[0].push(AnalogOut(4 * us, 0));//go back to zero
 
-	QV[0] = GalvoSeq();
+	//QV[0] = GalvoSeq();
 
 	//AO2
 	QV[1].push(AnalogOut(4*us, 0));
@@ -25,8 +25,8 @@ U32QV Seq1()
 
 	//DO1
 	QV[2].push(DigitalOut(4 * us, 1));
-	QV[2].push(DigitalOut(4 * us, 0));
-	QV[2].push(DigitalOut(1 * ms, 0));
+	QV[2].push(DigitalOut(100 * us, 0));
+	//QV[2].push(DigitalOut(1 * ms, 0));
 	QV[2].push(DigitalOut(4 * us, 1));
 	QV[2].push(DigitalOut(4 * us, 0));
 
@@ -76,3 +76,27 @@ U32QV GalvoTest()
 	return QV;
 }
 
+
+U32QV AnalogTimingCalib()
+{
+	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	U32QV QV(Nchan);
+	double delay = 400 * us;
+	double step = 4 * us;
+
+	//AO1
+	QV[0].push(AnalogOut(step, 0));//initial pulse
+	QV[0].push(AnalogOut(step, 0));
+	QV[0] = PushQ(QV[0], linearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
+	QV[0].push(AnalogOut(step, 10));//final pulse
+	QV[0].push(AnalogOut(step, 0));
+
+	//DO1
+	QV[2].push(DigitalOut(step, 1));
+	QV[2].push(DigitalOut(step, 0));
+	QV[2].push(DigitalOut(delay, 0));
+	QV[2].push(DigitalOut(step, 1));
+	QV[2].push(DigitalOut(step, 0));
+
+	return QV;
+}

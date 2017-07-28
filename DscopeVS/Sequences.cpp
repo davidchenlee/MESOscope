@@ -77,15 +77,16 @@ U32QV GalvoTest()
 }
 
 
-U32QV AnalogTimingCalib()
+U32QV AnalogLatencyCalib()
 {
+	//Calibrate DO first, then use it as a time reference
 	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 	U32QV QV(Nchan);
 	double delay = 400 * us;
 	double step = 4 * us;
 
 	//AO1
-	QV[0].push(AnalogOut(step, 0));//initial pulse
+	QV[0].push(AnalogOut(step, 10));//initial pulse
 	QV[0].push(AnalogOut(step, 0));
 	QV[0] = PushQ(QV[0], linearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
 	QV[0].push(AnalogOut(step, 5));//final pulse
@@ -95,6 +96,32 @@ U32QV AnalogTimingCalib()
 	QV[2].push(DigitalOut(step, 1));
 	QV[2].push(DigitalOut(step, 0));
 	QV[2].push(DigitalOut(delay, 0));
+	QV[2].push(DigitalOut(step, 1));
+	QV[2].push(DigitalOut(step, 0));
+
+	return QV;
+}
+
+U32QV DigitalLatencyCalib()
+{
+	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	U32QV QV(Nchan);
+	double delay = 400 * us;
+	double step = 4 * us;
+
+	//AO1
+	QV[0].push(AnalogOut(step, 10));//initial pulse
+	QV[0].push(AnalogOut(step, 0));
+	QV[0] = PushQ(QV[0], linearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
+	QV[0].push(AnalogOut(step, 5));//final pulse
+	QV[0].push(AnalogOut(step, 0));
+
+	//DO1
+	QV[2].push(DigitalOut(step, 1));
+
+	for (int ii = 0; ii < 99; ii++)
+		QV[2].push(DigitalOut(step, 0));
+
 	QV[2].push(DigitalOut(step, 1));
 	QV[2].push(DigitalOut(step, 0));
 

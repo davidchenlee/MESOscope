@@ -87,17 +87,18 @@ I16 AOUT(double x)
 
 U32 AnalogOut(double t, double val)
 {
-	U16 AOcal = 2; //The AO wait-time is slightly off (why?). Generate a ramp on the AO to accumulate the error, then match the last step with a DO pulse
-	return u32pack(us2tick(t) - AOcal, AOUT(val));
+	U16 AOlatency = 2; //To  calibrate it, run AnalogLatencyCalib()
+	return u32pack(us2tick(t) - AOlatency, AOUT(val));
 }
 
 
 U32 DigitalOut(double t, bool DO)
 {
+	U16 DOlatency = 2;//To  calibrate it, run DigitalLatencyCalib()
 	if (DO)
-		return u32pack(us2tick(t), 0x0001);
+		return u32pack(us2tick(t)- DOlatency, 0x0001);
 	else
-		return u32pack(us2tick(t), 0x0000);
+		return u32pack(us2tick(t)- DOlatency, 0x0000);
 }
 
 // Push all elements of 'tailQ' into 'headQ'

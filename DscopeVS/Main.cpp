@@ -39,7 +39,7 @@ int main()
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-			SendOutQueue(&status, session, AnalogTimingCalib());
+			SendOutQueue(&status, session, AnalogLatencyCalib());
 			PulseTrigger(&status, session);
 
 			//SECOND ROUND

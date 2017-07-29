@@ -28,6 +28,7 @@ namespace Const
 	extern const unsigned int tickPerUs;
 	extern const unsigned int AO_dt;
 	extern const U16 DODelayTick;
+	extern const unsigned int FIFOtimeout;
 
 
 };

@@ -5,7 +5,7 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
-	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFOtimeout, 80));
+	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFOtimeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));//DELAY. Sync AO and DO by delaying DO
 	std::cout << "FPGA initialize-variables status: " << *status << "\n";
 }
@@ -34,7 +34,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	}
 	allQs = {};//cleanup the queue in C++11
 
-			   //send the data to the FPGA through the FIFO
+	//send the data to the FPGA through the FIFO
 	U32 timeout = -1; // in ms. -1 means no timeout
 	U32 r = 1; //empty elements remaining
 

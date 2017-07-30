@@ -8,10 +8,6 @@ U32QV Seq1()
 	//AO1
 	QV[0].push(AnalogOut(4 * us, 10));
 	QV[0].push(AnalogOut(100 * us, 0));
-	//QV[0].push(AnalogOut(1*ms, 10));
-	//QV[0].push(AnalogOut(1*us, 0);
-	//QV[0] = PushQ(QV[0], linearRamp(4 * us, 1 * ms, 0, 5));
-	//QV[0].push(AnalogOut(1*_ms, 0));
 	QV[0].push(AnalogOut(4 * us, 5));
 	QV[0].push(AnalogOut(4 * us, 0));//go back to zero
 
@@ -19,16 +15,21 @@ U32QV Seq1()
 
 	//AO2
 	QV[1].push(AnalogOut(4*us, 0));
-	QV[1].push(AnalogOut(1*ms, 5));
+	QV[1].push(AnalogOut(4*us, 5));
 	QV[1].push(AnalogOut(4*us, 0));
 	QV[1].push(AnalogOut(4*us, 0));
 
 	//DO1
 	QV[2].push(DigitalOut(4 * us, 1));
-	QV[2].push(DigitalOut(100 * us, 0));
-	//QV[2].push(DigitalOut(1 * ms, 0));
+	QV[2].push(DigitalOut(4 * us, 0));
 	QV[2].push(DigitalOut(4 * us, 1));
 	QV[2].push(DigitalOut(4 * us, 0));
+
+	//Detector
+	QV[3].push(DigitalOut(0.05 * us, 1));
+	QV[3].push(DigitalOut(1 * us, 0));
+	//QV[3].push(DigitalOut(1 * us, 1));
+	//QV[3].push(DigitalOut(1 * us, 0));
 
 	return QV;
 }

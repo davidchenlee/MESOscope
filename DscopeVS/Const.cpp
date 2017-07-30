@@ -2,7 +2,7 @@
 
 namespace Const
 {
-	extern const unsigned char Nchan = 3;				//Number of channels available. WARNING: This number has to match the implementation on the FPGA!
+	extern const unsigned char Nchan = 4;				//Number of channels available. WARNING: This number has to match the implementation on the FPGA!
 	extern const unsigned char AO0 = 0;
 	extern const unsigned char AO1 = 1;
 	extern const unsigned char DO0 = 2;

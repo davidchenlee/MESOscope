@@ -15,21 +15,20 @@ U32QV Seq1()
 
 	//AO2
 	QV[1].push(AnalogOut(4*us, 0));
-	QV[1].push(AnalogOut(4*us, 5));
+	QV[1].push(AnalogOut(100*us, 5));
 	QV[1].push(AnalogOut(4*us, 0));
 	QV[1].push(AnalogOut(4*us, 0));
 
 	//DO1
 	QV[2].push(DigitalOut(4 * us, 1));
-	QV[2].push(DigitalOut(4 * us, 0));
+	QV[2].push(DigitalOut(100 * us, 0));
 	QV[2].push(DigitalOut(4 * us, 1));
 	QV[2].push(DigitalOut(4 * us, 0));
 
 	//Detector
-	QV[3].push(DigitalOut(0.05 * us, 1));
-	QV[3].push(DigitalOut(1 * us, 0));
-	//QV[3].push(DigitalOut(1 * us, 1));
-	//QV[3].push(DigitalOut(1 * us, 0));
+	QV[3].push(u32pack(8, 0x0001));
+	QV[3].push(u32pack(8, 0x0000));
+
 
 	return QV;
 }

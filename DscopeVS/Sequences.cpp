@@ -25,9 +25,15 @@ U32QV Seq1()
 	QV[2].push(DigitalOut(4 * us, 1));
 	QV[2].push(DigitalOut(4 * us, 0));
 
+	
 	//Detector
-	QV[3].push(u32pack(8, 0x0001));
-	QV[3].push(u32pack(8, 0x0000));
+	QV[3].push(GateDelay(3.125*us));
+	for (int ii = 0; ii < 2; ii++)
+	{
+		QV[3].push(DigitalOut(0.0625 * us, 1));
+		QV[3].push(DigitalOut(0.0625 * us, 0));
+	}
+
 
 
 	return QV;

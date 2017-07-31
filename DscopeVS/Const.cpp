@@ -14,7 +14,7 @@ namespace Const
 	extern const unsigned int tickPerUs = 160;			//Number of ticks in 1 us. It depends on the FPGA's clock
 	extern const unsigned int AO_dt = 2 * us;			//Time step (in us) of the analog output. The AO channels take >1us to write the output
 	extern const U16 DODelayTick = 4*74;				//relative delay between AO and DO. This is because AO takes longer than DO to write the output
-	extern const unsigned int FIFOtimeout = 1000;		//in ticks
+	extern const unsigned int FIFOtimeout = 100;		//in ticks
 
 
 };

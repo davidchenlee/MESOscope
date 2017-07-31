@@ -7,7 +7,7 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFOtimeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_Nchannels, Nchan));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));//DELAY. Sync AO and DO by delaying DO
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));	//DELAY. Sync AO and DO by delaying DO
 	std::cout << "FPGA initialize-variables status: " << *status << "\n";
 }
 
@@ -101,6 +101,15 @@ U32 DigitalOut(double t, bool DO)
 	else
 		return u32pack(us2tick(t)- DOlatency, 0x0000);
 }
+
+U32 GateDelay(double t)
+{
+	U16 GateLatency = 22;
+	return u32pack(us2tick(t) - GateLatency, 0x0000);
+}
+
+
+
 
 // Push all elements of 'tailQ' into 'headQ'
 U32Q PushQ(U32Q& headQ, U32Q& tailQ)

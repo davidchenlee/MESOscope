@@ -28,7 +28,7 @@ U32QV Seq1()
 	
 	//Detector
 	QV[3].push(GateDelay(3.125*us));
-	for (int ii = 0; ii < 2; ii++)
+	for (int ii = 0; ii < 1; ii++)
 	{
 		QV[3].push(DigitalOut(0.0625 * us, 1));
 		QV[3].push(DigitalOut(0.0625 * us, 0));

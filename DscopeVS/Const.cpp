@@ -16,5 +16,7 @@ namespace Const
 	extern const U16 DODelayTick = 4*74;				//relative delay between AO and DO. This is because AO takes longer than DO to write the output
 	extern const unsigned int FIFOtimeout = 100;		//in ticks
 
+	extern const unsigned char NPMTsim = 5;
+	extern const unsigned char PMTsim[5] = { 1, 0, 0, 0, 0 };		//simulate the PMT pulses. The laser has 80 MH repetition rate, i.e. each pulse must lasts <12.5us
 
 };

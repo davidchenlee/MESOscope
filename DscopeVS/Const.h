@@ -30,5 +30,7 @@ namespace Const
 	extern const U16 DODelayTick;
 	extern const unsigned int FIFOtimeout;
 
+	extern const unsigned char NPMTsim;
+	extern const unsigned char PMTsim[5];
 
 };

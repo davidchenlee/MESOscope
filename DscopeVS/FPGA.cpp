@@ -8,6 +8,7 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFOtimeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_Nchannels, Nchan));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));	//DELAY. Sync AO and DO by delaying DO
+	NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Array, PMTsim, NPMTsim);
 	std::cout << "FPGA initialize-variables status: " << *status << "\n";
 }
 

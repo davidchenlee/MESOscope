@@ -12,11 +12,12 @@ namespace Const
 	extern const unsigned int s = 1000000 * us;			//second
 	//extern const unsigned int V = 1;
 	extern const unsigned int tickPerUs = 160;			//Number of ticks in 1 us. It depends on the FPGA's clock
+	extern const double tstep = 1.0 / 160;				//time step of the FPGA's clock in us
 	extern const unsigned int AO_dt = 2 * us;			//Time step (in us) of the analog output. The AO channels take >1us to write the output
 	extern const U16 DODelayTick = 4*74;				//relative delay between AO and DO. This is because AO takes longer than DO to write the output
 	extern const unsigned int FIFOtimeout = 100;		//in ticks
 
 	extern const unsigned char NPMTsim = 5;
-	extern const unsigned char PMTsim[5] = { 1, 0, 0, 0, 0 };		//simulate the PMT pulses. The laser has 80 MH repetition rate, i.e. each pulse must lasts <12.5us
+	extern const unsigned char PMTsim[5] = { 1, 1, 0, 0, 0 };		//simulate the PMT pulses. The laser has 80 MH repetition rate, i.e. each pulse must lasts <12.5us
 
 };

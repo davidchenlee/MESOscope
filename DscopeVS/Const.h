@@ -26,6 +26,7 @@ namespace Const
 	extern const unsigned int s;			
 	//extern const unsigned int V;
 	extern const unsigned int tickPerUs;
+	extern const double tstep;
 	extern const unsigned int AO_dt;
 	extern const U16 DODelayTick;
 	extern const unsigned int FIFOtimeout;

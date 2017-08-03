@@ -26,12 +26,13 @@ U32QV Seq1()
 	QV[2].push(DigitalOut(4 * us, 0));
 
 	
-	//Detector
+	//Detector. Currently the clock increament is 6.25ns
 	QV[3].push(GateDelay(3.125*us));
 	for (int ii = 0; ii < 1; ii++)
 	{
-		QV[3].push(DigitalOut(0.0625 * us, 1));
-		QV[3].push(DigitalOut(0.0625 * us, 0));
+		//substract 1 tstep to avoid double counting a 80MHZ signal
+		QV[3].push(DigitalOut(0.0625 * us - tstep, 1));
+		QV[3].push(DigitalOut(0.0625 * us + tstep, 0));
 	}
 
 

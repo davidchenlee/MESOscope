@@ -18,6 +18,6 @@ namespace Const
 	extern const unsigned int FIFOtimeout = 100;		//in ticks
 
 	extern const unsigned char NPMTsim = 5;
-	extern const unsigned char PMTsim[5] = { 1, 1, 0, 0, 0 };		//simulate the PMT pulses. The laser has 80 MH repetition rate, i.e. each pulse must lasts <12.5us
+	extern const unsigned char PMTsim[5] = { 1, 0, 0, 0, 0 };		//simulate the PMT pulses. The laser has 80 MH repetition rate, i.e. each pulse must lasts <12.5us
 
 };

@@ -31,8 +31,8 @@ U32QV Seq1()
 	for (int ii = 0; ii < 1; ii++)
 	{
 		//substract 1 tstep to avoid double counting a 80MHZ signal
-		QV[3].push(DigitalOut(0.0625 * us - tstep, 1));
-		QV[3].push(DigitalOut(0.0625 * us + tstep, 0));
+		QV[3].push(DigitalOut(0.0625 * us , 1));
+		QV[3].push(DigitalOut(0.0625 * us , 0));
 	}
 
 

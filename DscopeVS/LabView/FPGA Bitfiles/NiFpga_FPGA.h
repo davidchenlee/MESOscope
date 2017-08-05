@@ -24,34 +24,34 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGA_Signature = "F00B986C6703FEF30ACBE78427126653";
+static const char* const NiFpga_FPGA_Signature = "409B86FDAFE7636D0A5A8EEA6D12919B";
 
 typedef enum
 {
-   NiFpga_FPGA_IndicatorU8_Counter = 0x26,
+   NiFpga_FPGA_IndicatorU8_Counter = 0x22,
 } NiFpga_FPGA_IndicatorU8;
 
 typedef enum
 {
-   NiFpga_FPGA_ControlBool_Reset = 0x1A,
+   NiFpga_FPGA_ControlBool_Enable = 0x16,
    NiFpga_FPGA_ControlBool_Trigger = 0x2E,
-   NiFpga_FPGA_ControlBool_Triggerdetector = 0x1E,
 } NiFpga_FPGA_ControlBool;
 
 typedef enum
 {
    NiFpga_FPGA_ControlU16_DOdelaytick = 0x32,
+   NiFpga_FPGA_ControlU16_Nmax = 0x1A,
 } NiFpga_FPGA_ControlU16;
 
 typedef enum
 {
-   NiFpga_FPGA_ControlI32_FIFOtimeout = 0x10,
-   NiFpga_FPGA_ControlI32_Nchannels = 0x28,
+   NiFpga_FPGA_ControlI32_FIFOtimeout = 0x28,
+   NiFpga_FPGA_ControlI32_Nchannels = 0x24,
 } NiFpga_FPGA_ControlI32;
 
 typedef enum
 {
-   NiFpga_FPGA_IndicatorArrayU8_outputarray2 = 0x14,
+   NiFpga_FPGA_IndicatorArrayU8_outputarray2 = 0x10,
 } NiFpga_FPGA_IndicatorArrayU8;
 
 typedef enum
@@ -61,7 +61,7 @@ typedef enum
 
 typedef enum
 {
-   NiFpga_FPGA_ControlArrayBool_Array = 0x22,
+   NiFpga_FPGA_ControlArrayBool_Array = 0x1E,
 } NiFpga_FPGA_ControlArrayBool;
 
 typedef enum

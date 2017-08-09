@@ -42,6 +42,45 @@ int main()
 			SendOutQueue(&status, session, Seq1());
 			PulseTrigger(&status, session);
 
+
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Reset, 1));
+			
+			
+
+			size_t Npop = 10;
+			uint32_t r; //elements remaining
+			size_t timeout = 100;
+			uint16_t* data = new uint16_t[Npop];
+			for (int ii = 0; ii < Npop; ii++)
+				data[ii] = 0;
+
+
+			//Start up the host FIFO. Not needed for reading the data, but it takes about 3ms to read 'elementsRemaining' once the FIFO starts running.
+			NiFpga_MergeStatus(&status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters));
+			Sleep(10);
+
+			//read the number of elements in the host FIFO
+			//NiFpga_MergeStatus(&status, NiFpga_ReadFifoU16(session, NiFpga_FPGA_TargetToHostFifoU16_FIFO, data, 0, -1, &r));
+
+			
+			// read the DMA FIFO data and print. This function alone is able to start up the FIFO, but it would not read 'elementsRemaining' right away because it takes about 3ms to read 'elementsRemaining' once the FIFO starts running
+			NiFpga_MergeStatus(&status, NiFpga_ReadFifoU16(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters, data, Npop, timeout, &r));
+			for (int ii = 0; ii<Npop; ii++)
+				std::cout << "Data: " << data[ii] << "\n";
+
+			std::cout << "Number of elements remaining in host FIFO: " << r << "\n";
+			
+			
+			
+			
+			
+			Sleep(100);
+
+
+
+
+
+
 			//SECOND ROUND
 			if (0)
 			{
@@ -58,7 +97,9 @@ int main()
 		/* You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.*/
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 		std::cout << "FPGA finalize status: " << status << "\n";
-		Sleep(1000);
+		
+		getchar();
+		//Sleep(1000);
 	}
 	}
 

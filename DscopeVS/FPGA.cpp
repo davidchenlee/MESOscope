@@ -8,7 +8,11 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFOtimeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_Nchannels, Nchan));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));	//DELAY. Sync AO and DO by delaying DO
-	NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Array, PMTsim, NPMTsim);
+	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Array, PMTsim, NPMTsim));
+
+	NiFpga_MergeStatus(status, NiFpga_WriteU64(session, NiFpga_FPGA_ControlU64_Nmaxlines, 1)); //Number of lines to acquire
+
+
 	std::cout << "FPGA initialize-variables status: " << *status << "\n";
 }
 
@@ -37,8 +41,8 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	allQs = {};//cleanup the queue in C++11
 
 	//send the data to the FPGA through the FIFO
-	U32 timeout = -1; // in ms. -1 means no timeout
-	U32 r = 1; //empty elements remaining
+	U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
+	U32 r; //empty elements remaining
 
 	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFIFOqueue, timeout, &r));
 
@@ -51,7 +55,7 @@ void PulseTrigger(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
-	std::cout << "Pulse trigger: " << *status << "\n";
+	std::cout << "Pulse trigger status: " << *status << "\n";
 }
 
 //**************************************************************************************************************************************************************

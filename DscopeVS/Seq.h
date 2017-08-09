@@ -1,3 +1,10 @@
+/*
+Sequence class
+WORK IN PROGRESS
+
+*/
+
+
 #pragma once
 #include <iostream>
 #include "FPGA.h"

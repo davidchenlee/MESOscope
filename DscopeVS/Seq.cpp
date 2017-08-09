@@ -1,3 +1,10 @@
+/*
+Sequence class
+WORK IN PROGRESS
+
+*/
+
+
 #include "Seq.h"
 
 //constructor

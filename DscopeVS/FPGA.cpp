@@ -3,14 +3,13 @@
 
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
-	//Initialize the FPGA variables
+	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFOtimeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_Nchannels, Nchan));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));	//DELAY. Sync AO and DO by delaying DO
-	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Array, PMTsim, NPMTsim));
-
-	NiFpga_MergeStatus(status, NiFpga_WriteU64(session, NiFpga_FPGA_ControlU64_Nmaxlines, 1)); //Number of lines to acquire
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));
+	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Array, pulseArray, Npulses));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Nmaxlines, Nmaxlines));
 
 
 	std::cout << "FPGA initialize-variables status: " << *status << "\n";

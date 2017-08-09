@@ -1773,6 +1773,10 @@
 				<Property Name="NI.DISK" Type="Bool">true</Property>
 				<Property Name="NI.SortType" Type="Int">0</Property>
 			</Item>
+			<Item Name="Probes" Type="Folder" URL="../Probes">
+				<Property Name="NI.DISK" Type="Bool">true</Property>
+				<Property Name="NI.SortType" Type="Int">0</Property>
+			</Item>
 			<Item Name="Buffers" Type="Folder">
 				<Item Name="AO0 buffer" Type="FPGA Memory Block">
 					<Property Name="FPGA.PersistentID" Type="Str">{E3A3D7DC-6593-48B0-99DB-FF0BD67B41A5}</Property>

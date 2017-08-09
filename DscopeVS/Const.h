@@ -16,22 +16,23 @@ typedef std::vector<U32Q> U32QV;			//Vector of queues of unsigned integers
 
 namespace Const
 {
-	extern const unsigned char Nchan;
-	extern const unsigned char AO0;
-	extern const unsigned char AO1;
-	extern const unsigned char DO0;
+	extern const U8 Nchan;
+	extern const U8 AO0;
+	extern const U8 AO1;
+	extern const U8 DO0;
 
-	extern const unsigned int us;
-	extern const unsigned int ms;
-	extern const unsigned int s;			
-	//extern const unsigned int V;
-	extern const unsigned int tickPerUs;
+	extern const U32 us;
+	extern const U32 ms;
+	extern const U32 s;
+	extern const U32 tickPerUs;
 	extern const double tstep;
-	extern const unsigned int AO_dt;
+	extern const U32 AO_dt;
 	extern const U16 DODelayTick;
-	extern const unsigned int FIFOtimeout;
+	extern const U16 FIFOtimeout;
 
-	extern const unsigned char NPMTsim;
-	extern const unsigned char PMTsim[5];
+	extern const U8 Npulses;
+	extern const U8 pulseArray[5];
+
+	extern const U16 Nmaxlines;
 
 };

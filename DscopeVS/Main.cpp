@@ -45,9 +45,7 @@ int main()
 
 			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Reset, 1));
 			
-			
-
-			size_t Npop = 10;
+			size_t Npop = 4;
 			uint32_t r; //elements remaining
 			size_t timeout = 100;
 			uint16_t* data = new uint16_t[Npop];
@@ -55,19 +53,14 @@ int main()
 				data[ii] = 0;
 
 
-			//Start up the host FIFO. Not needed for reading the data, but it takes about 3ms to read 'elementsRemaining' once the FIFO starts running.
+			//Start up the host FIFO. No need for reading the data, but it takes about 3ms to read 'elementsRemaining' once the FIFO starts running.
 			NiFpga_MergeStatus(&status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters));
 			Sleep(10);
 
-			//read the number of elements in the host FIFO
-			//NiFpga_MergeStatus(&status, NiFpga_ReadFifoU16(session, NiFpga_FPGA_TargetToHostFifoU16_FIFO, data, 0, -1, &r));
-
-			
 			// read the DMA FIFO data and print. This function alone is able to start up the FIFO, but it would not read 'elementsRemaining' right away because it takes about 3ms to read 'elementsRemaining' once the FIFO starts running
 			NiFpga_MergeStatus(&status, NiFpga_ReadFifoU16(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters, data, Npop, timeout, &r));
 			for (int ii = 0; ii<Npop; ii++)
 				std::cout << "Data: " << data[ii] << "\n";
-
 			std::cout << "Number of elements remaining in host FIFO: " << r << "\n";
 			
 			

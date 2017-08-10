@@ -25,5 +25,5 @@ namespace Const
 	extern const U8 pulseArray[Npulses] = { 1, 0, 0, 0, 0 };		//pulse sequence, where 1 (0) indicates the presence (absence) of a pulse
 
 
-	extern const U16 Nmaxlines = 1;						// max number of lines to acquire
+	extern const U16 Nmaxlines = 3;						// max number of scanned lines to acquire
 };

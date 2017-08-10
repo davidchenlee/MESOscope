@@ -42,15 +42,20 @@ int main()
 			SendOutQueue(&status, session, Seq1());
 			PulseTrigger(&status, session);
 
+			Sleep(500);
 
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Reset, 1));
+			// start acquiring data
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Startacquisition, 1));
+			Sleep(500);
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Readdata, 1));
+			Sleep(500);
 			
-			size_t Npop = 4;
+			size_t Npop = 3* Nmaxlines;
 			uint32_t r; //elements remaining
 			size_t timeout = 100;
 			uint16_t* data = new uint16_t[Npop];
-			for (int ii = 0; ii < Npop; ii++)
-				data[ii] = 0;
+			//for (int ii = 0; ii < Npop; ii++)
+				//data[ii] = 0;
 
 
 			//Start up the host FIFO. No need for reading the data, but it takes about 3ms to read 'elementsRemaining' once the FIFO starts running.

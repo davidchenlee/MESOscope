@@ -8,8 +8,10 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFOtimeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_Nchannels, Nchan));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));
-	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Array, pulseArray, Npulses));
+	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Nmaxlines, Nmaxlines));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Startacquisition, 0)); //start acquiring data
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Readdata, 0));		//read the data
 
 
 	std::cout << "FPGA initialize-variables status: " << *status << "\n";
@@ -106,7 +108,7 @@ U32 DigitalOut(double t, bool DO)
 		return u32pack(us2tick(t)- DOlatency, 0x0000);
 }
 
-U32 GateDelay(double t)
+U32 PixelClockDelay(double t)
 {
 	U16 GateLatency = 22;
 	return u32pack(us2tick(t) - GateLatency, 0x0000);

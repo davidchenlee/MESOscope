@@ -27,7 +27,8 @@ U32QV Seq1()
 
 	
 	//Detector. Currently the clock increament is 6.25ns = 0.00625
-	QV[3].push(GateDelay(3.125*us));
+	//Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
+	QV[3].push(PixelClockDelay(3.125*us));
 	for (int ii = 0; ii < 1; ii++)
 	{
 		QV[3].push(DigitalOut(0.0625 * us, 1));

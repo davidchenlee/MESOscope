@@ -31,8 +31,8 @@ namespace Const
 	extern const U16 FIFOtimeout;
 
 	extern const U8 Npulses;
-	extern const U8 pulseArray[5];
+	extern const U8 pulseArray[];
 
 	extern const U16 Nmaxlines;
-
+	extern const U16 Nmaxpixels;
 };

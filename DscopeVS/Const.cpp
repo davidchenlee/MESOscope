@@ -24,7 +24,7 @@ namespace Const
 	//extern const U8 Npulses = 5;				//Number of pulses per pixel
 	//extern const U8 pulseArray[Npulses] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0 };		//pulse sequence, where 1 (0) indicates the presence (absence) of a pulse
 	extern const U8 Npulses = 5;
-	extern const U8 pulseArray[Npulses] = { 0, 0, 1, 0, 1 };		//pulse sequence, where 1 (0) indicates the presence (absence) of a pulse
+	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 1, 0 };		//pulse sequence, where 1 (0) indicates the presence (absence) of a pulse
 
 	extern const U16 Nmaxlines = 1;						//Number of scanned lines to acquire
 	extern const U16 Nmaxpixels = 3;					//Number of pixels per line to acquire

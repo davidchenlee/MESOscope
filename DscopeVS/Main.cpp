@@ -28,9 +28,12 @@ int main()
 	{
 		NiFpga_Session session;
 
+		
+
 		/* opens a session, downloads the bitstream*/
 		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGA_Signature, "RIO0", 0, &session)); //1=no run, 0=run
 		std::cout << "FPGA open-session status: " << status << "\n";
+
 
 		if (NiFpga_IsNotError(status))
 		{
@@ -50,7 +53,7 @@ int main()
 			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Readdata, 1));
 			Sleep(500);
 			
-			size_t Npop = Nmaxpixels* Nmaxlines;
+			size_t Npop = (Nmaxpixels+1)* Nmaxlines;
 			uint32_t r; //elements remaining
 			size_t timeout = 100;
 			uint16_t* data = new uint16_t[Npop];
@@ -75,7 +78,7 @@ int main()
 			Sleep(100);
 
 
-
+			//NiFpga_StopFifo(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters)
 
 
 
@@ -89,8 +92,11 @@ int main()
 			//EVIL FUNCTION. DO NOT USE
 			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target)
 			unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.*/
-			//NiFpga_MergeStatus(&status, NiFpga_Close(session, 1)); //0 resets, 1 does not reset
+			//NiFpga_MergeStatus(&status, NiFpga_Close(session, 0)); //0 resets, 1 does not reset
 		}
+
+		/*20170815 I added this line because the photon-counter reading from the memory block/FIFO wasn't actualizing correctly after the first time running the code*/
+		//NiFpga_Reset(session);
 
 		/* You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.*/
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());

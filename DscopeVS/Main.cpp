@@ -32,10 +32,6 @@ int main()
 		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGA_Signature, "RIO0", 0, &session)); //1=no run, 0=run
 		std::cout << "FPGA open-session status: " << status << "\n";
 
-		//I think this restart the FPGA
-		//NiFpga_Reset(session);
-
-
 		if (NiFpga_IsNotError(status))
 		{
 			InitializeFPGA(&status, session);
@@ -90,11 +86,14 @@ int main()
 				PulseTrigger(&status, session);
 			}
 
-			//EVIL FUNCTION. DO NOT USE
 			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target)
 			unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.*/
 			//NiFpga_MergeStatus(&status, NiFpga_Close(session, 0)); //0 resets, 1 does not reset
 		}
+
+		//Reset the FPGA
+		//NiFpga_Reset(session);
+
 
 		/* You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.*/
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());

@@ -28,11 +28,12 @@ int main()
 	{
 		NiFpga_Session session;
 
-		
-
 		/* opens a session, downloads the bitstream*/
 		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGA_Signature, "RIO0", 0, &session)); //1=no run, 0=run
 		std::cout << "FPGA open-session status: " << status << "\n";
+
+		//I think this restart the FPGA
+		//NiFpga_Reset(session);
 
 
 		if (NiFpga_IsNotError(status))
@@ -95,15 +96,11 @@ int main()
 			//NiFpga_MergeStatus(&status, NiFpga_Close(session, 0)); //0 resets, 1 does not reset
 		}
 
-		/*20170815 I added this line because the photon-counter reading from the memory block/FIFO wasn't actualizing correctly after the first time running the code*/
-		//NiFpga_Reset(session);
-
 		/* You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.*/
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 		std::cout << "FPGA finalize status: " << status << "\n";
 		
 		getchar();
-		//Sleep(1000);
 	}
 	}
 

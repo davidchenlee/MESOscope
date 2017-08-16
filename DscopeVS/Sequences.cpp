@@ -29,7 +29,7 @@ U32QV Seq1()
 	//Detector. Currently the clock increament is 6.25ns = 0.00625
 	//Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
 	QV[3].push(PixelClockDelay(3.125*us));//this "zero bit" has already been considered on the FPGA side
-	for (int ii = 0; ii < Nmaxpixels+1; ii++) //#3 pixels plus one because there's one more pixels clock tick than pixel number
+	for (int ii = 0; ii < Nmaxpixels+1; ii++) // pixels plus one because there's one more pixels clock tick than pixel number
 	{
 		QV[3].push(DigitalOut(0.0625 * us, 1));
 	}

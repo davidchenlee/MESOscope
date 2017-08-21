@@ -78,7 +78,7 @@ U32 u32pack(U16 t, U16 x)
 U16 us2tick(double t)
 {
 	double aux = t * tickPerUs;
-	return (U16) aux;
+	return (U16)aux;
 }
 
 
@@ -103,9 +103,9 @@ U32 DigitalOut(double t, bool DO)
 {
 	U16 DOlatency = 2;//To  calibrate it, run DigitalLatencyCalib()
 	if (DO)
-		return u32pack(us2tick(t)- DOlatency, 0x0001);
+		return u32pack(us2tick(t) - DOlatency, 0x0001);
 	else
-		return u32pack(us2tick(t)- DOlatency, 0x0000);
+		return u32pack(us2tick(t) - DOlatency, 0x0000);
 }
 
 U32 PixelClockDelay(double t)
@@ -172,6 +172,29 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 
 	}
 	return queue;
+}
+
+
+void CountPhotons(NiFpga_Status* status, NiFpga_Session session) {
+
+	size_t Npop = (Nmaxpixels + 1)* Nmaxlines;
+	uint32_t r; //elements remaining
+	size_t timeout = 100;
+	uint16_t* data = new uint16_t[Npop];
+	for (U32 ii = 0; ii < Npop; ii++)
+		data[ii] = -1;
+
+	//Start the host FIFO. Not needed for reading the data, but it takes about 3ms to read 'elementsRemaining' once the FIFO starts running.
+	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters));
+
+	// read the DMA FIFO data and print. This function alone is able to start the FIFO, but it would not read 'elementsRemaining' right away because it takes about 3ms to read 'elementsRemaining' once the FIFO starts running
+	NiFpga_MergeStatus(status, NiFpga_ReadFifoU16(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters, data, Npop, timeout, &r));
+	
+	//print out the data
+	for (U32 ii = 0; ii < Npop; ii++)
+		std::cout << "Data: " << data[ii] << "\n";
+	std::cout << "Number of elements remaining in host FIFO: " << r << "\n";
+
 }
 
 

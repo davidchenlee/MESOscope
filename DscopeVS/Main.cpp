@@ -39,46 +39,18 @@ int main()
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-			SendOutQueue(&status, session, Seq1());
+			SendOutQueue(&status, session, GalvoTest());
 			PulseTrigger(&status, session);
 
 			Sleep(500);
 
 			// start acquiring data
 			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Startacquisition, 1));
-			Sleep(500);
 			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Readdata, 1));
-			Sleep(500);
+			CountPhotons(&status, session);
+
+
 			
-			size_t Npop = (Nmaxpixels+1)* Nmaxlines;
-			uint32_t r; //elements remaining
-			size_t timeout = 100;
-			uint16_t* data = new uint16_t[Npop];
-			for (int ii = 0; ii < Npop; ii++)
-				data[ii] = -1;
-
-
-			//Start up the host FIFO. No need for reading the data, but it takes about 3ms to read 'elementsRemaining' once the FIFO starts running.
-			NiFpga_MergeStatus(&status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters));
-			Sleep(10);
-
-			// read the DMA FIFO data and print. This function alone is able to start up the FIFO, but it would not read 'elementsRemaining' right away because it takes about 3ms to read 'elementsRemaining' once the FIFO starts running
-			NiFpga_MergeStatus(&status, NiFpga_ReadFifoU16(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters, data, Npop, timeout, &r));
-			for (int ii = 0; ii<Npop; ii++)
-				std::cout << "Data: " << data[ii] << "\n";
-			std::cout << "Number of elements remaining in host FIFO: " << r << "\n";
-			
-			
-			
-			
-			
-			Sleep(100);
-
-
-			//NiFpga_StopFifo(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters)
-
-
-
 			//SECOND ROUND
 			if (0)
 			{
@@ -99,8 +71,8 @@ int main()
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 		std::cout << "FPGA finalize status: " << status << "\n";
 		
-		getchar();
-	}
+		//getchar();
+		}
 	}
 
 

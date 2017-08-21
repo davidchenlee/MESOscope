@@ -58,13 +58,13 @@ U32QV Seq2()
 //this is a queue, not a vector of queues
 U32Q GalvoSeq()
 {
-	double Vmax = 5;
-	double step = 4 * ms;
+	double Vmax = 0.05;
+	double step = 100 * us;
 	U32Q Q;
 	//linear output
-	U32Q linearRamp1 = linearRamp(step, 1 * s, 0, -Vmax);
-	U32Q linearRamp2 = linearRamp(step, 1 * s, -Vmax, Vmax);
-	U32Q linearRamp3 = linearRamp(step, 1 * s, Vmax, 0);
+	U32Q linearRamp1 = linearRamp(step, 5 * ms, 0, -Vmax);
+	U32Q linearRamp2 = linearRamp(step, 10 * ms, -Vmax, Vmax);
+	U32Q linearRamp3 = linearRamp(step, 5 * ms, Vmax, 0);
 	PushQ(Q, linearRamp1);
 	PushQ(Q, linearRamp2);
 	PushQ(Q, linearRamp3);
@@ -74,10 +74,12 @@ U32Q GalvoSeq()
 U32QV GalvoTest()
 {
 	U32QV QV(Nchan);
+	//QV[0] = GalvoSeq();
+	QV[0].push(AnalogOut(4 * us, 0.000));
+	//QV[0].push(AnalogOut(4 * us, 0.1000));
 
-	QV[2].push(DigitalOut(62.5 * us, 1));
+	QV[2].push(DigitalOut(4 * us, 1));
 	QV[2].push(DigitalOut(4 * us, 0));
-
 	return QV;
 }
 

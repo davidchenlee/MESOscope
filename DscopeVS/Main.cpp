@@ -19,7 +19,7 @@ int main()
 		Sleep(1000);
 	}
 	else {
-			/* must be called before any other FPGA calls */
+	/* must be called before any other FPGA calls */
 	NiFpga_Status status = NiFpga_Initialize();
 	std::cout << "FPGA initialize status: " << status << "\n";
 

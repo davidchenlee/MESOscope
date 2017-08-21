@@ -35,7 +35,6 @@ U32QV Seq1()
 	}
 
 
-
 	return QV;
 }
 

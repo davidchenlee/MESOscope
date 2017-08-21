@@ -110,7 +110,7 @@ U32 DigitalOut(double t, bool DO)
 
 U32 PixelClockDelay(double t)
 {
-	U16 GateLatency = 22;
+	U16 GateLatency = 21;
 	return u32pack(us2tick(t) - GateLatency, 0x0000);
 }
 

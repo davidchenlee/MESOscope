@@ -39,16 +39,15 @@ int main()
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-			SendOutQueue(&status, session, GalvoTest());
+			SendOutQueue(&status, session, Seq1());
+			//SendOutQueue(&status, session, GalvoTest());
 			PulseTrigger(&status, session);
 
-			Sleep(500);
-
+			
 			// start acquiring data
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Startacquisition, 1));
-			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Readdata, 1));
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 1));
+			NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Read_data, 1));
 			CountPhotons(&status, session);
-
 
 			
 			//SECOND ROUND
@@ -71,7 +70,7 @@ int main()
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 		std::cout << "FPGA finalize status: " << status << "\n";
 		
-		//getchar();
+		getchar();
 		}
 	}
 

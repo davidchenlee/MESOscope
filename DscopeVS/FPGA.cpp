@@ -9,9 +9,9 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_Nchannels, Nchan));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));
 	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Nmaxlines, Nmaxlines));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Startacquisition, 0)); //start acquiring data
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Readdata, 0));		//read the data
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Nmax_lines, Nmaxlines));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 0)); //start acquiring data
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Read_data, 0));		//read the data
 
 
 	std::cout << "FPGA initialize-variables status: " << *status << "\n";
@@ -180,19 +180,19 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session) {
 	size_t Npop = (Nmaxpixels + 1)* Nmaxlines;
 	uint32_t r; //elements remaining
 	size_t timeout = 100;
-	uint16_t* data = new uint16_t[Npop];
+	uint8_t* data = new uint8_t[Npop];
 	for (U32 ii = 0; ii < Npop; ii++)
 		data[ii] = -1;
 
 	//Start the host FIFO. Not needed for reading the data, but it takes about 3ms to read 'elementsRemaining' once the FIFO starts running.
-	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters));
+	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU8_FIFOcounters));
 
 	// read the DMA FIFO data and print. This function alone is able to start the FIFO, but it would not read 'elementsRemaining' right away because it takes about 3ms to read 'elementsRemaining' once the FIFO starts running
-	NiFpga_MergeStatus(status, NiFpga_ReadFifoU16(session, NiFpga_FPGA_TargetToHostFifoU16_FIFOcounters, data, Npop, timeout, &r));
+	NiFpga_MergeStatus(status, NiFpga_ReadFifoU8(session, NiFpga_FPGA_TargetToHostFifoU8_FIFOcounters, data, Npop, timeout, &r));
 	
 	//print out the data
 	for (U32 ii = 0; ii < Npop; ii++)
-		std::cout << "Data: " << data[ii] << "\n";
+		std::cout << "Data: " << (U16) data[ii] << "\n";
 	std::cout << "Number of elements remaining in host FIFO: " << r << "\n";
 
 }

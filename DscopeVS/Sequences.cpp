@@ -29,11 +29,10 @@ U32QV Seq1()
 	//Detector. Currently the clock increament is 6.25ns = 0.00625
 	//Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
 	QV[3].push(PixelClockDelay(3.125*us));//this "zero bit" has already been considered on the FPGA side
-	for (int ii = 0; ii < Nmaxpixels+1; ii++) // pixels plus one because there's one more pixels clock tick than pixel number
+	for (U32 ii = 0; ii < Nmaxpixels+1; ii++) // pixels plus one because there's one more pixels clock tick than pixel number
 	{
 		QV[3].push(DigitalOut(0.0625 * us, 1));
 	}
-
 
 	return QV;
 }
@@ -75,10 +74,13 @@ U32QV GalvoTest()
 {
 	U32QV QV(Nchan);
 	//QV[0] = GalvoSeq();
-	QV[0].push(AnalogOut(4 * us, 0.000));
-	//QV[0].push(AnalogOut(4 * us, 0.1000));
+	double pulsewidth = 300 * us;
 
-	QV[2].push(DigitalOut(4 * us, 1));
+	QV[0].push(AnalogOut(4 * us, 0.000));
+	QV[0].push(AnalogOut(pulsewidth, -0.020));
+	QV[0].push(AnalogOut(4 * us, 0.000));
+
+	QV[2].push(DigitalOut(pulsewidth, 1));
 	QV[2].push(DigitalOut(4 * us, 0));
 	return QV;
 }
@@ -126,7 +128,7 @@ U32QV DigitalLatencyCalib()
 	//DO1
 	QV[2].push(DigitalOut(step, 1));
 
-	for (int ii = 0; ii < 99; ii++)
+	for (U32 ii = 0; ii < 99; ii++)
 		QV[2].push(DigitalOut(step, 0));
 
 	QV[2].push(DigitalOut(step, 1));

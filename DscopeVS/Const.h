@@ -34,5 +34,5 @@ namespace Const
 	extern const U8 pulseArray[];
 
 	extern const U16 Nmaxlines;
-	extern const U16 Nmaxpixels;
+	extern const U16 Npixels;
 };

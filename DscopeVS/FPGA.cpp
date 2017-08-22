@@ -94,25 +94,39 @@ I16 AOUT(double x)
 
 U32 AnalogOut(double t, double val)
 {
-	U16 AOlatency = 2; //To  calibrate it, run AnalogLatencyCalib()
+	U16 AOlatency = 2;	//To  calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block,
+						//which takes 2 reading cycles
 	return u32pack(us2tick(t) - AOlatency, AOUT(val));
 }
 
 
 U32 DigitalOut(double t, bool DO)
 {
-	U16 DOlatency = 2;//To  calibrate it, run DigitalLatencyCalib()
+	U16 DOlatency = 2;	//To  calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block,
+						//which takes 2 reading cycles
 	if (DO)
 		return u32pack(us2tick(t) - DOlatency, 0x0001);
 	else
 		return u32pack(us2tick(t) - DOlatency, 0x0000);
 }
 
+
 U32 PixelClockDelay(double t)
 {
 	U16 GateLatency = 21;
+	
 	return u32pack(us2tick(t) - GateLatency, 0x0000);
 }
+
+U32 PixelClock(double t, bool DO)
+{
+	U16 latency = 1;
+	if (DO)
+		return u32pack(us2tick(t) - latency, 0x0001);
+	else
+		return u32pack(us2tick(t) - latency, 0x0000);
+}
+
 
 
 
@@ -177,7 +191,7 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 
 void CountPhotons(NiFpga_Status* status, NiFpga_Session session) {
 
-	size_t Npop = (Nmaxpixels + 1)* Nmaxlines;
+	size_t Npop = (Npixels + 1)* Nmaxlines;
 	uint32_t r; //elements remaining
 	size_t timeout = 100;
 	uint8_t* data = new uint8_t[Npop];

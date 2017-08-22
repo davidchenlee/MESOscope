@@ -19,6 +19,7 @@ I16 AOUT(double x);
 U32 AnalogOut(double t, double V);
 U32 DigitalOut(double t, bool DO);
 U32 PixelClockDelay(double t);
+U32 PixelClock(double t, bool DO);
 U32Q PushQ(U32Q& headQ, U32Q& tailQ);
 U32Q linearRamp(double dt, double T, double Vi, double Vf);
 void CountPhotons(NiFpga_Status* status, NiFpga_Session session);

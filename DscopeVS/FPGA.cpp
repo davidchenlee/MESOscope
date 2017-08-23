@@ -113,22 +113,19 @@ U32 DigitalOut(double t, bool DO)
 
 U32 PixelClockDelay(double t)
 {
-	U16 GateLatency = 21;
+	U16 GateLatency = 2;
 	
 	return u32pack(us2tick(t) - GateLatency, 0x0000);
 }
 
 U32 PixelClock(double t, bool DO)
 {
-	U16 latency = 1;
+	U16 latency = 1;//The pixel-clock is implemented in a SCTL. The first cycle is lost in the wait-time reading
 	if (DO)
 		return u32pack(us2tick(t) - latency, 0x0001);
 	else
 		return u32pack(us2tick(t) - latency, 0x0000);
 }
-
-
-
 
 
 // Push all elements of 'tailQ' into 'headQ'

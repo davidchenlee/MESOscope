@@ -57,6 +57,7 @@ int main()
 			if (0)
 			{
 				SendOutQueue(&status, session, Seq2());
+				Sleep(1000);
 				PulseTrigger(&status, session);
 			}
 

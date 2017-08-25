@@ -6,24 +6,24 @@ U32QV Seq1()
 	U32QV QV(Nchan);
 
 	//AO0
-	QV[AO0].push(AnalogOut(4 * us, 0));
 	QV[AO0].push(AnalogOut(4 * us, 5));
 	QV[AO0].push(AnalogOut(4 * us, 0));
-	QV[AO0].push(AnalogOut(4 * us, 5));//go back to zero
+	QV[AO0].push(AnalogOut(4 * us, 5));
+	QV[AO0].push(AnalogOut(4 * us, 0));//go back to zero
 
 	//QV[AO0] = GalvoSeq();
 
 	//AO1
-	QV[AO1].push(AnalogOut(4*us, 0));
 	QV[AO1].push(AnalogOut(4*us, 5));
 	QV[AO1].push(AnalogOut(4*us, 0));
 	QV[AO1].push(AnalogOut(4*us, 5));
+	QV[AO1].push(AnalogOut(4*us, 0));
 
 	//DO0
-	QV[DO0].push(DigitalOut(4 * us, 0));
 	QV[DO0].push(DigitalOut(4 * us, 1));
 	QV[DO0].push(DigitalOut(4 * us, 0));
 	QV[DO0].push(DigitalOut(4 * us, 1));
+	QV[DO0].push(DigitalOut(4 * us, 0));
 
 	
 	//Detector. Currently the clock increament is 6.25ns = 0.00625

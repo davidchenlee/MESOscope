@@ -6,32 +6,32 @@ U32QV Seq1()
 	U32QV QV(Nchan);
 
 	//AO0
-	QV[0].push(AnalogOut(4 * us, 10));
-	QV[0].push(AnalogOut(100 * us, 0));
-	QV[0].push(AnalogOut(4 * us, 5));
-	QV[0].push(AnalogOut(4 * us, 0));//go back to zero
+	QV[AO0].push(AnalogOut(4 * us, 10));
+	QV[AO0].push(AnalogOut(100 * us, 0));
+	QV[AO0].push(AnalogOut(4 * us, 5));
+	QV[AO0].push(AnalogOut(4 * us, 0));//go back to zero
 
-	//QV[0] = GalvoSeq();
+	//QV[AO0] = GalvoSeq();
 
 	//AO1
-	QV[1].push(AnalogOut(4*us, 0));
-	QV[1].push(AnalogOut(100*us, 5));
-	QV[1].push(AnalogOut(4*us, 0));
-	QV[1].push(AnalogOut(4*us, 0));
+	QV[AO1].push(AnalogOut(4*us, 0));
+	QV[AO1].push(AnalogOut(4*us, 5));
+	QV[AO1].push(AnalogOut(4*us, 0));
+	QV[AO1].push(AnalogOut(4*us, 5));
 
 	//DO0
-	QV[2].push(DigitalOut(4 * us, 1));
-	QV[2].push(DigitalOut(100 * us, 0));
-	QV[2].push(DigitalOut(4 * us, 1));
-	QV[2].push(DigitalOut(4 * us, 0));
+	QV[DO0].push(DigitalOut(4 * us, 0));
+	QV[DO0].push(DigitalOut(4 * us, 1));
+	QV[DO0].push(DigitalOut(4 * us, 0));
+	QV[DO0].push(DigitalOut(4 * us, 1));
 
 	
 	//Detector. Currently the clock increament is 6.25ns = 0.00625
 	//Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
-	QV[3].push(PixelClockDelay(3.125*us));//this "zero bit" has already been considered on the FPGA side
+	QV[PCLOCK].push(PixelClockDelay(3.125*us));//this "zero bit" has already been considered on the FPGA side
 	for (U32 ii = 0; ii < Npixels+1; ii++) // pixels plus one because there's one more pixels clock tick than pixel number
 	{
-		QV[3].push(PixelClock(0.0625 * us, 1));
+		QV[PCLOCK].push(PixelClock(0.0625 * us, 1));
 	}
 
 	return QV;
@@ -42,14 +42,14 @@ U32QV Seq2()
 	U32QV QV(Nchan);
 
 	//AO0
-	QV[0].push(AnalogOut(4 * us, 10));
-	QV[0].push(AnalogOut(4 * us, 0));
+	QV[AO0].push(AnalogOut(4 * us, 10));
+	QV[AO0].push(AnalogOut(4 * us, 0));
 	//AO1
-	QV[1].push(AnalogOut(4 * us, 10));
-	QV[1].push(AnalogOut(4 * us, 0));
+	QV[AO1].push(AnalogOut(4 * us, 10));
+	QV[AO1].push(AnalogOut(4 * us, 0));
 	//DO0
-	QV[2].push(DigitalOut(4 * us, 1));
-	QV[2].push(DigitalOut(4 * us, 0));
+	QV[DO0].push(DigitalOut(4 * us, 1));
+	QV[DO0].push(DigitalOut(4 * us, 0));
 
 	return QV;
 }
@@ -73,15 +73,15 @@ U32Q GalvoSeq()
 U32QV GalvoTest()
 {
 	U32QV QV(Nchan);
-	//QV[0] = GalvoSeq();
+	//QV[AO0] = GalvoSeq();
 	double pulsewidth = 300 * us;
 
-	QV[0].push(AnalogOut(4 * us, 0.000));
-	QV[0].push(AnalogOut(pulsewidth, -0.020));
-	QV[0].push(AnalogOut(4 * us, 0.000));
+	QV[AO0].push(AnalogOut(4 * us, 0.000));
+	QV[AO0].push(AnalogOut(pulsewidth, -0.020));
+	QV[AO0].push(AnalogOut(4 * us, 0.000));
 
-	QV[2].push(DigitalOut(pulsewidth, 1));
-	QV[2].push(DigitalOut(4 * us, 0));
+	QV[DO0].push(DigitalOut(pulsewidth, 1));
+	QV[DO0].push(DigitalOut(4 * us, 0));
 	return QV;
 }
 
@@ -94,19 +94,19 @@ U32QV AnalogLatencyCalib()
 	double delay = 400 * us;
 	double step = 4 * us;
 
-	//AO1
-	QV[0].push(AnalogOut(step, 10));//initial pulse
-	QV[0].push(AnalogOut(step, 0));
-	QV[0] = PushQ(QV[0], linearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
-	QV[0].push(AnalogOut(step, 5));//final pulse
-	QV[0].push(AnalogOut(step, 0));
+	//AO0
+	QV[AO0].push(AnalogOut(step, 10));//initial pulse
+	QV[AO0].push(AnalogOut(step, 0));
+	QV[AO0] = PushQ(QV[0], linearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
+	QV[AO0].push(AnalogOut(step, 5));//final pulse
+	QV[AO0].push(AnalogOut(step, 0));
 
-	//DO1
-	QV[2].push(DigitalOut(step, 1));
-	QV[2].push(DigitalOut(step, 0));
-	QV[2].push(DigitalOut(delay, 0));
-	QV[2].push(DigitalOut(step, 1));
-	QV[2].push(DigitalOut(step, 0));
+	//DO0
+	QV[DO0].push(DigitalOut(step, 1));
+	QV[DO0].push(DigitalOut(step, 0));
+	QV[DO0].push(DigitalOut(delay, 0));
+	QV[DO0].push(DigitalOut(step, 1));
+	QV[DO0].push(DigitalOut(step, 0));
 
 	return QV;
 }
@@ -118,21 +118,21 @@ U32QV DigitalLatencyCalib()
 	double delay = 400 * us;
 	double step = 4 * us;
 
-	//AO1
-	QV[0].push(AnalogOut(step, 10));//initial pulse
-	QV[0].push(AnalogOut(step, 0));
-	QV[0] = PushQ(QV[0], linearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
-	QV[0].push(AnalogOut(step, 5));//final pulse
-	QV[0].push(AnalogOut(step, 0));
+	//AO0
+	QV[AO0].push(AnalogOut(step, 10));//initial pulse
+	QV[AO0].push(AnalogOut(step, 0));
+	QV[AO0] = PushQ(QV[0], linearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
+	QV[AO0].push(AnalogOut(step, 5));//final pulse
+	QV[AO0].push(AnalogOut(step, 0));
 
-	//DO1
-	QV[2].push(DigitalOut(step, 1));
+	//DO0
+	QV[DO0].push(DigitalOut(step, 1));
 
 	for (U32 ii = 0; ii < 99; ii++)
-		QV[2].push(DigitalOut(step, 0));
+		QV[DO0].push(DigitalOut(step, 0));
 
-	QV[2].push(DigitalOut(step, 1));
-	QV[2].push(DigitalOut(step, 0));
+	QV[DO0].push(DigitalOut(step, 1));
+	QV[DO0].push(DigitalOut(step, 0));
 
 	return QV;
 }

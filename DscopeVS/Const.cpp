@@ -8,6 +8,7 @@ namespace Const
 	extern const U8 AO0 = 0;
 	extern const U8 AO1 = 1;
 	extern const U8 DO0 = 2;
+	extern const U8 PCLOCK = 3;				//Pixel clock
 
 	extern const U32 us = 1;					//microsecond
 	extern const U32 ms = 1000 * us;			//millisecond

@@ -13,6 +13,14 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 0)); //start acquiring data
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Read_data, 0));		//read the data
 
+	/*
+	//Initialize all the channels with zero. Not needed if NiFpga_Finalize() is run at the end of the main code
+	U32QV QV(Nchan);
+	for (U8 ii = 0; ii < Nchan; ii++)
+		QV[ii].push(0);
+	SendOutQueue(status, session, QV);
+	PulseTrigger(status, session);
+	*/
 
 	std::cout << "FPGA initialize-variables status: " << *status << "\n";
 }

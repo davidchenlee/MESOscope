@@ -35,6 +35,7 @@ int main()
 		if (NiFpga_IsNotError(status))
 		{
 			InitializeFPGA(&status, session);
+			//Sleep(100);
 
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
@@ -61,9 +62,9 @@ int main()
 				PulseTrigger(&status, session);
 			}
 
-			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target)
+			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 			unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.*/
-			//NiFpga_MergeStatus(&status, NiFpga_Close(session, 0)); //0 resets, 1 does not reset
+			NiFpga_MergeStatus(&status, NiFpga_Close(session, 0)); //0 resets, 1 does not reset
 		}
 
 		//Reset the FPGA

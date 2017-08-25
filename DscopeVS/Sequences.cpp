@@ -6,10 +6,10 @@ U32QV Seq1()
 	U32QV QV(Nchan);
 
 	//AO0
-	QV[AO0].push(AnalogOut(4 * us, 10));
-	QV[AO0].push(AnalogOut(100 * us, 0));
+	QV[AO0].push(AnalogOut(4 * us, 0));
 	QV[AO0].push(AnalogOut(4 * us, 5));
-	QV[AO0].push(AnalogOut(4 * us, 0));//go back to zero
+	QV[AO0].push(AnalogOut(4 * us, 0));
+	QV[AO0].push(AnalogOut(4 * us, 5));//go back to zero
 
 	//QV[AO0] = GalvoSeq();
 

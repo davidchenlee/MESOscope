@@ -20,6 +20,7 @@ namespace Const
 	extern const U8 AO0;
 	extern const U8 AO1;
 	extern const U8 DO0;
+	extern const U8 DO1;
 	extern const U8 PCLOCK;
 
 	extern const U32 us;

@@ -19,6 +19,7 @@ U32QV Seq1()
 	QV[AO1].push(AnalogOut(4*us, 5));
 	QV[AO1].push(AnalogOut(4*us, 0));
 
+
 	//DO0
 	QV[DO0].push(DigitalOut(4 * us, 1));
 	QV[DO0].push(DigitalOut(4 * us, 0));

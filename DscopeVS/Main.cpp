@@ -75,7 +75,7 @@ int main()
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 		std::cout << "FPGA finalize status: " << status << "\n";
 		
-		getchar();
+		//getchar();
 		}
 	}
 

@@ -53,7 +53,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
 	U32 r; //empty elements remaining
 
-	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFO, FIFO, sizeFIFOqueue, timeout, &r));
+	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r));
 
 	std::cout << "FPGA FIFO status: " << *status << "\n";
 	delete[] FIFO;//cleanup
@@ -204,10 +204,10 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session) {
 		data[ii] = -1;
 
 	//Start the host FIFO. Not needed for reading the data, but it takes about 3ms to read 'elementsRemaining' once the FIFO starts running.
-	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU8_FIFOcounters));
+	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU8_FIFOOUT));
 
 	// read the DMA FIFO data and print. This function alone is able to start the FIFO, but it would not read 'elementsRemaining' right away because it takes about 3ms to read 'elementsRemaining' once the FIFO starts running
-	NiFpga_MergeStatus(status, NiFpga_ReadFifoU8(session, NiFpga_FPGA_TargetToHostFifoU8_FIFOcounters, data, Npop, timeout, &r));
+	NiFpga_MergeStatus(status, NiFpga_ReadFifoU8(session, NiFpga_FPGA_TargetToHostFifoU8_FIFOOUT, data, Npop, timeout, &r));
 	
 	//print out the data
 	for (U32 ii = 0; ii < Npop; ii++)

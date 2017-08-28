@@ -4,12 +4,14 @@ namespace Const
 {
 
 	extern const U8 Nchan = 5;				//Number of channels available. WARNING: This number MUST match the implementation on the FPGA!
+
 	//host-to-target FIFO array indices
 	extern const U8 AO0 = 0;
 	extern const U8 AO1 = 1;
 	extern const U8 DO0 = 2;
 	extern const U8 DO1 = 3;
 	extern const U8 PCLOCK = 4;				//Pixel clock
+	extern const U8 Ncounters = 1;			//Number of photon-counters. WARNING: This number MUST match the implementation on the FPGA!
 
 	extern const U32 us = 1;					//microsecond
 	extern const U32 ms = 1000 * us;			//millisecond
@@ -24,10 +26,10 @@ namespace Const
 	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refere to as a 'line'). If I devide each line in 1000 pixels, then the pix dwell time is 62.5ns
 	//Therefore, 62.5ns can fit at most 5 pulses with 12.5ns of separation.
 	extern const U8 Npulses = 10;				//Number of pulses per pixel for the PMT simulator
-	extern const U8 pulseArray[Npulses] = { 1, 0, 1, 0, 1, 1, 0, 0, 0, 0 };		//pulse sequence, where 1 (0) indicates the presence (absence) of a pulse
+	extern const U8 pulseArray[Npulses] = { 1, 0, 1, 0, 0, 0, 0, 0, 0, 0 };		//pulse sequence, where 1 (0) indicates the presence (absence) of a pulse
 	//extern const U8 Npulses = 5;
 	//extern const U8 pulseArray[Npulses] = { 1, 0, 0, 1, 0 };		//pulse sequence, where 1 (0) indicates the presence (absence) of a pulse
 
-	extern const U16 Nmaxlines = 2;						//Number of scanned lines to acquire
+	extern const U16 Nmaxlines = 1;						//Number of scanned lines to acquire
 	extern const U16 Npixels = 3;					//Number of pixels per line to acquire
 };

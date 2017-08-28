@@ -22,6 +22,7 @@ namespace Const
 	extern const U8 DO0;
 	extern const U8 DO1;
 	extern const U8 PCLOCK;
+	extern const U8 Ncounters;
 
 	extern const U32 us;
 	extern const U32 ms;

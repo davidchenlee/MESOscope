@@ -38,9 +38,9 @@ U32QV Seq1()
 	//Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
 	QV[PCLOCK].push(PixelClockDelay(3.125*us));//this "zero bit" has already been considered on the FPGA side
 	for (U32 ii = 0; ii < Npixels+1; ii++) // pixels plus one because there's one more pixels clock tick than pixel number
-	{
 		QV[PCLOCK].push(PixelClock(0.0625 * us, 1));
-	}
+
+
 
 	return QV;
 }

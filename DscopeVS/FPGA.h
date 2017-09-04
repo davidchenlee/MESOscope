@@ -10,7 +10,8 @@ static const char* Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\DscopeVS\\LabView\\FP
 //Prototypes
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);
 void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& Qarray);
-void PulseTrigger(NiFpga_Status* status, NiFpga_Session session);
+void TriggerAODO(NiFpga_Status* status, NiFpga_Session session);
+void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session);
 
 void printHex(U16 input);
 U32 u32pack(U16 t, U16 x);

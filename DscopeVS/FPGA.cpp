@@ -12,7 +12,6 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Nmax_lines, Nmaxlines));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 0)); //start acquiring data
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Read_data, 0));		//read the data
 
 	/*
 	//Initialize all the channels with zero. Not needed if NiFpga_Finalize() is run at the end of the main code
@@ -61,12 +60,20 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 }
 
 
-void PulseTrigger(NiFpga_Status* status, NiFpga_Session session)
+void TriggerAODO(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
 	std::cout << "Pulse trigger status: " << *status << "\n";
 }
+
+void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 0));
+	std::cout << "Acquisition trigger status: " << *status << "\n";
+}
+
 
 //**************************************************************************************************************************************************************
 

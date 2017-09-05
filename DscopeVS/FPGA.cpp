@@ -5,12 +5,13 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
-	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFOtimeout, FIFOtimeout));
+	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFO_timeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_Nchannels, Nchan));
 	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_Ncounters, Ncounters));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_DOdelaytick, DODelayTick));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Sync_DO_to_AO, Sync_DO_to_AO));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Sync_AODO_to_LineGate, Sync_AODO_to_LineGate));
 	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Nmax_lines, Nmaxlines));
+	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGA_ControlI16_Nmax_lines, Nmaxlines));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 0)); //start acquiring data
 
 	/*
@@ -59,7 +60,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	delete[] FIFO;//cleanup
 }
 
-
+//Main trigger. Trigger FIFO-in, and therefore, AO and DO
 void TriggerAODO(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 1));
@@ -67,6 +68,7 @@ void TriggerAODO(NiFpga_Status* status, NiFpga_Session session)
 	std::cout << "Pulse trigger status: " << *status << "\n";
 }
 
+//Trigger the pixel clock, and therefore, counters, and FIFO-out
 void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 1));
@@ -83,7 +85,7 @@ void printHex(U16 input)
 }
 
 
-//time t and analog output x are encoded in 16 bits each. Pack t as MSB and x as LSB.
+//time t and analog output x are encoded in 16 bits each. Pack t in MSB and x in LSB.
 U32 u32pack(U16 t, U16 x)
 {
 	return (t << 16) | (0x0000FFFF & x);
@@ -110,8 +112,7 @@ I16 AOUT(double x)
 
 U32 AnalogOut(double t, double val)
 {
-	U16 AOlatency = 2;	//To  calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block,
-						//which takes 2 reading cycles
+	U16 AOlatency = 2;	//To  calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 reading cycles
 	return u32pack(us2tick(t) - AOlatency, AOUT(val));
 }
 
@@ -127,16 +128,16 @@ U32 DigitalOut(double t, bool DO)
 }
 
 
+//Wait a certain amount of time once the pixel-clock is triggered by the resonant scanner. For this, send a package with a wait-time and zero bit
 U32 PixelClockDelay(double t)
 {
 	U16 GateLatency = 2;
-	
 	return u32pack(us2tick(t) - GateLatency, 0x0000);
 }
 
 U32 PixelClock(double t, bool DO)
 {
-	U16 latency = 1;//The pixel-clock is implemented in a SCTL. The first cycle is lost in the wait-time reading
+	U16 latency = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
 	if (DO)
 		return u32pack(us2tick(t) - latency, 0x0001);
 	else

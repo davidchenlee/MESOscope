@@ -30,12 +30,13 @@ namespace Const
 	extern const U32 tickPerUs;
 	extern const double tstep;
 	extern const U32 AO_dt;
-	extern const U16 DODelayTick;
+	extern const U16 Sync_DO_to_AO;
+	extern const U16 Sync_AODO_to_LineGate;
 	extern const U16 FIFOtimeout;
 
 	extern const U8 Npulses;
 	extern const U8 pulseArray[];
 
-	extern const U16 Nmaxlines;
+	extern const I16 Nmaxlines;
 	extern const U16 Npixels;
 };

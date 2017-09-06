@@ -23,7 +23,7 @@ U32QV Seq1()
 	//DO0
 	QV[DO0].push(DigitalOut(4 * us, 1));
 	QV[DO0].push(DigitalOut(4 * us, 0));
-	QV[DO0].push(DigitalOut(4 * us, 1));
+	QV[DO0].push(DigitalOut(4 * us, 0));
 	QV[DO0].push(DigitalOut(4 * us, 0));
 
 	//DO1

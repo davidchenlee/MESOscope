@@ -79,7 +79,7 @@ void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session)
 
 //**************************************************************************************************************************************************************
 
-void printHex(U16 input)
+void printHex(U32 input)
 {
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
@@ -96,52 +96,75 @@ U32 u32pack(U16 t, U16 x)
 U16 us2tick(double t)
 {
 	double aux = t * tickPerUs;
-	return (U16)aux;
+	U16 dt_tick_MIN = 2;		//Currently, DO and AO have a latency of 2 ticks
+	if ((U32)aux > 0x0000FFFF)
+	{
+		std::cout << "WARNING: time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us\n";
+		return _UI16_MAX;
+	}
+	else if ((U32)aux < dt_tick_MIN)
+	{
+		std::cout << "WARNING: time step underflow. Time step set to the min:" << std::fixed << dt_tick_MIN * dt_us << " us\n";;
+		return dt_tick_MIN;
+	}
+	else
+		return (U16)aux;
 }
 
 
-//converts voltage (range: -10V to 10V) to signed int 16 (range: -32768 to 32767)
+//converts voltage (range: -10V to 10V) to a signed int 16 (range: -32768 to 32767)
 //0x7FFFF = 0d32767
 //0xFFFF = -1
 //0x8000 = -32768
 I16 AOUT(double x)
 {
-	return (U16)(x / 10 * _I16_MAX);
+	if (x > 10)
+	{
+		std::cout << "WARNING: voltage overflow. Voltage set to the max: 10 V\n";
+		return (U16)_I16_MAX;
+	}
+	else if (x < -10)
+	{
+		std::cout << "WARNING: voltage underflow. Voltage set to the min: -10 V\n";
+		return (U16)_I16_MIN;
+	}
+	else
+		return (U16)(x / 10 * _I16_MAX);
 }
 
 
 U32 AnalogOut(double t, double val)
 {
-	U16 AOlatency = 2;	//To  calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 reading cycles
-	return u32pack(us2tick(t) - AOlatency, AOUT(val));
+	U16 AOlatency_tick = 2;	//To  calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
+	return u32pack(us2tick(t) - AOlatency_tick, AOUT(val));
 }
 
 
+//The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 U32 DigitalOut(double t, bool DO)
 {
-	U16 DOlatency = 2;	//To  calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block,
-						//which takes 2 reading cycles
+	U16 DOlatency_tick = 2;	//To  calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
 	if (DO)
-		return u32pack(us2tick(t) - DOlatency, 0x0001);
+		return u32pack(us2tick(t) - DOlatency_tick, 0x0001);
 	else
-		return u32pack(us2tick(t) - DOlatency, 0x0000);
+		return u32pack(us2tick(t) - DOlatency_tick, 0x0000);
 }
 
 
 //Wait a certain amount of time once the pixel-clock is triggered by the resonant scanner. For this, send a package with a wait-time and zero bit
 U32 PixelClockDelay(double t)
 {
-	U16 GateLatency = 2;
-	return u32pack(us2tick(t) - GateLatency, 0x0000);
+	U16 GateLatency_tick = 2;
+	return u32pack(us2tick(t) - GateLatency_tick, 0x0000);
 }
 
 U32 PixelClock(double t, bool DO)
 {
-	U16 latency = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
+	U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
 	if (DO)
-		return u32pack(us2tick(t) - latency, 0x0001);
+		return u32pack(us2tick(t) - PClatency_tick, 0x0001);
 	else
-		return u32pack(us2tick(t) - latency, 0x0000);
+		return u32pack(us2tick(t) - PClatency_tick, 0x0000);
 }
 
 
@@ -163,10 +186,10 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 	U32Q queue;
 	bool debug = false;
 
-	if (dt < AO_dt)
+	if (dt < AOdt_us)
 	{
-		std::cout << "WARNING: step size too small. Step size set to " << AO_dt << " us";
-		dt = AO_dt; //Analog output time increment in us
+		std::cout << "WARNING: time step too small. Time step set to " << AOdt_us << " us\n";
+		dt = AOdt_us; //Analog output time increment in us
 		getchar();
 	}
 
@@ -174,7 +197,7 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 
 	if (nPoints <= 1)
 	{
-		std::cout << "ERROR: not enought points for the analog linear ramp\n";
+		std::cout << "ERROR: not enought points for the linear ramp\n";
 		std::cout << "nPoints: " << nPoints << "\n";
 		getchar();
 	}

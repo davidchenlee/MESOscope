@@ -28,8 +28,8 @@ namespace Const
 	extern const U32 ms;
 	extern const U32 s;
 	extern const U32 tickPerUs;
-	extern const double tstep;
-	extern const U32 AO_dt;
+	extern const double dt_us;
+	extern const U32 AOdt_us;
 	extern const U16 Sync_DO_to_AO;
 	extern const U16 Sync_AODO_to_LineGate;
 	extern const U16 FIFOtimeout;

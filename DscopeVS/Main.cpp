@@ -69,7 +69,8 @@ int main()
 		/* You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.*/
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 		std::cout << "FPGA finalize status: " << status << "\n";
-		
+	
+
 		getchar();
 		}
 	}

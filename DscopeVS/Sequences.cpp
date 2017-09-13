@@ -40,8 +40,6 @@ U32QV Seq1()
 	for (U32 ii = 0; ii < Npixels+1; ii++) // pixels plus one because there's one more pixel-clock ticks than number of pixels
 		QV[PCLOCK].push(PixelClock(0.0625 * us, 1));
 
-
-
 	return QV;
 }
 

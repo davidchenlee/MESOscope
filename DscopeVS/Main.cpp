@@ -43,6 +43,7 @@ int main()
 			SendOutQueue(&status, session, Seq1());
 			//SendOutQueue(&status, session, GalvoTest());
 			TriggerAODO(&status, session);
+			Sleep(1000);
 
 			// start acquiring data
 			TriggerAcquisition(&status, session);

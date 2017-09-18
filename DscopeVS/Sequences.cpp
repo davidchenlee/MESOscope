@@ -19,7 +19,6 @@ U32QV Seq1()
 	QV[AO1].push(AnalogOut(4*us, 5));
 	QV[AO1].push(AnalogOut(4*us, 0));
 
-
 	//DO0
 	QV[DO0].push(DigitalOut(4 * us, 1));
 	QV[DO0].push(DigitalOut(4 * us, 0));
@@ -31,17 +30,13 @@ U32QV Seq1()
 	QV[DO1].push(DigitalOut(4 * us, 0));
 	QV[DO1].push(DigitalOut(4 * us, 0));
 	QV[DO1].push(DigitalOut(4 * us, 0));
-	//QV[DO1] = QV[DO0];
 
-	
-	//Detector. Currently the clock increment is 6.25ns = 0.00625us
-	//Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
-	QV[PCLOCK].push(PixelClockDelay(3.125*us));//wait after the trigger
-	for (U32 ii = 0; ii < Npixels+1; ii++) // pixels plus one because there's one more pixel-clock ticks than number of pixels
-		QV[PCLOCK].push(PixelClock(0.0625 * us, 1));
+	//Pixel clock
+	QV[PCLOCK] = PixelClockSeq();
 
 	return QV;
 }
+
 
 U32QV Seq2()
 {
@@ -60,7 +55,20 @@ U32QV Seq2()
 	return QV;
 }
 
-//this is a queue, not a vector of queues
+//this returns a queue and not a vector of queues
+U32Q PixelClockSeq()
+{
+	U32Q Q;	
+	//Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
+	//Currently the clock increment is 6.25ns = 0.00625us
+	Q.push(PixelClockDelay(3.125*us));//wait after the trigger
+	for (U32 ii = 0; ii < Npixels + 1; ii++) // pixels plus one because there's one more pixel-clock ticks than number of pixels
+		Q.push(PixelClock(0.0625 * us, 1));
+	return Q;
+}
+
+
+//this returns a queue and not a vector of queues
 U32Q GalvoSeq()
 {
 	double Vmax = 0.05;

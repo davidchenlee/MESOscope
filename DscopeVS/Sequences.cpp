@@ -11,6 +11,12 @@ U32QV Seq1()
 	QV[AO0].push(AnalogOut(4 * us, 5));
 	QV[AO0].push(AnalogOut(4 * us, 0));//go back to zero
 
+	//DO0
+	QV[DO0].push(DigitalOut(4 * us, 1));
+	QV[DO0].push(DigitalOut(4 * us, 0));
+	QV[DO0].push(DigitalOut(4 * us, 0));
+	QV[DO0].push(DigitalOut(4 * us, 0));
+
 	//QV[AO0] = GalvoSeq();
 
 	//AO1
@@ -19,11 +25,7 @@ U32QV Seq1()
 	QV[AO1].push(AnalogOut(4*us, 5));
 	QV[AO1].push(AnalogOut(4*us, 0));
 
-	//DO0
-	QV[DO0].push(DigitalOut(4 * us, 1));
-	QV[DO0].push(DigitalOut(4 * us, 0));
-	QV[DO0].push(DigitalOut(4 * us, 0));
-	QV[DO0].push(DigitalOut(4 * us, 0));
+
 
 	//DO1
 	QV[DO1].push(DigitalOut(4 * us, 1));
@@ -131,13 +133,6 @@ U32QV DigitalLatencyCalib()
 	U32QV QV(Nchan);
 	double delay = 400 * us;
 	double step = 4 * us;
-
-	//AO0
-	QV[AO0].push(AnalogOut(step, 10));//initial pulse
-	QV[AO0].push(AnalogOut(step, 0));
-	QV[AO0] = PushQ(QV[0], linearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
-	QV[AO0].push(AnalogOut(step, 5));//final pulse
-	QV[AO0].push(AnalogOut(step, 0));
 
 	//DO0
 	QV[DO0].push(DigitalOut(step, 1));

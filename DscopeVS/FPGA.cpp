@@ -5,13 +5,13 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
-	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_FIFO_timeout, FIFOtimeout));
-	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_Nchannels, Nchan));
-	NiFpga_MergeStatus(status, NiFpga_WriteI32(session, NiFpga_FPGA_ControlI32_Ncounters, Ncounters));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_FIFO_timeout, FIFOtimeout));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Nchannels, Nchan));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Ncounters, Ncounters));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Sync_DO_to_AO, Sync_DO_to_AO));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Sync_AODO_to_LineGate, Sync_AODO_to_LineGate));
 	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
-	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGA_ControlI16_Nmax_lines, Nmaxlines));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Nmax_lines, Nmaxlines));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 0)); //start acquiring data
 
 	/*

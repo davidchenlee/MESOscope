@@ -2,8 +2,7 @@
 
 U32QV Seq1()
 {
-	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
-	U32QV QV(Nchan);
+	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 
 	//AO0
 	QV[AO0].push(AnalogOut(4 * us, 5));
@@ -40,7 +39,7 @@ U32QV Seq1()
 
 U32QV Seq2()
 {
-	U32QV QV(Nchan);
+	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 
 	//AO0
 	QV[AO0].push(AnalogOut(4 * us, 10));
@@ -61,7 +60,7 @@ U32QV Seq2()
 //Currently the clock increment is 6.25ns = 0.00625us
 U32Q PixelClockSeq()
 {
-	U32Q Q;	
+	U32Q Q;	//Create a queue
 	
 	//INITIAL WAIT TIME
 	double t = 3.125*us;
@@ -80,7 +79,8 @@ U32Q GalvoSeq()
 {
 	double Vmax = 0.05;
 	double step = 100 * us;
-	U32Q Q;
+	U32Q Q; //Create a queue
+
 	//linear output
 	U32Q linearRamp1 = linearRamp(step, 5 * ms, 0, -Vmax);
 	U32Q linearRamp2 = linearRamp(step, 10 * ms, -Vmax, Vmax);
@@ -93,7 +93,7 @@ U32Q GalvoSeq()
 
 U32QV GalvoTest()
 {
-	U32QV QV(Nchan);
+	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 	//QV[AO0] = GalvoSeq();
 	double pulsewidth = 300 * us;
 
@@ -107,11 +107,28 @@ U32QV GalvoTest()
 }
 
 
+U32QV DigitalLatencyCalib()
+{
+	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	double step = 4 * us;
+
+	//DO0
+	QV[DO0].push(DigitalOut(step, 1));
+
+	for (U32 ii = 0; ii < 99; ii++)
+		QV[DO0].push(DigitalOut(step, 0));
+
+	QV[DO0].push(DigitalOut(step, 1));
+	QV[DO0].push(DigitalOut(step, 0));
+
+	return QV;
+}
+
+
+//Calibrate the digital channels first, then use them as a time reference
 U32QV AnalogLatencyCalib()
 {
-	//Calibrate DO first, then use it as a time reference
-	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
-	U32QV QV(Nchan);
+	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 	double delay = 400 * us;
 	double step = 4 * us;
 
@@ -126,24 +143,6 @@ U32QV AnalogLatencyCalib()
 	QV[DO0].push(DigitalOut(step, 1));
 	QV[DO0].push(DigitalOut(step, 0));
 	QV[DO0].push(DigitalOut(delay, 0));
-	QV[DO0].push(DigitalOut(step, 1));
-	QV[DO0].push(DigitalOut(step, 0));
-
-	return QV;
-}
-
-U32QV DigitalLatencyCalib()
-{
-	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
-	U32QV QV(Nchan);
-	double step = 4 * us;
-
-	//DO0
-	QV[DO0].push(DigitalOut(step, 1));
-
-	for (U32 ii = 0; ii < 99; ii++)
-		QV[DO0].push(DigitalOut(step, 0));
-
 	QV[DO0].push(DigitalOut(step, 1));
 	QV[DO0].push(DigitalOut(step, 0));
 

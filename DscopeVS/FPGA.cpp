@@ -133,6 +133,7 @@ I16 AOUT(double x)
 }
 
 
+//Send out an analog "segment", where the analog level 'val' is held for the amount of time 't'
 U32 AnalogOut(double t, double val)
 {
 	U16 AOlatency_tick = 2;	//To  calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
@@ -140,7 +141,7 @@ U32 AnalogOut(double t, double val)
 }
 
 
-//The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
+//Send out a digital "segment", where 'DO' is held LOW or HIGH for the amount of time 't'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 U32 DigitalOut(double t, bool DO)
 {
 	U16 DOlatency_tick = 2;	//To  calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
@@ -151,13 +152,7 @@ U32 DigitalOut(double t, bool DO)
 }
 
 
-//Wait a certain amount of time once the pixel-clock is triggered by the resonant scanner. For this, send a package with a wait-time and zero bit
-U32 PixelClockDelay(double t)
-{
-	U16 GateLatency_tick = 2;
-	return u32pack(us2tick(t) - GateLatency_tick, 0x0000);
-}
-
+//Send out a pixel-clock "segment", where 'DO' is held LOW or HIGH for the amount of time 't'
 U32 PixelClock(double t, bool DO)
 {
 	U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer

@@ -40,8 +40,8 @@ int main()
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-			//SendOutQueue(&status, session, Seq1());
-			SendOutQueue(&status, session, DigitalLatencyCalib());
+			SendOutQueue(&status, session, Seq1());
+			//SendOutQueue(&status, session, DigitalLatencyCalib());
 			TriggerAODO(&status, session);
 			Sleep(1000);
 

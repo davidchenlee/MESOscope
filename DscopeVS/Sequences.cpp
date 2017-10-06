@@ -25,8 +25,6 @@ U32QV Seq1()
 	QV[AO1].push(AnalogOut(4*us, 5));
 	QV[AO1].push(AnalogOut(4*us, 0));
 
-
-
 	//DO1
 	QV[DO1].push(DigitalOut(4 * us, 1));
 	QV[DO1].push(DigitalOut(4 * us, 0));
@@ -57,20 +55,27 @@ U32QV Seq2()
 	return QV;
 }
 
-//this returns a queue and not a vector of queues
+
+
+//Pixel clock sequence. The pixel clock starts when the line clock ticks, followed by a wait time 't'
+//Currently the clock increment is 6.25ns = 0.00625us
 U32Q PixelClockSeq()
 {
 	U32Q Q;	
-	//Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
-	//Currently the clock increment is 6.25ns = 0.00625us
-	Q.push(PixelClockDelay(3.125*us));//wait after the trigger
-	for (U32 ii = 0; ii < Npixels + 1; ii++) // pixels plus one because there's one more pixel-clock ticks than number of pixels
+	
+	//INITIAL WAIT TIME
+	double t = 3.125*us;
+	U16 latency = 2; //latency of detecting the line clock. Calibrate the latency on the oscilloscope
+	Q.push(u32pack(us2tick(t) - latency, 0x0000));
+
+	//PIXEL CLOCK TICKS. Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
+	for (U32 ii = 0; ii < Npixels + 1; ii++) // Npixels+1 because there is one more pixel-clock ticks than number of pixels
 		Q.push(PixelClock(0.0625 * us, 1));
-	return Q;
+	return Q; //this returns a queue and not a vector of queues
 }
 
 
-//this returns a queue and not a vector of queues
+
 U32Q GalvoSeq()
 {
 	double Vmax = 0.05;
@@ -83,7 +88,7 @@ U32Q GalvoSeq()
 	PushQ(Q, linearRamp1);
 	PushQ(Q, linearRamp2);
 	PushQ(Q, linearRamp3);
-	return Q;
+	return Q; //this returns a queue and not a vector of queues
 }
 
 U32QV GalvoTest()
@@ -131,7 +136,6 @@ U32QV DigitalLatencyCalib()
 {
 	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 	U32QV QV(Nchan);
-	double delay = 400 * us;
 	double step = 4 * us;
 
 	//DO0

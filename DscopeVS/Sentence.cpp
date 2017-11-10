@@ -19,10 +19,10 @@ U32QV Seq1()
 	//QV[AO0] = GalvoSeq();
 
 	//AO1
-	QV[AO1].push(AnalogOut(4*us, 5));
-	QV[AO1].push(AnalogOut(4*us, 0));
-	QV[AO1].push(AnalogOut(4*us, 5));
-	QV[AO1].push(AnalogOut(4*us, 0));
+	QV[AO1].push(AnalogOut(4 * us, 5));
+	QV[AO1].push(AnalogOut(4 * us, 0));
+	QV[AO1].push(AnalogOut(4 * us, 5));
+	QV[AO1].push(AnalogOut(4 * us, 0));
 
 	//DO1
 	QV[DO1].push(DigitalOut(4 * us, 1));
@@ -61,7 +61,7 @@ U32QV Seq2()
 U32Q PixelClockSeq()
 {
 	U32Q Q;	//Create a queue
-	
+
 	//INITIAL WAIT TIME
 	double t = 3.125*us;
 	U16 latency = 2; //latency of detecting the line clock. Calibrate the latency on the oscilloscope
@@ -122,7 +122,7 @@ U32QV DigitalOutSeq(bool DO)
 U32QV DigitalTimingCheck()
 {
 	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
-	double step = 400* us;
+	double step = 400 * us;
 
 	//DO0
 	QV[DO0].push(DigitalOut(step, 1));

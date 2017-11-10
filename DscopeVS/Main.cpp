@@ -9,15 +9,6 @@
 
 int main()
 {
-	if (0)
-	{
-		Seq ss;
-		ss.shutter(1 * us, 1);
-		std::cout << "size of the vector" << ss.size() << "\n";
-		std::cout << "" << (ss.vector())[0].size() << "\n";
-		Sleep(1000);
-	}
-	else {
 	/* must be called before any other FPGA calls */
 	NiFpga_Status status = NiFpga_Initialize();
 	std::cout << "FPGA initialize status: " << status << "\n";
@@ -34,29 +25,15 @@ int main()
 		if (NiFpga_IsNotError(status))
 		{
 			InitializeFPGA(&status, session);
-			//Sleep(100);
 
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
-			//TriggerAODO(&status, session);
-			//Sleep(1000);
 
-			//SendOutQueue(&status, session, Seq1());
 
-			NonDetDigitalPulse(&status, session, 10);
+			NonDetDigitalPulse(&status, session, 10*ms);
+			//MainSequence(&status, session);
 
-			// start acquiring data
-			//TriggerAcquisition(&status, session);
-			//CountPhotons(&status, session);
 
-			
-			//SECOND ROUND
-			if (0)
-			{
-				SendOutQueue(&status, session, Seq1());
-				TriggerAODO(&status, session);
-				TriggerAcquisition(&status, session);
-			}
 
 			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 			unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.*/
@@ -70,10 +47,9 @@ int main()
 		/* You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.*/
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 		std::cout << "FPGA finalize status: " << status << "\n";
-	
+
 
 		getchar();
-		}
 	}
 
 

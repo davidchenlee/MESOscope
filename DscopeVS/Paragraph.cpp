@@ -5,7 +5,7 @@
 void NonDetDigitalPulse(NiFpga_Status* status, NiFpga_Session session, double tstep)
 {
 	int delay = 4; //used to calibrate the pulse
-	int dt_ms = (int) tstep / ms;
+	int dt_ms = (int)tstep / ms;
 
 
 	SendOutQueue(status, session, DigitalOutSeq(1));
@@ -19,6 +19,41 @@ void NonDetDigitalPulse(NiFpga_Status* status, NiFpga_Session session, double ts
 	SendOutQueue(status, session, DigitalOutSeq(0));
 	TriggerAODO(status, session);
 }
+
+
+void MainSequence(NiFpga_Status* status, NiFpga_Session session)
+{
+	SendOutQueue(status, session, Seq1());
+	TriggerAODO(status, session);
+	Sleep(1000);
+
+	// start acquiring data
+	TriggerAcquisition(status, session);
+	CountPhotons(status, session);
+
+	//SECOND ROUND
+	if (0)
+	{
+		SendOutQueue(status, session, Seq1());
+		TriggerAODO(status, session);
+		TriggerAcquisition(status, session);
+	}
+}
+
+/*
+void SeqClassTest()
+{
+		Seq ss;
+		ss.shutter(1 * us, 1);
+		std::cout << "size of the vector" << ss.size() << "\n";
+		std::cout << "" << (ss.vector())[0].size() << "\n";
+		Sleep(1000);
+}
+*/
+
+
+
+
 
 
 /* FPGA FUNCTIONS**************************************************************************************************************************************************************************************/

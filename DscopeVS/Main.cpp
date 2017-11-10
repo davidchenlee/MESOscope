@@ -2,9 +2,8 @@
 //#include <time.h>
 //#include <concrt.h> 	//Concurrency::wait(2000);
 #include "windows.h"	//the stages use this lib. also Sleep
-#include "FPGA.h"
-#include "Sequences.h"
-#include "Seq.h"
+#include "Paragraph.h"
+#include "Seq.h" //'Seq' class
 //using namespace std;
 
 
@@ -39,15 +38,16 @@ int main()
 
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
+			//TriggerAODO(&status, session);
+			//Sleep(1000);
 
-			SendOutQueue(&status, session, Seq1());
-			//SendOutQueue(&status, session, DigitalLatencyCalib());
-			TriggerAODO(&status, session);
-			Sleep(1000);
+			//SendOutQueue(&status, session, Seq1());
+
+			NonDetDigitalPulse(&status, session, 10);
 
 			// start acquiring data
-			TriggerAcquisition(&status, session);
-			CountPhotons(&status, session);
+			//TriggerAcquisition(&status, session);
+			//CountPhotons(&status, session);
 
 			
 			//SECOND ROUND

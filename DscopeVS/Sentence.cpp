@@ -1,4 +1,4 @@
-#include "Sequences.h"
+#include "Sentence.h"
 
 U32QV Seq1()
 {
@@ -91,6 +91,7 @@ U32Q GalvoSeq()
 	return Q; //this returns a queue and not a vector of queues
 }
 
+
 U32QV GalvoTest()
 {
 	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
@@ -103,6 +104,30 @@ U32QV GalvoTest()
 
 	QV[DO0].push(DigitalOut(pulsewidth, 1));
 	QV[DO0].push(DigitalOut(4 * us, 0));
+	return QV;
+}
+
+
+U32QV DigitalOutSeq(bool DO)
+{
+	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	double step = 350 * us;
+
+	//DO0
+	QV[DO0].push(DigitalOut(step, DO));
+	return QV;
+}
+
+
+U32QV DigitalTimingCheck()
+{
+	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	double step = 400* us;
+
+	//DO0
+	QV[DO0].push(DigitalOut(step, 1));
+	QV[DO0].push(DigitalOut(step, 0));
+
 	return QV;
 }
 
@@ -125,7 +150,7 @@ U32QV DigitalLatencyCalib()
 }
 
 
-//Calibrate the digital channels first, then use them as a time reference
+//Calibrate the digital channels first, then use it as a time reference
 U32QV AnalogLatencyCalib()
 {
 	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA

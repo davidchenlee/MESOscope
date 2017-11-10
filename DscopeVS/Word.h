@@ -7,12 +7,6 @@ using namespace Const;
 /*Define the full path of the bitfile*/
 static const char* Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\DscopeVS\\LabView\\FPGA Bitfiles\\" NiFpga_FPGA_Bitfile;
 
-//Prototypes
-void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);
-void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& Qarray);
-void TriggerAODO(NiFpga_Status* status, NiFpga_Session session);
-void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session);
-
 void printHex(U32 input);
 U32 u32pack(U16 t, U16 x);
 U16 us2tick(double x);

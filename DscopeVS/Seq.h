@@ -7,7 +7,7 @@ WORK IN PROGRESS
 
 #pragma once
 #include <iostream>
-#include "FPGA.h"
+#include "Word.h"
 #include "Const.h"
 
 class Seq

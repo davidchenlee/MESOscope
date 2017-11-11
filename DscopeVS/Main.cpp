@@ -33,9 +33,8 @@ int main()
 			//NonDetDigitalPulse(&status, session, 10*ms);
 			//MainSequence(&status, session);
 
-
-			VTpulse(&status, session, 2 * ms, VTstart);
-
+			PulseVTcontrol(&status, session, 1 * s, VTforward);
+			//StartVT(&status, session);
 
 			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 			unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.*/

@@ -13,7 +13,8 @@ U32QV DigitalTimingCheck();
 U32QV AnalogLatencyCalib();
 U32QV DigitalLatencyCalib();
 
-void VTpulse(NiFpga_Status* status, NiFpga_Session session, double tstep, int channel);
+int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel);
+int StartVT(NiFpga_Status* status, NiFpga_Session session);
 
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);
 void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& Qarray);

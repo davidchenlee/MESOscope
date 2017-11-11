@@ -175,36 +175,52 @@ U32QV AnalogLatencyCalib()
 }
 
 
-//Non-deterministic digital pulse for the vibratome control. The timing fluctuates approx in 1ms
-void VTpulse(NiFpga_Status* status, NiFpga_Session session, double tstep, int channel)
+//Start running the vibratome
+int StartVT(NiFpga_Status* status, NiFpga_Session session)
 {
-	U8 selectedChannel = 0;
+	int dt = 20; //in ms. It has to be ~ 12 ms or longer to 
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_start, 1));
+	Sleep(dt);
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_start, 0));
+
+	return 0;
+}
+
+//Non-deterministic digital pulse for the vibratome control. The timing fluctuates approx in 1ms
+int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel)
+{
+	U8 selectedChannel;
+	int minstep = 10; //in ms
+
 	switch (channel)
 	{
-	case 0:
-		selectedChannel = NiFpga_FPGA_ControlBool_VT_start;
-		break;
-	case 1:
+	case VTback:
 		selectedChannel = NiFpga_FPGA_ControlBool_VT_back;
 		break;
-	case 2:
+	case VTforward:
 		selectedChannel = NiFpga_FPGA_ControlBool_VT_forward;
 		break;
+	default:
+		std::cout << "ERROR: Selected VT channel is unavailable\n";
+		return -1;
 	}
 
 
-	int delay = 1; //used to calibrate the pulse length
-	int dt_ms = (int)tstep / ms;
+	int delay = 1; //used to roughly calibrate the pulse length
+	int dt_ms = (int)dt / ms;
 
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 1));
 
-	if (dt_ms >= delay)
+	if (dt_ms >= minstep)
 		Sleep(dt_ms - delay);
 	else
-		std::cout << "WARNING: time step too small. Time step set to the min\n";
-
+	{
+		Sleep(minstep - delay);
+		std::cout << "WARNING: time step too small. Time step set to the min = ~" << minstep << "ms \n";
+	}
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 0));
-
+	
+	return 0;
 }
 
 

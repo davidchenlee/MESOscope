@@ -13,6 +13,11 @@ namespace Const
 	extern const U8 PCLOCK = 4;				//Pixel clock
 	extern const U8 Ncounters = 1;			//Number of photon-counters. WARNING: This number MUST match the implementation on the FPGA!
 
+	//vibratome channels
+	extern const U8 VTstart = 0;
+	extern const U8 VTback = 1;
+	extern const U8 VTforward = 2;
+
 	extern const U32 us = 1;							//microsecond
 	extern const U32 ms = 1000 * us;					//millisecond
 	extern const U32 s = 1000000 * us;					//second

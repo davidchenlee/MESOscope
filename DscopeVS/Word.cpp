@@ -167,6 +167,8 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session) {
 }
 
 
+
+
 /*
 int i;
 for(i=0; i<size; i=i+1){

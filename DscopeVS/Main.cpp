@@ -30,9 +30,11 @@ int main()
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
 
-			NonDetDigitalPulse(&status, session, 10*ms);
+			//NonDetDigitalPulse(&status, session, 10*ms);
 			//MainSequence(&status, session);
 
+
+			VTpulse(&status, session, 2 * ms, VTstart);
 
 
 			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)

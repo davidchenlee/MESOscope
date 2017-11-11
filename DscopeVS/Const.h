@@ -14,6 +14,7 @@ typedef unsigned __int64	U63;
 typedef std::queue<uint32_t> U32Q;			//Queue of unsigned integers
 typedef std::vector<U32Q> U32QV;			//Vector of queues of unsigned integers
 
+
 namespace Const
 {
 	extern const U8 Nchan;
@@ -23,6 +24,10 @@ namespace Const
 	extern const U8 DO1;
 	extern const U8 PCLOCK;
 	extern const U8 Ncounters;
+
+	extern const U8 VTstart;
+	extern const U8 VTback;
+	extern const U8 VTforward;
 
 	extern const U32 us;
 	extern const U32 ms;

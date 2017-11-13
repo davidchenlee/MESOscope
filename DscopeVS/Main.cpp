@@ -33,7 +33,7 @@ int main()
 			//NonDetDigitalPulse(&status, session, 10*ms);
 			//MainSequence(&status, session);
 
-			PulseVTcontrol(&status, session, 1 * s, VTforward);
+			PulseVTcontrol(&status, session, 3 * s, VTback);
 			//StartVT(&status, session);
 
 			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)

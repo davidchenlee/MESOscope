@@ -5,9 +5,9 @@ U32QV Seq1()
 	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 
 	//AO0
-	QV[AO0].push(AnalogOut(4 * us, 5));
+	QV[AO0].push(AnalogOut(4 * us, 10));
 	QV[AO0].push(AnalogOut(4 * us, 0));
-	QV[AO0].push(AnalogOut(4 * us, 5));
+	QV[AO0].push(AnalogOut(4 * us, 10));
 	QV[AO0].push(AnalogOut(4 * us, 0));//go back to zero
 
 	//DO0
@@ -18,6 +18,8 @@ U32QV Seq1()
 
 	//QV[AO0] = GalvoSeq();
 
+
+	//CURRENTLY, AO1 AND DO1 ARE TRIGGERED BY CONN1/DIO16
 	//AO1
 	QV[AO1].push(AnalogOut(4 * us, 5));
 	QV[AO1].push(AnalogOut(4 * us, 0));

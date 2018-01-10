@@ -90,9 +90,12 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\OwnCloud\Codes\Dscope\DscopeVS;D:\OwnCloud\Codes\Dscope\DscopeVS\LabView\FPGA Bitfiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>PI_GCS2_DLL.lib;PI_GCS2_DLL_x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -143,6 +146,7 @@
   <ItemGroup>
     <ClCompile Include="Const.cpp" />
     <ClCompile Include="Paragraph.cpp" />
+    <ClCompile Include="PIstages.cpp" />
     <ClCompile Include="Word.cpp" />
     <ClCompile Include="LabView\FPGA Bitfiles\NiFpga.c" />
     <ClCompile Include="Main.cpp" />
@@ -152,6 +156,7 @@
   <ItemGroup>
     <ClInclude Include="Const.h" />
     <ClInclude Include="Paragraph.h" />
+    <ClInclude Include="PIstages.h" />
     <ClInclude Include="Word.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Seq.h" />

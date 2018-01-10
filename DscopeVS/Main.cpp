@@ -4,21 +4,25 @@
 #include "windows.h"	//the stages use this lib. also Sleep
 #include "Paragraph.h"
 #include "Seq.h" //'Seq' class
+#include "PIstages.h"
 //using namespace std;
+
 
 
 int main()
 {
-	/* must be called before any other FPGA calls */
+
+	/*
+	//must be called before any other FPGA calls
 	NiFpga_Status status = NiFpga_Initialize();
 	std::cout << "FPGA initialize status: " << status << "\n";
 
-	/* check for any FPGA error */
+	//check for any FPGA error
 	if (NiFpga_IsNotError(status))
 	{
 		NiFpga_Session session;
 
-		/* opens a session, downloads the bitstream*/
+		//opens a session, downloads the bitstream
 		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGA_Signature, "RIO0", 0, &session)); //1=no run, 0=run
 		std::cout << "FPGA open-session status: " << status << "\n";
 
@@ -36,8 +40,8 @@ int main()
 			//PulseVTcontrol(&status, session, 3 * s, VTback);
 			//StartVT(&status, session);
 
-			/* Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
-			unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.*/
+			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
+			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 			NiFpga_MergeStatus(&status, NiFpga_Close(session, 0)); //0 resets, 1 does not reset
 		}
 
@@ -45,13 +49,17 @@ int main()
 		//NiFpga_Reset(session);
 
 
-		/* You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.*/
+		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 		std::cout << "FPGA finalize status: " << status << "\n";
 
 
 		getchar();
 	}
+	*/
+
+	runPIstageSequence();
+
 
 
 	return 0;

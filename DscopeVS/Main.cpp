@@ -5,6 +5,7 @@
 #include "Paragraph.h"
 #include "Seq.h" //'Seq' class
 #include "PIstages.h"
+#include "UART.h"
 //using namespace std;
 
 
@@ -12,7 +13,7 @@
 int main()
 {
 
-	/*
+	
 	//must be called before any other FPGA calls
 	NiFpga_Status status = NiFpga_Initialize();
 	std::cout << "FPGA initialize status: " << status << "\n";
@@ -56,10 +57,10 @@ int main()
 
 		getchar();
 	}
-	*/
+	
 
-	runPIstageSequence();
-
+	//runPIstageSequence();
+	//runUARTsequence();
 
 
 	return 0;

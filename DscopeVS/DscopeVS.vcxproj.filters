@@ -39,6 +39,9 @@
     <ClCompile Include="PIstages.cpp">
       <Filter>Header Files</Filter>
     </ClCompile>
+    <ClCompile Include="UART.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Seq.h">
@@ -60,6 +63,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PIstages.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UART.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

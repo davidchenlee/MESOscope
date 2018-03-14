@@ -28,7 +28,7 @@ namespace Const
 	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refere to as a 'line'). If I devide each line in 1000 pixels, then the pix dwell time is 62.5ns
 	//Therefore, 62.5ns can fit at most 5 pulses separated by 12.5ns of separation.
 	extern const U8 Npulses = 10;				//Number of pulses per pixel for the PMT simulator
-	extern const U8 pulseArray[Npulses] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };		//When the array element is HIGH, the output flips the state
+	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 };		//When the array element is HIGH, the output flips the state
 	//extern const U8 Npulses = 5;
 	//extern const U8 pulseArray[Npulses] = { 1, 0, 0, 1, 0 };		//pulse sequence, where 1 (0) indicates the presence (absence) of a pulse
 

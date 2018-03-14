@@ -143,7 +143,8 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 }
 
 
-void CountPhotons(NiFpga_Status* status, NiFpga_Session session) {
+void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
+{
 
 	size_t Npop = (Npixels + 1)* Nmaxlines;
 	uint32_t r; //elements remaining

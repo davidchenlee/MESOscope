@@ -2,6 +2,7 @@
 
 void MainSequence(NiFpga_Status* status, NiFpga_Session session)
 {
+	//control sequences
 	SendOutQueue(status, session, Seq1());
 	TriggerAODO(status, session);
 	Sleep(1000);

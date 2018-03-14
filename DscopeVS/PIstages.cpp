@@ -8,7 +8,7 @@
 // Additional Sample Functions
 int XstageID, YstageID, ZstageID;
 char NumberOfAxesPerController[2] = "1"; //There is only 1 stage per controller
-double SetPosition[3] = { 0, 0, 23 };
+double SetPosition[3] = { 0, -5, 23 };
 
 int runPIstageSequence()
 {

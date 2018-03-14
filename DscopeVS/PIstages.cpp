@@ -180,6 +180,7 @@ BOOL GetControllerID(int stageID)
 		return FALSE;
 	}
 	std::cout << "qIDN returned: " << IDN;
+	return TRUE;
 }
 
 // Determine boundaries for stage movement
@@ -199,6 +200,7 @@ BOOL GetStageBondaries(int stageID)
 	}
 
 	std::cout << "Allowed range of movement: min: " << MinPositionValue << "\t max: " << MaxPositionValue << "\n";
+	return TRUE;
 }
 
 // Move stage to set position within boundaries.
@@ -209,6 +211,7 @@ BOOL MoveStage(int stageID, double SetPosition)
 		CloseConnectionWithComment(stageID, "MOV, unable to move stage to target position.\n");
 		return FALSE;
 	}
+	return TRUE;
 }
 
 // Query stage position
@@ -221,4 +224,5 @@ BOOL GetStagePosition(int stageID, double SetPosition)
 		return FALSE;
 	}
 	std::cout << "Stage successfully moved to " << Position << " target was " << SetPosition << "\n";
+	return TRUE;
 }

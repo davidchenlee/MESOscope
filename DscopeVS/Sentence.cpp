@@ -59,7 +59,7 @@ U32QV Seq2()
 
 
 //Pixel clock sequence. The pixel clock starts when the line clock ticks, followed by a wait time 't'
-//Currently the clock increment is 6.25ns = 0.00625us
+//At 160MHz, the clock increment is 6.25ns = 0.00625us
 U32Q PixelClockSeq()
 {
 	U32Q Q;	//Create a queue
@@ -71,7 +71,8 @@ U32Q PixelClockSeq()
 
 	//PIXEL CLOCK TICKS. Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
 	for (U32 ii = 0; ii < Npixels + 1; ii++) // Npixels+1 because there is one more pixel-clock ticks than number of pixels
-		Q.push(PixelClock(0.0625 * us, 1));
+		Q.push(PixelClock(0.125 * us, 1));
+	//Q.push(PixelClock(0.0625 * us, 1));
 	return Q; //this returns a queue and not a vector of queues
 }
 

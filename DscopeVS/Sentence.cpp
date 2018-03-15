@@ -65,7 +65,7 @@ U32Q PixelClockSeq()
 	U32Q Q;	//Create a queue
 
 	//INITIAL WAIT TIME
-	double t = 3.125*us;
+	double t = 6.25*us;
 	U16 latency = 2; //latency of detecting the line clock. Calibrate the latency on the oscilloscope
 	Q.push(u32pack(us2tick(t) - latency, 0x0000));
 

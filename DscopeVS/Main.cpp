@@ -43,7 +43,7 @@ int main()
 
 			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
-			NiFpga_MergeStatus(&status, NiFpga_Close(session, 0)); //0 resets, 1 does not reset
+			NiFpga_MergeStatus(&status, NiFpga_Close(session, 1)); //0 resets, 1 does not reset
 		}
 
 		//Reset the FPGA
@@ -61,6 +61,8 @@ int main()
 
 	//runPIstageSequence();
 	//runUARTsequence();
+
+
 
 
 	return 0;

@@ -24,14 +24,15 @@ namespace Const
 														//ACHTUNG: use the same cable length when calibrating
 	extern const U16 FIFOtimeout = 100;					//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 
-	//Simulate the pulses from the PMT. The laser has a repetition rate of 80 MH, and therefore, the pulse separation is 12.5ns (the pulse width out from the PMT is ~1ns, but can be extreched via electronics).
-	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refere to as a 'line'). If I devide each line in 1000 pixels, then the pix dwell time is 62.5ns
-	//Therefore, 62.5ns can fit at most 5 pulses separated by 12.5ns
-	extern const U8 Npulses = 10;				//Number of pulses per pixel for the PMT simulator
-	extern const U8 pulseArray[Npulses] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };		//When the array element is HIGH, the output flips the state
-	//extern const U8 Npulses = 5;
-	//extern const U8 pulseArray[Npulses] = { 1, 0, 0, 1, 0 };		//pulse sequence, where 1 (0) indicates the presence (absence) of a pulse
+	//Simulate the pulses from the PMT. The laser has a repetition rate of 80 MH and therefore the pulse separation is 12.5ns (the pulse width out from the PMT is ~1ns but can be extreched via electronics).
+	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refer to as a 'line').
+	//Example, if I divide each line in 1000 pixels, then the pix dwell time is 62.5ns. Therefore, 62.5ns can fit at most 5 pulses separated by 12.5ns
+	
+	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
+	extern const U8 Npulses = 20;				//Number of pulses
+	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,    1, 1, 0, 0, 0, 0, 0, 0, 0, 0 };	//this sequence lasts 125ns	
 
-	extern const I16 Nmaxlines = 1;						//Number of scanned lines to acquire
+
+	extern const I16 Nmaxlines = 2;						//Number of scanned lines to acquire
 	extern const U16 Npixels = 400;					//Number of pixels per line to acquire
 };

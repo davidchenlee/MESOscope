@@ -146,6 +146,11 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 {
 
+	//test: write output to txt file
+	std::ofstream myfile;
+	myfile.open("_photon-counts.txt");
+
+
 	size_t Npop = (Npixels + 1)* Nmaxlines;
 	uint32_t r; //elements remaining
 	size_t timeout = 100;
@@ -162,8 +167,16 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	std::cout << "Data: " << (U16)data[0] << " (garbage count before the first pixel starts)\n";
 	//print out the data
 	for (U32 ii = 1; ii < Npop; ii++)
+	{
 		std::cout << "Data: " << (U16)data[ii] << "\n";
+		myfile << (U16)data[ii] << "\n";
+	}
 	std::cout << "Number of elements remaining in host FIFO: " << r << "\n";
+
+
+	//close txt file
+	myfile.close();
+
 
 }
 

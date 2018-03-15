@@ -3,7 +3,7 @@
 void MainSequence(NiFpga_Status* status, NiFpga_Session session)
 {
 	//control sequences
-	SendOutQueue(status, session, Seq1());
+	SendOutQueue(status, session, TestAODOSeq());
 	TriggerAODO(status, session);
 	Sleep(1000);
 
@@ -14,7 +14,7 @@ void MainSequence(NiFpga_Status* status, NiFpga_Session session)
 	//SECOND ROUND
 	if (0)
 	{
-		SendOutQueue(status, session, Seq1());
+		SendOutQueue(status, session, TestAODOSeq());
 		TriggerAODO(status, session);
 		TriggerAcquisition(status, session);
 	}

@@ -1,2 +1,2 @@
-A = importdata('_photon-counts 1.txt');
+A = importdata('_photon-counts.txt');
 plot(A)

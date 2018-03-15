@@ -1,6 +1,8 @@
 #include "Sentence.h"
 
-U32QV Seq1()
+
+//Test the analog and digital output
+U32QV TestAODOSeq()
 {
 	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 
@@ -37,25 +39,6 @@ U32QV Seq1()
 
 	return QV;
 }
-
-
-U32QV Seq2()
-{
-	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
-
-	//AO0
-	QV[AO0].push(AnalogOut(4 * us, 10));
-	QV[AO0].push(AnalogOut(4 * us, 0));
-	//AO1
-	QV[AO1].push(AnalogOut(4 * us, 10));
-	QV[AO1].push(AnalogOut(4 * us, 0));
-	//DO0
-	QV[DO0].push(DigitalOut(4 * us, 1));
-	QV[DO0].push(DigitalOut(4 * us, 0));
-
-	return QV;
-}
-
 
 
 //Pixel clock sequence. The pixel clock starts when the line clock ticks, followed by a wait time 't'
@@ -107,17 +90,6 @@ U32QV GalvoTest()
 
 	QV[DO0].push(DigitalOut(pulsewidth, 1));
 	QV[DO0].push(DigitalOut(4 * us, 0));
-	return QV;
-}
-
-
-U32QV DigitalOutSeq(bool DO)
-{
-	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
-	double step = 350 * us;
-
-	//DO0
-	QV[DO0].push(DigitalOut(step, DO));
 	return QV;
 }
 

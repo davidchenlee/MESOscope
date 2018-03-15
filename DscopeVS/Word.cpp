@@ -151,6 +151,10 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	myfile.open("_photon-counts.txt");
 
 
+
+
+	//The LV code saves the count every time the pixel clock ticks (flips its state).  Npixels+1 because there is one more pixel-clock tick than number of pixels. The first count is
+	//garbage and represent the count during the wait time till the first pixel
 	size_t Npop = (Npixels + 1)* Nmaxlines;
 	uint32_t r; //elements remaining
 	size_t timeout = 100;
@@ -164,25 +168,26 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	// read the DMA FIFO data and print. This function alone is able to start the FIFO, but it would not read 'elementsRemaining' right away because it takes about 3ms to read 'elementsRemaining' once the FIFO starts running
 	NiFpga_MergeStatus(status, NiFpga_ReadFifoU8(session, NiFpga_FPGA_TargetToHostFifoU8_FIFOOUT, data, Npop, timeout, &r));
 
-	/*
-	for (U32 ii = 0; ii < Nmaxlines; ii++)
+	
+	for (U32 ii = 0; ii < Nmaxlines; ii++) //iterate over the lines
 	{
-		for (U32 jj = 1; jj <= Npixels; jj++) //number of elements = Npixels
+		for (U32 jj = 1; jj <= Npixels; jj++)	//iterate over the number of pixels. Do not save the element jj = 0 (garbage count). # of elements in this loop = Npixels.
 		{
 			//std::cout << "Data: " << (U16)data[ii] << "\n";
 			myfile << (U16)data[ii*(Npixels+1) + jj] << "\n";
-
 		}
 	}
-	*/
+	
 
+	/*
 	for (U32 ii = 0; ii < Npop; ii++)
 	{
 
 			//std::cout << "Data: " << (U16)data[ii] << "\n";
 			myfile << (U16)data[ii] << "\n";
 
-		}
+	}
+	*/
 
 		
 //			std::cout << "Data: " << (U16)data[0] << " (garbage count before the first pixel starts)\n";

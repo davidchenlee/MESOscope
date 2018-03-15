@@ -3,9 +3,10 @@
 #include "windows.h"	//for  Sleep
 //using namespace Const;
 
+U32QV Acquire2D();
 U32QV TestAODOSeq();
 U32Q PixelClockSeq();
-U32Q GalvoSeq();
+U32Q GalvoLinearRamp();
 U32QV GalvoTest();
 U32QV DigitalTimingCheck();
 U32QV AnalogLatencyCalib();

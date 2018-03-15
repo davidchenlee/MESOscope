@@ -3,7 +3,8 @@
 void MainSequence(NiFpga_Status* status, NiFpga_Session session)
 {
 	//control sequences
-	SendOutQueue(status, session, TestAODOSeq());
+	//SendOutQueue(status, session, GalvoTest());
+	SendOutQueue(status, session, Acquire2D());
 	TriggerAODO(status, session);
 	Sleep(1000);
 

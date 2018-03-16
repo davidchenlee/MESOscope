@@ -162,37 +162,32 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	for (U32 ii = 0; ii < Npop; ii++)
 		data[ii] = -1;
 
-	//Start the host FIFO. Not needed for reading the data, but it takes about 3ms to read 'elementsRemaining' once the FIFO starts running.
+	//Start the host FIFO
 	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU8_FIFOOUT));
+	Sleep(10); //it takes about 3ms for the FIFO to start
 
-	// read the DMA FIFO data and print. This function alone is able to start the FIFO, but it would not read 'elementsRemaining' right away because it takes about 3ms to read 'elementsRemaining' once the FIFO starts running
+	NiFpga_MergeStatus(status, NiFpga_ReadFifoU8(session, NiFpga_FPGA_TargetToHostFifoU8_FIFOOUT, data, 0, timeout, &r));
+
+	std::cout << "Number of elements remaining in host FIFO: " << r << "\n";
+
+
 	NiFpga_MergeStatus(status, NiFpga_ReadFifoU8(session, NiFpga_FPGA_TargetToHostFifoU8_FIFOOUT, data, Npop, timeout, &r));
+	std::cout << "Number of elements remaining in host FIFO: " << r << "\n";
 
-	
 	for (U32 ii = 0; ii < Nmaxlines; ii++) //iterate over the lines
 	{
-		for (U32 jj = 1; jj <= Npixels; jj++)	//iterate over the number of pixels. Do not save the element jj = 0 (garbage count). # of elements in this loop = Npixels.
+		for (U32 jj = 1; jj < Npixels + 1; jj++)	//iterate over the number of pixels. Skip the first element jj = 0 (garbage count). # of elements in this loop = Npixels.
 		{
-			//std::cout << "Data: " << (U16)data[ii] << "\n";
+			//std::cout << "Data: " << (U16)data[jj] << "\n";
 			myfile << (U16)data[ii*(Npixels+1) + jj] << "\n";
 		}
 	}
+
 	
-
-	/*
-	for (U32 ii = 0; ii < Npop; ii++)
-	{
-
-			//std::cout << "Data: " << (U16)data[ii] << "\n";
-			myfile << (U16)data[ii] << "\n";
-
-	}
-	*/
-
 		
 //			std::cout << "Data: " << (U16)data[0] << " (garbage count before the first pixel starts)\n";
 
-	std::cout << "Number of elements remaining in host FIFO: " << r << "\n";
+	
 
 
 	//close txt file

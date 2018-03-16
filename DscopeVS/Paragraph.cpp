@@ -10,6 +10,7 @@ void MainSequence(NiFpga_Status* status, NiFpga_Session session)
 
 	// start acquiring data
 	TriggerAcquisition(status, session);
+	Sleep(1000);
 	CountPhotons(status, session);
 
 	//SECOND ROUND

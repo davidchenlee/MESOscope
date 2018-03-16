@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include "Const.h"
+#include "windows.h"	//Sleep
 using namespace Const;
 
 /*Define the full path of the bitfile*/

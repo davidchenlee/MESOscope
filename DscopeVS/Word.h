@@ -4,6 +4,7 @@
 #include <fstream>
 #include "Const.h"
 #include "windows.h"	//Sleep
+#include <ctime>		//Clock()
 using namespace Const;
 
 /*Define the full path of the bitfile*/

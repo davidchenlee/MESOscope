@@ -257,10 +257,11 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Nmax_lines, Nmaxlines));
 
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_start, 0));//Vibratome control
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_back, 0));//Vibratome control
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_forward, 0));//Vibratome control
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_NC, 0)); //Vibratome control
+	//Vibratome control
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_start, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_back, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_forward, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_NC, 0));
 
 	//Initialize all the channels with zero. Not needed if NiFpga_Finalize() is at the end of the main code
 	/*

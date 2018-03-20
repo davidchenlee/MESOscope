@@ -30,9 +30,9 @@ namespace Const
 	
 	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
 	extern const U8 Npulses = 20;				//Number of pulses
-	extern const U8 pulseArray[Npulses] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//this sequence lasts 125ns	
+	extern const U8 pulseArray[Npulses] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//this sequence lasts 125ns	
 
 
-	extern const I16 Nmaxlines = 200;						//Number of scanned lines to acquire
+	extern const I16 Nmaxlines = 1;						//Number of scanned lines to acquire
 	extern const U16 Npixels = 400;					//Number of pixels per line to acquire
 };

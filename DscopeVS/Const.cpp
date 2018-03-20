@@ -33,6 +33,6 @@ namespace Const
 	extern const U8 pulseArray[Npulses] = { 1, 0, 0, 1, 0, 0, 0, 0, 0, 0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//this sequence lasts 125ns	
 
 
-	extern const I16 Nmaxlines = 1;						//Number of scanned lines to acquire
+	extern const I16 Nmaxlines = 100;						//Number of scanned lines to acquire
 	extern const U16 Npixels = 400;					//Number of pixels per line to acquire
 };

@@ -6,11 +6,10 @@ void MainSequence(NiFpga_Status* status, NiFpga_Session session)
 	//SendOutQueue(status, session, GalvoTest());
 	SendOutQueue(status, session, Acquire2D());
 	TriggerAODO(status, session);
-	//Sleep(1000);
 
-	// start acquiring data
-	TriggerAcquisition(status, session);
+	TriggerAcquisition(status, session); // start acquiring data
 	CountPhotons(status, session);
+
 
 	//SECOND ROUND
 	if (0)

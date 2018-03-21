@@ -158,40 +158,54 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	uint32_t remainingFIFOb; //elements remaining
 	size_t timeout = 100;
 	uint32_t* dataFIFOa = new uint32_t[Npop];
-	uint32_t* dataFIFOb = new uint32_t[Npop];
+	//uint32_t* dataFIFOb = new uint32_t[Npop];
 	for (U32 ii = 0; ii < Npop; ii++)
 	{
 		dataFIFOa[ii] = 0;
-		dataFIFOb[ii] = 0;
+		//dataFIFOb[ii] = 0;
 	}
 
-	//std::queue<uint32_t*> QueueOfArrays; //queue of arrays
 	std::queue<uint32_t> NumberOfElements;
 
 
-	//uint32_t** dataFIFOb = new uint32_t*[Npop];
-	//std::vector<uint32_t*> dataFIFOb = std::vector<uint32_t*>();
+	uint32_t** test = new uint32_t*[10];
+	for (int i = 0; i < 10; i++)
+		test[i] = new uint32_t[Npop];
+
 
 	//Start the FIFO on the PC's side
 	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTa));
 	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb));
 
 	//Total number of elements read from the FIFO
-	size_t NelementsReadFIFOa = 0, NelementsReadFIFOb = 0, timeoutCounter = 0;
+	size_t NelementsReadFIFOa = 0;
+	size_t NelementsReadFIFOb = 0;
+	size_t timeoutCounter = 0;
+	size_t bufferIndex = 0;
 
 
 
-
-
-	//Start the timer
+	//Declare the timer
 	std::clock_t start;
 	double duration;
-	start = std::clock();
+	start = std::clock(); //Start the timer
 
 	//read the FIFO until it is emptied
 	while (NelementsReadFIFOa < Npop || NelementsReadFIFOb < Npop)
 	{
-		//Ask if there are data available in the FIFO?
+		/*
+		if (timeoutCounter == 50)
+		{
+			NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 1));
+			NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 0));
+
+
+			start = std::clock(); //Start the timer
+		}
+		*/
+
+
+		//Ask if there are data available in the FIFO
 		if (NelementsReadFIFOa < Npop) //Keep asking until all the data are downloaded, i.e. NelementsReadFIFOa = Npop
 		{
 			//By requesting 0 elements from the FIFO, the function returns the number of elements available in the FIFO. If no data are available yet, then remainingFIFOa = 0 is returned
@@ -216,7 +230,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 		if (NelementsReadFIFOb < Npop)
 		{
-			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb, dataFIFOb, 0, timeout, &remainingFIFOb));
+			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb, test[bufferIndex], 0, timeout, &remainingFIFOb));
 			std::cout << "Number of elements remaining in host FIFO b: " << remainingFIFOb << "\n";
 		}
 		else
@@ -226,19 +240,19 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		if (remainingFIFOb > 0)
 		{
 			NelementsReadFIFOb += remainingFIFOb;
-			NumberOfElements.push(remainingFIFOb); //record how many elements are read
-			uint32_t qwerty = remainingFIFOb;
+		
+			NumberOfElements.push(remainingFIFOb); //record how many elements are read													
 
 			//Read the elements in the FIFO
-			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb, dataFIFOb, remainingFIFOb, timeout, &remainingFIFOb));
-			//QueueOfArrays.push(dataFIFOb[timeoutCounter]);
+			std::cout << "counters: " << bufferIndex << "\n";
+			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb, test[bufferIndex], remainingFIFOb, timeout, &remainingFIFOb));
 
 
 			//for (U32 ii = 0; ii < qwerty; ii++)
-				//myfile << *(QueueOfArrays.front()+ii) << "\n";
+				//myfile << test[timeoutCounter][ii] << "\n";
 
 
-
+			bufferIndex++;
 
 		}
 
@@ -256,49 +270,17 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 	//Stop the timer
 	duration = (std::clock() - start) / (double)CLOCKS_PER_SEC;
-	std::cout << "Elapsed time (s): " << duration << '\n';
+	std::cout << "Elapsed time: " << duration << " s \n";
+	std::cout << "FIFO bandwidth: " << 2*32*Npop/duration/1000000 << " Mbps \n"; //2 FIFOs of 32 bits each
 
 	
-	
-	//std::cout << "Size of the Queue: " << QueueOfArrays.size() << "\n";
-
-
-	//while (!QueueOfArrays.empty())
+	for (int i = 0; !NumberOfElements.empty(); i++)
 	{
-		//std::cout << "Number of elements read: " << aux2 << "\n";
-
-
-
-	//	for (U32 ii = 0; ii < Npop; ii++)
-			//myfile << *(QueueOfArrays.front()+ii) << "\n";
-		//QueueOfArrays.pop();
-		//NumberOfElements.pop();
-
+		for (int j = 0; j < NumberOfElements.front(); j++)
+			myfile << test[i][j] << "\n";
+		NumberOfElements.pop();
 	}
-	
-	
-				
-
-
-
-
-	/*
-	//Save the data to file
-	for (U32 ii = 0; ii < Nmaxlines; ii++) //iterate over the lines
-	{
-		for (U32 jj = 0; jj < Npixels; jj++)	//iterate over the number of pixels
-		{
-			//std::cout << "Data: " << (U16)data[jj] << "\n";
-			myfile << (U32)dataFIFOa[ii*Npixels + jj] << "\n";
-		}
-	}
-	*/
-	
-
-	std::cout << "Last element: " << (U32)dataFIFOa[Npop-1] << "\n";
-
-
-
+		
 
 
 	//Read the number of free spots remaining in the FIFO
@@ -313,6 +295,11 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 	delete dataFIFOa;
 	//delete dataFIFOb;
+
+	for (int i = 0; i < bufferIndex; ++i) {
+		delete[] test[i];
+	}
+	delete[] test;
 
 }
 

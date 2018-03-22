@@ -200,7 +200,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	double duration;
 	start = std::clock(); //Start the timer
 
-	//read the PC-FIFO as the data arrive. I ran a test and found out that two 32-bit FIFOs has a larger bandwidth than a single 64 - bit FIFO
+	//Read the PC-FIFO as the data arrive. I ran a test and found out that two 32-bit FIFOs has a larger bandwidth than a single 64 - bit FIFO
 	while (NelementsReadFIFOa < Npop || NelementsReadFIFOb < Npop)
 	{
 		//FIFO OUT a
@@ -241,7 +241,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 			}
 		}
-		Sleep(5); //wait till collecting big chuncks of data
+		Sleep(10); //wait till collecting big chuncks of data
 
 		//Timeout the while loop in case the data transfer fails
 		timeoutCounter++;
@@ -281,7 +281,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	delete dataFIFOa;
 	//delete dataFIFOb;
 
-	//clean up the buffer awway
+	//clean up the buffer array
 	for (int i = 0; i < bufferArrayIndexb; ++i) {
 		delete[] bufferArrayb[i];
 	}

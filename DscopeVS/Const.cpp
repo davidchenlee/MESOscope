@@ -3,15 +3,15 @@
 namespace Const
 {
 
-	extern const U8 Nchan = 5;				//Number of channels available. WARNING: This number MUST match the implementation on the FPGA!
+	extern const U8 Nchan = 5;				//Number of channels available, including the channel for the pixel clock. WARNING: This number MUST match the implementation on the FPGA!
 
 	//host-to-target FIFO array indices
-	extern const U8 AO0 = 0;
-	extern const U8 AO1 = 1;
-	extern const U8 DO0 = 2;
-	extern const U8 DO1 = 3;
-	extern const U8 PCLOCK = 4;				//Pixel clock
-	extern const U8 Ncounters = 1;			//Number of photon-counters. WARNING: This number MUST match the implementation on the FPGA!
+	extern const U8 PCLOCK = 0;				//Pixel clock
+	extern const U8 AB0 = 1;				//Analog buffer 0
+	extern const U8 AB1 = 2;				//Analog buffer 1
+	extern const U8 DB0 = 3;				//Digital buffer 0
+	extern const U8 DB1 = 4;				//Digital buffer 1
+
 
 	extern const U32 us = 1;							//microsecond
 	extern const U32 ms = 1000 * us;					//millisecond

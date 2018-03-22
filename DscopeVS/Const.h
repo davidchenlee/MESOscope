@@ -25,12 +25,11 @@ typedef enum {
 namespace Const
 {
 	extern const U8 Nchan;
-	extern const U8 AO0;
-	extern const U8 AO1;
-	extern const U8 DO0;
-	extern const U8 DO1;
 	extern const U8 PCLOCK;
-	extern const U8 Ncounters;
+	extern const U8 AB0;
+	extern const U8 AB1;
+	extern const U8 DB0;
+	extern const U8 DB1;
 
 	extern const U32 us;
 	extern const U32 ms;

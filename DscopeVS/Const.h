@@ -28,6 +28,7 @@ namespace Const
 	extern const U8 PCLOCK;
 	extern const U8 AB0;
 	extern const U8 AB1;
+	extern const U8 AB2;
 	extern const U8 DB0;
 	extern const U8 DB1;
 

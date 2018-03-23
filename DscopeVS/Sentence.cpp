@@ -9,14 +9,12 @@ U32QV Acquire2D()
 	//Pixel clock
 	QV[PCLOCK] = PixelClockSeq();
 
-	//CURRENTLY, AO1 AND DO1 ARE TRIGGERED BY CONN1/DIO16
-
 	//linear ramp for the galvo
 	double Vmax = 5;
 	double step = 4 * us;
 	U32Q linearRamp0 = linearRamp(step, 25 * ms, -Vmax, Vmax);
 
-	//AO1
+	//AO0 = AO1. TRIGGERED BY CONN1/DIO16
 	QV[AB0] = linearRamp0;
 	/*
 	QV[AO1].push(AnalogOut(4 * us, 5));
@@ -25,12 +23,11 @@ U32QV Acquire2D()
 	QV[AO1].push(AnalogOut(4 * us, 0));
 	*/
 
-	//DO1
-	QV[DB1].push(DigitalOut(4 * us, 1));
-	QV[DB1].push(DigitalOut(4 * us, 0));
-	QV[DB1].push(DigitalOut(4 * us, 0));
-	QV[DB1].push(DigitalOut(4 * us, 0));
-
+	//DO0
+	QV[DB0].push(DigitalOut(4 * us, 1));
+	QV[DB0].push(DigitalOut(4 * us, 0));
+	QV[DB0].push(DigitalOut(4 * us, 0));
+	QV[DB0].push(DigitalOut(4 * us, 0));
 
 
 	return QV;

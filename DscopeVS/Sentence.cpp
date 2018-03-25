@@ -260,7 +260,7 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_NC, 0));
 
 
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_FIFOOUTdebug, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_FIFOOUTdebug, 0));
 
 
 

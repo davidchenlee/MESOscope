@@ -261,10 +261,10 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << "\n"; //print the total number of elements read
 
 
-	uint32_t Nfree;
+	//uint32_t Nfree;
 	//Read the number of free spots remaining in the FIFO
-	NiFpga_MergeStatus(status, NiFpga_ReadU32(session, NiFpga_FPGA_IndicatorU32_FIFOOUTfreespots, &Nfree));
-	std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << "\n";
+	//NiFpga_MergeStatus(status, NiFpga_ReadU32(session, NiFpga_FPGA_IndicatorU32_FIFOOUTfreespots, &Nfree));
+	//std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << "\n";
 	
 	//Save the buffer arrays into a text file
 	for (int i = 0; i < bufferArrayIndexb; i++)

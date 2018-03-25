@@ -24,7 +24,7 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGA_Signature = "61448F9199EA36C7D96EBBDE5ECB4AE3";
+static const char* const NiFpga_FPGA_Signature = "82A090E07F46382F780CAE53F11D3F3F";
 
 typedef enum
 {

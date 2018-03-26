@@ -10,11 +10,11 @@ U32QV Acquire2D()
 	QV[PCLOCK] = PixelClockSeq();
 
 	//linear ramp for the galvo
-	double Vmax = 5;
+	double Vmax = 2.0;
 	double step = 8 * us;
 	U32Q linearRampQueue; //Create a queue for the ramps
-	U32Q linearRampSegment0 = linearRamp(step, 25 * ms, -Vmax, Vmax); //ramp up from -Vmax to Vmax
-	U32Q linearRampSegment1 = linearRamp(step, 5 * ms, Vmax, -Vmax);  //set the output back to -Vmax
+	U32Q linearRampSegment0 = linearRamp(step, 25 * ms, -Vmax, Vmax); //ramp up the galvo from -Vmax to Vmax
+	U32Q linearRampSegment1 = linearRamp(step, 5 * ms, Vmax, -Vmax);  //set the galvo back to -Vmax
 	PushQ(linearRampQueue, linearRampSegment0);
 	PushQ(linearRampQueue, linearRampSegment1);
 

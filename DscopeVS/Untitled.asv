@@ -1,7 +1,7 @@
 clear all
 
 A = importdata('_photon-counts.txt');
-plot(A)
+%plot(A(80000:83000))
 
 for kk = 1:400
     if mod(kk,2)
@@ -11,11 +11,10 @@ for kk = 1:400
     end
 end
 
-%{
-hm = HeatMap(B, 'Colormap','redbluecmap');
-
 close all hidden
+hm =HeatMap(B, 'Colormap','redbluecmap')
+%HeatMap(B, [], [], '%0.2f', 'Colormap', 'money','Colorbar', true, 'ColorLevels', 5);
+
 ax = hm.plot; % 'ax' will be a handle to a standard MATLAB axes.
 colorbar('Peer', ax); % Turn the colorbar on
-caxis(ax, [0 10]); % Adjust the color limits
-%}
+caxis(ax, [-3 10]); % Adjust the color limits

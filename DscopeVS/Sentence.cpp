@@ -11,11 +11,15 @@ U32QV Acquire2D()
 
 	//linear ramp for the galvo
 	double Vmax = 5;
-	double step = 4 * us;
-	U32Q linearRamp0 = linearRamp(step, 25 * ms, -Vmax, Vmax);
+	double step = 8 * us;
+	U32Q linearRampQueue; //Create a queue for the ramps
+	U32Q linearRampSegment0 = linearRamp(step, 25 * ms, -Vmax, Vmax); //ramp up from -Vmax to Vmax
+	U32Q linearRampSegment1 = linearRamp(step, 5 * ms, Vmax, -Vmax);  //set the output back to -Vmax
+	PushQ(linearRampQueue, linearRampSegment0);
+	PushQ(linearRampQueue, linearRampSegment1);
 
 	//AO0 = AO1. TRIGGERED BY CONN1/DIO16
-	QV[AB0] = linearRamp0;
+	QV[AB0] = linearRampQueue;
 	/*
 	QV[AO1].push(AnalogOut(4 * us, 5));
 	QV[AO1].push(AnalogOut(4 * us, 0));
@@ -280,19 +284,24 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 
 void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 {
+
 	//take a vector of queues and return it as a single queue
 	U32Q allQs;
 	for (U32 i = 0; i < Nchan; i++)
 	{
-		allQs.push(QV[i].size()); //push the number of elements in the queue
+		allQs.push(QV[i].size()); //push the number of elements in the single queue
 		while (!QV[i].empty())
 		{
 			allQs.push(QV[i].front());
 			QV[i].pop();
 		}
 	}
-	//transfer the queue to an array to be sent to the FPGA. THE ORDER DETERMINES THE TARGETED CHANNEL
+	//transfer the queue to an array to be sent to the FPGA. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
 	U32 sizeFIFOqueue = allQs.size();
+
+	if (sizeFIFOqueue > FIFOINmax)
+		std::cout << "WARNING: FIFO IN overflow\n";
+
 	U32* FIFO = new U32[sizeFIFOqueue];
 	for (U32 i = 0; i < sizeFIFOqueue; i++)
 	{
@@ -301,14 +310,14 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	}
 	allQs = {};//cleanup the queue in C++11
 
-			   //send the data to the FPGA through the FIFO
+	//send the data to the FPGA through the FIFO
 	U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
 	U32 r; //empty elements remaining
 
 	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r));
 
 	std::cout << "FPGA FIFO status: " << *status << "\n";
-	delete[] FIFO;//cleanup
+	delete[] FIFO;//cleanup the array
 }
 
 //Main trigger. Trigger FIFO-in, which subsequently triggers AO and DO

@@ -11,7 +11,7 @@ typedef              int	I32;
 typedef unsigned     int	U32;
 typedef          __int64	I64;
 typedef unsigned __int64	U63;
-typedef std::queue<uint32_t> U32Q;			//Queue of unsigned integers
+typedef std::queue<U32> U32Q;			//Queue of unsigned integers
 typedef std::vector<U32Q> U32QV;			//Vector of queues of unsigned integers
 
 											//vibratome channels
@@ -41,6 +41,7 @@ namespace Const
 	extern const U16 Sync_DO_to_AO;
 	extern const U16 Sync_AODO_to_LineGate;
 	extern const U16 FIFOtimeout;
+	extern const U32 FIFOINmax;
 
 	extern const U8 Npulses;
 	extern const U8 pulseArray[];

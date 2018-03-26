@@ -152,11 +152,11 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 
 	size_t Npop = Npixels * Nmaxlines;
-	uint32_t remainingFIFOa; //Elements remaining
-	uint32_t remainingFIFOb; //Elements remaining
+	U32 remainingFIFOa; //Elements remaining
+	U32 remainingFIFOb; //Elements remaining
 	size_t timeout = 100;
-	uint32_t* dataFIFOa = new uint32_t[Npop];
-	//uint32_t* dataFIFOb = new uint32_t[Npop];
+	U32* dataFIFOa = new U32[Npop];
+	//U32* dataFIFOb = new U32[Npop];
 	for (U32 ii = 0; ii < Npop; ii++)
 	{
 		dataFIFOa[ii] = 0;
@@ -165,13 +165,13 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 	//Create an array of arrays as a buffer to store the data from the FIFO. I think I can't just make a long, concatenated 1D array
 	//because I have to pass individual arrays to the FIFO-read function
-	uint32_t NmaxbufferArray = 40;
-	uint32_t** bufferArrayb = new uint32_t*[NmaxbufferArray];
+	U32 NmaxbufferArray = 40;
+	U32** bufferArrayb = new U32*[NmaxbufferArray];
 	for (int i = 0; i < NmaxbufferArray; i++)
-		bufferArrayb[i] = new uint32_t[Npop]; //Each row is used to store the data from the FIFO-reading
+		bufferArrayb[i] = new U32[Npop]; //Each row is used to store the data from the FIFO-reading
 
 	//Each element in this array indicates the amount of data stored in bufferArrayb[i]
-	uint32_t* NelementsBufferArrayb = new uint32_t[10];
+	U32* NelementsBufferArrayb = new U32[10];
 
 	
 	//size_t actualDepth;
@@ -261,7 +261,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << "\n"; //print the total number of elements read
 
 
-	//uint32_t Nfree;
+	//U32 Nfree;
 	//Read the number of free spots remaining in the FIFO
 	//NiFpga_MergeStatus(status, NiFpga_ReadU32(session, NiFpga_FPGA_IndicatorU32_FIFOOUTfreespots, &Nfree));
 	//std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << "\n";

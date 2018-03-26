@@ -2,17 +2,14 @@
 
 namespace Const
 {
-
-
-
 	//host-to-target FIFO array indices
 	extern const U8 Nchan = 6;				//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
 	extern const U8 PCLOCK = 0;				//Pixel clock
-	extern const U8 AB0 = 1;				//Analog buffer 0 (galvo 1)
-	extern const U8 AB1 = 2;				//Analog buffer 1 (galvo 2)
-	extern const U8 AB2 = 3;				//Analog buffer 2 (general purpose)
-	extern const U8 DB0 = 4;				//Digital buffer 0 (shutter 1)
-	extern const U8 DB1 = 5;				//Digital buffer 1 (shutter 2)
+	extern const U8 ABUF0 = 1;				//Analog buffer 0 (galvo 1)
+	extern const U8 ABUF1 = 2;				//Analog buffer 1 (galvo 2)
+	extern const U8 ABUF2 = 3;				//Analog buffer 2 (general purpose)
+	extern const U8 DBUF0 = 4;				//Digital buffer 0 (shutter 1)
+	extern const U8 DBUF1 = 5;				//Digital buffer 1 (shutter 2)
 
 
 	extern const U32 us = 1;							//microsecond
@@ -33,7 +30,7 @@ namespace Const
 	
 	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
 	extern const U8 Npulses = 20;				//Number of pulses
-	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,    1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//@160MHz, once cycle through this array lasts 125ns	
+	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//@160MHz, once cycle through this array lasts 125ns	
 
 
 	extern const I16 Nmaxlines = 400;					//Number of scanned lines to acquire

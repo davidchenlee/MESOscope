@@ -151,10 +151,10 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	myfile.open("_photon-counts.txt");
 
 
-	size_t Npop = Npixels * Nmaxlines;
+	U32 Npop = Npixels * Nmaxlines;
 	U32 remainingFIFOa; //Elements remaining
 	U32 remainingFIFOb; //Elements remaining
-	size_t timeout = 100;
+	U32 timeout = 100;
 	U32* dataFIFOa = new U32[Npop];
 	//U32* dataFIFOb = new U32[Npop];
 	for (U32 ii = 0; ii < Npop; ii++)
@@ -167,23 +167,23 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//because I have to pass individual arrays to the FIFO-read function
 	U32 NmaxbufferArray = 40;
 	U32** bufferArrayb = new U32*[NmaxbufferArray];
-	for (int i = 0; i < NmaxbufferArray; i++)
+	for (U32 i = 0; i < NmaxbufferArray; i++)
 		bufferArrayb[i] = new U32[Npop]; //Each row is used to store the data from the FIFO-reading
 
 	//Each element in this array indicates the amount of data stored in bufferArrayb[i]
 	U32* NelementsBufferArrayb = new U32[10];
 
 	
-	//size_t actualDepth;
+	//U32 actualDepth;
 	//NiFpga_ConfigureFifo2(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTa, 1000000, &actualDepth);
 	//std::cout << "actualDepth a: " << actualDepth << "\n";
 	//NiFpga_ConfigureFifo2(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb, 1000000, &actualDepth);
 	//std::cout << "actualDepth b: " << actualDepth << "\n";
 
 
-	size_t NelementsReadFIFOa = 0, NelementsReadFIFOb = 0; 	//Total number of elements read from the FIFO
-	size_t timeoutCounter = 0;
-	size_t bufferArrayIndexb = 0; //Number of buffer arrays actually used
+	U32 NelementsReadFIFOa = 0, NelementsReadFIFOb = 0; 	//Total number of elements read from the FIFO
+	U32 timeoutCounter = 0;
+	U32 bufferArrayIndexb = 0; //Number of buffer arrays actually used
 
 
 	//Start transfering the data in the FPGA FIFO to the PC FIFO
@@ -267,9 +267,9 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << "\n";
 	
 	//Save the buffer arrays into a text file
-	for (int i = 0; i < bufferArrayIndexb; i++)
+	for (U32 i = 0; i < bufferArrayIndexb; i++)
 	{
-		for (int j = 0; j < NelementsBufferArrayb[i]; j++)
+		for (U32 j = 0; j < NelementsBufferArrayb[i]; j++)
 			myfile << bufferArrayb[i][j] << "\n";
 	}
 		
@@ -282,7 +282,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//delete dataFIFOb;
 
 	//clean up the buffer array
-	for (int i = 0; i < bufferArrayIndexb; ++i) {
+	for (U32 i = 0; i < bufferArrayIndexb; ++i) {
 		delete[] bufferArrayb[i];
 	}
 	delete[] bufferArrayb;

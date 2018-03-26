@@ -26,11 +26,11 @@ namespace Const
 {
 	extern const U8 Nchan;
 	extern const U8 PCLOCK;
-	extern const U8 AB0;
-	extern const U8 AB1;
-	extern const U8 AB2;
-	extern const U8 DB0;
-	extern const U8 DB1;
+	extern const U8 ABUF0;
+	extern const U8 ABUF1;
+	extern const U8 ABUF2;
+	extern const U8 DBUF0;
+	extern const U8 DBUF1;
 
 	extern const U32 us;
 	extern const U32 ms;

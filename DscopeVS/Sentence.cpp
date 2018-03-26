@@ -19,19 +19,13 @@ U32QV Acquire2D()
 	PushQ(linearRampQueue, linearRampSegment1);
 
 	//AO0 = AO1. TRIGGERED BY CONN1/DIO16
-	QV[AB0] = linearRampQueue;
-	/*
-	QV[AO1].push(AnalogOut(4 * us, 5));
-	QV[AO1].push(AnalogOut(4 * us, 0));
-	QV[AO1].push(AnalogOut(4 * us, 5));
-	QV[AO1].push(AnalogOut(4 * us, 0));
-	*/
+	QV[ABUF0] = linearRampQueue;
 
 	//DO0
-	QV[DB0].push(DigitalOut(4 * us, 1));
-	QV[DB0].push(DigitalOut(4 * us, 0));
-	QV[DB0].push(DigitalOut(4 * us, 0));
-	QV[DB0].push(DigitalOut(4 * us, 0));
+	QV[DBUF0].push(DigitalOut(4 * us, 1));
+	QV[DBUF0].push(DigitalOut(4 * us, 0));
+	QV[DBUF0].push(DigitalOut(4 * us, 0));
+	QV[DBUF0].push(DigitalOut(4 * us, 0));
 
 
 	return QV;
@@ -46,32 +40,32 @@ U32QV TestAODOSeq()
 	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 
 	//AO0
-	QV[AB0].push(AnalogOut(4 * us, 10));
-	QV[AB0].push(AnalogOut(4 * us, 0));
-	QV[AB0].push(AnalogOut(4 * us, 10));
-	QV[AB0].push(AnalogOut(4 * us, 0));//go back to zero
+	QV[ABUF0].push(AnalogOut(4 * us, 10));
+	QV[ABUF0].push(AnalogOut(4 * us, 0));
+	QV[ABUF0].push(AnalogOut(4 * us, 10));
+	QV[ABUF0].push(AnalogOut(4 * us, 0));//go back to zero
 
 	//DO0
-	QV[DB0].push(DigitalOut(4 * us, 1));
-	QV[DB0].push(DigitalOut(4 * us, 0));
-	QV[DB0].push(DigitalOut(4 * us, 0));
-	QV[DB0].push(DigitalOut(4 * us, 0));
+	QV[DBUF0].push(DigitalOut(4 * us, 1));
+	QV[DBUF0].push(DigitalOut(4 * us, 0));
+	QV[DBUF0].push(DigitalOut(4 * us, 0));
+	QV[DBUF0].push(DigitalOut(4 * us, 0));
 
 	//QV[AO0] = GalvoSeq();
 
 
 	//CURRENTLY, AO1 AND DO1 ARE TRIGGERED BY CONN1/DIO16
 	//AO1
-	QV[AB1].push(AnalogOut(4 * us, 5));
-	QV[AB1].push(AnalogOut(4 * us, 0));
-	QV[AB1].push(AnalogOut(4 * us, 5));
-	QV[AB1].push(AnalogOut(4 * us, 0));
+	QV[ABUF1].push(AnalogOut(4 * us, 5));
+	QV[ABUF1].push(AnalogOut(4 * us, 0));
+	QV[ABUF1].push(AnalogOut(4 * us, 5));
+	QV[ABUF1].push(AnalogOut(4 * us, 0));
 
 	//DO1
-	QV[DB1].push(DigitalOut(4 * us, 1));
-	QV[DB1].push(DigitalOut(4 * us, 0));
-	QV[DB1].push(DigitalOut(4 * us, 0));
-	QV[DB1].push(DigitalOut(4 * us, 0));
+	QV[DBUF1].push(DigitalOut(4 * us, 1));
+	QV[DBUF1].push(DigitalOut(4 * us, 0));
+	QV[DBUF1].push(DigitalOut(4 * us, 0));
+	QV[DBUF1].push(DigitalOut(4 * us, 0));
 
 	//Pixel clock
 	QV[PCLOCK] = PixelClockSeq();
@@ -120,7 +114,7 @@ U32Q GalvoLinearRamp()
 U32QV GalvoTest()
 {
 	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
-	QV[AB0] = GalvoLinearRamp();
+	QV[ABUF0] = GalvoLinearRamp();
 	
 	double pulsewidth = 300 * us;
 
@@ -130,8 +124,8 @@ U32QV GalvoTest()
 	QV[AO0].push(AnalogOut(4 * us, 0.000));
 	*/
 
-	QV[DB0].push(DigitalOut(pulsewidth, 1));
-	QV[DB0].push(DigitalOut(4 * us, 0));
+	QV[DBUF0].push(DigitalOut(pulsewidth, 1));
+	QV[DBUF0].push(DigitalOut(4 * us, 0));
 	return QV;
 }
 
@@ -142,8 +136,8 @@ U32QV DigitalTimingCheck()
 	double step = 400 * us;
 
 	//DO0
-	QV[DB0].push(DigitalOut(step, 1));
-	QV[DB0].push(DigitalOut(step, 0));
+	QV[DBUF0].push(DigitalOut(step, 1));
+	QV[DBUF0].push(DigitalOut(step, 0));
 
 	return QV;
 }
@@ -155,13 +149,13 @@ U32QV DigitalLatencyCalib()
 	double step = 4 * us;
 
 	//DO0
-	QV[DB0].push(DigitalOut(step, 1));
+	QV[DBUF0].push(DigitalOut(step, 1));
 
 	for (U32 ii = 0; ii < 99; ii++)
-		QV[DB0].push(DigitalOut(step, 0));
+		QV[DBUF0].push(DigitalOut(step, 0));
 
-	QV[DB0].push(DigitalOut(step, 1));
-	QV[DB0].push(DigitalOut(step, 0));
+	QV[DBUF0].push(DigitalOut(step, 1));
+	QV[DBUF0].push(DigitalOut(step, 0));
 
 	return QV;
 }
@@ -175,18 +169,18 @@ U32QV AnalogLatencyCalib()
 	double step = 4 * us;
 
 	//AO0
-	QV[AB0].push(AnalogOut(step, 10));//initial pulse
-	QV[AB0].push(AnalogOut(step, 0));
-	QV[AB0] = PushQ(QV[0], linearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
-	QV[AB0].push(AnalogOut(step, 5));//final pulse
-	QV[AB0].push(AnalogOut(step, 0));
+	QV[ABUF0].push(AnalogOut(step, 10));//initial pulse
+	QV[ABUF0].push(AnalogOut(step, 0));
+	QV[ABUF0] = PushQ(QV[0], linearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
+	QV[ABUF0].push(AnalogOut(step, 5));//final pulse
+	QV[ABUF0].push(AnalogOut(step, 0));
 
 	//DO0
-	QV[DB0].push(DigitalOut(step, 1));
-	QV[DB0].push(DigitalOut(step, 0));
-	QV[DB0].push(DigitalOut(delay, 0));
-	QV[DB0].push(DigitalOut(step, 1));
-	QV[DB0].push(DigitalOut(step, 0));
+	QV[DBUF0].push(DigitalOut(step, 1));
+	QV[DBUF0].push(DigitalOut(step, 0));
+	QV[DBUF0].push(DigitalOut(delay, 0));
+	QV[DBUF0].push(DigitalOut(step, 1));
+	QV[DBUF0].push(DigitalOut(step, 0));
 
 	return QV;
 }

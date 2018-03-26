@@ -44,10 +44,10 @@ U32QV Seq::vector()
 
 void Seq::galvo(double t, double val)
 {
-	QV[AB0].push(AnalogOut(t, val));
+	QV[ABUF0].push(AnalogOut(t, val));
 }
 
 void Seq::shutter(double t, bool val)
 {
-	QV[DB0].push(DigitalOut(t, val));
+	QV[DBUF0].push(DigitalOut(t, val));
 }

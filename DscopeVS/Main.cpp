@@ -3,17 +3,13 @@
 //#include <concrt.h> 	//Concurrency::wait(2000);
 #include "windows.h"	//the stages use this lib. also Sleep
 #include "Paragraph.h"
-#include "Seq.h" //'Seq' class
-#include "PIstages.h"
-#include "UART.h"
-//using namespace std;
-
+//#include "Seq.h" //'Seq' class
+//#include "PIstages.h"
+//#include "UART.h"
 
 
 int main()
 {
-
-	
 	//must be called before any other FPGA calls
 	NiFpga_Status status = NiFpga_Initialize();
 	std::cout << "FPGA initialize status: " << status << "\n";
@@ -53,8 +49,9 @@ int main()
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 		std::cout << "FPGA finalize status: " << status << "\n";
 
+		CoUninitialize();
 
-		getchar();
+		//getchar();
 	}
 	
 

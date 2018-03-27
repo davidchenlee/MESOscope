@@ -1,7 +1,7 @@
 #pragma once
 #include "NiFpga_FPGA.h"
 #include <iostream>
-#include <fstream>
+#include <fstream>      //file management
 #include "Const.h"
 #include "windows.h"	//Sleep
 #include <ctime>		//Clock()

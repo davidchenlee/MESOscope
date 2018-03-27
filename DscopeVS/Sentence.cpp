@@ -10,7 +10,7 @@ U32QV Acquire2D()
 	QV[PCLOCK] = PixelClockSeq();
 
 	//linear ramp for the galvo
-	double Vmax = 2.0;
+	double Vmax = 1.5;
 	double step = 8 * us;
 	U32Q linearRampQueue; //Create a queue for the ramps
 	U32Q linearRampSegment0 = linearRamp(step, 25 * ms, -Vmax, Vmax); //ramp up the galvo from -Vmax to Vmax
@@ -86,7 +86,7 @@ U32Q PixelClockSeq()
 	Q.push(u32pack(us2tick(t) - latency, 0x0000));
 
 	//PIXEL CLOCK TICKS. Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
-	for (U32 ii = 0; ii < Npixels + 1; ii++) // Npixels+1 because there is one more pixel-clock tick than number of pixels
+	for (U16 ii = 0; ii < Npixels + 1; ii++) // Npixels+1 because there is one more pixel-clock tick than number of pixels
 		Q.push(PixelClock(0.125 * us, 1));
 	//Q.push(PixelClock(0.0625 * us, 1));
 	return Q; //this returns a queue and not a vector of queues

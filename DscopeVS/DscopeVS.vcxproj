@@ -146,22 +146,16 @@
   <ItemGroup>
     <ClCompile Include="Const.cpp" />
     <ClCompile Include="Paragraph.cpp" />
-    <ClCompile Include="PIstages.cpp" />
-    <ClCompile Include="UART.cpp" />
     <ClCompile Include="Word.cpp" />
     <ClCompile Include="LabView\FPGA Bitfiles\NiFpga.c" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Seq.cpp" />
     <ClCompile Include="Sentence.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Const.h" />
     <ClInclude Include="Paragraph.h" />
-    <ClInclude Include="PIstages.h" />
-    <ClInclude Include="UART.h" />
     <ClInclude Include="Word.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="Seq.h" />
     <ClInclude Include="Sentence.h" />
   </ItemGroup>
   <ItemGroup>

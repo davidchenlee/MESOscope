@@ -22,7 +22,7 @@ namespace Const
 	extern const U16 Sync_AODO_to_LineGate = 9696;		//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 														//ACHTUNG: use the same cable length when calibrating
 	extern const U16 FIFOtimeout = 100;					//in ticks. Timeout of the host-to-target and target-to-host FIFOs
-	extern const U32 FIFOINmax = 16389;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
+	extern const U32 FIFOINmax = 65541;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 	//Simulate the pulses from the PMT. The laser has a repetition rate of 80 MH and therefore the pulse separation is 12.5ns (the pulse width out from the PMT is ~1ns but can be extreched via electronics).
 	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refer to as a 'line').

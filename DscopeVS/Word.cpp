@@ -38,7 +38,7 @@ U16 us2tick(double t)
 //0x7FFFF = 0d32767
 //0xFFFF = -1
 //0x8000 = -32768
-I16 AOUT(double x)
+I16 volt2I16(double x)
 {
 	if (x > 10)
 	{
@@ -59,7 +59,7 @@ I16 AOUT(double x)
 U32 AnalogOut(double t, double val)
 {
 	U16 AOlatency_tick = 2;	//To  calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
-	return u32pack(us2tick(t) - AOlatency_tick, AOUT(val));
+	return u32pack(us2tick(t) - AOlatency_tick, volt2I16(val));
 }
 
 

@@ -6,6 +6,7 @@
 //#include "Seq.h" //'Seq' class
 //#include "PIstages.h"
 //#include "UART.h"
+#include <tiffio.h>		//for Tiff files
 
 
 int main()

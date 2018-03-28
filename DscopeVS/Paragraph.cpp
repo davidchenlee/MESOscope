@@ -5,9 +5,9 @@ void MainSequence(NiFpga_Status* status, NiFpga_Session session)
 	//control sequences
 	//SendOutQueue(status, session, GalvoTest());
 	SendOutQueue(status, session, Acquire2D());
-	TriggerAODO(status, session);
+	TriggerAODO(status, session);			//trigger the analog and digital outputs
 
-	//TriggerAcquisition(status, session); // start acquiring data
+	//TriggerAcquisition(status, session); // trigger the data acquisition
 	CountPhotons(status, session);
 
 
@@ -20,7 +20,7 @@ void MainSequence(NiFpga_Status* status, NiFpga_Session session)
 	}
 }
 
-/* Testing the Seq class
+/* Test the Seq class
 void SeqClassTest()
 {
 		Seq ss;

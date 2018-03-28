@@ -1,7 +1,7 @@
 #include "Sentence.h"
 
 
-//Test the analog and digital output
+//Linearly scan the galvo while the RS is on to acquire a 2D image
 U32QV Acquire2D()
 {
 	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
@@ -12,6 +12,8 @@ U32QV Acquire2D()
 	//linear ramp for the galvo
 	double Vmax = 1.5;
 	double step = 8 * us;
+
+
 	U32Q linearRampQueue; //Create a queue for the ramps
 	U32Q linearRampSegment0 = linearRamp(step, 25 * ms, -Vmax, Vmax); //ramp up the galvo from -Vmax to Vmax
 	U32Q linearRampSegment1 = linearRamp(step, 5 * ms, Vmax, -Vmax);  //set the galvo back to -Vmax
@@ -257,10 +259,8 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_forward, 0));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_NC, 0));
 
-
+	//Debug FIFO OUT
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_FIFOOUTdebug, 0));
-
-
 
 	//Initialize all the channels with zero. Not needed if NiFpga_Finalize() is at the end of the main code
 	/*
@@ -268,7 +268,7 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	for (U8 ii = 0; ii < Nchan; ii++)
 		QV[ii].push(0);
 	SendOutQueue(status, session, QV);
-	PulseTrigger(status, session);
+	TriggerAODO(status, session);
 	*/
 
 	std::cout << "FPGA initialize-variables status: " << *status << "\n";

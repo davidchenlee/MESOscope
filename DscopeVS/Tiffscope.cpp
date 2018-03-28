@@ -4,7 +4,7 @@
 
 
 //READ FILE EXAMPLE*************************************************************************************************************
-int ReadTiffEx(void)
+int ReadTiff(void)
 {
 	TIFF *tif = TIFFOpen("D:\\OwnCloud\\Codes\\Cpp playground\\Playground\\marbles.tif", "r");
 
@@ -50,15 +50,15 @@ int ReadTiffEx(void)
 
 
 //WRITE FILE EXAMPLE*************************************************************************************************************
-int WriteTiffEx(void)
+int WriteTiff(void)
 {
-	uint32 width = 640;
-	uint32 height = 640;
+	uint32 width = 400;
+	uint32 height = 400;
 
-	TIFF *out = TIFFOpen("new.tif", "w");
+	TIFF *out = TIFFOpen("tiffExample.tif", "w");
 
-	//4 channels: RGBA
-	int sampleperpixel = 4;
+	//1 channel
+	int sampleperpixel = 1;
 
 	//create an matrix representing the image
 	unsigned char *image = new unsigned char[width*height*sampleperpixel];
@@ -67,13 +67,26 @@ int WriteTiffEx(void)
 	for (int ii = 0; ii < width*height*sampleperpixel; ii++)
 		image[ii] = 0;
 
-	//set alpha to the max
+	//create a color gradient as an exercise
+	for (int ii = 0; ii < width*height*sampleperpixel; ii++)
+	{
+		image[ii] = 255. / (width*height)*ii ;
+	}
+
+
+	/*
+	//set alpha channel (transparency) to the max
 	for (int ii = 3; ii < width*height*sampleperpixel; ii += 4)
 		image[ii] = 255;
 
+	//color gradient
 	for (int ii = 0; ii < width*height*sampleperpixel; ii += 4)
-		image[ii] = 255. / (width*height)*ii / 4;
-
+	{
+		image[ii] = 255. / (width*height)*ii / 4; //Red
+		//image[ii+1] = 255. / (width*height)*ii / 4; //Green
+		//image[ii+2] = 255. / (width*height)*ii / 4; //Blue
+	}
+	*/
 
 	//TAGS
 	TIFFSetField(out, TIFFTAG_IMAGEWIDTH, width);					// set the width of the image

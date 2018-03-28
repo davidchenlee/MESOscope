@@ -6,7 +6,7 @@
 //#include "Seq.h" //'Seq' class
 //#include "PIstages.h"
 //#include "UART.h"
-#include "Tiff.h"
+#include "Tiffscope.h"
 
 
 int main()
@@ -49,10 +49,7 @@ int main()
 		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
 		std::cout << "FPGA finalize status: " << status << "\n";
-
-		CoUninitialize();
-
-		//getchar();
+		
 	}
 	
 
@@ -61,6 +58,11 @@ int main()
 
 
 
+	//WriteTiff();
+	//ShellExecute(NULL, "open", "C:\\Users\\chen\\Desktop\\ImageJ-win64\\ImageJ-win64", NULL, NULL, SW_SHOWDEFAULT);
+	std::system("START /B C:\\ProgramData\\Oracle\\Java\\javapath\\java -jar C:\\Users\\chen\\Desktop\\ImageJ-win64\\jars\\ij-1.51w.jar -macro C:\\Users\\chen\\Desktop\\ImageJ-win64\\macros\\macroTest.ijm");
+
+		//getchar();
 
 	return 0;
 }

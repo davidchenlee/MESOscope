@@ -60,10 +60,10 @@ int WriteSyntheticTiff(void)
 	//1 channel
 	int sampleperpixel = 1;
 
-	//create an matrix representing the image
+	//create an 1D array representing the image
 	unsigned char *image = new unsigned char[width*height*sampleperpixel];
 
-	//initialize the matrix
+	//initialize the array
 	for (int ii = 0; ii < width*height*sampleperpixel; ii++)
 		image[ii] = 0;
 

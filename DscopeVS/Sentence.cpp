@@ -88,7 +88,7 @@ U32Q PixelClockSeq()
 	Q.push(u32pack(us2tick(t) - latency, 0x0000));
 
 	//PIXEL CLOCK TICKS. Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
-	for (U16 ii = 0; ii < Npixels + 1; ii++) // Npixels+1 because there is one more pixel-clock tick than number of pixels
+	for (U16 ii = 0; ii < Width_pix + 1; ii++) // Npixels+1 because there is one more pixel-clock tick than number of pixels
 		Q.push(PixelClock(0.125 * us, 1));
 	//Q.push(PixelClock(0.0625 * us, 1));
 	return Q; //this returns a queue and not a vector of queues
@@ -214,7 +214,7 @@ int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTc
 		selectedChannel = NiFpga_FPGA_ControlBool_VT_forward;
 		break;
 	default:
-		std::cout << "ERROR: Selected VT channel is unavailable\n";
+		std::cout << "ERROR: Selected VT channel is unavailable" << std::endl;
 		return -1;
 	}
 
@@ -229,7 +229,7 @@ int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTc
 	else
 	{
 		Sleep(minstep - delay);
-		std::cout << "WARNING: time step too small. Time step set to the min = ~" << minstep << "ms \n";
+		std::cout << "WARNING: time step too small. Time step set to the min = ~" << minstep << "ms" << std::endl;
 	}
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 0));
 	
@@ -251,7 +251,7 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Sync_DO_to_AO, Sync_DO_to_AO));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Sync_AODO_to_LineGate, Sync_AODO_to_LineGate));
 	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGA_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Nmax_lines, Nmaxlines));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGA_ControlU16_Height_pix, Height_pix));
 
 	//Vibratome control
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_VT_start, 0));
@@ -271,7 +271,7 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	TriggerAODO(status, session);
 	*/
 
-	std::cout << "FPGA initialize-variables status: " << *status << "\n";
+	std::cout << "FPGA initialize-variables status: " << *status << std::endl;
 }
 
 
@@ -294,7 +294,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	U32 sizeFIFOqueue = allQs.size();
 
 	if (sizeFIFOqueue > FIFOINmax)
-		std::cout << "WARNING: FIFO IN overflow\n";
+		std::cout << "WARNING: FIFO IN overflow" << std::endl;
 
 	U32* FIFO = new U32[sizeFIFOqueue];
 	for (U32 i = 0; i < sizeFIFOqueue; i++)
@@ -310,7 +310,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 
 	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGA_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r));
 
-	std::cout << "FPGA FIFO status: " << *status << "\n";
+	std::cout << "FPGA FIFO status: " << *status << std::endl;
 	delete[] FIFO;//cleanup the array
 }
 
@@ -319,7 +319,7 @@ void TriggerAODO(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Trigger, 0));
-	std::cout << "Pulse trigger status: " << *status << "\n";
+	std::cout << "Pulse trigger status: " << *status << std::endl;
 }
 
 //Trigger the pixel clock, and therefore, counters, and FIFO-out
@@ -327,5 +327,5 @@ void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 0));
-	std::cout << "Acquisition trigger status: " << *status << "\n";
+	std::cout << "Acquisition trigger status: " << *status << std::endl;
 }

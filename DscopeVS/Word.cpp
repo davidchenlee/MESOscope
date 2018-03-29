@@ -21,12 +21,12 @@ U16 us2tick(double t)
 	U16 dt_tick_MIN = 2;		//Currently, DO and AO have a latency of 2 ticks
 	if ((U32)aux > 0x0000FFFF)
 	{
-		std::cout << "WARNING: time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us\n";
+		std::cout << "WARNING: time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
 		return _UI16_MAX;
 	}
 	else if ((U32)aux < dt_tick_MIN)
 	{
-		std::cout << "WARNING: time step underflow. Time step set to the min:" << std::fixed << dt_tick_MIN * dt_us << " us\n";;
+		std::cout << "WARNING: time step underflow. Time step set to the min:" << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
 		return dt_tick_MIN;
 	}
 	else
@@ -42,12 +42,12 @@ I16 volt2I16(double x)
 {
 	if (x > 10)
 	{
-		std::cout << "WARNING: voltage overflow. Voltage set to the max: 10 V\n";
+		std::cout << "WARNING: voltage overflow. Voltage set to the max: 10 V" << std::endl;
 		return (U16)_I16_MAX;
 	}
 	else if (x < -10)
 	{
-		std::cout << "WARNING: voltage underflow. Voltage set to the min: -10 V\n";
+		std::cout << "WARNING: voltage underflow. Voltage set to the min: -10 V" << std::endl;
 		return (U16)_I16_MIN;
 	}
 	else
@@ -105,7 +105,7 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 
 	if (dt < AOdt_us)
 	{
-		std::cout << "WARNING: time step too small. Time step set to " << AOdt_us << " us\n";
+		std::cout << "WARNING: time step too small. Time step set to " << AOdt_us << " us" << std::endl;
 		dt = AOdt_us; //Analog output time increment in us
 		getchar();
 	}
@@ -114,16 +114,16 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 
 	if (nPoints <= 1)
 	{
-		std::cout << "ERROR: not enought points for the linear ramp\n";
-		std::cout << "nPoints: " << nPoints << "\n";
+		std::cout << "ERROR: not enought points for the linear ramp" << std::endl;
+		std::cout << "nPoints: " << nPoints << std::endl;
 		getchar();
 	}
 	else
 	{
 		if (debug)
 		{
-			std::cout << "nPoints: " << nPoints << "\n";
-			std::cout << "time \tticks \tv \n";
+			std::cout << "nPoints: " << nPoints << std::endl;
+			std::cout << "time \tticks \tv" << std::endl;
 		}
 
 		for (U32 ii = 0; ii < nPoints; ii++)
@@ -132,7 +132,7 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 			queue.push(AnalogOut(dt, V));
 
 			if (debug)
-				std::cout << (ii + 1) * dt << "\t" << (ii + 1) * us2tick(dt) << "\t" << V << "\t" << "\n";
+				std::cout << (ii + 1) * dt << "\t" << (ii + 1) * us2tick(dt) << "\t" << V << "\t" << std::endl;
 		}
 
 		if (debug)
@@ -151,7 +151,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	myfile.open("_photon-counts.txt");
 
 
-	U32 Npop = Npixels * Nmaxlines;
+	U32 Npop = Width_pix * Height_pix;
 	U32 remainingFIFOa; //Elements remaining
 	U32 remainingFIFOb; //Elements remaining
 	U32 timeout = 100;
@@ -176,9 +176,9 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	
 	//U32 actualDepth;
 	//NiFpga_ConfigureFifo2(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTa, 1000000, &actualDepth);
-	//std::cout << "actualDepth a: " << actualDepth << "\n";
+	//std::cout << "actualDepth a: " << actualDepth << std::endl;
 	//NiFpga_ConfigureFifo2(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb, 1000000, &actualDepth);
-	//std::cout << "actualDepth b: " << actualDepth << "\n";
+	//std::cout << "actualDepth b: " << actualDepth << std::endl;
 
 
 	U32 NelementsReadFIFOa = 0, NelementsReadFIFOb = 0; 	//Total number of elements read from the FIFO
@@ -208,7 +208,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		{
 			//By requesting 0 elements from the FIFO, the function returns the number of elements available in the FIFO. If no data are available yet, then remainingFIFOa = 0 is returned
 			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, 0, timeout, &remainingFIFOa));
-			//std::cout << "Number of elements remaining in the host FIFO a: " << remainingFIFOa << "\n";
+			//std::cout << "Number of elements remaining in the host FIFO a: " << remainingFIFOa << std::endl;
 
 			//If there are data available in the FIFO, retrieve it
 			if (remainingFIFOa > 0)
@@ -218,7 +218,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 				//Read the elements in the FIFO
 				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, remainingFIFOa, timeout, &remainingFIFOa));
-				//std::cout << "aaaaaaaaaaaa: " << remainingFIFOa << "\n";
+				//std::cout << "aaaaaaaaaaaa: " << remainingFIFOa << std::endl;
 			}
 		}
 	
@@ -226,7 +226,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		if (NelementsReadFIFOb < Npop)
 		{
 			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb, bufferArrayb[bufferArrayIndexb], 0, timeout, &remainingFIFOb));
-			//std::cout << "Number of elements remaining in the host FIFO b: " << remainingFIFOb << "\n";
+			//std::cout << "Number of elements remaining in the host FIFO b: " << remainingFIFOb << std::endl;
 
 			if (remainingFIFOb > 0)
 			{
@@ -235,7 +235,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 				//Read the elements in the FIFO
 				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb, bufferArrayb[bufferArrayIndexb], remainingFIFOb, timeout, &remainingFIFOb));
-				//std::cout << "bbbbbbbbbbbbb: " << remainingFIFOb << "\n";
+				//std::cout << "bbbbbbbbbbbbb: " << remainingFIFOb << std::endl;
 
 				bufferArrayIndexb++;
 
@@ -247,30 +247,30 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		timeoutCounter++;
 		if (timeoutCounter > 100)
 		{
-			std::cout << "WARNING: FIFO downloading timeout\n";
+			std::cout << "WARNING: FIFO downloading timeout" << std::endl;
 			break;
 		}	
 	}
 	
 	//Stop the timer
 	duration = (std::clock() - start) / (double)CLOCKS_PER_SEC;
-	std::cout << "Elapsed time: " << duration << " s \n";
-	std::cout << "FIFO bandwidth: " << 2 * 32 * Npop / duration / 1000000 << " Mbps \n"; //2 FIFOs of 32 bits each
+	std::cout << "Elapsed time: " << duration << " s" << std::endl;
+	std::cout << "FIFO bandwidth: " << 2 * 32 * Npop / duration / 1000000 << " Mbps" << std::endl; //2 FIFOs of 32 bits each
 
-	std::cout << "FIFObufferIndex: " << bufferArrayIndexb << "\n"; //print how many buffer arrays were actually used
-	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << "\n"; //print the total number of elements read
+	std::cout << "FIFObufferIndex: " << bufferArrayIndexb << std::endl; //print how many buffer arrays were actually used
+	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << std::endl; //print the total number of elements read
 
 
 	//U32 Nfree;
 	//Read the number of free spots remaining in the FIFO
 	//NiFpga_MergeStatus(status, NiFpga_ReadU32(session, NiFpga_FPGA_IndicatorU32_FIFOOUTfreespots, &Nfree));
-	//std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << "\n";
+	//std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << std::endl;
 	
 	//Save the buffer arrays into a text file
 	for (U32 i = 0; i < bufferArrayIndexb; i++)
 	{
 		for (U32 j = 0; j < NelementsBufferArrayb[i]; j++)
-			myfile << bufferArrayb[i][j] << "\n";
+			myfile << bufferArrayb[i][j] << std::endl;
 	}
 		
 	

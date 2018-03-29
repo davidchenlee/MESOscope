@@ -1,12 +1,18 @@
 %clear all
-HEATMAP = 1;
-COUNT_FREQ = 1;
+PLOT_VECTOR = 0;
+HEATMAP = ~PLOT_VECTOR;
+COUNT_FREQ = ~PLOT_VECTOR;
 
+
+%Plot the data as a vector
 vector = importdata('_photon-counts.txt');
-%plot(vector)
 
-if HEATMAP
-    
+if PLOT_VECTOR
+    plot(vector)
+end
+
+%Plot a heat map
+if HEATMAP   
     %convert the 1D data into a 2D array
     array2D = zeros(400, 400); %preallocate an array
     for kk = 1:400
@@ -27,6 +33,7 @@ if HEATMAP
     caxis(ax, [0 10]); % Adjust the color limits
 end
 
+%Tabulate the count frequency
 if COUNT_FREQ
     %print out a table with the frequency of each photon-count
     Ncounts = histcounts(vector);

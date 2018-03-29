@@ -25,8 +25,8 @@ void SeqClassTest()
 {
 		Seq ss;
 		ss.shutter(1 * us, 1);
-		std::cout << "size of the vector" << ss.size() << "\n";
-		std::cout << "" << (ss.vector())[0].size() << "\n";
+		std::cout << "size of the vector" << ss.size() << std::endl;
+		std::cout << "" << (ss.vector())[0].size() << std::endl;
 		Sleep(1000);
 }
 */

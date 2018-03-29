@@ -3,7 +3,7 @@
 #include "Tiffscope.h"
 
 
-//READ FILE EXAMPLE*************************************************************************************************************
+//READ FILE EXAMPLE
 int ReadTiff(void)
 {
 	TIFF *tif = TIFFOpen("D:\\OwnCloud\\Codes\\Cpp playground\\Playground\\marbles.tif", "r");
@@ -49,7 +49,7 @@ int ReadTiff(void)
 }
 
 
-//WRITE FILE EXAMPLE*************************************************************************************************************
+//WRITE FILE EXAMPLE
 int WriteTiff(void)
 {
 	uint32 width = 400;

@@ -13,7 +13,7 @@ int main()
 {
 	//must be called before any other FPGA calls
 	NiFpga_Status status = NiFpga_Initialize();
-	std::cout << "FPGA initialize status: " << status << "\n";
+	std::cout << "FPGA initialize status: " << status << std::endl;
 
 	//check for any FPGA error
 	if (NiFpga_IsNotError(status))
@@ -22,7 +22,7 @@ int main()
 
 		//opens a session, downloads the bitstream
 		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGA_Signature, "RIO0", 0, &session)); //1=no run, 0=run
-		std::cout << "FPGA open-session status: " << status << "\n";
+		std::cout << "FPGA open-session status: " << status << std::endl;
 
 		if (NiFpga_IsNotError(status))
 		{
@@ -48,7 +48,7 @@ int main()
 
 		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());
-		std::cout << "FPGA finalize status: " << status << "\n";
+		std::cout << "FPGA finalize status: " << status << std::endl;
 		
 	}
 	
@@ -56,13 +56,9 @@ int main()
 	//runPIstageSequence();
 	//runUARTsequence();
 
-
-
 	//WriteTiff();
-	//ShellExecute(NULL, "open", "C:\\Users\\chen\\Desktop\\ImageJ-win64\\ImageJ-win64", NULL, NULL, SW_SHOWDEFAULT);
-	std::system("START /B C:\\ProgramData\\Oracle\\Java\\javapath\\java -jar C:\\Users\\chen\\Desktop\\ImageJ-win64\\jars\\ij-1.51w.jar -macro C:\\Users\\chen\\Desktop\\ImageJ-win64\\macros\\macroTest.ijm");
 
-		//getchar();
+	getchar();
 
 	return 0;
 }

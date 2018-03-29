@@ -151,6 +151,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	myfile.open("_photon-counts.txt");
 
 
+	U32 ReadFifoWaittime = 1;			//Wait time between each iteration
 	U32 Npop = Width_pix * Height_pix;
 	U32 remainingFIFOa, remainingFIFOb; //Elements remaining
 	U32 timeout = 100;
@@ -199,6 +200,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 	start = std::clock(); //Start the timer
 
+	//TODO: implement the FIFO reading and data saving concurrently
 	//Read the PC-FIFO as the data arrive. I ran a test and found out that two 32-bit FIFOs has a larger bandwidth than a single 64 - bit FIFO
 	while (NelementsReadFIFOa < Npop || NelementsReadFIFOb < Npop)
 	{
@@ -240,9 +242,10 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 			}
 		}
-		Sleep(1); //wait till collecting big chuncks of data. Decrease the wait time till max transfer bandwidth
+		Sleep(ReadFifoWaittime); //wait till collecting big chuncks of data. Decrease the wait until max transfer bandwidth
 
 		timeoutCounter--;
+
 		//Timeout the while loop in case the data transfer fails
 		if (timeoutCounter == 0)
 		{
@@ -275,9 +278,6 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
 		image[ii] = 0;
 
-
-
-
 	U32 index = 0;
 	for (U32 ii = 0; ii < bufArrayIndexb; ii++)
 	{
@@ -293,16 +293,17 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 
 
-	//Reverse the pixel order every other line. For now, I'm just gonna use an aux array
-	//later on, write the tiff directly from the buffer arrays. to deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions of such functions
+	//Reverse the pixel order every other line. I'm just gonna use an aux array for now.
+	//Later on, write the tiff directly from the buffer arrays. to deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
 	//memset http://www.cplusplus.com/reference/cstring/memset/
 	//memmove http://www.cplusplus.com/reference/cstring/memmove/
+	//One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 	U32 *auxArray = new U32[Width_pix*Height_pix];
 	//initialize the array
 	for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
 		auxArray[ii] = 0;
 
-	for (U32 lineIndex = 0; lineIndex < Height_pix; lineIndex++) //from 0 to Height_pix
+	for (U32 lineIndex = 0; lineIndex < Height_pix; lineIndex++)
 		for (U32 pixIndex = 0; pixIndex < Width_pix; pixIndex++)
 		{
 			if (lineIndex % 2)
@@ -312,17 +313,12 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		}
 
 
+	//for debugging
 	//for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
 		//myfile << auxArray[ii] << std::endl;
 
 
 	delete image;
-
-	std::cout << "aaaa: " << index << std::endl;
-		
-
-
-
 
 	
 	//close txt file

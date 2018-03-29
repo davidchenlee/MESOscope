@@ -3,6 +3,8 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
+- Save the scanned image as tiff. Optimize the memory usage
+- Implement the FIFO reading and data saving concurrently
 - Save the run status in a text file
 - Maybe install openCV to display tiff images
 

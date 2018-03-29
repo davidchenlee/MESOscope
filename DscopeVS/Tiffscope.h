@@ -4,5 +4,5 @@
 #include <iostream>
 
 int ReadTiff(void);
-int WriteTiff(void);
+int WriteSyntheticTiff(void);
 

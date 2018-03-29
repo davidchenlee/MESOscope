@@ -56,7 +56,7 @@ int main()
 	//runPIstageSequence();
 	//runUARTsequence();
 
-	//WriteTiff();
+	//WriteSyntheticTiff();
 
 	getchar();
 

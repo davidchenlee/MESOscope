@@ -50,7 +50,7 @@ int ReadTiff(void)
 
 
 //WRITE FILE EXAMPLE
-int WriteTiff(void)
+int WriteSyntheticTiff(void)
 {
 	uint32 width = 400;
 	uint32 height = 400;

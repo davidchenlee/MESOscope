@@ -12,5 +12,6 @@ Code in C++ for controlling the NI USB-7852R card
 
 ### LabView
 - Maybe decrease the clock of the photon-counter from 160 MHz to 80 MHz for a faster/easier compilation
-- For debugging purposes, It would be nice to have an input selector on the photon-counter to choose from the PMT or the PMT simulator
-- change the internal FIFOs to memory blocks to allow multiple iterations
+- For debugging purposes, it would be nice to have an input selector on the photon-counter to choose from the PMT or the PMT simulator
+- Change the internal FIFOs to memory blocks to allow multiple iterations
+- When cycling the galvo ramp, implement the posibility to mirror the sequence so that the galvo can swing up and down continuously

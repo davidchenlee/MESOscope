@@ -12,9 +12,9 @@
 int main()
 {
 
-	//To make sure the the filterwheel 1 is set up in the right position
-	FilterWheel();
-	std::cout << endl;
+	//To make sure the the filterwheel 1 is set to the correct position
+	//FilterWheel();
+	//std::cout << endl;
 
 
 	//must be called before any other FPGA calls

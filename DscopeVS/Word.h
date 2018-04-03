@@ -8,7 +8,7 @@
 using namespace Const;
 
 /*Define the full path of the bitfile*/
-static const char* Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
+static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 
 void printHex(U32 input);
 U32 u32pack(U16 t, U16 x);

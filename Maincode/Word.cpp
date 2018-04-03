@@ -249,7 +249,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		//Timeout the while loop in case the data transfer fails
 		if (timeoutCounter == 0)
 		{
-			std::cout << "WARNING: FIFO downloading timeout" << std::endl;
+			std::cout << "ERROR: FIFO downloading timeout" << std::endl;
 			break;
 		}	
 	}
@@ -269,56 +269,55 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << std::endl;
 	
 
-
-
-	//create an 1D array representing the image
-	U32 *image = new U32[Width_pix*Height_pix];
-
-	//initialize the array
-	for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
-		image[ii] = 0;
-
-	U32 index = 0;
-	for (U32 ii = 0; ii < bufArrayIndexb; ii++)
+	if (NelementsReadFIFOa == Npop || NelementsReadFIFOb == Npop)
 	{
-		for (U32 jj = 0; jj < NelementsBufArrayb[ii]; jj++)
+		//create a long 1D array representing the image
+		U32 *image = new U32[Width_pix*Height_pix];
+
+		//initialize the array
+		for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
+			image[ii] = 0;
+
+		U32 index = 0;
+		for (U32 ii = 0; ii < bufArrayIndexb; ii++)
 		{
-			myfile << bufArrayb[ii][jj] << std::endl;		//Save the buffer-arrays into a text file
-			image[index] = bufArrayb[ii][jj];
-			//image[index] = index+1;						//for debugging
-			index++;
-		}
-	}
-
-
-
-
-	//Reverse the pixel order every other line. I'm just gonna use an aux array for now.
-	//Later on, write the tiff directly from the buffer arrays. to deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
-	//memset http://www.cplusplus.com/reference/cstring/memset/
-	//memmove http://www.cplusplus.com/reference/cstring/memmove/
-	//One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
-	U32 *auxArray = new U32[Width_pix*Height_pix];
-	//initialize the array
-	for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
-		auxArray[ii] = 0;
-
-	for (U32 lineIndex = 0; lineIndex < Height_pix; lineIndex++)
-		for (U32 pixIndex = 0; pixIndex < Width_pix; pixIndex++)
-		{
-			if (lineIndex % 2)
-				auxArray[lineIndex*Width_pix + pixIndex] = image[lineIndex*Width_pix + (Width_pix-pixIndex-1)]; //reversed case
-			else
-				auxArray[lineIndex*Width_pix + pixIndex] = image[lineIndex*Width_pix + pixIndex];
+			for (U32 jj = 0; jj < NelementsBufArrayb[ii]; jj++)
+			{
+				myfile << bufArrayb[ii][jj] << std::endl;		//Save the buffer-arrays into a text file
+				image[index] = bufArrayb[ii][jj];
+				//image[index] = index+1;						//for debugging
+				index++;
+			}
 		}
 
+		//Reverse the pixel order every other line. I'm just gonna use an aux array for now.
+		//Later on, write the tiff directly from the buffer arrays. to deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
+		//memset http://www.cplusplus.com/reference/cstring/memset/
+		//memmove http://www.cplusplus.com/reference/cstring/memmove/
+		//One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
+		U32 *auxArray = new U32[Width_pix*Height_pix];
+		//initialize the array
+		for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
+			auxArray[ii] = 0;
 
-	//for debugging
-	//for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
+		for (U32 lineIndex = 0; lineIndex < Height_pix; lineIndex++)
+			for (U32 pixIndex = 0; pixIndex < Width_pix; pixIndex++)
+			{
+				if (lineIndex % 2)
+					auxArray[lineIndex*Width_pix + pixIndex] = image[lineIndex*Width_pix + (Width_pix - pixIndex - 1)]; //reversed case
+				else
+					auxArray[lineIndex*Width_pix + pixIndex] = image[lineIndex*Width_pix + pixIndex];
+			}
+
+
+		//for debugging
+		//for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
 		//myfile << auxArray[ii] << std::endl;
 
-
-	delete image;
+		delete image, auxArray;
+	}
+	else
+		std::cout << "ERROR: some elements in the FIFO are missing " << std::endl;
 
 	
 	//close txt file

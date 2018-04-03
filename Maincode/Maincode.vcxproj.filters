@@ -58,7 +58,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="DscopeVS.rc">
+    <ResourceCompile Include="Maincode.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

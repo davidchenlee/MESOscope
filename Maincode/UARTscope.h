@@ -6,5 +6,4 @@
 using namespace std;
 
 void PrintCommState(DCB dcb);
-int runUARTsequence();
 int FilterWheel();

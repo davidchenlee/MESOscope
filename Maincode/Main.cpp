@@ -5,15 +5,16 @@
 #include "Paragraph.h"
 //#include "Seq.h" //'Seq' class
 //#include "PIstages.h"
-#include "UART.h"
+#include "UARTscope.h"
 #include "Tiffscope.h"
 
 
 int main()
 {
 
-	//runPIstageSequence();
+	//To make sure the the filterwheel 1 is set up in the right position
 	FilterWheel();
+	std::cout << endl;
 
 
 	//must be called before any other FPGA calls

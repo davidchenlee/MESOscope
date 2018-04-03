@@ -283,7 +283,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	{
 		for (U32 jj = 0; jj < NelementsBufArrayb[ii]; jj++)
 		{
-			//myfile << bufArrayb[ii][jj] << std::endl;		//Save the buffer-arrays into a text file
+			myfile << bufArrayb[ii][jj] << std::endl;		//Save the buffer-arrays into a text file
 			image[index] = bufArrayb[ii][jj];
 			//image[index] = index+1;						//for debugging
 			index++;

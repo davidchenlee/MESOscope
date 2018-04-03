@@ -36,6 +36,9 @@
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="UART.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -54,6 +57,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Tiffscope.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UART.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

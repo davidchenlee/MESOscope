@@ -5,12 +5,17 @@
 #include "Paragraph.h"
 //#include "Seq.h" //'Seq' class
 //#include "PIstages.h"
-//#include "UART.h"
+#include "UART.h"
 #include "Tiffscope.h"
 
 
 int main()
 {
+
+	//runPIstageSequence();
+	FilterWheel();
+
+
 	//must be called before any other FPGA calls
 	NiFpga_Status status = NiFpga_Initialize();
 	std::cout << "FPGA initialize status: " << status << std::endl;
@@ -53,8 +58,7 @@ int main()
 	}
 	
 
-	//runPIstageSequence();
-	//runUARTsequence();
+
 
 	//WriteSyntheticTiff();
 

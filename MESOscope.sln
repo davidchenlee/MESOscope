@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Main code", "Maincode\Maincode.vcxproj", "{A2026E64-828B-4F57-B191-1DE79638AEEC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Maincode", "Maincode\Maincode.vcxproj", "{A2026E64-828B-4F57-B191-1DE79638AEEC}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Filterwheels", "Filterwheels\Filterwheels.vcxproj", "{CFE9F7D9-94BE-4E4B-A5E3-D716434957AD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,14 @@ Global
 		{A2026E64-828B-4F57-B191-1DE79638AEEC}.Release|x64.Build.0 = Release|x64
 		{A2026E64-828B-4F57-B191-1DE79638AEEC}.Release|x86.ActiveCfg = Release|Win32
 		{A2026E64-828B-4F57-B191-1DE79638AEEC}.Release|x86.Build.0 = Release|Win32
+		{CFE9F7D9-94BE-4E4B-A5E3-D716434957AD}.Debug|x64.ActiveCfg = Debug|x64
+		{CFE9F7D9-94BE-4E4B-A5E3-D716434957AD}.Debug|x64.Build.0 = Debug|x64
+		{CFE9F7D9-94BE-4E4B-A5E3-D716434957AD}.Debug|x86.ActiveCfg = Debug|Win32
+		{CFE9F7D9-94BE-4E4B-A5E3-D716434957AD}.Debug|x86.Build.0 = Debug|Win32
+		{CFE9F7D9-94BE-4E4B-A5E3-D716434957AD}.Release|x64.ActiveCfg = Release|x64
+		{CFE9F7D9-94BE-4E4B-A5E3-D716434957AD}.Release|x64.Build.0 = Release|x64
+		{CFE9F7D9-94BE-4E4B-A5E3-D716434957AD}.Release|x86.ActiveCfg = Release|Win32
+		{CFE9F7D9-94BE-4E4B-A5E3-D716434957AD}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

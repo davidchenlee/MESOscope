@@ -1,5 +1,5 @@
 #pragma once
-#include "NiFpga_FPGA.h"
+#include "NiFpga_FPGAvi.h"
 #include <iostream>
 #include <fstream>      //file management
 #include "Const.h"
@@ -8,7 +8,7 @@
 using namespace Const;
 
 /*Define the full path of the bitfile*/
-static const char* Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGA_Bitfile;
+static const char* Bitfile = "D:\\OwnCloud\\Codes\\Dscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 
 void printHex(U32 input);
 U32 u32pack(U16 t, U16 x);

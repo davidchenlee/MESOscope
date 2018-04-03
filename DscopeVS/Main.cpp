@@ -21,7 +21,7 @@ int main()
 		NiFpga_Session session;
 
 		//opens a session, downloads the bitstream
-		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGA_Signature, "RIO0", 0, &session)); //1=no run, 0=run
+		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &session)); //1=no run, 0=run
 		std::cout << "FPGA open-session status: " << status << std::endl;
 
 		if (NiFpga_IsNotError(status))

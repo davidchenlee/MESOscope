@@ -175,9 +175,9 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 	
 	//U32 actualDepth;
-	//NiFpga_ConfigureFifo2(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTa, 1000000, &actualDepth);
+	//NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, 1000000, &actualDepth);
 	//std::cout << "actualDepth a: " << actualDepth << std::endl;
-	//NiFpga_ConfigureFifo2(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb, 1000000, &actualDepth);
+	//NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, 1000000, &actualDepth);
 	//std::cout << "actualDepth b: " << actualDepth << std::endl;
 
 
@@ -189,12 +189,12 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	double duration;
 
 	//Start transfering the data in the FPGA FIFO to the PC FIFO
-	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTa));
-	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb));
+	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 
 	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 1));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGA_ControlBool_Start_acquisition, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Start_acquisition, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Start_acquisition, 0));
 
 
 
@@ -208,7 +208,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		if (NelementsReadFIFOa < Npop) //Skip if all the data have already been downloaded (i.e. NelementsReadFIFOa = Npop)
 		{
 			//By requesting 0 elements from the FIFO, the function returns the number of elements available in the FIFO. If no data are available yet, then remainingFIFOa = 0 is returned
-			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, 0, timeout, &remainingFIFOa));
+			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, 0, timeout, &remainingFIFOa));
 			//std::cout << "Number of elements remaining in the host FIFO a: " << remainingFIFOa << std::endl;
 
 			//If there are data available in the FIFO, retrieve it
@@ -218,7 +218,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 				NelementsReadFIFOa += remainingFIFOa; //Keep track of how many data points have been read so far
 
 				//Read the elements in the FIFO
-				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, remainingFIFOa, timeout, &remainingFIFOa));
+				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, remainingFIFOa, timeout, &remainingFIFOa));
 				//std::cout << "aaaaaaaaaaaa: " << remainingFIFOa << std::endl;
 			}
 		}
@@ -226,7 +226,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		//FIFO OUT b
 		if (NelementsReadFIFOb < Npop)
 		{
-			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], 0, timeout, &remainingFIFOb));
+			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], 0, timeout, &remainingFIFOb));
 			//std::cout << "Number of elements remaining in the host FIFO b: " << remainingFIFOb << std::endl;
 
 			if (remainingFIFOb > 0)
@@ -235,7 +235,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 				NelementsBufArrayb[bufArrayIndexb] = remainingFIFOb; //record how many elements are in each FIFObuffer array												
 
 				//Read the elements in the FIFO
-				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGA_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], remainingFIFOb, timeout, &remainingFIFOb));
+				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], remainingFIFOb, timeout, &remainingFIFOb));
 				//std::cout << "bbbbbbbbbbbbb: " << remainingFIFOb << std::endl;
 
 				bufArrayIndexb++;
@@ -265,7 +265,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 	//U32 Nfree;
 	//Read the number of free spots remaining in the FIFO
-	//NiFpga_MergeStatus(status, NiFpga_ReadU32(session, NiFpga_FPGA_IndicatorU32_FIFOOUTfreespots, &Nfree));
+	//NiFpga_MergeStatus(status, NiFpga_ReadU32(session, NiFpga_FPGAvi_IndicatorU32_FIFOOUTfreespots, &Nfree));
 	//std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << std::endl;
 	
 

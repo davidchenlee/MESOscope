@@ -1,8 +1,7 @@
 //#include <math.h>
 //#include <time.h>
 //#include <concrt.h> 	//Concurrency::wait(2000);
-#include "windows.h"	//the stages use this lib. also Sleep
-#include "Paragraph.h"
+#include "Sequence.h"
 //#include "Seq.h" //'Seq' class
 //#include "PIstages.h"
 #include "UARTscope.h"

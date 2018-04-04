@@ -1,12 +1,14 @@
 #include "Sentence.h"
 
 
+#pragma region "Individual sequences"
+
 //Linearly scan the galvo while the RS is on to acquire a 2D image
 U32QV Acquire2D()
 {
 	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 
-	//Pixel clock
+					 //Pixel clock
 	QV[PCLOCK] = PixelClockSeq();
 
 	//linear ramp for the galvo
@@ -41,13 +43,13 @@ U32QV TestAODOSeq()
 {
 	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 
-	//AO0
+					 //AO0
 	QV[ABUF0].push(AnalogOut(4 * us, 10));
 	QV[ABUF0].push(AnalogOut(4 * us, 0));
 	QV[ABUF0].push(AnalogOut(4 * us, 10));
 	QV[ABUF0].push(AnalogOut(4 * us, 0));//go back to zero
 
-	//DO0
+										 //DO0
 	QV[DBUF0].push(DigitalOut(4 * us, 1));
 	QV[DBUF0].push(DigitalOut(4 * us, 0));
 	QV[DBUF0].push(DigitalOut(4 * us, 0));
@@ -82,7 +84,7 @@ U32Q PixelClockSeq()
 {
 	U32Q Q;	//Create a queue
 
-	//INITIAL WAIT TIME. Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us, then the wait time is (62.5-50)/2 = 6.25us
+			//INITIAL WAIT TIME. Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us, then the wait time is (62.5-50)/2 = 6.25us
 	double t = 6.25*us;
 	U16 latency = 2; //latency of detecting the line clock. Calibrate the latency on the oscilloscope
 	Q.push(u32pack(us2tick(t) - latency, 0x0000));
@@ -102,7 +104,7 @@ U32Q GalvoLinearRamp()
 	double step = 4 * us;
 	U32Q Q; //Create a queue
 
-	//linear output
+			//linear output
 	U32Q linearRamp1 = linearRamp(step, 1 * ms, 0, -Vmax);
 	U32Q linearRamp2 = linearRamp(step, 25 * ms, -Vmax, Vmax);
 	U32Q linearRamp3 = linearRamp(step, 1 * ms, Vmax, 0);
@@ -117,7 +119,7 @@ U32QV GalvoTest()
 {
 	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 	QV[ABUF0] = GalvoLinearRamp();
-	
+
 	double pulsewidth = 300 * us;
 
 	/*
@@ -232,13 +234,14 @@ int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTc
 		std::cout << "WARNING: time step too small. Time step set to the min = ~" << minstep << "ms" << std::endl;
 	}
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 0));
-	
+
 	return 0;
 }
 
+//endregion "Individual sequences"
+#pragma endregion
 
-
-/* FPGA FUNCTIONS**************************************************************************************************************************************************************************************/
+#pragma region "FPGA functions"
 
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
@@ -266,7 +269,7 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	/*
 	U32QV QV(Nchan);
 	for (U8 ii = 0; ii < Nchan; ii++)
-		QV[ii].push(0);
+	QV[ii].push(0);
 	SendOutQueue(status, session, QV);
 	TriggerAODO(status, session);
 	*/
@@ -304,7 +307,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	}
 	allQs = {};//cleanup the queue in C++11
 
-	//send the data to the FPGA through the FIFO
+			   //send the data to the FPGA through the FIFO
 	U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
 	U32 r; //empty elements remaining
 
@@ -329,3 +332,42 @@ void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Start_acquisition, 0));
 	std::cout << "Acquisition trigger status: " << *status << std::endl;
 }
+
+//endregion "FPGA functions"
+#pragma endregion
+
+#pragma region "Combined sequences"
+
+void MainSequence(NiFpga_Status* status, NiFpga_Session session)
+{
+	//control sequences
+	//SendOutQueue(status, session, GalvoTest());
+	SendOutQueue(status, session, Acquire2D());
+	TriggerAODO(status, session);			//trigger the analog and digital outputs
+
+											//TriggerAcquisition(status, session); // trigger the data acquisition
+	CountPhotons(status, session);
+
+
+	//SECOND ROUND
+	if (0)
+	{
+		SendOutQueue(status, session, TestAODOSeq());
+		TriggerAODO(status, session);
+		TriggerAcquisition(status, session);
+	}
+}
+
+/* Test the Seq class
+void SeqClassTest()
+{
+Seq ss;
+ss.shutter(1 * us, 1);
+std::cout << "size of the vector" << ss.size() << std::endl;
+std::cout << "" << (ss.vector())[0].size() << std::endl;
+Sleep(1000);
+}
+*/
+
+//endregion "FPGA functions"
+#pragma endregion

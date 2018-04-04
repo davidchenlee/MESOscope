@@ -124,11 +124,17 @@
     <ClCompile Include="..\Maincode\FPGAlowlevel.cpp" />
     <ClCompile Include="..\Maincode\FPGAsequences.cpp" />
     <ClCompile Include="TCmain.cpp" />
+    <ClCompile Include="TCsequences.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Maincode\Const.h" />
     <ClInclude Include="..\Maincode\FPGAlowlevel.h" />
     <ClInclude Include="..\Maincode\FPGAsequences.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="TCsequences.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Testcode.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

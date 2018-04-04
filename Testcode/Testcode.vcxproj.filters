@@ -30,6 +30,9 @@
     <ClCompile Include="TCmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TCsequences.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Maincode\Const.h">
@@ -41,5 +44,16 @@
     <ClInclude Include="..\Maincode\FPGAsequences.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TCsequences.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Testcode.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

@@ -35,10 +35,11 @@ U16 us2tick(double t)
 }
 
 
-//converts voltage (range: -10V to 10V) to a signed int 16 (range: -32768 to 32767)
-//0x7FFFF = 0d32767
-//0xFFFF = -1
-//0x8000 = -32768
+/*converts voltage (range: -10V to 10V) to a signed int 16 (range: -32768 to 32767)
+0x7FFFF = 0d32767
+0xFFFF = -1
+0x8000 = -32768
+*/
 I16 volt2I16(double x)
 {
 	if (x > 10)
@@ -86,7 +87,7 @@ U32 PixelClock(double t, bool DO)
 }
 
 
-// Push all elements of 'tailQ' into 'headQ'
+//Push all elements of 'tailQ' into 'headQ'
 U32Q PushQ(U32Q& headQ, U32Q& tailQ)
 {
 	while (!tailQ.empty())
@@ -98,7 +99,7 @@ U32Q PushQ(U32Q& headQ, U32Q& tailQ)
 }
 
 
-// PARAMETERS: time step, ramp length, initial voltage, final voltage
+//PARAMETERS: time step, ramp length, initial voltage, final voltage
 U32Q linearRamp(double dt, double T, double Vi, double Vf)
 {
 	U32Q queue;
@@ -392,9 +393,10 @@ U32Q NewConcatenatedQ(U32Q& headQ, U32Q& tailQ)
 //Linearly scan the galvo while the RS is on to acquire a 2D image
 U32QV Acquire2D()
 {
-	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	U32QV QV(Nchan);
 
-					 //Pixel clock
+	//Pixel clock
 	QV[PCLOCK] = PixelClockSeq();
 
 	//linear ramp for the galvo
@@ -425,9 +427,10 @@ U32QV Acquire2D()
 //Test the analog and digital output
 U32QV TestAODOSeq()
 {
-	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	U32QV QV(Nchan);
 
-					 //AO0
+	//AO0
 	QV[ABUF0].push(AnalogOut(4 * us, 10));
 	QV[ABUF0].push(AnalogOut(4 * us, 0));
 	QV[ABUF0].push(AnalogOut(4 * us, 10));
@@ -488,7 +491,7 @@ U32Q GalvoLinearRamp()
 	double step = 4 * us;
 	U32Q Q; //Create a queue
 
-			//linear output
+	//linear output
 	U32Q linearRamp1 = linearRamp(step, 1 * ms, 0, -Vmax);
 	U32Q linearRamp2 = linearRamp(step, 25 * ms, -Vmax, Vmax);
 	U32Q linearRamp3 = linearRamp(step, 1 * ms, Vmax, 0);
@@ -501,7 +504,8 @@ U32Q GalvoLinearRamp()
 
 U32QV GalvoTest()
 {
-	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	U32QV QV(Nchan);
 	QV[ABUF0] = GalvoLinearRamp();
 
 	double pulsewidth = 300 * us;
@@ -520,7 +524,8 @@ U32QV GalvoTest()
 
 U32QV DigitalTimingCheck()
 {
-	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	U32QV QV(Nchan);
 	double step = 400 * us;
 
 	//DO0
@@ -533,7 +538,8 @@ U32QV DigitalTimingCheck()
 
 U32QV DigitalLatencyCalib()
 {
-	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	U32QV QV(Nchan);
 	double step = 4 * us;
 
 	//DO0
@@ -552,7 +558,8 @@ U32QV DigitalLatencyCalib()
 //Calibrate the digital channels first, then use it as a time reference
 U32QV AnalogLatencyCalib()
 {
-	U32QV QV(Nchan); //Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	U32QV QV(Nchan);
 	double delay = 400 * us;
 	double step = 4 * us;
 
@@ -691,7 +698,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	}
 	allQs = {};//cleanup the queue in C++11
 
-			   //send the data to the FPGA through the FIFO
+	//send the data to the FPGA through the FIFO
 	U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
 	U32 r; //empty elements remaining
 

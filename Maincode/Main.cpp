@@ -1,5 +1,3 @@
-//#include <math.h>
-//#include <time.h>
 //#include <concrt.h> 	//Concurrency::wait(2000);
 #include "Sequence.h"
 //#include "Seq.h" //'Seq' class

@@ -36,7 +36,7 @@ U32QV AnalogLatencyCalib();
 U32QV DigitalLatencyCalib();
 
 //Combined sequences
-void MainSequence(NiFpga_Status* status, NiFpga_Session session);
+void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session);
 
 
 //Vibratome functions

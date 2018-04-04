@@ -388,7 +388,7 @@ U32Q NewConcatenatedQ(U32Q& headQ, U32Q& tailQ)
 //endregion "Low-level functions"
 #pragma endregion
 
-#pragma region "Individual sequences"
+#pragma region "FPGA individual sequences"
 
 //Linearly scan the galvo while the RS is on to acquire a 2D image
 U32QV Acquire2D()
@@ -471,7 +471,7 @@ U32Q PixelClockSeq()
 {
 	U32Q Q;	//Create a queue
 
-			//INITIAL WAIT TIME. Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us, then the wait time is (62.5-50)/2 = 6.25us
+	//INITIAL WAIT TIME. Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us, then the wait time is (62.5-50)/2 = 6.25us
 	double t = 6.25*us;
 	U16 latency = 2; //latency of detecting the line clock. Calibrate the latency on the oscilloscope
 	Q.push(u32pack(us2tick(t) - latency, 0x0000));
@@ -629,7 +629,7 @@ int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTc
 	return 0;
 }
 
-//endregion "Individual sequences"
+//endregion "FPGA individual sequences"
 #pragma endregion
 
 #pragma region "FPGA functions"
@@ -727,16 +727,16 @@ void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session)
 //endregion "FPGA functions"
 #pragma endregion
 
-#pragma region "Combined sequences"
+#pragma region "FPGA combined sequences"
 
-void MainSequence(NiFpga_Status* status, NiFpga_Session session)
+void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 {
 	//control sequences
 	//SendOutQueue(status, session, GalvoTest());
 	SendOutQueue(status, session, Acquire2D());
 	TriggerAODO(status, session);			//trigger the analog and digital outputs
 
-											//TriggerAcquisition(status, session); // trigger the data acquisition
+	//TriggerAcquisition(status, session); // trigger the data acquisition
 	CountPhotons(status, session);
 
 
@@ -760,5 +760,5 @@ Sleep(1000);
 }
 */
 
-//endregion "FPGA functions"
+//endregion "FPGA combined sequences"
 #pragma endregion

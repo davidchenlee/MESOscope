@@ -1,5 +1,5 @@
 //#include <concrt.h> 	//Concurrency::wait(2000);
-#include "Sequence.h"
+#include "FPGAsequences.h"
 //#include "Seq.h" //'Seq' class
 //#include "PIstages.h"
 #include "UARTscope.h"

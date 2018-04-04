@@ -155,16 +155,18 @@
   <ItemGroup>
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c" />
     <ClCompile Include="Const.cpp" />
+    <ClCompile Include="FPGAlowlevel.cpp" />
     <ClCompile Include="Tiffscope.cpp" />
     <ClCompile Include="UARTscope.cpp" />
-    <ClCompile Include="Sequence.cpp" />
-    <ClCompile Include="MCMain.cpp" />
+    <ClCompile Include="FPGAsequences.cpp" />
+    <ClCompile Include="MCmain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Const.h" />
+    <ClInclude Include="FPGAlowlevel.h" />
     <ClInclude Include="Tiffscope.h" />
     <ClInclude Include="UARTscope.h" />
-    <ClInclude Include="Sequence.h" />
+    <ClInclude Include="FPGAsequences.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -18,21 +18,27 @@
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Maincode\Sequence.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\Maincode\Const.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TCMain.cpp">
+    <ClCompile Include="..\Maincode\FPGAlowlevel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Maincode\FPGAsequences.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TCmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Maincode\Sequence.h">
+    <ClInclude Include="..\Maincode\Const.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Maincode\Const.h">
+    <ClInclude Include="..\Maincode\FPGAlowlevel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Maincode\FPGAsequences.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

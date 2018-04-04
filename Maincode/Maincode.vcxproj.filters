@@ -27,10 +27,13 @@
     <ClCompile Include="Const.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Sequence.cpp">
+    <ClCompile Include="FPGAsequences.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MCMain.cpp">
+    <ClCompile Include="FPGAlowlevel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MCmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -44,7 +47,10 @@
     <ClInclude Include="UARTscope.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Sequence.h">
+    <ClInclude Include="FPGAsequences.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FPGAlowlevel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

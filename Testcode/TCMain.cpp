@@ -1,4 +1,4 @@
-#include "Sequence.h"
+#include "FPGASequences.h"
 #include "NiFpga_FPGAvi.h"
 #include <iostream>
 

@@ -121,12 +121,14 @@
   <ItemGroup>
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c" />
     <ClCompile Include="..\Maincode\Const.cpp" />
-    <ClCompile Include="..\Maincode\Sequence.cpp" />
-    <ClCompile Include="TCMain.cpp" />
+    <ClCompile Include="..\Maincode\FPGAlowlevel.cpp" />
+    <ClCompile Include="..\Maincode\FPGAsequences.cpp" />
+    <ClCompile Include="TCmain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Maincode\Const.h" />
-    <ClInclude Include="..\Maincode\Sequence.h" />
+    <ClInclude Include="..\Maincode\FPGAlowlevel.h" />
+    <ClInclude Include="..\Maincode\FPGAsequences.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

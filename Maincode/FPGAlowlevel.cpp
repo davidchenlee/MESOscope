@@ -101,11 +101,11 @@ U32Q PushQ(U32Q& headQ, U32Q& tailQ)
 void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 {
 
-	//take a vector of queues and return it as a single queue
+	//take a vector of queues and return it as a single long queue
 	U32Q allQs;
 	for (U32 i = 0; i < Nchan; i++)
 	{
-		allQs.push(QV[i].size()); //push the number of elements in the single queue
+		allQs.push(QV[i].size()); //push the number of elements in each individual queue
 		while (!QV[i].empty())
 		{
 			allQs.push(QV[i].front());
@@ -124,9 +124,9 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 		FIFO[i] = allQs.front();
 		allQs.pop();
 	}
-	allQs = {};//cleanup the queue in C++11
+	allQs = {};//cleanup the queue C++11 style
 
-			   //send the data to the FPGA through the FIFO
+	//send the data to the FPGA through the FIFO
 	U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
 	U32 r; //empty elements remaining
 
@@ -225,7 +225,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	std::clock_t start;										//Declare a stopwatch
 	double duration;
 
-	//Start transfering the data in the FPGA FIFO to the PC FIFO
+	//Start the FIFO OUT to transfer data from the FPGA FIFO to the PC FIFO
 	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 
@@ -237,8 +237,8 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 	start = std::clock(); //Start the timer
 
-						  //TODO: implement the FIFO reading and data saving concurrently
-						  //Read the PC-FIFO as the data arrive. I ran a test and found out that two 32-bit FIFOs has a larger bandwidth than a single 64 - bit FIFO
+	//TODO: implement the FIFO reading and data saving concurrently
+	//Read the PC-FIFO as the data arrive. I ran a test and found out that two 32-bit FIFOs has a larger bandwidth than a single 64 - bit FIFO
 	while (NelementsReadFIFOa < Ntotal_pix || NelementsReadFIFOb < Ntotal_pix)
 	{
 		//FIFO OUT a
@@ -254,7 +254,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 				NelementsReadFIFOa += remainingFIFOa; //Keep track of how many data points have been read so far
 
-													  //Read the elements in the FIFO
+				//Read the elements in the FIFO
 				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, remainingFIFOa, timeout, &remainingFIFOa));
 				//std::cout << "aaaaaaaaaaaa: " << remainingFIFOa << std::endl;
 			}
@@ -300,19 +300,19 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << std::endl; //print the total number of elements read
 
 
-																											  //U32 Nfree;
-																											  //Read the number of free spots remaining in the FIFO
-																											  //NiFpga_MergeStatus(status, NiFpga_ReadU32(session, NiFpga_FPGAvi_IndicatorU32_FIFOOUTfreespots, &Nfree));
-																											  //std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << std::endl;
+	//U32 Nfree;
+	//Read the number of free spots remaining in the FIFO
+	//NiFpga_MergeStatus(status, NiFpga_ReadU32(session, NiFpga_FPGAvi_IndicatorU32_FIFOOUTfreespots, &Nfree));
+	//std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << std::endl;
 
 
 	if (NelementsReadFIFOa == Ntotal_pix || NelementsReadFIFOb == Ntotal_pix)
 	{
 		//create a long 1D array representing the image
-		U32 *image = new U32[Width_pix*Height_pix];
+		U32 *image = new U32[Ntotal_pix];
 
 		//initialize the array
-		for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
+		for (U32 ii = 0; ii < Ntotal_pix; ii++)
 			image[ii] = 0;
 
 		U32 index = 0;
@@ -332,9 +332,9 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		//memset http://www.cplusplus.com/reference/cstring/memset/
 		//memmove http://www.cplusplus.com/reference/cstring/memmove/
 		//One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
-		U32 *auxArray = new U32[Width_pix*Height_pix];
+		U32 *auxArray = new U32[Ntotal_pix];
 		//initialize the array
-		for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
+		for (U32 ii = 0; ii < Ntotal_pix; ii++)
 			auxArray[ii] = 0;
 
 		for (U32 lineIndex = 0; lineIndex < Height_pix; lineIndex++)
@@ -348,7 +348,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 
 		//for debugging
-		//for (U32 ii = 0; ii < Width_pix*Height_pix; ii++)
+		//for (U32 ii = 0; ii < Ntotal_pix; ii++)
 		//myfile << auxArray[ii] << std::endl;
 
 		delete image, auxArray;
@@ -452,14 +452,14 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	for (U8 ii = 0; ii < Nchan; ii++)
 	QV[ii].push(0);
 	SendOutQueue(status, session, QV);
-	TriggerAODO(status, session);
+	TriggerFIFOIN(status, session);
 	*/
 
 	std::cout << "FPGA initialize-variables status: " << *status << std::endl;
 }
 
 //Main trigger. Trigger FIFO-in, which subsequently triggers AO and DO
-void TriggerAODO(NiFpga_Status* status, NiFpga_Session session)
+void TriggerFIFOIN(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Trigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Trigger, 0));
@@ -475,4 +475,58 @@ void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session)
 }
 
 //endregion "FPGA initialization and trigger"
+#pragma endregion
+
+
+#pragma region "Vibratome"
+
+//Start running the vibratome
+int StartVT(NiFpga_Status* status, NiFpga_Session session)
+{
+	int dt = 20; //in ms. It has to be ~ 12 ms or longer to 
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1));
+	Sleep(dt);
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
+
+	return 0;
+}
+
+//Non-deterministic digital pulse for the vibratome control. The timing fluctuates approx in 1ms
+int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel)
+{
+	U8 selectedChannel;
+	int minstep = 10; //in ms
+
+	switch (channel)
+	{
+	case VTback:
+		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_back;
+		break;
+	case VTforward:
+		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_forward;
+		break;
+	default:
+		std::cout << "ERROR: Selected VT channel is unavailable" << std::endl;
+		return -1;
+	}
+
+
+	int delay = 1; //used to roughly calibrate the pulse length
+	int dt_ms = (int)dt / ms;
+
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 1));
+
+	if (dt_ms >= minstep)
+		Sleep(dt_ms - delay);
+	else
+	{
+		Sleep(minstep - delay);
+		std::cout << "WARNING: time step too small. Time step set to the min = ~" << minstep << "ms" << std::endl;
+	}
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 0));
+
+	return 0;
+}
+
+//endregion "Vibratome"
 #pragma endregion

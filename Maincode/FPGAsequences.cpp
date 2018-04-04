@@ -61,9 +61,8 @@ U32Q PixelClockSeq()
 void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 {
 	//control sequences
-	//SendOutQueue(status, session, TestAODOplusRamp());
 	SendOutQueue(status, session, Acquire2D());
-	TriggerAODO(status, session);			//trigger the analog and digital outputs
+	TriggerFIFOIN(status, session);			//trigger the analog and digital outputs
 
 	//TriggerAcquisition(status, session); // trigger the data acquisition
 	CountPhotons(status, session);
@@ -73,7 +72,7 @@ void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	if (0)
 	{
 		//SendOutQueue(status, session, TestAODO());
-		TriggerAODO(status, session);
+		TriggerFIFOIN(status, session);
 		TriggerAcquisition(status, session);
 	}
 }
@@ -92,54 +91,3 @@ Sleep(1000);
 //endregion "FPGA combined sequences"
 #pragma endregion
 
-#pragma region "Vibratome"
-
-//Start running the vibratome
-int StartVT(NiFpga_Status* status, NiFpga_Session session)
-{
-	int dt = 20; //in ms. It has to be ~ 12 ms or longer to 
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1));
-	Sleep(dt);
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
-
-	return 0;
-}
-
-//Non-deterministic digital pulse for the vibratome control. The timing fluctuates approx in 1ms
-int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel)
-{
-	U8 selectedChannel;
-	int minstep = 10; //in ms
-
-	switch (channel)
-	{
-	case VTback:
-		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_back;
-		break;
-	case VTforward:
-		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_forward;
-		break;
-	default:
-		std::cout << "ERROR: Selected VT channel is unavailable" << std::endl;
-		return -1;
-	}
-
-
-	int delay = 1; //used to roughly calibrate the pulse length
-	int dt_ms = (int)dt / ms;
-
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 1));
-
-	if (dt_ms >= minstep)
-		Sleep(dt_ms - delay);
-	else
-	{
-		Sleep(minstep - delay);
-		std::cout << "WARNING: time step too small. Time step set to the min = ~" << minstep << "ms" << std::endl;
-	}
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 0));
-
-	return 0;
-}
-
-#pragma endregion

@@ -26,5 +26,9 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session);
 
 //FPGA initialization and trigger
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);
-void TriggerAODO(NiFpga_Status* status, NiFpga_Session session);
+void TriggerFIFOIN(NiFpga_Status* status, NiFpga_Session session);
 void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session);
+
+//Combined sequences
+void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session);
+

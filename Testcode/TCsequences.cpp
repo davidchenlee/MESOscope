@@ -1,21 +1,5 @@
 #include "TCsequences.h"
 
-U32Q TestLinearRamp()
-{
-	double Vmax = 5;
-	double step = 4 * us;
-	U32Q Q; //Create a queue
-
-			//linear output
-	U32Q linearRamp1 = linearRamp(step, 1 * ms, 0, -Vmax);
-	U32Q linearRamp2 = linearRamp(step, 25 * ms, -Vmax, Vmax);
-	U32Q linearRamp3 = linearRamp(step, 1 * ms, Vmax, 0);
-	//PushQ(Q, linearRamp1);
-	PushQ(Q, linearRamp2);
-	//PushQ(Q, linearRamp3);
-	return Q; //this returns a queue and not a vector of queues
-}
-
 //Test the analog and digital output
 U32QV TestAODO()
 {
@@ -56,11 +40,23 @@ U32QV TestAODO()
 	return QV;
 }
 
-U32QV TestAODOplusRamp()
+U32QV TestAODOandRamp()
 {
 	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 	U32QV QV(Nchan);
-	QV[ABUF0] = TestLinearRamp();
+
+	//Generate linear ramps
+	double Vmax = 5;
+	double step = 4 * us;
+	U32Q Q; //Create a queue
+	U32Q linearRamp1 = linearRamp(step, 2 * ms, 0, -Vmax);
+	U32Q linearRamp2 = linearRamp(step, 20 * ms, -Vmax, Vmax);
+	U32Q linearRamp3 = linearRamp(step, 2 * ms, Vmax, 0);
+	//PushQ(Q, linearRamp1);
+	PushQ(Q, linearRamp2);
+	//PushQ(Q, linearRamp3);
+	QV[ABUF0] = Q;
+	Q = {}; //clean up
 
 	double pulsewidth = 300 * us;
 
@@ -75,6 +71,7 @@ U32QV TestAODOplusRamp()
 	return QV;
 }
 
+//Generate a long digital pulse and check the duration with the oscilloscope
 U32QV DigitalTimingCheck()
 {
 	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
@@ -88,6 +85,8 @@ U32QV DigitalTimingCheck()
 	return QV;
 }
 
+
+//Generate many short digital pulses and check the overall duration with the oscilloscope
 U32QV DigitalLatencyCalib()
 {
 	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
@@ -97,6 +96,7 @@ U32QV DigitalLatencyCalib()
 	//DO0
 	QV[DBUF0].push(DigitalOut(step, 1));
 
+	//many short digital pulses to accumulate the error
 	for (U32 ii = 0; ii < 99; ii++)
 		QV[DBUF0].push(DigitalOut(step, 0));
 
@@ -106,7 +106,7 @@ U32QV DigitalLatencyCalib()
 	return QV;
 }
 
-//Calibrate the digital channels first, then use it as a time reference
+//First, calibrate the digital channels, then use it as a time reference
 U32QV AnalogLatencyCalib()
 {
 	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA

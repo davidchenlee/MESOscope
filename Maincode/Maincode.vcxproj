@@ -164,9 +164,13 @@
   <ItemGroup>
     <ClInclude Include="Const.h" />
     <ClInclude Include="FPGAlowlevel.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="Tiffscope.h" />
     <ClInclude Include="UARTscope.h" />
     <ClInclude Include="FPGAsequences.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Maincode.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

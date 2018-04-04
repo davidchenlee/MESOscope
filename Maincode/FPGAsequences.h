@@ -9,6 +9,3 @@ U32Q PixelClockSeq();
 int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel);
 int StartVT(NiFpga_Status* status, NiFpga_Session session);
 
-//Combined sequences
-void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session);
-

@@ -470,6 +470,7 @@ void TriggerFIFOIN(NiFpga_Status* status, NiFpga_Session session)
 void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Start_acquisition, 1));
+	//Sleep(10);
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Start_acquisition, 0));
 	std::cout << "Acquisition trigger status: " << *status << std::endl;
 }

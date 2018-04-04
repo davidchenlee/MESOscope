@@ -31,7 +31,7 @@ int main()
 			Sleep(10);
 			TriggerFIFOIN(&status, session);			//trigger the control sequence
 			TriggerAcquisition(&status, session);
-			Sleep(10);
+			Sleep(20);
 
 			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.

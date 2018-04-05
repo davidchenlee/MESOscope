@@ -305,7 +305,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << std::endl;
 
 
-	if (NelementsReadFIFOa == Ntotal_pix || NelementsReadFIFOb == Ntotal_pix)
+	if (NelementsReadFIFOa == Ntotal_pix && NelementsReadFIFOb == Ntotal_pix)
 	{
 		//create a long 1D array representing the image
 		U32 *image = new U32[Ntotal_pix];
@@ -353,7 +353,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		delete image, auxArray;
 	}
 	else
-		std::cout << "ERROR: some elements in the FIFO are missing " << std::endl;
+		std::cout << "ERROR: more or less elements in the FIFO than expected " << std::endl;
 
 
 	//close txt file
@@ -431,12 +431,12 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFO_timeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, Nchan));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Sync_DO_to_AO, Sync_DO_to_AO));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Sync_AODO_to_LineGate, Sync_AODO_to_LineGate));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Sync_DO_to_AO, Sync_DO_to_AO_tick));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Sync_AODO_to_LineGate, Sync_AODO_to_LineGate_tick));
 	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Height_pix, Height_pix));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nframes, Nframes));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Frame_wait_time, 20000));
+	NiFpga_MergeStatus(status, NiFpga_WriteU32(session, NiFpga_FPGAvi_ControlU32_Frame_wait_time, FrameWaitTime_tick - FrameWaitTime_Latency_tick));
 	
 
 	//Vibratome control

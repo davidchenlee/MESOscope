@@ -24,7 +24,7 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGAvi_Signature = "44F06FC804CE60E3027B243188A267BA";
+static const char* const NiFpga_FPGAvi_Signature = "6C357E4BA66328025911EB1E7A814252";
 
 typedef enum
 {
@@ -47,13 +47,17 @@ typedef enum
 typedef enum
 {
    NiFpga_FPGAvi_ControlU16_FIFO_timeout = 0x12,
-   NiFpga_FPGAvi_ControlU16_Frame_wait_time = 0x16,
    NiFpga_FPGAvi_ControlU16_Height_pix = 0x46,
    NiFpga_FPGAvi_ControlU16_Nchannels = 0x4E,
    NiFpga_FPGAvi_ControlU16_Nframes = 0x1A,
    NiFpga_FPGAvi_ControlU16_Sync_AODO_to_LineGate = 0x3E,
    NiFpga_FPGAvi_ControlU16_Sync_DO_to_AO = 0x56,
 } NiFpga_FPGAvi_ControlU16;
+
+typedef enum
+{
+   NiFpga_FPGAvi_ControlU32_Frame_wait_time = 0x14,
+} NiFpga_FPGAvi_ControlU32;
 
 typedef enum
 {

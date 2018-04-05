@@ -38,8 +38,8 @@ namespace Const
 	extern const U32 tickPerUs;
 	extern const double dt_us;
 	extern const U32 AOdt_us;
-	extern const U16 Sync_DO_to_AO;
-	extern const U16 Sync_AODO_to_LineGate;
+	extern const U16 Sync_DO_to_AO_tick;
+	extern const U16 Sync_AODO_to_LineGate_tick;
 	extern const U16 FIFOtimeout;
 	extern const U32 FIFOINmax;
 
@@ -50,5 +50,7 @@ namespace Const
 	extern const U16 Height_pix;
 	extern const U32 Ntotal_pix;
 	extern const U16 Nframes;
+	extern const U32 FrameWaitTime_tick;
+	extern const U32 FrameWaitTime_Latency_tick;
 
 };

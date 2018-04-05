@@ -1,16 +1,16 @@
 #include "TCsequences.h"
 
-//Test the analog and digital output
+//Test the analog and digital output and the relative timing wrt the pixel clock
 U32QV TestAODO()
 {
 	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 	U32QV QV(Nchan);
 
 	//AO0
-	QV[ABUF0].push(AnalogOut(4 * us, 10));
-	QV[ABUF0].push(AnalogOut(4 * us, 0));
-	QV[ABUF0].push(AnalogOut(4 * us, 10));
-	QV[ABUF0].push(AnalogOut(4 * us, 0));//go back to zero
+	QV[ABUF2].push(AnalogOut(4 * us, 10));
+	QV[ABUF2].push(AnalogOut(4 * us, 0));
+	QV[ABUF2].push(AnalogOut(4 * us, 10));
+	QV[ABUF2].push(AnalogOut(4 * us, 0));//go back to zero
 
 	//DO0
 	QV[DBUF0].push(DigitalOut(4 * us, 1));
@@ -21,14 +21,14 @@ U32QV TestAODO()
 	//QV[AO0] = GalvoSeq();
 
 
-	//CURRENTLY, AO1 AND DO1 ARE TRIGGERED BY CONN1/DIO16
-	//AO1
-	QV[ABUF1].push(AnalogOut(4 * us, 5));
-	QV[ABUF1].push(AnalogOut(4 * us, 0));
-	QV[ABUF1].push(AnalogOut(4 * us, 5));
-	QV[ABUF1].push(AnalogOut(4 * us, 0));
+	//CURRENTLY, AO1 AND DO1 ARE TRIGGERED BY THE LINE CLOCK
+	//AO0
+	QV[ABUF0].push(AnalogOut(4 * us, 5));
+	QV[ABUF0].push(AnalogOut(4 * us, 0));
+	//QV[ABUF0].push(AnalogOut(4 * us, 5));
+	//QV[ABUF0].push(AnalogOut(4 * us, 0));
 
-	//DO1
+	//DO0
 	QV[DBUF1].push(DigitalOut(4 * us, 1));
 	QV[DBUF1].push(DigitalOut(4 * us, 0));
 	QV[DBUF1].push(DigitalOut(4 * us, 0));

@@ -201,7 +201,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//Create an array of buffer-arrays to store the data from the FIFO. The ReadFifo function gives chuncks of data.
 	//Store each chunck in a separate buffer-array
 	//I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
-	U8 NmaxbufArray = 10;
+	U8 NmaxbufArray = 100;
 	U32** bufArrayb = new U32*[NmaxbufArray];
 	for (U32 i = 0; i < NmaxbufArray; i++)
 		bufArrayb[i] = new U32[Ntotal_pix]; //Each row is used to store the data from the ReadFifo
@@ -295,7 +295,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	std::cout << "Elapsed time: " << duration << " s" << std::endl;
 	std::cout << "FIFO bandwidth: " << 2 * 32 * Ntotal_pix / duration / 1000000 << " Mbps" << std::endl; //2 FIFOs of 32 bits each
 
-	std::cout << "Buffer-arrays used: " << bufArrayIndexb << std::endl; //print how many buffer arrays were actually used
+	std::cout << "Buffer-arrays used: " << (U32)bufArrayIndexb << std::endl; //print how many buffer arrays were actually used
 	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << std::endl; //print the total number of elements read
 
 
@@ -436,6 +436,8 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Height_pix, Height_pix));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nframes, Nframes));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Frame_wait_time, 20000));
+	
 
 	//Vibratome control
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));

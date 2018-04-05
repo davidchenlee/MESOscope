@@ -1,5 +1,40 @@
 #include "FPGAsequences.h"
 
+#pragma region "FPGA combined sequences"
+
+void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
+{
+	//control sequences
+	SendOutQueue(status, session, Acquire2D());
+	TriggerFIFOIN(status, session);			//trigger the analog and digital outputs
+
+											//TriggerAcquisition(status, session); // trigger the data acquisition
+	CountPhotons(status, session);
+
+
+	//SECOND ROUND
+	if (0)
+	{
+		//SendOutQueue(status, session, TestAODO());
+		TriggerFIFOIN(status, session);
+		TriggerAcquisition(status, session);
+	}
+}
+
+/* Test the Seq class
+void SeqClassTest()
+{
+Seq ss;
+ss.shutter(1 * us, 1);
+std::cout << "size of the vector" << ss.size() << std::endl;
+std::cout << "" << (ss.vector())[0].size() << std::endl;
+Sleep(1000);
+}
+*/
+
+//endregion "FPGA combined sequences"
+#pragma endregion
+
 #pragma region "FPGA individual sequences"
 
 //Linearly scan the galvo while the RS is on to acquire a 2D image
@@ -56,38 +91,4 @@ U32Q PixelClockSeq()
 //endregion "FPGA individual sequences"
 #pragma endregion
 
-#pragma region "FPGA combined sequences"
-
-void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
-{
-	//control sequences
-	SendOutQueue(status, session, Acquire2D());
-	TriggerFIFOIN(status, session);			//trigger the analog and digital outputs
-
-	//TriggerAcquisition(status, session); // trigger the data acquisition
-	CountPhotons(status, session);
-
-
-	//SECOND ROUND
-	if (0)
-	{
-		//SendOutQueue(status, session, TestAODO());
-		TriggerFIFOIN(status, session);
-		TriggerAcquisition(status, session);
-	}
-}
-
-/* Test the Seq class
-void SeqClassTest()
-{
-Seq ss;
-ss.shutter(1 * us, 1);
-std::cout << "size of the vector" << ss.size() << std::endl;
-std::cout << "" << (ss.vector())[0].size() << std::endl;
-Sleep(1000);
-}
-*/
-
-//endregion "FPGA combined sequences"
-#pragma endregion
 

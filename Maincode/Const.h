@@ -49,4 +49,6 @@ namespace Const
 	extern const U16 Width_pix;
 	extern const U16 Height_pix;
 	extern const U32 Ntotal_pix;
+	extern const U16 Nframes;
+
 };

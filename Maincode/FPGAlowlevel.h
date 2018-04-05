@@ -23,7 +23,6 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& Qarray);
 U32Q linearRamp(double dt, double T, double Vi, double Vf);
 void CountPhotons(NiFpga_Status* status, NiFpga_Session session);
 
-
 //FPGA initialization and trigger
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);
 void TriggerFIFOIN(NiFpga_Status* status, NiFpga_Session session);

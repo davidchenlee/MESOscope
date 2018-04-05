@@ -30,11 +30,11 @@ namespace Const
 	
 	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
 	extern const U8 Npulses = 20;				//Number of pulses
-	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,    0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//@160MHz, one cycle through this array lasts 125ns	
+	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,    1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//@160MHz, one cycle through this array lasts 125ns	
 
 
-	extern const U16 Width_pix = 400;				//Width of the image. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const U16 Height_pix = 400;				//Height of the image. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const U16 Width_pix = 400;						//Width of the image. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
+	extern const U16 Height_pix = 400;						//Height of the image. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const U32 Ntotal_pix = Width_pix * Height_pix;	//Total number of pixels in each frame
-
+	extern const U16 Nframes = 1;							//Number of frames to acquire
 };

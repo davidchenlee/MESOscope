@@ -1,6 +1,6 @@
 #include "FPGAlowlevel.h"
 
-#pragma region "Low-level functions"
+#pragma region "FPGA low-level functions"
 
 void printHex(U32 input)
 {
@@ -100,10 +100,9 @@ U32Q PushQ(U32Q& headQ, U32Q& tailQ)
 
 void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 {
-
 	//take a vector of queues and return it as a single long queue
 	U32Q allQs;
-	for (U32 i = 0; i < Nchan; i++)
+	for (U8 i = 0; i < Nchan; i++)
 	{
 		allQs.push(QV[i].size()); //push the number of elements in each individual queue
 		while (!QV[i].empty())
@@ -202,7 +201,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//Create an array of buffer-arrays to store the data from the FIFO. The ReadFifo function gives chuncks of data.
 	//Store each chunck in a separate buffer-array
 	//I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
-	U32 NmaxbufArray = 10;
+	U8 NmaxbufArray = 10;
 	U32** bufArrayb = new U32*[NmaxbufArray];
 	for (U32 i = 0; i < NmaxbufArray; i++)
 		bufArrayb[i] = new U32[Ntotal_pix]; //Each row is used to store the data from the ReadFifo
@@ -219,7 +218,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 
 	U32 NelementsReadFIFOa = 0, NelementsReadFIFOb = 0; 	//Total number of elements read from the FIFO
-	U32 bufArrayIndexb = 0;									//Number of buffer arrays actually used
+	U8 bufArrayIndexb = 0;									//Number of buffer arrays actually used
 	U32 timeoutCounter = 100;								//Timeout the while-loop in case the data transfer from the FIFO fails	
 
 	std::clock_t start;										//Declare a stopwatch
@@ -230,8 +229,8 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 
 	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Start_acquisition, 1));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Start_acquisition, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger, 0));
 
 
 
@@ -316,7 +315,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 			image[ii] = 0;
 
 		U32 index = 0;
-		for (U32 ii = 0; ii < bufArrayIndexb; ii++)
+		for (U8 ii = 0; ii < bufArrayIndexb; ii++)
 		{
 			for (U32 jj = 0; jj < NelementsBufArrayb[ii]; jj++)
 			{
@@ -337,8 +336,8 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		for (U32 ii = 0; ii < Ntotal_pix; ii++)
 			auxArray[ii] = 0;
 
-		for (U32 lineIndex = 0; lineIndex < Height_pix; lineIndex++)
-			for (U32 pixIndex = 0; pixIndex < Width_pix; pixIndex++)
+		for (U16 lineIndex = 0; lineIndex < Height_pix; lineIndex++)
+			for (U16 pixIndex = 0; pixIndex < Width_pix; pixIndex++)
 			{
 				if (lineIndex % 2)
 					auxArray[lineIndex*Width_pix + pixIndex] = image[lineIndex*Width_pix + (Width_pix - pixIndex - 1)]; //reversed case
@@ -364,7 +363,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	delete dataFIFOa;
 
 	//clean up the buffer arrays
-	for (U32 i = 0; i < NmaxbufArray; ++i) {
+	for (U8 i = 0; i < NmaxbufArray; ++i) {
 		delete[] bufArrayb[i];
 	}
 	delete[] bufArrayb;
@@ -419,7 +418,7 @@ return newQ;
 }
 */
 
-//endregion "Low-level functions"
+//endregion "FPGA low-level functions"
 #pragma endregion
 
 #pragma region "FPGA initialization and trigger"
@@ -427,8 +426,8 @@ return newQ;
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Trigger, 0));//control-sequence trigger
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Start_acquisition, 0)); //data-acquisition trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOIN_trigger, 0));//control-sequence trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger, 0)); //data-acquisition trigger
 
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFO_timeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, Nchan));
@@ -436,6 +435,7 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Sync_AODO_to_LineGate, Sync_AODO_to_LineGate));
 	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Height_pix, Height_pix));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nframes, Nframes));
 
 	//Vibratome control
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
@@ -461,23 +461,21 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 //Main trigger. Trigger FIFO-in, which subsequently triggers AO and DO
 void TriggerFIFOIN(NiFpga_Status* status, NiFpga_Session session)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Trigger, 1));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Trigger, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOIN_trigger, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOIN_trigger, 0));
 	std::cout << "Pulse trigger status: " << *status << std::endl;
 }
 
 //Trigger the pixel clock, and therefore, counters, and FIFO-out
 void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Start_acquisition, 1));
-	//Sleep(10);
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Start_acquisition, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger, 0));
 	std::cout << "Acquisition trigger status: " << *status << std::endl;
 }
 
 //endregion "FPGA initialization and trigger"
 #pragma endregion
-
 
 #pragma region "Vibratome"
 

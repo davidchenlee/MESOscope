@@ -55,10 +55,11 @@ U32QV Acquire2D()
 	U32Q linearRampSegment0 = linearRamp(step, 25 * ms, -Vmax, Vmax); //ramp up the galvo from -Vmax to Vmax
 	U32Q linearRampSegment1 = linearRamp(step, 5 * ms, Vmax, -Vmax);  //set the galvo back to -Vmax
 	PushQ(linearRampQueue, linearRampSegment0);
-	PushQ(linearRampQueue, linearRampSegment1);
+	//PushQ(linearRampQueue, linearRampSegment1);
 
 	//AO0 = AO1. TRIGGERED BY CONN1/DIO16
 	QV[ABUF0] = linearRampQueue;
+	QV[ABUF0].push(AnalogOut(4 * us, -Vmax));
 
 	//DO0
 	QV[DBUF0].push(DigitalOut(4 * us, 1));

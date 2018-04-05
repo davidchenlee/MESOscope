@@ -12,7 +12,7 @@ U32QV TestAODO()
 	QV[ABUF0].push(AnalogOut(4 * us, 10));
 	QV[ABUF0].push(AnalogOut(4 * us, 0));//go back to zero
 
-										 //DO0
+	//DO0
 	QV[DBUF0].push(DigitalOut(4 * us, 1));
 	QV[DBUF0].push(DigitalOut(4 * us, 0));
 	QV[DBUF0].push(DigitalOut(4 * us, 0));

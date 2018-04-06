@@ -7,10 +7,10 @@ U32QV TestAODO()
 	U32QV QV(Nchan);
 
 	//AO0
-	QV[ABUF2].push(AnalogOut(4 * us, 10));
-	QV[ABUF2].push(AnalogOut(4 * us, 0));
-	QV[ABUF2].push(AnalogOut(4 * us, 10));
-	QV[ABUF2].push(AnalogOut(4 * us, 0));//go back to zero
+	//QV[ABUF2].push(AnalogOut(4 * us, 10));
+	//QV[ABUF2].push(AnalogOut(4 * us, 0));
+	//QV[ABUF2].push(AnalogOut(4 * us, 10));
+	//QV[ABUF2].push(AnalogOut(4 * us, 0));//go back to zero
 
 	//DO0
 	QV[DBUF0].push(DigitalOut(4 * us, 1));

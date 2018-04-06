@@ -7,8 +7,6 @@ void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	//control sequences
 	SendOutQueue(status, session, Acquire2D());
 	TriggerFIFOIN(status, session);			//trigger the analog and digital outputs
-
-	//TriggerAcquisition(status, session); // trigger the data acquisition
 	CountPhotons(status, session);
 
 
@@ -57,9 +55,10 @@ U32QV Acquire2D()
 	PushQ(linearRampQueue, linearRampSegment0);
 	//PushQ(linearRampQueue, linearRampSegment1);
 
-	//AO0 = AO1. TRIGGERED BY CONN1/DIO16
+	//AO0 = AO1. TRIGGERED BY THE LINE CLOCK
 	QV[ABUF0] = linearRampQueue;
 	QV[ABUF0].push(AnalogOut(4 * us, -Vmax));
+
 
 	//DO0
 	QV[DBUF0].push(DigitalOut(4 * us, 1));

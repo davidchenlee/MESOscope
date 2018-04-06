@@ -34,7 +34,7 @@ namespace Const
 	extern const U16 Width_pix = 400;							//Width of the image. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const U16 Height_pix = 400;							//Height of the image. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const U32 Ntotal_pix = Width_pix * Height_pix;		//Total number of pixels in each frame
-	extern const U16 Nframes = 1;								//Number of frames to acquire
+	extern const U16 Nframes = 200;								//Number of frames to acquire
 
 
 	//Currently, each frames is 400x400 pixels = 160000 pixels

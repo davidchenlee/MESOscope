@@ -8,7 +8,7 @@ void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	SendOutQueue(status, session, Acquire2D());
 	TriggerFIFOIN(status, session);			//trigger the analog and digital outputs
 
-											//TriggerAcquisition(status, session); // trigger the data acquisition
+	//TriggerAcquisition(status, session); // trigger the data acquisition
 	CountPhotons(status, session);
 
 

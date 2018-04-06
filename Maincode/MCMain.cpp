@@ -34,7 +34,7 @@ int main()
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-
+			
 			//NonDetDigitalPulse(&status, session, 10*ms);
 			FPGAcombinedSequence(&status, session);
 			//PulseVTcontrol(&status, session, 3 * s, VTback);

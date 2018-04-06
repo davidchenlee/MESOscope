@@ -191,7 +191,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	U32 ReadFifoWaittime = 1;			//Wait time between each iteration
 	U32 remainingFIFOa, remainingFIFOb; //Elements remaining
 	U32 timeout = 100;
-	U32* dataFIFOa = new U32[Ntotal_pix];
+	U32* dataFIFOa = new U32[Ntotal_pix];//The buffer size does not have to be the size of a frame
 
 	//Initialize the array for FIFOa
 	for (U32 ii = 0; ii < Ntotal_pix; ii++)
@@ -205,8 +205,9 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	U32** bufArrayb = new U32*[NmaxbufArray];
 	for (U32 i = 0; i < NmaxbufArray; i++)
 		bufArrayb[i] = new U32[Ntotal_pix]; //Each row is used to store the data from the ReadFifo
+											//The buffer size does not have to be the size of a frame
 
-											//The elements in this array indicate the number of elements in each chunch of data
+	//The elements in this array indicate the number of elements in each chunch of data
 	U32* NelementsBufArrayb = new U32[NmaxbufArray];
 
 
@@ -221,7 +222,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	U8 bufArrayIndexb = 0;									//Number of buffer arrays actually used
 	U32 timeoutCounter = 100;								//Timeout the while-loop in case the data transfer from the FIFO fails	
 
-	std::clock_t start;										//Declare a stopwatch
+	std::clock_t start;	//Declare a stopwatch
 	double duration;
 
 	//Start the FIFO OUT to transfer data from the FPGA FIFO to the PC FIFO
@@ -270,7 +271,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 				NelementsReadFIFOb += remainingFIFOb;
 				NelementsBufArrayb[bufArrayIndexb] = remainingFIFOb; //record how many elements are in each FIFObuffer array												
 
-																	 //Read the elements in the FIFO
+				//Read the elements in the FIFO
 				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], remainingFIFOb, timeout, &remainingFIFOb));
 				//std::cout << "bbbbbbbbbbbbb: " << remainingFIFOb << std::endl;
 
@@ -319,7 +320,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		{
 			for (U32 jj = 0; jj < NelementsBufArrayb[ii]; jj++)
 			{
-				myfile << bufArrayb[ii][jj] << std::endl;		//Save the buffer-arrays into a text file
+				//myfile << bufArrayb[ii][jj] << std::endl;		//Save the buffer-arrays into a text file
 				image[index] = bufArrayb[ii][jj];
 				//image[index] = index+1;						//for debugging
 				index++;
@@ -436,7 +437,6 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Height_pix, Height_pix));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nframes, Nframes));
-	NiFpga_MergeStatus(status, NiFpga_WriteU32(session, NiFpga_FPGAvi_ControlU32_Frame_wait_time, FrameWaitTime_tick - FrameWaitTime_Latency_tick));
 	
 
 	//Vibratome control
@@ -475,6 +475,7 @@ void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger, 0));
 	std::cout << "Acquisition trigger status: " << *status << std::endl;
 }
+
 
 //endregion "FPGA initialization and trigger"
 #pragma endregion

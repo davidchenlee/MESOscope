@@ -28,6 +28,8 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);
 void TriggerFIFOIN(NiFpga_Status* status, NiFpga_Session session);
 void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session);
 
+NiFpga_Bool ReadFIFOOUTtimeout(NiFpga_Status* status, NiFpga_Session session);
+
 //Combined sequences
 void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session);
 

@@ -3,13 +3,12 @@
 namespace Const
 {
 	//host-to-target FIFO array indices
-	extern const U8 Nchan = 6;				//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
+	extern const U8 Nchan = 5;				//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
 	extern const U8 PCLOCK = 0;				//Pixel clock
 	extern const U8 ABUF0 = 1;				//Analog buffer 0 (galvo 1)
 	extern const U8 ABUF1 = 2;				//Analog buffer 1 (galvo 2)
-	extern const U8 ABUF2 = 3;				//Analog buffer 2 (general purpose)
-	extern const U8 DBUF0 = 4;				//Digital buffer 0 (shutter 1)
-	extern const U8 DBUF1 = 5;				//Digital buffer 1 (shutter 2)
+	extern const U8 DBUF0 = 3;				//Digital buffer 0 (shutter 1)
+	extern const U8 DBUF1 = 4;				//Digital buffer 1 (shutter 2)
 
 
 	extern const U32 us = 1;								//microsecond
@@ -37,6 +36,10 @@ namespace Const
 	extern const U16 Height_pix = 400;							//Height of the image. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const U32 Ntotal_pix = Width_pix * Height_pix;		//Total number of pixels in each frame
 	extern const U16 Nframes = 1;								//Number of frames to acquire
-	extern const U32 FrameWaitTime_tick = 10;					//in us. Wait time between frame acquisition
-	extern const U32 FrameWaitTime_Latency_tick = 0;			//in us.
+
+
+	//Currently, each frames is 400x400 pixels = 160000 pixels
+	//For multiple beams, each fram will be 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
+	//The current buffer can do 400*1200 pix = 480000 pix, or 48 frames
+
 };

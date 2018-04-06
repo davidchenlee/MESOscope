@@ -24,39 +24,41 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGAvi_Signature = "BD7FFC1AEE00170173E5193ACF7A23E4";
+static const char* const NiFpga_FPGAvi_Signature = "D0FBB19B26824C599077DD9DA4FDBA5A";
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlBool_FIFOIN_trigger = 0x4E,
-   NiFpga_FPGAvi_ControlBool_FIFOOUTdebug = 0x1A,
-   NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger = 0x3E,
-   NiFpga_FPGAvi_ControlBool_RS_ON_OFF = 0x26,
-   NiFpga_FPGAvi_ControlBool_VT_NC = 0x36,
-   NiFpga_FPGAvi_ControlBool_VT_back = 0x2E,
-   NiFpga_FPGAvi_ControlBool_VT_forward = 0x32,
-   NiFpga_FPGAvi_ControlBool_VT_start = 0x2A,
+   NiFpga_FPGAvi_ControlBool_FIFOIN_trigger = 0x56,
+   NiFpga_FPGAvi_ControlBool_FIFOOUTdebug = 0x22,
+   NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger = 0x46,
+   NiFpga_FPGAvi_ControlBool_RS_ON_OFF = 0x2E,
+   NiFpga_FPGAvi_ControlBool_Shutter1 = 0x1A,
+   NiFpga_FPGAvi_ControlBool_Shutter2 = 0x16,
+   NiFpga_FPGAvi_ControlBool_VT_NC = 0x3E,
+   NiFpga_FPGAvi_ControlBool_VT_back = 0x36,
+   NiFpga_FPGAvi_ControlBool_VT_forward = 0x3A,
+   NiFpga_FPGAvi_ControlBool_VT_start = 0x32,
 } NiFpga_FPGAvi_ControlBool;
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlI16_PC1_voltage = 0x1E,
-   NiFpga_FPGAvi_ControlI16_RS_voltage = 0x22,
+   NiFpga_FPGAvi_ControlI16_PC1_voltage = 0x26,
+   NiFpga_FPGAvi_ControlI16_RS_voltage = 0x2A,
 } NiFpga_FPGAvi_ControlI16;
 
 typedef enum
 {
    NiFpga_FPGAvi_ControlU16_FIFO_timeout = 0x12,
-   NiFpga_FPGAvi_ControlU16_Height_pix = 0x42,
-   NiFpga_FPGAvi_ControlU16_Nchannels = 0x4A,
-   NiFpga_FPGAvi_ControlU16_Nframes = 0x16,
-   NiFpga_FPGAvi_ControlU16_Sync_AODO_to_LineGate = 0x3A,
-   NiFpga_FPGAvi_ControlU16_Sync_DO_to_AO = 0x52,
+   NiFpga_FPGAvi_ControlU16_Height_pix = 0x4A,
+   NiFpga_FPGAvi_ControlU16_Nchannels = 0x52,
+   NiFpga_FPGAvi_ControlU16_Nframes = 0x1E,
+   NiFpga_FPGAvi_ControlU16_Sync_AODO_to_LineGate = 0x42,
+   NiFpga_FPGAvi_ControlU16_Sync_DO_to_AO = 0x5A,
 } NiFpga_FPGAvi_ControlU16;
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlArrayBool_Pulsesequence = 0x44,
+   NiFpga_FPGAvi_ControlArrayBool_Pulsesequence = 0x4C,
 } NiFpga_FPGAvi_ControlArrayBool;
 
 typedef enum

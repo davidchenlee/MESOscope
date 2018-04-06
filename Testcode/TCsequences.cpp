@@ -29,10 +29,10 @@ U32QV TestAODO()
 	//QV[ABUF0].push(AnalogOut(4 * us, 0));
 
 	//DO0
-	QV[DBUF1].push(DigitalOut(4 * us, 1));
-	QV[DBUF1].push(DigitalOut(4 * us, 0));
-	QV[DBUF1].push(DigitalOut(4 * us, 0));
-	QV[DBUF1].push(DigitalOut(4 * us, 0));
+	//QV[DBUF1].push(DigitalOut(4 * us, 1));
+	//QV[DBUF1].push(DigitalOut(4 * us, 0));
+	//QV[DBUF1].push(DigitalOut(4 * us, 0));
+	//QV[DBUF1].push(DigitalOut(4 * us, 0));
 
 	//Pixel clock
 	QV[PCLOCK] = PixelClockSeq();

@@ -30,7 +30,6 @@ namespace Const
 	extern const U8 ABUF1;
 	extern const U8 ABUF2;
 	extern const U8 DBUF0;
-	extern const U8 DBUF1;
 
 	extern const U32 us;
 	extern const U32 ms;

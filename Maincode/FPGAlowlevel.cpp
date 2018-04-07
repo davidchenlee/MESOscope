@@ -188,7 +188,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	myfile.open("_photon-counts.txt");
 
 
-	U32 ReadFifoWaittime = 1;			//Wait time between each iteration
+	U32 ReadFifoWaittime = 5;			//Wait time between each iteration
 	U32 remainingFIFOa, remainingFIFOb; //Elements remaining
 	U32 timeout = 100;
 	U32* dataFIFOa = new U32[Ntotal_pix];//The buffer size does not have to be the size of a frame
@@ -239,6 +239,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 	//TODO: implement the FIFO reading and data saving concurrently
 	//Read the PC-FIFO as the data arrive. I ran a test and found out that two 32-bit FIFOs has a larger bandwidth than a single 64 - bit FIFO
+	//Test if the bandwidth can be increased by using 'NiFpga_AcquireFifoReadElementsU32'
 	while (NelementsReadFIFOa < Ntotal_pix || NelementsReadFIFOb < Ntotal_pix)
 	{
 		//FIFO OUT a
@@ -251,7 +252,6 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 			//If there are data available in the FIFO, retrieve it
 			if (remainingFIFOa > 0)
 			{
-
 				NelementsReadFIFOa += remainingFIFOa; //Keep track of how many data points have been read so far
 
 				//Read the elements in the FIFO

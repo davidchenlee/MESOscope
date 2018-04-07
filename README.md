@@ -26,3 +26,4 @@ Code in C++ for controlling the NI USB-7852R card
   - Read the FIFO in VS using the 'NiFpga_AcquireFifoReadElementsU32' function for higher bandwidth. The idea is to make the host FIFO extra large and read from it directly. This only works if the FIFO can be read and write simultaneosly
   - Try to increase the FIFO depth
 - I detected that, when the FPGA resets at the end of the code, the shutter #2 switches. I see a small voltage on the scope, like ~50mV that seems to be enough to trigger the shutter
+- The 'FIFO OUT' subvi has a feedback node that I could possibly get rid off because in the 'photon count' subvi the reset is placed after the counter. Try placing it BEFORE the counter.

@@ -19,6 +19,8 @@ namespace Const
 	extern const U16 Sync_DO_to_AO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 	extern const U16 Sync_AODO_to_LineGate_tick = 9696;		//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//ACHTUNG: use the same cable length when calibrating
+															//may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before
+
 	extern const U16 FIFOtimeout = 100;						//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const U32 FIFOINmax = 32773;						//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
@@ -28,13 +30,13 @@ namespace Const
 	
 	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
 	extern const U8 Npulses = 20;							//Number of pulses
-	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,    1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//@160MHz, one cycle through this array lasts 125ns	
+	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 1, 0, 0, 0, 0, 0, 0,    1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//@160MHz, one cycle through this array lasts 125ns	
 
 
 	extern const U16 Width_pix = 400;							//Width of the image. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const U16 Height_pix =1200;							//Height of the image. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const U16 Height_pix =400;							//Height of the image. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const U32 Ntotal_pix = Width_pix * Height_pix;		//Total number of pixels in each frame
-	extern const U16 Nframes = 100;								//Number of frames to acquire
+	extern const U16 Nframes = 2;								//Number of frames to acquire
 
 
 	//Currently, each frames is 400x400 pixels = 160000 pixels

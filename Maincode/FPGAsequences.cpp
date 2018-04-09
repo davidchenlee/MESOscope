@@ -15,7 +15,7 @@ void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	{
 		//SendOutQueue(status, session, TestAODO());
 		TriggerFIFOIN(status, session);
-		TriggerAcquisition(status, session);
+		TriggerLineGate(status, session);
 	}
 }
 

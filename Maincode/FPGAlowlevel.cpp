@@ -182,12 +182,6 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 
 void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 {
-
-	//write output to txt file
-	std::ofstream myfile;
-	myfile.open("_photon-counts.txt");
-
-
 	U32 ReadFifoWaittime = 5;			//Wait time between each iteration
 	U32 remainingFIFOa, remainingFIFOb; //Elements remaining
 	U32 timeout = 100;
@@ -230,8 +224,8 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 
 	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger, 1));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger, 0));
+	TriggerLineGate(status, session);
+
 
 
 
@@ -239,7 +233,10 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 	//TODO: implement the FIFO reading and data saving concurrently
 	//Read the PC-FIFO as the data arrive. I ran a test and found out that two 32-bit FIFOs has a larger bandwidth than a single 64 - bit FIFO
-	//Test if the bandwidth can be increased by using 'NiFpga_AcquireFifoReadElementsU32'
+	//Test if the bandwidth can be increased by using 'NiFpga_AcquireFifoReadElementsU32'.Ref: http://zone.ni.com/reference/en-XX/help/372928H-01/capi/functions_fifo_read/
+	//pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
+	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
+
 	while (NelementsReadFIFOa < Ntotal_pix || NelementsReadFIFOb < Ntotal_pix)
 	{
 		//FIFO OUT a
@@ -308,57 +305,14 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 	if (NelementsReadFIFOa == Ntotal_pix && NelementsReadFIFOb == Ntotal_pix)
 	{
-		//create a long 1D array representing the image
-		U32 *image = new U32[Ntotal_pix];
-
-		//initialize the array
-		for (U32 ii = 0; ii < Ntotal_pix; ii++)
-			image[ii] = 0;
-
-		U32 index = 0;
-		for (U8 ii = 0; ii < bufArrayIndexb; ii++)
-		{
-			for (U32 jj = 0; jj < NelementsBufArrayb[ii]; jj++)
-			{
-				myfile << bufArrayb[ii][jj] << std::endl;		//Save the buffer-arrays into a text file
-				image[index] = bufArrayb[ii][jj];
-				//image[index] = index+1;						//for debugging
-				index++;
-			}
-		}
-
-		//Reverse the pixel order every other line. I'm just gonna use an aux array for now.
-		//Later on, write the tiff directly from the buffer arrays. to deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
-		//memset http://www.cplusplus.com/reference/cstring/memset/
-		//memmove http://www.cplusplus.com/reference/cstring/memmove/
-		//One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
-		U32 *auxArray = new U32[Ntotal_pix];
-		//initialize the array
-		for (U32 ii = 0; ii < Ntotal_pix; ii++)
-			auxArray[ii] = 0;
-
-		for (U16 lineIndex = 0; lineIndex < Height_pix; lineIndex++)
-			for (U16 pixIndex = 0; pixIndex < Width_pix; pixIndex++)
-			{
-				if (lineIndex % 2)
-					auxArray[lineIndex*Width_pix + pixIndex] = image[lineIndex*Width_pix + (Width_pix - pixIndex - 1)]; //reversed case
-				else
-					auxArray[lineIndex*Width_pix + pixIndex] = image[lineIndex*Width_pix + pixIndex];
-			}
-
-
-		//for debugging
-		//for (U32 ii = 0; ii < Ntotal_pix; ii++)
-		//myfile << auxArray[ii] << std::endl;
+		U32 *image = UnpackFIFOBuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
+		U32 *auxArray = CorrectInterleavedImage(image);
+		SaveToTextFile(auxArray);
 
 		delete image, auxArray;
 	}
 	else
-		std::cout << "ERROR: more or less elements in the FIFO than expected " << std::endl;
-
-
-	//close txt file
-	myfile.close();
+		std::cout << "ERROR: more or less elements received from the FIFO than expected " << std::endl;
 
 
 	delete dataFIFOa;
@@ -370,6 +324,76 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	delete[] bufArrayb;
 
 }
+
+U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArrayb)
+{
+	//create a long 1D array representing the image
+	static U32 *image = new U32[Ntotal_pix];
+
+	//initialize the array
+	for (U32 ii = 0; ii < Ntotal_pix; ii++)
+		image[ii] = 0;
+
+	U32 index = 0;	//for debugging
+
+	for (U8 ii = 0; ii < bufArrayIndexb; ii++)
+	{
+		for (U32 jj = 0; jj < NelementsBufArrayb[ii]; jj++)
+		{
+			//myfile << bufArrayb[ii][jj] << std::endl;		
+			image[index] = bufArrayb[ii][jj];
+
+			//for debugging
+			image[index] = index + 1;
+			index++;
+		}
+	}
+	return image;
+}
+
+//Reverse the pixel order every other line. Use an aux array for now.
+//Later on, write the tiff directly from the buffer arrays. to deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
+//memset http://www.cplusplus.com/reference/cstring/memset/
+//memmove http://www.cplusplus.com/reference/cstring/memmove/
+//One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
+U32 *CorrectInterleavedImage(U32 *InterleavedImage)
+{
+	static U32 *auxArray = new U32[Ntotal_pix];
+	//initialize the array
+	for (U32 ii = 0; ii < Ntotal_pix; ii++)
+		auxArray[ii] = 0;
+
+	for (U16 lineIndex = 0; lineIndex < Height_pix; lineIndex++)
+		for (U16 pixIndex = 0; pixIndex < Width_pix; pixIndex++)
+		{
+			if (lineIndex % 2)
+				auxArray[lineIndex*Width_pix + pixIndex] = InterleavedImage[lineIndex*Width_pix + (Width_pix - pixIndex - 1)];	//reverse the pixel order
+			else
+				auxArray[lineIndex*Width_pix + pixIndex] = InterleavedImage[lineIndex*Width_pix + pixIndex];					//keep the pixel order. do nothing
+		}
+	return auxArray;
+
+	//for debugging
+	//for (U32 ii = 0; ii < Ntotal_pix; ii++)
+	//myfile << auxArray[ii] << std::endl;
+}
+
+
+void SaveToTextFile(U32 *auxArray)
+{
+	//write output to txt file
+	std::ofstream myfile;
+	myfile.open("_photon-counts.txt");
+
+	//Save the image in a text file
+	for (U32 ii = 0; ii < Ntotal_pix; ii++)
+		myfile << auxArray[ii] << std::endl;
+
+	//close txt file
+	myfile.close();
+}
+
+
 
 /*
 int i;
@@ -427,30 +451,31 @@ return newQ;
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOIN_trigger, 0));//control-sequence trigger
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger, 0)); //data-acquisition trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));//control-sequence trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGatetrigger, 0)); //data-acquisition trigger
 
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFO_timeout, FIFOtimeout));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, Nchan));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Sync_DO_to_AO, Sync_DO_to_AO_tick));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Sync_AODO_to_LineGate, Sync_AODO_to_LineGate_tick));
-	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, Sync_DO_to_AO_tick));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, Sync_AODO_to_LineGate_tick));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Npix_height, Height_pix));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nframes, Nframes));
+
+	//Shutters
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
 	
-
 	//Vibratome control
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_back, 0));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_forward, 0));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
 
-	//Debug FIFO OUT
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));
+	//Debugging
+	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));	//FIFO OUT
 
-	//Initialize all the channels with zero. Not needed if NiFpga_Finalize() is at the end of the main code
+	//Initialize all the channels with zero. No need if NiFpga_Finalize() is at the end of the main code
 	/*
 	U32QV QV(Nchan);
 	for (U8 ii = 0; ii < Nchan; ii++)
@@ -465,16 +490,16 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 //Main trigger. Trigger FIFO-in, which subsequently triggers AO and DO
 void TriggerFIFOIN(NiFpga_Status* status, NiFpga_Session session)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOIN_trigger, 1));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOIN_trigger, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
 	std::cout << "Pulse trigger status: " << *status << std::endl;
 }
 
-//Trigger the pixel clock, and therefore, counters, and FIFO-out
-void TriggerAcquisition(NiFpga_Status* status, NiFpga_Session session)
+//Trigger the 'Line gate' to start acquiring data
+void TriggerLineGate(NiFpga_Status* status, NiFpga_Session session)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger, 1));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Pixel_clock_trigger, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGatetrigger, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGatetrigger, 0));
 	std::cout << "Acquisition trigger status: " << *status << std::endl;
 }
 

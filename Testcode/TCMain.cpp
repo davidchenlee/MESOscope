@@ -29,7 +29,7 @@ int main()
 
 			SendOutQueue(&status, session, TestAODO());
 			TriggerFIFOIN(&status, session);			//trigger the control sequence
-			TriggerAcquisition(&status, session);
+			TriggerLineGate(&status, session);
 
 			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.

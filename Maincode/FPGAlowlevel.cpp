@@ -301,8 +301,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	{
 		U32 *image = UnpackFIFOBuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		CorrectInterleavedImage(image);
-		SaveToTextFile(image);
-
+		WriteFrameTiff(image,"_photon-counts.txt");
 		delete image;
 	}
 	else
@@ -359,9 +358,9 @@ U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArray
 //One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 void CorrectInterleavedImage(U32 *interleavedImage)
 {
-	U32 *auxLine = new U32[Width_pix];
+	U32 *auxLine = new U32[Width_pix]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
 
-	//for every odd line, reverse the pixel order
+	//for every odd-number line, reverse the pixel order
 	for (U16 lineIndex = 1; lineIndex < Height_pix; lineIndex += 2)
 	{
 		//save the data in an aux array
@@ -380,20 +379,19 @@ void CorrectInterleavedImage(U32 *interleavedImage)
 }
 
 
-void SaveToTextFile(U32 *auxArray)
+void WriteFrameTxt(U32 *imageArray, std::string fileName)
 {
 	//write output to txt file
 	std::ofstream myfile;
-	myfile.open("_photon-counts.txt");
+	myfile.open(fileName);
 
 	//Save the image in a text file
 	for (U32 ii = 0; ii < Ntotal_pix; ii++)
-		myfile << auxArray[ii] << std::endl;
+		myfile << imageArray[ii] << std::endl;
 
 	//close txt file
 	myfile.close();
 }
-
 
 
 /*

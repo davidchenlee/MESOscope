@@ -43,9 +43,10 @@ end
 %Tabulate the count frequency
 if COUNT_FREQ
     %print out a table with the frequency of each photon-count
-    Ncounts = histcounts(vector);
-    Nmax = numel(Ncounts);
-    table = [0:Nmax-1; Ncounts]';
+    [Ncounts, edges] = histcounts(vector);
+    photonNumber = round(edges); %round the lower delimited of the bin
+    photonNumber = photonNumber(1:length(photonNumber)-1); %get rid of the last element
+    table = [photonNumber; Ncounts]';
     
     colNames = {'count','frequency'};
     array2table(table,'VariableNames',colNames)

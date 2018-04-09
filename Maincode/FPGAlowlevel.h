@@ -5,6 +5,7 @@
 #include <fstream>      //file management
 #include "windows.h"	//the stages use this lib. also Sleep
 #include <ctime>		//Clock()
+#include "Tiffscope.h"
 using namespace Const;
 
 /*Define the full path of the bitfile*/
@@ -24,7 +25,8 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf);
 void CountPhotons(NiFpga_Status* status, NiFpga_Session session);
 U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArrayb);
 void CorrectInterleavedImage(U32 *InterleavedImage);
-void SaveToTextFile(U32 *auxArray);
+
+void WriteFrameTxt(U32 *imageArray, std::string fileName);
 
 //FPGA initialization and trigger
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);

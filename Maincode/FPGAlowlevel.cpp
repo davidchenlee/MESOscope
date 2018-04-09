@@ -22,12 +22,12 @@ U16 us2tick(double t)
 	U16 dt_tick_MIN = 2;		//Currently, DO and AO have a latency of 2 ticks
 	if ((U32)aux > 0x0000FFFF)
 	{
-		std::cout << "WARNING: time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
+		std::cerr << "WARNING: time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
 		return _UI16_MAX;
 	}
 	else if ((U32)aux < dt_tick_MIN)
 	{
-		std::cout << "WARNING: time step underflow. Time step set to the min:" << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
+		std::cerr << "WARNING: time step underflow. Time step set to the min:" << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
 		return dt_tick_MIN;
 	}
 	else
@@ -44,12 +44,12 @@ I16 volt2I16(double x)
 {
 	if (x > 10)
 	{
-		std::cout << "WARNING: voltage overflow. Voltage set to the max: 10 V" << std::endl;
+		std::cerr << "WARNING: voltage overflow. Voltage set to the max: 10 V" << std::endl;
 		return (U16)_I16_MAX;
 	}
 	else if (x < -10)
 	{
-		std::cout << "WARNING: voltage underflow. Voltage set to the min: -10 V" << std::endl;
+		std::cerr << "WARNING: voltage underflow. Voltage set to the min: -10 V" << std::endl;
 		return (U16)_I16_MIN;
 	}
 	else
@@ -115,7 +115,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	U32 sizeFIFOqueue = allQs.size();
 
 	if (sizeFIFOqueue > FIFOINmax)
-		std::cout << "WARNING: FIFO IN overflow" << std::endl;
+		std::cerr << "WARNING: FIFO IN overflow" << std::endl;
 
 	U32* FIFO = new U32[sizeFIFOqueue];
 	for (U32 i = 0; i < sizeFIFOqueue; i++)
@@ -143,7 +143,7 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 
 	if (dt < AOdt_us)
 	{
-		std::cout << "WARNING: time step too small. Time step set to " << AOdt_us << " us" << std::endl;
+		std::cerr << "WARNING: time step too small. Time step set to " << AOdt_us << " us" << std::endl;
 		dt = AOdt_us; //Analog output time increment in us
 		getchar();
 	}
@@ -152,8 +152,8 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 
 	if (nPoints <= 1)
 	{
-		std::cout << "ERROR: not enought points for the linear ramp" << std::endl;
-		std::cout << "nPoints: " << nPoints << std::endl;
+		std::cerr << "ERROR: not enought points for the linear ramp" << std::endl;
+		std::cerr << "nPoints: " << nPoints << std::endl;
 		getchar();
 	}
 	else
@@ -198,25 +198,21 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	U8 NmaxbufArray = 100;
 	U32** bufArrayb = new U32*[NmaxbufArray];
 	for (U32 i = 0; i < NmaxbufArray; i++)
-		bufArrayb[i] = new U32[Ntotal_pix]; //Each row is used to store the data from the ReadFifo
-											//The buffer size does not have to be the size of a frame
+		bufArrayb[i] = new U32[Ntotal_pix]; //Each row is used to store the data from the ReadFifo. The buffer size could possibly be < Ntotal_pi
 
 	//The elements in this array indicate the number of elements in each chunch of data
 	U32* NelementsBufArrayb = new U32[NmaxbufArray];
 
 
-	//U32 actualDepth;
-	//NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, 1000000, &actualDepth);
-	//std::cout << "actualDepth a: " << actualDepth << std::endl;
-	//NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, 1000000, &actualDepth);
-	//std::cout << "actualDepth b: " << actualDepth << std::endl;
-
-
 	U32 NelementsReadFIFOa = 0, NelementsReadFIFOb = 0; 	//Total number of elements read from the FIFO
 	U8 bufArrayIndexb = 0;									//Number of buffer arrays actually used
-	U32 timeoutCounter = 100;								//Timeout the while-loop in case the data transfer from the FIFO fails	
+	U32 timeoutCounter = 100;								//Timeout the while-loop in case the data-transfer from the FIFO fails	
 
-	std::clock_t start;	//Declare a stopwatch
+	//Confifure the depth of the FIFO
+	//ConfigureFIFO(status, session, 1000000);
+
+	//Declare a stopwatch
+	std::clock_t start;
 	double duration;
 
 	//Start the FIFO OUT to transfer data from the FPGA FIFO to the PC FIFO
@@ -226,12 +222,10 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
 	TriggerLineGate(status, session);
 
+	//Start the stopwatch
+	start = std::clock();
 
-
-
-	start = std::clock(); //Start the timer
-
-	//TODO: implement the FIFO reading and data saving concurrently
+	//TODO: save the data from the FIFO saving concurrently
 	//Read the PC-FIFO as the data arrive. I ran a test and found out that two 32-bit FIFOs has a larger bandwidth than a single 64 - bit FIFO
 	//Test if the bandwidth can be increased by using 'NiFpga_AcquireFifoReadElementsU32'.Ref: http://zone.ni.com/reference/en-XX/help/372928H-01/capi/functions_fifo_read/
 	//pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
@@ -283,12 +277,12 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		//Timeout the while loop in case the data transfer fails
 		if (timeoutCounter == 0)
 		{
-			std::cout << "ERROR: FIFO downloading timeout" << std::endl;
+			std::cerr << "ERROR: FIFO downloading timeout" << std::endl;
 			break;
 		}
 	}
 
-	//Stop the timer
+	//Stop the stopwatch
 	duration = (std::clock() - start) / (double)CLOCKS_PER_SEC;
 	std::cout << "Elapsed time: " << duration << " s" << std::endl;
 	std::cout << "FIFO bandwidth: " << 2 * 32 * Ntotal_pix / duration / 1000000 << " Mbps" << std::endl; //2 FIFOs of 32 bits each
@@ -307,12 +301,12 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	{
 		U32 *image = UnpackFIFOBuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		U32 *auxArray = CorrectInterleavedImage(image);
-		SaveToTextFile(auxArray);
+		//SaveToTextFile(auxArray);
 
 		delete image, auxArray;
 	}
 	else
-		std::cout << "ERROR: more or less elements received from the FIFO than expected " << std::endl;
+		std::cerr << "ERROR: more or less elements received from the FIFO than expected " << std::endl;
 
 
 	delete dataFIFOa;
@@ -325,6 +319,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 }
 
+//Copy all the chucks of data stored in the buffer 2D array into a single 1D array
 U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArrayb)
 {
 	//create a long 1D array representing the image
@@ -351,7 +346,7 @@ U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArray
 	return image;
 }
 
-//Reverse the pixel order every other line. Use an aux array for now.
+//The microscope scans bidirectionally. Reverse the pixel order every other line. Use an aux array for now.
 //Later on, write the tiff directly from the buffer arrays. to deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
 //memset http://www.cplusplus.com/reference/cstring/memset/
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
@@ -443,7 +438,7 @@ return newQ;
 }
 */
 
-//endregion "FPGA low-level functions"
+//endregion "FPGA configuration"
 #pragma endregion
 
 #pragma region "FPGA initialization and trigger"
@@ -504,7 +499,17 @@ void TriggerLineGate(NiFpga_Status* status, NiFpga_Session session)
 }
 
 
-//endregion "FPGA initialization and trigger"
+void ConfigureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth)
+{
+	U32 actualDepth;
+	NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth);
+	std::cout << "actualDepth a: " << actualDepth << std::endl;
+	NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth);
+	std::cout << "actualDepth b: " << actualDepth << std::endl;
+}
+
+
+//endregion "FPGA configuration"
 #pragma endregion
 
 #pragma region "Vibratome"
@@ -535,7 +540,7 @@ int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTc
 		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_forward;
 		break;
 	default:
-		std::cout << "ERROR: Selected VT channel is unavailable" << std::endl;
+		std::cerr << "ERROR: Selected VT channel is unavailable" << std::endl;
 		return -1;
 	}
 
@@ -550,7 +555,7 @@ int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTc
 	else
 	{
 		Sleep(minstep - delay);
-		std::cout << "WARNING: time step too small. Time step set to the min = ~" << minstep << "ms" << std::endl;
+		std::cerr << "WARNING: time step too small. Time step set to the min = ~" << minstep << "ms" << std::endl;
 	}
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 0));
 

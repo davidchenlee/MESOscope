@@ -22,7 +22,7 @@ U32Q PushQ(U32Q& headQ, U32Q& tailQ);
 void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& Qarray);
 U32Q linearRamp(double dt, double T, double Vi, double Vf);
 void CountPhotons(NiFpga_Status* status, NiFpga_Session session);
-U32 *asd(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArrayb);
+U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArrayb);
 U32 *CorrectInterleavedImage(U32 *InterleavedImage);
 void SaveToTextFile(U32 *auxArray);
 
@@ -30,6 +30,7 @@ void SaveToTextFile(U32 *auxArray);
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);
 void TriggerFIFOIN(NiFpga_Status* status, NiFpga_Session session);
 void TriggerLineGate(NiFpga_Status* status, NiFpga_Session session);
+void ConfigureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth);
 
 NiFpga_Bool ReadFIFOOUTtimeout(NiFpga_Status* status, NiFpga_Session session);
 

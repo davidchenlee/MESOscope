@@ -1,10 +1,11 @@
 %clear all
+CORRECT_INTERLEAVED_IMAGE = 0;
 PLOT_VECTOR = 0;
 HEATMAP = ~PLOT_VECTOR;
 COUNT_FREQ = ~PLOT_VECTOR;
 
 
-%Plot the data as a vector
+%Import the data as a vector
 vector = importdata('.\Maincode\_photon-counts.txt');
 
 if PLOT_VECTOR
@@ -12,15 +13,21 @@ if PLOT_VECTOR
 end
 
 %Plot a heat map
-if HEATMAP   
+if HEATMAP
     %convert the 1D data into a 2D array
     array2D = zeros(400, 400); %preallocate an array
     for kk = 1:400
-        if mod(kk,2)
-            array2D(:,kk) = vector(((kk-1)*400)+(1:400));
+        
+        if CORRECT_INTERLEAVED_IMAGE
+            
+            if mod(kk,2)
+                array2D(:,kk) = vector(((kk-1)*400)+(1:400));
+            else
+                %the scanned direction is reversed for every other line
+                array2D(:,kk) = flipud( vector( ((kk-1)*400)+(1:400) ) );
+            end
         else
-            %the scanned direction is reversed for every other line
-            array2D(:,kk) = flipud( vector( ((kk-1)*400)+(1:400) ) );
+            array2D(:,kk) = vector(((kk-1)*400)+(1:400));
         end
     end
     

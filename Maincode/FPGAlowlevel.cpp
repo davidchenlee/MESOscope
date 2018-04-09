@@ -300,10 +300,10 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	if (NelementsReadFIFOa == Ntotal_pix && NelementsReadFIFOb == Ntotal_pix)
 	{
 		U32 *image = UnpackFIFOBuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
-		U32 *auxArray = CorrectInterleavedImage(image);
-		//SaveToTextFile(auxArray);
+		CorrectInterleavedImage(image);
+		SaveToTextFile(image);
 
-		delete image, auxArray;
+		delete image;
 	}
 	else
 		std::cerr << "ERROR: more or less elements received from the FIFO than expected " << std::endl;
@@ -319,9 +319,11 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 }
 
-//Copy all the chucks of data stored in the buffer 2D array into a single 1D array
+//Returns a single 1D array with the chucks of data stored in the buffer 2D array
 U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArrayb)
 {
+	bool debug = 0; //For debugging. Generate numbers from 1 to Ntotal_pix with +1 increament
+
 	//create a long 1D array representing the image
 	static U32 *image = new U32[Ntotal_pix];
 
@@ -329,20 +331,24 @@ U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArray
 	for (U32 ii = 0; ii < Ntotal_pix; ii++)
 		image[ii] = 0;
 
-	U32 index = 0;	//for debugging
-
+	U32 pixIndex = 0;	//pixel of the image
 	for (U8 ii = 0; ii < bufArrayIndexb; ii++)
 	{
 		for (U32 jj = 0; jj < NelementsBufArrayb[ii]; jj++)
 		{
 			//myfile << bufArrayb[ii][jj] << std::endl;		
-			image[index] = bufArrayb[ii][jj];
+			image[pixIndex] = bufArrayb[ii][jj];
 
-			//for debugging
-			image[index] = index + 1;
-			index++;
+			//For debugging. Generate numbers from 1 to Ntotal_pix with +1 increament
+			if (debug)
+			{
+				image[pixIndex] = pixIndex + 1;
+			}
+
+			pixIndex++;
 		}
 	}
+
 	return image;
 }
 
@@ -351,22 +357,22 @@ U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArray
 //memset http://www.cplusplus.com/reference/cstring/memset/
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
 //One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
-U32 *CorrectInterleavedImage(U32 *InterleavedImage)
+void CorrectInterleavedImage(U32 *interleavedImage)
 {
-	static U32 *auxArray = new U32[Ntotal_pix];
-	//initialize the array
-	for (U32 ii = 0; ii < Ntotal_pix; ii++)
-		auxArray[ii] = 0;
+	U32 *auxLine = new U32[Width_pix];
 
-	for (U16 lineIndex = 0; lineIndex < Height_pix; lineIndex++)
+	//for every odd line, reverse the pixel order
+	for (U16 lineIndex = 1; lineIndex < Height_pix; lineIndex += 2)
+	{
+		//save the data in an aux array
 		for (U16 pixIndex = 0; pixIndex < Width_pix; pixIndex++)
-		{
-			if (lineIndex % 2)
-				auxArray[lineIndex*Width_pix + pixIndex] = InterleavedImage[lineIndex*Width_pix + (Width_pix - pixIndex - 1)];	//reverse the pixel order
-			else
-				auxArray[lineIndex*Width_pix + pixIndex] = InterleavedImage[lineIndex*Width_pix + pixIndex];					//keep the pixel order. do nothing
-		}
-	return auxArray;
+			auxLine[pixIndex] = interleavedImage[lineIndex*Width_pix + (Width_pix - pixIndex - 1)];
+		//write the data back
+		for (U16 pixIndex = 0; pixIndex < Width_pix; pixIndex++)
+			interleavedImage[lineIndex*Width_pix + pixIndex] = auxLine[pixIndex];
+
+	}
+	delete auxLine;
 
 	//for debugging
 	//for (U32 ii = 0; ii < Ntotal_pix; ii++)

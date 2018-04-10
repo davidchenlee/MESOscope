@@ -35,5 +35,9 @@ void TriggerLineGate(NiFpga_Status* status, NiFpga_Session session);
 void ConfigureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth);
 
 //Vibratome functions
-int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel);
-int StartVT(NiFpga_Status* status, NiFpga_Session session);
+int PushVibratomeButton(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel);
+int StartStopVibratome(NiFpga_Status* status, NiFpga_Session session);
+
+//Resonant scanner
+int StartStopResonantScanner(NiFpga_Status* status, NiFpga_Session session, bool state);
+int SetOutputVoltageResonantScanner(NiFpga_Status* status, NiFpga_Session session, I16 Vout);

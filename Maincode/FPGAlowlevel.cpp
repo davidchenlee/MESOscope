@@ -301,7 +301,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	{
 		U32 *image = UnpackFIFOBuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		CorrectInterleavedImage(image);
-		WriteFrameTiff(image,"_photon-counts.tiff");
+		//WriteFrameTiff(image,"_photon-counts.tiff");
 		//WriteFrameTxt(image, "_photon-counts.txt");
 		delete image;
 	}
@@ -452,15 +452,15 @@ return newQ;
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));//control-sequence trigger
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGatetrigger, 0)); //data-acquisition trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));		//control-sequence trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGatetrigger, 0));	//data-acquisition trigger
 
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, Nchan));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, SyncDOtoAO_tick));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, SyncAODOtoLineGate_tick));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesAllFrames, NlinesAllFrames));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Height_pixPerFrame, Height_pixPerFrame));//fix this
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Height_pixPerFrame, Height_pixPerFrame));
 
 	//Shutters
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
@@ -471,6 +471,10 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_back, 0));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_forward, 0));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
+
+	//Resonant scanner
+	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));	//Output voltage
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
 
 	//Debugging
 	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
@@ -521,7 +525,7 @@ void ConfigureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth)
 #pragma region "Vibratome"
 
 //Start running the vibratome
-int StartVT(NiFpga_Status* status, NiFpga_Session session)
+int StartStopVibratome(NiFpga_Status* status, NiFpga_Session session)
 {
 	int dt = 20; //in ms. It has to be ~ 12 ms or longer to 
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1));
@@ -531,8 +535,8 @@ int StartVT(NiFpga_Status* status, NiFpga_Session session)
 	return 0;
 }
 
-//Non-deterministic digital pulse for the vibratome control. The timing fluctuates approx in 1ms
-int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel)
+//Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
+int PushVibratomeButton(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel)
 {
 	U8 selectedChannel;
 	int minstep = 10; //in ms
@@ -570,3 +574,30 @@ int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTc
 
 //endregion "Vibratome"
 #pragma endregion
+
+#pragma region "Resonant scanner"
+
+int StartStopResonantScanner(NiFpga_Status* status, NiFpga_Session session, bool state)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, state));
+
+	return 0;
+}
+
+
+int SetOutputVoltageResonantScanner(NiFpga_Status* status, NiFpga_Session session, I16 Vout)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));
+
+	return 0;
+}
+
+
+
+#pragma endregion
+
+
+
+/*
+//Pockels cells
+NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));*/

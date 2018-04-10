@@ -45,15 +45,15 @@ I16 volt2I16(double x)
 	if (x > 10)
 	{
 		std::cerr << "WARNING: voltage overflow. Voltage set to the max: 10 V" << std::endl;
-		return (U16)_I16_MAX;
+		return (I16)_I16_MAX;
 	}
 	else if (x < -10)
 	{
 		std::cerr << "WARNING: voltage underflow. Voltage set to the min: -10 V" << std::endl;
-		return (U16)_I16_MIN;
+		return (I16)_I16_MIN;
 	}
 	else
-		return (U16)(x / 10 * _I16_MAX);
+		return (I16)(x / 10 * _I16_MAX);
 }
 
 

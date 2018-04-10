@@ -301,7 +301,8 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	{
 		U32 *image = UnpackFIFOBuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		CorrectInterleavedImage(image);
-		WriteFrameTiff(image,"_photon-counts.txt");
+		WriteFrameTiff(image,"_photon-counts.tiff");
+		//WriteFrameTxt(image, "_photon-counts.txt");
 		delete image;
 	}
 	else

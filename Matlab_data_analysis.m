@@ -44,8 +44,8 @@ end
 if COUNT_FREQ
     %print out a table with the frequency of each photon-count
     [Ncounts, edges] = histcounts(vector);
-    photonNumber = round(edges); %round the lower delimited of the bin
-    photonNumber = photonNumber(1:length(photonNumber)-1); %get rid of the last element
+    photonNumber = edges-0.5;
+    photonNumber = photonNumber(2:length(photonNumber)); %get rid of the first element
     table = [photonNumber; Ncounts]';
     
     colNames = {'count','frequency'};

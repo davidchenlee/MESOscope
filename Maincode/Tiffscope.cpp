@@ -6,45 +6,41 @@
 void WriteFrameTiff(U32 *imageIn, std::string fileName)
 {
 
-	TIFF *out = TIFFOpen("_photon-counts.tif", "w");
+	TIFF *out = TIFFOpen("_photon-counts.tif", "w"); //FIX THE FILENAME reference
 
 	if (out != nullptr)
 	{
-		int sampleperpixel = 1; 	//1 channel
+		int sampleperpixel = 4; 	//number of colors
 
-									//create an 1D array representing the image
+		//create an 1D array representing the image
 		unsigned char *image = new unsigned char[NpixPerFrame * sampleperpixel];
 
 		//initialize the array
 		for (int ii = 0; ii < NpixPerFrame * sampleperpixel; ii++)
 			image[ii] = 0;
 
-		/*
-		//create a color gradient as an exercise
-		for (int ii = 0; ii < Ntotal_pix*sampleperpixel; ii++)
+		
+		for (int ii = 0; ii < NpixPerFrame; ii++)
 		{
-		image[ii] = 255. / Ntotal_pix *ii; //255 is white, 0 is black
+			image[4*ii] = 25 * (U8)imageIn[ii];		//Red
+			image[4*ii+1] = 0;						//Green
+			image[4*ii+2] = 0;						//Blue
+			image[4*ii + 3] = 255;					//Transparency channel. 255 for MIN transparency
 		}
-		*/
-
-		for (int ii = 0; ii < NpixPerFrame * sampleperpixel; ii++)
-		{
-			image[ii] = 25 * (U8)imageIn[ii]; //255 is white, 0 is black
-		}
-
+		
 
 		//TAGS
-		TIFFSetField(out, TIFFTAG_IMAGEWIDTH, Width_pixPerFrame);					// set the width of the image
-		TIFFSetField(out, TIFFTAG_IMAGELENGTH, Height_pixPerFrame);					// set the height of the image
+		TIFFSetField(out, TIFFTAG_IMAGEWIDTH, Width_pixPerFrame);		// set the width of the image
+		TIFFSetField(out, TIFFTAG_IMAGELENGTH, Height_pixPerFrame);		// set the height of the image
 		TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, sampleperpixel);		// set number of channels per pixel
 		TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, 8);					// set the size of the channels
 		TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
-		//   Some other essential fields to set that you do not have to understand for now.
+																		// Some other essential fields to set that you do not have to understand for now.
 		TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
 		TIFFSetField(out, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
 
 
-		tsize_t linebytes = sampleperpixel * Width_pixPerFrame;						// length in memory of one row of pixel in the image.
+		tsize_t linebytes = sampleperpixel * Width_pixPerFrame;			// length in memory of one row of pixel in the image.
 		unsigned char *buf = NULL;										// buffer used to store the row of pixel information for writing to file
 
 																		// Allocating memory to store the pixels of current row
@@ -71,12 +67,6 @@ void WriteFrameTiff(U32 *imageIn, std::string fileName)
 		if (buf)
 			_TIFFfree(buf);
 	}
-
-
-
-
-
-
 }
 
 
@@ -152,9 +142,7 @@ int WriteSyntheticTiff(void)
 
 
 	/*
-	//set alpha channel (transparency) to the max
-	for (int ii = 3; ii < width*height*sampleperpixel; ii += 4)
-		image[ii] = 255;
+v
 
 	//color gradient
 	for (int ii = 0; ii < width*height*sampleperpixel; ii += 4)

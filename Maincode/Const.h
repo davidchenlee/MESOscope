@@ -37,18 +37,21 @@ namespace Const
 	extern const U32 tickPerUs;
 	extern const double dt_us;
 	extern const U32 AOdt_us;
-	extern const U16 Sync_DO_to_AO_tick;
-	extern const U16 Sync_AODO_to_LineGate_tick;
+	extern const U16 SyncDOtoAO_tick;
+	extern const U16 SyncAODOtoLineGate_tick;
 	extern const U16 FIFOtimeout;
 	extern const U32 FIFOINmax;
 
 	extern const U8 Npulses;
 	extern const U8 pulseArray[];
 
-	extern const U16 Width_pix;
-	extern const U16 Height_pix;
-	extern const U32 Ntotal_pix;
-	extern const U16 Nframes;
+	extern const U16 Width_pixPerFrame;
+	extern const U16 Height_pixPerFrame;
+	extern const U32 NpixPerFrame;
+	extern const U16 NFrames;
+	extern const U16 NlinesAllFrames;
+	extern const U32 NpixAllFrames;
+
 	extern const U32 FrameWaitTime_tick;
 	extern const U32 FrameWaitTime_Latency_tick;
 

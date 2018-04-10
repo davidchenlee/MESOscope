@@ -34,8 +34,6 @@ void TriggerFIFOIN(NiFpga_Status* status, NiFpga_Session session);
 void TriggerLineGate(NiFpga_Status* status, NiFpga_Session session);
 void ConfigureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth);
 
-NiFpga_Bool ReadFIFOOUTtimeout(NiFpga_Status* status, NiFpga_Session session);
-
-//Combined sequences
-void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session);
-
+//Vibratome functions
+int PulseVTcontrol(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel);
+int StartVT(NiFpga_Status* status, NiFpga_Session session);

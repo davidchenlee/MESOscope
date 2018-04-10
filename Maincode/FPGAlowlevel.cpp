@@ -185,10 +185,10 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	U32 ReadFifoWaittime = 5;			//Wait time between each iteration
 	U32 remainingFIFOa, remainingFIFOb; //Elements remaining
 	U32 timeout = 100;
-	U32* dataFIFOa = new U32[Ntotal_pix];//The buffer size does not have to be the size of a frame
+	U32* dataFIFOa = new U32[NpixAllFrames];//The buffer size does not have to be the size of a frame
 
 	//Initialize the array for FIFOa
-	for (U32 ii = 0; ii < Ntotal_pix; ii++)
+	for (U32 ii = 0; ii < NpixAllFrames; ii++)
 		dataFIFOa[ii] = 0;
 
 	//Test for FIFOb
@@ -198,7 +198,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	U8 NmaxbufArray = 100;
 	U32** bufArrayb = new U32*[NmaxbufArray];
 	for (U32 i = 0; i < NmaxbufArray; i++)
-		bufArrayb[i] = new U32[Ntotal_pix]; //Each row is used to store the data from the ReadFifo. The buffer size could possibly be < Ntotal_pi
+		bufArrayb[i] = new U32[NpixAllFrames]; //Each row is used to store the data from the ReadFifo. The buffer size could possibly be < Ntotal_pi
 
 	//The elements in this array indicate the number of elements in each chunch of data
 	U32* NelementsBufArrayb = new U32[NmaxbufArray];
@@ -231,10 +231,10 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
 	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
 
-	while (NelementsReadFIFOa < Ntotal_pix || NelementsReadFIFOb < Ntotal_pix)
+	while (NelementsReadFIFOa < NpixAllFrames || NelementsReadFIFOb < NpixAllFrames)
 	{
 		//FIFO OUT a
-		if (NelementsReadFIFOa < Ntotal_pix) //Skip if all the data have already been downloaded (i.e. NelementsReadFIFOa = Ntotal_pix)
+		if (NelementsReadFIFOa < NpixAllFrames) //Skip if all the data have already been downloaded (i.e. NelementsReadFIFOa = NpixAllFrames)
 		{
 			//By requesting 0 elements from the FIFO, the function returns the number of elements available in the FIFO. If no data are available yet, then remainingFIFOa = 0 is returned
 			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, 0, timeout, &remainingFIFOa));
@@ -252,7 +252,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		}
 
 		//FIFO OUT b
-		if (NelementsReadFIFOb < Ntotal_pix)
+		if (NelementsReadFIFOb < NpixAllFrames)
 		{
 			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], 0, timeout, &remainingFIFOb));
 			//std::cout << "Number of elements remaining in the host FIFO b: " << remainingFIFOb << std::endl;
@@ -285,7 +285,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//Stop the stopwatch
 	duration = (std::clock() - start) / (double)CLOCKS_PER_SEC;
 	std::cout << "Elapsed time: " << duration << " s" << std::endl;
-	std::cout << "FIFO bandwidth: " << 2 * 32 * Ntotal_pix / duration / 1000000 << " Mbps" << std::endl; //2 FIFOs of 32 bits each
+	std::cout << "FIFO bandwidth: " << 2 * 32 * NpixAllFrames / duration / 1000000 << " Mbps" << std::endl; //2 FIFOs of 32 bits each
 
 	std::cout << "Buffer-arrays used: " << (U32)bufArrayIndexb << std::endl; //print how many buffer arrays were actually used
 	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << std::endl; //print the total number of elements read
@@ -297,7 +297,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << std::endl;
 
 
-	if (NelementsReadFIFOa == Ntotal_pix && NelementsReadFIFOb == Ntotal_pix)
+	if (NelementsReadFIFOa == NpixAllFrames && NelementsReadFIFOb == NpixAllFrames)
 	{
 		U32 *image = UnpackFIFOBuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		CorrectInterleavedImage(image);
@@ -321,13 +321,13 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
 U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArrayb)
 {
-	bool debug = 0; //For debugging. Generate numbers from 1 to Ntotal_pix with +1 increament
+	bool debug = 0; //For debugging. Generate numbers from 1 to NpixAllFrames with +1 increament
 
 	//create a long 1D array representing the image
-	static U32 *image = new U32[Ntotal_pix];
+	static U32 *image = new U32[NpixAllFrames];
 
 	//initialize the array
-	for (U32 ii = 0; ii < Ntotal_pix; ii++)
+	for (U32 ii = 0; ii < NpixAllFrames; ii++)
 		image[ii] = 0;
 
 	U32 pixIndex = 0;	//pixel of the image
@@ -338,7 +338,7 @@ U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArray
 			//myfile << bufArrayb[ii][jj] << std::endl;		
 			image[pixIndex] = bufArrayb[ii][jj];
 
-			//For debugging. Generate numbers from 1 to Ntotal_pix with +1 increament
+			//For debugging. Generate numbers from 1 to NpixAllFrames with +1 increament
 			if (debug)
 			{
 				image[pixIndex] = pixIndex + 1;
@@ -358,23 +358,23 @@ U32 *UnpackFIFOBuffer(U8 bufArrayIndexb, U32 *NelementsBufArrayb, U32 **bufArray
 //One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 void CorrectInterleavedImage(U32 *interleavedImage)
 {
-	U32 *auxLine = new U32[Width_pix]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
+	U32 *auxLine = new U32[Width_pixPerFrame]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
 
 	//for every odd-number line, reverse the pixel order
-	for (U16 lineIndex = 1; lineIndex < Height_pix; lineIndex += 2)
+	for (U16 lineIndex = 1; lineIndex < Height_pixPerFrame; lineIndex += 2)
 	{
 		//save the data in an aux array
-		for (U16 pixIndex = 0; pixIndex < Width_pix; pixIndex++)
-			auxLine[pixIndex] = interleavedImage[lineIndex*Width_pix + (Width_pix - pixIndex - 1)];
+		for (U16 pixIndex = 0; pixIndex < Width_pixPerFrame; pixIndex++)
+			auxLine[pixIndex] = interleavedImage[lineIndex*Width_pixPerFrame + (Width_pixPerFrame - pixIndex - 1)];
 		//write the data back
-		for (U16 pixIndex = 0; pixIndex < Width_pix; pixIndex++)
-			interleavedImage[lineIndex*Width_pix + pixIndex] = auxLine[pixIndex];
+		for (U16 pixIndex = 0; pixIndex < Width_pixPerFrame; pixIndex++)
+			interleavedImage[lineIndex*Width_pixPerFrame + pixIndex] = auxLine[pixIndex];
 
 	}
 	delete auxLine;
 
 	//for debugging
-	//for (U32 ii = 0; ii < Ntotal_pix; ii++)
+	//for (U32 ii = 0; ii < NpixAllFrames; ii++)
 	//myfile << auxArray[ii] << std::endl;
 }
 
@@ -386,7 +386,7 @@ void WriteFrameTxt(U32 *imageArray, std::string fileName)
 	myfile.open(fileName);
 
 	//Save the image in a text file
-	for (U32 ii = 0; ii < Ntotal_pix; ii++)
+	for (U32 ii = 0; ii < NpixAllFrames; ii++)
 		myfile << imageArray[ii] << std::endl;
 
 	//close txt file
@@ -455,10 +455,10 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, Nchan));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, Sync_DO_to_AO_tick));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, Sync_AODO_to_LineGate_tick));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Npix_height, Height_pix));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nframes, Nframes));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, SyncDOtoAO_tick));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, SyncAODOtoLineGate_tick));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesAllFrames, NlinesAllFrames));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Height_pixPerFrame, Height_pixPerFrame));//fix this
 
 	//Shutters
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, 0));

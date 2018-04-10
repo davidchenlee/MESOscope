@@ -16,8 +16,8 @@ namespace Const
 	extern const U32 tickPerUs = 160;						//Number of ticks in 1 us. It depends on the FPGA's clock
 	extern const double dt_us = 1.0 / 160;					//time step of the FPGA's clock in us
 	extern const U32 AOdt_us = 2 * us;						//Time step (in us) of the analog output. The AO channels take >1us to write the output
-	extern const U16 Sync_DO_to_AO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
-	extern const U16 Sync_AODO_to_LineGate_tick = 9696;		//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
+	extern const U16 SyncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
+	extern const U16 SyncAODOtoLineGate_tick = 9696;		//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//ACHTUNG: use the same cable length when calibrating
 															//may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before
 
@@ -33,11 +33,12 @@ namespace Const
 	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 1, 0, 0, 0, 0, 0, 0,    1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//@160MHz, one cycle through this array lasts 125ns	
 
 
-	extern const U16 Width_pix = 400;							//Width of the image. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const U16 Height_pix = 400;							//Height of the image. This direction corresponds to the galvo. This sets the number of "lines" in the image
-	extern const U32 Ntotal_pix = Width_pix * Height_pix;		//Total number of pixels in each frame
-	extern const U16 Nframes = 200;								//Number of frames to acquire
-
+	extern const U16 Width_pixPerFrame = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
+	extern const U16 Height_pixPerFrame = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const U32 NpixPerFrame = Width_pixPerFrame * Height_pixPerFrame;		//Number of pixels in each frame
+	extern const U16 NFrames = 1;											//Number of frames to acquire
+	extern const U16 NlinesAllFrames = Height_pixPerFrame * NFrames;		//Total number of lines in all the frames
+	extern const U32 NpixAllFrames = Width_pixPerFrame * Height_pixPerFrame;	//Total number of pixels in all the frames
 
 	//Currently, each frames is 400x400 pixels = 160000 pixels
 	//For multiple beams, each fram will be 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers

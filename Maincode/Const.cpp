@@ -38,7 +38,7 @@ namespace Const
 
 	//Scanning calibration factors
 	extern const double RS_voltPerUm = 1.0*V/(157*um);							//volts per um. Calibration factor for the resonant scanner. Last calib 11/April/2018
-	extern const double Galvo_voltPerUm = 2.5*V/(188*um);						//volts per um. Calibration factor for the galvo. Last calib 11/April/2018
+	extern const double Galvo_voltPerUm = 2.5*V/(210*um);						//volts per um. Calibration factor for the galvo. Last calib 11/April/2018
 	extern const double PC1_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 1
 	extern const double PC2_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 2
 

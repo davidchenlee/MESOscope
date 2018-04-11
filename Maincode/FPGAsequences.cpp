@@ -57,18 +57,12 @@ U32QV Scan2D()
 	//linear ramp for the galvo
 	const double GalvoAmplitude_um = 200 * um;
 	const double GalvoAmplitude_volt = GalvoAmplitude_um * Galvo_voltPerUm;
+	//const double GalvoAmplitude_volt = 2.5;
 	const double GalvoStep = 8 * us;
 
-
-	U32Q linearRampQueue; //Create a queue for the ramps
 	U32Q linearRampSegment0 = linearRamp(GalvoStep, 25 * ms, -GalvoAmplitude_volt, GalvoAmplitude_volt); //ramp up the galvo from -GalvoAmplitude_volt to GalvoAmplitude_volt
-	U32Q linearRampSegment1 = linearRamp(GalvoStep, 5 * ms, GalvoAmplitude_volt, -GalvoAmplitude_volt);  //set the galvo back to -GalvoAmplitude_volt
-	PushQ(linearRampQueue, linearRampSegment0);
-	//PushQ(linearRampQueue, linearRampSegment1);
-
-	//AO0 = AO1. TRIGGERED BY THE LINE CLOCK
-	QV[ABUF0] = linearRampQueue;
-	QV[ABUF0].push(AnalogOut(4 * us, -GalvoAmplitude_volt));
+	QV[ABUF0] = linearRampSegment0;
+	QV[ABUF0].push(AnalogOut(4 * us, -GalvoAmplitude_volt));		//set the galvo back to -GalvoAmplitude_volt
 
 	//DO0
 	QV[DBUF0].push(DigitalOut(4 * us, 1));

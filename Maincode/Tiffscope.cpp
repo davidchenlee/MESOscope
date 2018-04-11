@@ -3,16 +3,16 @@
 #include "Tiffscope.h"
 
 
-void WriteFrameTiff(unsigned char *imageIn, std::string fileName)
+int WriteFrameTiff(unsigned char *imageIn, std::string fileName)
 {
-	double scale = 25.5;	//scale up the photon-count to cover the 0-255 range of a 8-bit number
+	const double scale = 25.5;	//scale up the photon-count to cover the full 0-255 range for a 8-bit number
 
 	const char *fileNameAsChar = fileName.c_str();
 	TIFF *out = TIFFOpen(fileNameAsChar, "w");
 
 	if (out != nullptr)
 	{
-		int sampleperpixel = 3; 	//number of colors
+		const int sampleperpixel = 3; 	//number of colors
 
 		//create an 1D array representing the image
 		unsigned char *image = new unsigned char[NpixPerFrame * sampleperpixel];
@@ -30,7 +30,6 @@ void WriteFrameTiff(unsigned char *imageIn, std::string fileName)
 			//image[4*ii + 3] = 255;														//Transparency channel. 255 for MIN transparency
 		}
 		
-
 		//TAGS
 		TIFFSetField(out, TIFFTAG_IMAGEWIDTH, Width_pixPerFrame);		// set the width of the image
 		TIFFSetField(out, TIFFTAG_IMAGELENGTH, Height_pixPerFrame);		// set the height of the image
@@ -69,9 +68,11 @@ void WriteFrameTiff(unsigned char *imageIn, std::string fileName)
 		if (buf)
 			_TIFFfree(buf);
 	}
+
+	return 0;
 }
 
-
+/*
 //READ FILE EXAMPLE
 int ReadTiff(void)
 {
@@ -142,18 +143,13 @@ int WriteSyntheticTiff(void)
 		image[ii] = 255. / (width*height)*ii ;
 	}
 
-
-	/*
-v
-
 	//color gradient
-	for (int ii = 0; ii < width*height*sampleperpixel; ii += 4)
+	//for (int ii = 0; ii < width*height*sampleperpixel; ii += 4)
 	{
-		image[ii] = 255. / (width*height)*ii / 4; //Red
+		//image[ii] = 255. / (width*height)*ii / 4; //Red
 		//image[ii+1] = 255. / (width*height)*ii / 4; //Green
 		//image[ii+2] = 255. / (width*height)*ii / 4; //Blue
 	}
-	*/
 
 	//TAGS
 	TIFFSetField(out, TIFFTAG_IMAGEWIDTH, width);					// set the width of the image
@@ -195,3 +191,6 @@ v
 
 	return 0;
 }
+
+
+*/

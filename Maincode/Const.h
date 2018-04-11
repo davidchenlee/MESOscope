@@ -36,6 +36,7 @@ namespace Const
 	extern const int us;
 	extern const int ms;
 	extern const int s;
+	extern const int um;
 	extern const int V;
 	extern const int tickPerUs;
 	extern const double dt_us;
@@ -56,6 +57,8 @@ namespace Const
 	extern const double Galvo_voltPerUm;
 	extern const double PC1_voltPermW;
 	extern const double PC2_voltPermW;
+
+
 
 	extern const int Npulses;
 	extern const U8 pulseArray[];

@@ -2,12 +2,32 @@
 
 #pragma region "FPGA combined sequences"
 
-void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
+int FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 {
-	//control sequences
-	SendOutQueue(status, session, Acquire2D());
-	TriggerFIFOIN(status, session);			//trigger the analog and digital outputs
-	CountPhotons(status, session);
+
+	/*
+	const double RSamplitude_um = 200 * um;
+	const double RSamplitude_volt = RSamplitude_um * RS_voltPerUm;
+	ResonantScanner_SetOutputVoltager(status, session, RSamplitude_volt);
+	Sleep(1000);
+	ResonantScanner_StartStop(status, session, 1);
+	Sleep(3000);
+	ResonantScanner_StartStop(status, session, 0);
+	*/
+
+
+	//Send the commands to the FPGA
+	SendOutQueue(status, session, Scan2D());
+
+	//Trigger the data acquisition
+	TriggerFIFOIN(status, session);		
+
+	//Read the photon count
+	ReadPhotonCount(status, session);
+
+
+
+
 
 
 	//SECOND ROUND
@@ -17,6 +37,8 @@ void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 		TriggerFIFOIN(status, session);
 		TriggerLineGate(status, session);
 	}
+
+	return 0;
 }
 //endregion "FPGA combined sequences"
 #pragma endregion
@@ -24,7 +46,7 @@ void FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 #pragma region "FPGA individual sequences"
 
 //Acquire a 2D image by linearly scan the galvo while the RS is on
-U32QV Acquire2D()
+U32QV Scan2D()
 {
 	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 	U32QV QV(Nchan);
@@ -33,8 +55,8 @@ U32QV Acquire2D()
 	QV[PCLOCK] = PixelClockSeq();
 
 	//linear ramp for the galvo
-	const double GalvoAmplitude_um = 1;
-	const double GalvoAmplitude_volt = 2.5 * V;
+	const double GalvoAmplitude_um = 200 * um;
+	const double GalvoAmplitude_volt = GalvoAmplitude_um * Galvo_voltPerUm;
 	const double GalvoStep = 8 * us;
 
 
@@ -47,7 +69,6 @@ U32QV Acquire2D()
 	//AO0 = AO1. TRIGGERED BY THE LINE CLOCK
 	QV[ABUF0] = linearRampQueue;
 	QV[ABUF0].push(AnalogOut(4 * us, -GalvoAmplitude_volt));
-
 
 	//DO0
 	QV[DBUF0].push(DigitalOut(4 * us, 1));

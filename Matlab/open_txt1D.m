@@ -6,7 +6,7 @@ COUNT_FREQ = ~PLOT_VECTOR;
 
 
 %Import the data as a vector
-vector = importdata('.\Maincode\_photon-counts.txt');
+vector = importdata('..\Maincode\_photon-counts.txt');
 
 if PLOT_VECTOR
     plot(vector)

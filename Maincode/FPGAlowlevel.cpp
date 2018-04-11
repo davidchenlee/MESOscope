@@ -98,7 +98,7 @@ U32Q PushQ(U32Q& headQ, U32Q& tailQ)
 	return headQ;
 }
 
-void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
+int SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 {
 	//take a vector of queues and return it as a single long queue
 	U32Q allQs;
@@ -133,6 +133,8 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 
 	std::cout << "FPGA FIFO status: " << *status << std::endl;
 	delete[] FIFO;//cleanup the array
+
+	return 0;
 }
 
 //PARAMETERS: time step, ramp length, initial voltage, final voltage
@@ -180,7 +182,7 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 	return queue;
 }
 
-void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
+int ReadPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 {
 	const int ReadFifoWaitingTime = 5;			//Waiting time between each iteration
 	U32 remainingFIFOa, remainingFIFOb;			//Elements remaining
@@ -317,6 +319,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	}
 	delete[] bufArrayb;
 
+	return 0;
 }
 
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
@@ -357,7 +360,7 @@ unsigned char *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32
 //memset http://www.cplusplus.com/reference/cstring/memset/
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
 //One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
-void CorrectInterleavedImage(unsigned char *interleavedImage)
+int CorrectInterleavedImage(unsigned char *interleavedImage)
 {
 	unsigned char *auxLine = new unsigned char[Width_pixPerFrame]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
 
@@ -377,10 +380,12 @@ void CorrectInterleavedImage(unsigned char *interleavedImage)
 	//for debugging
 	//for (U32 ii = 0; ii < NpixAllFrames; ii++)
 	//myfile << auxArray[ii] << std::endl;
+
+	return 0;
 }
 
 
-void WriteFrameToTxt(unsigned char *imageArray, std::string fileName)
+int WriteFrameToTxt(unsigned char *imageArray, std::string fileName)
 {
 	//write output to txt file
 	std::ofstream myfile;
@@ -388,10 +393,12 @@ void WriteFrameToTxt(unsigned char *imageArray, std::string fileName)
 
 	//Save the image in a text file
 	for (int ii = 0; ii < NpixAllFrames; ii++)
-		myfile << imageArray[ii] << std::endl;
+		myfile << (int) imageArray[ii] << std::endl;
 
 	//close txt file
 	myfile.close();
+
+	return 0;
 }
 
 
@@ -449,7 +456,7 @@ return newQ;
 
 #pragma region "FPGA initialization and trigger"
 
-void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
+int InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));		//control-sequence trigger
@@ -490,32 +497,40 @@ void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	*/
 
 	std::cout << "FPGA initialize-variables status: " << *status << std::endl;
+
+	return 0;
 }
 
 //Main trigger. Trigger FIFO-in, which subsequently triggers AO and DO
-void TriggerFIFOIN(NiFpga_Status* status, NiFpga_Session session)
+int TriggerFIFOIN(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
 	std::cout << "Pulse trigger status: " << *status << std::endl;
+
+	return 0;
 }
 
 //Trigger the 'Line gate' to start acquiring data
-void TriggerLineGate(NiFpga_Status* status, NiFpga_Session session)
+int TriggerLineGate(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGatetrigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGatetrigger, 0));
 	std::cout << "Acquisition trigger status: " << *status << std::endl;
+
+	return 0;
 }
 
 
-void ConfigureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth)
+int ConfigureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth)
 {
 	U32 actualDepth;
 	NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth);
 	std::cout << "actualDepth a: " << actualDepth << std::endl;
 	NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth);
 	std::cout << "actualDepth b: " << actualDepth << std::endl;
+
+	return 0;
 }
 
 

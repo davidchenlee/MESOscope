@@ -13,7 +13,8 @@ namespace Const
 	extern const int us = 1;								//microsecond
 	extern const int ms = 1000 * us;						//millisecond
 	extern const int s = 1000000 * us;						//second
-	extern const int V = 1;								//volt
+	extern const int um = 1;								//micrometer
+	extern const int V = 1;									//volt
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It depends on the FPGA's clock
 	extern const double dt_us = 1.0 / 160;					//time step of the FPGA's clock in us
 	extern const int AOdt_us = 2 * us;						//Time step (in us) of the analog output. The AO channels take >1 us to write the output
@@ -36,8 +37,8 @@ namespace Const
 	//The current buffer can do 400*1200 pix = 480000 pix, or 48 frames
 
 	//Scanning calibration factors
-	extern const double RS_voltPerUm = 1;										//volts per um. Calibration factor for the resonant scanner
-	extern const double Galvo_voltPerUm = 1;									//volts per um. Calibration factor for the galvo
+	extern const double RS_voltPerUm = 1.0*V/(157*um);							//volts per um. Calibration factor for the resonant scanner. Last calib 11/April/2018
+	extern const double Galvo_voltPerUm = 2.5*V/(188*um);						//volts per um. Calibration factor for the galvo. Last calib 11/April/2018
 	extern const double PC1_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 1
 	extern const double PC2_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 2
 

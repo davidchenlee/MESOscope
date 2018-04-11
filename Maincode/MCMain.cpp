@@ -34,19 +34,9 @@ int main()
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-			
-			//NonDetDigitalPulse(&status, session, 10*ms);
 			FPGAcombinedSequence(&status, session);
 			//Vibratome_SendCommand(&status, session, 3 * s, VibratomeBack);
 			//Vibratome_StartStop(&status, session);
-
-			/*
-			NiFpga_MergeStatus(&status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, 32767));
-			Sleep(1000);
-			ResonantScanner_StartStop(&status, session, 1);
-			Sleep(3000);
-			ResonantScanner_StartStop(&status, session, 0);
-			*/
 
 
 			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
@@ -69,7 +59,7 @@ int main()
 
 	//WriteSyntheticTiff();
 
-	getchar();
+	//getchar();
 
 	return 0;
 }

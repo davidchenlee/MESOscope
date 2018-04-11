@@ -44,9 +44,6 @@ namespace Const
 	extern const int FIFOtimeout;
 	extern const int FIFOINmax;
 
-	extern const int Npulses;
-	extern const U8 pulseArray[];
-
 	extern const int Width_pixPerFrame;
 	extern const int Height_pixPerFrame;
 	extern const int NpixPerFrame;
@@ -55,4 +52,10 @@ namespace Const
 	extern const int NpixAllFrames;
 
 	extern const double RS_voltPerUm;
+	extern const double Galvo_voltPerUm;
+	extern const double PC1_voltPermW;
+	extern const double PC2_voltPermW;
+
+	extern const int Npulses;
+	extern const U8 pulseArray[];
 };

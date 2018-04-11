@@ -35,7 +35,7 @@ Sleep(1000);
 
 #pragma region "FPGA individual sequences"
 
-//Linearly scan the galvo while the RS is on to acquire a 2D image
+//Acquire a 2D image by linearly scan the galvo while the RS is on
 U32QV Acquire2D()
 {
 	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
@@ -45,7 +45,7 @@ U32QV Acquire2D()
 	QV[PCLOCK] = PixelClockSeq();
 
 	//linear ramp for the galvo
-	double Vmax = 1.5;
+	double Vmax = 2.5;
 	double step = 8 * us;
 
 
@@ -65,7 +65,6 @@ U32QV Acquire2D()
 	QV[DBUF0].push(DigitalOut(4 * us, 0));
 	QV[DBUF0].push(DigitalOut(4 * us, 0));
 	QV[DBUF0].push(DigitalOut(4 * us, 0));
-
 
 	return QV;
 }

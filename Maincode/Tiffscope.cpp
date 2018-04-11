@@ -10,7 +10,7 @@ void WriteFrameTiff(U32 *imageIn, std::string fileName)
 
 	if (out != nullptr)
 	{
-		int sampleperpixel = 4; 	//number of colors
+		int sampleperpixel = 3; 	//number of colors
 
 		//create an 1D array representing the image
 		unsigned char *image = new unsigned char[NpixPerFrame * sampleperpixel];
@@ -22,10 +22,10 @@ void WriteFrameTiff(U32 *imageIn, std::string fileName)
 		
 		for (int ii = 0; ii < NpixPerFrame; ii++)
 		{
-			image[4*ii] = 25 * (unsigned char)imageIn[ii];		//Red
-			image[4*ii+1] = 0;									//Green
-			image[4*ii+2] = 0;									//Blue
-			image[4*ii + 3] = 255;					//Transparency channel. 255 for MIN transparency
+			image[sampleperpixel*ii] = 25 * (unsigned char)imageIn[ii];		//Red
+			image[sampleperpixel*ii+1] = 0;									//Green
+			image[sampleperpixel*ii+2] = 0;									//Blue
+			//image[4*ii + 3] = 255;					//Transparency channel. 255 for MIN transparency
 		}
 		
 

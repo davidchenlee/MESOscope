@@ -301,7 +301,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	{
 		U32 *image = UnpackFIFOBuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		CorrectInterleavedImage(image);
-		//WriteFrameTiff(image,"_photon-counts.tiff");
+		WriteFrameTiff(image,"_photon-counts.tiff");
 		//WriteFrameToTxt(image, "_photon-counts.txt");
 		delete image;
 	}
@@ -619,7 +619,6 @@ int Shutter2_OpenClose(NiFpga_Status* status, NiFpga_Session session, bool state
 
 	return 0;
 }
-
 
 //endregion "Shutters"
 #pragma endregion

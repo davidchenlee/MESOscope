@@ -22,9 +22,9 @@ void WriteFrameTiff(U32 *imageIn, std::string fileName)
 		
 		for (int ii = 0; ii < NpixPerFrame; ii++)
 		{
-			image[4*ii] = 25 * (U8)imageIn[ii];		//Red
-			image[4*ii+1] = 0;						//Green
-			image[4*ii+2] = 0;						//Blue
+			image[4*ii] = 25 * (unsigned char)imageIn[ii];		//Red
+			image[4*ii+1] = 0;									//Green
+			image[4*ii+2] = 0;									//Blue
 			image[4*ii + 3] = 255;					//Transparency channel. 255 for MIN transparency
 		}
 		

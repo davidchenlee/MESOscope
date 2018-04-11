@@ -6,7 +6,7 @@
 #include "Const.h"
 using namespace Const;
 
-void WriteFrameTiff(U32 *imageIn, std::string fileName);
+void WriteFrameTiff(unsigned char *imageIn, std::string fileName);
 int ReadTiff(void);
 int WriteSyntheticTiff(void);
 

@@ -23,10 +23,10 @@ U32Q PushQ(U32Q& headQ, U32Q& tailQ);
 void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& Qarray);
 U32Q linearRamp(double dt, double T, double Vi, double Vf);
 void CountPhotons(NiFpga_Status* status, NiFpga_Session session);
-U32 *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);
-void CorrectInterleavedImage(U32 *InterleavedImage);
+unsigned char *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);
+void CorrectInterleavedImage(unsigned char *interleavedImage);
 
-void WriteFrameToTxt(U32 *imageArray, std::string fileName);
+void WriteFrameToTxt(unsigned char *imageArray, std::string fileName);
 
 //FPGA initialization and trigger
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);

@@ -3,10 +3,12 @@
 #include "Tiffscope.h"
 
 
-void WriteFrameTiff(U32 *imageIn, std::string fileName)
+void WriteFrameTiff(unsigned char *imageIn, std::string fileName)
 {
+	double scale = 25.5;	//scale up the photon-count to cover the 0-255 range of a 8-bit number
 
-	TIFF *out = TIFFOpen("_photon-counts.tif", "w"); //FIX THE FILENAME reference
+	const char *fileNameAsChar = fileName.c_str();
+	TIFF *out = TIFFOpen(fileNameAsChar, "w");
 
 	if (out != nullptr)
 	{
@@ -22,10 +24,10 @@ void WriteFrameTiff(U32 *imageIn, std::string fileName)
 		
 		for (int ii = 0; ii < NpixPerFrame; ii++)
 		{
-			image[sampleperpixel*ii] = 25 * (unsigned char)imageIn[ii];		//Red
-			image[sampleperpixel*ii+1] = 0;									//Green
-			image[sampleperpixel*ii+2] = 0;									//Blue
-			//image[4*ii + 3] = 255;					//Transparency channel. 255 for MIN transparency
+			image[sampleperpixel*ii] = (unsigned char) std::floor(scale * imageIn[ii]);		//Red
+			image[sampleperpixel*ii+1] = 0;													//Green
+			image[sampleperpixel*ii+2] = 0;													//Blue
+			//image[4*ii + 3] = 255;														//Transparency channel. 255 for MIN transparency
 		}
 		
 

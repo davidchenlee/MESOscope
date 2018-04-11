@@ -299,9 +299,9 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 	if (NelementsReadFIFOa == NpixAllFrames && NelementsReadFIFOb == NpixAllFrames)
 	{
-		U32 *image = UnpackFIFOBuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
+		unsigned char *image = UnpackFIFOBuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		CorrectInterleavedImage(image);
-		WriteFrameTiff(image,"_photon-counts.tiff");
+		WriteFrameTiff(image,"_photon-counts.tif");
 		//WriteFrameToTxt(image, "_photon-counts.txt");
 		delete image;
 	}
@@ -320,12 +320,12 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 }
 
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
-U32 *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb)
+unsigned char *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb)
 {
 	bool debug = 0; //For debugging. Generate numbers from 1 to NpixAllFrames with +1 increament
 
 	//create a long 1D array representing the image
-	static U32 *image = new U32[NpixAllFrames];
+	static unsigned char *image = new unsigned char[NpixAllFrames];
 
 	//initialize the array
 	for (int ii = 0; ii < NpixAllFrames; ii++)
@@ -337,7 +337,7 @@ U32 *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArra
 		for (int jj = 0; jj < NelementsBufArrayb[ii]; jj++)
 		{
 			//myfile << bufArrayb[ii][jj] << std::endl;		
-			image[pixIndex] = bufArrayb[ii][jj];
+			image[pixIndex] = (unsigned char)bufArrayb[ii][jj];
 
 			//For debugging. Generate numbers from 1 to NpixAllFrames with +1 increament
 			if (debug)
@@ -357,9 +357,9 @@ U32 *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArra
 //memset http://www.cplusplus.com/reference/cstring/memset/
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
 //One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
-void CorrectInterleavedImage(U32 *interleavedImage)
+void CorrectInterleavedImage(unsigned char *interleavedImage)
 {
-	U32 *auxLine = new U32[Width_pixPerFrame]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
+	unsigned char *auxLine = new unsigned char[Width_pixPerFrame]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
 
 	//for every odd-number line, reverse the pixel order
 	for (int lineIndex = 1; lineIndex < Height_pixPerFrame; lineIndex += 2)
@@ -380,7 +380,7 @@ void CorrectInterleavedImage(U32 *interleavedImage)
 }
 
 
-void WriteFrameToTxt(U32 *imageArray, std::string fileName)
+void WriteFrameToTxt(unsigned char *imageArray, std::string fileName)
 {
 	//write output to txt file
 	std::ofstream myfile;

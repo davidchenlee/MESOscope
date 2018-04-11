@@ -3,14 +3,14 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- Save the scanned image as tiff. Scale the count to [0,255]. Optimize the transfer-memory usage
-- Calculate the required pixel clock for uniform spatial sampling (Mathematica notebook)
+- Implement the required pixel clock for uniform spatial sampling (Mathematica notebook)
 - Implement the FIFO reading and data saving concurrently
 - Save the run status and error messages in a text file
 - Save the run parameters in a text file
-- Maybe install openCV to display tiff images
+- Maybe install TVK to display tiff images
 - Allow reading multiple frames in the FPGA-to-PC FIFO
 - Flush the FPGA-to-PC FIFO before starting the code
+- Optimize the data-transfer memory usage
 
 
 ### LabView

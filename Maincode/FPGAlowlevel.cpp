@@ -18,8 +18,8 @@ U32 u32pack(U16 t, U16 x)
 //convert microseconds to ticks
 U16 us2tick(double t)
 {
-	double aux = t * tickPerUs;
-	U16 dt_tick_MIN = 2;		//Currently, DO and AO have a latency of 2 ticks
+	const double aux = t * tickPerUs;
+	const U16 dt_tick_MIN = 2;		//Currently, DO and AO have a latency of 2 ticks
 	if ((U32)aux > 0x0000FFFF)
 	{
 		std::cerr << "WARNING: time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
@@ -60,7 +60,7 @@ I16 volt2I16(double x)
 //Send out an analog instruction, where the analog level 'val' is held for the amount of time 't'
 U32 AnalogOut(double t, double val)
 {
-	U16 AOlatency_tick = 2;	//To  calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
+	const U16 AOlatency_tick = 2;	//To  calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
 	return u32pack(us2tick(t) - AOlatency_tick, volt2I16(val));
 }
 
@@ -68,7 +68,7 @@ U32 AnalogOut(double t, double val)
 //Send out a digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 U32 DigitalOut(double t, bool DO)
 {
-	U16 DOlatency_tick = 2;	//To  calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
+	const U16 DOlatency_tick = 2;	//To  calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 	if (DO)
 		return u32pack(us2tick(t) - DOlatency_tick, 0x0001);
 	else
@@ -79,7 +79,7 @@ U32 DigitalOut(double t, bool DO)
 //Send out a pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't'
 U32 PixelClock(double t, bool DO)
 {
-	U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
+	const U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
 	if (DO)
 		return u32pack(us2tick(t) - PClatency_tick, 0x0001);
 	else
@@ -112,7 +112,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 		}
 	}
 	//transfer the queue to an array to be sent to the FPGA. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
-	int sizeFIFOqueue = allQs.size();
+	const int sizeFIFOqueue = allQs.size();
 
 	if (sizeFIFOqueue > FIFOINmax)
 		std::cerr << "WARNING: FIFO IN overflow" << std::endl;
@@ -126,7 +126,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 	allQs = {};//cleanup the queue C++11 style
 
 	//send the data to the FPGA through the FIFO
-	U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
+	const U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
 	U32 r; //empty elements remaining
 
 	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r));
@@ -139,7 +139,7 @@ void SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
 U32Q linearRamp(double dt, double T, double Vi, double Vf)
 {
 	U32Q queue;
-	bool debug = false;
+	const bool debug = false;
 
 	if (dt < AOdt_us)
 	{
@@ -148,7 +148,7 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 		getchar();
 	}
 
-	int nPoints = (int)(T / dt);		//number of points
+	const int nPoints = (int)(T / dt);		//number of points
 
 	if (nPoints <= 1)
 	{
@@ -166,7 +166,7 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 
 		for (int ii = 0; ii < nPoints; ii++)
 		{
-			double V = Vi + (Vf - Vi)*ii / (nPoints - 1);
+			const double V = Vi + (Vf - Vi)*ii / (nPoints - 1);
 			queue.push(AnalogOut(dt, V));
 
 			if (debug)
@@ -182,9 +182,9 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 
 void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 {
-	int ReadFifoWaitingTime = 5;			//Wait time between each iteration
-	U32 remainingFIFOa, remainingFIFOb; //Elements remaining
-	U32 timeout = 100;					//FIFO timeout
+	const int ReadFifoWaitingTime = 5;			//Waiting time between each iteration
+	U32 remainingFIFOa, remainingFIFOb;			//Elements remaining
+	const U32 timeout = 100;					//FIFO timeout
 	U32* dataFIFOa = new U32[NpixAllFrames];//The buffer size does not necessarily have to be the size of a frame
 
 	//Initialize the array for FIFOa
@@ -195,7 +195,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 	//Create an array of buffer-arrays to store the data from the FIFO. The ReadFifo function gives chuncks of data.
 	//Store each chunck in a separate buffer-array
 	//I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
-	int NmaxbufArray = 100;
+	const int NmaxbufArray = 100;
 	U32** bufArrayb = new U32*[NmaxbufArray];
 	for (int i = 0; i < NmaxbufArray; i++)
 		bufArrayb[i] = new U32[NpixAllFrames]; //Each row is used to store the data from the ReadFifo. The buffer size could possibly be < Ntotal_pi
@@ -270,7 +270,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 			}
 		}
-		Sleep(ReadFifoWaitingTime); //wait till collecting big chuncks of data. Decrease the wait until max transfer bandwidth
+		Sleep(ReadFifoWaitingTime); //waiting till collecting big chuncks of data. Decrease the waiting until max transfer bandwidth
 
 		timeoutCounter--;
 
@@ -322,7 +322,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
 unsigned char *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb)
 {
-	bool debug = 0; //For debugging. Generate numbers from 1 to NpixAllFrames with +1 increament
+	const bool debug = 0; //For debugging. Generate numbers from 1 to NpixAllFrames with +1 increament
 
 	//create a long 1D array representing the image
 	static unsigned char *image = new unsigned char[NpixAllFrames];
@@ -344,7 +344,6 @@ unsigned char *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32
 			{
 				image[pixIndex] = pixIndex + 1;
 			}
-
 			pixIndex++;
 		}
 	}
@@ -352,8 +351,9 @@ unsigned char *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32
 	return image;
 }
 
-//The microscope scans bidirectionally. Reverse the pixel order every other line. Use an aux array for now.
-//Later on, write the tiff directly from the buffer arrays. to deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
+
+//The microscope scans bidirectionally. The pixel order is backwards every other line.
+//Later on, write the tiff directly from the buffer arrays. To deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
 //memset http://www.cplusplus.com/reference/cstring/memset/
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
 //One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
@@ -527,7 +527,7 @@ void ConfigureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth)
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
 int Vibratome_StartStop(NiFpga_Status* status, NiFpga_Session session)
 {
-	int dt = 20; //in ms. It has to be ~ 12 ms or longer to 
+	const int dt = 20; //in ms. It has to be ~ 12 ms or longer to 
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1));
 	Sleep(dt);
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
@@ -539,7 +539,7 @@ int Vibratome_StartStop(NiFpga_Status* status, NiFpga_Session session)
 int Vibratome_SendCommand(NiFpga_Status* status, NiFpga_Session session, double dt, VibratomeChannel channel)
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
-	int minstep = 10; //in ms
+	const int minstep = 10; //in ms
 
 	switch (channel)
 	{
@@ -555,8 +555,8 @@ int Vibratome_SendCommand(NiFpga_Status* status, NiFpga_Session session, double 
 	}
 
 
-	int delay = 1; //used to roughly calibrate the pulse length
-	int dt_ms = (int)dt / ms;
+	const int delay = 1; //used to roughly calibrate the pulse length
+	const int dt_ms = (int)dt / ms;
 
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 1));
 

@@ -36,6 +36,7 @@ namespace Const
 	extern const int us;
 	extern const int ms;
 	extern const int s;
+	extern const int V;
 	extern const int tickPerUs;
 	extern const double dt_us;
 	extern const int AOdt_us;

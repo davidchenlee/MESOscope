@@ -13,6 +13,7 @@ namespace Const
 	extern const int us = 1;								//microsecond
 	extern const int ms = 1000 * us;						//millisecond
 	extern const int s = 1000000 * us;						//second
+	extern const int V = 1;								//volt
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It depends on the FPGA's clock
 	extern const double dt_us = 1.0 / 160;					//time step of the FPGA's clock in us
 	extern const int AOdt_us = 2 * us;						//Time step (in us) of the analog output. The AO channels take >1 us to write the output

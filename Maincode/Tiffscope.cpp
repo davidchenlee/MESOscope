@@ -53,7 +53,7 @@ void WriteFrameTiff(U32 *imageIn, std::string fileName)
 		TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, Width_pixPerFrame*sampleperpixel));
 
 		//Now writing image to the file one strip at a time
-		for (uint32 row = 0; row < Height_pixPerFrame; row++)
+		for (int row = 0; row < Height_pixPerFrame; row++)
 		{
 			memcpy(buf, &image[(Height_pixPerFrame - row - 1)*linebytes], linebytes);    // check the index here, and figure out why not using h*linebytes
 			if (TIFFWriteScanline(out, buf, row, 0) < 0)

@@ -4,6 +4,7 @@
 //#include <limits.h>		//for _I16_MAX??
 
 //FPGA data types
+typedef unsigned char NiFpga_Bool;
 typedef   signed    char	I8;
 typedef unsigned    char	U8;
 typedef            short	I16;
@@ -17,10 +18,10 @@ typedef std::vector<U32Q> U32QV;			//Vector of queues of unsigned integers
 
 											//vibratome channels
 typedef enum {
-	VTstart,
-	VTback,
-	VTforward
-} VTchannel;
+	VibratomeStart,
+	VibratomeBack,
+	VibratomeForward
+} VibratomeChannel;
 
 
 namespace Const
@@ -52,4 +53,6 @@ namespace Const
 	extern const int NFrames;
 	extern const int NlinesAllFrames;
 	extern const int NpixAllFrames;
+
+	extern const double RS_voltPerUm;
 };

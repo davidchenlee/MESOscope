@@ -37,16 +37,17 @@ int main()
 			
 			//NonDetDigitalPulse(&status, session, 10*ms);
 			FPGAcombinedSequence(&status, session);
-			//PushVibratomeButton(&status, session, 3 * s, VTback);
-			//StartStopVibratome(&status, session);
+			//Vibratome_SendCommand(&status, session, 3 * s, VibratomeBack);
+			//Vibratome_StartStop(&status, session);
 
 			/*
 			NiFpga_MergeStatus(&status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, 32767));
 			Sleep(1000);
-			StartStopResonantScanner(&status, session, 1);
+			ResonantScanner_StartStop(&status, session, 1);
 			Sleep(3000);
-			StartStopResonantScanner(&status, session, 0);
+			ResonantScanner_StartStop(&status, session, 0);
 			*/
+
 
 			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.

@@ -44,4 +44,7 @@ namespace Const
 	//For multiple beams, each fram will be 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
 	//The current buffer can do 400*1200 pix = 480000 pix, or 48 frames
 
+	extern const double RS_voltPerUm = 1;										//volts per um. Calibration factor of the resonant scanner. 
+
+
 };

@@ -26,7 +26,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session);
 U32 *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);
 void CorrectInterleavedImage(U32 *InterleavedImage);
 
-void WriteFrameTxt(U32 *imageArray, std::string fileName);
+void WriteFrameToTxt(U32 *imageArray, std::string fileName);
 
 //FPGA initialization and trigger
 void InitializeFPGA(NiFpga_Status* status, NiFpga_Session session);
@@ -35,9 +35,14 @@ void TriggerLineGate(NiFpga_Status* status, NiFpga_Session session);
 void ConfigureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth);
 
 //Vibratome functions
-int PushVibratomeButton(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel);
-int StartStopVibratome(NiFpga_Status* status, NiFpga_Session session);
+int Vibratome_SendCommand(NiFpga_Status* status, NiFpga_Session session, double dt, VibratomeChannel channel);
+int Vibratome_StartStop(NiFpga_Status* status, NiFpga_Session session);
 
 //Resonant scanner
-int StartStopResonantScanner(NiFpga_Status* status, NiFpga_Session session, bool state);
-int SetOutputVoltageResonantScanner(NiFpga_Status* status, NiFpga_Session session, I16 Vout);
+NiFpga_Status ResonantScanner_StartStop(NiFpga_Status* status, NiFpga_Session session, bool state);
+int ResonantScanner_SetOutputVoltager(NiFpga_Status* status, NiFpga_Session session, double Vout);
+double ResonantScanner_Amp2Volt(double Amplitude);
+
+//Shutters
+int Shutter1_OpenClose(NiFpga_Status* status, NiFpga_Session session, bool state);
+int Shutter2_OpenClose(NiFpga_Status* status, NiFpga_Session session, bool state);

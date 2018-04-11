@@ -182,7 +182,7 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 
 void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 {
-	int ReadFifoWaittime = 5;			//Wait time between each iteration
+	int ReadFifoWaitingTime = 5;			//Wait time between each iteration
 	U32 remainingFIFOa, remainingFIFOb; //Elements remaining
 	U32 timeout = 100;					//FIFO timeout
 	U32* dataFIFOa = new U32[NpixAllFrames];//The buffer size does not necessarily have to be the size of a frame
@@ -270,7 +270,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 
 			}
 		}
-		Sleep(ReadFifoWaittime); //wait till collecting big chuncks of data. Decrease the wait until max transfer bandwidth
+		Sleep(ReadFifoWaitingTime); //wait till collecting big chuncks of data. Decrease the wait until max transfer bandwidth
 
 		timeoutCounter--;
 
@@ -302,7 +302,7 @@ void CountPhotons(NiFpga_Status* status, NiFpga_Session session)
 		U32 *image = UnpackFIFOBuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		CorrectInterleavedImage(image);
 		//WriteFrameTiff(image,"_photon-counts.tiff");
-		//WriteFrameTxt(image, "_photon-counts.txt");
+		//WriteFrameToTxt(image, "_photon-counts.txt");
 		delete image;
 	}
 	else
@@ -380,7 +380,7 @@ void CorrectInterleavedImage(U32 *interleavedImage)
 }
 
 
-void WriteFrameTxt(U32 *imageArray, std::string fileName)
+void WriteFrameToTxt(U32 *imageArray, std::string fileName)
 {
 	//write output to txt file
 	std::ofstream myfile;
@@ -524,8 +524,8 @@ void ConfigureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth)
 
 #pragma region "Vibratome"
 
-//Start running the vibratome
-int StartStopVibratome(NiFpga_Status* status, NiFpga_Session session)
+//Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
+int Vibratome_StartStop(NiFpga_Status* status, NiFpga_Session session)
 {
 	int dt = 20; //in ms. It has to be ~ 12 ms or longer to 
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1));
@@ -536,21 +536,21 @@ int StartStopVibratome(NiFpga_Status* status, NiFpga_Session session)
 }
 
 //Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
-int PushVibratomeButton(NiFpga_Status* status, NiFpga_Session session, double dt, VTchannel channel)
+int Vibratome_SendCommand(NiFpga_Status* status, NiFpga_Session session, double dt, VibratomeChannel channel)
 {
-	U32 selectedChannel;
+	NiFpga_FPGAvi_ControlBool selectedChannel;
 	int minstep = 10; //in ms
 
 	switch (channel)
 	{
-	case VTback:
+	case VibratomeBack:
 		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_back;
 		break;
-	case VTforward:
+	case VibratomeForward:
 		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_forward;
 		break;
 	default:
-		std::cerr << "ERROR: Selected VT channel is unavailable" << std::endl;
+		std::cerr << "ERROR: Selected vibratome channel is unavailable" << std::endl;
 		return -1;
 	}
 
@@ -577,27 +577,56 @@ int PushVibratomeButton(NiFpga_Status* status, NiFpga_Session session, double dt
 
 #pragma region "Resonant scanner"
 
-int StartStopResonantScanner(NiFpga_Status* status, NiFpga_Session session, bool state)
+//Start or stop the resonant scanner
+NiFpga_Status ResonantScanner_StartStop(NiFpga_Status* status, NiFpga_Session session, bool state)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, state));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool) state));
+
+	return *status;
+}
+
+//Set the output voltage of the resonant scanner
+int ResonantScanner_SetOutputVoltager(NiFpga_Status* status, NiFpga_Session session, double Vout)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, volt2I16(Vout)));
 
 	return 0;
 }
 
-
-int SetOutputVoltageResonantScanner(NiFpga_Status* status, NiFpga_Session session, I16 Vout)
+double ResonantScanner_Amp2Volt(double Amplitude)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));
-
-	return 0;
+	return Amplitude * RS_voltPerUm;
 }
 
 
-
+//endregion "Resonant scanner"
 #pragma endregion
 
 
 
+#pragma region "Shutters"
+
+int Shutter1_OpenClose(NiFpga_Status* status, NiFpga_Session session, bool state)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, (NiFpga_Bool)state));
+
+	return 0;
+}
+
+int Shutter2_OpenClose(NiFpga_Status* status, NiFpga_Session session, bool state)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter2, (NiFpga_Bool)state));
+
+	return 0;
+}
+
+
+//endregion "Shutters"
+#pragma endregion
+
+
 /*
 //Pockels cells
-NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));*/
+NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
+
+*/

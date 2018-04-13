@@ -20,7 +20,7 @@ U32 AnalogOut(double t, double V);
 U32 DigitalOut(double t, bool DO);
 U32 PixelClock(double t, bool DO);
 U32Q PushQ(U32Q& headQ, U32Q& tailQ);
-int SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& Qarray);
+int SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues);
 U32Q linearRamp(double dt, double T, double Vi, double Vf);
 int ReadPhotonCount(NiFpga_Status* status, NiFpga_Session session);
 unsigned char *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);

@@ -48,47 +48,56 @@ int FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 //Acquire a 2D image by linearly scan the galvo while the RS is on
 U32QV Scan2D()
 {
-	//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
-	U32QV QV(Nchan);
+	U32QV VectorOfQueues(Nchan);																			//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
 
 	//Pixel clock
-	QV[PCLOCK] = PixelClockSeq();
+	VectorOfQueues[PCLOCK] = PixelClockEvenTime();
 
-	//linear ramp for the galvo
+	//Linear ramp for the galvo
 	const double GalvoAmplitude_um = 200 * um;
 	const double GalvoAmplitude_volt = GalvoAmplitude_um * Galvo_voltPerUm;
 	//const double GalvoAmplitude_volt = 2.5;
 	const double GalvoStep = 8 * us;
 
-	U32Q linearRampSegment0 = linearRamp(GalvoStep, 25 * ms, -GalvoAmplitude_volt, GalvoAmplitude_volt); //ramp up the galvo from -GalvoAmplitude_volt to GalvoAmplitude_volt
-	QV[ABUF0] = linearRampSegment0;
-	QV[ABUF0].push(AnalogOut(4 * us, -GalvoAmplitude_volt));		//set the galvo back to -GalvoAmplitude_volt
+	U32Q linearRampSegment0 = linearRamp(GalvoStep, 25 * ms, -GalvoAmplitude_volt, GalvoAmplitude_volt);	//Ramp up the galvo from -GalvoAmplitude_volt to GalvoAmplitude_volt
+	VectorOfQueues[ABUF0] = linearRampSegment0;
+	VectorOfQueues[ABUF0].push(AnalogOut(4 * us, -GalvoAmplitude_volt));									//Set the galvo back to -GalvoAmplitude_volt
 
 	//DO0
-	QV[DBUF0].push(DigitalOut(4 * us, 1));
-	QV[DBUF0].push(DigitalOut(4 * us, 0));
-	QV[DBUF0].push(DigitalOut(4 * us, 0));
-	QV[DBUF0].push(DigitalOut(4 * us, 0));
+	VectorOfQueues[DBUF0].push(DigitalOut(4 * us, 1));
+	VectorOfQueues[DBUF0].push(DigitalOut(4 * us, 0));
+	VectorOfQueues[DBUF0].push(DigitalOut(4 * us, 0));
+	VectorOfQueues[DBUF0].push(DigitalOut(4 * us, 0));
 
-	return QV;
+	return VectorOfQueues;
 }
 
-//Pixel clock sequence. The pixel clock starts when the line clock ticks, followed by a waiting time 't'
+//Pixel clock sequence. The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'
 //At 160MHz, the clock increment is 6.25ns = 0.00625us
-U32Q PixelClockSeq()
+//Pixel clock evently spaced in time
+U32Q PixelClockEvenTime()
 {
-	U32Q Q;	//Create a queue
+	U32Q Q;																//Create a queue
+	
+	const double InitialWaitingTime = 6.25*us;							//Initial waiting time to center the pixel clock in a line scan
+																		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
+	U16 latency = 2;													//latency of detecting the line clock. Calibrate the latency with the oscilloscope
+	Q.push(u32pack(us2tick(InitialWaitingTime) - latency, 0x0000));
+																			
+	const double PixelWaitingTime = 0.125 * us;
+	for (U16 ii = 0; ii < Width_pixPerFrame + 1; ii++)					//Npixels+1 because there is one more pixel-clock tick than number of pixels
+		Q.push(PixelClock(PixelWaitingTime, TRUE));						//Generate the pixel clock. Everytime TRUE is pushed, the pixel clock "ticks" (flips its state)
 
-	//INITIAL WAITING TIME. Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us, then the waiting time is (62.5-50)/2 = 6.25us
-	const double t = 6.25*us;
-	U16 latency = 2; //latency of detecting the line clock. Calibrate the latency on the oscilloscope
-	Q.push(u32pack(us2tick(t) - latency, 0x0000));
+	return Q;															//Return a queue (and not a vector of queues)
+}
 
-	//PIXEL CLOCK TICKS. Everytime HIGH is pushed, the pixel clock "ticks" (flips its state)
-	for (U16 ii = 0; ii < Width_pixPerFrame + 1; ii++) // Npixels+1 because there is one more pixel-clock tick than number of pixels
-		Q.push(PixelClock(0.125 * us, 1));
-	//Q.push(PixelClock(0.0625 * us, 1));
-	return Q; //this returns a queue and not a vector of queues
+//Pixel clock sequence. The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'
+//At 160MHz, the clock increment is 6.25ns = 0.00625us
+U32Q PixelClockEvenSpace()
+{
+	U32Q Q;
+
+	return Q;
 }
 
 //endregion "FPGA individual sequences"

@@ -8,30 +8,30 @@ void printHex(int input)
 }
 
 
-//time t and analog output x are encoded in 16 bits each. Pack t in MSB and x in LSB.
+//Pack t in MSB and x in LSB. Time t and analog output x are encoded in 16 bits each.
 U32 u32pack(U16 t, U16 x)
 {
 	return (t << 16) | (0x0000FFFF & x);
 }
 
 
-//convert microseconds to ticks
-U16 us2tick(double t)
+//Convert microseconds to ticks
+U16 us2tick(double t_us)
 {
-	const double aux = t * tickPerUs;
-	const U16 dt_tick_MIN = 2;		//Currently, DO and AO have a latency of 2 ticks
-	if ((U32)aux > 0x0000FFFF)
+	const double t_tick = t_us * tickPerUs;
+	const U16 dt_tick_MIN = 2;							//Min ticks allowed. Consider that DO and AO have a latency of 2 ticks
+	if ((U32)t_tick > 0x0000FFFF)
 	{
 		std::cerr << "WARNING: time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
 		return _UI16_MAX;
 	}
-	else if ((U32)aux < dt_tick_MIN)
+	else if ((U32)t_tick < dt_tick_MIN)
 	{
 		std::cerr << "WARNING: time step underflow. Time step set to the min:" << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
 		return dt_tick_MIN;
 	}
 	else
-		return (U16)aux;
+		return (U16)t_tick;
 }
 
 
@@ -60,15 +60,15 @@ I16 volt2I16(double x)
 //Send out an analog instruction, where the analog level 'val' is held for the amount of time 't'
 U32 AnalogOut(double t, double val)
 {
-	const U16 AOlatency_tick = 2;	//To  calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
+	const U16 AOlatency_tick = 2;	//To calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
 	return u32pack(us2tick(t) - AOlatency_tick, volt2I16(val));
 }
 
 
-//Send out a digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
+//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 U32 DigitalOut(double t, bool DO)
 {
-	const U16 DOlatency_tick = 2;	//To  calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
+	const U16 DOlatency_tick = 2;	//To calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 	if (DO)
 		return u32pack(us2tick(t) - DOlatency_tick, 0x0001);
 	else
@@ -76,7 +76,7 @@ U32 DigitalOut(double t, bool DO)
 }
 
 
-//Send out a pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't'
+//Send out a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't'
 U32 PixelClock(double t, bool DO)
 {
 	const U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
@@ -87,7 +87,7 @@ U32 PixelClock(double t, bool DO)
 }
 
 
-//Push all elements of 'tailQ' into 'headQ'
+//Push all the elements in 'tailQ' into 'headQ'
 U32Q PushQ(U32Q& headQ, U32Q& tailQ)
 {
 	while (!tailQ.empty())
@@ -98,32 +98,36 @@ U32Q PushQ(U32Q& headQ, U32Q& tailQ)
 	return headQ;
 }
 
-int SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& QV)
+//Send off every single queue in VectorOfQueue to the FPGA
+//For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
+//Then transfer the elements in the long queue to an array to interface the FPGA
+//Alternatively, the single queues could be transferred directly to the array, but why bothering...
+int SendOutQueue(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues)
 {
-	//take a vector of queues and return it as a single long queue
-	U32Q allQs;
+	U32Q allQueues;								//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
 	{
-		allQs.push(QV[i].size()); //push the number of elements in each individual queue
-		while (!QV[i].empty())
+		allQueues.push(VectorOfQueues[i].size());			//Push the number of elements in each individual queue VectorOfQueues[i]
+		while (!VectorOfQueues[i].empty())
 		{
-			allQs.push(QV[i].front());
-			QV[i].pop();
+			allQueues.push(VectorOfQueues[i].front());		//Push all the elemets in individual queue VectorOfQueues[i] to allQueues
+			VectorOfQueues[i].pop();
 		}
 	}
-	//transfer the queue to an array to be sent to the FPGA. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
-	const int sizeFIFOqueue = allQs.size();
+
+	
+	const int sizeFIFOqueue = allQueues.size();		//Total number of elements in all the queues 
 
 	if (sizeFIFOqueue > FIFOINmax)
 		std::cerr << "WARNING: FIFO IN overflow" << std::endl;
 
-	U32* FIFO = new U32[sizeFIFOqueue];
+	U32* FIFO = new U32[sizeFIFOqueue];				//Create an array for interfacing the FPGA	
 	for (int i = 0; i < sizeFIFOqueue; i++)
 	{
-		FIFO[i] = allQs.front();
-		allQs.pop();
+		FIFO[i] = allQueues.front();				//Transfer the queue elements to the array
+		allQueues.pop();
 	}
-	allQs = {};//cleanup the queue C++11 style
+	allQueues = {};									//Cleanup the queue (C++11 style)
 
 	//send the data to the FPGA through the FIFO
 	const U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
@@ -146,11 +150,11 @@ U32Q linearRamp(double dt, double T, double Vi, double Vf)
 	if (dt < AOdt_us)
 	{
 		std::cerr << "WARNING: time step too small. Time step set to " << AOdt_us << " us" << std::endl;
-		dt = AOdt_us; //Analog output time increment in us
+		dt = AOdt_us;						//Analog output time increment (in us)
 		getchar();
 	}
 
-	const int nPoints = (int)(T / dt);		//number of points
+	const int nPoints = (int)(T / dt);		//Number of points
 
 	if (nPoints <= 1)
 	{
@@ -187,13 +191,13 @@ int ReadPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	const int ReadFifoWaitingTime = 5;			//Waiting time between each iteration
 	U32 remainingFIFOa, remainingFIFOb;			//Elements remaining
 	const U32 timeout = 100;					//FIFO timeout
-	U32* dataFIFOa = new U32[NpixAllFrames];//The buffer size does not necessarily have to be the size of a frame
+	U32* dataFIFOa = new U32[NpixAllFrames];	//The buffer size does not necessarily have to be the size of a frame
 
 	//Initialize the array for FIFOa
 	for (int ii = 0; ii < NpixAllFrames; ii++)
 		dataFIFOa[ii] = 0;
 
-	//Test for FIFOb
+	//Test the FIFOb
 	//Create an array of buffer-arrays to store the data from the FIFO. The ReadFifo function gives chuncks of data.
 	//Store each chunck in a separate buffer-array
 	//I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
@@ -325,16 +329,14 @@ int ReadPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
 unsigned char *UnpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb)
 {
-	const bool debug = 0; //For debugging. Generate numbers from 1 to NpixAllFrames with +1 increament
+	const bool debug = 0;												//For debugging. Generate numbers from 1 to NpixAllFrames with +1 increament
 
-	//create a long 1D array representing the image
-	static unsigned char *image = new unsigned char[NpixAllFrames];
+	static unsigned char *image = new unsigned char[NpixAllFrames];		//Create a long 1D array representing the image
 
-	//initialize the array
-	for (int ii = 0; ii < NpixAllFrames; ii++)
+	for (int ii = 0; ii < NpixAllFrames; ii++)							//Initialize the array
 		image[ii] = 0;
 
-	U32 pixIndex = 0;	//pixel of the image
+	U32 pixIndex = 0;													//Index the image pixel
 	for (int ii = 0; ii < bufArrayIndexb; ii++)
 	{
 		for (int jj = 0; jj < NelementsBufArrayb[ii]; jj++)
@@ -387,16 +389,13 @@ int CorrectInterleavedImage(unsigned char *interleavedImage)
 
 int WriteFrameToTxt(unsigned char *imageArray, std::string fileName)
 {
-	//write output to txt file
-	std::ofstream myfile;
-	myfile.open(fileName);
+	std::ofstream myfile;								//Create output file
+	myfile.open(fileName);								//Open the file
 
-	//Save the image in a text file
 	for (int ii = 0; ii < NpixAllFrames; ii++)
-		myfile << (int) imageArray[ii] << std::endl;
+		myfile << (int) imageArray[ii] << std::endl;	//Write each element
 
-	//close txt file
-	myfile.close();
+	myfile.close();										//Close the txt file
 
 	return 0;
 }
@@ -489,10 +488,10 @@ int InitializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 
 	//Initialize all the channels with zero. No need if NiFpga_Finalize() is at the end of the main code
 	/*
-	U32QV QV(Nchan);
+	U32QV VectorOfQueues(Nchan);
 	for (U32 ii = 0; ii < Nchan; ii++)
-	QV[ii].push(0);
-	SendOutQueue(status, session, QV);
+	VectorOfQueues[ii].push(0);
+	SendOutQueue(status, session, VectorOfQueues);
 	TriggerFIFOIN(status, session);
 	*/
 
@@ -542,9 +541,9 @@ int ConfigureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth)
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
 int Vibratome_StartStop(NiFpga_Status* status, NiFpga_Session session)
 {
-	const int dt = 20; //in ms. It has to be ~ 12 ms or longer to 
+	const int WaitingTime = 20; //in ms. It has to be ~ 12 ms or longer to 
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1));
-	Sleep(dt);
+	Sleep(WaitingTime);
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
 
 	return 0;

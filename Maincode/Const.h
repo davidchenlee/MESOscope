@@ -46,8 +46,8 @@ namespace Const
 	extern const int FIFOtimeout;
 	extern const int FIFOINmax;
 
-	extern const int Width_pixPerFrame;
-	extern const int Height_pixPerFrame;
+	extern const int WidthPerFrame_pix;
+	extern const int HeightPerFrame_pix;
 	extern const int NpixPerFrame;
 	extern const int NFrames;
 	extern const int NlinesAllFrames;

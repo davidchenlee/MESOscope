@@ -81,7 +81,7 @@ U32Q PixelClockEvenTime()
 	Q.push(u32pack(us2tick(InitialWaitingTime) - latency, 0x0000));
 																			
 	const double PixelWaitingTime = 0.125 * us;
-	for (U16 ii = 0; ii < Width_pixPerFrame + 1; ii++)					//Npixels+1 because there is one more pixel-clock tick than number of pixels
+	for (U16 ii = 0; ii < WidthPerFrame_pix + 1; ii++)					//Npixels+1 because there is one more pixel-clock tick than number of pixels
 		Q.push(generateSinglePixelClock(PixelWaitingTime, TRUE));						//Generate the pixel clock. Everytime TRUE is pushed, the pixel clock "ticks" (flips its state)
 
 	return Q;															//Return a queue (and not a vector of queues)

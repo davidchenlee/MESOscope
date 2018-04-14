@@ -8,34 +8,30 @@ int FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	/*
 	const double RSamplitude_um = 200 * um;
 	const double RSamplitude_volt = RSamplitude_um * RS_voltPerUm;
-	ResonantScanner_SetOutputVoltager(status, session, RSamplitude_volt);
+	resonantScanner_SetOutputVoltager(status, session, RSamplitude_volt);
 	Sleep(1000);
-	ResonantScanner_StartStop(status, session, 1);
+	resonantScanner_StartStop(status, session, 1);
 	Sleep(3000);
-	ResonantScanner_StartStop(status, session, 0);
+	resonantScanner_StartStop(status, session, 0);
 	*/
 
 
 	//Send the commands to the FPGA
-	SendOutQueue(status, session, Scan2D());
+	sendQueueToFPGA(status, session, Scan2D());
 
 	//Trigger the data acquisition
-	TriggerFIFOIN(status, session);		
+	triggerFIFOIN(status, session);		
 
 	//Read the photon count
-	ReadPhotonCount(status, session);
-
-
-
-
+	readPhotonCount(status, session);
 
 
 	//SECOND ROUND
 	if (0)
 	{
-		//SendOutQueue(status, session, TestAODO());
-		TriggerFIFOIN(status, session);
-		TriggerLineGate(status, session);
+		//sendQueueToFPGA(status, session, TestAODO());
+		triggerFIFOIN(status, session);
+		triggerLineGate(status, session);
 	}
 
 	return 0;
@@ -59,15 +55,15 @@ U32QV Scan2D()
 	//const double GalvoAmplitude_volt = 2.5;
 	const double GalvoStep = 8 * us;
 
-	U32Q linearRampSegment0 = linearRamp(GalvoStep, 25 * ms, -GalvoAmplitude_volt, GalvoAmplitude_volt);	//Ramp up the galvo from -GalvoAmplitude_volt to GalvoAmplitude_volt
+	U32Q linearRampSegment0 = generateLinearRamp(GalvoStep, 25 * ms, -GalvoAmplitude_volt, GalvoAmplitude_volt);	//Ramp up the galvo from -GalvoAmplitude_volt to GalvoAmplitude_volt
 	VectorOfQueues[ABUF0] = linearRampSegment0;
-	VectorOfQueues[ABUF0].push(AnalogOut(4 * us, -GalvoAmplitude_volt));									//Set the galvo back to -GalvoAmplitude_volt
+	VectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, -GalvoAmplitude_volt));									//Set the galvo back to -GalvoAmplitude_volt
 
 	//DO0
-	VectorOfQueues[DBUF0].push(DigitalOut(4 * us, 1));
-	VectorOfQueues[DBUF0].push(DigitalOut(4 * us, 0));
-	VectorOfQueues[DBUF0].push(DigitalOut(4 * us, 0));
-	VectorOfQueues[DBUF0].push(DigitalOut(4 * us, 0));
+	VectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 1));
+	VectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
+	VectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
+	VectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
 
 	return VectorOfQueues;
 }
@@ -86,7 +82,7 @@ U32Q PixelClockEvenTime()
 																			
 	const double PixelWaitingTime = 0.125 * us;
 	for (U16 ii = 0; ii < Width_pixPerFrame + 1; ii++)					//Npixels+1 because there is one more pixel-clock tick than number of pixels
-		Q.push(PixelClock(PixelWaitingTime, TRUE));						//Generate the pixel clock. Everytime TRUE is pushed, the pixel clock "ticks" (flips its state)
+		Q.push(generateSinglePixelClock(PixelWaitingTime, TRUE));						//Generate the pixel clock. Everytime TRUE is pushed, the pixel clock "ticks" (flips its state)
 
 	return Q;															//Return a queue (and not a vector of queues)
 }

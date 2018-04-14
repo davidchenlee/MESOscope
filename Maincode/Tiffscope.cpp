@@ -3,70 +3,68 @@
 #include "Tiffscope.h"
 
 
-int WriteFrameTiff(unsigned char *imageIn, std::string fileName)
+int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 {
-	const double scale = 25.5;	//scale up the photon-count to cover the full 0-255 range for a 8-bit number
+	const double scale = 25.5;																//Scale up the photon-count to cover the full 0-255 range for a 8-bit number
 
 	const char *fileNameAsChar = fileName.c_str();
-	TIFF *out = TIFFOpen(fileNameAsChar, "w");
+	TIFF *tiffHandle = TIFFOpen(fileNameAsChar, "w");
 
-	if (out != nullptr)
+	if (tiffHandle != nullptr)																//If the file opening succeeds
 	{
-		const int sampleperpixel = 3; 	//number of colors
+		const int samplePerPixel = 1; 														//Number of channels (colors)
 
-		//create an 1D array representing the image
-		unsigned char *image = new unsigned char[NpixPerFrame * sampleperpixel];
+		unsigned char *image = new unsigned char[NpixPerFrame * samplePerPixel];			//Create an 1D array representing the image
 
-		//initialize the array
-		for (int ii = 0; ii < NpixPerFrame * sampleperpixel; ii++)
-			image[ii] = 0;
+		for (int ii = 0; ii < NpixPerFrame * samplePerPixel; ii++)
+			image[ii] = 0;																	//Initialize the array
 
 		
 		for (int ii = 0; ii < NpixPerFrame; ii++)
 		{
-			image[sampleperpixel*ii] = (unsigned char) std::floor(scale * imageIn[ii]);		//Red
-			image[sampleperpixel*ii+1] = 0;													//Green
-			image[sampleperpixel*ii+2] = 0;													//Blue
+			image[samplePerPixel*ii] = (unsigned char) std::floor(scale * imageIn[ii]);		//Red
+			//image[samplePerPixel*ii+1] = 0;												//Green
+			//image[samplePerPixel*ii+2] = 0;												//Blue
 			//image[4*ii + 3] = 255;														//Transparency channel. 255 for MIN transparency
 		}
 		
 		//TAGS
-		TIFFSetField(out, TIFFTAG_IMAGEWIDTH, Width_pixPerFrame);		// set the width of the image
-		TIFFSetField(out, TIFFTAG_IMAGELENGTH, Height_pixPerFrame);		// set the height of the image
-		TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, sampleperpixel);		// set number of channels per pixel
-		TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, 8);					// set the size of the channels
-		TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
-																		// Some other essential fields to set that you do not have to understand for now.
-		TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
-		TIFFSetField(out, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, Width_pixPerFrame);					//Set the width of the image
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, Height_pixPerFrame);					//Set the height of the image
+		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, samplePerPixel);					//Set number of channels per pixel
+		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);									//Set the size of the channels
+		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);					//Set the origin of the image.
+		TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);				//Single Image plane
+		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);				//Single channel with min as black
+		//TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
 
 
-		tsize_t linebytes = sampleperpixel * Width_pixPerFrame;			// length in memory of one row of pixel in the image.
-		unsigned char *buf = NULL;										// buffer used to store the row of pixel information for writing to file
+		tsize_t bytesPerLine = samplePerPixel * Width_pixPerFrame;			//Length in memory of one row of pixel in the image.
+		unsigned char *buffer = NULL;										//Buffer used to store the row of pixel information for writing to file
 
-																		// Allocating memory to store the pixels of current row
-		if (TIFFScanlineSize(out))
-			buf = (unsigned char *)_TIFFmalloc(linebytes);
+		//Allocating memory to store the pixels of current row
+		if (TIFFScanlineSize(tiffHandle))
+			buffer = (unsigned char *)_TIFFmalloc(bytesPerLine);
 		else
-			buf = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(out));
+			buffer = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(tiffHandle));
 
-		// set the strip size of the file to be size of one row of pixels
-		TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, Width_pixPerFrame*sampleperpixel));
+		//Set the strip size of the file to be size of one row of pixels
+		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, Width_pixPerFrame*samplePerPixel));
 
 		//Now writing image to the file one strip at a time
 		for (int row = 0; row < Height_pixPerFrame; row++)
 		{
-			memcpy(buf, &image[(Height_pixPerFrame - row - 1)*linebytes], linebytes);    // check the index here, and figure out why not using h*linebytes
-			if (TIFFWriteScanline(out, buf, row, 0) < 0)
+			memcpy(buffer, &image[(Height_pixPerFrame - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
+			if (TIFFWriteScanline(tiffHandle, buffer, row, 0) < 0)
 				break;
 		}
 
-		//close the output file
-		(void)TIFFClose(out);
+		//Close the output file
+		(void)TIFFClose(tiffHandle);
 
-		//destroy the buffer
-		if (buf)
-			_TIFFfree(buf);
+		//Destroy the buffer
+		if (buffer)
+			_TIFFfree(buffer);
 	}
 
 	return 0;
@@ -74,7 +72,7 @@ int WriteFrameTiff(unsigned char *imageIn, std::string fileName)
 
 /*
 //READ FILE EXAMPLE
-int ReadTiff(void)
+int readTiff(void)
 {
 	TIFF *tif = TIFFOpen("D:\\OwnCloud\\Codes\\Cpp playground\\Playground\\marbles.tif", "r");
 
@@ -120,31 +118,31 @@ int ReadTiff(void)
 
 
 //WRITE FILE EXAMPLE
-int WriteSyntheticTiff(void)
+int writeSyntheticTiff(void)
 {
 	uint32 width = 400;
 	uint32 height = 400;
 
-	TIFF *out = TIFFOpen("tiffExample.tif", "w");
+	TIFF *tiffHandle = TIFFOpen("tiffExample.tif", "w");
 
 	//1 channel
-	int sampleperpixel = 1;
+	int samplePerPixel = 1;
 
 	//create an 1D array representing the image
-	unsigned char *image = new unsigned char[width*height*sampleperpixel];
+	unsigned char *image = new unsigned char[width*height*samplePerPixel];
 
 	//initialize the array
-	for (int ii = 0; ii < width*height*sampleperpixel; ii++)
+	for (int ii = 0; ii < width*height*samplePerPixel; ii++)
 		image[ii] = 0;
 
 	//create a color gradient as an exercise
-	for (int ii = 0; ii < width*height*sampleperpixel; ii++)
+	for (int ii = 0; ii < width*height*samplePerPixel; ii++)
 	{
 		image[ii] = 255. / (width*height)*ii ;
 	}
 
 	//color gradient
-	//for (int ii = 0; ii < width*height*sampleperpixel; ii += 4)
+	//for (int ii = 0; ii < width*height*samplePerPixel; ii += 4)
 	{
 		//image[ii] = 255. / (width*height)*ii / 4; //Red
 		//image[ii+1] = 255. / (width*height)*ii / 4; //Green
@@ -152,42 +150,42 @@ int WriteSyntheticTiff(void)
 	}
 
 	//TAGS
-	TIFFSetField(out, TIFFTAG_IMAGEWIDTH, width);					// set the width of the image
-	TIFFSetField(out, TIFFTAG_IMAGELENGTH, height);					// set the height of the image
-	TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, sampleperpixel);		// set number of channels per pixel
-	TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, 8);					// set the size of the channels
-	TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
+	TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, width);					// set the width of the image
+	TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, height);					// set the height of the image
+	TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, samplePerPixel);		// set number of channels per pixel
+	TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);					// set the size of the channels
+	TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
 																	//   Some other essential fields to set that you do not have to understand for now.
-	TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
-	TIFFSetField(out, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+	TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+	TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
 
 
-	tsize_t linebytes = sampleperpixel * width;						// length in memory of one row of pixel in the image.
-	unsigned char *buf = NULL;										// buffer used to store the row of pixel information for writing to file
+	tsize_t bytesPerLine = samplePerPixel * width;						// length in memory of one row of pixel in the image.
+	unsigned char *buffer = NULL;										// buffer used to store the row of pixel information for writing to file
 
 																	// Allocating memory to store the pixels of current row
-	if (TIFFScanlineSize(out))
-		buf = (unsigned char *)_TIFFmalloc(linebytes);
+	if (TIFFScanlineSize(tiffHandle))
+		buffer = (unsigned char *)_TIFFmalloc(bytesPerLine);
 	else
-		buf = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(out));
+		buffer = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(tiffHandle));
 
 	// set the strip size of the file to be size of one row of pixels
-	TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, width*sampleperpixel));
+	TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, width*samplePerPixel));
 
 	//Now writing image to the file one strip at a time
 	for (uint32 row = 0; row < height; row++)
 	{
-		memcpy(buf, &image[(height - row - 1)*linebytes], linebytes);    // check the index here, and figure out why not using h*linebytes
-		if (TIFFWriteScanline(out, buf, row, 0) < 0)
+		memcpy(buffer, &image[(height - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
+		if (TIFFWriteScanline(tiffHandle, buffer, row, 0) < 0)
 			break;
 	}
 
 	//close the output file
-	(void)TIFFClose(out);
+	(void)TIFFClose(tiffHandle);
 
 	//destroy the buffer
-	if (buf)
-		_TIFFfree(buf);
+	if (buffer)
+		_TIFFfree(buffer);
 
 	return 0;
 }

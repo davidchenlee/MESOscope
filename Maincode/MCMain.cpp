@@ -29,14 +29,14 @@ int main()
 
 		if (NiFpga_IsNotError(status))
 		{
-			InitializeFPGA(&status, session);
+			initializeFPGA(&status, session);
 
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
 			FPGAcombinedSequence(&status, session);
-			//Vibratome_SendCommand(&status, session, 3 * s, VibratomeBack);
-			//Vibratome_StartStop(&status, session);
+			//vibratome_SendCommand(&status, session, 3 * s, VibratomeBack);
+			//vibratome_StartStop(&status, session);
 
 
 			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
@@ -54,12 +54,7 @@ int main()
 		
 	}
 	
-
-
-
-	//WriteSyntheticTiff();
-
-	//getchar();
+	getchar();
 
 	return 0;
 }

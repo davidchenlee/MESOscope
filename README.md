@@ -21,7 +21,6 @@ Code in C++ for controlling the NI USB-7852R card
 - Maybe decrease the clock of the photon-counter from 160 MHz to 80 MHz for a faster/easier compilation
 - For debugging purposes, it would be nice to have an input selector on the photon-counter to choose from the PMT or the PMT simulator
 - Check the delay of the internal FIFOs implemented in memory blocks
-- Implement the posibility of mirroring the sequence so that the galvo can swing up and down continuously
 - When the FIFO OUT depth is set to 131071 elements, on the VS side the max # of readable elements is 160000
   - Read the FIFO in VS using the 'NiFpga_AcquireFifoReadElementsU32' function for higher bandwidth. The idea is to make the host FIFO extra large and read from it directly. This only works if the FIFO can be read and write simultaneosly
   - Try to increase the FIFO depth (I tried already. 131071 elements is the max for USB-7856R)

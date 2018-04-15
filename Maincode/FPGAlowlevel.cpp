@@ -188,7 +188,7 @@ U32Q generateLinearRamp(double dt, double T, double Vi, double Vf)
 
 int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 {
-	const int ReadFifoWaitingTime = 5;			//Waiting time between each iteration
+	const int ReadFifoWaitingTime = 15;			//Waiting time between each iteration
 	U32 remainingFIFOa, remainingFIFOb;			//Elements remaining
 	const U32 timeout = 100;					//FIFO timeout
 	U32* dataFIFOa = new U32[NpixAllFrames];	//The buffer size does not necessarily have to be the size of a frame
@@ -239,6 +239,8 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 
 	while (NelementsReadFIFOa < NpixAllFrames || NelementsReadFIFOb < NpixAllFrames)
 	{
+		Sleep(ReadFifoWaitingTime); //waiting till collecting big chuncks of data. Decrease the waiting until max transfer bandwidth
+
 		//FIFO OUT a
 		if (NelementsReadFIFOa < NpixAllFrames) //Skip if all the data have already been downloaded (i.e. NelementsReadFIFOa = NpixAllFrames)
 		{
@@ -273,10 +275,8 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 				//std::cout << "bbbbbbbbbbbbb: " << remainingFIFOb << std::endl;
 
 				bufArrayIndexb++;
-
 			}
 		}
-		Sleep(ReadFifoWaitingTime); //waiting till collecting big chuncks of data. Decrease the waiting until max transfer bandwidth
 
 		timeoutCounter--;
 

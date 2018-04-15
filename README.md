@@ -17,7 +17,6 @@ Code in C++ for controlling the NI USB-7852R card
 - Remove some elements in the front panel
 - Flush the buffers
 - Create a ramp generator. This is only necessary if I want to increase the memory of the FIFO OUT at the expense of the other buffers
-- Solve the problem about the pretrigger and the non-zero wait time after the pixel clock loop
 - Maybe decrease the clock of the photon-counter from 160 MHz to 80 MHz for a faster/easier compilation
 - For debugging purposes, it would be nice to have an input selector on the photon-counter to choose from the PMT or the PMT simulator
 - Check the delay of the internal FIFOs implemented in memory blocks
@@ -26,4 +25,4 @@ Code in C++ for controlling the NI USB-7852R card
   - Try to increase the FIFO depth (I tried already. 131071 elements is the max for USB-7856R)
   - Cascade FIFOs. I could compile an additional internal FIFO with 65545 elements, 64 bits
 - I detected that, when the FPGA resets at the end of the code, the shutter #2 switches. I see a small voltage on the scope, like ~50mV that seems to be enough to trigger the shutter
-- The 'FIFO OUT' subvi has a feedback node that I could possibly get rid off because in the 'photon count' subvi the reset is placed after the counter. Try placing it BEFORE the counter.
+- The 'FIFO OUT' subvi has a feedback node that I could possibly get rid of because in the 'photon count' subvi the reset is placed after the counter. Try placing it BEFORE the counter.

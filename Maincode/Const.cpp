@@ -26,7 +26,7 @@ namespace Const
 	extern const int FIFOINmax = 32773;						//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 	extern const int Width_pixPerFrame = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const int Height_pixPerFrame = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const int Height_pixPerFrame = 480;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int NpixPerFrame = Width_pixPerFrame * Height_pixPerFrame;		//Number of pixels in each frame
 	extern const int NFrames = 3;												//Number of frames to acquire
 	extern const int NlinesAllFrames = Height_pixPerFrame * NFrames;			//Total number of lines in all the frames
@@ -34,7 +34,9 @@ namespace Const
 
 	//Currently, each frames is 400x400 pixels = 160000 pixels
 	//For multiple beams, each fram will be 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
-	//The current buffer can do 400* (~1200) pix ~ 480000 pix, or ~48 multiplexed frames
+	//The current buffer can do 400*1200 pix ~ 480000 pix, or ~48 multiplexed frames
+
+	//20180415 - Added an internal FIFO. Now I can do 400x480x3 = 576000 pixels, or 57.6 multiplexed frames
 
 	//Scanning calibration factors
 	extern const double RS_voltPerUm = 1.0*V/(157*um);							//volts per um. Calibration factor for the resonant scanner. Last calib 11/April/2018

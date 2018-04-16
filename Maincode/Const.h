@@ -65,4 +65,7 @@ namespace Const
 
 	extern const bool PhotonCounterInputSelector;
 	extern const bool LineClockSelector;
+
+	extern const double HalfPeriodLineClock;
+	extern const double PI;
 };

@@ -9,7 +9,6 @@ namespace Const
 	extern const int ABUF1 = 2;				//Analog buffer 1 (galvo 2)
 	extern const int DBUF0 = 3;				//Digital buffer 0 (shutter 1)
 
-
 	extern const int us = 1;								//microsecond
 	extern const int ms = 1000 * us;						//millisecond
 	extern const int s = 1000000 * us;						//second
@@ -28,7 +27,7 @@ namespace Const
 	extern const int Width_pixPerFrame = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int Height_pixPerFrame = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int NpixPerFrame = Width_pixPerFrame * Height_pixPerFrame;		//Number of pixels in each frame
-	extern const int NFrames = 3;												//Number of frames to acquire
+	extern const int NFrames = 1;												//Number of frames to acquire
 	extern const int NlinesAllFrames = Height_pixPerFrame * NFrames;			//Total number of lines in all the frames
 	extern const int NpixAllFrames = Width_pixPerFrame * NlinesAllFrames;		//Total number of pixels in all the frames
 
@@ -49,7 +48,11 @@ namespace Const
 	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refer to as a 'line').
 	//Example, if I divide each line in 1000 pixels, then the pix dwell time is 62.5ns. Therefore, 62.5ns can fit at most 5 pulses separated by 12.5ns
 	extern const int Npulses = 20;																				//Number of pulses
-	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 1, 0, 0, 0, 0, 0, 0,    1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };	//@160MHz, one cycle through this array lasts 125ns	
+	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 1, 0, 0, 0, 0, 0, 0,    0, 0, 0, 0, 1, 0, 0, 0, 0, 0 };	//@160MHz, one cycle through this array lasts 125ns	
 
+	extern double *PixelClockEvenSpaceLUT = new double[Width_pixPerFrame];		//LUT for a pixel clock
+
+	extern const bool PMTsim = 1;												//Debugger. 1 to use the PMT-pulse simulator as the input of the photon-counter
+	extern const bool LineClockSelector = 0;									//1 for Resonant scanner, 0 for Function generator
 
 };

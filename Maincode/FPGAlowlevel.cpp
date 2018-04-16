@@ -188,10 +188,9 @@ U32Q generateLinearRamp(double dt, double T, double Vi, double Vf)
 
 int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 {
-
 	//FIFOa
 	int NelementsReadFIFOa = 0; 						//Total number of elements read from the FIFO
-	U32* dataFIFOa = new U32[NpixAllFrames];			//The buffer size does not necessarily have to be the size of a frame
+	U32 *dataFIFOa = new U32[NpixAllFrames];			//The buffer size does not necessarily have to be the size of a frame
 
 	//Initialize the array for FIFOa
 	for (int ii = 0; ii < NpixAllFrames; ii++)
@@ -203,7 +202,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	//I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
 	int bufArrayIndexb = 0;								//Number of buffer arrays actually used
 	const int NmaxbufArray = 100;
-	U32** bufArrayb = new U32*[NmaxbufArray];
+	U32 **bufArrayb = new U32*[NmaxbufArray];
 	for (int i = 0; i < NmaxbufArray; i++)
 		bufArrayb[i] = new U32[NpixAllFrames];			//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < NpixAllFrames
 
@@ -227,7 +226,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 		unsigned char *image = unpackFIFObuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		correctInterleavedImage(image);
 		writeFrameToTiff(image,"_photon-counts.tif");
-		//writeFrameToTxt(image, "_photon-counts.txt");
+		writeFrameToTxt(image, "_photon-counts.txt");
 		delete image;
 	}
 	else
@@ -268,7 +267,7 @@ void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &Nelement
 	{
 		Sleep(ReadFifoWaitingTime); //waiting till collecting big chuncks of data. Decrease the waiting until max transfer bandwidth
 
-									//FIFO OUT a
+		//FIFO OUT a
 		if (NelementsReadFIFOa < NpixAllFrames) //Skip if all the data have already been downloaded (i.e. NelementsReadFIFOa = NpixAllFrames)
 		{
 			//By requesting 0 elements from the FIFO, the function returns the number of elements available in the FIFO. If no data are available yet, then remainingFIFOa = 0 is returned
@@ -280,9 +279,8 @@ void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &Nelement
 			{
 				NelementsReadFIFOa += remainingFIFOa; //Keep track of how many data points have been read so far
 
-													  //Read the elements in the FIFO
+				//Read the elements in the FIFO
 				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, remainingFIFOa, timeout, &remainingFIFOa));
-				//std::cout << "aaaaaaaaaaaa: " << remainingFIFOa << std::endl;
 			}
 		}
 
@@ -295,11 +293,10 @@ void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &Nelement
 			if (remainingFIFOb > 0)
 			{
 				NelementsReadFIFOb += remainingFIFOb;
-				NelementsBufArrayb[bufArrayIndexb] = remainingFIFOb; //record how many elements are in each FIFObuffer array												
+				NelementsBufArrayb[bufArrayIndexb] = remainingFIFOb; //Record how many elements are in each FIFObuffer array												
 
-																	 //Read the elements in the FIFO
+				//Read the elements in the FIFO
 				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], remainingFIFOb, timeout, &remainingFIFOb));
-				//std::cout << "bbbbbbbbbbbbb: " << remainingFIFOb << std::endl;
 
 				bufArrayIndexb++;
 			}
@@ -322,7 +319,6 @@ void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &Nelement
 
 	std::cout << "Buffer-arrays used: " << (U32)bufArrayIndexb << std::endl; //print how many buffer arrays were actually used
 	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << std::endl; //print the total number of elements read
-
 
 	//U32 Nfree;
 	//Read the number of free spots remaining in the FIFO
@@ -464,8 +460,10 @@ return newQ;
 int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));		//control-sequence trigger
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));	//data-acquisition trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_PMTdebug, PMTsim));							//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Lineclockselector, LineClockSelector));		//Select the Line clock: resonant scanner or function generator
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));							//control-sequence trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));						//data-acquisition trigger
 
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, (U16) Nchan));
@@ -500,6 +498,12 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	sendQueueToFPGA(status, session, VectorOfQueues);
 	triggerFIFOIN(status, session);
 	*/
+
+	//Initialize the pixel clock
+	for (int i = 0; i < Width_pixPerFrame; i++)
+	{
+		PixelClockEvenSpaceLUT[i] = i;
+	}
 
 	std::cout << "FPGA initialize-variables status: " << *status << std::endl;
 

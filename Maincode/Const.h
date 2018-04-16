@@ -43,11 +43,11 @@ namespace Const
 	extern const int AOdt_us;
 	extern const int SyncDOtoAO_tick;
 	extern const int SyncAODOtoLineGate_tick;
-	extern const int FIFOtimeout;
+	extern const int FIFOtimeout_tick;
 	extern const int FIFOINmax;
 
-	extern const int Width_pixPerFrame;
-	extern const int Height_pixPerFrame;
+	extern const int WidthPerFrame_pix;
+	extern const int HeightPerFrame_pix;
 	extern const int NpixPerFrame;
 	extern const int NFrames;
 	extern const int NlinesAllFrames;
@@ -61,11 +61,13 @@ namespace Const
 	extern const int Npulses;
 	extern const U8 pulseArray[];
 
-	extern double *PixelClockEvenSpaceLUT;
-
-	extern const bool PhotonCounterInputSelector;
+	extern const U8 PhotonCounterInputSelector;
 	extern const bool LineClockSelector;
 
+	extern double *PixelClockEvenSpaceLUT;
 	extern const double HalfPeriodLineClock;
 	extern const double PI;
+	extern const double RSamplitudePkPK_um;
+	extern const double fillingFactor;
+
 };

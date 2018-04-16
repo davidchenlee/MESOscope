@@ -29,8 +29,8 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 		}
 		
 		//TAGS
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, Width_pixPerFrame);					//Set the width of the image
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, Height_pixPerFrame);					//Set the height of the image
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, WidthPerFrame_pix);					//Set the width of the image
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, HeightPerFrame_pix);					//Set the height of the image
 		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, samplePerPixel);					//Set number of channels per pixel
 		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);									//Set the size of the channels
 		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);					//Set the origin of the image.
@@ -39,7 +39,7 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 		//TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
 
 
-		tsize_t bytesPerLine = samplePerPixel * Width_pixPerFrame;			//Length in memory of one row of pixel in the image.
+		tsize_t bytesPerLine = samplePerPixel * WidthPerFrame_pix;			//Length in memory of one row of pixel in the image.
 		unsigned char *buffer = NULL;										//Buffer used to store the row of pixel information for writing to file
 
 		//Allocating memory to store the pixels of current row
@@ -49,12 +49,12 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 			buffer = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(tiffHandle));
 
 		//Set the strip size of the file to be size of one row of pixels
-		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, Width_pixPerFrame*samplePerPixel));
+		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, WidthPerFrame_pix*samplePerPixel));
 
 		//Now writing image to the file one strip at a time
-		for (int row = 0; row < Height_pixPerFrame; row++)
+		for (int row = 0; row < HeightPerFrame_pix; row++)
 		{
-			memcpy(buffer, &image[(Height_pixPerFrame - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
+			memcpy(buffer, &image[(HeightPerFrame_pix - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
 			if (TIFFWriteScanline(tiffHandle, buffer, row, 0) < 0)
 				break;
 		}

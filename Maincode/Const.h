@@ -58,8 +58,11 @@ namespace Const
 	extern const double PC1_voltPermW;
 	extern const double PC2_voltPermW;
 
-
-
 	extern const int Npulses;
 	extern const U8 pulseArray[];
+
+	extern double *PixelClockEvenSpaceLUT;
+
+	extern const bool PMTsim;
+	extern const bool LineClockSelector;
 };

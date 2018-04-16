@@ -19,14 +19,14 @@ namespace Const
 	extern const double dt_us = 1.0 / 160;					//time step of the FPGA's clock in us
 	extern const int AOdt_us = 2 * us;						//Time step (in us) of the analog output. The AO channels take >1 us to write the output
 	extern const int SyncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
-	extern const int SyncAODOtoLineGate_tick = 9696;		//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
+	extern const int SyncAODOtoLineGate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating. It may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before
 
 	extern const int FIFOtimeout = 100;						//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const int FIFOINmax = 32773;						//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 	extern const int Width_pixPerFrame = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const int Height_pixPerFrame = 480;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const int Height_pixPerFrame = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int NpixPerFrame = Width_pixPerFrame * Height_pixPerFrame;		//Number of pixels in each frame
 	extern const int NFrames = 3;												//Number of frames to acquire
 	extern const int NlinesAllFrames = Height_pixPerFrame * NFrames;			//Total number of lines in all the frames

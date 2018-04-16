@@ -24,41 +24,42 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGAvi_Signature = "E72005EE364D4C491D826481FEAEFFA2";
+static const char* const NiFpga_FPGAvi_Signature = "36B5A1491EE56C1350D00EEBB8EA1EA9";
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlBool_FIFOINtrigger = 0x56,
-   NiFpga_FPGAvi_ControlBool_FIFOOUTdebug = 0x26,
-   NiFpga_FPGAvi_ControlBool_LineGatetrigger = 0x1A,
-   NiFpga_FPGAvi_ControlBool_RS_ON_OFF = 0x32,
-   NiFpga_FPGAvi_ControlBool_Shutter1 = 0x22,
-   NiFpga_FPGAvi_ControlBool_Shutter2 = 0x1E,
-   NiFpga_FPGAvi_ControlBool_VT_NC = 0x42,
-   NiFpga_FPGAvi_ControlBool_VT_back = 0x3A,
-   NiFpga_FPGAvi_ControlBool_VT_forward = 0x3E,
-   NiFpga_FPGAvi_ControlBool_VT_start = 0x36,
+   NiFpga_FPGAvi_ControlBool_FIFOINtrigger = 0x5A,
+   NiFpga_FPGAvi_ControlBool_FIFOOUTdebug = 0x2A,
+   NiFpga_FPGAvi_ControlBool_FlushTrigger = 0x16,
+   NiFpga_FPGAvi_ControlBool_LineGateTrigger = 0x1E,
+   NiFpga_FPGAvi_ControlBool_RS_ON_OFF = 0x36,
+   NiFpga_FPGAvi_ControlBool_Shutter1 = 0x26,
+   NiFpga_FPGAvi_ControlBool_Shutter2 = 0x22,
+   NiFpga_FPGAvi_ControlBool_VT_NC = 0x46,
+   NiFpga_FPGAvi_ControlBool_VT_back = 0x3E,
+   NiFpga_FPGAvi_ControlBool_VT_forward = 0x42,
+   NiFpga_FPGAvi_ControlBool_VT_start = 0x3A,
 } NiFpga_FPGAvi_ControlBool;
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlI16_PC1_voltage = 0x2A,
-   NiFpga_FPGAvi_ControlI16_RS_voltage = 0x2E,
+   NiFpga_FPGAvi_ControlI16_PC1_voltage = 0x2E,
+   NiFpga_FPGAvi_ControlI16_RS_voltage = 0x32,
 } NiFpga_FPGAvi_ControlI16;
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlU16_FIFOtimeout = 0x52,
-   NiFpga_FPGAvi_ControlU16_Height_pixPerFrame = 0x16,
-   NiFpga_FPGAvi_ControlU16_Nchannels = 0x4E,
+   NiFpga_FPGAvi_ControlU16_FIFOtimeout = 0x56,
+   NiFpga_FPGAvi_ControlU16_Height_pixPerFrame = 0x1A,
+   NiFpga_FPGAvi_ControlU16_Nchannels = 0x52,
    NiFpga_FPGAvi_ControlU16_NlinesAllFrames = 0x12,
-   NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate = 0x46,
-   NiFpga_FPGAvi_ControlU16_SyncDOtoAO = 0x5A,
+   NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate = 0x4A,
+   NiFpga_FPGAvi_ControlU16_SyncDOtoAO = 0x5E,
 } NiFpga_FPGAvi_ControlU16;
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlArrayBool_Pulsesequence = 0x48,
+   NiFpga_FPGAvi_ControlArrayBool_Pulsesequence = 0x4C,
 } NiFpga_FPGAvi_ControlArrayBool;
 
 typedef enum

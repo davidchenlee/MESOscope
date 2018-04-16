@@ -12,7 +12,7 @@ using namespace Const;
 static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 
 //Low-level FPGA functions
-void printHex(U32 input);
+void printHex(int input);
 U32 u32pack(U16 t, U16 x);
 U16 us2tick(double x);
 I16 volt2I16(double x);
@@ -23,7 +23,8 @@ U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ);
 int sendQueueToFPGA(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues);
 U32Q generateLinearRamp(double dt, double T, double Vi, double Vf);
 int readPhotonCount(NiFpga_Status* status, NiFpga_Session session);
-unsigned char *unpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);
+void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb);
+unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);
 int correctInterleavedImage(unsigned char *interleavedImage);
 
 int writeFrameToTxt(unsigned char *imageArray, std::string fileName);

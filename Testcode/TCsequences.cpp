@@ -35,7 +35,7 @@ U32QV TestAODO()
 	//QV[DBUF1].push(generateSingleDigitalOut(4 * us, 0));
 
 	//Pixel clock
-	QV[PCLOCK] = PixelClockEvenTime();
+	QV[PCLOCK] = PixelClockEqualDuration();
 
 	return QV;
 }

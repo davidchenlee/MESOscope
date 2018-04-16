@@ -8,25 +8,36 @@ void printHex(int input)
 }
 
 
-//Convert from spatial coordinate to time
-double ConvertSpace2Time(double x)
+//Convert the spatial coordinate of the resonant scanner to time. x in [-RSamplitudePkPK_um/2, RSamplitudePkPK_um/2]
+double ConvertSpatialCoord2Time(double x)
 {
-	const double L = 250 * um;
-	return HalfPeriodLineClock / PI * asin(2 * x / L);
+	const double arg = 2 * x / RSamplitudePkPK_um;
+	if(arg <= 1)
+		return HalfPeriodLineClock * asin(arg) /PI ; //Return value in [-HalfPeriodLineClock/PI, HalfPeriodLineClock/PI]
+	else
+	{
+		std::cerr << "ERROR in " << __func__ << ": argument of asin greater than 1" << std::endl;
+		return HalfPeriodLineClock / PI;
+	}		
 }
 
-
-//Time discretization mapped from a discretized spatial coordinate
-double DiscreteTime(int pix)
+//Discretize the spatial coordinate, then convert it to time
+double getDiscreteTime(int pix)
 {
-	const double dx = 0.5 * um;
-	return ConvertSpace2Time(dx * pix);
+		const double dx = 0.5 * um;
+		return ConvertSpatialCoord2Time(dx * pix);
 }
 
 //Calculate the dwell time of the pixel
 double calculateDwellTime(int pix)
 {
-	return DiscreteTime(pix) - DiscreteTime(pix-1);
+	return getDiscreteTime(pix+1) - getDiscreteTime(pix);
+}
+
+//Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
+double calculatePracticalDwellTime(int pix)
+{
+	return round(calculateDwellTime(pix) * tickPerUs)/ tickPerUs;		// 1/tickPerUs is the FPGA clock (microseconds per tick)
 }
 
 
@@ -41,7 +52,7 @@ U32 packU32(U16 t, U16 x)
 U16 convertUs2tick(double t_us)
 {
 	const double t_tick = t_us * tickPerUs;
-	const U16 dt_tick_MIN = 2;							//Min ticks allowed. Consider that DO and AO have a latency of 2 ticks
+	const U32 dt_tick_MIN = 2;							//Min ticks allowed. Consider that DO and AO have a latency of 2 ticks
 	if ((U32)t_tick > 0x0000FFFF)
 	{
 		std::cerr << "WARNING: time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
@@ -49,7 +60,7 @@ U16 convertUs2tick(double t_us)
 	}
 	else if ((U32)t_tick < dt_tick_MIN)
 	{
-		std::cerr << "WARNING: time step underflow. Time step set to the min:" << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
+		std::cerr << "WARNING: time step underflow. Time step set to the min: " << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
 		return dt_tick_MIN;
 	}
 	else
@@ -248,14 +259,14 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 		unsigned char *image = unpackFIFObuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		correctInterleavedImage(image);
 		writeFrameToTiff(image,"_photon-counts.tif");
-		//writeFrameToTxt(image, "_photon-counts.txt");
-		delete image;
+		writeFrameToTxt(image, "_photon-counts.txt");
+		delete[] image;
 	}
 	else
 		std::cerr << "ERROR: more or less elements received from the FIFO than expected " << std::endl;
 
 
-	delete dataFIFOa;
+	delete[] dataFIFOa;
 
 	//clean up the buffer arrays
 	for (int i = 0; i < NmaxbufArray; ++i) {
@@ -388,20 +399,20 @@ unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32
 //One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 int correctInterleavedImage(unsigned char *interleavedImage)
 {
-	unsigned char *auxLine = new unsigned char[Width_pixPerFrame]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
+	unsigned char *auxLine = new unsigned char[WidthPerFrame_pix]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
 
 	//for every odd-number line, reverse the pixel order
-	for (int lineIndex = 1; lineIndex < Height_pixPerFrame; lineIndex += 2)
+	for (int lineIndex = 1; lineIndex < HeightPerFrame_pix; lineIndex += 2)
 	{
 		//save the data in an aux array
-		for (int pixIndex = 0; pixIndex < Width_pixPerFrame; pixIndex++)
-			auxLine[pixIndex] = interleavedImage[lineIndex*Width_pixPerFrame + (Width_pixPerFrame - pixIndex - 1)];
+		for (int pixIndex = 0; pixIndex < WidthPerFrame_pix; pixIndex++)
+			auxLine[pixIndex] = interleavedImage[lineIndex*WidthPerFrame_pix + (WidthPerFrame_pix - pixIndex - 1)];
 		//write the data back
-		for (int pixIndex = 0; pixIndex < Width_pixPerFrame; pixIndex++)
-			interleavedImage[lineIndex*Width_pixPerFrame + pixIndex] = auxLine[pixIndex];
+		for (int pixIndex = 0; pixIndex < WidthPerFrame_pix; pixIndex++)
+			interleavedImage[lineIndex*WidthPerFrame_pix + pixIndex] = auxLine[pixIndex];
 
 	}
-	delete auxLine;
+	delete[] auxLine;
 
 	//for debugging
 	//for (U32 ii = 0; ii < NpixAllFrames; ii++)
@@ -482,17 +493,17 @@ return newQ;
 int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_PhotonCounterInputSelector, PhotonCounterInputSelector));	//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_Photoncounterinputselector, PhotonCounterInputSelector));		//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineClockSelector, LineClockSelector));						//Select the Line clock: resonant scanner or function generator
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));											//control-sequence trigger
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));										//data-acquisition trigger
 
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout_tick));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, (U16) Nchan));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, (U16) SyncDOtoAO_tick));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, (U16) SyncAODOtoLineGate_tick));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesAllFrames, (U16) NlinesAllFrames));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Height_pixPerFrame, (U16) Height_pixPerFrame));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_HeightPerFrame_pix, (U16) HeightPerFrame_pix));
 
 	//Shutters
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
@@ -522,10 +533,28 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	*/
 
 	//Initialize the pixel clock
-	for (int ii = 0; ii < Width_pixPerFrame; ii++)
+
+	if (WidthPerFrame_pix % 2 == 0)	//is even
 	{
-		PixelClockEvenSpaceLUT[ii] = ii;
+		for (int pix = -WidthPerFrame_pix/2; pix < WidthPerFrame_pix/2; pix++)	//pix in [-WidthPerFrame_pix/2,WidthPerFrame_pix/2]
+			PixelClockEvenSpaceLUT[pix + WidthPerFrame_pix/2] = calculatePracticalDwellTime(pix);
 	}
+	else
+	{
+		for (int pix = 0; pix < WidthPerFrame_pix; pix++)
+		{
+			PixelClockEvenSpaceLUT[pix] = 0;
+		}
+		std::cerr << "ERROR in " << __func__ << ": The pixel clock does not support an odd number of pixels in the image width. Pixel clock set to 0" << std::endl;
+	}
+
+	/*
+	for (int pix = 0; pix < WidthPerFrame_pix; pix++)
+	{
+		std::cout << pix << "\t" <<  PixelClockEvenSpaceLUT[pix] << std::endl;
+	}
+	*/
+
 
 	std::cout << "FPGA initialize-variables status: " << *status << std::endl;
 

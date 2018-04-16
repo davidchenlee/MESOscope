@@ -1,6 +1,6 @@
 %clear all
 CORRECT_INTERLEAVED_IMAGE = 0;
-PLOT_VECTOR = 0;
+PLOT_VECTOR = 1;
 HEATMAP = ~PLOT_VECTOR;
 COUNT_FREQ = ~PLOT_VECTOR;
 
@@ -9,7 +9,7 @@ COUNT_FREQ = ~PLOT_VECTOR;
 vector = importdata('..\Maincode\_photon-counts.txt');
 
 if PLOT_VECTOR
-    plot(vector)
+    plot(vector(1:400))
 end
 
 %Plot a heat map

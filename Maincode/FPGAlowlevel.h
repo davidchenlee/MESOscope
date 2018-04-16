@@ -33,6 +33,7 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName);
 int initializeFPGA(NiFpga_Status* status, NiFpga_Session session);
 int triggerFIFOIN(NiFpga_Status* status, NiFpga_Session session);
 int triggerLineGate(NiFpga_Status* status, NiFpga_Session session);
+int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session);
 int configureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth);
 
 //Vibratome functions

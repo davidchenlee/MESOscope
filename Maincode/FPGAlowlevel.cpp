@@ -207,10 +207,8 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	for (int i = 0; i < NmaxbufArray; i++)
 		bufArrayb[i] = new U32[NpixAllFrames];			//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < NpixAllFrames
 
-	
 	int *NelementsBufArrayb = new int[NmaxbufArray];	//Each elements in this array indicates the number of elements in each chunch of data
 	int NelementsReadFIFOb = 0; 						//Total number of elements read from the FIFO
-
 
 
 	//Start the FIFO OUT to transfer data from the FPGA FIFO to the PC FIFO
@@ -223,7 +221,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	//Read the data
 	readFIFObuffer(status, session, NelementsReadFIFOa, NelementsReadFIFOb, dataFIFOa, bufArrayb, NelementsBufArrayb, bufArrayIndexb);
 
-	//If all the expected data is read, process the data
+	//If all the expected data is read successfully, process the data
 	if (NelementsReadFIFOa == NpixAllFrames && NelementsReadFIFOb == NpixAllFrames)
 	{
 		unsigned char *image = unpackFIFObuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
@@ -253,10 +251,9 @@ void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &Nelement
 	const int ReadFifoWaitingTime = 15;			//Waiting time between each iteration
 	const U32 timeout = 100;					//FIFO timeout
 	U32 remainingFIFOa, remainingFIFOb;			//Elements remaining in the FIFO
-	
-	int timeoutCounter = 100;					//Timeout the while-loop in case the data-transfer from the FIFO fails	
+	int timeoutCounter = 100;					//Timeout the while-loop if the data-transfer from the FIFO fails	
 
-	//Declare and start the stopwatch
+	//Declare and start a stopwatch
 	std::clock_t start;
 	double duration;
 	start = std::clock();
@@ -529,6 +526,15 @@ int triggerLineGate(NiFpga_Status* status, NiFpga_Session session)
 	return 0;
 }
 
+//Trigger the 'Line gate' to start acquiring data
+int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
+	std::cout << "Flush trigger status: " << *status << std::endl;
+
+	return 0;
+}
 
 int configureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth)
 {

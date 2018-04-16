@@ -87,11 +87,11 @@ U32Q PixelClockEvenTime()
 	
 	const double InitialWaitingTime = 6.25*us;							//Initial waiting time to center the pixel clock in a line scan
 																		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-	U16 latency = 2;													//latency of detecting the line clock. Calibrate the latency with the oscilloscope
+	int latency = 2;													//latency of detecting the line clock. Calibrate the latency with the oscilloscope
 	Q.push(u32pack(us2tick(InitialWaitingTime) - latency, 0x0000));
 																			
 	const double PixelWaitingTime = 0.125 * us;
-	for (U16 ii = 0; ii < Width_pixPerFrame + 1; ii++)					//Npixels+1 because there is one more pixel-clock tick than number of pixels
+	for (int ii = 0; ii < Width_pixPerFrame + 1; ii++)					//Npixels+1 because there is one more pixel-clock tick than number of pixels
 		Q.push(generateSinglePixelClock(PixelWaitingTime, TRUE));						//Generate the pixel clock. Everytime TRUE is pushed, the pixel clock "ticks" (flips its state)
 
 	return Q;															//Return a queue (and not a vector of queues)

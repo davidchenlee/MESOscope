@@ -40,6 +40,8 @@ namespace Const
 	extern const int V;
 	extern const int tickPerUs;
 	extern const double dt_us;
+	extern const U32 dt_tick_MIN;
+	extern const double dt_us_MIN;
 	extern const int AOdt_us;
 	extern const int SyncDOtoAO_tick;
 	extern const int SyncAODOtoLineGate_tick;
@@ -62,9 +64,9 @@ namespace Const
 	extern const U8 pulseArray[];
 
 	extern const U8 PhotonCounterInputSelector;
-	extern const bool LineClockSelector;
+	extern const U8 LineClockSelector;
 
-	extern double *PixelClockEvenSpaceLUT;
+	extern double *PixelClockEqualDistanceLUT;
 	extern const double HalfPeriodLineClock;
 	extern const double PI;
 	extern const double RSamplitudePkPK_um;

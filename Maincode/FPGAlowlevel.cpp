@@ -28,7 +28,7 @@ double getDiscreteTime(int pix)
 		return ConvertSpatialCoord2Time(dx * pix);
 }
 
-//Calculate the dwell time of the pixel
+//Calculate the dwell time for the pixel
 double calculateDwellTime(int pix)
 {
 	return getDiscreteTime(pix+1) - getDiscreteTime(pix);
@@ -37,7 +37,7 @@ double calculateDwellTime(int pix)
 //Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
 double calculatePracticalDwellTime(int pix)
 {
-	return round(calculateDwellTime(pix) * tickPerUs)/ tickPerUs;		// 1/tickPerUs is the FPGA clock (microseconds per tick)
+	return round(calculateDwellTime(pix) * tickPerUs)/ tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
 }
 
 
@@ -52,7 +52,7 @@ U32 packU32(U16 t, U16 x)
 U16 convertUs2tick(double t_us)
 {
 	const double t_tick = t_us * tickPerUs;
-	const U32 dt_tick_MIN = 2;							//Min ticks allowed. Consider that DO and AO have a latency of 2 ticks
+
 	if ((U32)t_tick > 0x0000FFFF)
 	{
 		std::cerr << "WARNING: time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
@@ -178,13 +178,13 @@ int sendQueueToFPGA(NiFpga_Status* status, NiFpga_Session session, U32QV& Vector
 U32Q generateLinearRamp(double dt, double T, double Vi, double Vf)
 {
 	U32Q queue;
-	const bool debug = false;
+	const bool debug = 0;
 
 	if (dt < AOdt_us)
 	{
 		std::cerr << "WARNING: time step too small. Time step set to " << AOdt_us << " us" << std::endl;
 		dt = AOdt_us;						//Analog output time increment (in us)
-		getchar();
+		return {};
 	}
 
 	const int nPoints = (int)(T / dt);		//Number of points
@@ -193,7 +193,7 @@ U32Q generateLinearRamp(double dt, double T, double Vi, double Vf)
 	{
 		std::cerr << "ERROR: not enought points for the linear ramp" << std::endl;
 		std::cerr << "nPoints: " << nPoints << std::endl;
-		getchar();
+		return {};
 	}
 	else
 	{
@@ -213,7 +213,11 @@ U32Q generateLinearRamp(double dt, double T, double Vi, double Vf)
 		}
 
 		if (debug)
+		{
 			getchar();
+			return {};
+		}
+
 
 	}
 	return queue;
@@ -260,7 +264,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 		correctInterleavedImage(image);
 		writeFrameToTiff(image,"_photon-counts.tif");
 		writeFrameToTxt(image, "_photon-counts.txt");
-		delete[] image;
+		delete image;
 	}
 	else
 		std::cerr << "ERROR: more or less elements received from the FIFO than expected " << std::endl;
@@ -494,7 +498,7 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_Photoncounterinputselector, PhotonCounterInputSelector));		//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineClockSelector, LineClockSelector));						//Select the Line clock: resonant scanner or function generator
+	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_LineClockSelector, LineClockSelector));							//Select the Line clock: resonant scanner or function generator
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));											//control-sequence trigger
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));										//data-acquisition trigger
 
@@ -537,13 +541,13 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	if (WidthPerFrame_pix % 2 == 0)	//is even
 	{
 		for (int pix = -WidthPerFrame_pix/2; pix < WidthPerFrame_pix/2; pix++)	//pix in [-WidthPerFrame_pix/2,WidthPerFrame_pix/2]
-			PixelClockEvenSpaceLUT[pix + WidthPerFrame_pix/2] = calculatePracticalDwellTime(pix);
+			PixelClockEqualDistanceLUT[pix + WidthPerFrame_pix/2] = calculatePracticalDwellTime(pix);
 	}
 	else
 	{
 		for (int pix = 0; pix < WidthPerFrame_pix; pix++)
 		{
-			PixelClockEvenSpaceLUT[pix] = 0;
+			PixelClockEqualDistanceLUT[pix] = 0;
 		}
 		std::cerr << "ERROR in " << __func__ << ": The pixel clock does not support an odd number of pixels in the image width. Pixel clock set to 0" << std::endl;
 	}
@@ -551,7 +555,7 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	/*
 	for (int pix = 0; pix < WidthPerFrame_pix; pix++)
 	{
-		std::cout << pix << "\t" <<  PixelClockEvenSpaceLUT[pix] << std::endl;
+		std::cout << pix << "\t" <<  PixelClockEqualDistanceLUT[pix] << std::endl;
 	}
 	*/
 

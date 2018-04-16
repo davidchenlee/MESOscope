@@ -9,7 +9,7 @@ COUNT_FREQ = ~PLOT_VECTOR;
 vector = importdata('..\Maincode\_photon-counts.txt');
 
 if PLOT_VECTOR
-    plot(vector(1:400))
+    plot(vector)
 end
 
 %Plot a heat map

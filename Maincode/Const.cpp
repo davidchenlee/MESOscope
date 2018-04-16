@@ -16,6 +16,8 @@ namespace Const
 	extern const int V = 1;									//volt
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It depends on the FPGA's clock
 	extern const double dt_us = 1.0 / 160;					//time step of the FPGA's clock in us
+	extern const U32 dt_tick_MIN = 2;						//Min ticks allowed because DO and AO have a latency of 2 ticks
+	extern const double dt_us_MIN = dt_tick_MIN * dt_us;	//in us. Min time step allowed
 	extern const int AOdt_us = 2 * us;						//Time step (in us) of the analog output. The AO channels take >1 us to write the output
 	extern const int SyncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 	extern const int SyncAODOtoLineGate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
@@ -24,7 +26,7 @@ namespace Const
 	extern const int FIFOtimeout_tick = 100;						//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const int FIFOINmax = 32773;						//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
-	extern const int WidthPerFrame_pix = 2;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
+	extern const int WidthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int HeightPerFrame_pix = 1;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int NpixPerFrame = WidthPerFrame_pix * HeightPerFrame_pix;		//Number of pixels in each frame
 	extern const int NFrames = 1;												//Number of frames to acquire
@@ -48,12 +50,12 @@ namespace Const
 	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refer to as a 'line').
 	//Example, if I divide each line in 1000 pixels, then the pix dwell time is 62.5ns. Therefore, 62.5ns can fit at most 5 pulses separated by 12.5ns
 	extern const int Npulses = 20;																				//Number of pulses
-	extern const U8 pulseArray[Npulses] = { 1, 1, 0, 1, 0, 0, 0, 0, 0, 0,    0, 0, 0, 0, 1, 0, 0, 0, 0, 0 };	//@160MHz, one cycle through this array lasts 125ns	
+	extern const U8 pulseArray[Npulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };	//@160MHz, one cycle through this array lasts 125ns	
 
-	extern const U8 PhotonCounterInputSelector = 2;								//0 for the real PMT, 1 for the simulated PMT, 2 for constant HIGH value
-	extern const bool LineClockSelector = 1;									//0 for the resonant scanner, 1 for the function generator
+	extern const U8 PhotonCounterInputSelector = 1;							//0 for the real PMT, 1 for the simulated PMT, 2 for constant HIGH value
+	extern const U8 LineClockSelector = 1;									//0 for the resonant scanner, 1 for the function generator
 
-	extern double *PixelClockEvenSpaceLUT = new double[WidthPerFrame_pix];		//LUT for a pixel clock
+	extern double *PixelClockEqualDistanceLUT = new double[WidthPerFrame_pix];		//LUT for a pixel clock
 	extern const double HalfPeriodLineClock = 62.5 * us;						//Half the period of the resonant scanner (62.5us for a 8KHz-scanner) = Time to scan a single line
 	extern const double PI = 3.1415926535897;
 	extern const double RSamplitudePkPK_um = 250 * us;					//The pk-pk amplitude is twice this

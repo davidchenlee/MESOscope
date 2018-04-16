@@ -63,6 +63,6 @@ namespace Const
 
 	extern double *PixelClockEvenSpaceLUT;
 
-	extern const bool PMTsim;
+	extern const bool PhotonCounterInputSelector;
 	extern const bool LineClockSelector;
 };

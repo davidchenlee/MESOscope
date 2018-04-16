@@ -53,6 +53,9 @@ namespace Const
 	extern double *PixelClockEvenSpaceLUT = new double[Width_pixPerFrame];		//LUT for a pixel clock
 
 	extern const bool PhotonCounterInputSelector = 0;							//0 for the external signal, 1 for the PMT-pulse simulator
-	extern const bool LineClockSelector = 0;									//0 for the function generator, 1 for the resonant scanner
+	extern const bool LineClockSelector = 1;									//0 for the resonant scanner, 1 for the function generator
+
+	extern const double HalfPeriodLineClock = 62.5 * us;						//Half the period of the resonant scanner (62.5us for a 8KHz-scanner) = Time to scan a single line
+	extern const double PI = 3.1415926535897;
 
 };

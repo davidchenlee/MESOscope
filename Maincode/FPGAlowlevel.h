@@ -13,9 +13,12 @@ static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitf
 
 //Low-level FPGA functions
 void printHex(int input);
-U32 u32pack(U16 t, U16 x);
-U16 us2tick(double x);
-I16 volt2I16(double x);
+double ConvertSpace2Time(double x);
+double DiscreteTime(int pix);
+double calculateDwellTime(int pix);
+U32 packU32(U16 t, U16 x);
+U16 convertUs2tick(double x);
+I16 convertVolt2I16(double x);
 U32 generateSingleAnalogOut(double t, double V);
 U32 generateSingleDigitalOut(double t, bool DO);
 U32 generateSinglePixelClock(double t, bool DO);

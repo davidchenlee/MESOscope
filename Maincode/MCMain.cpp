@@ -13,7 +13,6 @@ int main()
 	//FilterWheel();
 	//std::cout << endl;
 
-
 	//must be called before any other FPGA calls
 	NiFpga_Status status = NiFpga_Initialize();
 	std::cout << "FPGA initialize status: " << status << std::endl;

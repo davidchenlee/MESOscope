@@ -8,15 +8,37 @@ void printHex(int input)
 }
 
 
+//Convert from spatial coordinate to time
+double ConvertSpace2Time(double x)
+{
+	const double L = 250 * um;
+	return HalfPeriodLineClock / PI * asin(2 * x / L);
+}
+
+
+//Time discretization mapped from a discretized spatial coordinate
+double DiscreteTime(int pix)
+{
+	const double dx = 0.5 * um;
+	return ConvertSpace2Time(dx * pix);
+}
+
+//Calculate the dwell time of the pixel
+double calculateDwellTime(int pix)
+{
+	return DiscreteTime(pix) - DiscreteTime(pix-1);
+}
+
+
 //Pack t in MSB and x in LSB. Time t and analog output x are encoded in 16 bits each.
-U32 u32pack(U16 t, U16 x)
+U32 packU32(U16 t, U16 x)
 {
 	return (t << 16) | (0x0000FFFF & x);
 }
 
 
 //Convert microseconds to ticks
-U16 us2tick(double t_us)
+U16 convertUs2tick(double t_us)
 {
 	const double t_tick = t_us * tickPerUs;
 	const U16 dt_tick_MIN = 2;							//Min ticks allowed. Consider that DO and AO have a latency of 2 ticks
@@ -40,7 +62,7 @@ U16 us2tick(double t_us)
 0xFFFF = -1
 0x8000 = -32768
 */
-I16 volt2I16(double x)
+I16 convertVolt2I16(double x)
 {
 	if (x > 10)
 	{
@@ -61,7 +83,7 @@ I16 volt2I16(double x)
 U32 generateSingleAnalogOut(double t, double val)
 {
 	const U16 AOlatency_tick = 2;	//To calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
-	return u32pack(us2tick(t) - AOlatency_tick, volt2I16(val));
+	return packU32(convertUs2tick(t) - AOlatency_tick, convertVolt2I16(val));
 }
 
 
@@ -70,9 +92,9 @@ U32 generateSingleDigitalOut(double t, bool DO)
 {
 	const U16 DOlatency_tick = 2;	//To calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 	if (DO)
-		return u32pack(us2tick(t) - DOlatency_tick, 0x0001);
+		return packU32(convertUs2tick(t) - DOlatency_tick, 0x0001);
 	else
-		return u32pack(us2tick(t) - DOlatency_tick, 0x0000);
+		return packU32(convertUs2tick(t) - DOlatency_tick, 0x0000);
 }
 
 
@@ -81,9 +103,9 @@ U32 generateSinglePixelClock(double t, bool DO)
 {
 	const U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
 	if (DO)
-		return u32pack(us2tick(t) - PClatency_tick, 0x0001);
+		return packU32(convertUs2tick(t) - PClatency_tick, 0x0001);
 	else
-		return u32pack(us2tick(t) - PClatency_tick, 0x0000);
+		return packU32(convertUs2tick(t) - PClatency_tick, 0x0000);
 }
 
 
@@ -176,7 +198,7 @@ U32Q generateLinearRamp(double dt, double T, double Vi, double Vf)
 			queue.push(generateSingleAnalogOut(dt, V));
 
 			if (debug)
-				std::cout << (ii + 1) * dt << "\t" << (ii + 1) * us2tick(dt) << "\t" << V << "\t" << std::endl;
+				std::cout << (ii + 1) * dt << "\t" << (ii + 1) * convertUs2tick(dt) << "\t" << V << "\t" << std::endl;
 		}
 
 		if (debug)
@@ -460,10 +482,10 @@ return newQ;
 int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_PhotonCounterSelector, PhotonCounterInputSelector));							//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineClockSelector, LineClockSelector));		//Select the Line clock: resonant scanner or function generator
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));							//control-sequence trigger
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));						//data-acquisition trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_PhotonCounterInputSelector, PhotonCounterInputSelector));	//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineClockSelector, LineClockSelector));						//Select the Line clock: resonant scanner or function generator
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));											//control-sequence trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));										//data-acquisition trigger
 
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, (U16) Nchan));
@@ -500,9 +522,9 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	*/
 
 	//Initialize the pixel clock
-	for (int i = 0; i < Width_pixPerFrame; i++)
+	for (int ii = 0; ii < Width_pixPerFrame; ii++)
 	{
-		PixelClockEvenSpaceLUT[i] = i;
+		PixelClockEvenSpaceLUT[ii] = ii;
 	}
 
 	std::cout << "FPGA initialize-variables status: " << *status << std::endl;
@@ -621,7 +643,7 @@ NiFpga_Status resonantScanner_StartStop(NiFpga_Status* status, NiFpga_Session se
 //Set the output voltage of the resonant scanner
 int resonantScanner_SetOutputVoltager(NiFpga_Status* status, NiFpga_Session session, double Vout)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, volt2I16(Vout)));
+	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout)));
 
 	return 0;
 }

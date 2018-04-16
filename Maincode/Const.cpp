@@ -52,7 +52,7 @@ namespace Const
 
 	extern double *PixelClockEvenSpaceLUT = new double[Width_pixPerFrame];		//LUT for a pixel clock
 
-	extern const bool PMTsim = 1;												//Debugger. 1 to use the PMT-pulse simulator as the input of the photon-counter
-	extern const bool LineClockSelector = 0;									//1 for Resonant scanner, 0 for Function generator
+	extern const bool PhotonCounterInputSelector = 0;							//0 for the external signal, 1 for the PMT-pulse simulator
+	extern const bool LineClockSelector = 0;									//0 for the function generator, 1 for the resonant scanner
 
 };

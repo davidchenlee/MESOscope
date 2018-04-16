@@ -21,7 +21,7 @@ end
 %Tabulate the count frequency
 if COUNT_FREQ
     %print out a table with the frequency of each photon-count
-    [Ncounts, edges] = histcounts(vector);
+    [Ncounts, edges] = histcounts(PhotonCounts);
     photonNumber = edges-0.5;
     photonNumber = photonNumber(2:length(photonNumber)); %get rid of the first element
     table = [photonNumber; Ncounts]';

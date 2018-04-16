@@ -226,7 +226,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 		unsigned char *image = unpackFIFObuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		correctInterleavedImage(image);
 		writeFrameToTiff(image,"_photon-counts.tif");
-		writeFrameToTxt(image, "_photon-counts.txt");
+		//writeFrameToTxt(image, "_photon-counts.txt");
 		delete image;
 	}
 	else
@@ -460,8 +460,8 @@ return newQ;
 int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_PMTdebug, PMTsim));							//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Lineclockselector, LineClockSelector));		//Select the Line clock: resonant scanner or function generator
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_PhotonCounterSelector, PhotonCounterInputSelector));							//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineClockSelector, LineClockSelector));		//Select the Line clock: resonant scanner or function generator
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));							//control-sequence trigger
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));						//data-acquisition trigger
 

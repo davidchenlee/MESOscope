@@ -67,7 +67,7 @@ U32QV Scan2D()
 	VectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
 	*/
 	
-	//VectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, -GalvoAmplitude_volt));								//Set the galvo back to -GalvoAmplitude_volt
+	VectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, -GalvoAmplitude_volt));								//Set the galvo back to -GalvoAmplitude_volt
 
 	//DO0
 	VectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 1));
@@ -92,7 +92,7 @@ U32Q PixelClockEvenTime()
 																			
 	const double PixelWaitingTime = 0.125 * us;
 	for (int ii = 0; ii < Width_pixPerFrame + 1; ii++)					//Npixels+1 because there is one more pixel-clock tick than number of pixels
-		Q.push(generateSinglePixelClock(PixelWaitingTime, TRUE));						//Generate the pixel clock. Everytime TRUE is pushed, the pixel clock "ticks" (flips its state)
+		Q.push(generateSinglePixelClock(PixelWaitingTime, 1));		//Generate the pixel clock. Everytime 1 is pushed, the pixel clock "ticks" (flips its state)
 
 	return Q;															//Return a queue (and not a vector of queues)
 }

@@ -1,45 +1,48 @@
 #include "FPGAlowlevel.h"
 
-#pragma region "FPGA low-level functions"
 
 void printHex(int input)
 {
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
 
+#pragma region "Pixel clock auxiliary functions"
 
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSamplitudePkPK_um/2, RSamplitudePkPK_um/2]
 double ConvertSpatialCoord2Time(double x)
 {
 	const double arg = 2 * x / RSamplitudePkPK_um;
-	if(arg <= 1)
-		return HalfPeriodLineClock * asin(arg) /PI ; //Return value in [-HalfPeriodLineClock/PI, HalfPeriodLineClock/PI]
+	if (arg <= 1)
+		return HalfPeriodLineClock * asin(arg) / PI; //Return value in [-HalfPeriodLineClock/PI, HalfPeriodLineClock/PI]
 	else
 	{
 		std::cerr << "ERROR in " << __func__ << ": argument of asin greater than 1" << std::endl;
 		return HalfPeriodLineClock / PI;
-	}		
+	}
 }
 
 //Discretize the spatial coordinate, then convert it to time
 double getDiscreteTime(int pix)
 {
-		const double dx = 0.5 * um;
-		return ConvertSpatialCoord2Time(dx * pix);
+	const double dx = 0.5 * um;
+	return ConvertSpatialCoord2Time(dx * pix);
 }
 
 //Calculate the dwell time for the pixel
 double calculateDwellTime(int pix)
 {
-	return getDiscreteTime(pix+1) - getDiscreteTime(pix);
+	return getDiscreteTime(pix + 1) - getDiscreteTime(pix);
 }
 
 //Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
 double calculatePracticalDwellTime(int pix)
 {
-	return round(calculateDwellTime(pix) * tickPerUs)/ tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
+	return round(calculateDwellTime(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
 }
 
+#pragma endregion
+
+#pragma region "FPGA low-level functions"
 
 //Pack t in MSB and x in LSB. Time t and analog output x are encoded in 16 bits each.
 U32 packU32(U16 t, U16 x)
@@ -263,7 +266,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 		unsigned char *image = unpackFIFObuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 		correctInterleavedImage(image);
 		writeFrameToTiff(image,"_photon-counts.tif");
-		writeFrameToTxt(image, "_photon-counts.txt");
+		//writeFrameToTxt(image, "_photon-counts.txt");
 		delete image;
 	}
 	else
@@ -549,7 +552,7 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 		{
 			PixelClockEqualDistanceLUT[pix] = 0;
 		}
-		std::cerr << "ERROR in " << __func__ << ": The pixel clock does not support an odd number of pixels in the image width. Pixel clock set to 0" << std::endl;
+		std::cerr << "ERROR in " << __func__ << ": Odd number of pixels in the image width currently not supported by the pixel clock. Pixel clock set to 0" << std::endl;
 	}
 
 	/*
@@ -690,8 +693,6 @@ double resonantScanner_Amp2Volt(double Amplitude)
 //endregion "Resonant scanner"
 #pragma endregion
 
-
-
 #pragma region "Shutters"
 
 int shutter1_OpenClose(NiFpga_Status* status, NiFpga_Session session, bool state)
@@ -711,9 +712,9 @@ int shutter2_OpenClose(NiFpga_Status* status, NiFpga_Session session, bool state
 //endregion "Shutters"
 #pragma endregion
 
-
-/*
+#pragma region "Pockels cells"
 //Pockels cells
-NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
+//NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
 
-*/
+//endregion "Pockels cells"
+#pragma endregion

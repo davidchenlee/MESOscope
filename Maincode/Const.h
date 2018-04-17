@@ -16,12 +16,22 @@ typedef unsigned __int64	U63;
 typedef std::queue<U32> U32Q;				//Queue of unsigned integers
 typedef std::vector<U32Q> U32QV;			//Vector of queues of unsigned integers
 
-											//vibratome channels
-typedef enum {
+//vibratome channels
+enum VibratomeChannel {
 	VibratomeStart,
 	VibratomeBack,
 	VibratomeForward
-} VibratomeChannel;
+} ;
+
+enum PhotonCounterInputSelector {
+	PMText = 0,								//0 for the real external PMT
+	PMTsim = 1								//1 for the simulated PMT
+};
+
+enum LineClockInputSelector {
+	ResScan = 0,							//0 for the resonant scanner
+	FuncGen = 1								//1 for the function generator
+};
 
 
 namespace Const
@@ -63,8 +73,8 @@ namespace Const
 	extern const int Npulses;
 	extern const U8 pulseArray[];
 
-	extern const U8 PhotonCounterInputSelector;
-	extern const U8 LineClockSelector;
+	extern const PhotonCounterInputSelector PhotonCounterInput;
+	extern const LineClockInputSelector LineClockInput;
 
 	extern double *PixelClockEqualDistanceLUT;
 	extern const double HalfPeriodLineClock;

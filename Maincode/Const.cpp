@@ -52,13 +52,15 @@ namespace Const
 	extern const int Npulses = 20;																				//Number of pulses
 	extern const U8 pulseArray[Npulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };	//@160MHz, one cycle through this array lasts 125ns	
 
-	extern const U8 PhotonCounterInputSelector = 1;							//0 for the real PMT, 1 for the simulated PMT, 2 for constant HIGH value
-	extern const U8 LineClockSelector = 1;									//0 for the resonant scanner, 1 for the function generator
+	extern const PhotonCounterInputSelector PhotonCounterInput = PMTsim;
+	extern const LineClockInputSelector LineClockInput = FuncGen;
 
-	extern double *PixelClockEqualDistanceLUT = new double[WidthPerFrame_pix];		//LUT for a pixel clock
+	extern double *PixelClockEqualDistanceLUT = new double[WidthPerFrame_pix];	//LUT for a pixel clock
 	extern const double HalfPeriodLineClock = 62.5 * us;						//Half the period of the resonant scanner (62.5us for a 8KHz-scanner) = Time to scan a single line
 	extern const double PI = 3.1415926535897;
-	extern const double RSamplitudePkPK_um = 250 * us;					//The pk-pk amplitude is twice this
+	extern const double RSamplitudePkPK_um = 250 * us;							//The pk-pk amplitude is twice this
 	extern const double fillingFactor = 0.8;
+
+	
 
 };

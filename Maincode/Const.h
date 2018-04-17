@@ -30,7 +30,8 @@ enum PhotonCounterInputSelector {
 
 enum LineClockInputSelector {
 	ResScan = 0,							//0 for the resonant scanner
-	FuncGen = 1								//1 for the function generator
+	FuncGen = 1,							//1 for the function generator
+	FPGAclock = 2
 };
 
 

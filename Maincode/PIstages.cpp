@@ -86,7 +86,7 @@ int runPIstageSequence()
 	if (!MoveStage(XstageID, SetPosition[0]) | !MoveStage(YstageID, SetPosition[1]) | !MoveStage(ZstageID, SetPosition[2]))
 		return FALSE;
 
-	//Wait For Movement to Stop
+	//Wait for Movement to Stop
 	if (!WaitForMovementStop(XstageID, NumberOfAxesPerController) | !WaitForMovementStop(YstageID, NumberOfAxesPerController) | !WaitForMovementStop(ZstageID, NumberOfAxesPerController))
 		return FALSE;
 

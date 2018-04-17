@@ -44,6 +44,7 @@ namespace Const
 	extern const int ABUF2;
 	extern const int DBUF0;
 
+	extern const double PI;
 	extern const int us;
 	extern const int ms;
 	extern const int s;
@@ -66,6 +67,9 @@ namespace Const
 	extern const int NlinesAllFrames;
 	extern const int NpixAllFrames;
 
+	extern const PhotonCounterInputSelector PhotonCounterInput;
+	extern const LineClockInputSelector LineClockInput;
+
 	extern const double RS_voltPerUm;
 	extern const double Galvo_voltPerUm;
 	extern const double PC1_voltPermW;
@@ -74,13 +78,8 @@ namespace Const
 	extern const int Npulses;
 	extern const U8 pulseArray[];
 
-	extern const PhotonCounterInputSelector PhotonCounterInput;
-	extern const LineClockInputSelector LineClockInput;
-
 	extern double *PixelClockEqualDistanceLUT;
 	extern const double HalfPeriodLineClock;
-	extern const double PI;
 	extern const double RSamplitudePkPK_um;
-	extern const double fillingFactor;
-
 };
+

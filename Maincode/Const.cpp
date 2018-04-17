@@ -9,6 +9,7 @@ namespace Const
 	extern const int ABUF1 = 2;				//Analog buffer 1 (galvo 2)
 	extern const int DBUF0 = 3;				//Digital buffer 0 (shutter 1)
 
+	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//microsecond
 	extern const int ms = 1000 * us;						//millisecond
 	extern const int s = 1000000 * us;						//second
@@ -23,21 +24,18 @@ namespace Const
 	extern const int SyncAODOtoLineGate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating. It may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before
 
-	extern const int FIFOtimeout_tick = 100;						//in ticks. Timeout of the host-to-target and target-to-host FIFOs
+	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const int FIFOINmax = 32773;						//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 	extern const int WidthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const int HeightPerFrame_pix = 1;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
-	extern const int NpixPerFrame = WidthPerFrame_pix * HeightPerFrame_pix;		//Number of pixels in each frame
+	extern const int HeightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int NFrames = 1;												//Number of frames to acquire
+	extern const int NpixPerFrame = WidthPerFrame_pix * HeightPerFrame_pix;		//Number of pixels in each frame
 	extern const int NlinesAllFrames = HeightPerFrame_pix * NFrames;			//Total number of lines in all the frames
 	extern const int NpixAllFrames = WidthPerFrame_pix * NlinesAllFrames;		//Total number of pixels in all the frames
 
-	//Currently, each frames is 400x400 pixels = 160000 pixels
-	//For multiple beams, each fram will be 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
-	//The current buffer can do 400*1200 pix ~ 480000 pix, or ~48 multiplexed frames
-
-	//20180415 - Added an internal FIFO. Now I can do 400x480x3 = 576000 pixels, or 57.6 multiplexed frames
+	extern const PhotonCounterInputSelector PhotonCounterInput = PMText;
+	extern const LineClockInputSelector LineClockInput = ResScan;
 
 	//Scanning calibration factors
 	extern const double RS_voltPerUm = 1.0*V/(157*um);							//volts per um. Calibration factor for the resonant scanner. Last calib 11/April/2018
@@ -49,18 +47,17 @@ namespace Const
 	//The laser has a repetition rate of 80 MH and therefore the pulse separation is 12.5ns (the pulse width out from the PMT is ~1ns but can be extreched via electronics).
 	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refer to as a 'line').
 	//Example, if I divide each line in 1000 pixels, then the pix dwell time is 62.5ns. Therefore, 62.5ns can fit at most 5 pulses separated by 12.5ns
-	extern const int Npulses = 20;																				//Number of pulses
-	extern const U8 pulseArray[Npulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,    1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };	//@160MHz, one cycle through this array lasts 125ns	
+	extern const int Npulses = 20;												//Number of pulses
+	extern const U8 pulseArray[Npulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns	
 
-	extern const PhotonCounterInputSelector PhotonCounterInput = PMTsim;
-	extern const LineClockInputSelector LineClockInput = FuncGen;
-
+	//Pixel-clock paramenters
 	extern double *PixelClockEqualDistanceLUT = new double[WidthPerFrame_pix];	//LUT for a pixel clock
 	extern const double HalfPeriodLineClock = 62.5 * us;						//Half the period of the resonant scanner (62.5us for a 8KHz-scanner) = Time to scan a single line
-	extern const double PI = 3.1415926535897;
 	extern const double RSamplitudePkPK_um = 250 * us;							//The pk-pk amplitude is twice this
-	extern const double fillingFactor = 0.8;
-
-	
-
 };
+
+//Currently, each frames is 400x400 pixels = 160000 pixels
+//For multiple beams, each fram will be 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
+//The current buffer can do 400*1200 pix ~ 480000 pix, or ~48 multiplexed frames
+//20180415 - Added an internal FIFO. Now I can do 400x480x3 = 576000 pixels, or 57.6 multiplexed frames

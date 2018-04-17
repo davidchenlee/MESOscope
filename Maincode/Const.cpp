@@ -28,14 +28,14 @@ namespace Const
 	extern const int FIFOINmax = 32773;						//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 	extern const int WidthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const int HeightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const int HeightPerFrame_pix = 1350;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int NFrames = 1;												//Number of frames to acquire
 	extern const int NpixPerFrame = WidthPerFrame_pix * HeightPerFrame_pix;		//Number of pixels in each frame
 	extern const int NlinesAllFrames = HeightPerFrame_pix * NFrames;			//Total number of lines in all the frames
 	extern const int NpixAllFrames = WidthPerFrame_pix * NlinesAllFrames;		//Total number of pixels in all the frames
 
 	extern const PhotonCounterInputSelector PhotonCounterInput = PMText;
-	extern const LineClockInputSelector LineClockInput = ResScan;
+	extern const LineClockInputSelector LineClockInput = FuncGen;
 
 	//Scanning calibration factors
 	extern const double RS_voltPerUm = 1.0*V/(157*um);							//volts per um. Calibration factor for the resonant scanner. Last calib 11/April/2018

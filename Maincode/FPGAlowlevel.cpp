@@ -260,6 +260,10 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	//Read the data
 	readFIFObuffer(status, session, NelementsReadFIFOa, NelementsReadFIFOb, dataFIFOa, bufArrayb, NelementsBufArrayb, bufArrayIndexb);
 
+	//Close the FIFO to flush it
+	NiFpga_MergeStatus(status, NiFpga_StopFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	NiFpga_MergeStatus(status, NiFpga_StopFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+
 	//If all the expected data is read successfully, process the data
 	if (NelementsReadFIFOa == NpixAllFrames && NelementsReadFIFOb == NpixAllFrames)
 	{

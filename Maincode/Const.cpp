@@ -28,15 +28,16 @@ namespace Const
 	extern const int FIFOINmax = 32773;						//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 	extern const int WidthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const int HeightPerFrame_pix = 35;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
-	extern const int NFrames = 40;												//Number of frames to acquire
-	extern const int NlinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
+	extern const int HeightPerFrame_pix = 4;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const int NFrames = 3;												//Number of frames to acquire
+	extern const int NlinesSkip = 2;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
 	extern const int NpixPerFrame = WidthPerFrame_pix * HeightPerFrame_pix;		//Number of pixels in each frame
 	extern const int NlinesAllFrames = HeightPerFrame_pix * NFrames;			//Total number of lines in all the frames (without including the skipped lines)
 	extern const int NpixAllFrames = WidthPerFrame_pix * NlinesAllFrames;		//Total number of pixels in all the frames
 
-	//400x400, skipped 60
-
+	//400x400x5, skipped 60
+	//400x35x90, skipped 8
+	//400x35x70, skipped 6
 
 	extern const PhotonCounterInputSelector PhotonCounterInput = PMText;
 	extern const LineClockInputSelector LineClockInput = FuncGen;

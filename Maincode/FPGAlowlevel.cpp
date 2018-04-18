@@ -257,24 +257,32 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	triggerLineGate(status, session);
 
 	//Read the data
-	readFIFO(status, session, NelementsReadFIFOa, NelementsReadFIFOb, dataFIFOa, bufArrayb, NelementsBufArrayb, bufArrayIndexb, NmaxbufArray);
+	try
+	{
+		readFIFO(status, session, NelementsReadFIFOa, NelementsReadFIFOb, dataFIFOa, bufArrayb, NelementsBufArrayb, bufArrayIndexb, NmaxbufArray);
 
-	//Close the FIFO to flush it
+		//If all the expected data is read successfully, process the data
+		if (NelementsReadFIFOa == NpixAllFrames && NelementsReadFIFOb == NpixAllFrames)
+		{
+			unsigned char *image = unpackFIFObuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
+			correctInterleavedImage(image);
+			writeFrameToTiff(image, "_photon-counts.tif");
+			//writeFrameToTxt(image, "_photon-counts.txt");
+			delete image;
+		}
+		else
+			std::cerr << "ERROR in " << __func__ << ": more or less elements received from the FIFO than expected " << std::endl;
+	}
+	catch (int i)
+	{
+		std::cerr << "Exception Caught in " << __func__ << std::endl;
+	}
+
+
+
+	//Close the FIFO to (maybe) flush it
 	NiFpga_MergeStatus(status, NiFpga_StopFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 	NiFpga_MergeStatus(status, NiFpga_StopFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
-
-	//If all the expected data is read successfully, process the data
-	if (NelementsReadFIFOa == NpixAllFrames && NelementsReadFIFOb == NpixAllFrames)
-	{
-		unsigned char *image = unpackFIFObuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
-		correctInterleavedImage(image);
-		writeFrameToTiff(image,"_photon-counts.tif");
-		//writeFrameToTxt(image, "_photon-counts.txt");
-		delete image;
-	}
-	else
-		std::cerr << "ERROR in " << __func__ << ": more or less elements received from the FIFO than expected " << std::endl;
-
 
 	delete[] dataFIFOa;
 
@@ -292,7 +300,7 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 {
 	const int ReadFifoWaitingTime = 15;			//Waiting time between each iteration
 	const U32 timeout = 100;					//FIFO timeout
-	U32 remainingFIFOa, remainingFIFOb;			//Elements remaining in the FIFO
+	U32 NremainingFIFOa, NremainingFIFOb;			//Elements remaining in the FIFO
 	int timeoutCounter = 100;					//Timeout the while-loop if the data-transfer from the FIFO fails	
 
 	//Declare and start a stopwatch
@@ -305,7 +313,7 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 	//Test if the bandwidth can be increased by using 'NiFpga_AcquireFifoReadElementsU32'.Ref: http://zone.ni.com/reference/en-XX/help/372928G-01/capi/functions_fifo_read_acquire/
 	//pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
 	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
-
+	U32 *dummy = new U32[0];
 	while (NelementsReadFIFOa < NpixAllFrames || NelementsReadFIFOb < NpixAllFrames)
 	{
 		Sleep(ReadFifoWaitingTime); //wait till collecting big chuncks of data. Adjust the waiting time until getting max transfer bandwidth
@@ -313,39 +321,40 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 		//FIFO OUT a
 		if (NelementsReadFIFOa < NpixAllFrames)
 		{
-			U32 *dummy = new U32[0];
-			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &remainingFIFOa));
-			//std::cout << "Number of elements remaining in the host FIFO a: " << remainingFIFOa << std::endl;
+			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &NremainingFIFOa));
+			//std::cout << "Number of elements remaining in the host FIFO a: " << NremainingFIFOa << std::endl;
 			
-			if (remainingFIFOa > 0)
+			if (NremainingFIFOa > 0)
 			{
-				NelementsReadFIFOa += remainingFIFOa;
+				NelementsReadFIFOa += NremainingFIFOa;
 
-				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, remainingFIFOa, timeout, &remainingFIFOa));
+				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, NremainingFIFOa, timeout, &NremainingFIFOa));
 			}
 		}
 
 		//FIFO OUT b
 		if (NelementsReadFIFOb < NpixAllFrames)		//Skip if all the data have already been transferred (i.e. NelementsReadFIFOa = NpixAllFrames)
 		{
-			//By requesting 0 elements from the FIFO, the function returns the number of elements available in the FIFO. If no data are available yet, then remainingFIFOa = 0 is returned
-			U32 *dummy = new U32[0];
-			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &remainingFIFOb));
-			//std::cout << "Number of elements remaining in the host FIFO b: " << remainingFIFOb << std::endl;
+			//By requesting 0 elements from the FIFO, the function returns the number of elements available. If no data available so far, then NremainingFIFOa = 0 is returned
+			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &NremainingFIFOb));
+			//std::cout << "Number of elements remaining in the host FIFO b: " << NremainingFIFOb << std::endl;
 
 			//If there are data available in the FIFO, retrieve it
-			if (remainingFIFOb > 0)
+			if (NremainingFIFOb > 0)
 			{
-				NelementsReadFIFOb += remainingFIFOb;
-				NelementsBufArrayb[bufArrayIndexb] = remainingFIFOb; //Record how many elements are in each FIFObuffer array												
+				NelementsReadFIFOb += NremainingFIFOb;						//Keep track of the number of elements read so far
+				NelementsBufArrayb[bufArrayIndexb] = NremainingFIFOb;		//Keep track of how many elements are in each FIFObuffer array												
 
 				//Read the elements in the FIFO
-				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], remainingFIFOb, timeout, &remainingFIFOb));
+				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], NremainingFIFOb, timeout, &NremainingFIFOb));
 
-				if (bufArrayIndexb < NmaxbufArray)
-					bufArrayIndexb++;
-				else
+				//if (bufArrayIndexb >= NmaxbufArray)
+				{
 					std::cerr << "ERROR in " << __func__ << ": Buffer array overflow" << std::endl;
+					throw 10;
+				}
+
+				bufArrayIndexb++;
 			}
 		}
 

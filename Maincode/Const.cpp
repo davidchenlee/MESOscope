@@ -29,7 +29,7 @@ namespace Const
 
 	extern const int WidthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int HeightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
-	extern const int NFrames = 1;												//Number of frames to acquire
+	extern const int NFrames = 2;												//Number of frames to acquire
 	extern const int NpixPerFrame = WidthPerFrame_pix * HeightPerFrame_pix;		//Number of pixels in each frame
 	extern const int NlinesAllFrames = HeightPerFrame_pix * NFrames;			//Total number of lines in all the frames
 	extern const int NpixAllFrames = WidthPerFrame_pix * NlinesAllFrames;		//Total number of pixels in all the frames

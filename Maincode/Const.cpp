@@ -28,9 +28,9 @@ namespace Const
 	extern const int FIFOINmax = 32773;						//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 	extern const int WidthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const int HeightPerFrame_pix = 4;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
-	extern const int NFrames = 3;												//Number of frames to acquire
-	extern const int NlinesSkip = 2;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
+	extern const int HeightPerFrame_pix = 35;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const int NFrames = 30;												//Number of frames to acquire
+	extern const int NlinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
 	extern const int NpixPerFrame = WidthPerFrame_pix * HeightPerFrame_pix;		//Number of pixels in each frame
 	extern const int NlinesAllFrames = HeightPerFrame_pix * NFrames;			//Total number of lines in all the frames (without including the skipped lines)
 	extern const int NpixAllFrames = WidthPerFrame_pix * NlinesAllFrames;		//Total number of pixels in all the frames
@@ -58,8 +58,8 @@ namespace Const
 
 	//Pixel-clock paramenters
 	extern double *PixelClockEqualDistanceLUT = new double[WidthPerFrame_pix];	//LUT for a pixel clock
-	extern const double HalfPeriodLineClock = 62.5 * us;						//Half the period of the resonant scanner (62.5us for a 8KHz-scanner) = Time to scan a single line
-	extern const double RSamplitudePkPK_um = 250 * us;							//The pk-pk amplitude is twice this
+	extern const double HalfPeriodLineClock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
+	extern const double RSamplitudePkPK_um = 250 * um;							//The pk-pk amplitude is twice this
 };
 
 //Currently, each frames is 400x400 pixels = 160000 pixels

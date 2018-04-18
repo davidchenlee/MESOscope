@@ -13,11 +13,11 @@ double ConvertSpatialCoord2Time(double x)
 {
 	const double arg = 2 * x / RSamplitudePkPK_um;
 	if (arg <= 1)
-		return HalfPeriodLineClock * asin(arg) / PI; //Return value in [-HalfPeriodLineClock/PI, HalfPeriodLineClock/PI]
+		return HalfPeriodLineClock_us * asin(arg) / PI; //Return value in [-HalfPeriodLineClock_us/PI, HalfPeriodLineClock_us/PI]
 	else
 	{
 		std::cerr << "ERROR in " << __func__ << ": argument of asin greater than 1" << std::endl;
-		return HalfPeriodLineClock / PI;
+		return HalfPeriodLineClock_us / PI;
 	}
 }
 
@@ -58,12 +58,12 @@ U16 convertUs2tick(double t_us)
 
 	if ((U32)t_tick > 0x0000FFFF)
 	{
-		std::cerr << "WARNING: time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
+		std::cerr << "WARNING in " << __func__ << ": time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
 		return _UI16_MAX;
 	}
 	else if ((U32)t_tick < dt_tick_MIN)
 	{
-		std::cerr << "WARNING: time step underflow. Time step set to the min: " << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
+		std::cerr << "WARNING in " << __func__ << ": time step underflow. Time step set to the min: " << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
 		return dt_tick_MIN;
 	}
 	else
@@ -80,12 +80,12 @@ I16 convertVolt2I16(double x)
 {
 	if (x > 10)
 	{
-		std::cerr << "WARNING: voltage overflow. Voltage set to the max: 10 V" << std::endl;
+		std::cerr << "WARNING in " << __func__ << ": voltage overflow. Voltage set to the max: 10 V" << std::endl;
 		return (I16)_I16_MAX;
 	}
 	else if (x < -10)
 	{
-		std::cerr << "WARNING: voltage underflow. Voltage set to the min: -10 V" << std::endl;
+		std::cerr << "WARNING in " << __func__ << ": voltage underflow. Voltage set to the min: -10 V" << std::endl;
 		return (I16)_I16_MIN;
 	}
 	else
@@ -155,7 +155,7 @@ int sendQueueToFPGA(NiFpga_Status* status, NiFpga_Session session, U32QV& Vector
 	const int sizeFIFOqueue = allQueues.size();		//Total number of elements in all the queues 
 
 	if (sizeFIFOqueue > FIFOINmax)
-		std::cerr << "WARNING: FIFO IN overflow" << std::endl;
+		std::cerr << "WARNING in " << __func__ << ": FIFO IN overflow" << std::endl;
 
 	U32* FIFO = new U32[sizeFIFOqueue];				//Create an array for interfacing the FPGA	
 	for (int i = 0; i < sizeFIFOqueue; i++)
@@ -177,24 +177,23 @@ int sendQueueToFPGA(NiFpga_Status* status, NiFpga_Session session, U32QV& Vector
 	return 0;
 }
 
-//PARAMETERS: time step, ramp length, initial voltage, final voltage
-U32Q generateLinearRamp(double dt, double T, double Vi, double Vf)
+U32Q generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal)
 {
 	U32Q queue;
 	const bool debug = 0;
 
-	if (dt < AOdt_us)
+	if (TimeStep < AOdt_us)
 	{
-		std::cerr << "WARNING: time step too small. Time step set to " << AOdt_us << " us" << std::endl;
-		dt = AOdt_us;						//Analog output time increment (in us)
+		std::cerr << "WARNING in " << __func__ << ": time step too small. Time step set to " << AOdt_us << " us" << std::endl;
+		TimeStep = AOdt_us;						//Analog output time increment (in us)
 		return {};
 	}
 
-	const int nPoints = (int)(T / dt);		//Number of points
+	const int nPoints = (int)(RampLength / TimeStep);		//Number of points
 
 	if (nPoints <= 1)
 	{
-		std::cerr << "ERROR: not enought points for the linear ramp" << std::endl;
+		std::cerr << "ERROR in " << __func__ << ": not enought points for the linear ramp" << std::endl;
 		std::cerr << "nPoints: " << nPoints << std::endl;
 		return {};
 	}
@@ -208,11 +207,11 @@ U32Q generateLinearRamp(double dt, double T, double Vi, double Vf)
 
 		for (int ii = 0; ii < nPoints; ii++)
 		{
-			const double V = Vi + (Vf - Vi)*ii / (nPoints - 1);
-			queue.push(generateSingleAnalogOut(dt, V));
+			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
+			queue.push(generateSingleAnalogOut(TimeStep, V));
 
 			if (debug)
-				std::cout << (ii + 1) * dt << "\t" << (ii + 1) * convertUs2tick(dt) << "\t" << V << "\t" << std::endl;
+				std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
 		}
 
 		if (debug)
@@ -258,7 +257,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	triggerLineGate(status, session);
 
 	//Read the data
-	readFIFObuffer(status, session, NelementsReadFIFOa, NelementsReadFIFOb, dataFIFOa, bufArrayb, NelementsBufArrayb, bufArrayIndexb);
+	readFIFO(status, session, NelementsReadFIFOa, NelementsReadFIFOb, dataFIFOa, bufArrayb, NelementsBufArrayb, bufArrayIndexb, NmaxbufArray);
 
 	//Close the FIFO to flush it
 	NiFpga_MergeStatus(status, NiFpga_StopFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
@@ -274,7 +273,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 		delete image;
 	}
 	else
-		std::cerr << "ERROR: more or less elements received from the FIFO than expected " << std::endl;
+		std::cerr << "ERROR in " << __func__ << ": more or less elements received from the FIFO than expected " << std::endl;
 
 
 	delete[] dataFIFOa;
@@ -289,7 +288,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 }
 
 
-void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb)
+void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray)
 {
 	const int ReadFifoWaitingTime = 15;			//Waiting time between each iteration
 	const U32 timeout = 100;					//FIFO timeout
@@ -309,31 +308,32 @@ void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &Nelement
 
 	while (NelementsReadFIFOa < NpixAllFrames || NelementsReadFIFOb < NpixAllFrames)
 	{
-		Sleep(ReadFifoWaitingTime); //waiting till collecting big chuncks of data. Decrease the waiting until max transfer bandwidth
+		Sleep(ReadFifoWaitingTime); //wait till collecting big chuncks of data. Adjust the waiting time until getting max transfer bandwidth
 
 		//FIFO OUT a
-		if (NelementsReadFIFOa < NpixAllFrames) //Skip if all the data have already been downloaded (i.e. NelementsReadFIFOa = NpixAllFrames)
+		if (NelementsReadFIFOa < NpixAllFrames)
 		{
-			//By requesting 0 elements from the FIFO, the function returns the number of elements available in the FIFO. If no data are available yet, then remainingFIFOa = 0 is returned
-			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, 0, timeout, &remainingFIFOa));
+			U32 *dummy = new U32[0];
+			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &remainingFIFOa));
 			//std::cout << "Number of elements remaining in the host FIFO a: " << remainingFIFOa << std::endl;
-
-			//If there are data available in the FIFO, retrieve it
+			
 			if (remainingFIFOa > 0)
 			{
-				NelementsReadFIFOa += remainingFIFOa; //Keep track of how many data points have been read so far
+				NelementsReadFIFOa += remainingFIFOa;
 
-				//Read the elements in the FIFO
 				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, remainingFIFOa, timeout, &remainingFIFOa));
 			}
 		}
 
 		//FIFO OUT b
-		if (NelementsReadFIFOb < NpixAllFrames)
+		if (NelementsReadFIFOb < NpixAllFrames)		//Skip if all the data have already been transferred (i.e. NelementsReadFIFOa = NpixAllFrames)
 		{
-			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], 0, timeout, &remainingFIFOb));
+			//By requesting 0 elements from the FIFO, the function returns the number of elements available in the FIFO. If no data are available yet, then remainingFIFOa = 0 is returned
+			U32 *dummy = new U32[0];
+			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &remainingFIFOb));
 			//std::cout << "Number of elements remaining in the host FIFO b: " << remainingFIFOb << std::endl;
 
+			//If there are data available in the FIFO, retrieve it
 			if (remainingFIFOb > 0)
 			{
 				NelementsReadFIFOb += remainingFIFOb;
@@ -342,7 +342,10 @@ void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &Nelement
 				//Read the elements in the FIFO
 				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], remainingFIFOb, timeout, &remainingFIFOb));
 
-				bufArrayIndexb++;
+				if (bufArrayIndexb < NmaxbufArray)
+					bufArrayIndexb++;
+				else
+					std::cerr << "ERROR in " << __func__ << ": Buffer array overflow" << std::endl;
 			}
 		}
 
@@ -351,7 +354,7 @@ void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &Nelement
 		//Timeout the while loop in case the data transfer fails
 		if (timeoutCounter == 0)
 		{
-			std::cerr << "ERROR: FIFO downloading timeout" << std::endl;
+			std::cerr << "ERROR in " << __func__ << ": FIFO downloading timeout" << std::endl;
 			break;
 		}
 	}
@@ -363,13 +366,6 @@ void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &Nelement
 
 	std::cout << "Buffer-arrays used: " << (U32)bufArrayIndexb << std::endl; //print how many buffer arrays were actually used
 	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << std::endl; //print the total number of elements read
-
-	//U32 Nfree;
-	//Read the number of free spots remaining in the FIFO
-	//NiFpga_MergeStatus(status, NiFpga_ReadU32(session, NiFpga_FPGAvi_IndicatorU32_FIFOOUTfreespots, &Nfree));
-	//std::cout << "Number of free spots in the FIFO a: " << (U32)Nfree << std::endl;
-
-
 }
 
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
@@ -425,10 +421,6 @@ int correctInterleavedImage(unsigned char *interleavedImage)
 	}
 	delete[] auxLine;
 
-	//for debugging
-	//for (U32 ii = 0; ii < NpixAllFrames; ii++)
-	//myfile << auxArray[ii] << std::endl;
-
 	return 0;
 }
 
@@ -477,24 +469,6 @@ getchar();*/
 printf("%i\n", VOUT(10));
 getchar();*/
 
-/*
-// Create a new queue with 'headQ' and 'tailQ' combined
-U32Q NewConcatenatedQ(U32Q& headQ, U32Q& tailQ)
-{
-U32Q newQ;
-while (!headQ.empty())
-{
-newQ.push(headQ.front());
-headQ.pop();
-}
-while (!tailQ.empty())
-{
-newQ.push(tailQ.front());
-tailQ.pop();
-}
-return newQ;
-}
-*/
 
 //endregion "FPGA configuration"
 #pragma endregion
@@ -646,7 +620,7 @@ int vibratome_SendCommand(NiFpga_Status* status, NiFpga_Session session, double 
 		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_forward;
 		break;
 	default:
-		std::cerr << "ERROR: Selected vibratome channel is unavailable" << std::endl;
+		std::cerr << "ERROR in " << __func__ << ": Selected vibratome channel is unavailable" << std::endl;
 		return -1;
 	}
 
@@ -661,7 +635,7 @@ int vibratome_SendCommand(NiFpga_Status* status, NiFpga_Session session, double 
 	else
 	{
 		Sleep(minPushDuration - delay);
-		std::cerr << "WARNING: vibratome push duration too short. Instead, set to the min = ~" << minPushDuration << "ms" << std::endl;
+		std::cerr << "WARNING in " << __func__ << ": vibratome push duration too short. Instead, set to the min = ~" << minPushDuration << "ms" << std::endl;
 	}
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 0));
 

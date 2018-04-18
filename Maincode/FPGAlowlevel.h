@@ -27,7 +27,7 @@ U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ);
 int sendQueueToFPGA(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues);
 U32Q generateLinearRamp(double dt, double T, double Vi, double Vf);
 int readPhotonCount(NiFpga_Status* status, NiFpga_Session session);
-void readFIFObuffer(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb);
+void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray);
 unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);
 int correctInterleavedImage(unsigned char *interleavedImage);
 

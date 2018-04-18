@@ -54,9 +54,9 @@ U32QV Scan2D()
 	const double GalvoAmplitude_um = 200 * um;
 	const double GalvoAmplitude_volt = GalvoAmplitude_um * Galvo_voltPerUm;
 	//const double GalvoAmplitude_volt = 2.5;
-	const double GalvoStep = 8 * us;
+	const double GalvoTimeStep_us = 8 * us;
 
-	U32Q linearRampSegment0 = generateLinearRamp(GalvoStep,25 * ms, -GalvoAmplitude_volt, GalvoAmplitude_volt);	//Ramp up the galvo from -GalvoAmplitude_volt to GalvoAmplitude_volt
+	U32Q linearRampSegment0 = generateLinearRamp(GalvoTimeStep_us,25 * ms, -GalvoAmplitude_volt, GalvoAmplitude_volt);	//Ramp up the galvo from -GalvoAmplitude_volt to GalvoAmplitude_volt
 	
 	//VectorOfQueues[ABUF0] = linearRampSegment0;
 	//VectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, -GalvoAmplitude_volt));								//Set the galvo back to -GalvoAmplitude_volt

@@ -64,6 +64,7 @@ namespace Const
 	extern const int HeightPerFrame_pix;
 	extern const int NpixPerFrame;
 	extern const int NFrames;
+	extern const int NlinesSkip;
 	extern const int NlinesAllFrames;
 	extern const int NpixAllFrames;
 

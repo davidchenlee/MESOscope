@@ -16,7 +16,5 @@ public:
 	U32Q PixelClock::PixelClockEqualDuration();
 	U32Q PixelClock::PixelClockEqualDistance();
 	~PixelClock();
-
-
 };
 

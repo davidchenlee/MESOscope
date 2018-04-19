@@ -14,10 +14,6 @@ static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitf
 
 //Low-level FPGA functions
 void printHex(int input);
-double ConvertSpatialCoord2Time(double x);
-double getDiscreteTime(int pix);
-double calculateDwellTime(int pix);
-double calculatePracticalDwellTime(int pix);
 U32 packU32(U16 t, U16 x);
 U16 convertUs2tick(double x);
 I16 convertVolt2I16(double x);
@@ -35,7 +31,6 @@ int correctInterleavedImage(unsigned char *interleavedImage);
 int writeFrameToTxt(unsigned char *imageArray, std::string fileName);
 
 //FPGA initialization and trigger
-int initializeFPGA(NiFpga_Status* status, NiFpga_Session session);
 int triggerFIFOIN(NiFpga_Status* status, NiFpga_Session session);
 int triggerLineGate(NiFpga_Status* status, NiFpga_Session session);
 int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session);

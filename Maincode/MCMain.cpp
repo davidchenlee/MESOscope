@@ -13,7 +13,7 @@ int main()
 	//To make sure the the filterwheel 1 is set to the correct position
 	//FilterWheel();
 	//std::cout << endl;
-	//Sleep(1000);
+	//Sleep(1000); //wait for the filterwheel to settle
 
 	//must be called before any other FPGA calls
 	NiFpga_Status status = NiFpga_Initialize();
@@ -30,12 +30,10 @@ int main()
 
 		if (NiFpga_IsNotError(status))
 		{
-			initializeFPGA(&status, session);
-
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-			FPGAcombinedSequence(&status, session);
+			combinedSequence(&status, session);
 			//vibratome_SendCommand(&status, session, 3 * s, VibratomeBack);
 			//vibratome_StartStop(&status, session);
 

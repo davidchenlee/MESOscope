@@ -21,7 +21,7 @@ U32 generateSingleAnalogOut(double t, double V);
 U32 generateSingleDigitalOut(double t, bool DO);
 U32 generateSinglePixelClock(double t, bool DO);
 U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ);
-int sendQueueToFPGA(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues);
+int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues);
 U32Q generateLinearRamp(double dt, double T, double Vi, double Vf);
 int readPhotonCount(NiFpga_Status* status, NiFpga_Session session);
 void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray);
@@ -31,8 +31,8 @@ int correctInterleavedImage(unsigned char *interleavedImage);
 int writeFrameToTxt(unsigned char *imageArray, std::string fileName);
 
 //FPGA initialization and trigger
-int triggerFPGAreadsCommandsFromPC(NiFpga_Status* status, NiFpga_Session session);
-int triggerFPGAstartsImaging(NiFpga_Status* status, NiFpga_Session session);
+int triggerFPGAdistributeCommandsAmongChannels(NiFpga_Status* status, NiFpga_Session session);
+int triggerFPGAstartImaging(NiFpga_Status* status, NiFpga_Session session);
 int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session);
 int configureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth);
 

@@ -17,22 +17,22 @@ int combinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	//Initialize the FPGA
 	initializeFPGA(status, session);
 
-	//Send the commands to the FPGA
-	sendQueueToFPGA(status, session, Scan2D());
+	//Send the commands to the FPGA buffer
+	sendCommandsToFPGAbuffer(status, session, Scan2D());
 
-	//Trigger the data acquisition
-	triggerFPGAreadsCommandsFromPC(status, session);		
+	//Send the commands to the FPGA sub-buffers for each channel, but do not execute yet
+	triggerFPGAdistributeCommandsAmongChannels(status, session);		
 
-	//Read the photon count
+	//Execute the commands and read the photon count
 	readPhotonCount(status, session);
 
 
 	//SECOND ROUND
 	if (0)
 	{
-		//sendQueueToFPGA(status, session, TestAODO());
-		triggerFPGAreadsCommandsFromPC(status, session);
-		triggerFPGAstartsImaging(status, session);
+		//sendCommandsToFPGAbuffer(status, session, TestAODO());
+		triggerFPGAdistributeCommandsAmongChannels(status, session);
+		triggerFPGAstartImaging(status, session);
 	}
 
 	return 0;
@@ -121,9 +121,9 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	{
 		vectorOfQueues[chan].push(0);
 	}	
-	sendQueueToFPGA(status, session, vectorOfQueues);
-	triggerFPGAreadsCommandsFromPC(status, session);
-	triggerFPGAstartsImaging(status, session);
+	sendCommandsToFPGAbuffer(status, session, vectorOfQueues);
+	triggerFPGAdistributeCommandsAmongChannels(status, session);
+	triggerFPGAstartImaging(status, session);
 	Sleep(100);
 	
 

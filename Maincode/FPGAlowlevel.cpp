@@ -98,11 +98,11 @@ U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ)
 	return headQ;
 }
 
-//Send off every single queue in VectorOfQueue to the FPGA
+//Send every single queue in VectorOfQueue to the FPGA bufer
 //For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 //Then transfer the elements in the long queue to an array to interface the FPGA
 //Alternatively, the single queues could be transferred directly to the array, but why bothering...
-int sendQueueToFPGA(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues)
+int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues)
 {
 	U32Q allQueues;								//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
@@ -218,7 +218,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 
 	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-	triggerFPGAstartsImaging(status, session);
+	triggerFPGAstartImaging(status, session);
 
 	//Read the data
 	try
@@ -460,8 +460,8 @@ getchar();*/
 
 #pragma region "FPGA trigger"
 
-//Main trigger. Trigger FIFO-in, which subsequently triggers AO and DO
-int triggerFPGAreadsCommandsFromPC(NiFpga_Status* status, NiFpga_Session session)
+//Send the commands to the FPGA sub-buffers for each channel, but do not execute yet
+int triggerFPGAdistributeCommandsAmongChannels(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
@@ -470,8 +470,8 @@ int triggerFPGAreadsCommandsFromPC(NiFpga_Status* status, NiFpga_Session session
 	return 0;
 }
 
-//Trigger the 'Line gate' to start acquiring data
-int triggerFPGAstartsImaging(NiFpga_Status* status, NiFpga_Session session)
+//Execute the commands to acquire an image
+int triggerFPGAstartImaging(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));
@@ -480,7 +480,7 @@ int triggerFPGAstartsImaging(NiFpga_Status* status, NiFpga_Session session)
 	return 0;
 }
 
-//Trigger the 'Line gate' to start acquiring data
+//Trigger the FIFO flushing
 int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));

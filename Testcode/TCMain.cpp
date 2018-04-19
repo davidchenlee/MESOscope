@@ -25,9 +25,9 @@ int main()
 			//run the FPGA application if the FPGA was opened in 'no-run' mode
 			//NiFpga_MergeStatus(&status, NiFpga_Run(session, 0));
 
-			sendQueueToFPGA(&status, session, TestAODO());
-			triggerFPGAreadsCommandsFromPC(&status, session);			//trigger the control sequence
-			triggerFPGAstartsImaging(&status, session);
+			sendCommandsToFPGAbuffer(&status, session, TestAODO());
+			triggerFPGAdistributeCommandsAmongChannels(&status, session);			//trigger the control sequence
+			triggerFPGAstartImaging(&status, session);
 
 			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.

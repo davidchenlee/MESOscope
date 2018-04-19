@@ -39,12 +39,12 @@ namespace Const
 	//400x35x90, skipped 8
 	//400x35x70, skipped 6
 
-	extern const PhotonCounterInputSelector PhotonCounterInput = PMText;
-	extern const LineClockInputSelector LineClockInput = ResScan;
+	extern const PhotonCounterInputSelector PhotonCounterInput = PMText;		//PMText or PMTsim
+	extern const LineClockInputSelector LineClockInput = FuncGen;				//ResScan, FuncGen, or FPGAclock
 
 	//Scanning calibration factors
-	//extern const double RS_voltPerUm = 1.0*V/(157*um);							//volts per um. Calibration factor for the resonant scanner. Last calib 11/April/2018
-	extern const double RS_voltPerUm = 1.3*V / ((405-237) * um);							//volts per um. Calibration factor for the resonant scanner. Last calib 11/April/2018
+	//extern const double RS_voltPerUm = 1.0*V/(157*um);						//volts per um. Calibration factor for the resonant scanner (equal duration pixels). 11/April/2018
+	extern const double RS_voltPerUm = 1.3*V / ((405-237) * um);				//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 19/April/2018
 	extern const double Galvo_voltPerUm = 2.5*V/(210*um);						//volts per um. Calibration factor for the galvo. Last calib 11/April/2018
 	extern const double PC1_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 1
 	extern const double PC2_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 2
@@ -58,9 +58,10 @@ namespace Const
 											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns	
 
 	//Pixel-clock paramenters
-	extern double *PixelClockEqualDistanceLUT = new double[WidthPerFrame_pix];	//LUT for a pixel clock
+	extern std::vector<double> PixelClockEqualDistanceLUT(WidthPerFrame_pix);	//LUT for a pixel clock
 	extern const double HalfPeriodLineClock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
 	extern const double RSamplitudePkPK_um = 250 * um;							//The pk-pk amplitude is twice this
+
 };
 
 //Currently, each frames is 400x400 pixels = 160000 pixels

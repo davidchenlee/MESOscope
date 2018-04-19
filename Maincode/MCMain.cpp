@@ -57,7 +57,8 @@ int main()
 		
 	}
 	
-	//getchar();
+	std::cout << "\nPress any key to continue..." << std::endl;
+	getchar();
 
 	return 0;
 }

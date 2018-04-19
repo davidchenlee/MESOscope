@@ -561,6 +561,7 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 		std::cout << pix << "\t" <<  PixelClockEqualDistanceLUT[pix] << std::endl;
 	}
 	*/
+	//PixelClock aa;
 
 
 	std::cout << "FPGA initialize-variables status: " << *status << std::endl;

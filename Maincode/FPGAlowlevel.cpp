@@ -218,7 +218,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 
 	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-	triggerLineGate(status, session);
+	triggerFPGAstartsImaging(status, session);
 
 	//Read the data
 	try
@@ -461,7 +461,7 @@ getchar();*/
 #pragma region "FPGA trigger"
 
 //Main trigger. Trigger FIFO-in, which subsequently triggers AO and DO
-int triggerFIFOIN(NiFpga_Status* status, NiFpga_Session session)
+int triggerFPGAreadsCommandsFromPC(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
@@ -471,7 +471,7 @@ int triggerFIFOIN(NiFpga_Status* status, NiFpga_Session session)
 }
 
 //Trigger the 'Line gate' to start acquiring data
-int triggerLineGate(NiFpga_Status* status, NiFpga_Session session)
+int triggerFPGAstartsImaging(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));

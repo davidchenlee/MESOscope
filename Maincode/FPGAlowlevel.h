@@ -31,8 +31,8 @@ int correctInterleavedImage(unsigned char *interleavedImage);
 int writeFrameToTxt(unsigned char *imageArray, std::string fileName);
 
 //FPGA initialization and trigger
-int triggerFIFOIN(NiFpga_Status* status, NiFpga_Session session);
-int triggerLineGate(NiFpga_Status* status, NiFpga_Session session);
+int triggerFPGAreadsCommandsFromPC(NiFpga_Status* status, NiFpga_Session session);
+int triggerFPGAstartsImaging(NiFpga_Status* status, NiFpga_Session session);
 int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session);
 int configureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth);
 

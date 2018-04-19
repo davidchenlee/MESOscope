@@ -5,7 +5,9 @@
 class PixelClock
 {
 private:
-	std::vector<double> PixelClockEqualDistanceLUT;
+	U32Q Queue;
+	const int latency_tick = 2;		//latency of detecting the line clock. Calibrate the latency with the oscilloscope
+
 	double PixelClock::ConvertSpatialCoord2Time(double x);
 	double PixelClock::getDiscreteTime(int pix);
 	double PixelClock::calculateDwellTime(int pix);

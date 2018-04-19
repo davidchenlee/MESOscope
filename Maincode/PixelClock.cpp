@@ -1,7 +1,30 @@
 #include "PixelClock.h"
 
-PixelClock::PixelClock(): PixelClockEqualDistanceLUT(WidthPerFrame_pix,0)
+PixelClock::PixelClock()
 {
+}
+
+//Pixel clock sequence. Every pixel has the same duration in time.
+//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+//Pixel clock evently spaced in time
+U32Q PixelClock::PixelClockEqualDuration()
+{
+	const double InitialWaitingTime_us = 6.25*us;						//Initial waiting time to center the pixel clock in a line scan
+																		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
+	Queue.push(packU32(convertUs2tick(InitialWaitingTime_us) - latency_tick, 0x0000));
+
+	const double PixelTimeStep = 0.125 * us;
+	for (int pix = 0; pix < WidthPerFrame_pix + 1; pix++)
+		Queue.push(generateSinglePixelClock(PixelTimeStep, 1));			//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
+																		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
+	return Queue;														//Return a queue (and not a vector of queues)
+}
+
+//Pixel clock sequence. Every pixel is equally spaced.
+//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+U32Q PixelClock::PixelClockEqualDistance()
+{
+	std::vector<double> PixelClockEqualDistanceLUT(WidthPerFrame_pix);
 
 	if (WidthPerFrame_pix % 2 == 0)	//is even
 	{
@@ -12,43 +35,16 @@ PixelClock::PixelClock(): PixelClockEqualDistanceLUT(WidthPerFrame_pix,0)
 	{
 		std::cerr << "ERROR in " << __func__ << ": Odd number of pixels in the image width currently not supported by the pixel clock. Pixel clock set to 0" << std::endl;
 	}
-}
-
-//Pixel clock sequence. Every pixel has the same duration in time.
-//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-//Pixel clock evently spaced in time
-U32Q PixelClock::PixelClockEqualDuration()
-{
-	U32Q Q;																//Create a queue
-
-	const double InitialWaitingTime_us = 6.25*us;						//Initial waiting time to center the pixel clock in a line scan
-																		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-	int latency_tick = 2;												//latency of detecting the line clock. Calibrate the latency with the oscilloscope
-	Q.push(packU32(convertUs2tick(InitialWaitingTime_us) - latency_tick, 0x0000));
-
-	const double PixelTimeStep = 0.125 * us;
-	for (int pix = 0; pix < WidthPerFrame_pix + 1; pix++)
-		Q.push(generateSinglePixelClock(PixelTimeStep, 1));				//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
-																		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	return Q;															//Return a queue (and not a vector of queues)
-}
-
-//Pixel clock sequence. Every pixel is equally spaced.
-//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-U32Q PixelClock::PixelClockEqualDistance()
-{
-	U32Q Q;																		//Create a queue
 
 	const U16 InitialWaitingTime_tick = 2043;									//Initial waiting time. Look at the oscilloscope and adjust this parameter to center the pixel clock in a line scan
-	int latency_tick = 2;														//Latency of detecting the line clock. Calibrate the latency with the oscilloscope
-	Q.push(packU32(InitialWaitingTime_tick - latency_tick, 0x0000));
+	Queue.push(packU32(InitialWaitingTime_tick - latency_tick, 0x0000));
 
 	for (int pix = 0; pix < WidthPerFrame_pix; pix++)
-		Q.push(generateSinglePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
+		Queue.push(generateSinglePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
 
-	Q.push(generateSinglePixelClock(dt_us_MIN, 1));								//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
+	Queue.push(generateSinglePixelClock(dt_us_MIN, 1));								//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 
-	return Q;
+	return Queue;
 }
 
 PixelClock::~PixelClock()

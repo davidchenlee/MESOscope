@@ -79,7 +79,7 @@ namespace Const
 	extern const int Npulses;
 	extern const U8 pulseArray[];
 
-	extern double *PixelClockEqualDistanceLUT;
+	extern std::vector<double> PixelClockEqualDistanceLUT;
 	extern const double HalfPeriodLineClock_us;
 	extern const double RSamplitudePkPK_um;
 };

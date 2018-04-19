@@ -1,10 +1,9 @@
 #include "FPGAsequences.h"
 
-#pragma region "FPGA combined sequences"
+#pragma region "Combined sequences"
 
-int FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
+int combinedSequence(NiFpga_Status* status, NiFpga_Session session)
 {
-
 	/*
 	const double RSamplitude_um = 200 * um;
 	const double RSamplitude_volt = RSamplitude_um * RS_voltPerUm;
@@ -15,6 +14,8 @@ int FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	resonantScanner_StartStop(status, session, 0);
 	*/
 
+	//Initialize the FPGA
+	initializeFPGA(status, session);
 
 	//Send the commands to the FPGA
 	sendQueueToFPGA(status, session, Scan2D());
@@ -39,96 +40,91 @@ int FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 //endregion "FPGA combined sequences"
 #pragma endregion
 
-#pragma region "FPGA individual sequences"
+#pragma region "Individual sequences"
 
-//Acquire a 2D image by linearly scan the galvo while the RS is on
+//Scan a frame (image plane) by linearly scan the galvo while the RS is on
 U32QV Scan2D()
 {
-	U32QV VectorOfQueues(Nchan);																			//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	U32QV vectorOfQueues(Nchan);			//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
+	PixelClock pixelClock;					////Generate the pixel clock
 
-	//Pixel clock
-	//VectorOfQueues[PCLOCK] = PixelClockEqualDuration();
-	VectorOfQueues[PCLOCK] = PixelClockEqualDistance();
+	
+	//vectorOfQueues[PCLOCK] = pixelClock.PixelClock::PixelClockEqualDuration();
+	vectorOfQueues[PCLOCK] = pixelClock.PixelClock::PixelClockEqualDistance();
 
 	//Linear ramp for the galvo
-	const double GalvoAmplitude_um = 200 * um;
-	const double GalvoAmplitude_volt = GalvoAmplitude_um * Galvo_voltPerUm;
-	//const double GalvoAmplitude_volt = 2.5;
-	const double GalvoTimeStep_us = 8 * us;
+	const double galvoAmplitude_um = 200 * um;
+	const double galvoAmplitude_volt = galvoAmplitude_um * Galvo_voltPerUm;
+	//const double galvoAmplitude_volt = 2.5;
+	const double galvoTimeStep_us = 8 * us;
 
-	U32Q linearRampSegment0 = generateLinearRamp(GalvoTimeStep_us,25 * ms, GalvoAmplitude_volt, -GalvoAmplitude_volt);	//Ramp up the galvo from -GalvoAmplitude_volt to GalvoAmplitude_volt
+	U32Q linearRampSegment0 = generateLinearRamp(galvoTimeStep_us,25 * ms, galvoAmplitude_volt, -galvoAmplitude_volt);	//Ramp up the galvo from -galvoAmplitude_volt to galvoAmplitude_volt
 	
-	VectorOfQueues[ABUF0] = linearRampSegment0;
-	VectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, GalvoAmplitude_volt));								//Set the galvo back to -GalvoAmplitude_volt
+	vectorOfQueues[ABUF0] = linearRampSegment0;
+	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, galvoAmplitude_volt));								//Set the galvo back to -galvoAmplitude_volt
 	
 	/*//debugger
-	VectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
-	VectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 5));
-	VectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
-	VectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 5));
-	VectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
+	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
+	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 5));
+	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
+	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 5));
+	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
 	*/
 	
-	
-
 	//DO0
-	VectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 1));
-	VectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
-	VectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
-	VectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
+	vectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 1));
+	vectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
+	vectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
+	vectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
 
-	return VectorOfQueues;
+	return vectorOfQueues;
 }
 
-//Pixel clock sequence. Every pixel has the same duration in time.
-//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-//Pixel clock evently spaced in time
-U32Q PixelClockEqualDuration()
+
+int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
-	U32Q Q;																//Create a queue
-	
-	const double InitialWaitingTime_us = 6.25*us;							//Initial waiting time to center the pixel clock in a line scan
-																		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-	int latency_tick = 2;													//latency of detecting the line clock. Calibrate the latency with the oscilloscope
-	Q.push(packU32(convertUs2tick(InitialWaitingTime_us) - latency_tick, 0x0000));
-																			
-	const double PixelTimeStep = 0.125 * us;
-	for (int pix = 0; pix < WidthPerFrame_pix + 1; pix++)
-		Q.push(generateSinglePixelClock(PixelTimeStep, 1));				//Generate the pixel clock. Every time 1 is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
-																		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	return Q;															//Return a queue (and not a vector of queues)
+	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
+	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_PhotonCounterInputSelector, PhotonCounterInput));			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_LineClockInputSelector, LineClockInput));					//Select the Line clock: resonant scanner or function generator
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));										//control-sequence trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));									//data-acquisition trigger
+
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout_tick));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)Nchan));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, (U16)SyncDOtoAO_tick));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, (U16)SyncAODOtoLineGate_tick));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(NlinesAllFrames + NFrames * NlinesSkip)));			//Total number of lines in all the frames, including the skipped lines
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)HeightPerFrame_pix));								//Number of lines in a frame, without including the skipped lines
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(HeightPerFrame_pix + NlinesSkip)));		//Number of lines in a frame including the skipped lines
+
+																																						//Shutters
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
+
+	//Vibratome control
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_back, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_forward, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
+
+	//Resonant scanner
+	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));											//Output voltage
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));											//Turn on/off
+
+																																			//Debugging
+	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));										//FIFO OUT
+
+	//Initialize all the channels with zero. No need if NiFpga_Finalize() is at the end of the main code
+	/*
+	U32QV vectorOfQueues(Nchan);
+	for (U32 ii = 0; ii < Nchan; ii++)
+	vectorOfQueues[ii].push(0);
+	sendQueueToFPGA(status, session, vectorOfQueues);
+	triggerFIFOIN(status, session);
+	*/
+
+	std::cout << "FPGA initialize-variables status: " << *status << std::endl;
+
+	return 0;
 }
-
-//Pixel clock sequence. Every pixel is equally spaced.
-//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-U32Q PixelClockEqualDistance()
-{
-	U32Q Q;																		//Create a queue
-
-	const U16 InitialWaitingTime_tick = 2043;									//Initial waiting time. Look at the oscilloscope and adjust this parameter to center the pixel clock in a line scan
-	int latency_tick = 2;														//Latency of detecting the line clock. Calibrate the latency with the oscilloscope
-	Q.push(packU32(InitialWaitingTime_tick - latency_tick, 0x0000));
-
-	for (int pix = 0; pix < WidthPerFrame_pix; pix++)						
-		Q.push(generateSinglePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time 1 is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
-	
-	Q.push(generateSinglePixelClock(dt_us_MIN, 1));								//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-
-	return Q;
-}
-
-//endregion "FPGA individual sequences"
-#pragma endregion
-
-
-/* Test the Seq class
-void SeqClassTest()
-{
-Seq ss;
-ss.shutter(1 * us, 1);
-std::cout << "size of the vector" << ss.size() << std::endl;
-std::cout << "" << (ss.vector())[0].size() << std::endl;
-Sleep(1000);
-}
-*/
-

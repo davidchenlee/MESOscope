@@ -6,42 +6,6 @@ void printHex(int input)
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
 
-#pragma region "Pixel clock auxiliary functions"
-
-//Convert the spatial coordinate of the resonant scanner to time. x in [-RSamplitudePkPK_um/2, RSamplitudePkPK_um/2]
-double ConvertSpatialCoord2Time(double x)
-{
-	const double arg = 2 * x / RSamplitudePkPK_um;
-	if (arg <= 1)
-		return HalfPeriodLineClock_us * asin(arg) / PI; //Return value in [-HalfPeriodLineClock_us/PI, HalfPeriodLineClock_us/PI]
-	else
-	{
-		std::cerr << "ERROR in " << __func__ << ": argument of asin greater than 1" << std::endl;
-		return HalfPeriodLineClock_us / PI;
-	}
-}
-
-//Discretize the spatial coordinate, then convert it to time
-double getDiscreteTime(int pix)
-{
-	const double dx = 0.5 * um;
-	return ConvertSpatialCoord2Time(dx * pix);
-}
-
-//Calculate the dwell time for the pixel
-double calculateDwellTime(int pix)
-{
-	return getDiscreteTime(pix + 1) - getDiscreteTime(pix);
-}
-
-//Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
-double calculatePracticalDwellTime(int pix)
-{
-	return round(calculateDwellTime(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
-}
-
-#pragma endregion
-
 #pragma region "FPGA low-level functions"
 
 //Pack t in MSB and x in LSB. Time t and analog output x are encoded in 16 bits each.
@@ -311,7 +275,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 
 void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray)
 {
-	const int ReadFifoWaitingTime = 15;			//Waiting time between each iteration
+	const int readFifoWaitingTime = 15;			//Waiting time between each iteration
 	const U32 timeout = 100;					//FIFO timeout
 	U32 NremainingFIFOa, NremainingFIFOb;			//Elements remaining in the FIFO
 	int timeoutCounter = 100;					//Timeout the while-loop if the data-transfer from the FIFO fails	
@@ -329,7 +293,7 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 	U32 *dummy = new U32[0];
 	while (NelementsReadFIFOa < NpixAllFrames || NelementsReadFIFOb < NpixAllFrames)
 	{
-		Sleep(ReadFifoWaitingTime); //wait till collecting big chuncks of data. Adjust the waiting time until getting max transfer bandwidth
+		Sleep(readFifoWaitingTime); //wait till collecting big chuncks of data. Adjust the waiting time until getting max transfer bandwidth
 
 		//FIFO OUT a
 		if (NelementsReadFIFOa < NpixAllFrames)
@@ -494,80 +458,7 @@ getchar();*/
 //endregion "FPGA configuration"
 #pragma endregion
 
-#pragma region "FPGA initialization and trigger"
-
-int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
-{
-	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_PhotonCounterInputSelector, PhotonCounterInput));			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_LineClockInputSelector, LineClockInput));					//Select the Line clock: resonant scanner or function generator
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));										//control-sequence trigger
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));									//data-acquisition trigger
-
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout_tick));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)Nchan));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, (U16)SyncDOtoAO_tick));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, (U16)SyncAODOtoLineGate_tick));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(NlinesAllFrames+ NFrames*NlinesSkip)));	//Total number of lines in all the frames, including the skipped lines
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)HeightPerFrame_pix));					//Number of lines in a frame, without including the skipped lines
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(HeightPerFrame_pix+NlinesSkip)));		//Number of lines in a frame including the skipped lines
-
-	//Shutters
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
-	
-	//Vibratome control
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_back, 0));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_forward, 0));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
-
-	//Resonant scanner
-	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));											//Output voltage
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));											//Turn on/off
-
-	//Debugging
-	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));										//FIFO OUT
-
-	//Initialize all the channels with zero. No need if NiFpga_Finalize() is at the end of the main code
-	/*
-	U32QV VectorOfQueues(Nchan);
-	for (U32 ii = 0; ii < Nchan; ii++)
-	VectorOfQueues[ii].push(0);
-	sendQueueToFPGA(status, session, VectorOfQueues);
-	triggerFIFOIN(status, session);
-	*/
-
-	//Initialize the pixel clock
-
-	if (WidthPerFrame_pix % 2 == 0)	//is even
-	{
-		for (int pix = -WidthPerFrame_pix/2; pix < WidthPerFrame_pix/2; pix++)	//pix in [-WidthPerFrame_pix/2,WidthPerFrame_pix/2]
-			PixelClockEqualDistanceLUT[pix + WidthPerFrame_pix/2] = calculatePracticalDwellTime(pix);
-	}
-	else
-	{
-		for (int pix = 0; pix < WidthPerFrame_pix; pix++)
-		{
-			PixelClockEqualDistanceLUT[pix] = 0;
-		}
-		std::cerr << "ERROR in " << __func__ << ": Odd number of pixels in the image width currently not supported by the pixel clock. Pixel clock set to 0" << std::endl;
-	}
-
-	/*
-	for (int pix = 0; pix < WidthPerFrame_pix; pix++)
-	{
-		std::cout << pix << "\t" <<  PixelClockEqualDistanceLUT[pix] << std::endl;
-	}
-	*/
-	//PixelClock aa;
-
-
-	std::cout << "FPGA initialize-variables status: " << *status << std::endl;
-
-	return 0;
-}
+#pragma region "FPGA trigger"
 
 //Main trigger. Trigger FIFO-in, which subsequently triggers AO and DO
 int triggerFIFOIN(NiFpga_Status* status, NiFpga_Session session)

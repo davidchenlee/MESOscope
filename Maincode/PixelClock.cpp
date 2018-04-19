@@ -28,7 +28,7 @@ U32Q PixelClock::PixelClockEqualDuration()
 
 	const double PixelTimeStep = 0.125 * us;
 	for (int pix = 0; pix < WidthPerFrame_pix + 1; pix++)
-		Q.push(generateSinglePixelClock(PixelTimeStep, 1));				//Generate the pixel clock. Every time 1 is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
+		Q.push(generateSinglePixelClock(PixelTimeStep, 1));				//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
 																		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 	return Q;															//Return a queue (and not a vector of queues)
 }
@@ -44,7 +44,7 @@ U32Q PixelClock::PixelClockEqualDistance()
 	Q.push(packU32(InitialWaitingTime_tick - latency_tick, 0x0000));
 
 	for (int pix = 0; pix < WidthPerFrame_pix; pix++)
-		Q.push(generateSinglePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time 1 is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
+		Q.push(generateSinglePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
 
 	Q.push(generateSinglePixelClock(dt_us_MIN, 1));								//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 

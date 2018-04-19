@@ -2,12 +2,11 @@
 #include "FPGAlowlevel.h"
 
 //Combined sequences
-int FPGAcombinedSequence(NiFpga_Status* status, NiFpga_Session session);
+int combinedSequence(NiFpga_Status* status, NiFpga_Session session);
 
 //Individual sequences
 U32QV Scan2D();
-U32Q PixelClockEqualDuration();
-U32Q PixelClockEqualDistance();
+int initializeFPGA(NiFpga_Status* status, NiFpga_Session session);
 
 
 

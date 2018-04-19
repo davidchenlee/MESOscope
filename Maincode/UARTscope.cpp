@@ -1,4 +1,6 @@
 //example from https://msdn.microsoft.com/en-us/library/windows/desktop/aa363201(v=vs.85).aspx
+//May do: use this cross-platform serial class http://wjwwood.io/serial/doc/1.1.0/classserial_1_1_serial.html
+
 #include "UARTscope.h"
 
 void PrintCommState(DCB dcb)

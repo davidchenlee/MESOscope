@@ -4,6 +4,7 @@
 //#include "PIstages.h"
 #include "UARTscope.h"
 #include "Tiffscope.h"
+#include <windows.devices.serialcommunication.h>
 
 
 int main()
@@ -12,6 +13,7 @@ int main()
 	//To make sure the the filterwheel 1 is set to the correct position
 	//FilterWheel();
 	//std::cout << endl;
+	//Sleep(1000);
 
 	//must be called before any other FPGA calls
 	NiFpga_Status status = NiFpga_Initialize();
@@ -55,7 +57,7 @@ int main()
 		
 	}
 	
-	getchar();
+	//getchar();
 
 	return 0;
 }

@@ -10,7 +10,7 @@ PhotonCounts =  inputImage(:,:,1)/scale;
 
 %Plot a heat map
 if HEATMAP
-    hm = HeatMap(PhotonCounts, 'Colormap','redbluecmap');
+    hm = HeatMap(flip(PhotonCounts,1), 'Colormap','redbluecmap'); % Flip the image for consistency with ImageJ
     close all hidden
     ax = hm.plot; % 'ax' will be a handle to a standard MATLAB axes.
     colorbar('Peer', ax); % Turn the colorbar on

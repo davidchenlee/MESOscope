@@ -361,7 +361,7 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 				//Read the elements in the FIFO
 				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], NremainingFIFOb, timeout, &NremainingFIFOb));
 
-				//if (bufArrayIndexb >= NmaxbufArray)
+				if (bufArrayIndexb >= NmaxbufArray)
 				{
 					throw std::range_error(std::string{} + "ERROR in " + __func__ + ": Buffer array overflow\n");
 				}

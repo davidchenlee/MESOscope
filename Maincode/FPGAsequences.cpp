@@ -21,7 +21,7 @@ int combinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	sendQueueToFPGA(status, session, Scan2D());
 
 	//Trigger the data acquisition
-	triggerFIFOIN(status, session);		
+	triggerFPGAreadsCommandsFromPC(status, session);		
 
 	//Read the photon count
 	readPhotonCount(status, session);
@@ -31,8 +31,8 @@ int combinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	if (0)
 	{
 		//sendQueueToFPGA(status, session, TestAODO());
-		triggerFIFOIN(status, session);
-		triggerLineGate(status, session);
+		triggerFPGAreadsCommandsFromPC(status, session);
+		triggerFPGAstartsImaging(status, session);
 	}
 
 	return 0;
@@ -46,9 +46,8 @@ int combinedSequence(NiFpga_Status* status, NiFpga_Session session)
 U32QV Scan2D()
 {
 	U32QV vectorOfQueues(Nchan);			//Create and initialize a vector of queues. Each queue correspond to a channel on the FPGA
-	PixelClock pixelClock;					////Generate the pixel clock
+	PixelClock pixelClock;					//Create an empty pixel clock
 
-	
 	//vectorOfQueues[PCLOCK] = pixelClock.PixelClock::PixelClockEqualDuration();
 	vectorOfQueues[PCLOCK] = pixelClock.PixelClock::PixelClockEqualDistance();
 
@@ -116,13 +115,17 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));										//FIFO OUT
 
 	//Initialize all the channels with zero. No need if NiFpga_Finalize() is at the end of the main code
-	/*
+	
 	U32QV vectorOfQueues(Nchan);
-	for (U32 ii = 0; ii < Nchan; ii++)
-	vectorOfQueues[ii].push(0);
+	for (int chan = 0; chan < Nchan; chan++)
+	{
+		vectorOfQueues[chan].push(0);
+	}	
 	sendQueueToFPGA(status, session, vectorOfQueues);
-	triggerFIFOIN(status, session);
-	*/
+	triggerFPGAreadsCommandsFromPC(status, session);
+	triggerFPGAstartsImaging(status, session);
+	Sleep(100);
+	
 
 	std::cout << "FPGA initialize-variables status: " << *status << std::endl;
 

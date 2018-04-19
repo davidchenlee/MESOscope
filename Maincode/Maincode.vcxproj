@@ -156,6 +156,7 @@
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c" />
     <ClCompile Include="Const.cpp" />
     <ClCompile Include="FPGAlowlevel.cpp" />
+    <ClCompile Include="PixelClock.cpp" />
     <ClCompile Include="Tiffscope.cpp" />
     <ClCompile Include="UARTscope.cpp" />
     <ClCompile Include="FPGAsequences.cpp" />
@@ -164,6 +165,7 @@
   <ItemGroup>
     <ClInclude Include="Const.h" />
     <ClInclude Include="FPGAlowlevel.h" />
+    <ClInclude Include="PixelClock.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Tiffscope.h" />
     <ClInclude Include="UARTscope.h" />

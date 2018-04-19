@@ -33,7 +33,7 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, HeightPerFrame_pix);					//Set the height of the image
 		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, samplePerPixel);					//Set number of channels per pixel
 		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);									//Set the size of the channels
-		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);					//Set the origin of the image.
+		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);					//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
 		TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);				//Single Image plane
 		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);				//Single channel with min as black
 		//TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
@@ -42,7 +42,7 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 		tsize_t bytesPerLine = samplePerPixel * WidthPerFrame_pix;			//Length in memory of one row of pixel in the image.
 		unsigned char *buffer = NULL;										//Buffer used to store the row of pixel information for writing to file
 
-		//Allocating memory to store the pixels of current row
+		//Allocating memory to store pixels of current row
 		if (TIFFScanlineSize(tiffHandle))
 			buffer = (unsigned char *)_TIFFmalloc(bytesPerLine);
 		else

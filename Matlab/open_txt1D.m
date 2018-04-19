@@ -1,6 +1,6 @@
 %clear all
-CORRECT_INTERLEAVED_IMAGE = 0;
-PLOT_VECTOR = 1;
+CORRECT_INTERLEAVED_IMAGE = 0; % Not needed anymore because I do it before saving the txt file
+PLOT_VECTOR = 0;
 HEATMAP = ~PLOT_VECTOR;
 COUNT_FREQ = ~PLOT_VECTOR;
 
@@ -32,7 +32,7 @@ if HEATMAP
     end
     
     
-    hm = HeatMap(array2D, 'Colormap','redbluecmap');
+    hm = HeatMap(array2D', 'Colormap','redbluecmap'); % Transposed matrix for consistency with ImageJ
     
     close all hidden
     ax = hm.plot; % 'ax' will be a handle to a standard MATLAB axes.

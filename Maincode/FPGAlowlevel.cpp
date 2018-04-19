@@ -273,10 +273,23 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 		else
 			std::cerr << "ERROR in " << __func__ << ": more or less elements received from the FIFO than expected " << std::endl;
 	}
-	catch (int i)
-	{
-		std::cerr << "Exception Caught in " << __func__ << std::endl;
+	catch (const std::overflow_error& e) {
+		// this executes if f() throws std::overflow_error (same type rule)
+		std::cerr << e.what();
 	}
+	catch (const std::runtime_error& e) {
+		// this executes if f() throws std::underflow_error (base class rule)
+		std::cerr << e.what();
+	}
+	catch (const std::exception& e) {
+		// this executes if f() throws std::logic_error (base class rule)
+		std::cerr << e.what();
+	}
+	catch (...)
+	{
+		std::cerr << "Unknown exception Caught in " << __func__ << std::endl;
+	}
+
 
 
 
@@ -350,8 +363,7 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 
 				//if (bufArrayIndexb >= NmaxbufArray)
 				{
-					std::cerr << "ERROR in " << __func__ << ": Buffer array overflow" << std::endl;
-					throw 10;
+					throw std::range_error(std::string{} + "ERROR in " + __func__ + ": Buffer array overflow\n");
 				}
 
 				bufArrayIndexb++;

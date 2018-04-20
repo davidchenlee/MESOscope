@@ -231,22 +231,17 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName)
 	return 0;
 }
 
-//endregion "Photon counter"
-#pragma endregion
+#pragma endregion "Photon counter"
 
 
 #pragma region "Vibratome"
 
-Vibratome::Vibratome()
-{}
+Vibratome::Vibratome() {}
 
-Vibratome::~Vibratome()
-{
-
-}
+Vibratome::~Vibratome() {}
 
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
-int Vibratome::startStop(NiFpga_Status* status, NiFpga_Session session)
+int Vibratome::setState(NiFpga_Status* status, NiFpga_Session session)
 {
 	const int WaitingTime = 20; //in ms. It has to be ~ 12 ms or longer to 
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1));
@@ -293,66 +288,112 @@ int Vibratome::sendCommand(NiFpga_Status* status, NiFpga_Session session, double
 	return 0;
 }
 
-//endregion "Vibratome"
-#pragma endregion
+#pragma endregion "Vibratome"
 
 #pragma region "Resonant scanner"
 
-//Start or stop the resonant scanner
-NiFpga_Status resonantScanner_StartStop(NiFpga_Status* status, NiFpga_Session session, bool state)
+ResonantScanner::ResonantScanner(NiFpga_Status* status, NiFpga_Session session)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)state));
+	this->status = status;
+	this->session = session;
+	calibFactor = RS_voltPerUm;
+};
+ResonantScanner::~ResonantScanner() {};
 
-	return *status;
+//Start or stop the resonant scanner
+int ResonantScanner::setState(bool requestedState)
+{
+	state = state;
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)requestedState));
+
+	return 0;
 }
 
 //Set the output voltage of the resonant scanner
-int resonantScanner_SetOutputVoltager(NiFpga_Status* status, NiFpga_Session session, double Vout)
+int ResonantScanner::setOutputVoltage(double Vout)
 {
+	amplitude = Vout;
 	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout)));
 
 	return 0;
 }
 
-double resonantScanner_Amp2Volt(double Amplitude)
+int ResonantScanner::turnOn()
+{
+	const double RSamplitude_um = 200 * um;
+	const double RSamplitude_volt = RSamplitude_um * RS_voltPerUm;
+
+	this->setState(0);	//make sure that disable is on
+	Sleep(10);
+	this->setOutputVoltage(RSamplitude_volt);
+	Sleep(10);
+	this->setState(1);
+
+	return 0;
+}
+
+int ResonantScanner::turnOff()
+{
+	this->setState(0);
+	Sleep(10);
+	this->setOutputVoltage(0);
+
+	return 0;
+}
+
+
+double ResonantScanner::convertUm2Volt(double Amplitude)
 {
 	return Amplitude * RS_voltPerUm;
 }
 
-
-//endregion "Resonant scanner"
-#pragma endregion
+#pragma endregion "Resonant scanner"
 
 #pragma region "Shutters"
 
-int shutter1_OpenClose(NiFpga_Status* status, NiFpga_Session session, bool state)
+Shutter::Shutter(NiFpga_Status* status, NiFpga_Session session, uint32_t ID)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, (NiFpga_Bool)state));
+	this->status = status;
+	this->session = session;
+	IDshutter = ID;
+}
+
+Shutter::~Shutter() {}
+
+int Shutter::setState(bool requestedState)
+{
+	state = requestedState;
+	NiFpga_MergeStatus(this->status, NiFpga_WriteBool(this->session, IDshutter, (NiFpga_Bool)requestedState));
 
 	return 0;
 }
 
-int shutter2_OpenClose(NiFpga_Status* status, NiFpga_Session session, bool state)
+int Shutter::pulseHigh()
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter2, (NiFpga_Bool)state));
-
+	if(state)	//make sure that the output is set LOW
+		NiFpga_MergeStatus(this->status, NiFpga_WriteBool(this->session, IDshutter, 0));
+	else
+	{
+		NiFpga_MergeStatus(this->status, NiFpga_WriteBool(this->session, IDshutter, 1));
+		Sleep(10);
+		NiFpga_MergeStatus(this->status, NiFpga_WriteBool(this->session, IDshutter, 0));
+	}
 	return 0;
 }
 
-//endregion "Shutters"
-#pragma endregion
+#pragma endregion "Shutters"
 
 #pragma region "Pockels cells"
 //Pockels cells
 //NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
 
-//endregion "Pockels cells"
-#pragma endregion
+#pragma endregion "Pockels cells"
+
+#pragma region "Pixel clock"
 
 PixelClock::PixelClock()
 {
 }
-
 
 PixelClock::~PixelClock()
 {
@@ -401,7 +442,7 @@ U32Q PixelClock::PixelClockEqualDuration()
 
 	const double PixelTimeStep = 0.125 * us;
 	for (int pix = 0; pix < WidthPerFrame_pix + 1; pix++)
-		Queue.push(generateSinglePixelClock(PixelTimeStep, 1));			//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
+		Queue.push(generateSinglePixelClock(PixelTimeStep, 1));			//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
 																		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 	return Queue;														//Return a queue (and not a vector of queues)
 }
@@ -426,10 +467,11 @@ U32Q PixelClock::PixelClockEqualDistance()
 	Queue.push(packU32(InitialWaitingTime_tick - latency_tick, 0x0000));
 
 	for (int pix = 0; pix < WidthPerFrame_pix; pix++)
-		Queue.push(generateSinglePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its state), which serves as a pixel delimiter
+		Queue.push(generateSinglePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
 
 	Queue.push(generateSinglePixelClock(dt_us_MIN, 1));								//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 
 	return Queue;
 }
 
+#pragma endregion "Pixel clock"

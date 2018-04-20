@@ -1,26 +1,5 @@
 #include "Devices.h"
 
-
-void turnRSon(NiFpga_Status* status, NiFpga_Session session)
-{
-	const double RSamplitude_um = 200 * um;
-	const double RSamplitude_volt = RSamplitude_um * RS_voltPerUm;
-
-	resonantScanner_StartStop(status, session, 0);	//make sure that disable is on
-	Sleep(10);
-	resonantScanner_SetOutputVoltager(status, session, RSamplitude_volt);
-	Sleep(10);
-	resonantScanner_StartStop(status, session, 1);
-}
-
-void turnRSoff(NiFpga_Status* status, NiFpga_Session session)
-{
-	resonantScanner_StartStop(status, session, 0);
-	Sleep(10);
-	resonantScanner_SetOutputVoltager(status, session, 0);
-}
-
-
 int main()
 {
 	NiFpga_Status status = NiFpga_Initialize();								//Must be called before any other FPGA calls
@@ -37,11 +16,14 @@ int main()
 
 		if (NiFpga_IsNotError(status))
 		{
+			ResonantScanner RS(&status, session);
 			if(0)
-				turnRSon(&status, session);
+				RS.turnOn();
 			else
-				turnRSoff(&status, session);
+				RS.turnOff();
 			
+			Shutter aa(&status, session,NiFpga_FPGAvi_ControlBool_Shutter2);
+			aa.pulseHigh();
 			
 			NiFpga_MergeStatus(&status, NiFpga_Close(session, 1));			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 																			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.

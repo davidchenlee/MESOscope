@@ -33,7 +33,7 @@ int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	readPhotonCount(status, session);
 
 	//sendCommand(&status, session, 3 * s, VibratomeBack);
-	//startStop(&status, session);
+	//setState(&status, session);
 
 	//SECOND ROUND
 	if (0)

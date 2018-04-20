@@ -116,6 +116,7 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 
 	//Initialize all the channels with zero. No need if NiFpga_Finalize() is at the end of the main code
 	
+	/*
 	U32QV vectorOfQueues(Nchan);
 	for (int chan = 0; chan < Nchan; chan++)
 	{
@@ -125,6 +126,7 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	triggerFPGAdistributeCommandsAmongChannels(status, session);
 	triggerFPGAstartImaging(status, session);
 	Sleep(100);
+	*/
 	
 
 	std::cout << "FPGA initialize-variables status: " << *status << std::endl;

@@ -2,7 +2,8 @@ HEATMAP = 1;
 COUNT_FREQ = 1;
 
 scale = 25.5;
-inputImage = imread('..\Maincode\_photon-counts.tif');
+tiffHandle = Tiff('..\Maincode\_photon-counts.tif');
+inputImage = read(tiffHandle);
 %image(inputImage)
 
 %Recover the photon counts from the tiff image

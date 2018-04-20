@@ -1,11 +1,51 @@
-/* The following examples are from http://research.cs.wisc.edu/graphics/Courses/638-f1999/libtiff_tutorial.htm */
+/* The following example is from http://research.cs.wisc.edu/graphics/Courses/638-f1999/libtiff_tutorial.htm */
 
 #include "Tiffscope.h"
+
+#pragma region "Custom tags"
+//example from https://stackoverflow.com/questions/24059421/adding-custom-tags-to-a-tiff-file
+
+#define N(a) (sizeof(a) / sizeof (a[0]))
+#define TIFFTAG_EXAMPLELONG     65000
+#define TIFFTAG_EXAMPLEFLOAT     65001
+
+
+//The casts are necessary because the string literals are inherently const, but the definition of TIFFFieldInfo requires a non-const string pointer. The Intel and Microsoft compilers tolerate this, but gcc doesn't.
+static const TIFFFieldInfo xtiffFieldInfo[] = {
+	{ TIFFTAG_EXAMPLELONG,  1, 1, TIFF_LONG,  FIELD_CUSTOM, 0, 0, const_cast<char*>("ExampleLong") },
+{ TIFFTAG_EXAMPLEFLOAT, 1, 1, TIFF_FLOAT, FIELD_CUSTOM, 0, 0, const_cast<char*>("ExampleFloat") },
+};
+
+static TIFFExtendProc parent_extender = NULL;  // In case we want a chain of extensions
+
+static void registerCustomTIFFTags(TIFF *tif)
+{
+	/* Install the extended Tag field info */
+	TIFFMergeFieldInfo(tif, xtiffFieldInfo, N(xtiffFieldInfo));
+
+	if (parent_extender)
+		(*parent_extender)(tif);
+}
+
+static void augment_libtiff_with_custom_tags() {
+	static bool first_time = true;
+	if (!first_time)
+		return;
+	first_time = false;
+	parent_extender = TIFFSetTagExtender(registerCustomTIFFTags);
+}
+
+//endregion "Custom tags"
+#pragma endregion
+
 
 
 int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 {
 	const double scale = 25.5;																//Scale up the photon-count to cover the full 0-255 range for a 8-bit number
+
+																							// Create the TIFF directory object:
+	augment_libtiff_with_custom_tags();
 
 	const char *fileNameAsChar = fileName.c_str();
 	TIFF *tiffHandle = TIFFOpen(fileNameAsChar, "w");
@@ -34,10 +74,14 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, samplePerPixel);					//Set number of channels per pixel
 		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);									//Set the size of the channels
 		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);					//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
-		TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);				//Single Image plane
+		//TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);				//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
 		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);				//Single channel with min as black
 		//TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
 
+
+		//CUSTOM TAGS
+		TIFFSetField(tiffHandle, TIFFTAG_EXAMPLELONG, 1);
+		TIFFSetField(tiffHandle, TIFFTAG_EXAMPLEFLOAT, 2.0);
 
 		tsize_t bytesPerLine = samplePerPixel * WidthPerFrame_pix;			//Length in memory of one row of pixel in the image.
 		unsigned char *buffer = NULL;										//Buffer used to store the row of pixel information for writing to file
@@ -69,6 +113,8 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 
 	return 0;
 }
+
+
 
 /*
 //READ FILE EXAMPLE

@@ -16,11 +16,13 @@ int main()
 
 		if (NiFpga_IsNotError(status))
 		{
+			
 			ResonantScanner RS(&status, session);
 			if(0)
-				RS.turnOn();
+				RS.turnOn(200*um);
 			else
 				RS.turnOff();
+			
 			
 			Shutter aa(&status, session,NiFpga_FPGAvi_ControlBool_Shutter2);
 			aa.pulseHigh();

@@ -296,14 +296,16 @@ ResonantScanner::ResonantScanner(NiFpga_Status* status, NiFpga_Session session)
 {
 	this->status = status;
 	this->session = session;
-	calibFactor = RS_voltPerUm;
+	voltPerUm = RS_voltPerUm;
+	amplitude_um = 0;
+	delayTime = 10;	//in ms
 };
 ResonantScanner::~ResonantScanner() {};
 
 //Start or stop the resonant scanner
 int ResonantScanner::setState(bool requestedState)
 {
-	state = state;
+	this->state = requestedState;
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)requestedState));
 
 	return 0;
@@ -312,21 +314,27 @@ int ResonantScanner::setState(bool requestedState)
 //Set the output voltage of the resonant scanner
 int ResonantScanner::setOutputVoltage(double Vout)
 {
-	amplitude = Vout;
+	this->amplitude_um = Vout / this->voltPerUm;
 	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout)));
 
 	return 0;
 }
 
-int ResonantScanner::turnOn()
+//Set the output voltage of the resonant scanner
+int ResonantScanner::setOutputAmplitude(double amplitude_um)
 {
-	const double RSamplitude_um = 200 * um;
-	const double RSamplitude_volt = RSamplitude_um * RS_voltPerUm;
+	this->amplitude_um = amplitude_um;
+	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(amplitude_um * voltPerUm)));
 
+	return 0;
+}
+
+int ResonantScanner::turnOn(double amplitude_um)
+{
 	this->setState(0);	//make sure that disable is on
-	Sleep(10);
-	this->setOutputVoltage(RSamplitude_volt);
-	Sleep(10);
+	Sleep(delayTime);
+	this->setOutputAmplitude(amplitude_um);
+	Sleep(delayTime);
 	this->setState(1);
 
 	return 0;
@@ -335,16 +343,16 @@ int ResonantScanner::turnOn()
 int ResonantScanner::turnOff()
 {
 	this->setState(0);
-	Sleep(10);
+	Sleep(delayTime);
 	this->setOutputVoltage(0);
 
 	return 0;
 }
 
 
-double ResonantScanner::convertUm2Volt(double Amplitude)
+double ResonantScanner::convertUm2Volt(double amplitude_um)
 {
-	return Amplitude * RS_voltPerUm;
+	return amplitude_um * this->voltPerUm;
 }
 
 #pragma endregion "Resonant scanner"
@@ -356,6 +364,7 @@ Shutter::Shutter(NiFpga_Status* status, NiFpga_Session session, uint32_t ID)
 	this->status = status;
 	this->session = session;
 	IDshutter = ID;
+	delayTime = 10;	//in ms
 }
 
 Shutter::~Shutter() {}
@@ -375,7 +384,7 @@ int Shutter::pulseHigh()
 	else
 	{
 		NiFpga_MergeStatus(this->status, NiFpga_WriteBool(this->session, IDshutter, 1));
-		Sleep(10);
+		Sleep(delayTime);
 		NiFpga_MergeStatus(this->status, NiFpga_WriteBool(this->session, IDshutter, 0));
 	}
 	return 0;
@@ -391,13 +400,9 @@ int Shutter::pulseHigh()
 
 #pragma region "Pixel clock"
 
-PixelClock::PixelClock()
-{
-}
+PixelClock::PixelClock() {}
 
-PixelClock::~PixelClock()
-{
-}
+PixelClock::~PixelClock() {}
 
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSamplitudePkPK_um/2, RSamplitudePkPK_um/2]
 double PixelClock::ConvertSpatialCoord2Time(double x)

@@ -13,20 +13,20 @@ U32QV TestAODO()
 	//QV[ABUF2].push(generateSingleAnalogOut(4 * us, 0));//go back to zero
 
 	//DO0
-	QV[DBUF0].push(generateSingleDigitalOut(4 * us, 1));
-	QV[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
-	QV[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
-	QV[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
+	QV[IDshutter1].push(generateSingleDigitalOut(4 * us, 1));
+	QV[IDshutter1].push(generateSingleDigitalOut(4 * us, 0));
+	QV[IDshutter1].push(generateSingleDigitalOut(4 * us, 0));
+	QV[IDshutter1].push(generateSingleDigitalOut(4 * us, 0));
 
 	//QV[AO0] = GalvoSeq();
 
 
 	//CURRENTLY, AO1 AND DO1 ARE TRIGGERED BY THE LINE CLOCK
 	//AO0
-	QV[ABUF0].push(generateSingleAnalogOut(4 * us, 5));
-	QV[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
-	//QV[ABUF0].push(generateSingleAnalogOut(4 * us, 5));
-	//QV[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
+	QV[IDgalvo1].push(generateSingleAnalogOut(4 * us, 5));
+	QV[IDgalvo1].push(generateSingleAnalogOut(4 * us, 0));
+	//QV[IDgalvo1].push(generateSingleAnalogOut(4 * us, 5));
+	//QV[IDgalvo1].push(generateSingleAnalogOut(4 * us, 0));
 
 	//DO0
 	//QV[DBUF1].push(generateSingleDigitalOut(4 * us, 1));
@@ -56,7 +56,7 @@ U32QV TestAODOandRamp()
 	//concatenateQueues(Q, linearRamp1);
 	concatenateQueues(Q, linearRamp2);
 	//concatenateQueues(Q, linearRamp3);
-	QV[ABUF0] = Q;
+	QV[IDgalvo1] = Q;
 	Q = {}; //clean up
 
 	double pulsewidth = 300 * us;
@@ -67,8 +67,8 @@ U32QV TestAODOandRamp()
 	QV[AO0].push(generateSingleAnalogOut(4 * us, 0.000));
 	*/
 
-	QV[DBUF0].push(generateSingleDigitalOut(pulsewidth, 1));
-	QV[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
+	QV[IDshutter1].push(generateSingleDigitalOut(pulsewidth, 1));
+	QV[IDshutter1].push(generateSingleDigitalOut(4 * us, 0));
 	return QV;
 }
 
@@ -80,8 +80,8 @@ U32QV DigitalTimingCheck()
 	double step = 400 * us;
 
 	//DO0
-	QV[DBUF0].push(generateSingleDigitalOut(step, 1));
-	QV[DBUF0].push(generateSingleDigitalOut(step, 0));
+	QV[IDshutter1].push(generateSingleDigitalOut(step, 1));
+	QV[IDshutter1].push(generateSingleDigitalOut(step, 0));
 
 	return QV;
 }
@@ -95,14 +95,14 @@ U32QV DigitalLatencyCalib()
 	double step = 4 * us;
 
 	//DO0
-	QV[DBUF0].push(generateSingleDigitalOut(step, 1));
+	QV[IDshutter1].push(generateSingleDigitalOut(step, 1));
 
 	//many short digital pulses to accumulate the error
 	for (U32 ii = 0; ii < 99; ii++)
-		QV[DBUF0].push(generateSingleDigitalOut(step, 0));
+		QV[IDshutter1].push(generateSingleDigitalOut(step, 0));
 
-	QV[DBUF0].push(generateSingleDigitalOut(step, 1));
-	QV[DBUF0].push(generateSingleDigitalOut(step, 0));
+	QV[IDshutter1].push(generateSingleDigitalOut(step, 1));
+	QV[IDshutter1].push(generateSingleDigitalOut(step, 0));
 
 	return QV;
 }
@@ -116,18 +116,18 @@ U32QV AnalogLatencyCalib()
 	double step = 4 * us;
 
 	//AO0
-	QV[ABUF0].push(generateSingleAnalogOut(step, 10));//initial pulse
-	QV[ABUF0].push(generateSingleAnalogOut(step, 0));
-	QV[ABUF0] = concatenateQueues(QV[0], generateLinearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
-	QV[ABUF0].push(generateSingleAnalogOut(step, 5));//final pulse
-	QV[ABUF0].push(generateSingleAnalogOut(step, 0));
+	QV[IDgalvo1].push(generateSingleAnalogOut(step, 10));//initial pulse
+	QV[IDgalvo1].push(generateSingleAnalogOut(step, 0));
+	QV[IDgalvo1] = concatenateQueues(QV[0], generateLinearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
+	QV[IDgalvo1].push(generateSingleAnalogOut(step, 5));//final pulse
+	QV[IDgalvo1].push(generateSingleAnalogOut(step, 0));
 
 	//DO0
-	QV[DBUF0].push(generateSingleDigitalOut(step, 1));
-	QV[DBUF0].push(generateSingleDigitalOut(step, 0));
-	QV[DBUF0].push(generateSingleDigitalOut(delay, 0));
-	QV[DBUF0].push(generateSingleDigitalOut(step, 1));
-	QV[DBUF0].push(generateSingleDigitalOut(step, 0));
+	QV[IDshutter1].push(generateSingleDigitalOut(step, 1));
+	QV[IDshutter1].push(generateSingleDigitalOut(step, 0));
+	QV[IDshutter1].push(generateSingleDigitalOut(delay, 0));
+	QV[IDshutter1].push(generateSingleDigitalOut(step, 1));
+	QV[IDshutter1].push(generateSingleDigitalOut(step, 0));
 
 	return QV;
 }

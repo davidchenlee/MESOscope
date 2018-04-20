@@ -40,10 +40,10 @@ namespace Const
 {
 	extern const int Nchan;
 	extern const int PCLOCK;
-	extern const int ABUF0;
-	extern const int ABUF1;
+	extern const int IDgalvo1;
+	extern const int IDgalvo2;
 	extern const int ABUF2;
-	extern const int DBUF0;
+	extern const int IDshutter1;
 
 	extern const double PI;
 	extern const int us;

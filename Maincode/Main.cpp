@@ -31,6 +31,8 @@ int main()
 		std::cout << "FPGA finalize status: " << status << std::endl;
 		
 	}
+
+
 	
 	std::cout << "\nPress any key to continue..." << std::endl;
 	getchar();

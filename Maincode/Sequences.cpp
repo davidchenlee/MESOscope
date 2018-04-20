@@ -2,6 +2,7 @@
 
 #pragma region "Combined sequences"
 
+
 int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 {
 	/*
@@ -20,13 +21,13 @@ int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	//Sleep(1000); //wait for the filterwheel to settle
 
 	//Initialize the FPGA
-	initializeFPGA(status, session);
+	initializeFPGAvariables(status, session);
 
 	//Send the commands to the FPGA buffer
 	sendCommandsToFPGAbuffer(status, session, command2DScan());
 
-	//Send the commands to the FPGA sub-buffers for each channel, but do not execute yet
-	triggerFPGAdistributeCommandsAmongChannels(status, session);		
+	//Send the commands to each channel buffers, but do not execute them yet
+	triggerFPGAdistributeCommands(status, session);		
 
 	//Execute the commands and read the photon count
 	readPhotonCount(status, session);
@@ -38,7 +39,7 @@ int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	if (0)
 	{
 		//sendCommandsToFPGAbuffer(status, session, TestAODO());
-		triggerFPGAdistributeCommandsAmongChannels(status, session);
+		triggerFPGAdistributeCommands(status, session);
 		triggerFPGAstartImaging(status, session);
 	}
 
@@ -140,3 +141,35 @@ U32Q generateLinearRamp(double TimeStep, double RampLength, double Vinitial, dou
 
 //endregion "Individual sequences"
 #pragma endregion
+
+
+
+
+
+FPGAClassTest::FPGAClassTest()
+{
+	status = NiFpga_Initialize();		//Must be called before any other FPGA calls
+	std::cout << "FPGA initialize status: " << status << std::endl;
+
+	if (NiFpga_IsNotError(status))		//Check for any FPGA error
+	{
+		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &session));		//Opens a session, downloads the bitstream
+																												//1=no run, 0=run
+		std::cout << "FPGA open-session status: " << status << std::endl;
+	}
+}
+
+FPGAClassTest::~FPGAClassTest()
+{
+	if (NiFpga_IsNotError(status))
+	{
+		NiFpga_MergeStatus(&status, NiFpga_Close(session, 1));			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
+																		//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
+																		//0 resets, 1 does not reset
+	}
+
+	//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
+	NiFpga_MergeStatus(&status, NiFpga_Finalize());
+	std::cout << "FPGA finalize status: " << status << std::endl;
+}
+

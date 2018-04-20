@@ -23,8 +23,8 @@ U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ);
 int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues);
 
 //FPGA initialization and trigger
-int initializeFPGA(NiFpga_Status* status, NiFpga_Session session);
-int triggerFPGAdistributeCommandsAmongChannels(NiFpga_Status* status, NiFpga_Session session);
+int initializeFPGAvariables(NiFpga_Status* status, NiFpga_Session session);
+int triggerFPGAdistributeCommands(NiFpga_Status* status, NiFpga_Session session);
 int triggerFPGAstartImaging(NiFpga_Status* status, NiFpga_Session session);
 int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session);
 int configureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth);

@@ -1,5 +1,6 @@
 #pragma once
-#include "FPGAsequences.h"
+#include "Devices.h"
+#include "Sequences.h"
 
 U32QV TestAODO();
 U32QV TestAODOandRamp();

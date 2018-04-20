@@ -41,3 +41,13 @@ section thickness: Lslice
 sectioning amplitude and speed (manual settings)
 sectioning duration*/
 
+
+class FPGAClassTest
+{
+	NiFpga_Status status;
+	NiFpga_Session session;
+
+public:
+	FPGAClassTest();
+	~FPGAClassTest();
+};

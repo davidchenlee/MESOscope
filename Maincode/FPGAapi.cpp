@@ -146,7 +146,7 @@ int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32Q
 
 #pragma region "FPGA initialization and trigger"
 
-int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
+int initializeFPGAvariables(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_PhotonCounterInputSelector, PhotonCounterInput));			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
@@ -188,7 +188,7 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 	vectorOfQueues[chan].push(0);
 	}
 	sendCommandsToFPGAbuffer(status, session, vectorOfQueues);
-	triggerFPGAdistributeCommandsAmongChannels(status, session);
+	triggerFPGAdistributeCommands(status, session);
 	triggerFPGAstartImaging(status, session);
 	Sleep(100);
 	*/
@@ -200,7 +200,7 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 }
 
 //Send the commands to the FPGA channel buffers but do not execute them yet
-int triggerFPGAdistributeCommandsAmongChannels(NiFpga_Status* status, NiFpga_Session session)
+int triggerFPGAdistributeCommands(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));

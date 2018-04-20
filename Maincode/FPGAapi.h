@@ -5,7 +5,6 @@
 #include <fstream>      //file management
 #include "windows.h"	//the stages use this lib. also Sleep
 #include <ctime>		//Clock()
-#include "Tiffscope.h"
 using namespace Const;
 
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/

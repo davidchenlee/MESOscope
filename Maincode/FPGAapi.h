@@ -18,8 +18,10 @@ I16 convertVolt2I16(double x);
 U32 generateSingleAnalogOut(double t, double V);
 U32 generateSingleDigitalOut(double t, bool DO);
 U32 generateSinglePixelClock(double t, bool DO);
+U32Q generateLinearRamp(double dt, double T, double Vi, double Vf);
 U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ);
 int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues);
+
 
 //FPGA initialization and trigger
 int initializeFPGAvariables(NiFpga_Status* status, NiFpga_Session session);

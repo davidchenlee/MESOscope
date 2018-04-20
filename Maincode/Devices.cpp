@@ -237,8 +237,16 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName)
 
 #pragma region "Vibratome"
 
+Vibratome::Vibratome()
+{}
+
+Vibratome::~Vibratome()
+{
+
+}
+
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
-int vibratome_StartStop(NiFpga_Status* status, NiFpga_Session session)
+int Vibratome::startStop(NiFpga_Status* status, NiFpga_Session session)
 {
 	const int WaitingTime = 20; //in ms. It has to be ~ 12 ms or longer to 
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1));
@@ -249,7 +257,7 @@ int vibratome_StartStop(NiFpga_Status* status, NiFpga_Session session)
 }
 
 //Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
-int vibratome_SendCommand(NiFpga_Status* status, NiFpga_Session session, double pushDuration, VibratomeChannel channel)
+int Vibratome::sendCommand(NiFpga_Status* status, NiFpga_Session session, double pushDuration, VibratomeChannel channel)
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
 	const int minPushDuration = 10; //in ms

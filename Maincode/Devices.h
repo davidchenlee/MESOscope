@@ -12,8 +12,20 @@ int correctInterleavedImage(unsigned char *interleavedImage);
 int writeFrameToTxt(unsigned char *imageArray, std::string fileName);
 
 //Vibratome functions
-int vibratome_SendCommand(NiFpga_Status* status, NiFpga_Session session, double dt, VibratomeChannel channel);
-int vibratome_StartStop(NiFpga_Status* status, NiFpga_Session session);
+class Vibratome
+{
+	int Nslide;						//Slide number
+	double sectionThickness;		//Thickness of the section
+	double speed;					//Speed of the vibratome (manual setting)
+	double amplitude;				//Amplitude of the vibratome (manual setting)
+public:
+	Vibratome();
+	~Vibratome();
+	int startStop(NiFpga_Status* status, NiFpga_Session session);
+	int sendCommand(NiFpga_Status* status, NiFpga_Session session, double dt, VibratomeChannel channel);
+};
+
+
 
 //Resonant scanner
 NiFpga_Status resonantScanner_StartStop(NiFpga_Status* status, NiFpga_Session session, bool state);

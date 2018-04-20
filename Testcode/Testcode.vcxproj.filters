@@ -36,9 +36,6 @@
     <ClCompile Include="..\Maincode\Tiffscope.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Maincode\Sequences.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Maincode\Const.h">
@@ -57,9 +54,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Maincode\Tiffscope.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Maincode\Sequences.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

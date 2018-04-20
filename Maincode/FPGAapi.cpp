@@ -1,0 +1,222 @@
+#include "FPGAapi.h"
+
+
+void printHex(int input)
+{
+	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
+}
+
+#pragma region "FPGA low-level functions"
+
+//Pack t in MSB and x in LSB. Time t and analog output x are encoded in 16 bits each.
+U32 packU32(U16 t, U16 x)
+{
+	return (t << 16) | (0x0000FFFF & x);
+}
+
+
+//Convert microseconds to ticks
+U16 convertUs2tick(double t_us)
+{
+	const double t_tick = t_us * tickPerUs;
+
+	if ((U32)t_tick > 0x0000FFFF)
+	{
+		std::cerr << "WARNING in " << __func__ << ": time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
+		return _UI16_MAX;
+	}
+	else if ((U32)t_tick < dt_tick_MIN)
+	{
+		std::cerr << "WARNING in " << __func__ << ": time step underflow. Time step set to the min: " << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
+		return dt_tick_MIN;
+	}
+	else
+		return (U16)t_tick;
+}
+
+
+/*converts voltage (range: -10V to 10V) to a signed int 16 (range: -32768 to 32767)
+0x7FFFF = 0d32767
+0xFFFF = -1
+0x8000 = -32768
+*/
+I16 convertVolt2I16(double x)
+{
+	if (x > 10)
+	{
+		std::cerr << "WARNING in " << __func__ << ": voltage overflow. Voltage set to the max: 10 V" << std::endl;
+		return (I16)_I16_MAX;
+	}
+	else if (x < -10)
+	{
+		std::cerr << "WARNING in " << __func__ << ": voltage underflow. Voltage set to the min: -10 V" << std::endl;
+		return (I16)_I16_MIN;
+	}
+	else
+		return (I16)(x / 10 * _I16_MAX);
+}
+
+
+//Send out an analog instruction, where the analog level 'val' is held for the amount of time 't'
+U32 generateSingleAnalogOut(double t, double val)
+{
+	const U16 AOlatency_tick = 2;	//To calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
+	return packU32(convertUs2tick(t) - AOlatency_tick, convertVolt2I16(val));
+}
+
+
+//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
+U32 generateSingleDigitalOut(double t, bool DO)
+{
+	const U16 DOlatency_tick = 2;	//To calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
+	if (DO)
+		return packU32(convertUs2tick(t) - DOlatency_tick, 0x0001);
+	else
+		return packU32(convertUs2tick(t) - DOlatency_tick, 0x0000);
+}
+
+
+//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't'
+U32 generateSinglePixelClock(double t, bool DO)
+{
+	const U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
+	if (DO)
+		return packU32(convertUs2tick(t) - PClatency_tick, 0x0001);
+	else
+		return packU32(convertUs2tick(t) - PClatency_tick, 0x0000);
+}
+
+
+//Push all the elements in 'tailQ' into 'headQ'
+U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ)
+{
+	while (!tailQ.empty())
+	{
+		headQ.push(tailQ.front());
+		tailQ.pop();
+	}
+	return headQ;
+}
+
+//Send every single queue in VectorOfQueue to the FPGA bufer
+//For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
+//Then transfer the elements in the long queue to an array to interface the FPGA
+//Alternatively, the single queues could be transferred directly to the array, but why bothering...
+int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues)
+{
+	U32Q allQueues;								//Create a single long queue
+	for (int i = 0; i < Nchan; i++)
+	{
+		allQueues.push(VectorOfQueues[i].size());			//Push the number of elements in each individual queue VectorOfQueues[i]
+		while (!VectorOfQueues[i].empty())
+		{
+			allQueues.push(VectorOfQueues[i].front());		//Push all the elemets in individual queue VectorOfQueues[i] to allQueues
+			VectorOfQueues[i].pop();
+		}
+	}
+
+	
+	const int sizeFIFOqueue = allQueues.size();		//Total number of elements in all the queues 
+
+	if (sizeFIFOqueue > FIFOINmax)
+		std::cerr << "WARNING in " << __func__ << ": FIFO IN overflow" << std::endl;
+
+	U32* FIFO = new U32[sizeFIFOqueue];				//Create an array for interfacing the FPGA	
+	for (int i = 0; i < sizeFIFOqueue; i++)
+	{
+		FIFO[i] = allQueues.front();				//Transfer the queue elements to the array
+		allQueues.pop();
+	}
+	allQueues = {};									//Cleanup the queue (C++11 style)
+
+	//Send the data to the FPGA through the FIFO
+	const U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
+	U32 r; //empty elements remaining
+
+	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r));
+
+	std::cout << "FPGA FIFO status: " << *status << std::endl;
+	delete[] FIFO;//cleanup the array
+
+	return 0;
+}
+
+//endregion "FPGA configuration"
+#pragma endregion
+
+#pragma region "FPGA trigger"
+
+//Send the commands to the FPGA sub-buffers for each channel, but do not execute yet
+int triggerFPGAdistributeCommandsAmongChannels(NiFpga_Status* status, NiFpga_Session session)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
+	std::cout << "Pulse trigger status: " << *status << std::endl;
+
+	return 0;
+}
+
+//Execute the commands to acquire an image
+int triggerFPGAstartImaging(NiFpga_Status* status, NiFpga_Session session)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));
+	std::cout << "Acquisition trigger status: " << *status << std::endl;
+
+	return 0;
+}
+
+//Trigger the FIFO flushing
+int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session)
+{
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
+	std::cout << "Flush trigger status: " << *status << std::endl;
+
+	return 0;
+}
+
+int configureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth)
+{
+	U32 actualDepth;
+	NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth);
+	std::cout << "actualDepth a: " << actualDepth << std::endl;
+	NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth);
+	std::cout << "actualDepth b: " << actualDepth << std::endl;
+
+	return 0;
+}
+
+//endregion "FPGA configuration"
+#pragma endregion
+
+
+
+/*
+int i;
+for(i=0; i<size; i=i+1){
+data[i] = i*5000;
+
+
+for(i=0; i<size; i=i+1){
+printf("%i\n",data[i]);
+}
+getchar();
+*/
+
+/*
+int16_t val = -32769;
+char hex[16];
+sprintf(hex, "%x", ((val + (1 << 16)) % (1 << 16)) );
+puts(hex);
+getchar();*/
+
+
+/*the AO reads a I16, specifically
+0x7FFF = 32767
+0xFFFF = -1
+0x8000 = -32768*/
+
+/*
+printf("%i\n", VOUT(10));
+getchar();*/

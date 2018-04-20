@@ -7,7 +7,7 @@
 
 #define N(a) (sizeof(a) / sizeof (a[0]))
 #define TIFFTAG_EXAMPLELONG     65000
-#define TIFFTAG_EXAMPLEFLOAT     65001
+#define TIFFTAG_EXAMPLEFLOAT	65001
 
 
 //The casts are necessary because the string literals are inherently const, but the definition of TIFFFieldInfo requires a non-const string pointer. The Intel and Microsoft compilers tolerate this, but gcc doesn't.

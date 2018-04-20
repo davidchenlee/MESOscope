@@ -16,6 +16,7 @@ typedef unsigned __int64	U63;
 typedef std::queue<U32> U32Q;				//Queue of unsigned integers
 typedef std::vector<U32Q> U32QV;			//Vector of queues of unsigned integers
 
+
 //vibratome channels
 enum VibratomeChannel {
 	VibratomeStart,

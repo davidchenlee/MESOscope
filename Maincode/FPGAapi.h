@@ -6,7 +6,6 @@
 #include "windows.h"	//the stages use this lib. also Sleep
 #include <ctime>		//Clock()
 #include "Tiffscope.h"
-#include "PixelClock.h"
 using namespace Const;
 
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/
@@ -24,6 +23,7 @@ U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ);
 int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues);
 
 //FPGA initialization and trigger
+int initializeFPGA(NiFpga_Status* status, NiFpga_Session session);
 int triggerFPGAdistributeCommandsAmongChannels(NiFpga_Status* status, NiFpga_Session session);
 int triggerFPGAstartImaging(NiFpga_Status* status, NiFpga_Session session);
 int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session);

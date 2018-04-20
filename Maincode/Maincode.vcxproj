@@ -157,17 +157,15 @@
     <ClCompile Include="Const.cpp" />
     <ClCompile Include="Devices.cpp" />
     <ClCompile Include="FPGAapi.cpp" />
-    <ClCompile Include="PixelClock.cpp" />
     <ClCompile Include="Tiffscope.cpp" />
     <ClCompile Include="UARTscope.cpp" />
     <ClCompile Include="Sequences.cpp" />
-    <ClCompile Include="MCmain.cpp" />
+    <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Const.h" />
     <ClInclude Include="Devices.h" />
     <ClInclude Include="FPGAapi.h" />
-    <ClInclude Include="PixelClock.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Tiffscope.h" />
     <ClInclude Include="UARTscope.h" />

@@ -25,7 +25,6 @@ int main()
 																			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 																			//0 resets, 1 does not reset
 		}	
-		//NiFpga_Reset(session);											//Reset the FPGA
 
 		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 		NiFpga_MergeStatus(&status, NiFpga_Finalize());

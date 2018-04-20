@@ -141,12 +141,65 @@ int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32Q
 	return 0;
 }
 
-//endregion "FPGA configuration"
+//endregion "FPGA low-level functions"
 #pragma endregion
 
-#pragma region "FPGA trigger"
+#pragma region "FPGA initialization and trigger"
 
-//Send the commands to the FPGA sub-buffers for each channel, but do not execute yet
+int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
+{
+	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
+	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_PhotonCounterInputSelector, PhotonCounterInput));			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_LineClockInputSelector, LineClockInput));					//Select the Line clock: resonant scanner or function generator
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));										//control-sequence trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));									//data-acquisition trigger
+
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout_tick));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)Nchan));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, (U16)SyncDOtoAO_tick));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, (U16)SyncAODOtoLineGate_tick));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(NlinesAllFrames + NFrames * NlinesSkip)));			//Total number of lines in all the frames, including the skipped lines
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)HeightPerFrame_pix));								//Number of lines in a frame, without including the skipped lines
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(HeightPerFrame_pix + NlinesSkip)));		//Number of lines in a frame including the skipped lines
+
+																																						//Shutters
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
+
+	//Vibratome control
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_back, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_forward, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
+
+	//Resonant scanner
+	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));											//Output voltage
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));											//Turn on/off
+
+																																			//Debugging
+	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));										//FIFO OUT
+
+	//Initialize all the channels with zero. No need if NiFpga_Finalize() is at the end of the main code
+	/*
+	U32QV vectorOfQueues(Nchan);
+	for (int chan = 0; chan < Nchan; chan++)
+	{
+	vectorOfQueues[chan].push(0);
+	}
+	sendCommandsToFPGAbuffer(status, session, vectorOfQueues);
+	triggerFPGAdistributeCommandsAmongChannels(status, session);
+	triggerFPGAstartImaging(status, session);
+	Sleep(100);
+	*/
+
+
+	std::cout << "FPGA initialize-variables status: " << *status << std::endl;
+
+	return 0;
+}
+
+//Send the commands to the FPGA channel buffers but do not execute them yet
 int triggerFPGAdistributeCommandsAmongChannels(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
@@ -156,7 +209,7 @@ int triggerFPGAdistributeCommandsAmongChannels(NiFpga_Status* status, NiFpga_Ses
 	return 0;
 }
 
-//Execute the commands to acquire an image
+//Execute the commands
 int triggerFPGAstartImaging(NiFpga_Status* status, NiFpga_Session session)
 {
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1));
@@ -187,7 +240,7 @@ int configureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth)
 	return 0;
 }
 
-//endregion "FPGA configuration"
+//endregion "FPGA initialization and trigger"
 #pragma endregion
 
 

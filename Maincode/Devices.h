@@ -23,3 +23,20 @@ double resonantScanner_Amp2Volt(double Amplitude);
 //Shutters
 int shutter1_OpenClose(NiFpga_Status* status, NiFpga_Session session, bool state);
 int shutter2_OpenClose(NiFpga_Status* status, NiFpga_Session session, bool state);
+
+class PixelClock
+{
+private:
+	U32Q Queue;
+	const int latency_tick = 2;		//latency of detecting the line clock. Calibrate the latency with the oscilloscope
+	double ConvertSpatialCoord2Time(double x);
+	double getDiscreteTime(int pix);
+	double calculateDwellTime(int pix);
+	double calculatePracticalDwellTime(int pix);
+public:
+	PixelClock();
+	~PixelClock();
+	U32Q PixelClockEqualDuration();
+	U32Q PixelClockEqualDistance();
+};
+

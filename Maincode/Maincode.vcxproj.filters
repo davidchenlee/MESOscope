@@ -27,12 +27,6 @@
     <ClCompile Include="Const.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MCmain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PixelClock.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Sequences.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -40,6 +34,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FPGAapi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -54,9 +51,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PixelClock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Sequences.h">

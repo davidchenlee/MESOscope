@@ -71,22 +71,22 @@ U32QV command2DScan()
 
 	U32Q linearRampSegment0 = generateLinearRamp(galvoTimeStep_us,25 * ms, galvoAmplitude_volt, -galvoAmplitude_volt);	//Ramp up the galvo from -galvoAmplitude_volt to galvoAmplitude_volt
 	
-	vectorOfQueues[ABUF0] = linearRampSegment0;
-	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, galvoAmplitude_volt));								//Set the galvo back to -galvoAmplitude_volt
+	vectorOfQueues[IDgalvo1] = linearRampSegment0;
+	vectorOfQueues[IDgalvo1].push(generateSingleAnalogOut(4 * us, galvoAmplitude_volt));								//Set the galvo back to -galvoAmplitude_volt
 	
 	/*//debugger
-	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
-	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 5));
-	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
-	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 5));
-	vectorOfQueues[ABUF0].push(generateSingleAnalogOut(4 * us, 0));
+	vectorOfQueues[IDgalvo1].push(generateSingleAnalogOut(4 * us, 0));
+	vectorOfQueues[IDgalvo1].push(generateSingleAnalogOut(4 * us, 5));
+	vectorOfQueues[IDgalvo1].push(generateSingleAnalogOut(4 * us, 0));
+	vectorOfQueues[IDgalvo1].push(generateSingleAnalogOut(4 * us, 5));
+	vectorOfQueues[IDgalvo1].push(generateSingleAnalogOut(4 * us, 0));
 	*/
 	
 	//DO0
-	vectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 1));
-	vectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
-	vectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
-	vectorOfQueues[DBUF0].push(generateSingleDigitalOut(4 * us, 0));
+	vectorOfQueues[IDshutter1].push(generateSingleDigitalOut(4 * us, 1));
+	vectorOfQueues[IDshutter1].push(generateSingleDigitalOut(4 * us, 0));
+	vectorOfQueues[IDshutter1].push(generateSingleDigitalOut(4 * us, 0));
+	vectorOfQueues[IDshutter1].push(generateSingleDigitalOut(4 * us, 0));
 
 	return vectorOfQueues;
 }

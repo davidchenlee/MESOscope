@@ -5,9 +5,9 @@ namespace Const
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;				//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
 	extern const int PCLOCK = 0;			//Pixel clock
-	extern const int ABUF0 = 1;				//Analog buffer 0 (galvo 1)
-	extern const int ABUF1 = 2;				//Analog buffer 1 (galvo 2)
-	extern const int DBUF0 = 3;				//Digital buffer 0 (shutter 1)
+	extern const int IDgalvo1 = 1;			//Analog buffer 0 (galvo 1)
+	extern const int IDgalvo2 = 2;			//Analog buffer 1 (galvo 2)
+	extern const int IDshutter1 = 3;				//Digital buffer 0 (shutter 1)
 
 	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//microsecond

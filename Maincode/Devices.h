@@ -29,16 +29,18 @@ class ResonantScanner
 {
 	NiFpga_Status *status;
 	NiFpga_Session session;
+	int delayTime;
 	double ResonantScanner::convertUm2Volt(double Amplitude);
 public:
 	bool state;
-	double amplitude;
-	double calibFactor;		//volts per microns
+	double amplitude_um;
+	double voltPerUm;		//Calibration factor. volts per microns
 	ResonantScanner(NiFpga_Status* status, NiFpga_Session session);
 	~ResonantScanner();
 	int ResonantScanner::setState(bool state);
 	int ResonantScanner::setOutputVoltage(double Vout);
-	int ResonantScanner::turnOn();
+	int ResonantScanner::setOutputAmplitude(double amplitude_um);
+	int ResonantScanner::turnOn(double amplitude_um);
 	int ResonantScanner::turnOff();
 };
 
@@ -46,9 +48,10 @@ class Shutter
 {
 	NiFpga_Status *status;
 	NiFpga_Session session;
-	bool state;
-	uint32_t IDshutter;
+	int delayTime;
 public:
+	uint32_t IDshutter;
+	bool state;
 	Shutter(NiFpga_Status* status, NiFpga_Session session, uint32_t ID);
 	~Shutter();
 	int Shutter::setState(bool requestedState);

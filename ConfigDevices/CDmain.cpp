@@ -1,4 +1,4 @@
-#include "Sequences.h"
+#include "Devices.h"
 
 
 void turnRSon(NiFpga_Status* status, NiFpga_Session session)
@@ -37,9 +37,10 @@ int main()
 
 		if (NiFpga_IsNotError(status))
 		{
-
-			//turnRSon(&status, session);
-			turnRSoff(&status, session);
+			if(0)
+				turnRSon(&status, session);
+			else
+				turnRSoff(&status, session);
 			
 			
 			NiFpga_MergeStatus(&status, NiFpga_Close(session, 1));			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)

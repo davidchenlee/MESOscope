@@ -136,7 +136,6 @@
     <ClCompile Include="..\Maincode\Const.cpp" />
     <ClCompile Include="..\Maincode\Devices.cpp" />
     <ClCompile Include="..\Maincode\FPGAapi.cpp" />
-    <ClCompile Include="..\Maincode\Sequences.cpp" />
     <ClCompile Include="..\Maincode\Tiffscope.cpp" />
     <ClCompile Include="TCmain.cpp" />
     <ClCompile Include="TCsequences.cpp" />
@@ -145,7 +144,6 @@
     <ClInclude Include="..\Maincode\Const.h" />
     <ClInclude Include="..\Maincode\Devices.h" />
     <ClInclude Include="..\Maincode\FPGAapi.h" />
-    <ClInclude Include="..\Maincode\Sequences.h" />
     <ClInclude Include="..\Maincode\Tiffscope.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="TCsequences.h" />

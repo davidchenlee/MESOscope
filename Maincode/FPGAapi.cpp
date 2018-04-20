@@ -86,6 +86,54 @@ U32 generateSinglePixelClock(double t, bool DO)
 		return packU32(convertUs2tick(t) - PClatency_tick, 0x0000);
 }
 
+U32Q generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal)
+{
+	U32Q queue;
+	const bool debug = 0;
+
+	if (TimeStep < AOdt_us)
+	{
+		std::cerr << "WARNING in " << __func__ << ": time step too small. Time step set to " << AOdt_us << " us" << std::endl;
+		TimeStep = AOdt_us;						//Analog output time increment (in us)
+		return {};
+	}
+
+	const int nPoints = (int)(RampLength / TimeStep);		//Number of points
+
+	if (nPoints <= 1)
+	{
+		std::cerr << "ERROR in " << __func__ << ": not enought points for the linear ramp" << std::endl;
+		std::cerr << "nPoints: " << nPoints << std::endl;
+		return {};
+	}
+	else
+	{
+		if (debug)
+		{
+			std::cout << "nPoints: " << nPoints << std::endl;
+			std::cout << "time \tticks \tv" << std::endl;
+		}
+
+		for (int ii = 0; ii < nPoints; ii++)
+		{
+			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
+			queue.push(generateSingleAnalogOut(TimeStep, V));
+
+			if (debug)
+				std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
+		}
+
+		if (debug)
+		{
+			getchar();
+			return {};
+		}
+
+
+	}
+	return queue;
+}
+
 
 //Push all the elements in 'tailQ' into 'headQ'
 U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ)
@@ -140,6 +188,7 @@ int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32Q
 
 	return 0;
 }
+
 
 //endregion "FPGA low-level functions"
 #pragma endregion

@@ -4,6 +4,10 @@ PixelClock::PixelClock()
 {
 }
 
+PixelClock::~PixelClock()
+{
+}
+
 //Pixel clock sequence. Every pixel has the same duration in time.
 //The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 //Pixel clock evently spaced in time
@@ -46,11 +50,6 @@ U32Q PixelClock::PixelClockEqualDistance()
 
 	return Queue;
 }
-
-PixelClock::~PixelClock()
-{
-}
-
 
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSamplitudePkPK_um/2, RSamplitudePkPK_um/2]
 double PixelClock::ConvertSpatialCoord2Time(double x)

@@ -22,12 +22,12 @@ U16 convertUs2tick(double t_us)
 
 	if ((U32)t_tick > 0x0000FFFF)
 	{
-		std::cerr << "WARNING in " << __func__ << ": time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
 		return _UI16_MAX;
 	}
 	else if ((U32)t_tick < dt_tick_MIN)
 	{
-		std::cerr << "WARNING in " << __func__ << ": time step underflow. Time step set to the min: " << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": time step underflow. Time step set to the min: " << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
 		return dt_tick_MIN;
 	}
 	else
@@ -44,12 +44,12 @@ I16 convertVolt2I16(double x)
 {
 	if (x > 10)
 	{
-		std::cerr << "WARNING in " << __func__ << ": voltage overflow. Voltage set to the max: 10 V" << std::endl;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": voltage overflow. Voltage set to the max: 10 V" << std::endl;
 		return (I16)_I16_MAX;
 	}
 	else if (x < -10)
 	{
-		std::cerr << "WARNING in " << __func__ << ": voltage underflow. Voltage set to the min: -10 V" << std::endl;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": voltage underflow. Voltage set to the min: -10 V" << std::endl;
 		return (I16)_I16_MIN;
 	}
 	else
@@ -93,7 +93,7 @@ U32Q generateLinearRamp(double TimeStep, double RampLength, double Vinitial, dou
 
 	if (TimeStep < AOdt_us)
 	{
-		std::cerr << "WARNING in " << __func__ << ": time step too small. Time step set to " << AOdt_us << " us" << std::endl;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": time step too small. Time step set to " << AOdt_us << " us" << std::endl;
 		TimeStep = AOdt_us;						//Analog output time increment (in us)
 		return {};
 	}
@@ -102,7 +102,7 @@ U32Q generateLinearRamp(double TimeStep, double RampLength, double Vinitial, dou
 
 	if (nPoints <= 1)
 	{
-		std::cerr << "ERROR in " << __func__ << ": not enought points for the linear ramp" << std::endl;
+		std::cerr << "ERROR in " << __FUNCTION__ << ": not enought points for the linear ramp" << std::endl;
 		std::cerr << "nPoints: " << nPoints << std::endl;
 		return {};
 	}
@@ -150,7 +150,7 @@ U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ)
 //For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 //Then transfer the elements in the long queue to an array to interface the FPGA
 //Alternatively, the single queues could be transferred directly to the array, but why bothering...
-int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues)
+int sendCommandsToFPGAbuffer(NiFpga_Session session, U32QV& VectorOfQueues)
 {
 	U32Q allQueues;								//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
@@ -167,7 +167,7 @@ int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32Q
 	const int sizeFIFOqueue = allQueues.size();		//Total number of elements in all the queues 
 
 	if (sizeFIFOqueue > FIFOINmax)
-		std::cerr << "WARNING in " << __func__ << ": FIFO IN overflow" << std::endl;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": FIFO IN overflow" << std::endl;
 
 	U32* FIFO = new U32[sizeFIFOqueue];				//Create an array for interfacing the FPGA	
 	for (int i = 0; i < sizeFIFOqueue; i++)
@@ -181,9 +181,9 @@ int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32Q
 	const U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
 	U32 r; //empty elements remaining
 
-	NiFpga_MergeStatus(status, NiFpga_WriteFifoU32(session, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r));
+	NiFpga_Status status = NiFpga_WriteFifoU32(session, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r);
 
-	std::cout << "FPGA FIFO status: " << *status << std::endl;
+	std::cout << "FPGA FIFO status: " << status << std::endl;
 	delete[] FIFO;//cleanup the array
 
 	return 0;
@@ -195,39 +195,40 @@ int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32Q
 
 #pragma region "FPGA initialization and trigger"
 
-int initializeFPGAvariables(NiFpga_Status* status, NiFpga_Session session)
+int initializeFPGAvariables(NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_PhotonCounterInputSelector, PhotonCounterInput));			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-	NiFpga_MergeStatus(status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_LineClockInputSelector, LineClockInput));					//Select the Line clock: resonant scanner or function generator
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));										//control-sequence trigger
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));									//data-acquisition trigger
+	NiFpga_Status status;
+	status = NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_PhotonCounterInputSelector, PhotonCounterInput);			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+	NiFpga_MergeStatus(&status, NiFpga_WriteU8(session, NiFpga_FPGAvi_ControlU8_LineClockInputSelector, LineClockInput));					//Select the Line clock: resonant scanner or function generator
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));										//control-sequence trigger
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));									//data-acquisition trigger
 
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout_tick));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)Nchan));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, (U16)SyncDOtoAO_tick));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, (U16)SyncAODOtoLineGate_tick));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(NlinesAllFrames + NFrames * NlinesSkip)));			//Total number of lines in all the frames, including the skipped lines
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)HeightPerFrame_pix));								//Number of lines in a frame, without including the skipped lines
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(HeightPerFrame_pix + NlinesSkip)));		//Number of lines in a frame including the skipped lines
+	NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout_tick));
+	NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)Nchan));
+	NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, (U16)SyncDOtoAO_tick));
+	NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, (U16)SyncAODOtoLineGate_tick));
+	NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(NlinesAllFrames + NFrames * NlinesSkip)));			//Total number of lines in all the frames, including the skipped lines
+	NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)HeightPerFrame_pix));								//Number of lines in a frame, without including the skipped lines
+	NiFpga_MergeStatus(&status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(HeightPerFrame_pix + NlinesSkip)));		//Number of lines in a frame including the skipped lines
 
 																																						//Shutters
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
 
 	//Vibratome control
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_back, 0));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_forward, 0));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_back, 0));
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_forward, 0));
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
 
 	//Resonant scanner
-	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));											//Output voltage
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));											//Turn on/off
+	NiFpga_MergeStatus(&status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));											//Output voltage
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));											//Turn on/off
 
 																																			//Debugging
-	NiFpga_MergeStatus(status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));										//FIFO OUT
+	NiFpga_MergeStatus(&status, NiFpga_WriteArrayBool(session, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, Npulses));
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));										//FIFO OUT
 
 	//Initialize all the channels with zero. No need if NiFpga_Finalize() is at the end of the main code
 	/*
@@ -242,48 +243,47 @@ int initializeFPGAvariables(NiFpga_Status* status, NiFpga_Session session)
 	Sleep(100);
 	*/
 
-
-	std::cout << "FPGA initialize-variables status: " << *status << std::endl;
+	std::cout << "FPGA initialize-variables status: " << status << std::endl;
 
 	return 0;
 }
 
 //Send the commands to the FPGA channel buffers but do not execute them yet
-int triggerFPGAdistributeCommands(NiFpga_Status* status, NiFpga_Session session)
+int triggerFPGAdistributeCommands(NiFpga_Session session)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
-	std::cout << "Pulse trigger status: " << *status << std::endl;
+	NiFpga_Status status = NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1);
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
+	std::cout << "Pulse trigger status: " << status << std::endl;
 
 	return 0;
 }
 
 //Execute the commands
-int triggerFPGAstartImaging(NiFpga_Status* status, NiFpga_Session session)
+int triggerFPGAstartImaging(NiFpga_Session session)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));
-	std::cout << "Acquisition trigger status: " << *status << std::endl;
+	NiFpga_Status status = NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1);
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));
+	std::cout << "Acquisition trigger status: " << status << std::endl;
 
 	return 0;
 }
 
 //Trigger the FIFO flushing
-int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session)
+int triggerFIFOflush(NiFpga_Session session)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
-	std::cout << "Flush trigger status: " << *status << std::endl;
+	NiFpga_Status status = NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1);
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
+	std::cout << "Flush trigger status: " << status << std::endl;
 
 	return 0;
 }
 
-int configureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth)
+int configureFIFO(NiFpga_Session session, U32 depth)
 {
 	U32 actualDepth;
-	NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth);
+	NiFpga_Status status = NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth);
 	std::cout << "actualDepth a: " << actualDepth << std::endl;
-	NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth);
+	NiFpga_MergeStatus(&status, NiFpga_ConfigureFifo2(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
 	std::cout << "actualDepth b: " << actualDepth << std::endl;
 
 	return 0;

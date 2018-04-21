@@ -19,13 +19,13 @@ int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	//Sleep(1000); //wait for the filterwheel to settle
 
 	//Initialize the FPGA
-	initializeFPGAvariables(status, session);
+	initializeFPGAvariables(session);
 
 	//Send the commands to the FPGA buffer
-	sendCommandsToFPGAbuffer(status, session, command2DScan());
+	sendCommandsToFPGAbuffer(session, command2DScan());
 
 	//Send the commands to each channel buffers, but do not execute them yet
-	triggerFPGAdistributeCommands(status, session);		
+	triggerFPGAdistributeCommands(session);		
 
 	//Execute the commands and read the photon count
 	readPhotonCount(status, session);
@@ -37,12 +37,12 @@ int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	if (0)
 	{
 		//sendCommandsToFPGAbuffer(status, session, TestAODO());
-		triggerFPGAdistributeCommands(status, session);
-		triggerFPGAstartImaging(status, session);
+		triggerFPGAdistributeCommands(session);
+		triggerFPGAstartImaging(session);
 	}
 
 	Sleep(100);
-	triggerFIFOflush(status, session);
+	triggerFIFOflush(session);
 
 	return 0;
 }

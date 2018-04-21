@@ -16,7 +16,7 @@ static const TIFFFieldInfo xtiffFieldInfo[] = {
 { TIFFTAG_EXAMPLEFLOAT, 1, 1, TIFF_FLOAT, FIELD_CUSTOM, 0, 0, const_cast<char*>("ExampleFloat") },
 };
 
-static TIFFExtendProc parent_extender = NULL;  // In case we want a chain of extensions
+static TIFFExtendProc parent_extender = nullptr;  // In case we want a chain of extensions
 
 static void registerCustomTIFFTags(TIFF *tif)
 {
@@ -84,7 +84,7 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 		TIFFSetField(tiffHandle, TIFFTAG_EXAMPLEFLOAT, 2.0);
 
 		tsize_t bytesPerLine = samplePerPixel * WidthPerFrame_pix;			//Length in memory of one row of pixel in the image.
-		unsigned char *buffer = NULL;										//Buffer used to store the row of pixel information for writing to file
+		unsigned char *buffer = nullptr;										//Buffer used to store the row of pixel information for writing to file
 
 		//Allocating memory to store pixels of current row
 		if (TIFFScanlineSize(tiffHandle))
@@ -133,7 +133,7 @@ int readTiff(void)
 	uint32 npixels = width * height;
 	uint32* raster = (uint32 *)_TIFFmalloc(npixels * sizeof(uint32));
 
-	if (raster == NULL) // check the raster's memory was allocaed
+	if (raster == nullptr) // check the raster's memory was allocaed
 	{
 		TIFFClose(tif);
 		std::cerr << "Could not allocate memory for raster of TIFF image" << std::endl;
@@ -207,7 +207,7 @@ int writeSyntheticTiff(void)
 
 
 	tsize_t bytesPerLine = samplePerPixel * width;						// length in memory of one row of pixel in the image.
-	unsigned char *buffer = NULL;										// buffer used to store the row of pixel information for writing to file
+	unsigned char *buffer = nullptr;										// buffer used to store the row of pixel information for writing to file
 
 																	// Allocating memory to store the pixels of current row
 	if (TIFFScanlineSize(tiffHandle))

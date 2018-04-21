@@ -14,22 +14,30 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName);
 //Vibratome functions
 class Vibratome
 {
+	NiFpga_Status *status;
+	NiFpga_Session session;
+	//vibratome channels
+	enum VibratomeChannel {
+		VibratomeStart,
+		VibratomeBack,
+		VibratomeForward
+	};
+public:
 	int Nslide;						//Slide number
 	double sectionThickness;		//Thickness of the section
 	double speed;					//Speed of the vibratome (manual setting)
 	double amplitude;				//Amplitude of the vibratome (manual setting)
-public:
 	Vibratome();
 	~Vibratome();
-	int setState(NiFpga_Status* status, NiFpga_Session session);
-	int sendCommand(NiFpga_Status* status, NiFpga_Session session, double dt, VibratomeChannel channel);
+	int setState();
+	int sendCommand(double dt, VibratomeChannel channel);
 };
 
 class ResonantScanner
 {
 	NiFpga_Status *status;
 	NiFpga_Session session;
-	int delayTime;
+	const int delayTime;
 	double ResonantScanner::convertUm2Volt(double Amplitude);
 public:
 	bool state;
@@ -48,7 +56,7 @@ class Shutter
 {
 	NiFpga_Status *status;
 	NiFpga_Session session;
-	int delayTime;
+	const int delayTime;
 public:
 	uint32_t IDshutter;
 	bool state;
@@ -61,7 +69,7 @@ public:
 class PixelClock
 {
 	U32Q Queue;
-	const int latency_tick = 2;		//latency of detecting the line clock. Calibrate the latency with the oscilloscope
+	const int latency_tick = 2;		//latency of detecting the line clock. Calibrate the latency with the oscilloscope. (C++11 allows initialization in declaration)
 	double ConvertSpatialCoord2Time(double x);
 	double getDiscreteTime(int pix);
 	double calculateDwellTime(int pix);

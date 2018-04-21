@@ -1,11 +1,11 @@
 //#include <concrt.h> 	//Concurrency::wait(2000);
 #include "Sequences.h"
 
+
 int main()
 {
 	NiFpga_Status status = NiFpga_Initialize();								//Must be called before any other FPGA calls
 	std::cout << "FPGA initialize status: " << status << std::endl;
-
 	
 	if (NiFpga_IsNotError(status))											//Check for any FPGA error
 	{

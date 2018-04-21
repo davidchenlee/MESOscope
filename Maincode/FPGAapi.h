@@ -30,3 +30,12 @@ int triggerFPGAstartImaging(NiFpga_Status* status, NiFpga_Session session);
 int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session);
 int configureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth);
 
+class FPGAClassTest
+{
+	NiFpga_Status status;
+	NiFpga_Session session;
+
+public:
+	FPGAClassTest();
+	~FPGAClassTest();
+};

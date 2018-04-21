@@ -236,12 +236,15 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName)
 
 #pragma region "Vibratome"
 
-Vibratome::Vibratome() {}
+Vibratome::Vibratome()
+	: status(status),
+	session(session)
+{}
 
 Vibratome::~Vibratome() {}
 
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
-int Vibratome::setState(NiFpga_Status* status, NiFpga_Session session)
+int Vibratome::setState()
 {
 	const int WaitingTime = 20; //in ms. It has to be ~ 12 ms or longer to 
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1));
@@ -252,7 +255,7 @@ int Vibratome::setState(NiFpga_Status* status, NiFpga_Session session)
 }
 
 //Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
-int Vibratome::sendCommand(NiFpga_Status* status, NiFpga_Session session, double pushDuration, VibratomeChannel channel)
+int Vibratome::sendCommand(double pushDuration, VibratomeChannel channel)
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
 	const int minPushDuration = 10; //in ms
@@ -271,7 +274,7 @@ int Vibratome::sendCommand(NiFpga_Status* status, NiFpga_Session session, double
 	}
 
 
-	const int delay = 1;						//Used to roughly calibrate the pulse length
+	const int delay = 1;	//Used to roughly calibrate the pulse length
 	const int dt_ms = (int)pushDuration / ms;
 
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 1));
@@ -293,12 +296,17 @@ int Vibratome::sendCommand(NiFpga_Status* status, NiFpga_Session session, double
 #pragma region "Resonant scanner"
 
 ResonantScanner::ResonantScanner(NiFpga_Status* status, NiFpga_Session session)
+	: status(status),
+	session(session),
+	voltPerUm(RS_voltPerUm),
+	amplitude_um(0),
+	delayTime(10)
 {
-	this->status = status;
-	this->session = session;
-	voltPerUm = RS_voltPerUm;
-	amplitude_um = 0;
-	delayTime = 10;	//in ms
+//	this->status = status;
+//	this->session = session;
+//	voltPerUm = RS_voltPerUm;
+//	amplitude_um = 0;
+//	delayTime = 10;	//in ms
 };
 ResonantScanner::~ResonantScanner() {};
 
@@ -360,11 +368,15 @@ double ResonantScanner::convertUm2Volt(double amplitude_um)
 #pragma region "Shutters"
 
 Shutter::Shutter(NiFpga_Status* status, NiFpga_Session session, uint32_t ID)
+	: status(status),
+	session(session),
+	IDshutter(ID),
+	delayTime(10)
 {
-	this->status = status;
-	this->session = session;
-	IDshutter = ID;
-	delayTime = 10;	//in ms
+//	this->status = status;
+//	this->session = session;
+//	IDshutter = ID;
+//	delayTime = 10;	//in ms
 }
 
 Shutter::~Shutter() {}
@@ -468,7 +480,7 @@ U32Q PixelClock::PixelClockEqualDistance()
 		std::cerr << "ERROR in " << __func__ << ": Odd number of pixels in the image width currently not supported by the pixel clock. Pixel clock set to 0" << std::endl;
 	}
 
-	const U16 InitialWaitingTime_tick = 2043;									//Initial waiting time. Look at the oscilloscope and adjust this parameter to center the pixel clock in a line scan
+	const U16 InitialWaitingTime_tick = 2043;										//Initial waiting time. Look at the oscilloscope and adjust this parameter to center the pixel clock in a line scan
 	Queue.push(packU32(InitialWaitingTime_tick - latency_tick, 0x0000));
 
 	for (int pix = 0; pix < WidthPerFrame_pix; pix++)

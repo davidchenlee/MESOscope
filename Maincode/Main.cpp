@@ -24,6 +24,7 @@ int main()
 			NiFpga_MergeStatus(&status, NiFpga_Close(session, 1));			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 																			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 																			//0 resets, 1 does not reset
+			std::cout << "FPGA closing-session status: " << status << std::endl;
 		}	
 
 		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
@@ -35,7 +36,7 @@ int main()
 
 	
 	std::cout << "\nPress any key to continue..." << std::endl;
-	getchar();
+	//getchar();
 
 	return 0;
 }

@@ -25,7 +25,7 @@ int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	sendCommandsToFPGAbuffer(session, command2DScan());
 
 	//Send the commands to each channel buffers, but do not execute them yet
-	triggerFPGAdistributeCommands(session);		
+	executeFPGACommands(session);		
 
 	//Execute the commands and read the photon count
 	readPhotonCount(status, session);
@@ -37,7 +37,7 @@ int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	if (0)
 	{
 		//sendCommandsToFPGAbuffer(status, session, TestAODO());
-		triggerFPGAdistributeCommands(session);
+		executeFPGACommands(session);
 		triggerFPGAstartImaging(session);
 	}
 
@@ -67,7 +67,7 @@ U32QV command2DScan()
 	//const double galvoAmplitude_volt = 2.5;
 	const double galvoTimeStep_us = 8 * us;
 
-	U32Q linearRampSegment0 = generateLinearRamp(galvoTimeStep_us,25 * ms, galvoAmplitude_volt, -galvoAmplitude_volt);	//Ramp up the galvo from -galvoAmplitude_volt to galvoAmplitude_volt
+	U32Q linearRampSegment0 = generateLinearRamp(galvoTimeStep_us, 25 * ms, galvoAmplitude_volt, -galvoAmplitude_volt);	//Ramp up the galvo from -galvoAmplitude_volt to galvoAmplitude_volt
 	
 	vectorOfQueues[IDgalvo1] = linearRampSegment0;
 	vectorOfQueues[IDgalvo1].push(generateSingleAnalogOut(4 * us, galvoAmplitude_volt));								//Set the galvo back to -galvoAmplitude_volt

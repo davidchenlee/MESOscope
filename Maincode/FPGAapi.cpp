@@ -249,7 +249,7 @@ int initializeFPGAvariables(NiFpga_Session session)
 }
 
 //Send the commands to the FPGA channel buffers but do not execute them yet
-int triggerFPGAdistributeCommands(NiFpga_Session session)
+int executeFPGACommands(NiFpga_Session session)
 {
 	NiFpga_Status status = NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1);
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
@@ -299,7 +299,7 @@ FPGAClassTest::FPGAClassTest()
 
 	if (NiFpga_IsNotError(status))		//Check for any FPGA error
 	{
-		NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &session));		//Opens a session, downloads the bitstream
+		status = NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &session);		//Opens a session, downloads the bitstream
 																												//1=no run, 0=run
 		std::cout << "FPGA open-session status: " << status << std::endl;
 	}
@@ -309,13 +309,14 @@ FPGAClassTest::~FPGAClassTest()
 {
 	if (NiFpga_IsNotError(status))
 	{
-		NiFpga_MergeStatus(&status, NiFpga_Close(session, 1));			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
+		status = NiFpga_Close(session, 1);			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 																		//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 																		//0 resets, 1 does not reset
+		std::cout << "FPGA closing-session status: " << status << std::endl;
 	}
 
 	//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
-	NiFpga_MergeStatus(&status, NiFpga_Finalize());
+	status = NiFpga_Finalize();
 	std::cout << "FPGA finalize status: " << status << std::endl;
 }
 

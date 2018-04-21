@@ -243,9 +243,9 @@ Vibratome::~Vibratome() {}
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
 int Vibratome::startStop()
 {
-	const int WaitingTime = 20; //in ms. It has to be ~ 12 ms or longer to 
+	const int SleepTime = 20; //in ms. It has to be ~ 12 ms or longer to 
 	NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1);
-	Sleep(WaitingTime);
+	Sleep(SleepTime);
 	NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0);
 
 	return 0;
@@ -439,9 +439,9 @@ double PixelClock::calculatePracticalDwellTime(int pix)
 //Pixel clock evently spaced in time
 U32Q PixelClock::PixelClockEqualDuration()
 {
-	const double InitialWaitingTime_us = 6.25*us;						//Initial waiting time to center the pixel clock in a line scan
+	const double InitialTimeStep_us = 6.25*us;							//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
 																		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-	Queue.push(packU32(convertUs2tick(InitialWaitingTime_us) - latency_tick, 0x0000));
+	Queue.push(packU32(convertUs2tick(InitialTimeStep_us) - latency_tick, 0x0000));
 
 	const double PixelTimeStep = 0.125 * us;
 	for (int pix = 0; pix < WidthPerFrame_pix + 1; pix++)
@@ -466,8 +466,12 @@ U32Q PixelClock::PixelClockEqualDistance()
 		std::cerr << "ERROR in " << __FUNCTION__ << ": Odd number of pixels in the image width currently not supported by the pixel clock. Pixel clock set to 0" << std::endl;
 	}
 
-	const U16 InitialWaitingTime_tick = 2043;										//Initial waiting time. Look at the oscilloscope and adjust this parameter to center the pixel clock in a line scan
-	Queue.push(packU32(InitialWaitingTime_tick - latency_tick, 0x0000));
+	//Determine the relative delay of the pixel clock wrt the line clock
+	const U16 calibCoarse_tick = 2043;	//Look at the oscilloscope and adjust to center the pixel clock within a line scan
+	const U16 calibFine_tick = 10;		//In practice, the resonant scanner is not perfectly centered around the objective's back aperture
+										//Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
+	const U16 InitialTimeStep_tick = calibCoarse_tick + calibFine_tick;	
+	Queue.push(packU32(InitialTimeStep_tick - latency_tick, 0x0000));
 
 	for (int pix = 0; pix < WidthPerFrame_pix; pix++)
 		Queue.push(generateSinglePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter

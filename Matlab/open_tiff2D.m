@@ -31,5 +31,6 @@ if COUNT_FREQ
     array2table(table,'VariableNames',colNames)
 end
 
+close(tiffHandle);
 
 

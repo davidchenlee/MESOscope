@@ -25,7 +25,7 @@ int sendCommandsToFPGAbuffer(NiFpga_Session session, U32QV& VectorOfQueues);
 
 //FPGA initialization and trigger
 int initializeFPGAvariables(NiFpga_Session session);
-int triggerFPGAdistributeCommands(NiFpga_Session session);
+int executeFPGACommands(NiFpga_Session session);
 int triggerFPGAstartImaging(NiFpga_Session session);
 int triggerFIFOflush(NiFpga_Session session);
 int configureFIFO(NiFpga_Session session, U32 depth);

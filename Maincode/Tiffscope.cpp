@@ -80,8 +80,8 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 
 
 		//CUSTOM TAGS
-		TIFFSetField(tiffHandle, TIFFTAG_EXAMPLELONG, 1);
-		TIFFSetField(tiffHandle, TIFFTAG_EXAMPLEFLOAT, 2.0);
+		//TIFFSetField(tiffHandle, TIFFTAG_EXAMPLELONG, 1);
+		//TIFFSetField(tiffHandle, TIFFTAG_EXAMPLEFLOAT, 2.0);
 
 		tsize_t bytesPerLine = samplePerPixel * WidthPerFrame_pix;			//Length in memory of one row of pixel in the image.
 		unsigned char *buffer = nullptr;										//Buffer used to store the row of pixel information for writing to file

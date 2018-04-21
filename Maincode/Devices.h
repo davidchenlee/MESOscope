@@ -4,6 +4,7 @@
 #include "UARTscope.h"
 #include "Tiffscope.h"
 
+
 //Photon counter
 int readPhotonCount(NiFpga_Status* status, NiFpga_Session session);
 void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray);
@@ -14,7 +15,6 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName);
 //Vibratome functions
 class Vibratome
 {
-	NiFpga_Status *status;
 	NiFpga_Session session;
 	//vibratome channels
 	enum VibratomeChannel {
@@ -29,23 +29,22 @@ public:
 	double amplitude;				//Amplitude of the vibratome (manual setting)
 	Vibratome();
 	~Vibratome();
-	int setState();
+	int startStop();
 	int sendCommand(double dt, VibratomeChannel channel);
 };
 
 class ResonantScanner
 {
-	NiFpga_Status *status;
 	NiFpga_Session session;
-	const int delayTime;
+	const int delayTime = 10;
 	double ResonantScanner::convertUm2Volt(double Amplitude);
 public:
-	bool state;
-	double amplitude_um;
-	double voltPerUm;		//Calibration factor. volts per microns
-	ResonantScanner(NiFpga_Status* status, NiFpga_Session session);
+	bool outputState;
+	double amplitude_um = 0;
+	double voltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
+	ResonantScanner(NiFpga_Session session);
 	~ResonantScanner();
-	int ResonantScanner::setState(bool state);
+	int ResonantScanner::enable(bool requestedState);
 	int ResonantScanner::setOutputVoltage(double Vout);
 	int ResonantScanner::setOutputAmplitude(double amplitude_um);
 	int ResonantScanner::turnOn(double amplitude_um);
@@ -54,15 +53,14 @@ public:
 
 class Shutter
 {
-	NiFpga_Status *status;
 	NiFpga_Session session;
-	const int delayTime;
+	const int delayTime = 10;
 public:
 	uint32_t IDshutter;
 	bool state;
-	Shutter(NiFpga_Status* status, NiFpga_Session session, uint32_t ID);
+	Shutter(NiFpga_Session session, uint32_t ID);
 	~Shutter();
-	int Shutter::setState(bool requestedState);
+	int Shutter::setOutput(bool requestedState);
 	int Shutter::pulseHigh();
 };
 
@@ -82,3 +80,4 @@ public:
 	U32Q PixelClockEqualDistance();
 };
 
+void printFPGAstatus(NiFpga_Status status, std::string functionName);

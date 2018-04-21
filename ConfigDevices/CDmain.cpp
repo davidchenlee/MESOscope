@@ -17,14 +17,14 @@ int main()
 		if (NiFpga_IsNotError(status))
 		{
 			
-			ResonantScanner RS(&status, session);
-			if(0)
+			ResonantScanner RS(session);
+			if(1)
 				RS.turnOn(200*um);
 			else
 				RS.turnOff();
 			
 			
-			Shutter aa(&status, session,NiFpga_FPGAvi_ControlBool_Shutter2);
+			Shutter aa(session,NiFpga_FPGAvi_ControlBool_Shutter2);
 			aa.pulseHigh();
 			
 			NiFpga_MergeStatus(&status, NiFpga_Close(session, 1));			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
@@ -41,7 +41,7 @@ int main()
 
 
 	std::cout << "\nPress any key to continue..." << std::endl;
-	//getchar();
+	getchar();
 
 	return 0;
 }

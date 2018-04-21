@@ -20,15 +20,15 @@ U32 generateSingleDigitalOut(double t, bool DO);
 U32 generateSinglePixelClock(double t, bool DO);
 U32Q generateLinearRamp(double dt, double T, double Vi, double Vf);
 U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ);
-int sendCommandsToFPGAbuffer(NiFpga_Status* status, NiFpga_Session session, U32QV& VectorOfQueues);
+int sendCommandsToFPGAbuffer(NiFpga_Session session, U32QV& VectorOfQueues);
 
 
 //FPGA initialization and trigger
-int initializeFPGAvariables(NiFpga_Status* status, NiFpga_Session session);
-int triggerFPGAdistributeCommands(NiFpga_Status* status, NiFpga_Session session);
-int triggerFPGAstartImaging(NiFpga_Status* status, NiFpga_Session session);
-int triggerFIFOflush(NiFpga_Status* status, NiFpga_Session session);
-int configureFIFO(NiFpga_Status* status, NiFpga_Session session, U32 depth);
+int initializeFPGAvariables(NiFpga_Session session);
+int triggerFPGAdistributeCommands(NiFpga_Session session);
+int triggerFPGAstartImaging(NiFpga_Session session);
+int triggerFIFOflush(NiFpga_Session session);
+int configureFIFO(NiFpga_Session session, U32 depth);
 
 class FPGAClassTest
 {

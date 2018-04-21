@@ -29,7 +29,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 
 	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-	triggerFPGAstartImaging(status, session);
+	triggerFPGAstartImaging(session);
 
 	//Read the data
 	try
@@ -46,7 +46,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 			delete image;
 		}
 		else
-			std::cerr << "ERROR in " << __func__ << ": more or less elements received from the FIFO than expected " << std::endl;
+			std::cerr << "ERROR in " << __FUNCTION__ << ": more or less elements received from the FIFO than expected " << std::endl;
 	}
 	catch (const std::overflow_error& e) {
 		// this executes if f() throws std::overflow_error (same type rule)
@@ -62,7 +62,7 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	}
 	catch (...)
 	{
-		std::cerr << "Unknown exception Caught in " << __func__ << std::endl;
+		std::cerr << "Unknown exception Caught in " << __FUNCTION__ << std::endl;
 	}
 
 
@@ -136,7 +136,7 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 
 				if (bufArrayIndexb >= NmaxbufArray)
 				{
-					throw std::range_error(std::string{} +"ERROR in " + __func__ + ": Buffer array overflow\n");
+					throw std::range_error(std::string{} +"ERROR in " + __FUNCTION__ + ": Buffer array overflow\n");
 				}
 
 				bufArrayIndexb++;
@@ -147,7 +147,7 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 
 		if (timeoutCounter == 0)					//Timeout the while loop in case the data transfer fails
 		{
-			std::cerr << "ERROR in " << __func__ << ": FIFO downloading timeout" << std::endl;
+			std::cerr << "ERROR in " << __FUNCTION__ << ": FIFO downloading timeout" << std::endl;
 			break;
 		}
 	}
@@ -236,20 +236,17 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName)
 
 #pragma region "Vibratome"
 
-Vibratome::Vibratome()
-	: status(status),
-	session(session)
-{}
+Vibratome::Vibratome(): session(session) {}
 
 Vibratome::~Vibratome() {}
 
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
-int Vibratome::setState()
+int Vibratome::startStop()
 {
 	const int WaitingTime = 20; //in ms. It has to be ~ 12 ms or longer to 
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1));
+	NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1);
 	Sleep(WaitingTime);
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0));
+	NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0);
 
 	return 0;
 }
@@ -269,7 +266,7 @@ int Vibratome::sendCommand(double pushDuration, VibratomeChannel channel)
 		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_forward;
 		break;
 	default:
-		std::cerr << "ERROR in " << __func__ << ": Selected vibratome channel is unavailable" << std::endl;
+		std::cerr << "ERROR in " << __FUNCTION__ << ": Selected vibratome channel is unavailable" << std::endl;
 		return -1;
 	}
 
@@ -277,16 +274,16 @@ int Vibratome::sendCommand(double pushDuration, VibratomeChannel channel)
 	const int delay = 1;	//Used to roughly calibrate the pulse length
 	const int dt_ms = (int)pushDuration / ms;
 
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 1));
+	NiFpga_WriteBool(session, selectedChannel, 1);
 
 	if (dt_ms >= minPushDuration)
 		Sleep(dt_ms - delay);
 	else
 	{
 		Sleep(minPushDuration - delay);
-		std::cerr << "WARNING in " << __func__ << ": vibratome push duration too short. Instead, set to the min = ~" << minPushDuration << "ms" << std::endl;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": vibratome push duration too short. Instead, set to the min = ~" << minPushDuration << "ms" << std::endl;
 	}
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, selectedChannel, 0));
+	NiFpga_WriteBool(session, selectedChannel, 0);
 
 	return 0;
 }
@@ -295,35 +292,31 @@ int Vibratome::sendCommand(double pushDuration, VibratomeChannel channel)
 
 #pragma region "Resonant scanner"
 
-ResonantScanner::ResonantScanner(NiFpga_Status* status, NiFpga_Session session)
-	: status(status),
-	session(session),
-	voltPerUm(RS_voltPerUm),
-	amplitude_um(0),
-	delayTime(10)
-{
-//	this->status = status;
-//	this->session = session;
-//	voltPerUm = RS_voltPerUm;
-//	amplitude_um = 0;
-//	delayTime = 10;	//in ms
-};
+ResonantScanner::ResonantScanner(NiFpga_Session session): session(session) {};
+
 ResonantScanner::~ResonantScanner() {};
 
 //Start or stop the resonant scanner
-int ResonantScanner::setState(bool requestedState)
+int ResonantScanner::enable(bool requestedState)
 {
-	this->state = requestedState;
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)requestedState));
+	NiFpga_Status status = NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)requestedState);
+	if(status)	//if error or warning
+		printFPGAstatus(status, __FUNCTION__);
+	else
+		this->outputState = requestedState;
 
 	return 0;
 }
 
+
 //Set the output voltage of the resonant scanner
 int ResonantScanner::setOutputVoltage(double Vout)
 {
-	this->amplitude_um = Vout / this->voltPerUm;
-	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout)));
+	NiFpga_Status status = NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout));
+	if (status)
+		printFPGAstatus(status, __FUNCTION__);
+	else
+		this->amplitude_um = Vout / this->voltPerUm;
 
 	return 0;
 }
@@ -331,26 +324,29 @@ int ResonantScanner::setOutputVoltage(double Vout)
 //Set the output voltage of the resonant scanner
 int ResonantScanner::setOutputAmplitude(double amplitude_um)
 {
-	this->amplitude_um = amplitude_um;
-	NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(amplitude_um * voltPerUm)));
+	NiFpga_Status status = NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(amplitude_um * voltPerUm));
+	if (status)
+		printFPGAstatus(status, __FUNCTION__);
+	else
+		this->amplitude_um = amplitude_um;
 
 	return 0;
 }
 
 int ResonantScanner::turnOn(double amplitude_um)
 {
-	this->setState(0);	//make sure that disable is on
+	this->enable(0);	//make sure that the scanner is OFF
 	Sleep(delayTime);
 	this->setOutputAmplitude(amplitude_um);
 	Sleep(delayTime);
-	this->setState(1);
+	this->enable(1);
 
 	return 0;
 }
 
 int ResonantScanner::turnOff()
 {
-	this->setState(0);
+	this->enable(0);
 	Sleep(delayTime);
 	this->setOutputVoltage(0);
 
@@ -367,24 +363,14 @@ double ResonantScanner::convertUm2Volt(double amplitude_um)
 
 #pragma region "Shutters"
 
-Shutter::Shutter(NiFpga_Status* status, NiFpga_Session session, uint32_t ID)
-	: status(status),
-	session(session),
-	IDshutter(ID),
-	delayTime(10)
-{
-//	this->status = status;
-//	this->session = session;
-//	IDshutter = ID;
-//	delayTime = 10;	//in ms
-}
+Shutter::Shutter(NiFpga_Session session, uint32_t ID) : session(session), IDshutter(ID) {}
 
 Shutter::~Shutter() {}
 
-int Shutter::setState(bool requestedState)
+int Shutter::setOutput(bool requestedState)
 {
 	state = requestedState;
-	NiFpga_MergeStatus(this->status, NiFpga_WriteBool(this->session, IDshutter, (NiFpga_Bool)requestedState));
+	NiFpga_WriteBool(this->session, IDshutter, (NiFpga_Bool)requestedState);
 
 	return 0;
 }
@@ -392,12 +378,12 @@ int Shutter::setState(bool requestedState)
 int Shutter::pulseHigh()
 {
 	if(state)	//make sure that the output is set LOW
-		NiFpga_MergeStatus(this->status, NiFpga_WriteBool(this->session, IDshutter, 0));
+		NiFpga_WriteBool(this->session, IDshutter, 0);
 	else
 	{
-		NiFpga_MergeStatus(this->status, NiFpga_WriteBool(this->session, IDshutter, 1));
+		NiFpga_WriteBool(this->session, IDshutter, 1);
 		Sleep(delayTime);
-		NiFpga_MergeStatus(this->status, NiFpga_WriteBool(this->session, IDshutter, 0));
+		NiFpga_WriteBool(this->session, IDshutter, 0);
 	}
 	return 0;
 }
@@ -424,7 +410,7 @@ double PixelClock::ConvertSpatialCoord2Time(double x)
 		return HalfPeriodLineClock_us * asin(arg) / PI; //Return value in [-HalfPeriodLineClock_us/PI, HalfPeriodLineClock_us/PI]
 	else
 	{
-		std::cerr << "ERROR in " << __func__ << ": argument of asin greater than 1" << std::endl;
+		std::cerr << "ERROR in " << __FUNCTION__ << ": argument of asin greater than 1" << std::endl;
 		return HalfPeriodLineClock_us / PI;
 	}
 }
@@ -477,7 +463,7 @@ U32Q PixelClock::PixelClockEqualDistance()
 	}
 	else
 	{
-		std::cerr << "ERROR in " << __func__ << ": Odd number of pixels in the image width currently not supported by the pixel clock. Pixel clock set to 0" << std::endl;
+		std::cerr << "ERROR in " << __FUNCTION__ << ": Odd number of pixels in the image width currently not supported by the pixel clock. Pixel clock set to 0" << std::endl;
 	}
 
 	const U16 InitialWaitingTime_tick = 2043;										//Initial waiting time. Look at the oscilloscope and adjust this parameter to center the pixel clock in a line scan
@@ -492,3 +478,13 @@ U32Q PixelClock::PixelClockEqualDistance()
 }
 
 #pragma endregion "Pixel clock"
+
+
+
+void printFPGAstatus(NiFpga_Status status, std::string functionName)
+{
+	if (status < 0)
+		std::cerr << "ERROR: '" << functionName << "' exited with FPGA code: " << status << std::endl;
+	if (status >0)
+		std::cerr << "WARNING: '" << functionName << "' exited with FPGA code: " << status << std::endl;
+}

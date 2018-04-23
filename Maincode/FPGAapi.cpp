@@ -305,6 +305,16 @@ FPGAClassTest::FPGAClassTest()
 	}
 }
 
+
+void printFPGAstatus(NiFpga_Status status, char functionName[])
+{
+	if (status < 0)
+		std::cerr << "ERROR: '" << functionName << "' exited with FPGA code: " << status << std::endl;
+	if (status >0)
+		std::cerr << "WARNING: '" << functionName << "' exited with FPGA code: " << status << std::endl;
+}
+
+
 FPGAClassTest::~FPGAClassTest()
 {
 	if (NiFpga_IsNotError(status))
@@ -318,7 +328,9 @@ FPGAClassTest::~FPGAClassTest()
 	//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 	status = NiFpga_Finalize();
 	std::cout << "FPGA finalize status: " << status << std::endl;
-}
+};
+
+
 
 /*
 int i;

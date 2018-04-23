@@ -91,3 +91,4 @@ U32QV command2DScan()
 
 //endregion "Individual sequences"
 #pragma endregion
+

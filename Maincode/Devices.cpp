@@ -236,26 +236,28 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName)
 
 #pragma region "Vibratome"
 
-Vibratome::Vibratome(): session(session) {}
+Vibratome::Vibratome(): mSession(mSession) {}
 
 Vibratome::~Vibratome() {}
 
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
-int Vibratome::startStop()
+NiFpga_Status Vibratome::startStop()
 {
 	const int SleepTime = 20; //in ms. It has to be ~ 12 ms or longer to 
-	NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 1);
+	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_start, 1);
 	Sleep(SleepTime);
-	NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_VT_start, 0);
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_start, 0));
 
-	return 0;
+	return status;
 }
 
 //Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
-int Vibratome::sendCommand(double pushDuration, VibratomeChannel channel)
+NiFpga_Status Vibratome::sendCommand(double pulseDuration, VibratomeChannel channel)
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
-	const int minPushDuration = 10; //in ms
+	const int minPulseDuration = 10; //in ms
+	const int delay = 1;	//Used to roughly calibrate the pulse length
+	const int dt_ms = (int)pulseDuration / ms;
 
 	switch (channel)
 	{
@@ -270,122 +272,119 @@ int Vibratome::sendCommand(double pushDuration, VibratomeChannel channel)
 		return -1;
 	}
 
+	NiFpga_Status status = NiFpga_WriteBool(mSession, selectedChannel, 1);
 
-	const int delay = 1;	//Used to roughly calibrate the pulse length
-	const int dt_ms = (int)pushDuration / ms;
-
-	NiFpga_WriteBool(session, selectedChannel, 1);
-
-	if (dt_ms >= minPushDuration)
+	if (dt_ms >= minPulseDuration)
 		Sleep(dt_ms - delay);
 	else
 	{
-		Sleep(minPushDuration - delay);
-		std::cerr << "WARNING in " << __FUNCTION__ << ": vibratome push duration too short. Instead, set to the min = ~" << minPushDuration << "ms" << std::endl;
+		Sleep(minPulseDuration - delay);
+		std::cerr << "WARNING in " << __FUNCTION__ << ": vibratome pulse duration too short. Instead, set to the min = ~" << minPulseDuration << "ms" << std::endl;
 	}
-	NiFpga_WriteBool(session, selectedChannel, 0);
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, selectedChannel, 0));
 
-	return 0;
+	return status;
 }
 
 #pragma endregion "Vibratome"
 
 #pragma region "Resonant scanner"
 
-ResonantScanner::ResonantScanner(NiFpga_Session session): session(session) {};
+ResonantScanner::ResonantScanner(NiFpga_Session session): mSession(session) {};
 
 ResonantScanner::~ResonantScanner() {};
 
 //Start or stop the resonant scanner
-int ResonantScanner::enable(bool requestedState)
+NiFpga_Status ResonantScanner::startStop(bool state)
 {
-	NiFpga_Status status = NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)requestedState);
-	if(status)	//if error or warning
-		printFPGAstatus(status, __FUNCTION__);
-	else
-		this->outputState = requestedState;
+	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)state);
 
-	return 0;
+	if (!status)
+		mState = state;
+	return status;
 }
 
 
 //Set the output voltage of the resonant scanner
-int ResonantScanner::setOutputVoltage(double Vout)
+NiFpga_Status ResonantScanner::setOutputVoltage(double Vout)
 {
-	NiFpga_Status status = NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout));
-	if (status)
-		printFPGAstatus(status, __FUNCTION__);
-	else
-		this->amplitude_um = Vout / this->voltPerUm;
+	NiFpga_Status status = NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout));
 
-	return 0;
+	if (!status)
+		mAmplitude_um = Vout / mVoltPerUm;
+
+	return status;
 }
 
 //Set the output voltage of the resonant scanner
-int ResonantScanner::setOutputAmplitude(double amplitude_um)
+NiFpga_Status ResonantScanner::setOutputAmplitude(double amplitude_um)
 {
-	NiFpga_Status status = NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(amplitude_um * voltPerUm));
+	NiFpga_Status status = NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(amplitude_um * mVoltPerUm));
+
+	if (!status)
+		mAmplitude_um = amplitude_um;
+
+	return status;
+}
+
+NiFpga_Status ResonantScanner::turnOn(double amplitude_um)
+{
+	NiFpga_Status status = this->setOutputAmplitude(amplitude_um);
+	Sleep(mDelayTime);
+	NiFpga_MergeStatus(&status, this->startStop(1));
+
 	if (status)
 		printFPGAstatus(status, __FUNCTION__);
-	else
-		this->amplitude_um = amplitude_um;
 
-	return 0;
+	return status;
 }
 
-int ResonantScanner::turnOn(double amplitude_um)
+NiFpga_Status ResonantScanner::turnOff()
 {
-	this->enable(0);	//make sure that the scanner is OFF
-	Sleep(delayTime);
-	this->setOutputAmplitude(amplitude_um);
-	Sleep(delayTime);
-	this->enable(1);
+	NiFpga_Status status = this->startStop(0);
+	Sleep(mDelayTime);
+	NiFpga_MergeStatus(&status, this->setOutputVoltage(0));
 
-	return 0;
-}
+	if (status)
+		printFPGAstatus(status, __FUNCTION__);
 
-int ResonantScanner::turnOff()
-{
-	this->enable(0);
-	Sleep(delayTime);
-	this->setOutputVoltage(0);
-
-	return 0;
+	return status;
 }
 
 
 double ResonantScanner::convertUm2Volt(double amplitude_um)
 {
-	return amplitude_um * this->voltPerUm;
+	return amplitude_um * this->mVoltPerUm;
 }
 
 #pragma endregion "Resonant scanner"
 
 #pragma region "Shutters"
 
-Shutter::Shutter(NiFpga_Session session, uint32_t ID) : session(session), IDshutter(ID) {}
+Shutter::Shutter(NiFpga_Session session, uint32_t ID) : mSession(session), mIDshutter(ID) {}
 
 Shutter::~Shutter() {}
 
-int Shutter::setOutput(bool requestedState)
+NiFpga_Status Shutter::setOutput(bool state)
 {
-	state = requestedState;
-	NiFpga_WriteBool(this->session, IDshutter, (NiFpga_Bool)requestedState);
+	NiFpga_Status status = NiFpga_WriteBool(this->mSession, mIDshutter, (NiFpga_Bool)state);
 
-	return 0;
+	if(!status)
+		mState = state;
+
+	return status;
 }
 
-int Shutter::pulseHigh()
+NiFpga_Status Shutter::pulseHigh()
 {
-	if(state)	//make sure that the output is set LOW
-		NiFpga_WriteBool(this->session, IDshutter, 0);
-	else
-	{
-		NiFpga_WriteBool(this->session, IDshutter, 1);
-		Sleep(delayTime);
-		NiFpga_WriteBool(this->session, IDshutter, 0);
-	}
-	return 0;
+	NiFpga_Status status = NiFpga_WriteBool(this->mSession, mIDshutter, 1);
+	Sleep(mDelayTime);
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(this->mSession, mIDshutter, 0));
+
+	if (!status)
+		mState = 0;
+
+	return status;
 }
 
 #pragma endregion "Shutters"
@@ -483,12 +482,17 @@ U32Q PixelClock::PixelClockEqualDistance()
 
 #pragma endregion "Pixel clock"
 
-
-
-void printFPGAstatus(NiFpga_Status status, std::string functionName)
+#pragma region "Stages"
+Stage::Stage()
 {
-	if (status < 0)
-		std::cerr << "ERROR: '" << functionName << "' exited with FPGA code: " << status << std::endl;
-	if (status >0)
-		std::cerr << "WARNING: '" << functionName << "' exited with FPGA code: " << status << std::endl;
+
 }
+
+Stage::~Stage()
+{
+
+}
+#pragma endregion "Stages"
+
+
+

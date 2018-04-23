@@ -17,12 +17,12 @@ public:
 	FPGAapi();
 	~FPGAapi();
 
-	void close();
-	int initialize();
-	int sendCommandsToFPGAbuffer();
-	void sendRTsequenceToFPGA();
-	int triggerFPGAstartImaging();
-	int triggerFIFOflush();
+	NiFpga_Status initialize();
+	NiFpga_Status writeFIFO();
+	NiFpga_Status sendRTtoFPGA();
+	NiFpga_Status triggerRTsequence();
+	NiFpga_Status flushFIFO();
+	NiFpga_Status  close();
 	void printFPGAstatus(char functionName[]);
 };
 

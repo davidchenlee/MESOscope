@@ -11,7 +11,7 @@ int main()
 
 	Sequence1(fpga);
 
-	fpga.triggerFIFOflush();
+	fpga.flushFIFO();
 	fpga.close();
 	getchar();
 

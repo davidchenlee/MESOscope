@@ -26,7 +26,7 @@ int main()
 
 			sendCommandsToFPGAbuffer(&status, session, TestAODO());
 			sendFPGAchannelBuffers(&status, session);			//trigger the control sequence
-			triggerFPGAstartImaging(&status, session);
+			triggerRTsequence(&status, session);
 
 			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.

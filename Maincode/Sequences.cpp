@@ -9,11 +9,11 @@ int Sequence1(FPGAapi fpga)
 
 	//Create a real-time sequence
 	RTsequence sequence(&fpga);
-	sequence.linearRamp(GALVO1, galvoTimeStep_us, 25 * ms, galvoAmplitude_volt, -galvoAmplitude_volt);
-	sequence.push(GALVO1, singleAnalogOut(4 * us, galvoAmplitude_volt));
+	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25 * ms, galvoAmplitude_volt, -galvoAmplitude_volt);
+	sequence.pushSingleValue(GALVO1, singleAnalogOut(4 * us, galvoAmplitude_volt));
 
 
-	fpga.sendRTsequenceToFPGA();
+	fpga.sendRTtoFPGA();
 
 	//Create a photon counter
 	PhotonCounter counter(fpga);

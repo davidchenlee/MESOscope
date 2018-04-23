@@ -96,6 +96,12 @@ public:
 
 class Stage
 {
+	double posX;
+	double posY;
+	double posZ;
+	int NtileX;
+	int NtileY;
+	int NtileZ;
 public:
 	Stage();
 	~Stage();
@@ -105,21 +111,39 @@ public:
 class RTsequence
 {
 	FPGAapi *mFpga;
-	const int mLatency_tick = 2;			//latency of detecting the line clock. Calibrate the latency with the oscilloscope
-	double ConvertSpatialCoord2Time(double x);
-	double getDiscreteTime(int pix);
-	double calculateDwellTime(int pix);
-	double calculatePracticalDwellTime(int pix);
+
+	class PixelClock
+	{
+		const int mLatency_tick = 2;			//latency detecting the line clock. Calibrate the latency with the oscilloscope
+		double ConvertSpatialCoord2Time(double x);
+		double getDiscreteTime(int pix);
+		double calculateDwellTime(int pix);
+		double calculatePracticalDwellTime(int pix);
+	public:
+		PixelClock();
+		~PixelClock();
+		QU32 PixelClockEqualDuration();
+		QU32 PixelClockEqualDistance();
+	};
+
 public:
 	RTsequence(FPGAapi *fpga);
 	~RTsequence();
 
-	int push(RTchannel chan, QU32 queue);
-	int push(RTchannel chan, U32 aa);
-	int linearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
-	QU32 PixelClockEqualDuration();
-	QU32 PixelClockEqualDistance();
+	int pushQueue(RTchannel chan, QU32 queue);
+	int pushSingleValue(RTchannel chan, U32 input);
+	int pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
+
 };
 
+class Laser
+{
+	double laserPower;
+	double wavelength;
+public:
+	Laser();
+	~Laser();
+
+};
 
 

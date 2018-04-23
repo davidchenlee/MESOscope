@@ -30,9 +30,9 @@ enum LineClockInputSelector {
 
 enum RTchannel {
 	PCLOCK = 0,								//Pixel clock
-	IDgalvo1 = 1,							//Analog channel (galvo 1)
-	IDgalvo2 = 2,							//Analog channel (galvo 2)
-	IDshutter1 = 3							//Digital channel(shutter 1)
+	GALVO1 = 1,							//Analog channel (galvo 1)
+	GALVO2 = 2,							//Analog channel (galvo 2)
+	SHUTTER1 = 3							//Digital channel(shutter 1)
 };
 
 

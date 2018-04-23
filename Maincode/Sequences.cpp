@@ -19,13 +19,14 @@ int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	//Sleep(1000); //wait for the filterwheel to settle
 
 	//Initialize the FPGA
-	initializeFPGAvariables(session);
+	initializeFPGA(session);
 
 	//Send the commands to the FPGA buffer
 	sendCommandsToFPGAbuffer(session, command2DScan());
 
 	//Send the commands to each channel buffers, but do not execute them yet
-	executeFPGACommands(session);		
+	sendFPGAchannelBuffers(session);
+	
 
 	//Execute the commands and read the photon count
 	readPhotonCount(status, session);
@@ -37,7 +38,7 @@ int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 	if (0)
 	{
 		//sendCommandsToFPGAbuffer(status, session, TestAODO());
-		executeFPGACommands(session);
+		sendFPGAchannelBuffers(session);
 		triggerFPGAstartImaging(session);
 	}
 
@@ -48,6 +49,7 @@ int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session)
 }
 //endregion "FPGA combined sequences"
 #pragma endregion
+
 
 
 #pragma region "Individual sequences"
@@ -69,8 +71,8 @@ VQU32 command2DScan()
 
 	QU32 linearRampSegment0 = generateLinearRamp(galvoTimeStep_us, 25 * ms, galvoAmplitude_volt, -galvoAmplitude_volt);	//Ramp up the galvo from -galvoAmplitude_volt to galvoAmplitude_volt
 	
-	vectorOfQueues[IDgalvo1] = linearRampSegment0;
-	vectorOfQueues[IDgalvo1].push(singleAnalogOut(4 * us, galvoAmplitude_volt));								//Set the galvo back to -galvoAmplitude_volt
+	vectorOfQueues[GALVO1] = linearRampSegment0;
+	vectorOfQueues[GALVO1].push(singleAnalogOut(4 * us, galvoAmplitude_volt));								//Set the galvo back to -galvoAmplitude_volt
 	
 	/*//debugger
 	vectorOfQueues[IDgalvo1].push(generateSingleAnalogOut(4 * us, 0));
@@ -81,10 +83,10 @@ VQU32 command2DScan()
 	*/
 	
 	//DO0
-	vectorOfQueues[IDshutter1].push(singleDigitalOut(4 * us, 1));
-	vectorOfQueues[IDshutter1].push(singleDigitalOut(4 * us, 0));
-	vectorOfQueues[IDshutter1].push(singleDigitalOut(4 * us, 0));
-	vectorOfQueues[IDshutter1].push(singleDigitalOut(4 * us, 0));
+	vectorOfQueues[SHUTTER1].push(singleDigitalOut(4 * us, 1));
+	vectorOfQueues[SHUTTER1].push(singleDigitalOut(4 * us, 0));
+	vectorOfQueues[SHUTTER1].push(singleDigitalOut(4 * us, 0));
+	vectorOfQueues[SHUTTER1].push(singleDigitalOut(4 * us, 0));
 
 	return vectorOfQueues;
 }
@@ -92,6 +94,4 @@ VQU32 command2DScan()
 //endregion "Individual sequences"
 #pragma endregion
 
-VQU32 RTsequence::mVectorOfQueues(Nchan);	//initialize the static member
 
-RTsequence eee;

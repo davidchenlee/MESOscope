@@ -13,18 +13,18 @@ VQU32 TestAODO()
 	//QV[ABUF2].push(generateSingleAnalogOut(4 * us, 0));//go back to zero
 
 	//DO0
-	QV[IDshutter1].push(singleDigitalOut(4 * us, 1));
-	QV[IDshutter1].push(singleDigitalOut(4 * us, 0));
-	QV[IDshutter1].push(singleDigitalOut(4 * us, 0));
-	QV[IDshutter1].push(singleDigitalOut(4 * us, 0));
+	QV[SHUTTER1].push(singleDigitalOut(4 * us, 1));
+	QV[SHUTTER1].push(singleDigitalOut(4 * us, 0));
+	QV[SHUTTER1].push(singleDigitalOut(4 * us, 0));
+	QV[SHUTTER1].push(singleDigitalOut(4 * us, 0));
 
 	//QV[AO0] = GalvoSeq();
 
 
 	//CURRENTLY, AO1 AND DO1 ARE TRIGGERED BY THE LINE CLOCK
 	//AO0
-	QV[IDgalvo1].push(singleAnalogOut(4 * us, 5));
-	QV[IDgalvo1].push(singleAnalogOut(4 * us, 0));
+	QV[GALVO1].push(singleAnalogOut(4 * us, 5));
+	QV[GALVO1].push(singleAnalogOut(4 * us, 0));
 	//QV[IDgalvo1].push(generateSingleAnalogOut(4 * us, 5));
 	//QV[IDgalvo1].push(generateSingleAnalogOut(4 * us, 0));
 
@@ -56,7 +56,7 @@ VQU32 TestAODOandRamp()
 	//concatenateQueues(Q, linearRamp1);
 	concatenateQueues(Q, linearRamp2);
 	//concatenateQueues(Q, linearRamp3);
-	QV[IDgalvo1] = Q;
+	QV[GALVO1] = Q;
 	Q = {}; //clean up
 
 	double pulsewidth = 300 * us;
@@ -67,8 +67,8 @@ VQU32 TestAODOandRamp()
 	QV[AO0].push(generateSingleAnalogOut(4 * us, 0.000));
 	*/
 
-	QV[IDshutter1].push(singleDigitalOut(pulsewidth, 1));
-	QV[IDshutter1].push(singleDigitalOut(4 * us, 0));
+	QV[SHUTTER1].push(singleDigitalOut(pulsewidth, 1));
+	QV[SHUTTER1].push(singleDigitalOut(4 * us, 0));
 	return QV;
 }
 
@@ -80,8 +80,8 @@ VQU32 DigitalTimingCheck()
 	double step = 400 * us;
 
 	//DO0
-	QV[IDshutter1].push(singleDigitalOut(step, 1));
-	QV[IDshutter1].push(singleDigitalOut(step, 0));
+	QV[SHUTTER1].push(singleDigitalOut(step, 1));
+	QV[SHUTTER1].push(singleDigitalOut(step, 0));
 
 	return QV;
 }
@@ -95,14 +95,14 @@ VQU32 DigitalLatencyCalib()
 	double step = 4 * us;
 
 	//DO0
-	QV[IDshutter1].push(singleDigitalOut(step, 1));
+	QV[SHUTTER1].push(singleDigitalOut(step, 1));
 
 	//many short digital pulses to accumulate the error
 	for (U32 ii = 0; ii < 99; ii++)
-		QV[IDshutter1].push(singleDigitalOut(step, 0));
+		QV[SHUTTER1].push(singleDigitalOut(step, 0));
 
-	QV[IDshutter1].push(singleDigitalOut(step, 1));
-	QV[IDshutter1].push(singleDigitalOut(step, 0));
+	QV[SHUTTER1].push(singleDigitalOut(step, 1));
+	QV[SHUTTER1].push(singleDigitalOut(step, 0));
 
 	return QV;
 }
@@ -116,18 +116,18 @@ VQU32 AnalogLatencyCalib()
 	double step = 4 * us;
 
 	//AO0
-	QV[IDgalvo1].push(singleAnalogOut(step, 10));//initial pulse
-	QV[IDgalvo1].push(singleAnalogOut(step, 0));
-	QV[IDgalvo1] = concatenateQueues(QV[0], generateLinearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
-	QV[IDgalvo1].push(singleAnalogOut(step, 5));//final pulse
-	QV[IDgalvo1].push(singleAnalogOut(step, 0));
+	QV[GALVO1].push(singleAnalogOut(step, 10));//initial pulse
+	QV[GALVO1].push(singleAnalogOut(step, 0));
+	QV[GALVO1] = concatenateQueues(QV[0], generateLinearRamp(4 * us, delay, 0, 5));//linear ramp to accumulate the error
+	QV[GALVO1].push(singleAnalogOut(step, 5));//final pulse
+	QV[GALVO1].push(singleAnalogOut(step, 0));
 
 	//DO0
-	QV[IDshutter1].push(singleDigitalOut(step, 1));
-	QV[IDshutter1].push(singleDigitalOut(step, 0));
-	QV[IDshutter1].push(singleDigitalOut(delay, 0));
-	QV[IDshutter1].push(singleDigitalOut(step, 1));
-	QV[IDshutter1].push(singleDigitalOut(step, 0));
+	QV[SHUTTER1].push(singleDigitalOut(step, 1));
+	QV[SHUTTER1].push(singleDigitalOut(step, 0));
+	QV[SHUTTER1].push(singleDigitalOut(delay, 0));
+	QV[SHUTTER1].push(singleDigitalOut(step, 1));
+	QV[SHUTTER1].push(singleDigitalOut(step, 0));
 
 	return QV;
 }

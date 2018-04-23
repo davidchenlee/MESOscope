@@ -40,7 +40,7 @@ namespace Const
 	//400x35x70, skipped 6
 
 	extern const PhotonCounterInputSelector PhotonCounterInput = PMText;		//PMText or PMTsim
-	extern const LineClockInputSelector LineClockInput = ResScan;				//ResScan, FuncGen, or FPGAclock
+	extern const LineClockInputSelector LineClockInput = FuncGen;				//ResScan, FuncGen, or FPGAclock
 
 	//Scanning calibration factors
 	//extern const double RS_voltPerUm = 1.0*V/(157*um);						//volts per um. Calibration factor for the resonant scanner (equal duration pixels). 11/April/2018

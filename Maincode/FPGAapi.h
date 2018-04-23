@@ -30,6 +30,8 @@ int triggerFPGAstartImaging(NiFpga_Session session);
 int triggerFIFOflush(NiFpga_Session session);
 int configureFIFO(NiFpga_Session session, U32 depth);
 
+void printFPGAstatus(NiFpga_Status status, char functionName[]);
+
 class FPGAClassTest
 {
 	NiFpga_Status status;

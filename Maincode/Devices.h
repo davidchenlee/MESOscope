@@ -15,7 +15,7 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName);
 //Vibratome functions
 class Vibratome
 {
-	NiFpga_Session session;
+	NiFpga_Session mSession;
 	//vibratome channels
 	enum VibratomeChannel {
 		VibratomeStart,
@@ -23,45 +23,45 @@ class Vibratome
 		VibratomeForward
 	};
 public:
-	int Nslide;						//Slide number
-	double sectionThickness;		//Thickness of the section
-	double speed;					//Speed of the vibratome (manual setting)
-	double amplitude;				//Amplitude of the vibratome (manual setting)
+	int mNslide;						//Slide number
+	double mSectionThickness;		//Thickness of the section
+	double mSpeed;					//Speed of the vibratome (manual setting)
+	double mAmplitude;				//Amplitude of the vibratome (manual setting)
 	Vibratome();
 	~Vibratome();
-	int startStop();
-	int sendCommand(double dt, VibratomeChannel channel);
+	NiFpga_Status startStop();
+	NiFpga_Status sendCommand(double dt, VibratomeChannel channel);
 };
 
 class ResonantScanner
 {
-	NiFpga_Session session;
-	const int delayTime = 10;
+	NiFpga_Session mSession;
+	const int mDelayTime = 10;
 	double ResonantScanner::convertUm2Volt(double Amplitude);
 public:
-	bool outputState;
-	double amplitude_um = 0;
-	double voltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
+	bool mState;							//is the scanner on or off
+	double mAmplitude_um = 0;
+	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
 	ResonantScanner(NiFpga_Session session);
 	~ResonantScanner();
-	int ResonantScanner::enable(bool requestedState);
-	int ResonantScanner::setOutputVoltage(double Vout);
-	int ResonantScanner::setOutputAmplitude(double amplitude_um);
-	int ResonantScanner::turnOn(double amplitude_um);
-	int ResonantScanner::turnOff();
+	NiFpga_Status ResonantScanner::startStop(bool requestedState);
+	NiFpga_Status ResonantScanner::setOutputVoltage(double Vout);
+	NiFpga_Status ResonantScanner::setOutputAmplitude(double amplitude_um);
+	NiFpga_Status ResonantScanner::turnOn(double amplitude_um);
+	NiFpga_Status ResonantScanner::turnOff();
 };
 
 class Shutter
 {
-	NiFpga_Session session;
-	const int delayTime = 10;
+	NiFpga_Session mSession;
+	const int mDelayTime = 10;
 public:
-	uint32_t IDshutter;
-	bool state;
+	uint32_t mIDshutter;
+	bool mState;
 	Shutter(NiFpga_Session session, uint32_t ID);
 	~Shutter();
-	int Shutter::setOutput(bool requestedState);
-	int Shutter::pulseHigh();
+	NiFpga_Status Shutter::setOutput(bool requestedState);
+	NiFpga_Status Shutter::pulseHigh();
 };
 
 class PixelClock
@@ -80,4 +80,11 @@ public:
 	U32Q PixelClockEqualDistance();
 };
 
-void printFPGAstatus(NiFpga_Status status, std::string functionName);
+class Stage
+{
+public:
+	Stage();
+	~Stage();
+};
+
+

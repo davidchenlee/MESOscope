@@ -5,4 +5,4 @@
 int runCombinedSequence(NiFpga_Status* status, NiFpga_Session session);
 
 //Individual sequences
-U32QV command2DScan();
+VQU32 command2DScan();

@@ -22,8 +22,7 @@ int main()
 				RS.turnOn(200*um);
 			else
 				RS.turnOff();
-			
-			
+						
 			Shutter aa(session,NiFpga_FPGAvi_ControlBool_Shutter2);
 			aa.pulseHigh();
 			

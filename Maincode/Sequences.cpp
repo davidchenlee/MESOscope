@@ -19,7 +19,7 @@ int Sequence1(FPGAapi fpga)
 	PhotonCounter counter(fpga);
 
 	//Execute the RT sequence and read the photon count
-	counter.readPhotonCount();
+	counter.readCount();
 
 	return 0;
 }

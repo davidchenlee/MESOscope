@@ -13,6 +13,8 @@ int main()
 
 	fpga.flushFIFO();
 	fpga.close();
+	
+	std::cout << "\nPress any key to continue..." << std::endl;
 	getchar();
 
 	return 0;

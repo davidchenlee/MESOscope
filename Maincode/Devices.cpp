@@ -155,7 +155,7 @@ PhotonCounter::~PhotonCounter()
 {
 }
 
-NiFpga_Status PhotonCounter::readPhotonCount()
+NiFpga_Status PhotonCounter::readCount()
 {
 	//FIFOa
 	int NelementsReadFIFOa = 0; 						//Total number of elements read from the FIFO
@@ -573,7 +573,8 @@ Stage::~Stage()
 #pragma endregion "Stages"
 
 #pragma region "Real-time sequence"
-RTsequence::RTsequence(FPGAapi *fpga): mFpga(fpga)
+
+RTsequence::RTsequence(FPGAapi *fpga): mFpga(fpga)				//Pass a pointer to be abla to modify fpga.mVectorOfQueue
 {
 	PixelClock pixelclock;
 	//mFpga->mVectorOfQueues[PCLOCK] = pixelclock. PixelClockEqualDuration();
@@ -662,7 +663,7 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 	QU32 queue;
 	std::vector<double> PixelClockEqualDistanceLUT(WidthPerFrame_pix);
 
-	if (WidthPerFrame_pix % 2 == 0)	//is even
+	if (WidthPerFrame_pix % 2 == 0)	//is even. Odd number of pixels not implemented yet
 	{
 		for (int pix = -WidthPerFrame_pix / 2; pix < WidthPerFrame_pix / 2; pix++)	//pix in [-WidthPerFrame_pix/2,WidthPerFrame_pix/2]
 			PixelClockEqualDistanceLUT[pix + WidthPerFrame_pix / 2] = calculatePracticalDwellTime(pix);
@@ -705,3 +706,5 @@ RTsequence::PixelClock::~PixelClock()
 Laser::Laser() {}
 Laser::~Laser() {}
 
+Laser::PockelsCell::PockelsCell() {}
+Laser::PockelsCell::~PockelsCell() {}

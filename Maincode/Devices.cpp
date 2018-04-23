@@ -1,7 +1,161 @@
 #include "Devices.h"
 
+
+void printHex(int input)
+{
+	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
+}
+
+#pragma region "Generic functions"
+
+//Pack t in MSB and x in LSB. Time t and analog output x are encoded in 16 bits each.
+U32 packU32(U16 t, U16 x)
+{
+	return (t << 16) | (0x0000FFFF & x);
+}
+
+
+//Convert microseconds to ticks
+U16 convertUs2tick(double t_us)
+{
+	const double t_tick = t_us * tickPerUs;
+
+	if ((U32)t_tick > 0x0000FFFF)
+	{
+		std::cerr << "WARNING in " << __FUNCTION__ << ": time step overflow. Time step set to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
+		return _UI16_MAX;
+	}
+	else if ((U32)t_tick < dt_tick_MIN)
+	{
+		std::cerr << "WARNING in " << __FUNCTION__ << ": time step underflow. Time step set to the min: " << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
+		return dt_tick_MIN;
+	}
+	else
+		return (U16)t_tick;
+}
+
+
+/*converts voltage (range: -10V to 10V) to a signed int 16 (range: -32768 to 32767)
+0x7FFFF = 0d32767
+0xFFFF = -1
+0x8000 = -32768
+*/
+I16 convertVolt2I16(double x)
+{
+	if (x > 10)
+	{
+		std::cerr << "WARNING in " << __FUNCTION__ << ": voltage overflow. Voltage set to the max: 10 V" << std::endl;
+		return (I16)_I16_MAX;
+	}
+	else if (x < -10)
+	{
+		std::cerr << "WARNING in " << __FUNCTION__ << ": voltage underflow. Voltage set to the min: -10 V" << std::endl;
+		return (I16)_I16_MIN;
+	}
+	else
+		return (I16)(x / 10 * _I16_MAX);
+}
+
+
+//Send out an analog instruction, where the analog level 'val' is held for the amount of time 't'
+U32 singleAnalogOut(double t, double val)
+{
+	const U16 AOlatency_tick = 2;	//To calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
+	return packU32(convertUs2tick(t) - AOlatency_tick, convertVolt2I16(val));
+}
+
+
+//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
+U32 singleDigitalOut(double t, bool DO)
+{
+	const U16 DOlatency_tick = 2;	//To calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
+	if (DO)
+		return packU32(convertUs2tick(t) - DOlatency_tick, 0x0001);
+	else
+		return packU32(convertUs2tick(t) - DOlatency_tick, 0x0000);
+}
+
+
+//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't'
+U32 singlePixelClock(double t, bool DO)
+{
+	const U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
+	if (DO)
+		return packU32(convertUs2tick(t) - PClatency_tick, 0x0001);
+	else
+		return packU32(convertUs2tick(t) - PClatency_tick, 0x0000);
+}
+
+QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal)
+{
+	QU32 queue;
+	const bool debug = 0;
+
+	if (TimeStep < AOdt_us)
+	{
+		std::cerr << "WARNING in " << __FUNCTION__ << ": time step too small. Time step set to " << AOdt_us << " us" << std::endl;
+		TimeStep = AOdt_us;						//Analog output time increment (in us)
+		return {};
+	}
+
+	const int nPoints = (int)(RampLength / TimeStep);		//Number of points
+
+	if (nPoints <= 1)
+	{
+		std::cerr << "ERROR in " << __FUNCTION__ << ": not enought points for the linear ramp" << std::endl;
+		std::cerr << "nPoints: " << nPoints << std::endl;
+		return {};
+	}
+	else
+	{
+		if (debug)
+		{
+			std::cout << "nPoints: " << nPoints << std::endl;
+			std::cout << "time \tticks \tv" << std::endl;
+		}
+
+		for (int ii = 0; ii < nPoints; ii++)
+		{
+			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
+			queue.push(singleAnalogOut(TimeStep, V));
+
+			if (debug)
+				std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
+		}
+
+		if (debug)
+		{
+			getchar();
+			return {};
+		}
+
+
+	}
+	return queue;
+}
+
+//Push all the elements in 'tailQ' into 'headQ'
+void concatenateQueues(QU32& concatenatedQueue, QU32 newQueue)
+{
+	while (!newQueue.empty())
+	{
+		concatenatedQueue.push(newQueue.front());
+		newQueue.pop();
+	}
+}
+
+#pragma endregion "Genetic functions"
+
 #pragma region "Photon counter"
-int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
+PhotonCounter::PhotonCounter(FPGAapi fpga): mFpga(fpga)
+{
+}
+
+PhotonCounter::~PhotonCounter()
+{
+}
+
+NiFpga_Status PhotonCounter::readPhotonCount()
 {
 	//FIFOa
 	int NelementsReadFIFOa = 0; 						//Total number of elements read from the FIFO
@@ -23,18 +177,17 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	int *NelementsBufArrayb = new int[NmaxbufArray];	//Each elements in this array indicates the number of elements in each chunch of data
 	int NelementsReadFIFOb = 0; 						//Total number of elements read from the FIFO
 
-
 	//Start the FIFO OUT to transfer data from the FPGA FIFO to the PC FIFO
-	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	NiFpga_MergeStatus(status, NiFpga_StartFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_StartFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_StartFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 
 	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-	triggerFPGAstartImaging(session);
+	mFpga.triggerFPGAstartImaging();
 
 	//Read the data
 	try
 	{
-		readFIFO(status, session, NelementsReadFIFOa, NelementsReadFIFOb, dataFIFOa, bufArrayb, NelementsBufArrayb, bufArrayIndexb, NmaxbufArray);
+		readFIFO(NelementsReadFIFOa, NelementsReadFIFOb, dataFIFOa, bufArrayb, NelementsBufArrayb, bufArrayIndexb, NmaxbufArray);
 
 		//If all the expected data is read successfully, process the data
 		if (NelementsReadFIFOa == NpixAllFrames && NelementsReadFIFOb == NpixAllFrames)
@@ -67,8 +220,8 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 
 
 	//Close the FIFO to (maybe) flush it
-	NiFpga_MergeStatus(status, NiFpga_StopFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	NiFpga_MergeStatus(status, NiFpga_StopFifo(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_StopFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_StopFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 
 	delete[] dataFIFOa;
 
@@ -78,11 +231,11 @@ int readPhotonCount(NiFpga_Status* status, NiFpga_Session session)
 	}
 	delete[] bufArrayb;
 
-	return 0;
+	return mFpga.mStatus;
 }
 
 
-void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray)
+NiFpga_Status PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray)
 {
 	const int readFifoWaitingTime = 15;			//Waiting time between each iteration
 	const U32 timeout = 100;					//FIFO timeout
@@ -107,14 +260,14 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 									//FIFO OUT a
 		if (NelementsReadFIFOa < NpixAllFrames)
 		{
-			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &NremainingFIFOa));
+			NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &NremainingFIFOa));
 			//std::cout << "Number of elements remaining in the host FIFO a: " << NremainingFIFOa << std::endl;
 
 			if (NremainingFIFOa > 0)
 			{
 				NelementsReadFIFOa += NremainingFIFOa;
 
-				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, NremainingFIFOa, timeout, &NremainingFIFOa));
+				NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, NremainingFIFOa, timeout, &NremainingFIFOa));
 			}
 		}
 
@@ -122,7 +275,7 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 		if (NelementsReadFIFOb < NpixAllFrames)		//Skip if all the data have already been transferred (i.e. NelementsReadFIFOa = NpixAllFrames)
 		{
 			//By requesting 0 elements from the FIFO, the function returns the number of elements available. If no data available so far, then NremainingFIFOa = 0 is returned
-			NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &NremainingFIFOb));
+			NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &NremainingFIFOb));
 			//std::cout << "Number of elements remaining in the host FIFO b: " << NremainingFIFOb << std::endl;
 
 			//If there are data available in the FIFO, retrieve it
@@ -132,7 +285,7 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 				NelementsBufArrayb[bufArrayIndexb] = NremainingFIFOb;		//Keep track of how many elements are in each FIFObuffer array												
 
 																			//Read the elements in the FIFO
-				NiFpga_MergeStatus(status, NiFpga_ReadFifoU32(session, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], NremainingFIFOb, timeout, &NremainingFIFOb));
+				NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], NremainingFIFOb, timeout, &NremainingFIFOb));
 
 				if (bufArrayIndexb >= NmaxbufArray)
 				{
@@ -159,6 +312,19 @@ void readFIFO(NiFpga_Status* status, NiFpga_Session session, int &NelementsReadF
 
 	std::cout << "Buffer-arrays used: " << (U32)bufArrayIndexb << std::endl; //print how many buffer arrays were actually used
 	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << std::endl; //print the total number of elements read
+
+	return mFpga.mStatus;
+}
+
+NiFpga_Status PhotonCounter::configureFIFO(U32 depth)
+{
+	U32 actualDepth;
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ConfigureFifo2(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
+	std::cout << "actualDepth a: " << actualDepth << std::endl;
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ConfigureFifo2(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
+	std::cout << "actualDepth b: " << actualDepth << std::endl;
+
+	return mFpga.mStatus;
 }
 
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
@@ -233,10 +399,9 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName)
 
 #pragma endregion "Photon counter"
 
-
 #pragma region "Vibratome"
 
-Vibratome::Vibratome(): mSession(mSession) {}
+Vibratome::Vibratome(FPGAapi fpga): mFpga(fpga){}
 
 Vibratome::~Vibratome() {}
 
@@ -244,11 +409,11 @@ Vibratome::~Vibratome() {}
 NiFpga_Status Vibratome::startStop()
 {
 	const int SleepTime = 20; //in ms. It has to be ~ 12 ms or longer to 
-	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_start, 1);
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, NiFpga_FPGAvi_ControlBool_VT_start, 1));
 	Sleep(SleepTime);
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_start, 0));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, NiFpga_FPGAvi_ControlBool_VT_start, 0));
 
-	return status;
+	return mFpga.mStatus;
 }
 
 //Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
@@ -272,7 +437,7 @@ NiFpga_Status Vibratome::sendCommand(double pulseDuration, VibratomeChannel chan
 		return -1;
 	}
 
-	NiFpga_Status status = NiFpga_WriteBool(mSession, selectedChannel, 1);
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, selectedChannel, 1));
 
 	if (dt_ms >= minPulseDuration)
 		Sleep(dt_ms - delay);
@@ -281,110 +446,110 @@ NiFpga_Status Vibratome::sendCommand(double pulseDuration, VibratomeChannel chan
 		Sleep(minPulseDuration - delay);
 		std::cerr << "WARNING in " << __FUNCTION__ << ": vibratome pulse duration too short. Instead, set to the min = ~" << minPulseDuration << "ms" << std::endl;
 	}
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, selectedChannel, 0));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, selectedChannel, 0));
 
-	return status;
+	return mFpga.mStatus;
 }
 
 #pragma endregion "Vibratome"
 
 #pragma region "Resonant scanner"
 
-ResonantScanner::ResonantScanner(NiFpga_Session session): mSession(session) {};
+ResonantScanner::ResonantScanner(FPGAapi fpga): mFpga(fpga){};
 
 ResonantScanner::~ResonantScanner() {};
 
 //Start or stop the resonant scanner
 NiFpga_Status ResonantScanner::startStop(bool state)
 {
-	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)state);
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)state));
 
-	if (!status)
+	if (!mFpga.mStatus)
 		mState = state;
-	return status;
+	return mFpga.mStatus;
 }
 
 
 //Set the output voltage of the resonant scanner
 NiFpga_Status ResonantScanner::setOutputVoltage(double Vout)
 {
-	NiFpga_Status status = NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout)));
 
-	if (!status)
+	if (!mFpga.mStatus)
 		mAmplitude_um = Vout / mVoltPerUm;
 
-	return status;
+	return mFpga.mStatus;
 }
 
 //Set the output voltage of the resonant scanner
 NiFpga_Status ResonantScanner::setOutputAmplitude(double amplitude_um)
 {
-	NiFpga_Status status = NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(amplitude_um * mVoltPerUm));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(amplitude_um * mVoltPerUm)));
 
-	if (!status)
+	if (!mFpga.mStatus)
 		mAmplitude_um = amplitude_um;
 
-	return status;
+	return mFpga.mStatus;
 }
 
 NiFpga_Status ResonantScanner::turnOn(double amplitude_um)
 {
-	NiFpga_Status status = this->setOutputAmplitude(amplitude_um);
+	NiFpga_MergeStatus(&mFpga.mStatus, this->setOutputAmplitude(amplitude_um));
 	Sleep(mDelayTime);
-	NiFpga_MergeStatus(&status, this->startStop(1));
+	NiFpga_MergeStatus(&mFpga.mStatus, this->startStop(1));
 
-	if (status)
-		printFPGAstatus(status, __FUNCTION__);
+	if (mFpga.mStatus)
+		mFpga.printFPGAstatus(__FUNCTION__);
 
-	return status;
+	return mFpga.mStatus;
 }
 
 NiFpga_Status ResonantScanner::turnOff()
 {
-	NiFpga_Status status = this->startStop(0);
+	NiFpga_MergeStatus(&mFpga.mStatus, this->startStop(0));
 	Sleep(mDelayTime);
-	NiFpga_MergeStatus(&status, this->setOutputVoltage(0));
+	NiFpga_MergeStatus(&mFpga.mStatus, this->setOutputVoltage(0));
 
-	if (status)
-		printFPGAstatus(status, __FUNCTION__);
+	if (mFpga.mStatus)
+		mFpga.printFPGAstatus(__FUNCTION__);
 
-	return status;
+	return mFpga.mStatus;
 }
 
 
 double ResonantScanner::convertUm2Volt(double amplitude_um)
 {
-	return amplitude_um * this->mVoltPerUm;
+	return amplitude_um * mVoltPerUm;
 }
 
 #pragma endregion "Resonant scanner"
 
 #pragma region "Shutters"
 
-Shutter::Shutter(NiFpga_Session session, uint32_t ID) : mSession(session), mIDshutter(ID) {}
+Shutter::Shutter(FPGAapi fpga, uint32_t ID) : mFpga(fpga), mIDshutter(ID) {}
 
 Shutter::~Shutter() {}
 
 NiFpga_Status Shutter::setOutput(bool state)
 {
-	NiFpga_Status status = NiFpga_WriteBool(this->mSession, mIDshutter, (NiFpga_Bool)state);
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mIDshutter, (NiFpga_Bool)state));
 
-	if(!status)
+	if(!mFpga.mStatus)
 		mState = state;
 
-	return status;
+	return mFpga.mStatus;
 }
 
 NiFpga_Status Shutter::pulseHigh()
 {
-	NiFpga_Status status = NiFpga_WriteBool(this->mSession, mIDshutter, 1);
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mIDshutter, 1));
 	Sleep(mDelayTime);
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(this->mSession, mIDshutter, 0));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mIDshutter, 0));
 
-	if (!status)
+	if (!mFpga.mStatus)
 		mState = 0;
 
-	return status;
+	return mFpga.mStatus;
 }
 
 #pragma endregion "Shutters"
@@ -394,93 +559,6 @@ NiFpga_Status Shutter::pulseHigh()
 //NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
 
 #pragma endregion "Pockels cells"
-
-#pragma region "Pixel clock"
-
-PixelClock::PixelClock() {}
-
-PixelClock::~PixelClock() {}
-
-//Convert the spatial coordinate of the resonant scanner to time. x in [-RSamplitudePkPK_um/2, RSamplitudePkPK_um/2]
-double PixelClock::ConvertSpatialCoord2Time(double x)
-{
-	const double arg = 2 * x / RSamplitudePkPK_um;
-	if (arg <= 1)
-		return HalfPeriodLineClock_us * asin(arg) / PI; //Return value in [-HalfPeriodLineClock_us/PI, HalfPeriodLineClock_us/PI]
-	else
-	{
-		std::cerr << "ERROR in " << __FUNCTION__ << ": argument of asin greater than 1" << std::endl;
-		return HalfPeriodLineClock_us / PI;
-	}
-}
-
-//Discretize the spatial coordinate, then convert it to time
-double PixelClock::getDiscreteTime(int pix)
-{
-	const double dx = 0.5 * um;
-	return ConvertSpatialCoord2Time(dx * pix);
-}
-
-//Calculate the dwell time for the pixel
-double PixelClock::calculateDwellTime(int pix)
-{
-	return getDiscreteTime(pix + 1) - getDiscreteTime(pix);
-}
-
-//Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
-double PixelClock::calculatePracticalDwellTime(int pix)
-{
-	return round(calculateDwellTime(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
-}
-
-//Pixel clock sequence. Every pixel has the same duration in time.
-//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-//Pixel clock evently spaced in time
-QU32 PixelClock::PixelClockEqualDuration()
-{
-	const double InitialTimeStep_us = 6.25*us;							//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
-																		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-	Queue.push(packU32(convertUs2tick(InitialTimeStep_us) - latency_tick, 0x0000));
-
-	const double PixelTimeStep = 0.125 * us;
-	for (int pix = 0; pix < WidthPerFrame_pix + 1; pix++)
-		Queue.push(singlePixelClock(PixelTimeStep, 1));			//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
-																		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	return Queue;														//Return a queue (and not a vector of queues)
-}
-
-//Pixel clock sequence. Every pixel is equally spaced.
-//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-QU32 PixelClock::PixelClockEqualDistance()
-{
-	std::vector<double> PixelClockEqualDistanceLUT(WidthPerFrame_pix);
-
-	if (WidthPerFrame_pix % 2 == 0)	//is even
-	{
-		for (int pix = -WidthPerFrame_pix / 2; pix < WidthPerFrame_pix / 2; pix++)	//pix in [-WidthPerFrame_pix/2,WidthPerFrame_pix/2]
-			PixelClockEqualDistanceLUT[pix + WidthPerFrame_pix / 2] = calculatePracticalDwellTime(pix);
-	}
-	else
-	{
-		std::cerr << "ERROR in " << __FUNCTION__ << ": Odd number of pixels in the image width currently not supported by the pixel clock. Pixel clock set to 0" << std::endl;
-	}
-
-	//Determine the relative delay of the pixel clock wrt the line clock
-	const U16 calibCoarse_tick = 2043;	//Look at the oscilloscope and adjust to center the pixel clock within a line scan
-	const U16 calibFine_tick = 10;		//In practice, the resonant scanner is not perfectly centered around the objective's back aperture
-										//Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
-	const U16 InitialTimeStep_tick = calibCoarse_tick + calibFine_tick;	
-	Queue.push(packU32(InitialTimeStep_tick - latency_tick, 0x0000));
-
-	for (int pix = 0; pix < WidthPerFrame_pix; pix++)
-		Queue.push(singlePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
-
-	Queue.push(singlePixelClock(dt_us_MIN, 1));								//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-
-	return Queue;
-}
-
-#pragma endregion "Pixel clock"
 
 #pragma region "Stages"
 Stage::Stage()
@@ -494,11 +572,10 @@ Stage::~Stage()
 }
 #pragma endregion "Stages"
 
-
-
+#pragma region "Real-time sequence"
 RTsequence::RTsequence(FPGAapi *fpga): mFpga(fpga)
 {
-	//mVectorOfQueues[PCLOCK] = PixelClockEqualDuration();
+	//mFpga->mVectorOfQueues[PCLOCK] = PixelClockEqualDuration();
 	mFpga->mVectorOfQueues[PCLOCK] = PixelClockEqualDistance();
 }
 
@@ -514,17 +591,19 @@ int RTsequence::push(RTchannel chan, QU32 queue)
 	return 0;
 }
 
-int RTsequence::push(RTchannel chan, U32 aa)
+int RTsequence::push(RTchannel chan, U32 input)
 {
-	mFpga->mVectorOfQueues[chan].push(aa);
+	mFpga->mVectorOfQueues[chan].push(input);
 	return 0;
 }
 
 
-void RTsequence::linearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal)
+int RTsequence::linearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal)
 {
 	mFpga->mVectorOfQueues[chan] = generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal);
+	return 0;
 }
+
 
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSamplitudePkPK_um/2, RSamplitudePkPK_um/2]
 double RTsequence::ConvertSpatialCoord2Time(double x)
@@ -606,3 +685,8 @@ QU32 RTsequence::PixelClockEqualDistance()
 
 	return queue;
 }
+
+#pragma endregion "Real-time sequence"
+
+
+

@@ -32,7 +32,7 @@ class PhotonCounter
 public:
 	PhotonCounter(FPGAapi fpga);
 	~PhotonCounter();
-	NiFpga_Status readPhotonCount();
+	NiFpga_Status readCount();
 	NiFpga_Status readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray);
 	NiFpga_Status configureFIFO(U32 depth);
 };
@@ -42,12 +42,9 @@ class Vibratome
 {
 	FPGAapi mFpga;
 
-	//vibratome channels
-	enum VibratomeChannel {
-		VibratomeStart,
-		VibratomeBack,
-		VibratomeForward
-	};
+	//Vibratome channels
+	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};
+
 public:
 	int mNslide;						//Slide number
 	double mSectionThickness;		//Thickness of the section
@@ -114,7 +111,7 @@ class RTsequence
 
 	class PixelClock
 	{
-		const int mLatency_tick = 2;			//latency detecting the line clock. Calibrate the latency with the oscilloscope
+		const int mLatency_tick = 2;			//latency at detecting the line clock. Calibrate the latency with the oscilloscope
 		double ConvertSpatialCoord2Time(double x);
 		double getDiscreteTime(int pix);
 		double calculateDwellTime(int pix);
@@ -138,12 +135,18 @@ public:
 
 class Laser
 {
-	double laserPower;
 	double wavelength;
+	class PockelsCell
+	{
+		double Vout_volt;			//Output voltage to the HV amplifier
+		double PC_voltPermW;		//Calibration factor
+	public:
+		PockelsCell();
+		~PockelsCell();
+	};
 public:
 	Laser();
 	~Laser();
-
 };
 
 

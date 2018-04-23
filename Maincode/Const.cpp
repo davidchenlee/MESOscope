@@ -55,7 +55,6 @@ namespace Const
 											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns	
 
 	//Pixel-clock paramenters
-	extern std::vector<double> PixelClockEqualDistanceLUT(WidthPerFrame_pix);	//LUT for a pixel clock
 	extern const double HalfPeriodLineClock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
 	extern const double RSamplitudePkPK_um = 250 * um;							//The pk-pk amplitude is twice this
 

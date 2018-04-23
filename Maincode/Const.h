@@ -17,24 +17,9 @@ typedef std::queue<U32> QU32;				//Queue of unsigned integers
 typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
 
 
-enum PhotonCounterInputSelector {
-	PMText = 0,								//0 for the real external PMT
-	PMTsim = 1								//1 for the simulated PMT
-};
-
-enum LineClockInputSelector {
-	ResScan = 0,							//0 for the resonant scanner
-	FuncGen = 1,							//1 for the function generator
-	FPGAclock = 2
-};
-
-enum RTchannel {
-	PCLOCK = 0,								//Pixel clock
-	GALVO1 = 1,							//Analog channel (galvo 1)
-	GALVO2 = 2,							//Analog channel (galvo 2)
-	SHUTTER1 = 3							//Digital channel(shutter 1)
-};
-
+enum PhotonCounterInputSelector { PMText, PMTsim, FPGAclock };	//real PMT, simulated PMT, internal clock
+enum LineClockInputSelector { ResScan, FuncGen };	//Resonant scanner, function generator, 
+enum RTchannel {PCLOCK, GALVO1, GALVO2, SHUTTER1};		//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
 
 namespace Const
 {
@@ -75,7 +60,6 @@ namespace Const
 	extern const int Npulses;
 	extern const U8 pulseArray[];
 
-	extern std::vector<double> PixelClockEqualDistanceLUT;
 	extern const double HalfPeriodLineClock_us;
 	extern const double RSamplitudePkPK_um;
 };

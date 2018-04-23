@@ -2,8 +2,8 @@
 #include "Devices.h"
 #include "Sequences.h"
 
-U32QV TestAODO();
-U32QV TestAODOandRamp();
-U32QV DigitalTimingCheck();
-U32QV AnalogLatencyCalib();
-U32QV DigitalLatencyCalib();
+VQU32 TestAODO();
+VQU32 TestAODOandRamp();
+VQU32 DigitalTimingCheck();
+VQU32 AnalogLatencyCalib();
+VQU32 DigitalLatencyCalib();

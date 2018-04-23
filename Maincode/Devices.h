@@ -66,7 +66,7 @@ public:
 
 class PixelClock
 {
-	U32Q Queue;
+	QU32 Queue;
 	const int latency_tick = 2;		//latency of detecting the line clock. Calibrate the latency with the oscilloscope. (C++11 allows initialization in declaration)
 	double ConvertSpatialCoord2Time(double x);
 	double getDiscreteTime(int pix);
@@ -76,8 +76,8 @@ class PixelClock
 public:
 	PixelClock();
 	~PixelClock();
-	U32Q PixelClockEqualDuration();
-	U32Q PixelClockEqualDistance();
+	QU32 PixelClockEqualDuration();
+	QU32 PixelClockEqualDistance();
 };
 
 class Stage

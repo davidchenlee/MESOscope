@@ -15,12 +15,12 @@ void printHex(int input);
 U32 packU32(U16 t, U16 x);
 U16 convertUs2tick(double x);
 I16 convertVolt2I16(double x);
-U32 generateSingleAnalogOut(double t, double V);
-U32 generateSingleDigitalOut(double t, bool DO);
-U32 generateSinglePixelClock(double t, bool DO);
-U32Q generateLinearRamp(double dt, double T, double Vi, double Vf);
-U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ);
-int sendCommandsToFPGAbuffer(NiFpga_Session session, U32QV& VectorOfQueues);
+U32 singleAnalogOut(double t, double V);
+U32 singleDigitalOut(double t, bool DO);
+U32 singlePixelClock(double t, bool DO);
+QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);
+void concatenateQueues(QU32& headQ, QU32 tailQ);
+int sendCommandsToFPGAbuffer(NiFpga_Session session, VQU32& VectorOfQueues);
 
 
 //FPGA initialization and trigger
@@ -40,4 +40,24 @@ class FPGAClassTest
 public:
 	FPGAClassTest();
 	~FPGAClassTest();
+};
+
+class RTsequence
+{
+	static VQU32 mVectorOfQueues;
+
+	const int latency_tick = 2;		//latency of detecting the line clock. Calibrate the latency with the oscilloscope. (C++11 allows initialization in declaration)
+	double ConvertSpatialCoord2Time(double x);
+	double getDiscreteTime(int pix);
+	double calculateDwellTime(int pix);
+	double calculatePracticalDwellTime(int pix);
+	void PixelClockEqualDuration();
+	void PixelClockEqualDistance();
+public:
+	RTsequence();
+	RTsequence::RTsequence(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
+	~RTsequence();
+	int push(RTchannel chan, QU32 queue);
+	int push(RTchannel chan, U32 aa);
+
 };

@@ -13,8 +13,8 @@ typedef              int	I32;
 typedef unsigned     int	U32;
 typedef          __int64	I64;
 typedef unsigned __int64	U63;
-typedef std::queue<U32> U32Q;				//Queue of unsigned integers
-typedef std::vector<U32Q> U32QV;			//Vector of queues of unsigned integers
+typedef std::queue<U32> QU32;				//Queue of unsigned integers
+typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
 
 
 enum PhotonCounterInputSelector {
@@ -28,16 +28,18 @@ enum LineClockInputSelector {
 	FPGAclock = 2
 };
 
+enum RTchannel {
+	PCLOCK = 0,								//Pixel clock
+	IDgalvo1 = 1,							//Analog channel (galvo 1)
+	IDgalvo2 = 2,							//Analog channel (galvo 2)
+	IDshutter1 = 3							//Digital channel(shutter 1)
+};
+
 
 namespace Const
 {
 	extern const int Nchan;
-	extern const int PCLOCK;
-	extern const int IDgalvo1;
-	extern const int IDgalvo2;
-	extern const int ABUF2;
-	extern const int IDshutter1;
-
+	
 	extern const double PI;
 	extern const int us;
 	extern const int ms;

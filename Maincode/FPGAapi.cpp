@@ -58,7 +58,7 @@ I16 convertVolt2I16(double x)
 
 
 //Send out an analog instruction, where the analog level 'val' is held for the amount of time 't'
-U32 generateSingleAnalogOut(double t, double val)
+U32 singleAnalogOut(double t, double val)
 {
 	const U16 AOlatency_tick = 2;	//To calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
 	return packU32(convertUs2tick(t) - AOlatency_tick, convertVolt2I16(val));
@@ -66,7 +66,7 @@ U32 generateSingleAnalogOut(double t, double val)
 
 
 //Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
-U32 generateSingleDigitalOut(double t, bool DO)
+U32 singleDigitalOut(double t, bool DO)
 {
 	const U16 DOlatency_tick = 2;	//To calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 	if (DO)
@@ -77,7 +77,7 @@ U32 generateSingleDigitalOut(double t, bool DO)
 
 
 //Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't'
-U32 generateSinglePixelClock(double t, bool DO)
+U32 singlePixelClock(double t, bool DO)
 {
 	const U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
 	if (DO)
@@ -86,9 +86,9 @@ U32 generateSinglePixelClock(double t, bool DO)
 		return packU32(convertUs2tick(t) - PClatency_tick, 0x0000);
 }
 
-U32Q generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal)
+QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal)
 {
-	U32Q queue;
+	QU32 queue;
 	const bool debug = 0;
 
 	if (TimeStep < AOdt_us)
@@ -117,7 +117,7 @@ U32Q generateLinearRamp(double TimeStep, double RampLength, double Vinitial, dou
 		for (int ii = 0; ii < nPoints; ii++)
 		{
 			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
-			queue.push(generateSingleAnalogOut(TimeStep, V));
+			queue.push(singleAnalogOut(TimeStep, V));
 
 			if (debug)
 				std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
@@ -136,23 +136,22 @@ U32Q generateLinearRamp(double TimeStep, double RampLength, double Vinitial, dou
 
 
 //Push all the elements in 'tailQ' into 'headQ'
-U32Q concatenateQueues(U32Q& headQ, U32Q& tailQ)
+void concatenateQueues(QU32& concatenatedQueue, QU32 newQueue)
 {
-	while (!tailQ.empty())
+	while (!newQueue.empty())
 	{
-		headQ.push(tailQ.front());
-		tailQ.pop();
+		concatenatedQueue.push(newQueue.front());
+		newQueue.pop();
 	}
-	return headQ;
 }
 
 //Send every single queue in VectorOfQueue to the FPGA bufer
 //For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 //Then transfer the elements in the long queue to an array to interface the FPGA
 //Alternatively, the single queues could be transferred directly to the array, but why bothering...
-int sendCommandsToFPGAbuffer(NiFpga_Session session, U32QV& VectorOfQueues)
+int sendCommandsToFPGAbuffer(NiFpga_Session session, VQU32& VectorOfQueues)
 {
-	U32Q allQueues;								//Create a single long queue
+	QU32 allQueues;								//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
 	{
 		allQueues.push(VectorOfQueues[i].size());			//Push the number of elements in each individual queue VectorOfQueues[i]
@@ -292,6 +291,15 @@ int configureFIFO(NiFpga_Session session, U32 depth)
 //endregion "FPGA initialization and trigger"
 #pragma endregion
 
+
+void printFPGAstatus(NiFpga_Status status, char functionName[])
+{
+	if (status < 0)
+		std::cerr << "ERROR: '" << functionName << "' exited with FPGA code: " << status << std::endl;
+	if (status >0)
+		std::cerr << "WARNING: '" << functionName << "' exited with FPGA code: " << status << std::endl;
+}
+
 FPGAClassTest::FPGAClassTest()
 {
 	status = NiFpga_Initialize();		//Must be called before any other FPGA calls
@@ -304,16 +312,6 @@ FPGAClassTest::FPGAClassTest()
 		std::cout << "FPGA open-session status: " << status << std::endl;
 	}
 }
-
-
-void printFPGAstatus(NiFpga_Status status, char functionName[])
-{
-	if (status < 0)
-		std::cerr << "ERROR: '" << functionName << "' exited with FPGA code: " << status << std::endl;
-	if (status >0)
-		std::cerr << "WARNING: '" << functionName << "' exited with FPGA code: " << status << std::endl;
-}
-
 
 FPGAClassTest::~FPGAClassTest()
 {
@@ -329,6 +327,110 @@ FPGAClassTest::~FPGAClassTest()
 	status = NiFpga_Finalize();
 	std::cout << "FPGA finalize status: " << status << std::endl;
 };
+
+RTsequence::RTsequence()
+{
+	//PixelClockEqualDuration();
+	PixelClockEqualDistance();
+}
+
+RTsequence::~RTsequence()
+{
+
+}
+
+int RTsequence::push(RTchannel chan, QU32 queue)
+{
+	concatenateQueues(mVectorOfQueues[chan], queue);
+	return 0;
+}
+
+int RTsequence::push(RTchannel chan, U32 aa)
+{
+	mVectorOfQueues[chan].push(aa);
+	return 0;
+}
+
+
+RTsequence::RTsequence(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal)
+{
+	mVectorOfQueues[chan] = generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal);
+}
+
+//Convert the spatial coordinate of the resonant scanner to time. x in [-RSamplitudePkPK_um/2, RSamplitudePkPK_um/2]
+double RTsequence::ConvertSpatialCoord2Time(double x)
+{
+	const double arg = 2 * x / RSamplitudePkPK_um;
+	if (arg <= 1)
+		return HalfPeriodLineClock_us * asin(arg) / PI; //Return value in [-HalfPeriodLineClock_us/PI, HalfPeriodLineClock_us/PI]
+	else
+	{
+		std::cerr << "ERROR in " << __FUNCTION__ << ": argument of asin greater than 1" << std::endl;
+		return HalfPeriodLineClock_us / PI;
+	}
+}
+
+//Discretize the spatial coordinate, then convert it to time
+double RTsequence::getDiscreteTime(int pix)
+{
+	const double dx = 0.5 * um;
+	return ConvertSpatialCoord2Time(dx * pix);
+}
+
+//Calculate the dwell time for the pixel
+double RTsequence::calculateDwellTime(int pix)
+{
+	return getDiscreteTime(pix + 1) - getDiscreteTime(pix);
+}
+
+//Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
+double RTsequence::calculatePracticalDwellTime(int pix)
+{
+	return round(calculateDwellTime(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
+}
+
+//Pixel clock sequence. Every pixel has the same duration in time.
+//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+//Pixel clock evently spaced in time
+void RTsequence::PixelClockEqualDuration()
+{
+	const double InitialTimeStep_us = 6.25*us;							//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
+																		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
+	mVectorOfQueues[PCLOCK].push(packU32(convertUs2tick(InitialTimeStep_us) - latency_tick, 0x0000));
+
+	const double PixelTimeStep = 0.125 * us;
+	for (int pix = 0; pix < WidthPerFrame_pix + 1; pix++)
+		mVectorOfQueues[PCLOCK].push(singlePixelClock(PixelTimeStep, 1));			//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
+																					//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
+}
+
+//Pixel clock sequence. Every pixel is equally spaced.
+//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+void RTsequence::PixelClockEqualDistance()
+{
+	std::vector<double> PixelClockEqualDistanceLUT(WidthPerFrame_pix);
+
+	if (WidthPerFrame_pix % 2 == 0)	//is even
+	{
+		for (int pix = -WidthPerFrame_pix / 2; pix < WidthPerFrame_pix / 2; pix++)	//pix in [-WidthPerFrame_pix/2,WidthPerFrame_pix/2]
+			PixelClockEqualDistanceLUT[pix + WidthPerFrame_pix / 2] = calculatePracticalDwellTime(pix);
+	}
+	else
+		std::cerr << "ERROR in " << __FUNCTION__ << ": Odd number of pixels in the image width currently not supported by the pixel clock. Pixel clock set to 0" << std::endl;
+
+	//Determine the relative delay of the pixel clock wrt the line clock
+	const U16 calibCoarse_tick = 2043;	//Look at the oscilloscope and adjust to center the pixel clock within a line scan
+	const U16 calibFine_tick = 10;		//In practice, the resonant scanner is not perfectly centered around the objective's back aperture
+										//Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
+	const U16 InitialTimeStep_tick = calibCoarse_tick + calibFine_tick;
+	mVectorOfQueues[PCLOCK].push(packU32(InitialTimeStep_tick - latency_tick, 0x0000));
+
+	for (int pix = 0; pix < WidthPerFrame_pix; pix++)
+		mVectorOfQueues[PCLOCK].push(singlePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
+
+	mVectorOfQueues[PCLOCK].push(singlePixelClock(dt_us_MIN, 1));	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
+}
+
 
 
 

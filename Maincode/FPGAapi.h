@@ -24,40 +24,32 @@ int sendCommandsToFPGAbuffer(NiFpga_Session session, VQU32& VectorOfQueues);
 
 
 //FPGA initialization and trigger
-int initializeFPGAvariables(NiFpga_Session session);
-int executeFPGACommands(NiFpga_Session session);
+int initializeFPGA(NiFpga_Session session);
+int sendFPGAchannelBuffers(NiFpga_Session session);
 int triggerFPGAstartImaging(NiFpga_Session session);
 int triggerFIFOflush(NiFpga_Session session);
 int configureFIFO(NiFpga_Session session, U32 depth);
 
 void printFPGAstatus(NiFpga_Status status, char functionName[]);
 
-class FPGAClassTest
+
+
+class FPGAapi
 {
-	NiFpga_Status status;
-	NiFpga_Session session;
+	NiFpga_Status mStatus;
+	NiFpga_Session mSession;
 
 public:
-	FPGAClassTest();
-	~FPGAClassTest();
-};
+	VQU32 mVectorOfQueues;
+	FPGAapi();
+	~FPGAapi();
+	int initialize();
+	void loadRTsequenceOnFPGA();
+	NiFpga_Session getSession();
 
-class RTsequence
-{
-	static VQU32 mVectorOfQueues;
 
-	const int latency_tick = 2;		//latency of detecting the line clock. Calibrate the latency with the oscilloscope. (C++11 allows initialization in declaration)
-	double ConvertSpatialCoord2Time(double x);
-	double getDiscreteTime(int pix);
-	double calculateDwellTime(int pix);
-	double calculatePracticalDwellTime(int pix);
-	void PixelClockEqualDuration();
-	void PixelClockEqualDistance();
-public:
-	RTsequence();
-	RTsequence::RTsequence(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
-	~RTsequence();
-	int push(RTchannel chan, QU32 queue);
-	int push(RTchannel chan, U32 aa);
+
+
 
 };
+

@@ -496,3 +496,113 @@ Stage::~Stage()
 
 
 
+RTsequence::RTsequence(FPGAapi *fpga): mFpga(fpga)
+{
+	//mVectorOfQueues[PCLOCK] = PixelClockEqualDuration();
+	mFpga->mVectorOfQueues[PCLOCK] = PixelClockEqualDistance();
+}
+
+RTsequence::~RTsequence()
+{
+
+}
+
+int RTsequence::push(RTchannel chan, QU32 queue)
+{
+
+	concatenateQueues(mFpga->mVectorOfQueues[chan], queue);
+	return 0;
+}
+
+int RTsequence::push(RTchannel chan, U32 aa)
+{
+	mFpga->mVectorOfQueues[chan].push(aa);
+	return 0;
+}
+
+
+void RTsequence::linearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal)
+{
+	mFpga->mVectorOfQueues[chan] = generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal);
+}
+
+//Convert the spatial coordinate of the resonant scanner to time. x in [-RSamplitudePkPK_um/2, RSamplitudePkPK_um/2]
+double RTsequence::ConvertSpatialCoord2Time(double x)
+{
+	const double arg = 2 * x / RSamplitudePkPK_um;
+	if (arg <= 1)
+		return HalfPeriodLineClock_us * asin(arg) / PI; //Return value in [-HalfPeriodLineClock_us/PI, HalfPeriodLineClock_us/PI]
+	else
+	{
+		std::cerr << "ERROR in " << __FUNCTION__ << ": argument of asin greater than 1" << std::endl;
+		return HalfPeriodLineClock_us / PI;
+	}
+}
+
+//Discretize the spatial coordinate, then convert it to time
+double RTsequence::getDiscreteTime(int pix)
+{
+	const double dx = 0.5 * um;
+	return ConvertSpatialCoord2Time(dx * pix);
+}
+
+//Calculate the dwell time for the pixel
+double RTsequence::calculateDwellTime(int pix)
+{
+	return getDiscreteTime(pix + 1) - getDiscreteTime(pix);
+}
+
+//Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
+double RTsequence::calculatePracticalDwellTime(int pix)
+{
+	return round(calculateDwellTime(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
+}
+
+//Pixel clock sequence. Every pixel has the same duration in time.
+//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+//Pixel clock evently spaced in time
+QU32 RTsequence::PixelClockEqualDuration()
+{
+	QU32 queue;
+	const double InitialTimeStep_us = 6.25*us;							//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
+																		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
+	queue.push(packU32(convertUs2tick(InitialTimeStep_us) - mLatency_tick, 0x0000));
+
+	const double PixelTimeStep = 0.125 * us;
+	for (int pix = 0; pix < WidthPerFrame_pix + 1; pix++)
+		queue.push(singlePixelClock(PixelTimeStep, 1));			//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
+																//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
+	return queue;
+}
+
+//Pixel clock sequence. Every pixel is equally spaced.
+//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+QU32 RTsequence::PixelClockEqualDistance()
+{
+	QU32 queue;
+	std::vector<double> PixelClockEqualDistanceLUT(WidthPerFrame_pix);
+
+	if (WidthPerFrame_pix % 2 == 0)	//is even
+	{
+		for (int pix = -WidthPerFrame_pix / 2; pix < WidthPerFrame_pix / 2; pix++)	//pix in [-WidthPerFrame_pix/2,WidthPerFrame_pix/2]
+			PixelClockEqualDistanceLUT[pix + WidthPerFrame_pix / 2] = calculatePracticalDwellTime(pix);
+	}
+	else
+	{
+		std::cerr << "ERROR in " << __FUNCTION__ << ": Odd number of pixels in the image width currently not supported by the pixel clock. Pixel clock set to 0" << std::endl;
+	}
+
+	//Determine the relative delay of the pixel clock wrt the line clock
+	const U16 calibCoarse_tick = 2043;	//Look at the oscilloscope and adjust to center the pixel clock within a line scan
+	const U16 calibFine_tick = 10;		//In practice, the resonant scanner is not perfectly centered around the objective's back aperture
+										//Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
+	const U16 InitialTimeStep_tick = calibCoarse_tick + calibFine_tick;
+	queue.push(packU32(InitialTimeStep_tick - mLatency_tick, 0x0000));
+
+	for (int pix = 0; pix < WidthPerFrame_pix; pix++)
+		queue.push(singlePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
+
+	queue.push(singlePixelClock(dt_us_MIN, 1));								//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
+
+	return queue;
+}

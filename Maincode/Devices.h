@@ -88,3 +88,22 @@ public:
 };
 
 
+class RTsequence
+{
+	FPGAapi *mFpga;
+
+	const int mLatency_tick = 2;			//latency of detecting the line clock. Calibrate the latency with the oscilloscope
+	double ConvertSpatialCoord2Time(double x);
+	double getDiscreteTime(int pix);
+	double calculateDwellTime(int pix);
+	double calculatePracticalDwellTime(int pix);
+
+public:
+	RTsequence(FPGAapi *fpga);
+	~RTsequence();
+	int push(RTchannel chan, QU32 queue);
+	int push(RTchannel chan, U32 aa);
+	void linearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
+	QU32 PixelClockEqualDuration();
+	QU32 PixelClockEqualDistance();
+};

@@ -17,22 +17,8 @@ FPGAapi::~FPGAapi()
 {
 };
 
-void FPGAapi::close()
-{
-	if (NiFpga_IsNotError(mStatus))
-	{
-		mStatus = NiFpga_Close(mSession, 1);			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
-														//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
-														//0 resets, 1 does not reset
-		std::cout << "FPGA closing-session status: " << mStatus << std::endl;
-	}
 
-	//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
-	mStatus = NiFpga_Finalize();
-	std::cout << "FPGA finalize status: " << mStatus << std::endl;
-}
-
-int FPGAapi::initialize()
+NiFpga_Status FPGAapi::initialize()
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotonCounterInputSelector, PhotonCounterInput));			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
@@ -68,7 +54,7 @@ int FPGAapi::initialize()
 
 	std::cout << "FPGA initialization status: " << mStatus << std::endl;
 
-	return 0;
+	return mStatus;
 }
 
 
@@ -76,7 +62,7 @@ int FPGAapi::initialize()
 //For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 //Then transfer the elements in the long queue to an array to interface the FPGA
 //Alternatively, the single queues could be transferred directly to the array, but why bothering...
-int FPGAapi::sendCommandsToFPGAbuffer()
+NiFpga_Status FPGAapi::writeFIFO()
 {
 	QU32 allQueues;								//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
@@ -107,42 +93,62 @@ int FPGAapi::sendCommandsToFPGAbuffer()
 	const U32 timeout = -1; // in ms. A value -1 prevents the FIFO from timing out
 	U32 r; //empty elements remaining
 
-	NiFpga_Status status = NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r);
+	NiFpga_MergeStatus(&mStatus, NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r));
 
-	std::cout << "FPGA FIFO status: " << status << std::endl;
+	std::cout << "FPGA FIFO status: " << mStatus << std::endl;
 	delete[] FIFO;//cleanup the array
 
-	return 0;
+	return mStatus;
 }
 
-void FPGAapi::sendRTsequenceToFPGA()
+NiFpga_Status FPGAapi::sendRTtoFPGA()
 {
-	this->sendCommandsToFPGAbuffer();
+	this->writeFIFO();
 
+	//Distribute the commands among the different channels (look at the LV code)
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
 	std::cout << "Pulse trigger status: " << mStatus << std::endl;
+
+	return mStatus;
 }
 
 //Execute the commands
-int FPGAapi::triggerFPGAstartImaging()
+NiFpga_Status FPGAapi::triggerRTsequence()
 {
 	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1);
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));
 	std::cout << "Acquisition trigger status: " << status << std::endl;
 
-	return 0;
+	return mStatus;
 }
 
 
 //Trigger the FIFO flushing
-int FPGAapi::triggerFIFOflush()
+NiFpga_Status FPGAapi::flushFIFO()
 {
-	mStatus = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1);
+	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
 	std::cout << "Flush trigger status: " << mStatus << std::endl;
 
-	return 0;
+	return mStatus;
+}
+
+NiFpga_Status  FPGAapi::close()
+{
+	if (NiFpga_IsNotError(mStatus))
+	{
+		NiFpga_MergeStatus(&mStatus, NiFpga_Close(mSession, 1));			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
+																			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
+																			//0 resets, 1 does not reset
+		std::cout << "FPGA closing-session status: " << mStatus << std::endl;
+	}
+
+	//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
+	mStatus = NiFpga_Finalize();
+	std::cout << "FPGA finalize status: " << mStatus << std::endl;
+
+	return mStatus;
 }
 
 

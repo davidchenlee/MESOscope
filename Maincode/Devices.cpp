@@ -182,7 +182,7 @@ NiFpga_Status PhotonCounter::readPhotonCount()
 	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_StartFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 
 	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-	mFpga.triggerFPGAstartImaging();
+	mFpga.triggerRTsequence();
 
 	//Read the data
 	try
@@ -575,8 +575,9 @@ Stage::~Stage()
 #pragma region "Real-time sequence"
 RTsequence::RTsequence(FPGAapi *fpga): mFpga(fpga)
 {
-	//mFpga->mVectorOfQueues[PCLOCK] = PixelClockEqualDuration();
-	mFpga->mVectorOfQueues[PCLOCK] = PixelClockEqualDistance();
+	PixelClock pixelclock;
+	//mFpga->mVectorOfQueues[PCLOCK] = pixelclock. PixelClockEqualDuration();
+	mFpga->mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
 }
 
 RTsequence::~RTsequence()
@@ -584,21 +585,21 @@ RTsequence::~RTsequence()
 
 }
 
-int RTsequence::push(RTchannel chan, QU32 queue)
+int RTsequence::pushQueue(RTchannel chan, QU32 queue)
 {
 
 	concatenateQueues(mFpga->mVectorOfQueues[chan], queue);
 	return 0;
 }
 
-int RTsequence::push(RTchannel chan, U32 input)
+int RTsequence::pushSingleValue(RTchannel chan, U32 input)
 {
 	mFpga->mVectorOfQueues[chan].push(input);
 	return 0;
 }
 
 
-int RTsequence::linearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal)
+int RTsequence::pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal)
 {
 	mFpga->mVectorOfQueues[chan] = generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal);
 	return 0;
@@ -606,7 +607,7 @@ int RTsequence::linearRamp(RTchannel chan, double TimeStep, double RampLength, d
 
 
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSamplitudePkPK_um/2, RSamplitudePkPK_um/2]
-double RTsequence::ConvertSpatialCoord2Time(double x)
+double RTsequence::PixelClock::ConvertSpatialCoord2Time(double x)
 {
 	const double arg = 2 * x / RSamplitudePkPK_um;
 	if (arg <= 1)
@@ -619,20 +620,20 @@ double RTsequence::ConvertSpatialCoord2Time(double x)
 }
 
 //Discretize the spatial coordinate, then convert it to time
-double RTsequence::getDiscreteTime(int pix)
+double RTsequence::PixelClock::getDiscreteTime(int pix)
 {
 	const double dx = 0.5 * um;
 	return ConvertSpatialCoord2Time(dx * pix);
 }
 
 //Calculate the dwell time for the pixel
-double RTsequence::calculateDwellTime(int pix)
+double RTsequence::PixelClock::calculateDwellTime(int pix)
 {
 	return getDiscreteTime(pix + 1) - getDiscreteTime(pix);
 }
 
 //Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
-double RTsequence::calculatePracticalDwellTime(int pix)
+double RTsequence::PixelClock::calculatePracticalDwellTime(int pix)
 {
 	return round(calculateDwellTime(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
 }
@@ -640,7 +641,7 @@ double RTsequence::calculatePracticalDwellTime(int pix)
 //Pixel clock sequence. Every pixel has the same duration in time.
 //The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 //Pixel clock evently spaced in time
-QU32 RTsequence::PixelClockEqualDuration()
+QU32 RTsequence::PixelClock::PixelClockEqualDuration()
 {
 	QU32 queue;
 	const double InitialTimeStep_us = 6.25*us;							//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
@@ -656,7 +657,7 @@ QU32 RTsequence::PixelClockEqualDuration()
 
 //Pixel clock sequence. Every pixel is equally spaced.
 //The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-QU32 RTsequence::PixelClockEqualDistance()
+QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 {
 	QU32 queue;
 	std::vector<double> PixelClockEqualDistanceLUT(WidthPerFrame_pix);
@@ -689,4 +690,18 @@ QU32 RTsequence::PixelClockEqualDistance()
 #pragma endregion "Real-time sequence"
 
 
+
+RTsequence::PixelClock::PixelClock()
+{
+
+}
+RTsequence::PixelClock::~PixelClock()
+{
+
+}
+
+
+
+Laser::Laser() {}
+Laser::~Laser() {}
 

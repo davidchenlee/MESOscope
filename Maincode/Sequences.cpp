@@ -2,15 +2,10 @@
 
 int Sequence1(FPGAapi fpga)
 {
-	//Linear ramp for the galvo
-	const double galvoAmplitude_um = 200 * um;
-	const double galvoAmplitude_volt = galvoAmplitude_um * Galvo_voltPerUm;
-	const double galvoTimeStep_us = 8 * us;
-
 	//Create a real-time sequence
 	RTsequence sequence(&fpga);
-	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25 * ms, galvoAmplitude_volt, -galvoAmplitude_volt);
-	sequence.pushSingleValue(GALVO1, singleAnalogOut(4 * us, galvoAmplitude_volt));
+	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25 * ms, galvo1Amp_volt, -galvo1Amp_volt);		//Linear ramp for the galvo
+	sequence.pushSingleValue(GALVO1, singleAnalogOut(4 * us, galvo1Amp_volt));								//set the output back to the initial value
 
 
 	fpga.sendRTtoFPGA();

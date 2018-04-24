@@ -147,13 +147,9 @@ void concatenateQueues(QU32& concatenatedQueue, QU32 newQueue)
 #pragma endregion "Genetic functions"
 
 #pragma region "Photon counter"
-PhotonCounter::PhotonCounter(FPGAapi fpga): mFpga(fpga)
-{
-}
+PhotonCounter::PhotonCounter(FPGAapi fpga): mFpga(fpga){}
 
-PhotonCounter::~PhotonCounter()
-{
-}
+PhotonCounter::~PhotonCounter(){}
 
 NiFpga_Status PhotonCounter::readCount()
 {
@@ -561,15 +557,11 @@ NiFpga_Status Shutter::pulseHigh()
 #pragma endregion "Pockels cells"
 
 #pragma region "Stages"
-Stage::Stage()
-{
+Stage::Stage(){}
 
-}
+Stage::~Stage(){}
 
-Stage::~Stage()
-{
 
-}
 #pragma endregion "Stages"
 
 #pragma region "Real-time sequence"
@@ -581,10 +573,7 @@ RTsequence::RTsequence(FPGAapi *fpga): mFpga(fpga)				//Pass a pointer to be abl
 	mFpga->mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
 }
 
-RTsequence::~RTsequence()
-{
-
-}
+RTsequence::~RTsequence(){}
 
 int RTsequence::pushQueue(RTchannel chan, QU32 queue)
 {
@@ -607,10 +596,10 @@ int RTsequence::pushLinearRamp(RTchannel chan, double TimeStep, double RampLengt
 }
 
 
-//Convert the spatial coordinate of the resonant scanner to time. x in [-RSamplitudePkPK_um/2, RSamplitudePkPK_um/2]
+//Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
 double RTsequence::PixelClock::ConvertSpatialCoord2Time(double x)
 {
-	const double arg = 2 * x / RSamplitudePkPK_um;
+	const double arg = 2 * x / RSpkpk_um;
 	if (arg <= 1)
 		return HalfPeriodLineClock_us * asin(arg) / PI; //Return value in [-HalfPeriodLineClock_us/PI, HalfPeriodLineClock_us/PI]
 	else
@@ -692,14 +681,8 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 
 
 
-RTsequence::PixelClock::PixelClock()
-{
-
-}
-RTsequence::PixelClock::~PixelClock()
-{
-
-}
+RTsequence::PixelClock::PixelClock(){}
+RTsequence::PixelClock::~PixelClock(){}
 
 
 

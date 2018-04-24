@@ -13,9 +13,7 @@ FPGAapi::FPGAapi(): mVectorOfQueues(Nchan)
 	}
 }
 
-FPGAapi::~FPGAapi()
-{
-};
+FPGAapi::~FPGAapi(){};
 
 
 NiFpga_Status FPGAapi::initialize()
@@ -34,7 +32,7 @@ NiFpga_Status FPGAapi::initialize()
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)HeightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(HeightPerFrame_pix + NlinesSkip)));	//Number of lines in a frame including the skipped lines
 
-																																						//Shutters
+	//Shutters
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
 

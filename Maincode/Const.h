@@ -23,6 +23,9 @@ enum RTchannel {PCLOCK, GALVO1, GALVO2, SHUTTER1};		//Pixel clock, analog channe
 
 namespace Const
 {
+	extern const PhotonCounterInputSelector PhotonCounterInput;
+	extern const LineClockInputSelector LineClockInput;
+
 	extern const int Nchan;
 	
 	extern const double PI;
@@ -41,6 +44,21 @@ namespace Const
 	extern const int FIFOtimeout_tick;
 	extern const int FIFOINmax;
 
+	extern const double RS_voltPerUm;
+	extern const double galvo_voltPerUm;
+	extern const double PC1_voltPermW;
+	extern const double PC2_voltPermW;
+
+	extern const int Npulses;
+	extern const U8 pulseArray[];
+
+	extern const double HalfPeriodLineClock_us;
+	extern const double RSpkpk_um;
+
+	extern const double FFOVslow_um;
+	extern const double galvo1Amp_volt;
+
+	extern const double galvoTimeStep_us;
 	extern const int WidthPerFrame_pix;
 	extern const int HeightPerFrame_pix;
 	extern const int NpixPerFrame;
@@ -49,18 +67,4 @@ namespace Const
 	extern const int NlinesAllFrames;
 	extern const int NpixAllFrames;
 
-	extern const PhotonCounterInputSelector PhotonCounterInput;
-	extern const LineClockInputSelector LineClockInput;
-
-	extern const double RS_voltPerUm;
-	extern const double Galvo_voltPerUm;
-	extern const double PC1_voltPermW;
-	extern const double PC2_voltPermW;
-
-	extern const int Npulses;
-	extern const U8 pulseArray[];
-
-	extern const double HalfPeriodLineClock_us;
-	extern const double RSamplitudePkPK_um;
-};
-
+}

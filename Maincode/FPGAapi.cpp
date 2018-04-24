@@ -7,8 +7,8 @@ FPGAapi::FPGAapi(): mVectorOfQueues(Nchan)
 
 	if (NiFpga_IsNotError(mStatus))		//Check for any FPGA error
 	{
-		mStatus = NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession);		//Opens a session, downloads the bitstream
-																							//1=no run, 0=run
+		NiFpga_MergeStatus(&mStatus, NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession));		//Opens a session, downloads the bitstream
+																												//1=no run, 0=run
 		//std::cout << "FPGA open-session status: " << mStatus << std::endl;
 	}
 }
@@ -114,8 +114,8 @@ NiFpga_Status FPGAapi::sendRTtoFPGA()
 //Execute the commands
 NiFpga_Status FPGAapi::triggerRTsequence()
 {
-	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1);
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));
+	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1));
+	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));
 	//std::cout << "Acquisition trigger status: " << status << std::endl;
 
 	return mStatus;
@@ -145,6 +145,8 @@ NiFpga_Status  FPGAapi::close()
 	//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 	NiFpga_MergeStatus(&mStatus, NiFpga_Finalize());
 	//std::cout << "FPGA finalize status: " << mStatus << std::endl;
+
+	std::cout << "FPGA exit code: " << mStatus << std::endl;
 
 	return mStatus;
 }

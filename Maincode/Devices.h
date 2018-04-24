@@ -40,7 +40,7 @@ public:
 
 class Vibratome
 {
-	FPGAapi mFpga;
+	FPGAapi &mFpga;
 
 	//Vibratome channels
 	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};
@@ -51,7 +51,7 @@ public:
 	double mSpeed;					//Speed of the vibratome (manual setting)
 	double mAmplitude;				//Amplitude of the vibratome (manual setting)
 
-	Vibratome(FPGAapi fpga);
+	Vibratome(FPGAapi &fpga);
 	~Vibratome();
 	NiFpga_Status startStop();
 	NiFpga_Status sendCommand(double dt, VibratomeChannel channel);
@@ -77,13 +77,13 @@ public:
 
 class Shutter
 {
-	FPGAapi mFpga;
+	FPGAapi &mFpga;
 	const int mDelayTime = 10;
 public:
 	uint32_t mIDshutter;
 	bool mState;
 
-	Shutter(FPGAapi fpga, uint32_t ID);
+	Shutter(FPGAapi &fpga, uint32_t ID);
 	~Shutter();
 
 	NiFpga_Status setOutput(bool requestedState);
@@ -93,11 +93,12 @@ public:
 
 class Stage
 {
+	FPGAapi &mFpga;
 	std::vector<double> absPosition;	//Absolute position of the stages (x, y, z)
 	std::vector<int> Ntile;				//Tile number in x, y, z
 	std::vector<int> tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
 public:
-	Stage();
+	Stage(FPGAapi &fpga);
 	~Stage();
 };
 
@@ -114,13 +115,16 @@ class RTsequence
 		double calculateDwellTime(int pix);
 		double calculatePracticalDwellTime(int pix);
 	public:
+		NiFpga_Status mError;
 		PixelClock();
 		~PixelClock();
 		QU32 PixelClockEqualDuration();
 		QU32 PixelClockEqualDistance();
+
 	};
 
 public:
+
 	RTsequence(FPGAapi &fpga);
 	~RTsequence();
 
@@ -132,6 +136,7 @@ public:
 
 class Laser
 {
+	FPGAapi &mFpga;
 	double wavelength;
 	class PockelsCell
 	{
@@ -142,7 +147,7 @@ class Laser
 		~PockelsCell();
 	};
 public:
-	Laser();
+	Laser(FPGAapi &fpga);
 	~Laser();
 };
 

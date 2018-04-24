@@ -397,7 +397,7 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName)
 
 #pragma region "Vibratome"
 
-Vibratome::Vibratome(FPGAapi fpga): mFpga(fpga){}
+Vibratome::Vibratome(FPGAapi &fpga): mFpga(fpga){}
 
 Vibratome::~Vibratome() {}
 
@@ -522,7 +522,7 @@ double ResonantScanner::convertUm2Volt(double amplitude_um)
 
 #pragma region "Shutters"
 
-Shutter::Shutter(FPGAapi fpga, uint32_t ID) : mFpga(fpga), mIDshutter(ID) {}
+Shutter::Shutter(FPGAapi &fpga, uint32_t ID) : mFpga(fpga), mIDshutter(ID) {}
 
 Shutter::~Shutter() {}
 
@@ -561,7 +561,7 @@ NiFpga_Status Shutter::pulseHigh()
 #pragma endregion "Pockels cells"
 
 #pragma region "Stages"
-Stage::Stage(){}
+Stage::Stage(FPGAapi &fpga): mFpga(fpga) {}
 
 Stage::~Stage(){}
 
@@ -570,18 +570,23 @@ Stage::~Stage(){}
 
 #pragma region "Real-time sequence"
 
-RTsequence::RTsequence(FPGAapi &fpga): mFpga(fpga)				//Pass a pointer to be abla to modify fpga.mVectorOfQueue
+RTsequence::RTsequence(FPGAapi &fpga): mFpga(fpga)	//Pass by reference to be abla to modify fpga.mVectorOfQueue
 {
 	PixelClock pixelclock;
+
 	//mFpga->mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDuration();
-	mFpga.mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
+	//mFpga.mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
+
+	if (pixelclock.mError)
+		mFpga.mStatus = NiFpga_Status_InvalidParameter;
+		
+
 }
 
 RTsequence::~RTsequence(){}
 
 int RTsequence::pushQueue(RTchannel chan, QU32 queue)
 {
-
 	concatenateQueues(mFpga.mVectorOfQueues[chan], queue);
 	return 0;
 }
@@ -599,16 +604,18 @@ int RTsequence::pushLinearRamp(RTchannel chan, double TimeStep, double RampLengt
 	return 0;
 }
 
-
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
 double RTsequence::PixelClock::ConvertSpatialCoord2Time(double x)
 {
 	const double arg = 2 * x / RSpkpk_um;
 	if (arg <= 1)
+	{
 		return halfPeriodLineClock_us * asin(arg) / PI; //Return value in [-halfPeriodLineClock_us/PI, halfPeriodLineClock_us/PI]
+	}
 	else
 	{
 		std::cerr << "ERROR in " << __FUNCTION__ << ": argument of asin greater than 1" << std::endl;
+		mError = -1;
 		return halfPeriodLineClock_us / PI;
 	}
 }
@@ -631,6 +638,7 @@ double RTsequence::PixelClock::calculatePracticalDwellTime(int pix)
 {
 	return round(calculateDwellTime(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
 }
+
 
 //Pixel clock sequence. Every pixel has the same duration in time.
 //The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
@@ -664,6 +672,7 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 	else
 	{
 		std::cerr << "ERROR in " << __FUNCTION__ << ": Odd number of pixels for the image width currently not supported. Pixel clock set to 0" << std::endl;
+		mError = -1;
 	}
 
 	//Determine the relative delay of the pixel clock wrt the line clock
@@ -685,12 +694,12 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 
 
 
-RTsequence::PixelClock::PixelClock(){}
+RTsequence::PixelClock::PixelClock(): mError(0) {}
 RTsequence::PixelClock::~PixelClock(){}
 
 
 
-Laser::Laser() {}
+Laser::Laser(FPGAapi &fpga): mFpga(fpga) {}
 Laser::~Laser() {}
 
 Laser::PockelsCell::PockelsCell() {}

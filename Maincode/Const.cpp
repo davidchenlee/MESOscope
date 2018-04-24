@@ -25,12 +25,12 @@ namespace Const
 	extern const int FIFOtimeout = 100;						//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const int FIFOINmax = 32773;						//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
-	extern const int WidthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const int HeightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
-	extern const int NpixPerFrame = WidthPerFrame_pix * HeightPerFrame_pix;		//Number of pixels in each frame
+	extern const int Width_pixPerFrame = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
+	extern const int Height_pixPerFrame = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const int NpixPerFrame = Width_pixPerFrame * Height_pixPerFrame;		//Number of pixels in each frame
 	extern const int NFrames = 1;												//Number of frames to acquire
-	extern const int NlinesAllFrames = HeightPerFrame_pix * NFrames;			//Total number of lines in all the frames
-	extern const int NpixAllFrames = WidthPerFrame_pix * NlinesAllFrames;		//Total number of pixels in all the frames
+	extern const int NlinesAllFrames = Height_pixPerFrame * NFrames;			//Total number of lines in all the frames
+	extern const int NpixAllFrames = Width_pixPerFrame * NlinesAllFrames;		//Total number of pixels in all the frames
 
 	//Currently, each frames is 400x400 pixels = 160000 pixels
 	//For multiple beams, each fram will be 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers

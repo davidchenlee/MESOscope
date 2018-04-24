@@ -364,17 +364,17 @@ unsigned char *unpackFIFOBuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32
 //One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 int correctInterleavedImage(unsigned char *interleavedImage)
 {
-	unsigned char *auxLine = new unsigned char[WidthPerFrame_pix]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
+	unsigned char *auxLine = new unsigned char[Width_pixPerFrame]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
 
 	//for every odd-number line, reverse the pixel order
-	for (int lineIndex = 1; lineIndex < HeightPerFrame_pix; lineIndex += 2)
+	for (int lineIndex = 1; lineIndex < Height_pixPerFrame; lineIndex += 2)
 	{
 		//save the data in an aux array
-		for (int pixIndex = 0; pixIndex < WidthPerFrame_pix; pixIndex++)
-			auxLine[pixIndex] = interleavedImage[lineIndex*WidthPerFrame_pix + (WidthPerFrame_pix - pixIndex - 1)];
+		for (int pixIndex = 0; pixIndex < Width_pixPerFrame; pixIndex++)
+			auxLine[pixIndex] = interleavedImage[lineIndex*Width_pixPerFrame + (Width_pixPerFrame - pixIndex - 1)];
 		//write the data back
-		for (int pixIndex = 0; pixIndex < WidthPerFrame_pix; pixIndex++)
-			interleavedImage[lineIndex*WidthPerFrame_pix + pixIndex] = auxLine[pixIndex];
+		for (int pixIndex = 0; pixIndex < Width_pixPerFrame; pixIndex++)
+			interleavedImage[lineIndex*Width_pixPerFrame + pixIndex] = auxLine[pixIndex];
 
 	}
 	delete auxLine;
@@ -459,14 +459,14 @@ int initializeFPGA(NiFpga_Status* status, NiFpga_Session session)
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));		//control-sequence trigger
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineClockTrigger, 0));	//data-acquisition trigger
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGatetrigger, 0));	//data-acquisition trigger
 
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Nchannels, (U16) Nchan));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, (U16) SyncDOtoAO_tick));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, (U16) SyncAODOtoLineGate_tick));
 	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_NlinesAllFrames, (U16) NlinesAllFrames));
-	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_HeightPerFrame_pix, (U16) HeightPerFrame_pix));
+	NiFpga_MergeStatus(status, NiFpga_WriteU16(session, NiFpga_FPGAvi_ControlU16_Height_pixPerFrame, (U16) Height_pixPerFrame));
 
 	//Shutters
 	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
@@ -513,8 +513,8 @@ int triggerFIFOIN(NiFpga_Status* status, NiFpga_Session session)
 //Trigger the 'Line gate' to start acquiring data
 int triggerLineGate(NiFpga_Status* status, NiFpga_Session session)
 {
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineClockTrigger, 1));
-	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineClockTrigger, 0));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGatetrigger, 1));
+	NiFpga_MergeStatus(status, NiFpga_WriteBool(session, NiFpga_FPGAvi_ControlBool_LineGatetrigger, 0));
 	std::cout << "Acquisition trigger status: " << *status << std::endl;
 
 	return 0;

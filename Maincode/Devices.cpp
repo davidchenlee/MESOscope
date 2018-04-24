@@ -569,7 +569,7 @@ Stage::~Stage(){}
 RTsequence::RTsequence(FPGAapi *fpga): mFpga(fpga)				//Pass a pointer to be abla to modify fpga.mVectorOfQueue
 {
 	PixelClock pixelclock;
-	//mFpga->mVectorOfQueues[PCLOCK] = pixelclock. PixelClockEqualDuration();
+	//mFpga->mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDuration();
 	mFpga->mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
 }
 

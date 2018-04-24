@@ -59,14 +59,14 @@ public:
 
 class ResonantScanner
 {
-	FPGAapi mFpga;
+	FPGAapi &mFpga;
 	const int mDelayTime = 10;
 	double ResonantScanner::convertUm2Volt(double Amplitude);
 public:
 	bool mState;							//determine if is the scanner on or off
 	double mAmplitude_um = 0;
 	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
-	ResonantScanner(FPGAapi fpga);
+	ResonantScanner(FPGAapi &fpga);
 	~ResonantScanner();
 	NiFpga_Status startStop(bool requestedState);
 	NiFpga_Status setOutputVoltage(double Vout);
@@ -93,12 +93,9 @@ public:
 
 class Stage
 {
-	double posX;
-	double posY;
-	double posZ;
-	int NtileX;
-	int NtileY;
-	int NtileZ;
+	std::vector<double> absPosition;	//Absolute position of the stages (x, y, z)
+	std::vector<int> Ntile;				//Tile number in x, y, z
+	std::vector<int> tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
 public:
 	Stage();
 	~Stage();
@@ -107,7 +104,7 @@ public:
 
 class RTsequence
 {
-	FPGAapi *mFpga;
+	FPGAapi &mFpga;
 
 	class PixelClock
 	{
@@ -124,7 +121,7 @@ class RTsequence
 	};
 
 public:
-	RTsequence(FPGAapi *fpga);
+	RTsequence(FPGAapi &fpga);
 	~RTsequence();
 
 	int pushQueue(RTchannel chan, QU32 queue);

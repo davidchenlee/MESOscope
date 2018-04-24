@@ -155,9 +155,9 @@ NiFpga_Status PhotonCounter::readCount()
 {
 	//FIFOa
 	int NelementsReadFIFOa = 0; 						//Total number of elements read from the FIFO
-	U32 *dataFIFOa = new U32[NpixAllFrames];			//The buffer size does not necessarily have to be the size of a frame
+	U32 *dataFIFOa = new U32[nPixAllFrames];			//The buffer size does not necessarily have to be the size of a frame
 														
-	for (int ii = 0; ii < NpixAllFrames; ii++)			//Initialize the array for FIFOa
+	for (int ii = 0; ii < nPixAllFrames; ii++)			//Initialize the array for FIFOa
 		dataFIFOa[ii] = 0;
 
 	//FIFOb
@@ -168,7 +168,7 @@ NiFpga_Status PhotonCounter::readCount()
 	const int NmaxbufArray = 100;
 	U32 **bufArrayb = new U32*[NmaxbufArray];
 	for (int i = 0; i < NmaxbufArray; i++)
-		bufArrayb[i] = new U32[NpixAllFrames];			//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < NpixAllFrames
+		bufArrayb[i] = new U32[nPixAllFrames];			//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < nPixAllFrames
 
 	int *NelementsBufArrayb = new int[NmaxbufArray];	//Each elements in this array indicates the number of elements in each chunch of data
 	int NelementsReadFIFOb = 0; 						//Total number of elements read from the FIFO
@@ -186,7 +186,7 @@ NiFpga_Status PhotonCounter::readCount()
 		readFIFO(NelementsReadFIFOa, NelementsReadFIFOb, dataFIFOa, bufArrayb, NelementsBufArrayb, bufArrayIndexb, NmaxbufArray);
 
 		//If all the expected data is read successfully, process the data
-		if (NelementsReadFIFOa == NpixAllFrames && NelementsReadFIFOb == NpixAllFrames)
+		if (NelementsReadFIFOa == nPixAllFrames && NelementsReadFIFOb == nPixAllFrames)
 		{
 			unsigned char *image = unpackFIFObuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
 			correctInterleavedImage(image);
@@ -249,12 +249,12 @@ NiFpga_Status PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsRea
 	//pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
 	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
 	U32 *dummy = new U32[0];
-	while (NelementsReadFIFOa < NpixAllFrames || NelementsReadFIFOb < NpixAllFrames)
+	while (NelementsReadFIFOa < nPixAllFrames || NelementsReadFIFOb < nPixAllFrames)
 	{
 		Sleep(readFifoWaitingTime); //wait till collecting big chuncks of data. Adjust the waiting time until getting max transfer bandwidth
 
 									//FIFO OUT a
-		if (NelementsReadFIFOa < NpixAllFrames)
+		if (NelementsReadFIFOa < nPixAllFrames)
 		{
 			NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &NremainingFIFOa));
 			//std::cout << "Number of elements remaining in the host FIFO a: " << NremainingFIFOa << std::endl;
@@ -268,7 +268,7 @@ NiFpga_Status PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsRea
 		}
 
 		//FIFO OUT b
-		if (NelementsReadFIFOb < NpixAllFrames)		//Skip if all the data have already been transferred (i.e. NelementsReadFIFOa = NpixAllFrames)
+		if (NelementsReadFIFOb < nPixAllFrames)		//Skip if all the data have already been transferred (i.e. NelementsReadFIFOa = nPixAllFrames)
 		{
 			//By requesting 0 elements from the FIFO, the function returns the number of elements available. If no data available so far, then NremainingFIFOa = 0 is returned
 			NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &NremainingFIFOb));
@@ -304,7 +304,7 @@ NiFpga_Status PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsRea
 	//Stop the stopwatch
 	duration = (std::clock() - start) / (double)CLOCKS_PER_SEC;
 	std::cout << "Elapsed time: " << duration << " s" << std::endl;
-	std::cout << "FIFO bandwidth: " << 2 * 32 * NpixAllFrames / duration / 1000000 << " Mbps" << std::endl; //2 FIFOs of 32 bits each
+	std::cout << "FIFO bandwidth: " << 2 * 32 * nPixAllFrames / duration / 1000000 << " Mbps" << std::endl; //2 FIFOs of 32 bits each
 
 	std::cout << "Buffer-arrays used: " << (U32)bufArrayIndexb << std::endl; //print how many buffer arrays were actually used
 	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << std::endl; //print the total number of elements read
@@ -326,11 +326,11 @@ NiFpga_Status PhotonCounter::configureFIFO(U32 depth)
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
 unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb)
 {
-	const bool debug = 0;												//For debugging. Generate numbers from 1 to NpixAllFrames with +1 increament
+	const bool debug = 0;												//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
 
-	static unsigned char *image = new unsigned char[NpixAllFrames];		//Create a long 1D array representing the image
+	static unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
 
-	for (int ii = 0; ii < NpixAllFrames; ii++)							//Initialize the array
+	for (int ii = 0; ii < nPixAllFrames; ii++)							//Initialize the array
 		image[ii] = 0;
 
 	U32 pixIndex = 0;													//Index the image pixel
@@ -341,7 +341,7 @@ unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32
 			//myfile << bufArrayb[ii][jj] << std::endl;		
 			image[pixIndex] = (unsigned char)bufArrayb[ii][jj];
 
-			//For debugging. Generate numbers from 1 to NpixAllFrames with +1 increament
+			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
 			if (debug)
 			{
 				image[pixIndex] = pixIndex + 1;
@@ -361,17 +361,17 @@ unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32
 //One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 int correctInterleavedImage(unsigned char *interleavedImage)
 {
-	unsigned char *auxLine = new unsigned char[WidthPerFrame_pix]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
+	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
 
 																   //for every odd-number line, reverse the pixel order
-	for (int lineIndex = 1; lineIndex < HeightPerFrame_pix; lineIndex += 2)
+	for (int lineIndex = 1; lineIndex < heightPerFrame_pix; lineIndex += 2)
 	{
 		//save the data in an aux array
-		for (int pixIndex = 0; pixIndex < WidthPerFrame_pix; pixIndex++)
-			auxLine[pixIndex] = interleavedImage[lineIndex*WidthPerFrame_pix + (WidthPerFrame_pix - pixIndex - 1)];
+		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
+			auxLine[pixIndex] = interleavedImage[lineIndex*widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];
 		//write the data back
-		for (int pixIndex = 0; pixIndex < WidthPerFrame_pix; pixIndex++)
-			interleavedImage[lineIndex*WidthPerFrame_pix + pixIndex] = auxLine[pixIndex];
+		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
+			interleavedImage[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];
 
 	}
 	delete[] auxLine;
@@ -385,7 +385,7 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName)
 	std::ofstream myfile;								//Create output file
 	myfile.open(fileName);								//Open the file
 
-	for (int ii = 0; ii < NpixAllFrames; ii++)
+	for (int ii = 0; ii < nPixAllFrames; ii++)
 		myfile << (int)imageArray[ii] << std::endl;	//Write each element
 
 	myfile.close();										//Close the txt file
@@ -430,7 +430,7 @@ NiFpga_Status Vibratome::sendCommand(double pulseDuration, VibratomeChannel chan
 		break;
 	default:
 		std::cerr << "ERROR in " << __FUNCTION__ << ": Selected vibratome channel is unavailable" << std::endl;
-		return -1;
+		return NiFpga_Status_InvalidParameter;
 	}
 
 	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, selectedChannel, 1));
@@ -440,7 +440,7 @@ NiFpga_Status Vibratome::sendCommand(double pulseDuration, VibratomeChannel chan
 	else
 	{
 		Sleep(minPulseDuration - delay);
-		std::cerr << "WARNING in " << __FUNCTION__ << ": vibratome pulse duration too short. Instead, set to the min = ~" << minPulseDuration << "ms" << std::endl;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": vibratome pulse duration too short. Duration set to the min = ~" << minPulseDuration << "ms" << std::endl;
 	}
 	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, selectedChannel, 0));
 
@@ -451,7 +451,7 @@ NiFpga_Status Vibratome::sendCommand(double pulseDuration, VibratomeChannel chan
 
 #pragma region "Resonant scanner"
 
-ResonantScanner::ResonantScanner(FPGAapi fpga): mFpga(fpga){};
+ResonantScanner::ResonantScanner(FPGAapi &fpga): mFpga(fpga){};
 
 ResonantScanner::~ResonantScanner() {};
 
@@ -493,7 +493,7 @@ NiFpga_Status ResonantScanner::turnOn(double amplitude_um)
 	NiFpga_MergeStatus(&mFpga.mStatus, this->setOutputAmplitude(amplitude_um));
 	Sleep(mDelayTime);
 	NiFpga_MergeStatus(&mFpga.mStatus, this->startStop(1));
-
+	//mFpga.mStatus = -1;
 	if (mFpga.mStatus)
 		mFpga.printFPGAstatus(__FUNCTION__);
 
@@ -532,6 +532,8 @@ NiFpga_Status Shutter::setOutput(bool state)
 
 	if(!mFpga.mStatus)
 		mState = state;
+	else
+		mFpga.printFPGAstatus(__FUNCTION__);
 
 	return mFpga.mStatus;
 }
@@ -544,6 +546,8 @@ NiFpga_Status Shutter::pulseHigh()
 
 	if (!mFpga.mStatus)
 		mState = 0;
+	else
+		mFpga.printFPGAstatus(__FUNCTION__);
 
 	return mFpga.mStatus;
 }
@@ -566,11 +570,11 @@ Stage::~Stage(){}
 
 #pragma region "Real-time sequence"
 
-RTsequence::RTsequence(FPGAapi *fpga): mFpga(fpga)				//Pass a pointer to be abla to modify fpga.mVectorOfQueue
+RTsequence::RTsequence(FPGAapi &fpga): mFpga(fpga)				//Pass a pointer to be abla to modify fpga.mVectorOfQueue
 {
 	PixelClock pixelclock;
 	//mFpga->mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDuration();
-	mFpga->mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
+	mFpga.mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
 }
 
 RTsequence::~RTsequence(){}
@@ -578,20 +582,20 @@ RTsequence::~RTsequence(){}
 int RTsequence::pushQueue(RTchannel chan, QU32 queue)
 {
 
-	concatenateQueues(mFpga->mVectorOfQueues[chan], queue);
+	concatenateQueues(mFpga.mVectorOfQueues[chan], queue);
 	return 0;
 }
 
 int RTsequence::pushSingleValue(RTchannel chan, U32 input)
 {
-	mFpga->mVectorOfQueues[chan].push(input);
+	mFpga.mVectorOfQueues[chan].push(input);
 	return 0;
 }
 
 
 int RTsequence::pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal)
 {
-	mFpga->mVectorOfQueues[chan] = generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal);
+	mFpga.mVectorOfQueues[chan] = generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal);
 	return 0;
 }
 
@@ -601,11 +605,11 @@ double RTsequence::PixelClock::ConvertSpatialCoord2Time(double x)
 {
 	const double arg = 2 * x / RSpkpk_um;
 	if (arg <= 1)
-		return HalfPeriodLineClock_us * asin(arg) / PI; //Return value in [-HalfPeriodLineClock_us/PI, HalfPeriodLineClock_us/PI]
+		return halfPeriodLineClock_us * asin(arg) / PI; //Return value in [-halfPeriodLineClock_us/PI, halfPeriodLineClock_us/PI]
 	else
 	{
 		std::cerr << "ERROR in " << __FUNCTION__ << ": argument of asin greater than 1" << std::endl;
-		return HalfPeriodLineClock_us / PI;
+		return halfPeriodLineClock_us / PI;
 	}
 }
 
@@ -639,7 +643,7 @@ QU32 RTsequence::PixelClock::PixelClockEqualDuration()
 	queue.push(packU32(convertUs2tick(InitialTimeStep_us) - mLatency_tick, 0x0000));
 
 	const double PixelTimeStep = 0.125 * us;
-	for (int pix = 0; pix < WidthPerFrame_pix + 1; pix++)
+	for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
 		queue.push(singlePixelClock(PixelTimeStep, 1));			//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
 																//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 	return queue;
@@ -650,16 +654,16 @@ QU32 RTsequence::PixelClock::PixelClockEqualDuration()
 QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 {
 	QU32 queue;
-	std::vector<double> PixelClockEqualDistanceLUT(WidthPerFrame_pix);
+	std::vector<double> PixelClockEqualDistanceLUT(widthPerFrame_pix);
 
-	if (WidthPerFrame_pix % 2 == 0)	//is even. Odd number of pixels not implemented yet
+	if (widthPerFrame_pix % 2 == 0)	//is even. Odd number of pixels not implemented yet
 	{
-		for (int pix = -WidthPerFrame_pix / 2; pix < WidthPerFrame_pix / 2; pix++)	//pix in [-WidthPerFrame_pix/2,WidthPerFrame_pix/2]
-			PixelClockEqualDistanceLUT[pix + WidthPerFrame_pix / 2] = calculatePracticalDwellTime(pix);
+		for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)	//pix in [-widthPerFrame_pix/2,widthPerFrame_pix/2]
+			PixelClockEqualDistanceLUT[pix + widthPerFrame_pix / 2] = calculatePracticalDwellTime(pix);
 	}
 	else
 	{
-		std::cerr << "ERROR in " << __FUNCTION__ << ": Odd number of pixels in the image width currently not supported by the pixel clock. Pixel clock set to 0" << std::endl;
+		std::cerr << "ERROR in " << __FUNCTION__ << ": Odd number of pixels for the image width currently not supported. Pixel clock set to 0" << std::endl;
 	}
 
 	//Determine the relative delay of the pixel clock wrt the line clock
@@ -669,7 +673,7 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 	const U16 InitialTimeStep_tick = calibCoarse_tick + calibFine_tick;
 	queue.push(packU32(InitialTimeStep_tick - mLatency_tick, 0x0000));
 
-	for (int pix = 0; pix < WidthPerFrame_pix; pix++)
+	for (int pix = 0; pix < widthPerFrame_pix; pix++)
 		queue.push(singlePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
 
 	queue.push(singlePixelClock(dt_us_MIN, 1));								//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant

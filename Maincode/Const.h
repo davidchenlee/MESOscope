@@ -23,8 +23,8 @@ enum RTchannel {PCLOCK, GALVO1, GALVO2, SHUTTER1};		//Pixel clock, analog channe
 
 namespace Const
 {
-	extern const PhotonCounterInputSelector PhotonCounterInput;
-	extern const LineClockInputSelector LineClockInput;
+	extern const PhotonCounterInputSelector photonCounterInput;
+	extern const LineClockInputSelector lineClockInput;
 
 	extern const int Nchan;
 	
@@ -39,8 +39,8 @@ namespace Const
 	extern const U32 dt_tick_MIN;
 	extern const double dt_us_MIN;
 	extern const int AOdt_us;
-	extern const int SyncDOtoAO_tick;
-	extern const int SyncAODOtoLineGate_tick;
+	extern const int syncDOtoAO_tick;
+	extern const int syncAODOtoLineGate_tick;
 	extern const int FIFOtimeout_tick;
 	extern const int FIFOINmax;
 
@@ -49,22 +49,22 @@ namespace Const
 	extern const double PC1_voltPermW;
 	extern const double PC2_voltPermW;
 
-	extern const int Npulses;
+	extern const int nPulses;
 	extern const U8 pulseArray[];
 
-	extern const double HalfPeriodLineClock_us;
+	extern const double halfPeriodLineClock_us;
 	extern const double RSpkpk_um;
 
-	extern const double FFOVslow_um;
+	extern const double fFOVslow_um;
 	extern const double galvo1Amp_volt;
 
 	extern const double galvoTimeStep_us;
-	extern const int WidthPerFrame_pix;
-	extern const int HeightPerFrame_pix;
-	extern const int NpixPerFrame;
-	extern const int NlinesSkip;
-	extern const int NFrames;
-	extern const int NlinesAllFrames;
-	extern const int NpixAllFrames;
+	extern const int widthPerFrame_pix;
+	extern const int heightPerFrame_pix;
+	extern const int nPixPerFrame;
+	extern const int nLinesSkip;
+	extern const int nFrames;
+	extern const int nLinesAllFrames;
+	extern const int nPixAllFrames;
 
 }

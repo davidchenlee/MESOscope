@@ -9,7 +9,7 @@ int main()
 	fpga.initialize();
 
 	ResonantScanner RS(fpga);
-	if (0)
+	if (1)
 		RS.turnOn(200 * um);
 	else
 		RS.turnOff();

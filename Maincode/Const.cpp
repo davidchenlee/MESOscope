@@ -2,8 +2,8 @@
 
 namespace Const
 {
-	extern const PhotonCounterInputSelector PhotonCounterInput = PMText;		//PMText or PMTsim
-	extern const LineClockInputSelector LineClockInput = FuncGen;				//ResScan, FuncGen, or FPGAclock
+	extern const PhotonCounterInputSelector photonCounterInput = PMText;		//PMText or PMTsim
+	extern const LineClockInputSelector lineClockInput = FuncGen;				//ResScan, FuncGen, or FPGAclock
 
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;							//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
@@ -19,8 +19,8 @@ namespace Const
 	extern const U32 dt_tick_MIN = 2;						//Min ticks allowed because DO and AO have a latency of 2 ticks
 	extern const double dt_us_MIN = dt_tick_MIN * dt_us;	//in us. Min time step allowed
 	extern const int AOdt_us = 2 * us;						//Time step (in us) of the analog output. The AO channels take >1 us to write the output
-	extern const int SyncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
-	extern const int SyncAODOtoLineGate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
+	extern const int syncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
+	extern const int syncAODOtoLineGate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating. It may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before
 
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
@@ -38,12 +38,12 @@ namespace Const
 	//The laser has a repetition rate of 80 MH and therefore the pulse separation is 12.5ns (the pulse width out from the PMT is ~1ns but can be extreched via electronics).
 	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refer to as a 'line').
 	//Example, if I divide each line in 1000 pixels, then the pix dwell time is 62.5ns. Therefore, 62.5ns can fit at most 5 pulses separated by 12.5ns
-	extern const int Npulses = 20;												//Number of pulses
-	extern const U8 pulseArray[Npulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	extern const int nPulses = 20;												//Number of pulses
+	extern const U8 pulseArray[nPulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns	
 
 	//Pixel-clock paramenters
-	extern const double HalfPeriodLineClock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
+	extern const double halfPeriodLineClock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
 	extern const double RSpkpk_um = 250 * um;							//The amplitude is half this
 
 
@@ -51,17 +51,17 @@ namespace Const
 
 	//SCANNING PARAMETERS
 	//Galvo
-	extern const double FFOVslow_um = 200 * um;									//Full FOV in the slow axis (galvo)
-	extern const double galvo1Amp_volt = FFOVslow_um * galvo_voltPerUm;
+	extern const double fFOVslow_um = 200 * um;									//Full FOV in the slow axis (galvo)
+	extern const double galvo1Amp_volt = fFOVslow_um * galvo_voltPerUm;
 	extern const double galvoTimeStep_us = 8 * us;
 
-	extern const int WidthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const int HeightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
-	extern const int NlinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
-	extern const int NFrames = 1;												//Number of frames to acquire
-	extern const int NpixPerFrame = WidthPerFrame_pix * HeightPerFrame_pix;		//Number of pixels in each frame
-	extern const int NlinesAllFrames = HeightPerFrame_pix * NFrames;			//Total number of lines in all the frames without including the skipped lines
-	extern const int NpixAllFrames = WidthPerFrame_pix * NlinesAllFrames;		//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
+	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
+	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
+	extern const int nFrames = 1;												//Number of frames to acquire
+	extern const int nPixPerFrame = widthPerFrame_pix * heightPerFrame_pix;		//Number of pixels in each frame
+	extern const int nLinesAllFrames = heightPerFrame_pix * nFrames;			//Total number of lines in all the frames without including the skipped lines
+	extern const int nPixAllFrames = widthPerFrame_pix * nLinesAllFrames;		//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
 	//400x400x5, skipped 60
 	//400x35x90, skipped 8

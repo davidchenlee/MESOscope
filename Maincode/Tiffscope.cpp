@@ -54,13 +54,13 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 	{
 		const int samplePerPixel = 1; 														//Number of channels (colors)
 
-		unsigned char *image = new unsigned char[NpixPerFrame * samplePerPixel];			//Create an 1D array representing the image
+		unsigned char *image = new unsigned char[nPixPerFrame * samplePerPixel];			//Create an 1D array representing the image
 
-		for (int ii = 0; ii < NpixPerFrame * samplePerPixel; ii++)
+		for (int ii = 0; ii < nPixPerFrame * samplePerPixel; ii++)
 			image[ii] = 0;																	//Initialize the array
 
 		
-		for (int ii = 0; ii < NpixPerFrame; ii++)
+		for (int ii = 0; ii < nPixPerFrame; ii++)
 		{
 			image[samplePerPixel*ii] = (unsigned char) std::floor(scale * imageIn[ii]);		//Red
 			//image[samplePerPixel*ii+1] = 0;												//Green
@@ -69,8 +69,8 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 		}
 		
 		//TAGS
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, WidthPerFrame_pix);					//Set the width of the image
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, HeightPerFrame_pix);					//Set the height of the image
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, widthPerFrame_pix);					//Set the width of the image
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, heightPerFrame_pix);					//Set the height of the image
 		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, samplePerPixel);					//Set number of channels per pixel
 		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);									//Set the size of the channels
 		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);					//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
@@ -83,7 +83,7 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 		//TIFFSetField(tiffHandle, TIFFTAG_EXAMPLELONG, 1);
 		//TIFFSetField(tiffHandle, TIFFTAG_EXAMPLEFLOAT, 2.0);
 
-		tsize_t bytesPerLine = samplePerPixel * WidthPerFrame_pix;			//Length in memory of one row of pixel in the image.
+		tsize_t bytesPerLine = samplePerPixel * widthPerFrame_pix;			//Length in memory of one row of pixel in the image.
 		unsigned char *buffer = nullptr;										//Buffer used to store the row of pixel information for writing to file
 
 		//Allocating memory to store pixels of current row
@@ -93,12 +93,12 @@ int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
 			buffer = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(tiffHandle));
 
 		//Set the strip size of the file to be size of one row of pixels
-		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, WidthPerFrame_pix*samplePerPixel));
+		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, widthPerFrame_pix*samplePerPixel));
 
 		//Now writing image to the file one strip at a time
-		for (int row = 0; row < HeightPerFrame_pix; row++)
+		for (int row = 0; row < heightPerFrame_pix; row++)
 		{
-			memcpy(buffer, &image[(HeightPerFrame_pix - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
+			memcpy(buffer, &image[(heightPerFrame_pix - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
 			if (TIFFWriteScanline(tiffHandle, buffer, row, 0) < 0)
 				break;
 		}

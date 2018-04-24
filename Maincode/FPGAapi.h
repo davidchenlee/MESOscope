@@ -22,7 +22,7 @@ public:
 	NiFpga_Status sendRTtoFPGA();
 	NiFpga_Status triggerRTsequence();
 	NiFpga_Status flushFIFO();
-	NiFpga_Status  close();
+	NiFpga_Status close();
 	void printFPGAstatus(char functionName[]);
 };
 

@@ -522,13 +522,13 @@ double ResonantScanner::convertUm2Volt(double amplitude_um)
 
 #pragma region "Shutters"
 
-Shutter::Shutter(FPGAapi &fpga, uint32_t ID) : mFpga(fpga), mIDshutter(ID) {}
+Shutter::Shutter(FPGAapi &fpga, int ID) : mFpga(fpga), mID(ID) {}
 
 Shutter::~Shutter() {}
 
 NiFpga_Status Shutter::setOutput(bool state)
 {
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mIDshutter, (NiFpga_Bool)state));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mID, (NiFpga_Bool)state));
 
 	if(!mFpga.mStatus)
 		mState = state;
@@ -540,9 +540,9 @@ NiFpga_Status Shutter::setOutput(bool state)
 
 NiFpga_Status Shutter::pulseHigh()
 {
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mIDshutter, 1));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mID, 1));
 	Sleep(mDelayTime);
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mIDshutter, 0));
+	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mID, 0));
 
 	if (!mFpga.mStatus)
 		mState = 0;
@@ -575,7 +575,7 @@ RTsequence::RTsequence(FPGAapi &fpga): mFpga(fpga)	//Pass by reference to be abl
 	PixelClock pixelclock;
 
 	//mFpga->mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDuration();
-	//mFpga.mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
+	mFpga.mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
 
 	if (pixelclock.mError)
 		mFpga.mStatus = NiFpga_Status_InvalidParameter;
@@ -698,9 +698,12 @@ RTsequence::PixelClock::PixelClock(): mError(0) {}
 RTsequence::PixelClock::~PixelClock(){}
 
 
-
 Laser::Laser(FPGAapi &fpga): mFpga(fpga) {}
 Laser::~Laser() {}
 
 Laser::PockelsCell::PockelsCell() {}
 Laser::PockelsCell::~PockelsCell() {}
+
+
+Filterwheel::Filterwheel(int ID): mID(ID) {}
+Filterwheel::~Filterwheel() {}

@@ -2,14 +2,19 @@
 
 int main()
 {
+	//To make sure the the filterwheel 1 is set to the correct position
+	FilterWheel();
+	Sleep(1000); //wait for the filterwheel to settle
 
 	FPGAapi fpga;
 
 	//Initialize the FPGA
 	fpga.initialize();
 
+
+
 	ResonantScanner RS(fpga);
-	if (1)
+	if (0)
 		RS.turnOn(200 * um);
 	else
 		RS.turnOff();

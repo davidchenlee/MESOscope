@@ -131,6 +131,7 @@
     <ClInclude Include="..\Maincode\Devices.h" />
     <ClInclude Include="..\Maincode\FPGAapi.h" />
     <ClInclude Include="..\Maincode\Tiffscope.h" />
+    <ClInclude Include="..\Maincode\UARTscope.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c" />
@@ -138,6 +139,7 @@
     <ClCompile Include="..\Maincode\Devices.cpp" />
     <ClCompile Include="..\Maincode\FPGAapi.cpp" />
     <ClCompile Include="..\Maincode\Tiffscope.cpp" />
+    <ClCompile Include="..\Maincode\UARTscope.cpp" />
     <ClCompile Include="CDmain.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

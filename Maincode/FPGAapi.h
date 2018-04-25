@@ -16,7 +16,6 @@ public:
 
 	FPGAapi();
 	~FPGAapi();
-
 	NiFpga_Status initialize();
 	NiFpga_Status writeFIFO();
 	NiFpga_Status sendRTtoFPGA();

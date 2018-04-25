@@ -86,7 +86,7 @@ int FilterWheel()
 
 
 	//WRITE DATA
-	string TxCommand = "pos=1";
+	string TxCommand = "pos=2";
 	DWORD dwBytesWritten;
 	int totalBytesWritten = 0;
 	for (int ii = 0; ii < TxCommand.length(); ii++)

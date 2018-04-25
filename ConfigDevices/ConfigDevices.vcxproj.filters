@@ -27,6 +27,9 @@
     <ClInclude Include="..\Maincode\Tiffscope.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\Maincode\UARTscope.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Maincode\Const.cpp">
@@ -45,6 +48,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Maincode\Tiffscope.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Maincode\UARTscope.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

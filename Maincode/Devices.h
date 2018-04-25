@@ -41,10 +41,7 @@ public:
 class Vibratome
 {
 	FPGAapi &mFpga;
-
-	//Vibratome channels
-	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};
-
+	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
 public:
 	int mNslide;						//Slide number
 	double mSectionThickness;		//Thickness of the section
@@ -80,12 +77,11 @@ class Shutter
 	FPGAapi &mFpga;
 	const int mDelayTime = 10;
 public:
-	uint32_t mIDshutter;
+	int mID;			//Device ID
 	bool mState;
 
-	Shutter(FPGAapi &fpga, uint32_t ID);
+	Shutter(FPGAapi &fpga, int ID);
 	~Shutter();
-
 	NiFpga_Status setOutput(bool requestedState);
 	NiFpga_Status pulseHigh();
 };
@@ -94,8 +90,8 @@ public:
 class Stage
 {
 	FPGAapi &mFpga;
-	std::vector<double> absPosition;	//Absolute position of the stages (x, y, z)
-	std::vector<int> Ntile;				//Tile number in x, y, z
+	std::vector<double> absPosition;			//Absolute position of the stages (x, y, z)
+	std::vector<int> Ntile;						//Tile number in x, y, z
 	std::vector<int> tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
 public:
 	Stage(FPGAapi &fpga);
@@ -109,7 +105,7 @@ class RTsequence
 
 	class PixelClock
 	{
-		const int mLatency_tick = 2;			//latency at detecting the line clock. Calibrate the latency with the oscilloscope
+		const int mLatency_tick = 2;						//latency at detecting the line clock. Calibrate the latency with the oscilloscope
 		double ConvertSpatialCoord2Time(double x);
 		double getDiscreteTime(int pix);
 		double calculateDwellTime(int pix);
@@ -120,11 +116,8 @@ class RTsequence
 		~PixelClock();
 		QU32 PixelClockEqualDuration();
 		QU32 PixelClockEqualDistance();
-
 	};
-
 public:
-
 	RTsequence(FPGAapi &fpga);
 	~RTsequence();
 
@@ -152,3 +145,10 @@ public:
 };
 
 
+class Filterwheel
+{
+	int mID;						//Device ID
+public:
+	Filterwheel(int ID);
+	~Filterwheel();
+};

@@ -136,20 +136,17 @@ namespace GenericFPGAfunctions {
 FPGAapi::FPGAapi(): mVectorOfQueues(Nchan)
 {
 	mStatus = NiFpga_Initialize();		//Must be called before any other FPGA calls
+	if (mStatus < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(mStatus));
 	//std::cout << "FPGA initialize status: " << mStatus << std::endl;
 
-	if (NiFpga_IsNotError(mStatus))		//Check for any FPGA error
-	{
-		NiFpga_MergeStatus(&mStatus, NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession));		//Opens a session, downloads the bitstream
-																												//1=no run, 0=run
-		//std::cout << "FPGA open-session status: " << mStatus << std::endl;
-	}
+	NiFpga_MergeStatus(&mStatus, NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession));		//Opens a session, downloads the bitstream. 1=no run, 0=run
+	if (mStatus < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(mStatus));
 }
 
 FPGAapi::~FPGAapi(){};
 
 
-NiFpga_Status FPGAapi::initialize()
+void FPGAapi::initialize()
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotonCounterInputSelector, photonCounterInput));			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
@@ -183,9 +180,8 @@ NiFpga_Status FPGAapi::initialize()
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));									//FIFO OUT
 
+	if (mStatus < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(mStatus));
 	//std::cout << "FPGA initialization status: " << mStatus << std::endl;
-
-	return mStatus;
 }
 
 
@@ -193,7 +189,7 @@ NiFpga_Status FPGAapi::initialize()
 //For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 //Then transfer the elements in the long queue to an array to interface the FPGA
 //Alternatively, the single queues could be transferred directly to the array, but why bothering...
-NiFpga_Status FPGAapi::writeFIFO()
+void FPGAapi::writeFIFO()
 {
 	QU32 allQueues;								//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
@@ -210,7 +206,7 @@ NiFpga_Status FPGAapi::writeFIFO()
 	const int sizeFIFOqueue = allQueues.size();		//Total number of elements in all the queues 
 
 	if (sizeFIFOqueue > FIFOINmax)
-		std::cerr << "WARNING in " << __FUNCTION__ << ": FIFO IN overflow" << std::endl;
+		throw std::overflow_error((std::string)__FUNCTION__ + ": FIFO IN overflow");
 
 	U32* FIFO = new U32[sizeFIFOqueue];				//Create an array for interfacing the FPGA	
 	for (int i = 0; i < sizeFIFOqueue; i++)
@@ -228,45 +224,49 @@ NiFpga_Status FPGAapi::writeFIFO()
 
 	//std::cout << "FPGA FIFO status: " << mStatus << std::endl;
 	delete[] FIFO;									//cleanup the array
-
-	return mStatus;
 }
 
-NiFpga_Status FPGAapi::sendRTtoFPGA()
+void FPGAapi::sendRTtoFPGA()
 {
 	this->writeFIFO();
 
 	//Distribute the commands among the different channels (see the implementation of the LV code)
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
-	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
-	//std::cout << "Pulse trigger status: " << mStatus << std::endl;
+	if (mStatus < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(mStatus));
 
-	return mStatus;
+	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
+	if (mStatus < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(mStatus));
+
+	//std::cout << "Pulse trigger status: " << mStatus << std::endl;
 }
 
 //Execute the commands
-NiFpga_Status FPGAapi::triggerRTsequence()
+void FPGAapi::triggerRTsequence()
 {
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1));
-	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));
-	//std::cout << "Acquisition trigger status: " << status << std::endl;
+	if (mStatus < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(mStatus));
 
-	return mStatus;
+	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));
+	if (mStatus < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(mStatus));
+
+	//std::cout << "Acquisition trigger status: " << status << std::endl;
 }
 
 
 //Trigger the FIFO flushing
-NiFpga_Status FPGAapi::flushFIFO()
+void FPGAapi::flushFIFO()
 {
 	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
-	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
-	//std::cout << "Flush trigger status: " << mStatus << std::endl;
+	if (mStatus < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(mStatus));
 
-	return mStatus;
+	NiFpga_MergeStatus(&mStatus, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
+	if (mStatus < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(mStatus));
+
+	//std::cout << "Flush trigger status: " << mStatus << std::endl;
 }
 
 //The FPGAapi object has to be closed explicitly (in opposition to using the destructor) because it lives in main()
-NiFpga_Status  FPGAapi::close()
+void FPGAapi::close()
 {
 	if (NiFpga_IsNotError(mStatus))
 	{
@@ -279,10 +279,6 @@ NiFpga_Status  FPGAapi::close()
 	//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 	NiFpga_MergeStatus(&mStatus, NiFpga_Finalize());
 	//std::cout << "FPGA finalize status: " << mStatus << std::endl;
-
-	std::cout << "FPGA exit code: " << mStatus << std::endl;
-
-	return mStatus;
 }
 
 

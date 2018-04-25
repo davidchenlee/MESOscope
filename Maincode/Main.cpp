@@ -23,20 +23,33 @@ int main()
 
 
 	}
-	catch (MyException &e)
+	catch (FPGAexception &e)
 	{
-		std::cout << "An error has been caught" << std::endl;
-		std::cout << e.what() << std::endl;
+		std::cout << "An error has occurred in " << e.what() << std::endl;
+	}
+	catch (std::invalid_argument &e)
+	{
+		std::cout << "An error has occurred in " << e.what() << std::endl;
+	}
+	catch (std::overflow_error &e)
+	{
+		std::cout << "An error has occurred in " << e.what() << std::endl;
 	}
 	catch (std::runtime_error &e)
 	{
 		std::cout << "An error has occurred in " << e.what() << std::endl;
 	}
+	catch (...)
+	{
+		std::cout << "An unknown error has occurred" << std::endl;
+	}
+
+
 
 
 	fpga.close();
 	std::cout << "\nPress any key to continue..." << std::endl;
-	//getchar();
+	getchar();
 
 	return 0;
 }

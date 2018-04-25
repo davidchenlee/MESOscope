@@ -251,23 +251,26 @@ int writeFrameToTxt(unsigned char *imageArray, std::string fileName)
 
 #pragma region "Vibratome"
 
-Vibratome::Vibratome(FPGAapi &fpga): mFpga(fpga){}
+Vibratome::Vibratome(FPGAapi fpga): mFpga(fpga){}
 
 Vibratome::~Vibratome() {}
 
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
-NiFpga_Status Vibratome::startStop()
+void Vibratome::startStop()
 {
 	const int SleepTime = 20; //in ms. It has to be ~ 12 ms or longer to 
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, NiFpga_FPGAvi_ControlBool_VT_start, 1));
-	Sleep(SleepTime);
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, NiFpga_FPGAvi_ControlBool_VT_start, 0));
 
-	return mFpga.mStatus;
+	NiFpga_Status status = NiFpga_WriteBool(mFpga.mSession, NiFpga_FPGAvi_ControlBool_VT_start, 1);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+
+	Sleep(SleepTime);
+
+	status = NiFpga_WriteBool(mFpga.mSession, NiFpga_FPGAvi_ControlBool_VT_start, 0);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 }
 
 //Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
-NiFpga_Status Vibratome::sendCommand(double pulseDuration, VibratomeChannel channel)
+void Vibratome::sendCommand(double pulseDuration, VibratomeChannel channel)
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
 	const int minPulseDuration = 10; //in ms
@@ -283,11 +286,11 @@ NiFpga_Status Vibratome::sendCommand(double pulseDuration, VibratomeChannel chan
 		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_forward;
 		break;
 	default:
-		std::cerr << "ERROR in " << __FUNCTION__ << ": Selected vibratome channel is unavailable" << std::endl;
-		return NiFpga_Status_InvalidParameter;
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected vibratome channel is unavailable");
 	}
 
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, selectedChannel, 1));
+	NiFpga_Status status = NiFpga_WriteBool(mFpga.mSession, selectedChannel, 1);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 
 	if (dt_ms >= minPulseDuration)
 		Sleep(dt_ms - delay);
@@ -296,82 +299,56 @@ NiFpga_Status Vibratome::sendCommand(double pulseDuration, VibratomeChannel chan
 		Sleep(minPulseDuration - delay);
 		std::cerr << "WARNING in " << __FUNCTION__ << ": vibratome pulse duration too short. Duration set to the min = ~" << minPulseDuration << "ms" << std::endl;
 	}
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, selectedChannel, 0));
-
-	return mFpga.mStatus;
+	status = NiFpga_WriteBool(mFpga.mSession, selectedChannel, 0);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 }
 
 #pragma endregion "Vibratome"
 
 #pragma region "Resonant scanner"
 
-ResonantScanner::ResonantScanner(FPGAapi &fpga): mFpga(fpga){};
+ResonantScanner::ResonantScanner(FPGAapi fpga): mFpga(fpga){};
 
 ResonantScanner::~ResonantScanner() {};
 
 //Start or stop the resonant scanner
-NiFpga_Status ResonantScanner::startStop(bool state)
-{
+void ResonantScanner::startStop(bool state){
 
 	NiFpga_Status status =  NiFpga_WriteBool(mFpga.mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)state);
-	//status = 1;
-	if (status)
-	{
-		std::string qwe = "aaaaaaa ";
-		std::string wwe(__FUNCTION__);
-		throw std::runtime_error(qwe + wwe);
-	}
-
-	if (!mFpga.mStatus)
-		mState = state;
-	return mFpga.mStatus;
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 }
 
 
 //Set the output voltage of the resonant scanner
-NiFpga_Status ResonantScanner::setOutputVoltage(double Vout)
+void ResonantScanner::setOutputVoltage(double Vout)
 {
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout)));
-
-	if (!mFpga.mStatus)
-		mAmplitude_um = Vout / mVoltPerUm;
-
-	return mFpga.mStatus;
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout));
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	
+	mAmplitude_um = Vout / mVoltPerUm;
 }
 
 //Set the output voltage of the resonant scanner
-NiFpga_Status ResonantScanner::setOutputAmplitude(double amplitude_um)
+void ResonantScanner::setOutputAmplitude(double amplitude_um)
 {
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(amplitude_um * mVoltPerUm)));
-
-	if (!mFpga.mStatus)
-		mAmplitude_um = amplitude_um;
-
-	return mFpga.mStatus;
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(amplitude_um * mVoltPerUm));
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	
+	mAmplitude_um = amplitude_um;
 }
 
-NiFpga_Status ResonantScanner::turnOn(double amplitude_um)
+void ResonantScanner::turnOn(double amplitude_um)
 {
-	NiFpga_MergeStatus(&mFpga.mStatus, this->setOutputAmplitude(amplitude_um));
+	setOutputAmplitude(amplitude_um);
 	Sleep(mDelayTime);
-	NiFpga_MergeStatus(&mFpga.mStatus, this->startStop(1));
-
-	if (mFpga.mStatus)
-		mFpga.printFPGAstatus(__FUNCTION__);
-
-	return mFpga.mStatus;
+	startStop(1);
 }
 
-NiFpga_Status ResonantScanner::turnOff()
+void ResonantScanner::turnOff()
 {
-	NiFpga_MergeStatus(&mFpga.mStatus, this->startStop(0));
+	startStop(0);
 	Sleep(mDelayTime);
-	NiFpga_MergeStatus(&mFpga.mStatus, this->setOutputVoltage(0));
-
-	if (mFpga.mStatus)
-		mFpga.printFPGAstatus(__FUNCTION__);
-
-	return mFpga.mStatus;
+	setOutputVoltage(0);
 }
 
 
@@ -384,34 +361,25 @@ double ResonantScanner::convertUm2Volt(double amplitude_um)
 
 #pragma region "Shutters"
 
-Shutter::Shutter(FPGAapi &fpga, int ID) : mFpga(fpga), mID(ID) {}
+Shutter::Shutter(FPGAapi fpga, int ID) : mFpga(fpga), mID(ID) {}
 
 Shutter::~Shutter() {}
 
-NiFpga_Status Shutter::setOutput(bool state)
+void Shutter::setOutput(bool state)
 {
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mID, (NiFpga_Bool)state));
-
-	if(!mFpga.mStatus)
-		mState = state;
-	else
-		mFpga.printFPGAstatus(__FUNCTION__);
-
-	return mFpga.mStatus;
+	NiFpga_Status status =  NiFpga_WriteBool(mFpga.mSession, mID, (NiFpga_Bool)state);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 }
 
-NiFpga_Status Shutter::pulseHigh()
+void Shutter::pulseHigh()
 {
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mID, 1));
+	NiFpga_Status status =  NiFpga_WriteBool(mFpga.mSession, mID, 1);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+
 	Sleep(mDelayTime);
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, mID, 0));
 
-	if (!mFpga.mStatus)
-		mState = 0;
-	else
-		mFpga.printFPGAstatus(__FUNCTION__);
-
-	return mFpga.mStatus;
+	status = NiFpga_WriteBool(mFpga.mSession, mID, 0);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 }
 
 #pragma endregion "Shutters"
@@ -423,7 +391,7 @@ NiFpga_Status Shutter::pulseHigh()
 #pragma endregion "Pockels cells"
 
 #pragma region "Stages"
-Stage::Stage(FPGAapi &fpga): mFpga(fpga) {}
+Stage::Stage(FPGAapi fpga): mFpga(fpga) {}
 
 Stage::~Stage(){}
 
@@ -432,17 +400,12 @@ Stage::~Stage(){}
 
 #pragma region "Real-time sequence"
 
-RTsequence::RTsequence(FPGAapi &fpga): mFpga(fpga)	//Pass by reference to be abla to modify fpga.mVectorOfQueue
+RTsequence::RTsequence(FPGAapi &fpga): mFpga(fpga)	//Pass fpga by reference to be able to modify fpga.mVectorOfQueue
 {
 	PixelClock pixelclock;
 
 	//mFpga->mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDuration();
 	mFpga.mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
-
-	if (pixelclock.mError)
-		mFpga.mStatus = NiFpga_Status_InvalidParameter;
-		
-
 }
 
 RTsequence::~RTsequence(){}
@@ -480,17 +443,11 @@ void RTsequence::concatenateQueues(QU32& receivingQueue, QU32 givingQueue)
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
 double RTsequence::PixelClock::ConvertSpatialCoord2Time(double x)
 {
-	const double arg = 2 * x / RSpkpk_um;
-	if (arg <= 1)
-	{
-		return halfPeriodLineClock_us * asin(arg) / PI; //Return value in [-halfPeriodLineClock_us/PI, halfPeriodLineClock_us/PI]
-	}
+	 double arg = 2 * x / RSpkpk_um;
+	if (arg > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Argument of asin greater than 1");
 	else
-	{
-		std::cerr << "ERROR in " << __FUNCTION__ << ": argument of asin greater than 1" << std::endl;
-		mError = -1;
-		return halfPeriodLineClock_us / PI;
-	}
+		return halfPeriodLineClock_us * asin(arg) / PI; //Return value in [-halfPeriodLineClock_us/PI, halfPeriodLineClock_us/PI]
 }
 
 //Discretize the spatial coordinate, then convert it to time
@@ -537,17 +494,13 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 	QU32 queue;
 	std::vector<double> PixelClockEqualDistanceLUT(widthPerFrame_pix);
 
-	if (widthPerFrame_pix % 2 == 0)	//is even. Odd number of pixels not implemented yet
-	{
-		for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)	//pix in [-widthPerFrame_pix/2,widthPerFrame_pix/2]
-			PixelClockEqualDistanceLUT[pix + widthPerFrame_pix / 2] = calculatePracticalDwellTime(pix);
-	}
-	else
-	{
-		std::cerr << "ERROR in " << __FUNCTION__ << ": Odd number of pixels for the image width currently not supported. Pixel clock set to 0" << std::endl;
-		mError = -1;
-	}
+	if (widthPerFrame_pix % 2 != 0)	//is Odd. Odd number of pixels not supported yet
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels for the image width currently not supported");
+	
+	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)	//pix in [-widthPerFrame_pix/2,widthPerFrame_pix/2]
+		PixelClockEqualDistanceLUT[pix + widthPerFrame_pix / 2] = calculatePracticalDwellTime(pix);
 
+		
 	//Determine the relative delay of the pixel clock wrt the line clock
 	const U16 calibCoarse_tick = 2043;	//Look at the oscilloscope and adjust to center the pixel clock within a line scan
 	const U16 calibFine_tick = 10;		//In practice, the resonant scanner is not perfectly centered around the objective's back aperture
@@ -567,11 +520,11 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 
 
 
-RTsequence::PixelClock::PixelClock(): mError(0) {}
+RTsequence::PixelClock::PixelClock() {}
 RTsequence::PixelClock::~PixelClock(){}
 
 
-Laser::Laser(FPGAapi &fpga): mFpga(fpga) {}
+Laser::Laser(FPGAapi fpga): mFpga(fpga) {}
 Laser::~Laser() {}
 
 Laser::PockelsCell::PockelsCell() {}

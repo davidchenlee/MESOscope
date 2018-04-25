@@ -27,7 +27,7 @@ public:
 
 
 class Vibratome {
-	FPGAapi &mFpga;
+	FPGAapi mFpga;
 	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
 public:
 	int mNslide;						//Slide number
@@ -35,51 +35,49 @@ public:
 	double mSpeed;					//Speed of the vibratome (manual setting)
 	double mAmplitude;				//Amplitude of the vibratome (manual setting)
 
-	Vibratome(FPGAapi &fpga);
+	Vibratome(FPGAapi fpga);
 	~Vibratome();
-	NiFpga_Status startStop();
-	NiFpga_Status sendCommand(double dt, VibratomeChannel channel);
+	void startStop();
+	void sendCommand(double dt, VibratomeChannel channel);
 };
 
 class ResonantScanner {
-	FPGAapi &mFpga;
+	FPGAapi mFpga;
 	const int mDelayTime = 10;
 	double ResonantScanner::convertUm2Volt(double Amplitude);
 public:
 	bool mState;							//determine if is the scanner on or off
 	double mAmplitude_um = 0;
 	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
-	ResonantScanner(FPGAapi &fpga);
+	ResonantScanner(FPGAapi fpga);
 	~ResonantScanner();
-	NiFpga_Status startStop(bool requestedState);
-	NiFpga_Status setOutputVoltage(double Vout);
-	NiFpga_Status setOutputAmplitude(double amplitude_um);
-	NiFpga_Status turnOn(double amplitude_um);
-	NiFpga_Status turnOff();
+	void startStop(bool state);
+	void setOutputVoltage(double Vout);
+	void setOutputAmplitude(double amplitude_um);
+	void turnOn(double amplitude_um);
+	void turnOff();
 };
 
 class Shutter {
-	FPGAapi &mFpga;
+	FPGAapi mFpga;
 	const int mDelayTime = 10;
 public:
 	int mID;			//Device ID
-	bool mState;
-
-	Shutter(FPGAapi &fpga, int ID);
+	Shutter(FPGAapi fpga, int ID);
 	~Shutter();
-	NiFpga_Status setOutput(bool requestedState);
-	NiFpga_Status pulseHigh();
+	void setOutput(bool requestedState);
+	void pulseHigh();
 };
 
 
 class Stage
 {
-	FPGAapi &mFpga;
+	FPGAapi mFpga;
 	std::vector<double> absPosition;			//Absolute position of the stages (x, y, z)
 	std::vector<int> Ntile;						//Tile number in x, y, z
 	std::vector<int> tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
 public:
-	Stage(FPGAapi &fpga);
+	Stage(FPGAapi fpga);
 	~Stage();
 };
 
@@ -97,7 +95,6 @@ class RTsequence
 		double calculateDwellTime(int pix);
 		double calculatePracticalDwellTime(int pix);
 	public:
-		NiFpga_Status mError;
 		PixelClock();
 		~PixelClock();
 		QU32 PixelClockEqualDuration();
@@ -116,7 +113,7 @@ public:
 
 class Laser
 {
-	FPGAapi &mFpga;
+	FPGAapi mFpga;
 	double wavelength;
 	class PockelsCell
 	{
@@ -127,7 +124,7 @@ class Laser
 		~PockelsCell();
 	};
 public:
-	Laser(FPGAapi &fpga);
+	Laser(FPGAapi fpga);
 	~Laser();
 };
 
@@ -135,6 +132,7 @@ public:
 class Filterwheel
 {
 	int mID;						//Device ID
+	int mPosition;
 public:
 	Filterwheel(int ID);
 	~Filterwheel();

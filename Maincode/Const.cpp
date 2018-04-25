@@ -3,7 +3,7 @@
 namespace Const
 {
 	extern const PhotonCounterInputSelector photonCounterInput = PMText;		//PMText or PMTsim
-	extern const LineClockInputSelector lineClockInput = ResScan;				//ResScan, FuncGen, or FPGAclock
+	extern const LineClockInputSelector lineClockInput = FuncGen;				//ResScan, FuncGen, or FPGAclock
 
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;								//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!

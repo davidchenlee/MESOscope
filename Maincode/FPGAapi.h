@@ -2,6 +2,7 @@
 #include <iostream>
 #include "NiFpga_FPGAvi.h"
 #include "Const.h"
+#include <string>	//printing the error codes
 using namespace Const;
 
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/
@@ -26,16 +27,17 @@ public:
 
 	FPGAapi();
 	~FPGAapi();
-	NiFpga_Status initialize();
-	NiFpga_Status writeFIFO();
-	NiFpga_Status sendRTtoFPGA();
-	NiFpga_Status triggerRTsequence();
-	NiFpga_Status flushFIFO();
-	NiFpga_Status close();
+	void initialize();
+	void writeFIFO();
+	void sendRTtoFPGA();
+	void triggerRTsequence();
+	void flushFIFO();
+	void close();
 	void printFPGAstatus(char functionName[]);
 };
 
-class MyException : public std::runtime_error {
+class FPGAexception : public std::runtime_error {
 public:
-	MyException() : std::runtime_error("MyException") {}
+	//FPGAexception(const char *message) : std::runtime_error(message) {}
+	explicit FPGAexception(const std::string& message) : std::runtime_error(message.c_str()) {}
 };

@@ -5,7 +5,7 @@ PhotonCounter::PhotonCounter(FPGAapi fpga): mFpga(fpga){}
 
 PhotonCounter::~PhotonCounter(){}
 
-NiFpga_Status PhotonCounter::readCount()
+void PhotonCounter::readCount()
 {
 	//FIFOa
 	int NelementsReadFIFOa = 0; 						//Total number of elements read from the FIFO
@@ -28,8 +28,10 @@ NiFpga_Status PhotonCounter::readCount()
 	int NelementsReadFIFOb = 0; 						//Total number of elements read from the FIFO
 
 	//Start the FIFO OUT to transfer data from the FPGA FIFO to the PC FIFO
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_StartFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_StartFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	NiFpga_Status status = NiFpga_StartFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	status = NiFpga_StartFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 
 	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
 	mFpga.triggerRTsequence();
@@ -70,8 +72,10 @@ NiFpga_Status PhotonCounter::readCount()
 
 
 	//Close the FIFO to (maybe) flush it
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_StopFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_StopFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	status = NiFpga_StopFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	status = NiFpga_StopFifo(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 
 	delete[] dataFIFOa;
 
@@ -80,12 +84,10 @@ NiFpga_Status PhotonCounter::readCount()
 		delete[] bufArrayb[i];
 	}
 	delete[] bufArrayb;
-
-	return mFpga.mStatus;
 }
 
 
-NiFpga_Status PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray)
+void PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray)
 {
 	const int readFifoWaitingTime = 15;			//Waiting time between each iteration
 	const U32 timeout = 100;					//FIFO timeout
@@ -103,6 +105,7 @@ NiFpga_Status PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsRea
 	//pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
 	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
 	U32 *dummy = new U32[0];
+	NiFpga_Status status;
 	while (NelementsReadFIFOa < nPixAllFrames || NelementsReadFIFOb < nPixAllFrames)
 	{
 		Sleep(readFifoWaitingTime); //wait till collecting big chuncks of data. Adjust the waiting time until getting max transfer bandwidth
@@ -110,14 +113,16 @@ NiFpga_Status PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsRea
 									//FIFO OUT a
 		if (NelementsReadFIFOa < nPixAllFrames)
 		{
-			NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &NremainingFIFOa));
+			status = NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &NremainingFIFOa);
+			if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 			//std::cout << "Number of elements remaining in the host FIFO a: " << NremainingFIFOa << std::endl;
 
 			if (NremainingFIFOa > 0)
 			{
 				NelementsReadFIFOa += NremainingFIFOa;
 
-				NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, NremainingFIFOa, timeout, &NremainingFIFOa));
+				status =  NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, NremainingFIFOa, timeout, &NremainingFIFOa);
+				if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 			}
 		}
 
@@ -125,7 +130,8 @@ NiFpga_Status PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsRea
 		if (NelementsReadFIFOb < nPixAllFrames)		//Skip if all the data have already been transferred (i.e. NelementsReadFIFOa = nPixAllFrames)
 		{
 			//By requesting 0 elements from the FIFO, the function returns the number of elements available. If no data available so far, then NremainingFIFOa = 0 is returned
-			NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &NremainingFIFOb));
+			status = NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &NremainingFIFOb);
+			if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 			//std::cout << "Number of elements remaining in the host FIFO b: " << NremainingFIFOb << std::endl;
 
 			//If there are data available in the FIFO, retrieve it
@@ -135,7 +141,8 @@ NiFpga_Status PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsRea
 				NelementsBufArrayb[bufArrayIndexb] = NremainingFIFOb;		//Keep track of how many elements are in each FIFObuffer array												
 
 																			//Read the elements in the FIFO
-				NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], NremainingFIFOb, timeout, &NremainingFIFOb));
+				status = NiFpga_ReadFifoU32(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], NremainingFIFOb, timeout, &NremainingFIFOb);
+				if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 
 				if (bufArrayIndexb >= NmaxbufArray)
 				{
@@ -162,19 +169,16 @@ NiFpga_Status PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsRea
 
 	std::cout << "Buffer-arrays used: " << (U32)bufArrayIndexb << std::endl; //print how many buffer arrays were actually used
 	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << std::endl; //print the total number of elements read
-
-	return mFpga.mStatus;
 }
 
-NiFpga_Status PhotonCounter::configureFIFO(U32 depth)
+void PhotonCounter::configureFIFO(U32 depth)
 {
 	U32 actualDepth;
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ConfigureFifo2(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
+	NiFpga_Status status = NiFpga_ConfigureFifo2(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 	std::cout << "actualDepth a: " << actualDepth << std::endl;
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_ConfigureFifo2(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
+	status =  NiFpga_ConfigureFifo2(mFpga.mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth);
 	std::cout << "actualDepth b: " << actualDepth << std::endl;
-
-	return mFpga.mStatus;
 }
 
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
@@ -320,21 +324,23 @@ void ResonantScanner::startStop(bool state){
 
 
 //Set the output voltage of the resonant scanner
-void ResonantScanner::setOutputVoltage(double Vout)
+void ResonantScanner::setOutputVoltage(double V_volt)
 {
-	NiFpga_Status status = NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(Vout));
+	mAmplitude_volt = V_volt;
+	mAmplitude_um = V_volt / mVoltPerUm;
+
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(mAmplitude_volt));
 	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
-	
-	mAmplitude_um = Vout / mVoltPerUm;
 }
 
 //Set the output voltage of the resonant scanner
 void ResonantScanner::setOutputAmplitude(double amplitude_um)
 {
-	NiFpga_Status status = NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(amplitude_um * mVoltPerUm));
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
-	
+	mAmplitude_volt = amplitude_um * mVoltPerUm;
 	mAmplitude_um = amplitude_um;
+
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(mAmplitude_volt));
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
 }
 
 void ResonantScanner::turnOn(double amplitude_um)
@@ -527,12 +533,34 @@ RTsequence::PixelClock::~PixelClock(){}
 Laser::Laser(FPGAapi fpga): mFpga(fpga) {}
 Laser::~Laser() {}
 
-PockelsCell::PockelsCell() {}
+PockelsCell::PockelsCell(FPGAapi fpga): mFpga(fpga) {}
 PockelsCell::~PockelsCell() {}
 
-void PockelsCell::setOutputVoltage(double Vout)
+void PockelsCell::setOutputVoltage(double V_volt)
 {
+	mV_volt = V_volt;
+	mP_mW = V_volt / mVoltPermW;
 
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_PC1_voltage, convertVolt2I16(mV_volt));
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+}
+
+void PockelsCell::turnOn(double P_mW)
+{
+	mV_volt = P_mW * mVoltPermW;
+	mP_mW = P_mW;
+
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_PC1_voltage, convertVolt2I16(mV_volt));
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+}
+
+void PockelsCell::turnOff()
+{
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.mSession, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0);
+	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+
+	mV_volt = 0;
+	mP_mW = 0;
 }
 
 

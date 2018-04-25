@@ -21,7 +21,6 @@ namespace GenericFPGAfunctions {
 
 class FPGAapi {	
 public:
-	NiFpga_Status mStatus;
 	NiFpga_Session mSession;
 	VQU32 mVectorOfQueues;
 
@@ -33,7 +32,6 @@ public:
 	void triggerRTsequence();
 	void flushFIFO();
 	void close();
-	void printFPGAstatus(char functionName[]);
 };
 
 class FPGAexception : public std::runtime_error {

@@ -20,9 +20,9 @@ class PhotonCounter {
 public:
 	PhotonCounter(FPGAapi fpga);
 	~PhotonCounter();
-	NiFpga_Status readCount();
-	NiFpga_Status readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray);
-	NiFpga_Status configureFIFO(U32 depth);
+	void readCount();
+	void readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray);
+	void configureFIFO(U32 depth);
 };
 
 
@@ -44,16 +44,16 @@ public:
 class ResonantScanner {
 	FPGAapi mFpga;
 	const int mDelayTime = 10;
+	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
+	double mAmplitude_um = 0;
+	double mAmplitude_volt = 0;
+	void setOutputVoltage(double Vout);
+	void setOutputAmplitude(double amplitude_um);
 	double ResonantScanner::convertUm2Volt(double Amplitude);
 public:
-	bool mState;							//determine if is the scanner on or off
-	double mAmplitude_um = 0;
-	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
 	ResonantScanner(FPGAapi fpga);
 	~ResonantScanner();
 	void startStop(bool state);
-	void setOutputVoltage(double Vout);
-	void setOutputAmplitude(double amplitude_um);
 	void turnOn(double amplitude_um);
 	void turnOff();
 };
@@ -121,14 +121,16 @@ public:
 
 class PockelsCell
 {
+	FPGAapi mFpga;
 	int mID;
-	double mVout_volt;			//Output voltage to the HV amplifier
-	double mVoltPermW;			//Calibration factor
+	double mVoltPermW = 1;		//Calibration factor
+	double mV_volt;			//Output voltage to the HV amplifier
+	double mP_mW;			//Output laser power
+	void setOutputVoltage(double V_volt);
 public:
-	PockelsCell();
+	PockelsCell(FPGAapi fpga);
 	~PockelsCell();
-	void setOutputVoltage(double Vout);
-	void turnOn();
+	void turnOn(double P_mW);
 	void turnOff();
 };
 

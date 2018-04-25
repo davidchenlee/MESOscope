@@ -11,12 +11,6 @@ int main()
 
 	try
 	{
-		ResonantScanner RS(fpga);
-		if (1)
-			RS.turnOn(200 * um);
-		else
-			RS.turnOff();
-
 		Sequence1(fpga);
 		fpga.flushFIFO();
 	}

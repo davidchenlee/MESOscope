@@ -17,7 +17,6 @@ U32 singleAnalogOut(double t, double V);
 U32 singleDigitalOut(double t, bool DO);
 U32 singlePixelClock(double t, bool DO);
 QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);
-void concatenateQueues(QU32& headQ, QU32 tailQ);
 
 
 //Image handling
@@ -26,8 +25,7 @@ int correctInterleavedImage(unsigned char *interleavedImage);
 int writeFrameToTxt(unsigned char *imageArray, std::string fileName);
 
 
-class PhotonCounter
-{
+class PhotonCounter {
 	FPGAapi mFpga;
 public:
 	PhotonCounter(FPGAapi fpga);
@@ -38,8 +36,7 @@ public:
 };
 
 
-class Vibratome
-{
+class Vibratome {
 	FPGAapi &mFpga;
 	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
 public:
@@ -54,8 +51,7 @@ public:
 	NiFpga_Status sendCommand(double dt, VibratomeChannel channel);
 };
 
-class ResonantScanner
-{
+class ResonantScanner {
 	FPGAapi &mFpga;
 	const int mDelayTime = 10;
 	double ResonantScanner::convertUm2Volt(double Amplitude);
@@ -72,8 +68,7 @@ public:
 	NiFpga_Status turnOff();
 };
 
-class Shutter
-{
+class Shutter {
 	FPGAapi &mFpga;
 	const int mDelayTime = 10;
 public:
@@ -102,6 +97,7 @@ public:
 class RTsequence
 {
 	FPGAapi &mFpga;
+	void concatenateQueues(QU32& receivingQueue, QU32 givingQueue);
 
 	class PixelClock
 	{
@@ -117,6 +113,7 @@ class RTsequence
 		QU32 PixelClockEqualDuration();
 		QU32 PixelClockEqualDistance();
 	};
+
 public:
 	RTsequence(FPGAapi &fpga);
 	~RTsequence();
@@ -152,3 +149,5 @@ public:
 	Filterwheel(int ID);
 	~Filterwheel();
 };
+
+

@@ -2,9 +2,11 @@
 
 int main()
 {
+	/*
 	//To make sure the the filterwheel 1 is set to the correct position
 	FilterWheel();
 	Sleep(1000); //wait for the filterwheel to settle
+	*/
 
 	FPGAapi fpga;
 
@@ -14,13 +16,21 @@ int main()
 
 
 	ResonantScanner RS(fpga);
-	if (0)
-		RS.turnOn(200 * um);
-	else
-		RS.turnOff();
+	try
+	{
+		if (1)
+			RS.turnOn(200 * um);
+		else
+			RS.turnOff();
+	}
+	catch (...)
+	{
+		std::cout << "ooops" << std::endl;
+	}
+
 
 	fpga.flushFIFO();
-	fpga.close();
+
 	std::cout << "\nPress any key to continue..." << std::endl;
 	getchar();
 

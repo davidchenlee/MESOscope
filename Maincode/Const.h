@@ -4,15 +4,14 @@
 //#include <limits.h>		//for _I16_MAX??
 
 //FPGA data types
-typedef unsigned char NiFpga_Bool;
-typedef   signed    char	I8;
-typedef unsigned    char	U8;
-typedef            short	I16;
-typedef unsigned   short	U16;
-typedef              int	I32;
-typedef unsigned     int	U32;
-typedef          __int64	I64;
-typedef unsigned __int64	U63;
+typedef int8_t		I8;
+typedef uint8_t		U8;
+typedef int16_t		I16;
+typedef uint16_t	U16;
+typedef int32_t		I32;
+typedef uint32_t	U32;
+typedef int64_t		I64;
+typedef uint64_t	U64;
 typedef std::queue<U32> QU32;				//Queue of unsigned integers
 typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
 

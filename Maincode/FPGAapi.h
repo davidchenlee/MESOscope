@@ -7,8 +7,7 @@ using namespace Const;
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/
 static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 
-class FPGAapi
-{	
+class FPGAapi {	
 public:
 	NiFpga_Status mStatus;
 	NiFpga_Session mSession;
@@ -25,3 +24,7 @@ public:
 	void printFPGAstatus(char functionName[]);
 };
 
+class MyException : public std::runtime_error {
+public:
+	MyException() : std::runtime_error("MyException") {}
+};

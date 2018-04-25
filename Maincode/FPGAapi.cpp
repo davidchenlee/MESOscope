@@ -132,13 +132,14 @@ NiFpga_Status FPGAapi::flushFIFO()
 	return mStatus;
 }
 
+//The FPGAapi object has to be closed explicitly (in opposition to using the destructor) because it lives in main()
 NiFpga_Status  FPGAapi::close()
 {
 	if (NiFpga_IsNotError(mStatus))
 	{
-		NiFpga_MergeStatus(&mStatus, NiFpga_Close(mSession, 1));			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
-																			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
-																			//0 resets, 1 does not reset
+		NiFpga_MergeStatus(&mStatus, NiFpga_Close(mSession, 1));						//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
+																						//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
+																						//0 resets, 1 does not reset
 		//std::cout << "FPGA closing-session status: " << mStatus << std::endl;
 	}
 

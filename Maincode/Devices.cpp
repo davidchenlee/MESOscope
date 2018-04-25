@@ -134,16 +134,6 @@ QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, dou
 	return queue;
 }
 
-//Push all the elements in 'tailQ' into 'headQ'
-void concatenateQueues(QU32& concatenatedQueue, QU32 newQueue)
-{
-	while (!newQueue.empty())
-	{
-		concatenatedQueue.push(newQueue.front());
-		newQueue.pop();
-	}
-}
-
 #pragma endregion "Genetic functions"
 
 #pragma region "Photon counter"
@@ -458,7 +448,15 @@ ResonantScanner::~ResonantScanner() {};
 //Start or stop the resonant scanner
 NiFpga_Status ResonantScanner::startStop(bool state)
 {
-	NiFpga_MergeStatus(&mFpga.mStatus, NiFpga_WriteBool(mFpga.mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)state));
+
+	NiFpga_Status status =  NiFpga_WriteBool(mFpga.mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)state);
+	//status = 1;
+	if (status)
+	{
+		std::string qwe = "aaaaaaa ";
+		std::string wwe(__FUNCTION__);
+		throw std::runtime_error(qwe + wwe);
+	}
 
 	if (!mFpga.mStatus)
 		mState = state;
@@ -493,7 +491,7 @@ NiFpga_Status ResonantScanner::turnOn(double amplitude_um)
 	NiFpga_MergeStatus(&mFpga.mStatus, this->setOutputAmplitude(amplitude_um));
 	Sleep(mDelayTime);
 	NiFpga_MergeStatus(&mFpga.mStatus, this->startStop(1));
-	//mFpga.mStatus = -1;
+
 	if (mFpga.mStatus)
 		mFpga.printFPGAstatus(__FUNCTION__);
 
@@ -600,9 +598,20 @@ int RTsequence::pushSingleValue(RTchannel chan, U32 input)
 
 int RTsequence::pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal)
 {
-	mFpga.mVectorOfQueues[chan] = generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal);
+	concatenateQueues(mFpga.mVectorOfQueues[chan], generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal));
 	return 0;
 }
+
+//Push all the elements in 'tailQ' into 'headQ'
+void RTsequence::concatenateQueues(QU32& receivingQueue, QU32 givingQueue)
+{
+	while (!givingQueue.empty())
+	{
+		receivingQueue.push(givingQueue.front());
+		givingQueue.pop();
+	}
+}
+
 
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
 double RTsequence::PixelClock::ConvertSpatialCoord2Time(double x)

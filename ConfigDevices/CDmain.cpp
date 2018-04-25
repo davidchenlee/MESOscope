@@ -22,14 +22,13 @@ int main()
 			RS.turnOn(200 * um);
 		else
 			RS.turnOff();
+
+		fpga.flushFIFO();
 	}
 	catch (...)
 	{
 		std::cout << "ooops" << std::endl;
 	}
-
-
-	fpga.flushFIFO();
 
 	std::cout << "\nPress any key to continue..." << std::endl;
 	getchar();

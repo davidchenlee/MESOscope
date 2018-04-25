@@ -8,13 +8,10 @@ Code in C++ for controlling the NI USB-7852R card
 - Save the run parameters in a text file
 - Maybe install TVK to display tiff images
 - Allow reading multiple frames in the FPGA-to-PC FIFO
-- Flush the FPGA-to-PC FIFO before starting the code
 - Optimize the data-transfer memory usage
 
 
 ### LabView
-- Remove some elements in the front panel
-- Flush the buffers
 - Create a ramp generator. This is only necessary if I want to increase the memory of the FIFO OUT at the expense of the other buffers
 - Maybe decrease the clock of the photon-counter from 160 MHz to 80 MHz for a faster/easier compilation
 - Check the delay of the internal FIFOs implemented in memory blocks

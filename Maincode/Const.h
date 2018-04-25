@@ -17,8 +17,8 @@ typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
 
 
 enum PhotonCounterInputSelector { PMText, PMTsim, FPGAclock };	//real PMT, simulated PMT, internal clock
-enum LineClockInputSelector { ResScan, FuncGen };	//Resonant scanner, function generator, 
-enum RTchannel {PCLOCK, GALVO1, GALVO2, SHUTTER1};		//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
+enum LineClockInputSelector { ResScan, FuncGen };				//Resonant scanner, function generator, 
+enum RTchannel {PCLOCK, GALVO1, GALVO2, DOdebug};				//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
 
 namespace Const
 {

@@ -104,7 +104,6 @@ class RTsequence
 public:
 	RTsequence(FPGAapi &fpga);
 	~RTsequence();
-
 	int pushQueue(RTchannel chan, QU32 queue);
 	int pushSingleValue(RTchannel chan, U32 input);
 	int pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
@@ -114,18 +113,23 @@ public:
 class Laser
 {
 	FPGAapi mFpga;
-	double wavelength;
-	class PockelsCell
-	{
-		double Vout_volt;			//Output voltage to the HV amplifier
-		double PC_voltPermW;		//Calibration factor
-	public:
-		PockelsCell();
-		~PockelsCell();
-	};
+	double mWavelength;
 public:
 	Laser(FPGAapi fpga);
 	~Laser();
+};
+
+class PockelsCell
+{
+	int mID;
+	double mVout_volt;			//Output voltage to the HV amplifier
+	double mVoltPermW;			//Calibration factor
+public:
+	PockelsCell();
+	~PockelsCell();
+	void setOutputVoltage(double Vout);
+	void turnOn();
+	void turnOff();
 };
 
 

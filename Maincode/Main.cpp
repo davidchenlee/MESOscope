@@ -19,9 +19,6 @@ int main()
 
 		Sequence1(fpga);
 		fpga.flushFIFO();
-
-
-
 	}
 	catch (FPGAexception &e)
 	{

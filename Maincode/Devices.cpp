@@ -527,8 +527,15 @@ RTsequence::PixelClock::~PixelClock(){}
 Laser::Laser(FPGAapi fpga): mFpga(fpga) {}
 Laser::~Laser() {}
 
-Laser::PockelsCell::PockelsCell() {}
-Laser::PockelsCell::~PockelsCell() {}
+PockelsCell::PockelsCell() {}
+PockelsCell::~PockelsCell() {}
+
+void PockelsCell::setOutputVoltage(double Vout)
+{
+
+}
+
+
 
 
 Filterwheel::Filterwheel(int ID): mID(ID) {}

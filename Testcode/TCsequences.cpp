@@ -13,10 +13,10 @@ VQU32 TestAODO()
 	//QV[ABUF2].push(generateSingleAnalogOut(4 * us, 0));//go back to zero
 
 	//DO0
-	QV[SHUTTER1].push(singleDigitalOut(4 * us, 1));
-	QV[SHUTTER1].push(singleDigitalOut(4 * us, 0));
-	QV[SHUTTER1].push(singleDigitalOut(4 * us, 0));
-	QV[SHUTTER1].push(singleDigitalOut(4 * us, 0));
+	QV[DOdebug].push(singleDigitalOut(4 * us, 1));
+	QV[DOdebug].push(singleDigitalOut(4 * us, 0));
+	QV[DOdebug].push(singleDigitalOut(4 * us, 0));
+	QV[DOdebug].push(singleDigitalOut(4 * us, 0));
 
 	//QV[AO0] = GalvoSeq();
 
@@ -67,8 +67,8 @@ VQU32 TestAODOandRamp()
 	QV[AO0].push(generateSingleAnalogOut(4 * us, 0.000));
 	*/
 
-	QV[SHUTTER1].push(singleDigitalOut(pulsewidth, 1));
-	QV[SHUTTER1].push(singleDigitalOut(4 * us, 0));
+	QV[DOdebug].push(singleDigitalOut(pulsewidth, 1));
+	QV[DOdebug].push(singleDigitalOut(4 * us, 0));
 	return QV;
 }
 
@@ -80,8 +80,8 @@ VQU32 DigitalTimingCheck()
 	double step = 400 * us;
 
 	//DO0
-	QV[SHUTTER1].push(singleDigitalOut(step, 1));
-	QV[SHUTTER1].push(singleDigitalOut(step, 0));
+	QV[DOdebug].push(singleDigitalOut(step, 1));
+	QV[DOdebug].push(singleDigitalOut(step, 0));
 
 	return QV;
 }
@@ -95,14 +95,14 @@ VQU32 DigitalLatencyCalib()
 	double step = 4 * us;
 
 	//DO0
-	QV[SHUTTER1].push(singleDigitalOut(step, 1));
+	QV[DOdebug].push(singleDigitalOut(step, 1));
 
 	//many short digital pulses to accumulate the error
 	for (U32 ii = 0; ii < 99; ii++)
-		QV[SHUTTER1].push(singleDigitalOut(step, 0));
+		QV[DOdebug].push(singleDigitalOut(step, 0));
 
-	QV[SHUTTER1].push(singleDigitalOut(step, 1));
-	QV[SHUTTER1].push(singleDigitalOut(step, 0));
+	QV[DOdebug].push(singleDigitalOut(step, 1));
+	QV[DOdebug].push(singleDigitalOut(step, 0));
 
 	return QV;
 }
@@ -123,11 +123,11 @@ VQU32 AnalogLatencyCalib()
 	QV[GALVO1].push(singleAnalogOut(step, 0));
 
 	//DO0
-	QV[SHUTTER1].push(singleDigitalOut(step, 1));
-	QV[SHUTTER1].push(singleDigitalOut(step, 0));
-	QV[SHUTTER1].push(singleDigitalOut(delay, 0));
-	QV[SHUTTER1].push(singleDigitalOut(step, 1));
-	QV[SHUTTER1].push(singleDigitalOut(step, 0));
+	QV[DOdebug].push(singleDigitalOut(step, 1));
+	QV[DOdebug].push(singleDigitalOut(step, 0));
+	QV[DOdebug].push(singleDigitalOut(delay, 0));
+	QV[DOdebug].push(singleDigitalOut(step, 1));
+	QV[DOdebug].push(singleDigitalOut(step, 0));
 
 	return QV;
 }

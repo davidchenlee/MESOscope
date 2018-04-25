@@ -1,18 +1,14 @@
 #include "Sequences.h"
 
-int Sequence1(FPGAapi &fpga)
+void Sequence1(FPGAapi &fpga) //Pass fpga by reference to be able to modify fpga.mVectorOfQueue
 {
-	//Create a real-time sequence
+	//Create a realtime sequence
 	RTsequence sequence(fpga);
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Amp_volt, -galvo1Amp_volt);		//Linear ramp for the galvo
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Amp_volt, galvo1Amp_volt);			//set the output back to the initial value
-	//sequence.pushSingleValue(GALVO1, singleAnalogOut(4 * us, galvo1Amp_volt));								//set the output back to the initial value
 	fpga.sendRTtoFPGA();
 	
-	if (!fpga.mStatus)
-	{
-		PhotonCounter counter(fpga);		//Create a photon counter
-		counter.readCount();				//Execute the RT sequence and read the photon count
-	}
-	return 0;
+	PhotonCounter counter(fpga);		//Create a photon counter
+	counter.readCount();				//Execute the RT sequence and read the photon count
+
 }

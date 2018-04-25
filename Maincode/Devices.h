@@ -6,17 +6,7 @@
 #include "windows.h"	//the stages use this lib. also Sleep
 #include <fstream>      //file management
 #include <ctime>		//Clock()
-
-
-//Genetic functions
-void printHex(int input);
-U32 packU32(U16 t, U16 x);
-U16 convertUs2tick(double x);
-I16 convertVolt2I16(double x);
-U32 singleAnalogOut(double t, double V);
-U32 singleDigitalOut(double t, bool DO);
-U32 singlePixelClock(double t, bool DO);
-QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);
+using namespace GenericFPGAfunctions;
 
 
 //Image handling

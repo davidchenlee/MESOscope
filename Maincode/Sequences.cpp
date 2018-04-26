@@ -13,13 +13,15 @@ void Sequence1(FPGAapi fpga)
 	
 	
 	//Create a non-realtime sequence
-	pockels.turnOn(5 * V);
+	pockels.turnOn(0 * V);
 	sequence.runRTsequence();				//Execute the RT sequence and read the photon count
 	pockels.turnOff();
 
+	/*
 	ResonantScanner RS(fpga);			//Create a resonant scanner
 	if (0)
 		RS.turnOn(200 * um);
 	else
 		RS.turnOff();
+	*/
 }

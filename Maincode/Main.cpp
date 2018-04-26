@@ -33,7 +33,7 @@ int main()
 	}
 
 	std::cout << "\nPress any key to continue..." << std::endl;
-	getchar();
+	//getchar();
 
 	return 0;
 }

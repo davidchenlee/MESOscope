@@ -58,6 +58,8 @@ namespace Const
 
 	extern const double fFOVslow_um;
 	extern const double galvo1Amp_volt;
+	extern const int calibCoarse_tick;
+	extern const int calibFine_tick;
 
 	extern const double galvoTimeStep_us;
 	extern const int widthPerFrame_pix;

@@ -337,12 +337,7 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)	//pix in [-widthPerFrame_pix/2,widthPerFrame_pix/2]
 		PixelClockEqualDistanceLUT[pix + widthPerFrame_pix / 2] = calculatePracticalDwellTime(pix);
 
-
-	//Determine the relative delay of the pixel clock wrt the line clock
-	const U16 calibCoarse_tick = 2043;	//Look at the oscilloscope and adjust to center the pixel clock within a line scan
-	const U16 calibFine_tick = 10;		//In practice, the resonant scanner is not perfectly centered around the objective's back aperture
-										//Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
-	const U16 InitialTimeStep_tick = calibCoarse_tick + calibFine_tick;
+	const U16 InitialTimeStep_tick = (U16)(calibCoarse_tick + calibFine_tick);		//relative delay of the pixel clock wrt the line clock
 	queue.push(packU32(InitialTimeStep_tick - mLatency_tick, 0x0000));
 
 	for (int pix = 0; pix < widthPerFrame_pix; pix++)
@@ -362,15 +357,21 @@ void RTsequence::runRTsequence()
 	mFpga.runRTsequence();		//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
 	readFIFO();					//Read the data
 
-	//If data number mismatch
-	if (nElemReadFIFO_A != nPixAllFrames || nElemReadFIFO_B != nPixAllFrames)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": More or less elements received from the FIFO than expected");
-
-	unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
-	correctInterleavedImage(image);
-	writeFrametoTiff(image, "_photon-counts.tif");
-	//writeFrametoTxt(image, "_photon-counts.txt");
-	delete image;
+	//If all the expected data is read successfully, process the data
+	if (nElemReadFIFO_A == nPixAllFrames && nElemReadFIFO_B == nPixAllFrames)
+	{
+		unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
+		correctInterleavedImage(image);
+		writeFrametoTiff(image, "_photon-counts.tif");
+		//writeFrametoTxt(image, "_photon-counts.txt");
+		delete image;
+	}
+	else
+	{
+		std::cerr << "ERROR in " << __FUNCTION__ << ": more or less elements received from the FIFO than expected " << std::endl;
+		//THROWING THE ERROR MAKES THE COMPUTER CRASH
+		//throw std::runtime_error("More or less elements received from the FIFO than expected ");
+	}
 	
 	stopFIFOs();				//Close the FIFO to (maybe) flush it
 }
@@ -448,11 +449,17 @@ void RTsequence::readFIFO()
 		}
 
 		timeoutCounter--;
-	
-		if (timeoutCounter == 0)	//Timeout the data transfer
+		
+		if (timeoutCounter == 0)	//Timeout the while loop in case the data transfer fails
 		{
-			throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO downloading timeout");
+			std::cerr << "ERROR in " << __FUNCTION__ << ": FIFO downloading timeout" << std::endl;
+			break;
 		}
+		/*//THROWING THE ERROR MAKES THE COMPUTER CRASH
+		if (timeoutCounter == 0)	//Timeout the data transfer
+		throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO downloading timeout");
+		*/
+		
 	}
 
 	//Stop the stopwatch
@@ -593,10 +600,12 @@ void PockelsCell::turnOn(double P_mW)
 
 void PockelsCell::turnOff()
 {
-	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, 0);
+	//double Vmin = 2.49 * V;// 750 nm
+	double Vmin = 3 * V; //900 nm
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(Vmin));
 	mFpga.checkFPGAstatus(__FUNCTION__, status);
 
-	mV_volt = 0;
+	mV_volt = Vmin;
 	mP_mW = 0;
 }
 

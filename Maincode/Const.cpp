@@ -2,8 +2,8 @@
 
 namespace Const
 {
-	extern const PhotonCounterInputSelector photonCounterInput = sim;		//ext or sim
-	extern const LineClockInputSelector lineClockInput = FG;				//RS or FG
+	extern const PhotonCounterInputSelector photonCounterInput = ext;		//ext or sim
+	extern const LineClockInputSelector lineClockInput = RS;				//RS or FG
 
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;								//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
@@ -46,12 +46,18 @@ namespace Const
 	extern const double halfPeriodLineClock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
 	extern const double RSpkpk_um = 250 * um;							//The amplitude is half this
 
-
-
+	//Determine the relative delay of the pixel clock wrt the line clock
+	//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan
+	//calibFine_tick: In practice, the resonant scanner is not perfectly centered around the objective's back aperture. /Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
+	extern const int calibCoarse_tick = 2023;
+	extern const int calibFine_tick = 10;
+	//extern const int calibCoarse_tick = 2043; //RS@200 um
+	//extern const int calibFine_tick = 10;
+						
 
 	//SCANNING PARAMETERS
 	//Galvo
-	extern const double fFOVslow_um = 200 * um;									//Full FOV in the slow axis (galvo)
+	extern const double fFOVslow_um = 50 * um;									//Full FOV in the slow axis (galvo)
 	extern const double galvo1Amp_volt = fFOVslow_um * galvo_voltPerUm;
 	extern const double galvoTimeStep_us = 8 * us;
 
@@ -62,6 +68,9 @@ namespace Const
 	extern const int nPixPerFrame = widthPerFrame_pix * heightPerFrame_pix;		//Number of pixels in each frame
 	extern const int nLinesAllFrames = heightPerFrame_pix * nFrames;			//Total number of lines in all the frames without including the skipped lines
 	extern const int nPixAllFrames = widthPerFrame_pix * nLinesAllFrames;		//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
+
+
+
 
 	//400x400x5, skipped 60
 	//400x35x90, skipped 8

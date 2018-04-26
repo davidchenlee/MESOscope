@@ -210,8 +210,8 @@ void FPGAapi::initialize()
 	checkFPGAstatus(__FUNCTION__, status);
 
 	//PockelsID cells
-	NiFpga_MergeStatus(&status, NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
-	checkFPGAstatus(__FUNCTION__, status);
+	//NiFpga_MergeStatus(&status, NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
+	//checkFPGAstatus(__FUNCTION__, status);
 
 	//Debugger
 	NiFpga_MergeStatus(&status, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));

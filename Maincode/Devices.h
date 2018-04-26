@@ -74,21 +74,23 @@ class RTsequence {
 	VQU32 mVectorOfQueues;
 	void concatenateQueues(QU32& receivingQueue, QU32 givingQueue);
 	QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);
-	void configureFIFO(U32 depth);
-	void startFIFOs();
-	void readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray);
-	void stopFIFOs();
+
 
 	//FIFO A
 	int nElemReadFIFO_A = 0; 							//Total number of elements read from the FIFO
 	U32 *dataFIFO_A;									//The buffer size does not necessarily have to be the size of a frame
 
+	//FIFO B
 	int counterBufArray_B = 0;							//Number of buffer arrays actually used
 	const int nBufArrays = 100;
 	int *nElemBufArray_B;								//Each elements in this array indicates the number of elements in each chunch of data
 	int nElemReadFIFO_B = 0; 							//Total number of elements read from the FIFO
-
 	U32 **bufArray_B;									//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < nPixAllFrames
+
+	void configureFIFO(U32 depth);
+	void startFIFOs();
+	void readFIFO();
+	void stopFIFOs();
 
 	class PixelClock
 	{
@@ -110,8 +112,8 @@ public:
 	void pushQueue(RTchannel chan, QU32 queue);
 	void pushSingleValue(RTchannel chan, U32 input);
 	void pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
-	void sendRTsequencetoFPGA();
-	void triggerRTsequence();
+	void loadRTsequenceonFPGA();
+	void runRTsequence();
 };
 
 

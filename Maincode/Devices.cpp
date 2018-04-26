@@ -184,7 +184,7 @@ RTsequence::~RTsequence()
 	}
 	delete[] bufArray_B;
 
-	std::cout << "RT destructor was called" << std::endl;
+	//std::cout << "RT destructor was called" << std::endl;
 }
 
 QU32 RTsequence::generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal)
@@ -261,7 +261,7 @@ void RTsequence::concatenateQueues(QU32& receivingQueue, QU32 givingQueue)
 }
 
 //Distribute the commands among the different channels (see the implementation of the LV code), but do not execute yet
-void  RTsequence::sendRTsequencetoFPGA()
+void  RTsequence::loadRTsequenceonFPGA()
 {
 	mFpga.writeFIFO(mVectorOfQueues);
 
@@ -353,40 +353,26 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 	return queue;
 }
 
-void RTsequence::triggerRTsequence()
+//Create an array of arrays to serve as a buffer and store the data from the FIFO
+//The ReadFifo function gives chuncks of data. Store each chunck in a separate buffer-array
+//I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
+void RTsequence::runRTsequence()
 {
-	//FIFO B
-	//Create an array of arrays to serve as a buffer and store the data from the FIFO
-	//The ReadFifo function gives chuncks of data. Store each chunck in a separate buffer-array
-	//I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
+	startFIFOs();				//Start the FIFO OUT to transfer data from the FPGA FIFO to the PC FIFO
+	mFpga.runRTsequence();		//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
+	readFIFO();					//Read the data
 
-	//Start the FIFO OUT to transfer data from the FPGA FIFO to the PC FIFO
-	startFIFOs();
-
-	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-	mFpga.triggerRTsequence();
-
-	//Read the data
-	readFIFO(nElemReadFIFO_A, nElemReadFIFO_B, dataFIFO_A, bufArray_B, nElemBufArray_B, counterBufArray_B, nBufArrays);
-
-	//If all the expected data is read successfully, process the data
-	if (nElemReadFIFO_A == nPixAllFrames && nElemReadFIFO_B == nPixAllFrames)
-	{
-		unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
-		correctInterleavedImage(image);
-		writeFrametoTiff(image, "_photon-counts.tif");
-		//writeFrametoTxt(image, "_photon-counts.txt");
-		delete image;
-	}
-	else
-	{
+	//If data number mismatch
+	if (nElemReadFIFO_A != nPixAllFrames || nElemReadFIFO_B != nPixAllFrames)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": More or less elements received from the FIFO than expected");
-		//std::cerr << "ERROR in " << __FUNCTION__ << ": more or less elements received from the FIFO than expected " << std::endl;
-	}
-	
-	//Close the FIFO to (maybe) flush it
-	stopFIFOs();
 
+	unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
+	correctInterleavedImage(image);
+	writeFrametoTiff(image, "_photon-counts.tif");
+	//writeFrametoTxt(image, "_photon-counts.txt");
+	delete image;
+	
+	stopFIFOs();				//Close the FIFO to (maybe) flush it
 }
 
 void RTsequence::startFIFOs()
@@ -397,14 +383,14 @@ void RTsequence::startFIFOs()
 	mFpga.checkFPGAstatus(__FUNCTION__, status);
 }
 
-void RTsequence::readFIFO(int &nElemReadFIFO_A, int &nElemReadFIFO_B, U32 *dataFIFO_A, U32 **bufArray_B, int *nElemBufArray_B, int &counterBufArray_B, int nBufArrays)
+void RTsequence::readFIFO()
 {
 	const int readFifoWaitingTime = 15;			//Waiting time between each iteration
 	const U32 timeout = 100;					//FIFO timeout
 	U32 nRemainFIFO_A, nRemainFIFO_B;			//Elements remaining in the FIFO
 	int timeoutCounter = 100;					//Timeout the while-loop if the data-transfer from the FIFO fails	
 
-												//Declare and start a stopwatch
+	//Declare and start a stopwatch
 	std::clock_t start;
 	double duration;
 	start = std::clock();
@@ -420,7 +406,7 @@ void RTsequence::readFIFO(int &nElemReadFIFO_A, int &nElemReadFIFO_B, U32 *dataF
 	{
 		Sleep(readFifoWaitingTime); //wait till collecting big chuncks of data. Adjust the waiting time until getting max transfer bandwidth
 
-									//FIFO OUT A
+		//FIFO OUT A
 		if (nElemReadFIFO_A < nPixAllFrames)
 		{
 			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &nRemainFIFO_A);
@@ -450,7 +436,7 @@ void RTsequence::readFIFO(int &nElemReadFIFO_A, int &nElemReadFIFO_B, U32 *dataF
 				nElemReadFIFO_B += nRemainFIFO_B;						//Keep track of the number of elements read so far
 				nElemBufArray_B[counterBufArray_B] = nRemainFIFO_B;		//Keep track of how many elements are in each FIFObuffer array												
 
-																		//Read the elements in the FIFO
+				//Read the elements in the FIFO
 				status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArray_B[counterBufArray_B], nRemainFIFO_B, timeout, &nRemainFIFO_B);
 				mFpga.checkFPGAstatus(__FUNCTION__, status);
 
@@ -462,16 +448,10 @@ void RTsequence::readFIFO(int &nElemReadFIFO_A, int &nElemReadFIFO_B, U32 *dataF
 		}
 
 		timeoutCounter--;
-
-		/*
-		if (timeoutCounter == 0)					//Timeout the while loop in case the data transfer fails
-			throw std::runtime_error((std::string)__FUNCTION__ +": FIFO downloading timeout");
-			*/
-
-		if (timeoutCounter == 0)					//Timeout the while loop in case the data transfer fails
+	
+		if (timeoutCounter == 0)	//Timeout the data transfer
 		{
-			std::cerr << "ERROR in " << __FUNCTION__ << ": FIFO downloading timeout" << std::endl;
-			break;
+			throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO downloading timeout");
 		}
 	}
 
@@ -489,8 +469,11 @@ void RTsequence::configureFIFO(U32 depth)
 	U32 actualDepth;
 	NiFpga_Status status = NiFpga_ConfigureFifo2(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth);
 	mFpga.checkFPGAstatus(__FUNCTION__, status);
-	std::cout << "actualDepth a: " << actualDepth << std::endl;
+	
 	status = NiFpga_ConfigureFifo2(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth);
+	mFpga.checkFPGAstatus(__FUNCTION__, status);
+
+	std::cout << "actualDepth a: " << actualDepth << std::endl;
 	std::cout << "actualDepth b: " << actualDepth << std::endl;
 }
 

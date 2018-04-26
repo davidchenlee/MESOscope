@@ -29,7 +29,7 @@ public:
 	~FPGAapi();
 	void initialize();
 	void FPGAapi::writeFIFO(VQU32 &vectorqueues);
-	void triggerRTsequence();
+	void runRTsequence();
 	void flushFIFO();
 	void close();
 	NiFpga_Session getSession();

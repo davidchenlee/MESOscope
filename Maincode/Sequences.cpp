@@ -6,7 +6,7 @@ void Sequence1(FPGAapi fpga)
 	RTsequence sequence(fpga);
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Amp_volt, -galvo1Amp_volt);		//Linear ramp for the galvo
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Amp_volt, galvo1Amp_volt);			//set the output back to the initial value
-	sequence.sendRTsequencetoFPGA();
+	sequence.loadRTsequenceonFPGA();
 
 	PockelsCell pockels(fpga, Pockels1);			//Create a pockels cell
 	//RTsequence::RTsequence counter(fpga);		//Create a photon counter
@@ -14,7 +14,7 @@ void Sequence1(FPGAapi fpga)
 	
 	//Create a non-realtime sequence
 	pockels.turnOn(5 * V);
-	sequence.triggerRTsequence();				//Execute the RT sequence and read the photon count
+	sequence.runRTsequence();				//Execute the RT sequence and read the photon count
 	pockels.turnOff();
 
 	ResonantScanner RS(fpga);			//Create a resonant scanner

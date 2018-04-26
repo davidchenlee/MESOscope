@@ -3,13 +3,13 @@
 
 int main()
 {
-	FPGAapi fpga;
-	fpga.initialize();	//Initialize the FPGA
-
+	FPGAapi fpga;			//Open a FPGA connection
 	try
 	{
-		Sequence1(fpga);
-		fpga.flushFIFO();
+		fpga.initialize();	//Initialize the FPGA
+		Sequence1(fpga);	//Run the sequence
+		fpga.flushFIFO();	//Flush the FPGA FIFOs as precaution
+		fpga.close();		//Close the FPGA connection
 	}
 	catch (FPGAexception &e)
 	{
@@ -31,9 +31,7 @@ int main()
 	{
 		std::cout << "An unknown error has occurred" << std::endl;
 	}
-	
 
-	fpga.close();
 	std::cout << "\nPress any key to continue..." << std::endl;
 	getchar();
 

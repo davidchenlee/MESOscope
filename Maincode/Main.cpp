@@ -1,11 +1,8 @@
 //#include <concrt.h> 	//Concurrency::wait(2000);
 #include "Sequences.h"
-#include <exception>
-
 
 int main()
 {
-
 	FPGAapi fpga;
 	fpga.initialize();	//Initialize the FPGA
 
@@ -34,9 +31,7 @@ int main()
 	{
 		std::cout << "An unknown error has occurred" << std::endl;
 	}
-
-
-
+	
 
 	fpga.close();
 	std::cout << "\nPress any key to continue..." << std::endl;

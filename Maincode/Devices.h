@@ -12,7 +12,7 @@ using namespace GenericFPGAfunctions;
 //Image handling
 unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);
 int correctInterleavedImage(unsigned char *interleavedImage);
-int writeFrameToTxt(unsigned char *imageArray, std::string fileName);
+int writeFrametoTxt(unsigned char *imageArray, std::string fileName);
 
 
 class PhotonCounter {
@@ -29,12 +29,11 @@ public:
 class Vibratome {
 	FPGAapi mFpga;
 	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
-public:
 	int mNslide;						//Slide number
 	double mSectionThickness;		//Thickness of the section
 	double mSpeed;					//Speed of the vibratome (manual setting)
 	double mAmplitude;				//Amplitude of the vibratome (manual setting)
-
+public:
 	Vibratome(FPGAapi fpga);
 	~Vibratome();
 	void startStop();
@@ -60,9 +59,9 @@ public:
 
 class Shutter {
 	FPGAapi mFpga;
+	int mID;			//Device ID
 	const int mDelayTime = 10;
 public:
-	int mID;			//Device ID
 	Shutter(FPGAapi fpga, int ID);
 	~Shutter();
 	void setOutput(bool requestedState);
@@ -84,7 +83,8 @@ public:
 
 class RTsequence
 {
-	FPGAapi &mFpga;
+	FPGAapi mFpga;
+	VQU32 mVectorOfQueues;
 	void concatenateQueues(QU32& receivingQueue, QU32 givingQueue);
 
 	class PixelClock
@@ -102,11 +102,12 @@ class RTsequence
 	};
 
 public:
-	RTsequence(FPGAapi &fpga);
+	RTsequence(FPGAapi fpga);
 	~RTsequence();
-	int pushQueue(RTchannel chan, QU32 queue);
-	int pushSingleValue(RTchannel chan, U32 input);
-	int pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
+	void pushQueue(RTchannel chan, QU32 queue);
+	void pushSingleValue(RTchannel chan, U32 input);
+	void pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
+	void sendtoFPGA();
 
 };
 

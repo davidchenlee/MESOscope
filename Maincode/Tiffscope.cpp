@@ -40,7 +40,7 @@ static void augment_libtiff_with_custom_tags() {
 
 
 
-int writeFrameToTiff(unsigned char *imageIn, std::string fileName)
+int writeFrametoTiff(unsigned char *imageIn, std::string fileName)
 {
 	const double scale = 25.5;																//Scale up the photon-count to cover the full 0-255 range for a 8-bit number
 

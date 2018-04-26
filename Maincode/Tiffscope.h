@@ -4,7 +4,7 @@
 #include "Const.h"
 using namespace Const;
 
-int writeFrameToTiff(unsigned char *imageIn, std::string fileName);
+int writeFrametoTiff(unsigned char *imageIn, std::string fileName);
 //int readTiff(void);
 //int writeSyntheticTiff(void);
 

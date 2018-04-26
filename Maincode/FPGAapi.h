@@ -20,18 +20,16 @@ namespace GenericFPGAfunctions {
 }
 
 class FPGAapi {	
-public:
 	NiFpga_Session mSession;
-	VQU32 mVectorOfQueues;
-
+public:
 	FPGAapi();
 	~FPGAapi();
 	void initialize();
-	void writeFIFO();
-	void sendRTtoFPGA();
+	void FPGAapi::writeFIFO(VQU32 &vectorqueues);
 	void triggerRTsequence();
 	void flushFIFO();
 	void close();
+	NiFpga_Session getSession();
 };
 
 class FPGAexception : public std::runtime_error {

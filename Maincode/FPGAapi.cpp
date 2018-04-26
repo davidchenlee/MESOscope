@@ -133,7 +133,7 @@ namespace GenericFPGAfunctions {
 }
 
 
-FPGAapi::FPGAapi(): mVectorOfQueues(Nchan)
+FPGAapi::FPGAapi()
 {
 	NiFpga_Status status = NiFpga_Initialize();		//Must be called before any other FPGA calls
 	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
@@ -192,19 +192,18 @@ void FPGAapi::initialize()
 //For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 //Then transfer the elements in the long queue to an array to interface the FPGA
 //Alternatively, the single queues could be transferred directly to the array, but why bothering...
-void FPGAapi::writeFIFO()
+void FPGAapi::writeFIFO(VQU32 &vectorQueues)
 {
-	QU32 allQueues;								//Create a single long queue
+	QU32 allQueues;										//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
 	{
-		allQueues.push(mVectorOfQueues[i].size());			//Push the number of elements in each individual queue VectorOfQueues[i]
-		while (!mVectorOfQueues[i].empty())
+		allQueues.push(vectorQueues[i].size());			//Push the number of elements in each individual queue VectorOfQueues[i]
+		while (!vectorQueues[i].empty())
 		{
-			allQueues.push(mVectorOfQueues[i].front());		//Push all the elemets from the individual queues VectorOfQueues[i] to allQueues
-			mVectorOfQueues[i].pop();
+			allQueues.push(vectorQueues[i].front());	//Push all the elemets from the individual queues VectorOfQueues[i] to allQueues
+			vectorQueues[i].pop();
 		}
 	}
-
 
 	const int sizeFIFOqueue = allQueues.size();		//Total number of elements in all the queues 
 
@@ -229,19 +228,6 @@ void FPGAapi::writeFIFO()
 	delete[] FIFO;									//cleanup the array
 }
 
-void FPGAapi::sendRTtoFPGA()
-{
-	this->writeFIFO();
-
-	//Distribute the commands among the different channels (see the implementation of the LV code)
-	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1);
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
-
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
-
-	//std::cout << "Pulse trigger status: " << mStatus << std::endl;
-}
 
 //Execute the commands
 void FPGAapi::triggerRTsequence()
@@ -284,6 +270,10 @@ void FPGAapi::close()
 }
 
 
+NiFpga_Session FPGAapi::getSession()
+{
+	return mSession;
+}
 
 /*
 int i;

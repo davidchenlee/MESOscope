@@ -3,7 +3,7 @@
 void Sequence1(FPGAapi fpga)
 {
 	//Create a realtime sequence
-	RTsequence sequence(fpga);
+	RTsequence::Sequence sequence(fpga);
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Amp_volt, -galvo1Amp_volt);		//Linear ramp for the galvo
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Amp_volt, galvo1Amp_volt);			//set the output back to the initial value
 	sequence.sendtoFPGA();

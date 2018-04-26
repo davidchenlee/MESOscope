@@ -69,8 +69,7 @@ public:
 };
 
 
-class Stage
-{
+class Stage {
 	FPGAapi mFpga;
 	std::vector<double> absPosition;			//Absolute position of the stages (x, y, z)
 	std::vector<int> Ntile;						//Tile number in x, y, z
@@ -78,42 +77,44 @@ class Stage
 public:
 	Stage(FPGAapi fpga);
 	~Stage();
+	std::vector<double> getPosition();
 };
 
+namespace RTsequence {
+	class Sequence {
+		FPGAapi mFpga;
+		VQU32 mVectorOfQueues;
+		void concatenateQueues(QU32& receivingQueue, QU32 givingQueue);
+		QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);//
 
-class RTsequence
-{
-	FPGAapi mFpga;
-	VQU32 mVectorOfQueues;
-	void concatenateQueues(QU32& receivingQueue, QU32 givingQueue);
-	QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);//
+		class PixelClock
+		{
+			const int mLatency_tick = 2;						//latency at detecting the line clock. Calibrate the latency with the oscilloscope
+			double ConvertSpatialCoord2Time(double x);
+			double getDiscreteTime(int pix);
+			double calculateDwellTime(int pix);
+			double calculatePracticalDwellTime(int pix);
+		public:
+			PixelClock();
+			~PixelClock();
+			QU32 PixelClockEqualDuration();
+			QU32 PixelClockEqualDistance();
+		};
 
-	class PixelClock
-	{
-		const int mLatency_tick = 2;						//latency at detecting the line clock. Calibrate the latency with the oscilloscope
-		double ConvertSpatialCoord2Time(double x);
-		double getDiscreteTime(int pix);
-		double calculateDwellTime(int pix);
-		double calculatePracticalDwellTime(int pix);
 	public:
-		PixelClock();
-		~PixelClock();
-		QU32 PixelClockEqualDuration();
-		QU32 PixelClockEqualDistance();
+		Sequence(FPGAapi fpga);
+		~Sequence();
+		void pushQueue(RTchannel chan, QU32 queue);
+		void pushSingleValue(RTchannel chan, U32 input);
+		void pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
+		void sendtoFPGA();
 	};
+}
 
-public:
-	RTsequence(FPGAapi fpga);
-	~RTsequence();
-	void pushQueue(RTchannel chan, QU32 queue);
-	void pushSingleValue(RTchannel chan, U32 input);
-	void pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
-	void sendtoFPGA();
 
-};
 
-class Laser
-{
+
+class Laser {
 	FPGAapi mFpga;
 	double mWavelength;
 public:
@@ -121,8 +122,7 @@ public:
 	~Laser();
 };
 
-class PockelsCell
-{
+class PockelsCell{
 	FPGAapi mFpga;
 	PockelsID mID;													//Device ID
 	NiFpga_FPGAvi_ControlI16 mFPGAid;								//internal ID assigned by the FPGA
@@ -138,8 +138,7 @@ public:
 };
 
 
-class Filterwheel
-{
+class Filterwheel {
 	FilterwheelID mID;						//Device ID
 	std::string COM = "";					//internal ID assigned by the OS
 	int mPosition;

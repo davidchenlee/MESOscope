@@ -134,8 +134,6 @@ namespace GenericFPGAfunctions {
 }//namespace
 
 
-
-
 FPGAapi::FPGAapi()
 {
 	NiFpga_Status status = NiFpga_Initialize();		//Must be called before any other FPGA calls
@@ -147,7 +145,6 @@ FPGAapi::FPGAapi()
 }
 
 FPGAapi::~FPGAapi(){};
-
 
 void FPGAapi::initialize()
 {
@@ -190,7 +187,6 @@ void FPGAapi::initialize()
 	//std::cout << "FPGA initialization status: " << mStatus << std::endl;
 }
 
-
 //Send every single queue in VectorOfQueue to the FPGA bufer
 //For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 //Then transfer the elements in the long queue to an array to interface the FPGA
@@ -231,7 +227,6 @@ void FPGAapi::writeFIFO(VQU32 &vectorQueues)
 	delete[] FIFO;									//cleanup the array
 }
 
-
 //Execute the commands
 void FPGAapi::triggerRTsequence()
 {
@@ -243,7 +238,6 @@ void FPGAapi::triggerRTsequence()
 
 	//std::cout << "Acquisition trigger status: " << status << std::endl;
 }
-
 
 //Trigger the FIFO flushing
 void FPGAapi::flushFIFO()
@@ -271,7 +265,6 @@ void FPGAapi::close()
 	checkFPGAstatus(__FUNCTION__, status);
 	//std::cout << "FPGA finalize status: " << mStatus << std::endl;
 }
-
 
 NiFpga_Session FPGAapi::getSession()
 {

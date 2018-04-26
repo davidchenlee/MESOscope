@@ -2,7 +2,7 @@
 
 namespace Const
 {
-	extern const PhotonCounterInputSelector photonCounterInput = PMText;		//PMText or PMTsim
+	extern const PhotonCounterInputSelector photonCounterInput = PMTsim;		//PMText or PMTsim
 	extern const LineClockInputSelector lineClockInput = FuncGen;				//ResScan, FuncGen, or FPGAclock
 
 	//host-to-target FIFO array indices

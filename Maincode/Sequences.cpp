@@ -8,7 +8,7 @@ void Sequence1(FPGAapi fpga)
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Amp_volt, galvo1Amp_volt);			//set the output back to the initial value
 	sequence.sendtoFPGA();
 
-	PockelsCell pockels(fpga);			//Create a pockels cell
+	PockelsCell pockels(fpga, Pockels1);			//Create a pockels cell
 	PhotonCounter counter(fpga);		//Create a photon counter
 	ResonantScanner RS(fpga);			//Create a resonant scanner
 	

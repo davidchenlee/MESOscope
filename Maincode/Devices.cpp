@@ -206,7 +206,6 @@ unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32
 			pixIndex++;
 		}
 	}
-
 	return image;
 }
 
@@ -289,7 +288,7 @@ void Vibratome::sendCommand(double pulseDuration, VibratomeChannel channel)
 		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_forward;
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected vibratome channel is unavailable");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected vibratome channel unavailable");
 	}
 
 	NiFpga_Status status = NiFpga_WriteBool(mFpga.getSession(), selectedChannel, 1);
@@ -366,31 +365,31 @@ double ResonantScanner::convertUm2Volt(double amplitude_um)
 
 #pragma region "Shutters"
 
-Shutter::Shutter(FPGAapi fpga, int ID) : mFpga(fpga), mID(ID) {}
+Shutter::Shutter(FPGAapi fpga, int ID) : mFpga(fpga), mFilterwheelID(ID) {}
 
 Shutter::~Shutter() {}
 
 void Shutter::setOutput(bool state)
 {
-	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), mID, (NiFpga_Bool)state);
+	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), mFilterwheelID, (NiFpga_Bool)state);
 	mFpga.checkFPGAstatus(__FUNCTION__, status);
 }
 
 void Shutter::pulseHigh()
 {
-	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), mID, 1);
+	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), mFilterwheelID, 1);
 	mFpga.checkFPGAstatus(__FUNCTION__, status);
 
 	Sleep(mDelayTime);
 
-	status = NiFpga_WriteBool(mFpga.getSession(), mID, 0);
+	status = NiFpga_WriteBool(mFpga.getSession(), mFilterwheelID, 0);
 	mFpga.checkFPGAstatus(__FUNCTION__, status);
 }
 
 #pragma endregion "Shutters"
 
 #pragma region "Pockels cells"
-//Pockels cells
+//PockelsID cells
 //NiFpga_MergeStatus(status, NiFpga_WriteI16(session, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
 
 #pragma endregion "Pockels cells"
@@ -409,7 +408,7 @@ RTsequence::RTsequence(FPGAapi fpga): mFpga(fpga), mVectorOfQueues(Nchan)
 {
 	PixelClock pixelclock;
 
-	//mFpga->mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDuration();
+	//mVectorOfQueues[PCLOCK]= pixelclock.PixelClockEqualDuration();
 	mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
 }
 
@@ -588,7 +587,18 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 Laser::Laser(FPGAapi fpga): mFpga(fpga) {}
 Laser::~Laser() {}
 
-PockelsCell::PockelsCell(FPGAapi fpga): mFpga(fpga) {}
+PockelsCell::PockelsCell(FPGAapi fpga, PockelsID ID) : mFpga(fpga), mID(ID)
+{
+	switch (ID)
+	{
+	case Pockels1:
+		mFPGAid = NiFpga_FPGAvi_ControlI16_PC1_voltage;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
+	}
+}
+
 PockelsCell::~PockelsCell() {}
 
 void PockelsCell::setOutputVoltage(double V_volt)
@@ -596,7 +606,7 @@ void PockelsCell::setOutputVoltage(double V_volt)
 	mV_volt = V_volt;
 	mP_mW = V_volt / mVoltPermW;
 
-	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_PC1_voltage, convertVolt2I16(mV_volt));
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt));
 	mFpga.checkFPGAstatus(__FUNCTION__, status);
 }
 
@@ -605,13 +615,13 @@ void PockelsCell::turnOn(double P_mW)
 	mV_volt = P_mW * mVoltPermW;
 	mP_mW = P_mW;
 
-	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_PC1_voltage, convertVolt2I16(mV_volt));
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt));
 	mFpga.checkFPGAstatus(__FUNCTION__, status);
 }
 
 void PockelsCell::turnOff()
 {
-	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_PC1_voltage, 0);
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, 0);
 	mFpga.checkFPGAstatus(__FUNCTION__, status);
 
 	mV_volt = 0;
@@ -619,7 +629,18 @@ void PockelsCell::turnOff()
 }
 
 
-
-
-Filterwheel::Filterwheel(int ID): mID(ID) {}
+Filterwheel::Filterwheel(FilterwheelID ID): mID(ID)
+{
+	switch (ID)
+	{
+	case FW1:
+		COM = "aaa";
+		break;
+	case FW2:
+		COM = "bbb";
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected filterwheel unavailable");
+	}
+}
 Filterwheel::~Filterwheel() {}

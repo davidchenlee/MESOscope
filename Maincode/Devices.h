@@ -29,7 +29,7 @@ int writeFrametoTxt(unsigned char *imageArray, std::string fileName);
 class Vibratome {
 	FPGAapi mFpga;
 	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
-	int mNslide;						//Slide number
+	int mNslide;					//Slide number
 	double mSectionThickness;		//Thickness of the section
 	double mSpeed;					//Speed of the vibratome (manual setting)
 	double mAmplitude;				//Amplitude of the vibratome (manual setting)
@@ -59,7 +59,7 @@ public:
 
 class Shutter {
 	FPGAapi mFpga;
-	int mID;			//Device ID
+	int mFilterwheelID;			//Device ID
 	const int mDelayTime = 10;
 public:
 	Shutter(FPGAapi fpga, int ID);
@@ -124,13 +124,14 @@ public:
 class PockelsCell
 {
 	FPGAapi mFpga;
-	int mID;
-	double mVoltPermW = 1;		//Calibration factor
-	double mV_volt;			//Output voltage to the HV amplifier
-	double mP_mW;			//Output laser power
+	PockelsID mID;													//Device ID
+	NiFpga_FPGAvi_ControlI16 mFPGAid;								//internal ID assigned by the FPGA
+	double mVoltPermW = 1;											//Calibration factor
+	double mV_volt;													//Output voltage to the HV amplifier
+	double mP_mW;													//Output laser power
 	void setOutputVoltage(double V_volt);
 public:
-	PockelsCell(FPGAapi fpga);
+	PockelsCell(FPGAapi fpga, PockelsID ID);
 	~PockelsCell();
 	void turnOn(double P_mW);
 	void turnOff();
@@ -139,10 +140,11 @@ public:
 
 class Filterwheel
 {
-	int mID;						//Device ID
+	FilterwheelID mID;						//Device ID
+	std::string COM = "";					//internal ID assigned by the OS
 	int mPosition;
 public:
-	Filterwheel(int ID);
+	Filterwheel(FilterwheelID filterwheelID);
 	~Filterwheel();
 };
 

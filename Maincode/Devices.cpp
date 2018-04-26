@@ -416,6 +416,54 @@ RTsequence::RTsequence(FPGAapi fpga): mFpga(fpga), mVectorOfQueues(Nchan)
 
 RTsequence::~RTsequence(){}
 
+QU32 RTsequence::generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal)
+{
+	QU32 queue;
+	const bool debug = 0;
+
+	if (TimeStep < AOdt_us)
+	{
+		std::cerr << "WARNING in " << __FUNCTION__ << ": time step too small. Time step set to " << AOdt_us << " us" << std::endl;
+		TimeStep = AOdt_us;						//Analog output time increment (in us)
+		return {};
+	}
+
+	const int nPoints = (int)(RampLength / TimeStep);		//Number of points
+
+	if (nPoints <= 1)
+	{
+		std::cerr << "ERROR in " << __FUNCTION__ << ": not enought points for the linear ramp" << std::endl;
+		std::cerr << "nPoints: " << nPoints << std::endl;
+		return {};
+	}
+	else
+	{
+		if (debug)
+		{
+			std::cout << "nPoints: " << nPoints << std::endl;
+			std::cout << "time \tticks \tv" << std::endl;
+		}
+
+		for (int ii = 0; ii < nPoints; ii++)
+		{
+			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
+			queue.push(singleAnalogOut(TimeStep, V));
+
+			if (debug)
+				std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
+		}
+
+		if (debug)
+		{
+			getchar();
+			return {};
+		}
+
+
+	}
+	return queue;
+}
+
 void RTsequence::pushQueue(RTchannel chan, QU32 queue)
 {
 	concatenateQueues(mVectorOfQueues[chan], queue);
@@ -425,7 +473,6 @@ void RTsequence::pushSingleValue(RTchannel chan, U32 input)
 {
 	mVectorOfQueues[chan].push(input);
 }
-
 
 void RTsequence::pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal)
 {
@@ -441,7 +488,6 @@ void RTsequence::concatenateQueues(QU32& receivingQueue, QU32 givingQueue)
 		givingQueue.pop();
 	}
 }
-
 
 //Distribute the commands among the different channels (see the implementation of the LV code), but do not execute yet
 void  RTsequence::sendtoFPGA()

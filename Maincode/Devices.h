@@ -86,6 +86,7 @@ class RTsequence
 	FPGAapi mFpga;
 	VQU32 mVectorOfQueues;
 	void concatenateQueues(QU32& receivingQueue, QU32 givingQueue);
+	QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);//
 
 	class PixelClock
 	{

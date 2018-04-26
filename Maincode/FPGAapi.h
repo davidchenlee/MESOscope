@@ -5,6 +5,7 @@
 #include <string>	//printing the error codes
 using namespace Const;
 
+
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/
 static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 

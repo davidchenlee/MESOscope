@@ -19,6 +19,8 @@ namespace GenericFPGAfunctions {
 	QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);
 }
 
+
+
 class FPGAapi {	
 	NiFpga_Session mSession;
 public:
@@ -30,6 +32,7 @@ public:
 	void flushFIFO();
 	void close();
 	NiFpga_Session getSession();
+	void checkFPGAstatus(char functionName[], NiFpga_Status status);
 };
 
 class FPGAexception : public std::runtime_error {

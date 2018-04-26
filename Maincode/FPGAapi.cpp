@@ -130,17 +130,20 @@ namespace GenericFPGAfunctions {
 		}
 		return queue;
 	}
-}
+
+}//namespace
+
+
 
 
 FPGAapi::FPGAapi()
 {
 	NiFpga_Status status = NiFpga_Initialize();		//Must be called before any other FPGA calls
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	checkFPGAstatus(__FUNCTION__, status);
 	//std::cout << "FPGA initialize status: " << mStatus << std::endl;
 
 	NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession));		//Opens a session, downloads the bitstream. 1=no run, 0=run
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	checkFPGAstatus(__FUNCTION__, status);
 }
 
 FPGAapi::~FPGAapi(){};
@@ -183,7 +186,7 @@ void FPGAapi::initialize()
 	NiFpga_MergeStatus(&status, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));									//FIFO OUT
 
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	checkFPGAstatus(__FUNCTION__, status);
 	//std::cout << "FPGA initialization status: " << mStatus << std::endl;
 }
 
@@ -233,10 +236,10 @@ void FPGAapi::writeFIFO(VQU32 &vectorQueues)
 void FPGAapi::triggerRTsequence()
 {
 	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1);
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	checkFPGAstatus(__FUNCTION__, status);
 
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	checkFPGAstatus(__FUNCTION__, status);
 
 	//std::cout << "Acquisition trigger status: " << status << std::endl;
 }
@@ -246,10 +249,10 @@ void FPGAapi::triggerRTsequence()
 void FPGAapi::flushFIFO()
 {
 	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1);
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	checkFPGAstatus(__FUNCTION__, status);
 
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	checkFPGAstatus(__FUNCTION__, status);
 
 	//std::cout << "Flush trigger status: " << mStatus << std::endl;
 }
@@ -260,12 +263,12 @@ void FPGAapi::close()
 	NiFpga_Status status = NiFpga_Close(mSession, 1);						//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 																			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 																			//0 resets, 1 does not reset
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	checkFPGAstatus(__FUNCTION__, status);
 	//std::cout << "FPGA closing-session status: " << mStatus << std::endl;
 
 	//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 	status =  NiFpga_Finalize();
-	if (status < 0) throw FPGAexception((std::string)__FUNCTION__ + " with FPGA code " + std::to_string(status));
+	checkFPGAstatus(__FUNCTION__, status);
 	//std::cout << "FPGA finalize status: " << mStatus << std::endl;
 }
 
@@ -273,6 +276,14 @@ void FPGAapi::close()
 NiFpga_Session FPGAapi::getSession()
 {
 	return mSession;
+}
+
+void FPGAapi::checkFPGAstatus(char functionName[], NiFpga_Status status)
+{
+	if (status < 0)
+		throw FPGAexception((std::string)functionName + " with FPGA code " + std::to_string(status));
+	if (status > 0)
+		std::cerr << "A warning has ocurred in " << functionName << " with FPGA code " << status << std::endl;
 }
 
 /*

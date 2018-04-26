@@ -7,25 +7,25 @@ PhotonCounter::~PhotonCounter(){}
 
 void PhotonCounter::readCount()
 {
-	//FIFOa
-	int NelementsReadFIFOa = 0; 						//Total number of elements read from the FIFO
-	U32 *dataFIFOa = new U32[nPixAllFrames];			//The buffer size does not necessarily have to be the size of a frame
+	//FIFO A
+	int nElemReadFIFO_A = 0; 							//Total number of elements read from the FIFO
+	U32 *dataFIFO_A = new U32[nPixAllFrames];			//The buffer size does not necessarily have to be the size of a frame
 														
 	for (int ii = 0; ii < nPixAllFrames; ii++)			//Initialize the array for FIFOa
-		dataFIFOa[ii] = 0;
+		dataFIFO_A[ii] = 0;
 
-	//FIFOb
+	//FIFO B
 	//Create an array of arrays to serve as a buffer and store the data from the FIFO
 	//The ReadFifo function gives chuncks of data. Store each chunck in a separate buffer-array
 	//I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
-	int bufArrayIndexb = 0;								//Number of buffer arrays actually used
-	const int NmaxbufArray = 100;
-	U32 **bufArrayb = new U32*[NmaxbufArray];
-	for (int i = 0; i < NmaxbufArray; i++)
-		bufArrayb[i] = new U32[nPixAllFrames];			//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < nPixAllFrames
+	int counterBufArray_B = 0;							//Number of buffer arrays actually used
+	const int nBufArrays = 100;
+	U32 **bufArray_B = new U32*[nBufArrays];
+	for (int i = 0; i < nBufArrays; i++)
+		bufArray_B[i] = new U32[nPixAllFrames];			//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < nPixAllFrames
 
-	int *NelementsBufArrayb = new int[NmaxbufArray];	//Each elements in this array indicates the number of elements in each chunch of data
-	int NelementsReadFIFOb = 0; 						//Total number of elements read from the FIFO
+	int *nElemBufArray_B = new int[nBufArrays];			//Each elements in this array indicates the number of elements in each chunch of data
+	int nElemReadFIFO_B = 0; 							//Total number of elements read from the FIFO
 
 	//Start the FIFO OUT to transfer data from the FPGA FIFO to the PC FIFO
 	NiFpga_Status status = NiFpga_StartFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa);
@@ -39,12 +39,12 @@ void PhotonCounter::readCount()
 	//Read the data
 	try
 	{
-		readFIFO(NelementsReadFIFOa, NelementsReadFIFOb, dataFIFOa, bufArrayb, NelementsBufArrayb, bufArrayIndexb, NmaxbufArray);
+		readFIFO(nElemReadFIFO_A, nElemReadFIFO_B, dataFIFO_A, bufArray_B, nElemBufArray_B, counterBufArray_B, nBufArrays);
 
 		//If all the expected data is read successfully, process the data
-		if (NelementsReadFIFOa == nPixAllFrames && NelementsReadFIFOb == nPixAllFrames)
+		if (nElemReadFIFO_A == nPixAllFrames && nElemReadFIFO_B == nPixAllFrames)
 		{
-			unsigned char *image = unpackFIFObuffer(bufArrayIndexb, NelementsBufArrayb, bufArrayb);
+			unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
 			correctInterleavedImage(image);
 			writeFrametoTiff(image, "_photon-counts.tif");
 			//writeFrametoTxt(image, "_photon-counts.txt");
@@ -77,21 +77,22 @@ void PhotonCounter::readCount()
 	status = NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb);
 	mFpga.checkFPGAstatus(__FUNCTION__, status);
 
-	delete[] dataFIFOa;
+	delete[] dataFIFO_A;
+	delete[] nElemBufArray_B;
 
 	//clean up the buffer arrays
-	for (int i = 0; i < NmaxbufArray; ++i) {
-		delete[] bufArrayb[i];
+	for (int i = 0; i < nBufArrays; ++i) {
+		delete[] bufArray_B[i];
 	}
-	delete[] bufArrayb;
+	delete[] bufArray_B;
 }
 
 
-void PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray)
+void PhotonCounter::readFIFO(int &nElemReadFIFO_A, int &nElemReadFIFO_B, U32 *dataFIFO_A, U32 **bufArray_B, int *nElemBufArray_B, int &counterBufArray_B, int nBufArrays)
 {
 	const int readFifoWaitingTime = 15;			//Waiting time between each iteration
 	const U32 timeout = 100;					//FIFO timeout
-	U32 NremainingFIFOa, NremainingFIFOb;			//Elements remaining in the FIFO
+	U32 nRemainFIFO_A, nRemainFIFO_B;			//Elements remaining in the FIFO
 	int timeoutCounter = 100;					//Timeout the while-loop if the data-transfer from the FIFO fails	
 
 	//Declare and start a stopwatch
@@ -106,50 +107,48 @@ void PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U
 	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
 	U32 *dummy = new U32[0];
 	NiFpga_Status status;
-	while (NelementsReadFIFOa < nPixAllFrames || NelementsReadFIFOb < nPixAllFrames)
+	while (nElemReadFIFO_A < nPixAllFrames || nElemReadFIFO_B < nPixAllFrames)
 	{
 		Sleep(readFifoWaitingTime); //wait till collecting big chuncks of data. Adjust the waiting time until getting max transfer bandwidth
 
-									//FIFO OUT a
-		if (NelementsReadFIFOa < nPixAllFrames)
+		//FIFO OUT A
+		if (nElemReadFIFO_A < nPixAllFrames)
 		{
-			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &NremainingFIFOa);
+			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &nRemainFIFO_A);
 			mFpga.checkFPGAstatus(__FUNCTION__, status);
-			//std::cout << "Number of elements remaining in the host FIFO a: " << NremainingFIFOa << std::endl;
+			//std::cout << "Number of elements remaining in the host FIFO a: " << nRemainFIFO_A << std::endl;
 
-			if (NremainingFIFOa > 0)
+			if (nRemainFIFO_A > 0)
 			{
-				NelementsReadFIFOa += NremainingFIFOa;
+				nElemReadFIFO_A += nRemainFIFO_A;
 
-				status =  NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFOa, NremainingFIFOa, timeout, &NremainingFIFOa);
+				status =  NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFO_A, nRemainFIFO_A, timeout, &nRemainFIFO_A);
 				mFpga.checkFPGAstatus(__FUNCTION__, status);
 			}
 		}
 
-		//FIFO OUT b
-		if (NelementsReadFIFOb < nPixAllFrames)		//Skip if all the data have already been transferred (i.e. NelementsReadFIFOa = nPixAllFrames)
+		//FIFO OUT B
+		if (nElemReadFIFO_B < nPixAllFrames)		//Skip if all the data have already been transferred (i.e. nElemReadFIFO_A = nPixAllFrames)
 		{
-			//By requesting 0 elements from the FIFO, the function returns the number of elements available. If no data available so far, then NremainingFIFOa = 0 is returned
-			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &NremainingFIFOb);
+			//By requesting 0 elements from the FIFO, the function returns the number of elements available. If no data available so far, then nRemainFIFO_A = 0 is returned
+			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &nRemainFIFO_B);
 			mFpga.checkFPGAstatus(__FUNCTION__, status);
-			//std::cout << "Number of elements remaining in the host FIFO b: " << NremainingFIFOb << std::endl;
+			//std::cout << "Number of elements remaining in the host FIFO b: " << nRemainFIFO_B << std::endl;
 
 			//If there are data available in the FIFO, retrieve it
-			if (NremainingFIFOb > 0)
+			if (nRemainFIFO_B > 0)
 			{
-				NelementsReadFIFOb += NremainingFIFOb;						//Keep track of the number of elements read so far
-				NelementsBufArrayb[bufArrayIndexb] = NremainingFIFOb;		//Keep track of how many elements are in each FIFObuffer array												
+				nElemReadFIFO_B += nRemainFIFO_B;						//Keep track of the number of elements read so far
+				nElemBufArray_B[counterBufArray_B] = nRemainFIFO_B;		//Keep track of how many elements are in each FIFObuffer array												
 
 																			//Read the elements in the FIFO
-				status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArrayb[bufArrayIndexb], NremainingFIFOb, timeout, &NremainingFIFOb);
+				status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArray_B[counterBufArray_B], nRemainFIFO_B, timeout, &nRemainFIFO_B);
 				mFpga.checkFPGAstatus(__FUNCTION__, status);
 
-				if (bufArrayIndexb >= NmaxbufArray)
-				{
+				if (counterBufArray_B >= nBufArrays)
 					throw std::range_error(std::string{} +"ERROR in " + __FUNCTION__ + ": Buffer array overflow\n");
-				}
 
-				bufArrayIndexb++;
+				counterBufArray_B++;
 			}
 		}
 
@@ -167,8 +166,8 @@ void PhotonCounter::readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U
 	std::cout << "Elapsed time: " << duration << " s" << std::endl;
 	std::cout << "FIFO bandwidth: " << 2 * 32 * nPixAllFrames / duration / 1000000 << " Mbps" << std::endl; //2 FIFOs of 32 bits each
 
-	std::cout << "Buffer-arrays used: " << (U32)bufArrayIndexb << std::endl; //print how many buffer arrays were actually used
-	std::cout << "Total of elements read: " << NelementsReadFIFOa << "\t" << NelementsReadFIFOb << std::endl; //print the total number of elements read
+	std::cout << "Buffer-arrays used: " << (U32)counterBufArray_B << std::endl; //print how many buffer arrays were actually used
+	std::cout << "Total of elements read: " << nElemReadFIFO_A << "\t" << nElemReadFIFO_B << std::endl; //print the total number of elements read
 }
 
 void PhotonCounter::configureFIFO(U32 depth)
@@ -196,7 +195,7 @@ unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32
 	{
 		for (int jj = 0; jj < NelementsBufArrayb[ii]; jj++)
 		{
-			//myfile << bufArrayb[ii][jj] << std::endl;		
+			//myfile << bufArray_B[ii][jj] << std::endl;		
 			image[pixIndex] = (unsigned char)bufArrayb[ii][jj];
 
 			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
@@ -216,7 +215,7 @@ unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32
 //Later on, write the tiff directly from the buffer arrays. To deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
 //memset http://www.cplusplus.com/reference/cstring/memset/
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
-//One idea is to read bufArrayb line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
+//One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 int correctInterleavedImage(unsigned char *interleavedImage)
 {
 	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to temp store the data. In principle I could just use half the size, but why bothering...

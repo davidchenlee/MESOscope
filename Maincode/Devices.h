@@ -9,11 +9,6 @@
 using namespace GenericFPGAfunctions;
 
 
-//Image handling
-unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);
-int correctInterleavedImage(unsigned char *interleavedImage);
-int writeFrametoTxt(unsigned char *imageArray, std::string fileName);
-
 
 class PhotonCounter {
 	FPGAapi mFpga;
@@ -24,6 +19,11 @@ public:
 	void readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray);
 	void configureFIFO(U32 depth);
 };
+
+//Image handling
+unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);
+int correctInterleavedImage(unsigned char *interleavedImage);
+int writeFrametoTxt(unsigned char *imageArray, std::string fileName);
 
 
 class Vibratome {

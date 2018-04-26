@@ -9,17 +9,6 @@
 using namespace GenericFPGAfunctions;
 
 
-
-class PhotonCounter {
-	FPGAapi mFpga;
-public:
-	PhotonCounter(FPGAapi fpga);
-	~PhotonCounter();
-	void readCount();
-	void readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray);
-	void configureFIFO(U32 depth);
-};
-
 //Image handling
 unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);
 int correctInterleavedImage(unsigned char *interleavedImage);
@@ -80,36 +69,38 @@ public:
 	std::vector<double> getPosition();
 };
 
-namespace RTsequence {
-	class Sequence {
-		FPGAapi mFpga;
-		VQU32 mVectorOfQueues;
-		void concatenateQueues(QU32& receivingQueue, QU32 givingQueue);
-		QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);//
+class RTsequence {
+	FPGAapi mFpga;
+	VQU32 mVectorOfQueues;
+	void concatenateQueues(QU32& receivingQueue, QU32 givingQueue);
+	QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);
+	void configureFIFO(U32 depth);
+	void readFIFO(int &NelementsReadFIFOa, int &NelementsReadFIFOb, U32 *dataFIFOa, U32 **bufArrayb, int *NelementsBufArrayb, int &bufArrayIndexb, int NmaxbufArray);
 
-		class PixelClock
-		{
-			const int mLatency_tick = 2;						//latency at detecting the line clock. Calibrate the latency with the oscilloscope
-			double ConvertSpatialCoord2Time(double x);
-			double getDiscreteTime(int pix);
-			double calculateDwellTime(int pix);
-			double calculatePracticalDwellTime(int pix);
-		public:
-			PixelClock();
-			~PixelClock();
-			QU32 PixelClockEqualDuration();
-			QU32 PixelClockEqualDistance();
-		};
-
+	class PixelClock
+	{
+		const int mLatency_tick = 2;						//latency at detecting the line clock. Calibrate the latency with the oscilloscope
+		double ConvertSpatialCoord2Time(double x);
+		double getDiscreteTime(int pix);
+		double calculateDwellTime(int pix);
+		double calculatePracticalDwellTime(int pix);
 	public:
-		Sequence(FPGAapi fpga);
-		~Sequence();
-		void pushQueue(RTchannel chan, QU32 queue);
-		void pushSingleValue(RTchannel chan, U32 input);
-		void pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
-		void sendtoFPGA();
+		PixelClock();
+		~PixelClock();
+		QU32 PixelClockEqualDuration();
+		QU32 PixelClockEqualDistance();
 	};
-}
+
+public:
+	RTsequence(FPGAapi fpga);
+	~RTsequence();
+	void pushQueue(RTchannel chan, QU32 queue);
+	void pushSingleValue(RTchannel chan, U32 input);
+	void pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
+	void sendtoFPGA();
+	void runSequence();
+};
+
 
 
 

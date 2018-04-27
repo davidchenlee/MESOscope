@@ -44,6 +44,7 @@ int main()
 		std::cout << "An unknown error has occurred" << std::endl;
 	}
 
+	//runPIstageSequence();
 
 	std::cout << "\nPress any key to continue..." << std::endl;
 	getchar();

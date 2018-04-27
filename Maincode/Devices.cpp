@@ -143,18 +143,6 @@ void Shutter::pulseHigh()
 
 #pragma endregion "Pockels cells"
 
-#pragma region "Stages"
-Stage::Stage(){}
-
-Stage::~Stage(){}
-
-std::vector<double> Stage::getPosition()
-{
-	return absPosition;
-}
-
-#pragma endregion "Stages"
-
 
 #pragma region "RTsequence"
 
@@ -357,8 +345,13 @@ void RTsequence::runRTsequence()
 	mFpga.runRTsequence();		//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
 	readFIFO();					//Read the data
 
-	//If all the expected data is read successfully, process the data
-	if (nElemReadFIFO_A == nPixAllFrames && nElemReadFIFO_B == nPixAllFrames)
+	//If NOT all the expected data is read successfully
+	if (nElemReadFIFO_A != nPixAllFrames || nElemReadFIFO_B != nPixAllFrames)
+	{
+		throw std::runtime_error((std::string)__FUNCTION__ + ": More or less elements received from the FIFO than expected ");
+		//std::cerr << "ERROR in " << __FUNCTION__ << ": more or less elements received from the FIFO than expected " << std::endl;
+	}
+	else
 	{
 		unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
 		correctInterleavedImage(image);
@@ -366,12 +359,10 @@ void RTsequence::runRTsequence()
 		//writeFrametoTxt(image, "_photon-counts.txt");
 		delete image;
 	}
-	else
-	{
-		std::cerr << "ERROR in " << __FUNCTION__ << ": more or less elements received from the FIFO than expected " << std::endl;
-		//throw std::runtime_error((std::string)__FUNCTION__ + ": More or less elements received from the FIFO than expected ");
-	}
-		
+
+	
+	
+
 	stopFIFOs();				//Close the FIFO to (maybe) flush it
 }
 
@@ -450,17 +441,18 @@ void RTsequence::readFIFO()
 
 		timeoutCounter--;
 		
-
+		
 		if (timeoutCounter == 0)	//Timeout the data transfer
 			throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO downloading timeout");
+	
 
 		/*
-		if (timeoutCounter == 0)					//Timeout the while loop in case the data transfer fails
-		{
+		if (timeoutCounter == 0) {
 			std::cerr << "ERROR in " << __FUNCTION__ << ": FIFO downloading timeout" << std::endl;
 			break;
 		}
 		*/
+		
 		
 	}
 
@@ -626,3 +618,179 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID) {
 	}
 }
 Filterwheel::~Filterwheel() {}
+
+#pragma region "Stages"
+Stage::Stage() {}
+
+Stage::~Stage() {}
+
+const std::vector<double> Stage::getPosition()
+{
+	return absPosition;
+}
+
+#pragma endregion "Stages"
+
+
+
+// Additional Sample Functions
+int XstageID, YstageID, ZstageID;
+char NumberOfAxesPerController[2] = "1"; //There is only 1 stage per controller
+
+bool runPIstage()
+{
+	//Start USB connection. Make sure that the stages and servo are enabled on supplied software PIMikroMove
+	XstageID = PI_ConnectUSB("116049107"); //	X-stage (V-551.4B)
+	YstageID = PI_ConnectUSB("116049105"); //	Y-stage (V-551.2B)
+	ZstageID = PI_ConnectUSB("0165500631");	//  Z-stage (ES-100)
+
+	std::cout << XstageID << std::endl;
+	std::cout << YstageID << std::endl;
+	std::cout << ZstageID << std::endl;
+
+	if (XstageID < 0)
+	{
+		std::cout << "Could not connect to the controller X.\n";
+		return false;
+	}
+	else if (YstageID < 0)
+	{
+		std::cout << "Could not connect to the controller Y.\n";
+		return false;
+	}
+	else if (ZstageID < 0) {
+		std::cout << "Could not connect to the controller Z.\n";
+		return false;
+	}
+
+	// Determine boundaries for stage movement
+	//if (!GetStageBondaries(XstageID) | !GetStageBondaries(YstageID) | !GetStageBondaries(ZstageID))
+		//return false;
+
+	// Query stage position
+	if (!GetStagePosition(XstageID) | !GetStagePosition(YstageID) | !GetStagePosition(ZstageID))
+		return false;
+
+	// Close Connection		
+	PI_CloseConnection(XstageID);
+	PI_CloseConnection(YstageID);
+	PI_CloseConnection(ZstageID);
+	std::cout << "Connection closed.\n";
+
+	return true;
+}
+
+
+bool referenceStageZ()
+{
+	// Switch on servo
+	const BOOL ServoOn = true;
+	if (!PI_SVO(ZstageID, NumberOfAxesPerController, &ServoOn))
+	{
+	CloseConnectionWithComment(ZstageID, "SVO failed. Exiting.\n");
+	return false;
+	}
+
+	// Reference stage
+	if (!ReferenceIfNeeded(ZstageID, NumberOfAxesPerController))
+	{
+	CloseConnectionWithComment(ZstageID, "Not referenced, Referencing failed.\n");
+	return false;
+	}
+
+	// Check if referencing was successful
+	BOOL referenceCompleted;
+	referenceCompleted = false;
+
+	if (!PI_qFRF(ZstageID, NumberOfAxesPerController, &referenceCompleted))
+	{
+	CloseConnectionWithComment(ZstageID, "Failed to query reference status.\n");
+	return false;
+	}
+
+	// Abort execution if stage could not be referenced
+	if (false == referenceCompleted)
+	{
+	CloseConnectionWithComment(ZstageID, "Referencing failed.\n");
+	return false;
+	}
+
+	std::cout << "Stage Z is referenced.\n";
+}
+
+// Determine boundaries for stage movement
+bool GetStageBondaries(int stageID)
+{
+	double MinPositionValue, MaxPositionValue;
+	if (!PI_qTMN(stageID, NumberOfAxesPerController, &MinPositionValue))
+	{
+		CloseConnectionWithComment(stageID, "TMN? unable to query min. position of axis.\n");
+		return false;
+	}
+
+	if (!PI_qTMX(stageID, NumberOfAxesPerController, &MaxPositionValue))
+	{
+		CloseConnectionWithComment(stageID, "TMX?, Unable to query max. position of axis.\n");
+		return false;
+	}
+
+	std::cout << "Allowed range of movement: min: " << MinPositionValue << "\t max: " << MaxPositionValue << "\n";
+	return true;
+}
+
+// Query stage position
+bool GetStagePosition(int stageID)
+{
+	double Position;
+	if (!PI_qPOS(stageID, NumberOfAxesPerController, &Position))
+	{
+		CloseConnectionWithComment(stageID, "Unable to query stage position\n");
+		return false;
+	}
+	std::cout << "Stage at the position: " << Position << std::endl;
+	return true;
+}
+
+bool ReferenceIfNeeded(int PIdeviceId, char* axis)
+{
+	BOOL Referenced;
+	BOOL Flag;
+	if (!PI_qFRF(PIdeviceId, axis, &Referenced))
+		return false;
+
+	// If stage is equipped with absolute sensors, Referenced will always be set to true.
+	if (!Referenced)
+	{
+		std::cout << "Referencing axis " << axis << "\n";
+		if (!PI_FRF(PIdeviceId, axis))
+		{
+			return false;
+		}
+
+		// Wait until the reference move is done.
+		Flag = FALSE;
+		while (Flag != TRUE)
+		{
+			if (!PI_IsControllerReady(PIdeviceId, &Flag))
+				return false;
+		}
+	}
+	return true;
+}
+
+
+void CloseConnectionWithComment(int PIdeviceId, const char* comment)
+{
+	std::cout << comment << "\n";
+	ReportError(PIdeviceId);
+	PI_CloseConnection(PIdeviceId);
+}
+
+void ReportError(int PIdeviceId)
+{
+	int err = PI_GetError(PIdeviceId);
+	char zErrMsg[300];
+
+	if (PI_TranslateError(err, zErrMsg, 299))
+		std::cout << "Error " << err << " occurred: " << zErrMsg << "\n";
+}

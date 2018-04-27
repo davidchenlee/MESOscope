@@ -11,7 +11,8 @@ static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitf
 
 void checkFPGAstatus(char functionName[], NiFpga_Status status);
 
-namespace GenericFPGAfunctions {
+namespace GenericFPGAfunctions
+{
 	void printHex(int input);
 	U32 packU32(U16 t, U16 x);
 	U16 convertUs2tick(double x);
@@ -24,7 +25,8 @@ namespace GenericFPGAfunctions {
 
 
 
-class FPGAapi {	
+class FPGAapi
+{	
 	NiFpga_Session mSession;
 public:
 	FPGAapi();
@@ -37,7 +39,8 @@ public:
 	NiFpga_Session getSession() const;
 };
 
-class FPGAexception : public std::runtime_error {
+class FPGAexception : public std::runtime_error
+{
 public:
 	//FPGAexception(const char *message) : std::runtime_error(message) {}
 	FPGAexception(const std::string& message) : std::runtime_error(message.c_str()) {}

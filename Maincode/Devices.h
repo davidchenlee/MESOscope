@@ -3,9 +3,14 @@
 //#include "PIstages.h"
 //#include "UARTscope.h"
 #include "Tiffscope.h"
-#include "windows.h"	//the stages use this lib. also Sleep
+#include <windows.h>	//the stages use this lib. also Sleep
 #include <fstream>      //file management
 #include <ctime>		//Clock()
+
+
+
+#include "PI_GCS2_DLL.h"
+
 using namespace GenericFPGAfunctions;
 
 
@@ -15,7 +20,8 @@ int correctInterleavedImage(unsigned char *interleavedImage);
 int writeFrametoTxt(unsigned char *imageArray, std::string fileName);
 
 
-class Vibratome {
+class Vibratome
+{
 	const FPGAapi &mFpga;
 	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
 	int mNslide;					//Slide number
@@ -29,7 +35,8 @@ public:
 	void sendCommand(const double dt, const VibratomeChannel channel);
 };
 
-class ResonantScanner {
+class ResonantScanner
+{
 	const FPGAapi &mFpga;
 	const int mDelayTime = 10;
 	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
@@ -46,7 +53,8 @@ public:
 	void turnOff();
 };
 
-class Shutter {
+class Shutter
+{
 	const FPGAapi &mFpga;
 	int mID;			//Device ID
 	const int mDelayTime = 10;
@@ -57,19 +65,9 @@ public:
 	void pulseHigh();
 };
 
-
-class Stage {
-	std::vector<double> absPosition;			//Absolute position of the stages (x, y, z)
-	std::vector<int> Ntile;						//Tile number in x, y, z
-	std::vector<int> tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
-public:
-	Stage();
-	~Stage();
-	std::vector<double> getPosition();
-};
-
 //WARNING: copy-constructor not implemented
-class RTsequence {
+class RTsequence
+{
 	const FPGAapi &mFpga;
 	VQU32 mVectorOfQueues;
 	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
@@ -116,14 +114,16 @@ public:
 };
 
 
-class Laser {
+class Laser
+{
 	double mWavelength;
 public:
 	Laser();
 	~Laser();
 };
 
-class PockelsCell{
+class PockelsCell
+{
 	const FPGAapi &mFpga;
 	PockelsID mID;													//Device ID
 	NiFpga_FPGAvi_ControlI16 mFPGAid;								//internal ID assigned by the FPGA
@@ -138,7 +138,8 @@ public:
 	void turnOff();
 };
 
-class Filterwheel {
+class Filterwheel
+{
 	FilterwheelID mID;						//Device ID
 	std::string COM = "";					//internal ID assigned by the OS
 	int mPosition;
@@ -146,3 +147,23 @@ public:
 	Filterwheel(const FilterwheelID ID);
 	~Filterwheel();
 };
+
+class Stage
+{
+	std::vector<double> absPosition;			//Absolute position of the stages (x, y, z)
+	std::vector<int> Ntile;						//Tile number in x, y, z
+	std::vector<int> tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
+public:
+	Stage();
+	~Stage();
+	const std::vector<double> getPosition();
+};
+
+
+bool runPIstage();
+bool referenceStageZ();
+bool GetStageBondaries(int stageID);
+bool GetStagePosition(int stageID);
+bool ReferenceIfNeeded(int PIdeviceId, char* axis);
+void CloseConnectionWithComment(int PIdeviceId, const char* comment);
+void ReportError(int PIdeviceId);

@@ -2,13 +2,16 @@
 
 void Sequence1(const FPGAapi &fpga)
 {
+
+	double wavelength_nm = 1040;
+
 	//Create a realtime sequence
 	RTsequence sequence(fpga);
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Amp_volt, -galvo1Amp_volt);		//Linear ramp for the galvo
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Amp_volt, galvo1Amp_volt);			//set the output back to the initial value
 	sequence.loadRTsequenceonFPGA();
 
-	PockelsCell pockels(fpga, Pockels1);			//Create a pockels cell
+	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
 	//RTsequence::RTsequence counter(fpga);		//Create a photon counter
 	
 	

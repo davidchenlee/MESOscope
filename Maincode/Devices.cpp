@@ -489,7 +489,7 @@ void RTsequence::stopFIFOs()
 #pragma endregion "RTsequence"
 
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
-unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb)
+unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
 {
 	const bool debug = 0;												//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
 
@@ -499,12 +499,12 @@ unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32
 		image[ii] = 0;
 
 	U32 pixIndex = 0;													//Index the image pixel
-	for (int ii = 0; ii < bufArrayIndexb; ii++)
+	for (int ii = 0; ii < counterBufArray_B; ii++)
 	{
-		for (int jj = 0; jj < NelementsBufArrayb[ii]; jj++)
+		for (int jj = 0; jj < nElemBufArray_B[ii]; jj++)
 		{
 			//myfile << bufArray_B[ii][jj] << std::endl;		
-			image[pixIndex] = (unsigned char)bufArrayb[ii][jj];
+			image[pixIndex] = (unsigned char)bufArray_B[ii][jj];
 
 			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
 			if (debug)
@@ -544,7 +544,7 @@ int correctInterleavedImage(unsigned char *interleavedImage)
 }
 
 
-int writeFrametoTxt(unsigned char *imageArray, std::string fileName)
+int writeFrametoTxt(unsigned char *imageArray, const std::string fileName)
 {
 	std::ofstream myfile;								//Create output file
 	myfile.open(fileName);								//Open the file
@@ -557,10 +557,7 @@ int writeFrametoTxt(unsigned char *imageArray, std::string fileName)
 	return 0;
 }
 
-Laser::Laser() {}
-Laser::~Laser() {}
-
-PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID) : mFpga(fpga), mID(ID)
+PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const double wavelength_nm) : mFpga(fpga), mID(ID), mWavelength_nm(wavelength_nm)
 {
 	switch (ID)
 	{
@@ -574,7 +571,13 @@ PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID) : mFpga(fpga),
 
 PockelsCell::~PockelsCell() {}
 
-void PockelsCell::setOutputVoltage(double V_volt)
+double PockelsCell::getVoltageforMinPower()
+{
+	return 0.00361 * mWavelength_nm - 0.206;
+}
+
+
+void PockelsCell::setOutputVoltage(const double V_volt)
 {
 	mV_volt = V_volt;
 	mP_mW = V_volt / mVoltPermW;
@@ -594,8 +597,8 @@ void PockelsCell::turnOn(const double P_mW)
 
 void PockelsCell::turnOff()
 {
-	//double Vmin = 2.49 * V;// 750 nm
-	double Vmin = 3 * V; //900 nm
+	//double Vmin = 2.49 * V;			//@750 nm
+	double Vmin = getVoltageforMinPower();
 	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(Vmin));
 	checkFPGAstatus(__FUNCTION__, status);
 
@@ -672,50 +675,10 @@ bool runPIstage()
 		return false;
 
 	// Close Connection		
-	PI_CloseConnection(XstageID);
-	PI_CloseConnection(YstageID);
-	PI_CloseConnection(ZstageID);
+	PI_CloseConnection(XstageID), PI_CloseConnection(YstageID), PI_CloseConnection(ZstageID);
 	std::cout << "Connection closed.\n";
 
 	return true;
-}
-
-
-bool referenceStageZ()
-{
-	// Switch on servo
-	const BOOL ServoOn = true;
-	if (!PI_SVO(ZstageID, NumberOfAxesPerController, &ServoOn))
-	{
-	CloseConnectionWithComment(ZstageID, "SVO failed. Exiting.\n");
-	return false;
-	}
-
-	// Reference stage
-	if (!ReferenceIfNeeded(ZstageID, NumberOfAxesPerController))
-	{
-	CloseConnectionWithComment(ZstageID, "Not referenced, Referencing failed.\n");
-	return false;
-	}
-
-	// Check if referencing was successful
-	BOOL referenceCompleted;
-	referenceCompleted = false;
-
-	if (!PI_qFRF(ZstageID, NumberOfAxesPerController, &referenceCompleted))
-	{
-	CloseConnectionWithComment(ZstageID, "Failed to query reference status.\n");
-	return false;
-	}
-
-	// Abort execution if stage could not be referenced
-	if (false == referenceCompleted)
-	{
-	CloseConnectionWithComment(ZstageID, "Referencing failed.\n");
-	return false;
-	}
-
-	std::cout << "Stage Z is referenced.\n";
 }
 
 // Determine boundaries for stage movement
@@ -793,4 +756,42 @@ void ReportError(int PIdeviceId)
 
 	if (PI_TranslateError(err, zErrMsg, 299))
 		std::cout << "Error " << err << " occurred: " << zErrMsg << "\n";
+}
+
+bool referenceStageZ()
+{
+	// Switch on servo
+	const BOOL ServoOn = true;
+	if (!PI_SVO(ZstageID, NumberOfAxesPerController, &ServoOn))
+	{
+		CloseConnectionWithComment(ZstageID, "SVO failed. Exiting.\n");
+		return false;
+	}
+
+	// Reference stage
+	if (!ReferenceIfNeeded(ZstageID, NumberOfAxesPerController))
+	{
+		CloseConnectionWithComment(ZstageID, "Not referenced, Referencing failed.\n");
+		return false;
+	}
+
+	// Check if referencing was successful
+	BOOL referenceCompleted;
+	referenceCompleted = false;
+
+	if (!PI_qFRF(ZstageID, NumberOfAxesPerController, &referenceCompleted))
+	{
+		CloseConnectionWithComment(ZstageID, "Failed to query reference status.\n");
+		return false;
+	}
+
+	// Abort execution if stage could not be referenced
+	if (false == referenceCompleted)
+	{
+		CloseConnectionWithComment(ZstageID, "Referencing failed.\n");
+		return false;
+	}
+
+	std::cout << "Stage Z is referenced.\n";
+	return true;
 }

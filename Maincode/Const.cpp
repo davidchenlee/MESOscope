@@ -3,7 +3,7 @@
 namespace Const
 {
 	extern const PhotonCounterInputSelector photonCounterInput = ext;		//ext or sim
-	extern const LineClockInputSelector lineClockInput = FG;				//RS or FG
+	extern const LineClockInputSelector lineClockInput = RS;				//RS or FG
 
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;								//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
@@ -26,13 +26,6 @@ namespace Const
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const int FIFOINmax = 32773;						//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
-	//Scanning calibration factors
-	//extern const double RS_voltPerUm = 1.0*V/(157*um);						//volts per um. Calibration factor for the resonant scanner (equal duration pixels). 11/April/2018
-	extern const double RS_voltPerUm = 1.3*V / ((405-237) * um);				//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 19/April/2018
-	extern const double galvo_voltPerUm = 2.5*V/(210*um);						//volts per um. Calibration factor for the galvo. Last calib 11/April/2018
-	extern const double PC1_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 1
-	extern const double PC2_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 2
-
 
 	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
 	//The laser has a repetition rate of 80 MH and therefore the pulse separation is 12.5ns (the pulse width out from the PMT is ~1ns but can be extreched via electronics).
@@ -42,25 +35,31 @@ namespace Const
 	extern const U8 pulseArray[nPulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns	
 
-	//Pixel-clock paramenters
-	extern const double halfPeriodLineClock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
-	extern const double RSpkpk_um = 250 * um;							//The amplitude is half this
 
-	//Determine the relative delay of the pixel clock wrt the line clock
-	//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan
-	//calibFine_tick: In practice, the resonant scanner is not perfectly centered around the objective's back aperture. /Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
-	extern const int calibCoarse_tick = 2023;
-	extern const int calibFine_tick = 10;
-	//extern const int calibCoarse_tick = 2043; //RS@200 um
-	//extern const int calibFine_tick = 10;
-						
+}
 
-	//SCANNING PARAMETERS
-	//Galvo
+namespace Parameters
+{
+	//GALVO
+	extern const double galvo_voltPerUm = 2.5*V / (210 * um);					//volts per um. Calibration factor of the galvo. Last calib 11/April/2018
 	extern const double fFOVslow_um = 50 * um;									//Full FOV in the slow axis (galvo)
 	extern const double galvo1Amp_volt = fFOVslow_um * galvo_voltPerUm;
 	extern const double galvoTimeStep_us = 8 * us;
 
+	//RESONANT SCANNER
+	//extern const double RS_voltPerUm = 1.0*V/(157*um);						//volts per um. Calibration factor for the resonant scanner (equal duration pixels). 11/April/2018
+	extern const double RS_voltPerUm = 1.3*V / ((405 - 237) * um);				//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 19/April/2018
+
+	//PIXEL CLOCK
+	extern const double halfPeriodLineClock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
+	extern const double RSpkpk_um = 250 * um;									//Peak-to-peak amplitude of the resonant scanner
+	//Determine the relative delay of the pixel clock wrt the line clock
+	extern const int calibCoarse_tick = 2043;									//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan
+	extern const int calibFine_tick = -8;
+	//extern const int calibCoarse_tick = 2043; //RS@200 um						//calibFine_tick: In practice, the resonant scanner is not perfectly centered around the objective's back aperture. Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
+	//extern const int calibFine_tick = 10;
+
+	//IMAGE
 	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
@@ -68,15 +67,13 @@ namespace Const
 	extern const int nPixPerFrame = widthPerFrame_pix * heightPerFrame_pix;		//Number of pixels in each frame
 	extern const int nLinesAllFrames = heightPerFrame_pix * nFrames;			//Total number of lines in all the frames without including the skipped lines
 	extern const int nPixAllFrames = widthPerFrame_pix * nLinesAllFrames;		//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
-
-
-
-
 	//400x400x5, skipped 60
 	//400x35x90, skipped 8
 	//400x35x70, skipped 6
 
-
+	//POCKELS CELLS
+	extern const double PC1_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 1
+	extern const double PC2_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 2
 }
 
 

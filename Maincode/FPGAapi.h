@@ -4,6 +4,7 @@
 #include "Const.h"
 #include <string>	//printing the error codes
 using namespace Const;
+using namespace Parameters;
 
 
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/

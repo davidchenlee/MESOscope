@@ -10,14 +10,13 @@
 
 
 #include "PI_GCS2_DLL.h"
-
 using namespace GenericFPGAfunctions;
 
 
 //Image handling
-unsigned char *unpackFIFObuffer(int bufArrayIndexb, int *NelementsBufArrayb, U32 **bufArrayb);
+unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B);
 int correctInterleavedImage(unsigned char *interleavedImage);
-int writeFrametoTxt(unsigned char *imageArray, std::string fileName);
+int writeFrametoTxt(unsigned char *imageArray, const std::string fileName);
 
 
 class Vibratome
@@ -113,26 +112,19 @@ public:
 	void runRTsequence();
 };
 
-
-class Laser
-{
-	double mWavelength;
-public:
-	Laser();
-	~Laser();
-};
-
 class PockelsCell
 {
 	const FPGAapi &mFpga;
 	PockelsID mID;													//Device ID
-	NiFpga_FPGAvi_ControlI16 mFPGAid;								//internal ID assigned by the FPGA
+	NiFpga_FPGAvi_ControlI16 mFPGAid;								//Internal ID of the FPGA
+	double mWavelength_nm;											//Wavelength of the laser
 	double mVoltPermW = 1;											//Calibration factor
 	double mV_volt;													//Output voltage to the HV amplifier
 	double mP_mW;													//Output laser power
-	void setOutputVoltage(double V_volt);
+	double getVoltageforMinPower();									//The output laser power depend on the wavelength
+	void setOutputVoltage(const double V_volt);
 public:
-	PockelsCell(const FPGAapi &fpga, const PockelsID ID);
+	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const double wavelength_nm);
 	~PockelsCell();
 	void turnOn(const double P_mW);
 	void turnOff();
@@ -161,9 +153,9 @@ public:
 
 
 bool runPIstage();
-bool referenceStageZ();
 bool GetStageBondaries(int stageID);
 bool GetStagePosition(int stageID);
 bool ReferenceIfNeeded(int PIdeviceId, char* axis);
 void CloseConnectionWithComment(int PIdeviceId, const char* comment);
 void ReportError(int PIdeviceId);
+bool referenceStageZ();

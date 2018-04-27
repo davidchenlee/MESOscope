@@ -21,7 +21,7 @@ void Vibratome::startStop()
 }
 
 //Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
-void Vibratome::sendCommand(double pulseDuration, VibratomeChannel channel)
+void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel channel)
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
 	const int minPulseDuration = 10; //in ms
@@ -63,7 +63,7 @@ ResonantScanner::ResonantScanner(const FPGAapi &fpga): mFpga(fpga){};
 ResonantScanner::~ResonantScanner() {};
 
 //Start or stop the resonant scanner
-void ResonantScanner::startStop(bool state){
+void ResonantScanner::startStop(const bool state){
 	
 	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)state);
 	checkFPGAstatus(__FUNCTION__, status);
@@ -71,7 +71,7 @@ void ResonantScanner::startStop(bool state){
 
 
 //Set the output voltage of the resonant scanner
-void ResonantScanner::setOutputVoltage(double V_volt)
+void ResonantScanner::setOutputVoltage(const double V_volt)
 {
 	mAmplitude_volt = V_volt;
 	mAmplitude_um = V_volt / mVoltPerUm;
@@ -81,7 +81,7 @@ void ResonantScanner::setOutputVoltage(double V_volt)
 }
 
 //Set the output voltage of the resonant scanner
-void ResonantScanner::setOutputAmplitude(double amplitude_um)
+void ResonantScanner::setOutputAmplitude(const double amplitude_um)
 {
 	mAmplitude_volt = amplitude_um * mVoltPerUm;
 	mAmplitude_um = amplitude_um;
@@ -90,7 +90,7 @@ void ResonantScanner::setOutputAmplitude(double amplitude_um)
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
-void ResonantScanner::turnOn(double amplitude_um)
+void ResonantScanner::turnOn(const double amplitude_um)
 {
 	setOutputAmplitude(amplitude_um);
 	Sleep(mDelayTime);
@@ -118,7 +118,7 @@ Shutter::Shutter(const FPGAapi &fpga, int ID) : mFpga(fpga), mID(ID) {}
 
 Shutter::~Shutter() {}
 
-void Shutter::setOutput(bool state)
+void Shutter::setOutput(const bool state)
 {
 	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), mID, (NiFpga_Bool)state);
 	checkFPGAstatus(__FUNCTION__, status);
@@ -184,10 +184,10 @@ RTsequence::~RTsequence()
 	}
 	delete[] bufArray_B;
 
-	std::cout << "RT destructor was called" << std::endl;
+	//std::cout << "RT destructor was called" << std::endl;
 }
 
-QU32 RTsequence::generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal)
+QU32 RTsequence::generateLinearRamp(double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
 {
 	QU32 queue;
 	const bool debug = 0;
@@ -235,23 +235,23 @@ QU32 RTsequence::generateLinearRamp(double TimeStep, double RampLength, double V
 	return queue;
 }
 
-void RTsequence::pushQueue(RTchannel chan, QU32 queue)
+void RTsequence::pushQueue(const RTchannel chan, QU32& queue)
 {
 	concatenateQueues(mVectorOfQueues[chan], queue);
 }
 
-void RTsequence::pushSingleValue(RTchannel chan, U32 input)
+void RTsequence::pushSingleValue(const RTchannel chan, const U32 input)
 {
 	mVectorOfQueues[chan].push(input);
 }
 
-void RTsequence::pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal)
+void RTsequence::pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
 {
 	concatenateQueues(mVectorOfQueues[chan], generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal));
 }
 
 //Push all the elements in 'tailQ' into 'headQ'
-void RTsequence::concatenateQueues(QU32& receivingQueue, QU32 givingQueue)
+void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue)
 {
 	while (!givingQueue.empty())
 	{
@@ -278,7 +278,7 @@ RTsequence::PixelClock::PixelClock() {}
 RTsequence::PixelClock::~PixelClock() {}
 
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
-double RTsequence::PixelClock::ConvertSpatialCoord2Time(double x)
+double RTsequence::PixelClock::ConvertSpatialCoord2Time(const double x)
 {
 	double arg = 2 * x / RSpkpk_um;
 	if (arg > 1)
@@ -288,20 +288,20 @@ double RTsequence::PixelClock::ConvertSpatialCoord2Time(double x)
 }
 
 //Discretize the spatial coordinate, then convert it to time
-double RTsequence::PixelClock::getDiscreteTime(int pix)
+double RTsequence::PixelClock::getDiscreteTime(const int pix)
 {
 	const double dx = 0.5 * um;
 	return ConvertSpatialCoord2Time(dx * pix);
 }
 
 //Calculate the dwell time for the pixel
-double RTsequence::PixelClock::calculateDwellTime(int pix)
+double RTsequence::PixelClock::calculateDwellTime(const int pix)
 {
 	return getDiscreteTime(pix + 1) - getDiscreteTime(pix);
 }
 
 //Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
-double RTsequence::PixelClock::calculatePracticalDwellTime(int pix)
+double RTsequence::PixelClock::calculatePracticalDwellTime(const int pix)
 {
 	return round(calculateDwellTime(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
 }
@@ -568,7 +568,7 @@ int writeFrametoTxt(unsigned char *imageArray, std::string fileName)
 Laser::Laser() {}
 Laser::~Laser() {}
 
-PockelsCell::PockelsCell(const FPGAapi &fpga, PockelsID ID) : mFpga(fpga), mID(ID)
+PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID) : mFpga(fpga), mID(ID)
 {
 	switch (ID)
 	{
@@ -591,7 +591,7 @@ void PockelsCell::setOutputVoltage(double V_volt)
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
-void PockelsCell::turnOn(double P_mW)
+void PockelsCell::turnOn(const double P_mW)
 {
 	mV_volt = P_mW * mVoltPermW;
 	mP_mW = P_mW;
@@ -612,7 +612,7 @@ void PockelsCell::turnOff()
 }
 
 
-Filterwheel::Filterwheel(FilterwheelID ID): mID(ID) {
+Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID) {
 	switch (ID)
 	{
 	case FW1:

@@ -26,7 +26,7 @@ public:
 	Vibratome(const FPGAapi &fpga);
 	~Vibratome();
 	void startStop();
-	void sendCommand(double dt, VibratomeChannel channel);
+	void sendCommand(const double dt, const VibratomeChannel channel);
 };
 
 class ResonantScanner {
@@ -35,14 +35,14 @@ class ResonantScanner {
 	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
 	double mAmplitude_um = 0;
 	double mAmplitude_volt = 0;
-	void setOutputVoltage(double Vout);
-	void setOutputAmplitude(double amplitude_um);
-	double convertUm2Volt(double Amplitude);
+	void setOutputVoltage(const double Vout);
+	void setOutputAmplitude(const double amplitude_um);
+	double convertUm2Volt(const double Amplitude);
 public:
 	ResonantScanner(const FPGAapi &fpga);
 	~ResonantScanner();
-	void startStop(bool state);
-	void turnOn(double amplitude_um);
+	void startStop(const bool state);
+	void turnOn(const double amplitude_um);
 	void turnOff();
 };
 
@@ -53,7 +53,7 @@ class Shutter {
 public:
 	Shutter(const FPGAapi &fpga, int ID);
 	~Shutter();
-	void setOutput(bool requestedState);
+	void setOutput(const bool state);
 	void pulseHigh();
 };
 
@@ -68,12 +68,12 @@ public:
 	std::vector<double> getPosition();
 };
 
+//WARNING: copy-constructor not implemented
 class RTsequence {
 	const FPGAapi &mFpga;
 	VQU32 mVectorOfQueues;
-	void concatenateQueues(QU32& receivingQueue, QU32 givingQueue);
-	QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);
-
+	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
+	QU32 generateLinearRamp(double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 
 	//FIFO A
 	int nElemReadFIFO_A = 0; 							//Total number of elements read from the FIFO
@@ -94,10 +94,10 @@ class RTsequence {
 	class PixelClock
 	{
 		const int mLatency_tick = 2;					//latency at detecting the line clock. Calibrate the latency with the oscilloscope
-		double ConvertSpatialCoord2Time(double x);
-		double getDiscreteTime(int pix);
-		double calculateDwellTime(int pix);
-		double calculatePracticalDwellTime(int pix);
+		double ConvertSpatialCoord2Time(const double x);
+		double getDiscreteTime(const int pix);
+		double calculateDwellTime(const int pix);
+		double calculatePracticalDwellTime(const int pix);
 	public:
 		PixelClock();
 		~PixelClock();
@@ -108,9 +108,9 @@ class RTsequence {
 public:
 	RTsequence(const FPGAapi &fpga);
 	~RTsequence();
-	void pushQueue(RTchannel chan, QU32 queue);
-	void pushSingleValue(RTchannel chan, U32 input);
-	void pushLinearRamp(RTchannel chan, double TimeStep, double RampLength, double Vinitial, double Vfinal);
+	void pushQueue(const RTchannel chan, QU32& queue);
+	void pushSingleValue(const RTchannel chan, const U32 input);
+	void pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 	void loadRTsequenceonFPGA();
 	void runRTsequence();
 };
@@ -132,9 +132,9 @@ class PockelsCell{
 	double mP_mW;													//Output laser power
 	void setOutputVoltage(double V_volt);
 public:
-	PockelsCell(const FPGAapi &fpga, PockelsID ID);
+	PockelsCell(const FPGAapi &fpga, const PockelsID ID);
 	~PockelsCell();
-	void turnOn(double P_mW);
+	void turnOn(const double P_mW);
 	void turnOff();
 };
 
@@ -143,6 +143,6 @@ class Filterwheel {
 	std::string COM = "";					//internal ID assigned by the OS
 	int mPosition;
 public:
-	Filterwheel(FilterwheelID ID);
+	Filterwheel(const FilterwheelID ID);
 	~Filterwheel();
 };

@@ -158,7 +158,6 @@
     <ClCompile Include="Devices.cpp" />
     <ClCompile Include="FPGAapi.cpp" />
     <ClCompile Include="Tiffscope.cpp" />
-    <ClCompile Include="UARTscope.cpp" />
     <ClCompile Include="Sequences.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
@@ -168,7 +167,6 @@
     <ClInclude Include="FPGAapi.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Tiffscope.h" />
-    <ClInclude Include="UARTscope.h" />
     <ClInclude Include="Sequences.h" />
   </ItemGroup>
   <ItemGroup>

@@ -140,13 +140,13 @@ FPGAapi::FPGAapi()
 	checkFPGAstatus(__FUNCTION__, status);
 	//std::cout << "FPGA initialize status: " << mStatus << std::endl;
 
-	NiFpga_MergeStatus(&status, NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession));		//Opens a session, downloads the bitstream. 1=no run, 0=run
+	status = NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession);		//Opens a session, downloads the bitstream. 1=no run, 0=run
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
 FPGAapi::~FPGAapi()
 {
-	//std::cout << "FPGAapi destructor was called" << std::endl;
+	std::cout << "FPGAapi destructor was called" << std::endl;
 };
 
 void FPGAapi::initialize() const
@@ -272,7 +272,7 @@ void FPGAapi::runRTsequence() const
 	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1);
 	checkFPGAstatus(__FUNCTION__, status);
 
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));
+	status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0);
 	checkFPGAstatus(__FUNCTION__, status);
 
 	//std::cout << "Acquisition trigger status: " << status << std::endl;
@@ -284,16 +284,16 @@ void FPGAapi::flushFIFO() const
 	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1);
 	checkFPGAstatus(__FUNCTION__, status);
 
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
+	status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0);
 	checkFPGAstatus(__FUNCTION__, status);
 
 	//std::cout << "Flush trigger status: " << mStatus << std::endl;
 }
 
 //The FPGAapi object has to be closed explicitly (in opposition to using the destructor) because it lives in main()
-void FPGAapi::close() const
+void FPGAapi::close(const bool reset) const
 {
-	NiFpga_Status status = NiFpga_Close(mSession, 1);						//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
+	NiFpga_Status status = NiFpga_Close(mSession, (U32) !reset);			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 																			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 																			//0 resets, 1 does not reset
 	checkFPGAstatus(__FUNCTION__, status);

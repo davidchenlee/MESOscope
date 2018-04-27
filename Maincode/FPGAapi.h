@@ -33,12 +33,12 @@ public:
 	void writeFIFO(VQU32 &vectorqueues) const;
 	void runRTsequence() const;
 	void flushFIFO() const;
-	void close() const;
+	void close(const bool reset) const;
 	NiFpga_Session getSession() const;
 };
 
 class FPGAexception : public std::runtime_error {
 public:
 	//FPGAexception(const char *message) : std::runtime_error(message) {}
-	explicit FPGAexception(const std::string& message) : std::runtime_error(message.c_str()) {}
+	FPGAexception(const std::string& message) : std::runtime_error(message.c_str()) {}
 };

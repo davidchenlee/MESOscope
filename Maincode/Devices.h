@@ -1,7 +1,7 @@
 #pragma once
 #include "FPGAapi.h"
-#include "PIstages.h"
-#include "UARTscope.h"
+//#include "PIstages.h"
+//#include "UARTscope.h"
 #include "Tiffscope.h"
 #include "windows.h"	//the stages use this lib. also Sleep
 #include <fstream>      //file management
@@ -37,7 +37,7 @@ class ResonantScanner {
 	double mAmplitude_volt = 0;
 	void setOutputVoltage(double Vout);
 	void setOutputAmplitude(double amplitude_um);
-	double ResonantScanner::convertUm2Volt(double Amplitude);
+	double convertUm2Volt(double Amplitude);
 public:
 	ResonantScanner(const FPGAapi &fpga);
 	~ResonantScanner();
@@ -48,7 +48,7 @@ public:
 
 class Shutter {
 	const FPGAapi &mFpga;
-	int mFilterwheelID;			//Device ID
+	int mID;			//Device ID
 	const int mDelayTime = 10;
 public:
 	Shutter(const FPGAapi &fpga, int ID);
@@ -138,14 +138,11 @@ public:
 	void turnOff();
 };
 
-
 class Filterwheel {
 	FilterwheelID mID;						//Device ID
 	std::string COM = "";					//internal ID assigned by the OS
 	int mPosition;
 public:
-	Filterwheel(FilterwheelID filterwheelID);
+	Filterwheel(FilterwheelID ID);
 	~Filterwheel();
 };
-
-

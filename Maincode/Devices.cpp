@@ -114,24 +114,24 @@ double ResonantScanner::convertUm2Volt(double amplitude_um)
 
 #pragma region "Shutters"
 
-Shutter::Shutter(const FPGAapi &fpga, int ID) : mFpga(fpga), mFilterwheelID(ID) {}
+Shutter::Shutter(const FPGAapi &fpga, int ID) : mFpga(fpga), mID(ID) {}
 
 Shutter::~Shutter() {}
 
 void Shutter::setOutput(bool state)
 {
-	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), mFilterwheelID, (NiFpga_Bool)state);
+	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), mID, (NiFpga_Bool)state);
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
 void Shutter::pulseHigh()
 {
-	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), mFilterwheelID, 1);
+	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), mID, 1);
 	checkFPGAstatus(__FUNCTION__, status);
 
 	Sleep(mDelayTime);
 
-	status = NiFpga_WriteBool(mFpga.getSession(), mFilterwheelID, 0);
+	status = NiFpga_WriteBool(mFpga.getSession(), mID, 0);
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
@@ -184,7 +184,7 @@ RTsequence::~RTsequence()
 	}
 	delete[] bufArray_B;
 
-	//std::cout << "RT destructor was called" << std::endl;
+	std::cout << "RT destructor was called" << std::endl;
 }
 
 QU32 RTsequence::generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal)
@@ -368,11 +368,10 @@ void RTsequence::runRTsequence()
 	}
 	else
 	{
-		//std::cerr << "ERROR in " << __FUNCTION__ << ": more or less elements received from the FIFO than expected " << std::endl;
-		//THROWING THE ERROR CRASHES THE COMPUTER
-		throw std::runtime_error("More or less elements received from the FIFO than expected ");
+		std::cerr << "ERROR in " << __FUNCTION__ << ": more or less elements received from the FIFO than expected " << std::endl;
+		//throw std::runtime_error((std::string)__FUNCTION__ + ": More or less elements received from the FIFO than expected ");
 	}
-	
+		
 	stopFIFOs();				//Close the FIFO to (maybe) flush it
 }
 
@@ -388,7 +387,8 @@ void RTsequence::readFIFO()
 {
 	const int readFifoWaitingTime = 15;			//Waiting time between each iteration
 	const U32 timeout = 100;					//FIFO timeout
-	U32 nRemainFIFO_A, nRemainFIFO_B;			//Elements remaining in the FIFO
+	U32 nRemainFIFO_A = 0;
+	U32 nRemainFIFO_B = 0;			//Elements remaining in the FIFO
 	int timeoutCounter = 100;					//Timeout the while-loop if the data-transfer from the FIFO fails	
 
 	//Declare and start a stopwatch
@@ -410,16 +410,16 @@ void RTsequence::readFIFO()
 		//FIFO OUT A
 		if (nElemReadFIFO_A < nPixAllFrames)
 		{
-			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &nRemainFIFO_A);
-			checkFPGAstatus(__FUNCTION__, status);
+			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &nRemainFIFO_A);//////////////////////////////////////
+			checkFPGAstatus(__FUNCTION__, status);///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			//std::cout << "Number of elements remaining in the host FIFO a: " << nRemainFIFO_A << std::endl;
 
 			if (nRemainFIFO_A > 0)
 			{
 				nElemReadFIFO_A += nRemainFIFO_A;
 
-				status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFO_A, nRemainFIFO_A, timeout, &nRemainFIFO_A);
-				checkFPGAstatus(__FUNCTION__, status);
+				status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFO_A, nRemainFIFO_A, timeout, &nRemainFIFO_A);/////////////////
+				checkFPGAstatus(__FUNCTION__, status);///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			}
 		}
 
@@ -427,8 +427,8 @@ void RTsequence::readFIFO()
 		if (nElemReadFIFO_B < nPixAllFrames)		//Skip if all the data have already been transferred (i.e. nElemReadFIFO_A = nPixAllFrames)
 		{
 			//By requesting 0 elements from the FIFO, the function returns the number of elements available. If no data available so far, then nRemainFIFO_A = 0 is returned
-			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &nRemainFIFO_B);
-			checkFPGAstatus(__FUNCTION__, status);
+			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &nRemainFIFO_B);//////////////////////////////////////
+			checkFPGAstatus(__FUNCTION__, status);///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 			//std::cout << "Number of elements remaining in the host FIFO b: " << nRemainFIFO_B << std::endl;
 
 			//If there are data available in the FIFO, retrieve it
@@ -438,8 +438,8 @@ void RTsequence::readFIFO()
 				nElemBufArray_B[counterBufArray_B] = nRemainFIFO_B;		//Keep track of how many elements are in each FIFObuffer array												
 
 				//Read the elements in the FIFO
-				status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArray_B[counterBufArray_B], nRemainFIFO_B, timeout, &nRemainFIFO_B);
-				checkFPGAstatus(__FUNCTION__, status);
+				status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArray_B[counterBufArray_B], nRemainFIFO_B, timeout, &nRemainFIFO_B);//////////////////////////////////////
+				checkFPGAstatus(__FUNCTION__, status);///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 				if (counterBufArray_B >= nBufArrays)
 					throw std::range_error(std::string{} +"ERROR in " + __FUNCTION__ + ": Buffer array overflow\n");
@@ -450,17 +450,17 @@ void RTsequence::readFIFO()
 
 		timeoutCounter--;
 		
+
+		if (timeoutCounter == 0)	//Timeout the data transfer
+			throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO downloading timeout");
+
 		/*
-		if (timeoutCounter == 0)	//Timeout the while loop in case the data transfer fails
+		if (timeoutCounter == 0)					//Timeout the while loop in case the data transfer fails
 		{
 			std::cerr << "ERROR in " << __FUNCTION__ << ": FIFO downloading timeout" << std::endl;
 			break;
 		}
 		*/
-		//THROWING THE ERROR CRASHES THE COMPUTER
-		if (timeoutCounter == 0)	//Timeout the data transfer
-		throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO downloading timeout");
-		
 		
 	}
 
@@ -612,8 +612,7 @@ void PockelsCell::turnOff()
 }
 
 
-Filterwheel::Filterwheel(FilterwheelID ID): mID(ID)
-{
+Filterwheel::Filterwheel(FilterwheelID ID): mID(ID) {
 	switch (ID)
 	{
 	case FW1:

@@ -6,9 +6,6 @@
 #include <windows.h>	//the stages use this lib. also Sleep
 #include <fstream>      //file management
 #include <ctime>		//Clock()
-
-
-
 #include "PI_GCS2_DLL.h"
 using namespace GenericFPGAfunctions;
 

@@ -2,32 +2,50 @@
 
 int main()
 {
-	/*
-	//To make sure the the filterwheel 1 is set to the correct position
-	FilterWheel();
-	Sleep(1000); //wait for the filterwheel to settle
-	*/
-
-	FPGAapi fpga;
-
-	//Initialize the FPGA
-	fpga.initialize();
-
-
-
-	ResonantScanner RS(fpga);
+	FPGAapi fpga;			//Open a FPGA connection
 	try
 	{
-		if (1)
+		fpga.initialize();	//Initialize the FPGA
+
+		ResonantScanner RS(fpga);
+		if (0)
 			RS.turnOn(200 * um);
 		else
 			RS.turnOff();
 
-		fpga.flushFIFO();
+		fpga.close(0);		//Close the FPGA connection
+
+	}
+	catch (const FPGAexception &e)
+	{
+		std::cout << "An error has occurred in " << e.what() << std::endl;
+	}
+
+	catch (const std::invalid_argument &e)
+	{
+		std::cout << "An error has occurred in " << e.what() << std::endl;
+	}
+	catch (const std::overflow_error &e)
+	{
+		std::cout << "An error has occurred in " << e.what() << std::endl;
+	}
+	catch (const std::runtime_error &e)
+	{
+		std::cout << "An error has occurred in " << e.what() << std::endl;
+		try
+		{
+			fpga.close(1);		//Close and reset the FPGA connection. If not reset, residual data will remain
+								//in the FPGA and will probably make the next sequence crash the computer
+		}
+		catch (const FPGAexception &e)
+		{
+			std::cout << "An error has occurred in " << e.what() << std::endl;
+		}
+
 	}
 	catch (...)
 	{
-		std::cout << "ooops" << std::endl;
+		std::cout << "An unknown error has occurred" << std::endl;
 	}
 
 	std::cout << "\nPress any key to continue..." << std::endl;

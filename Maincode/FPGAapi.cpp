@@ -144,9 +144,12 @@ FPGAapi::FPGAapi()
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
-FPGAapi::~FPGAapi(){};
+FPGAapi::~FPGAapi()
+{
+	//std::cout << "FPGAapi destructor was called" << std::endl;
+};
 
-void FPGAapi::initialize()
+void FPGAapi::initialize() const
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	NiFpga_Status status = NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotonCounterInputSelector, photonCounterInput);			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
@@ -227,7 +230,7 @@ void FPGAapi::initialize()
 //For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 //Then transfer the elements in the long queue to an array to interface the FPGA
 //Alternatively, the single queues could be transferred directly to the array, but why bothering...
-void FPGAapi::writeFIFO(VQU32 &vectorQueues)
+void FPGAapi::writeFIFO(VQU32 &vectorQueues) const
 {
 	QU32 allQueues;										//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
@@ -264,7 +267,7 @@ void FPGAapi::writeFIFO(VQU32 &vectorQueues)
 }
 
 //Execute the commands
-void FPGAapi::runRTsequence()
+void FPGAapi::runRTsequence() const
 {
 	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1);
 	checkFPGAstatus(__FUNCTION__, status);
@@ -276,7 +279,7 @@ void FPGAapi::runRTsequence()
 }
 
 //Trigger the FIFO flushing
-void FPGAapi::flushFIFO()
+void FPGAapi::flushFIFO() const
 {
 	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1);
 	checkFPGAstatus(__FUNCTION__, status);
@@ -288,7 +291,7 @@ void FPGAapi::flushFIFO()
 }
 
 //The FPGAapi object has to be closed explicitly (in opposition to using the destructor) because it lives in main()
-void FPGAapi::close()
+void FPGAapi::close() const
 {
 	NiFpga_Status status = NiFpga_Close(mSession, 1);						//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 																			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
@@ -302,12 +305,12 @@ void FPGAapi::close()
 	//std::cout << "FPGA finalize status: " << mStatus << std::endl;
 }
 
-NiFpga_Session FPGAapi::getSession()
+NiFpga_Session FPGAapi::getSession() const
 {
 	return mSession;
 }
 
-void FPGAapi::checkFPGAstatus(char functionName[], NiFpga_Status status)
+void checkFPGAstatus(char functionName[], NiFpga_Status status)
 {
 	if (status < 0)
 		throw FPGAexception((std::string)functionName + " with FPGA code " + std::to_string(status));

@@ -11,19 +11,19 @@ int main()
 		fpga.flushFIFO();	//Flush the FPGA FIFOs as precaution
 		fpga.close();		//Close the FPGA connection
 	}
-	catch (FPGAexception &e)
+	catch (const FPGAexception &e)
 	{
 		std::cout << "An error has occurred in " << e.what() << std::endl;
 	}
-	catch (std::invalid_argument &e)
+	catch (const std::invalid_argument &e)
 	{
 		std::cout << "An error has occurred in " << e.what() << std::endl;
 	}
-	catch (std::overflow_error &e)
+	catch (const std::overflow_error &e)
 	{
 		std::cout << "An error has occurred in " << e.what() << std::endl;
 	}
-	catch (std::runtime_error &e)
+	catch (const std::runtime_error &e)
 	{
 		std::cout << "An error has occurred in " << e.what() << std::endl;
 	}
@@ -33,7 +33,7 @@ int main()
 	}
 
 	std::cout << "\nPress any key to continue..." << std::endl;
-	//getchar();
+	getchar();
 
 	return 0;
 }

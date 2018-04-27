@@ -9,6 +9,8 @@ using namespace Const;
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/
 static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 
+void checkFPGAstatus(char functionName[], NiFpga_Status status);
+
 namespace GenericFPGAfunctions {
 	void printHex(int input);
 	U32 packU32(U16 t, U16 x);
@@ -27,13 +29,12 @@ class FPGAapi {
 public:
 	FPGAapi();
 	~FPGAapi();
-	void initialize();
-	void FPGAapi::writeFIFO(VQU32 &vectorqueues);
-	void runRTsequence();
-	void flushFIFO();
-	void close();
-	NiFpga_Session getSession();
-	void checkFPGAstatus(char functionName[], NiFpga_Status status);
+	void initialize() const;
+	void writeFIFO(VQU32 &vectorqueues) const;
+	void runRTsequence() const;
+	void flushFIFO() const;
+	void close() const;
+	NiFpga_Session getSession() const;
 };
 
 class FPGAexception : public std::runtime_error {

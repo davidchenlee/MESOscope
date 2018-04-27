@@ -1,6 +1,6 @@
 #include "Sequences.h"
 
-void Sequence1(FPGAapi fpga)
+void Sequence1(const FPGAapi &fpga)
 {
 	//Create a realtime sequence
 	RTsequence sequence(fpga);

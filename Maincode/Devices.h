@@ -1,6 +1,6 @@
 #pragma once
 #include "FPGAapi.h"
-//#include "PIstages.h"
+#include "PIstages.h"
 #include "UARTscope.h"
 #include "Tiffscope.h"
 #include "windows.h"	//the stages use this lib. also Sleep
@@ -16,21 +16,21 @@ int writeFrametoTxt(unsigned char *imageArray, std::string fileName);
 
 
 class Vibratome {
-	FPGAapi mFpga;
+	const FPGAapi &mFpga;
 	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
 	int mNslide;					//Slide number
 	double mSectionThickness;		//Thickness of the section
 	double mSpeed;					//Speed of the vibratome (manual setting)
 	double mAmplitude;				//Amplitude of the vibratome (manual setting)
 public:
-	Vibratome(FPGAapi fpga);
+	Vibratome(const FPGAapi &fpga);
 	~Vibratome();
 	void startStop();
 	void sendCommand(double dt, VibratomeChannel channel);
 };
 
 class ResonantScanner {
-	FPGAapi mFpga;
+	const FPGAapi &mFpga;
 	const int mDelayTime = 10;
 	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
 	double mAmplitude_um = 0;
@@ -39,7 +39,7 @@ class ResonantScanner {
 	void setOutputAmplitude(double amplitude_um);
 	double ResonantScanner::convertUm2Volt(double Amplitude);
 public:
-	ResonantScanner(FPGAapi fpga);
+	ResonantScanner(const FPGAapi &fpga);
 	~ResonantScanner();
 	void startStop(bool state);
 	void turnOn(double amplitude_um);
@@ -47,11 +47,11 @@ public:
 };
 
 class Shutter {
-	FPGAapi mFpga;
+	const FPGAapi &mFpga;
 	int mFilterwheelID;			//Device ID
 	const int mDelayTime = 10;
 public:
-	Shutter(FPGAapi fpga, int ID);
+	Shutter(const FPGAapi &fpga, int ID);
 	~Shutter();
 	void setOutput(bool requestedState);
 	void pulseHigh();
@@ -59,18 +59,17 @@ public:
 
 
 class Stage {
-	FPGAapi mFpga;
 	std::vector<double> absPosition;			//Absolute position of the stages (x, y, z)
 	std::vector<int> Ntile;						//Tile number in x, y, z
 	std::vector<int> tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
 public:
-	Stage(FPGAapi fpga);
+	Stage();
 	~Stage();
 	std::vector<double> getPosition();
 };
 
 class RTsequence {
-	FPGAapi mFpga;
+	const FPGAapi &mFpga;
 	VQU32 mVectorOfQueues;
 	void concatenateQueues(QU32& receivingQueue, QU32 givingQueue);
 	QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);
@@ -107,7 +106,7 @@ class RTsequence {
 	};
 
 public:
-	RTsequence(FPGAapi fpga);
+	RTsequence(const FPGAapi &fpga);
 	~RTsequence();
 	void pushQueue(RTchannel chan, QU32 queue);
 	void pushSingleValue(RTchannel chan, U32 input);
@@ -117,19 +116,15 @@ public:
 };
 
 
-
-
-
 class Laser {
-	FPGAapi mFpga;
 	double mWavelength;
 public:
-	Laser(FPGAapi fpga);
+	Laser();
 	~Laser();
 };
 
 class PockelsCell{
-	FPGAapi mFpga;
+	const FPGAapi &mFpga;
 	PockelsID mID;													//Device ID
 	NiFpga_FPGAvi_ControlI16 mFPGAid;								//internal ID assigned by the FPGA
 	double mVoltPermW = 1;											//Calibration factor
@@ -137,7 +132,7 @@ class PockelsCell{
 	double mP_mW;													//Output laser power
 	void setOutputVoltage(double V_volt);
 public:
-	PockelsCell(FPGAapi fpga, PockelsID ID);
+	PockelsCell(const FPGAapi &fpga, PockelsID ID);
 	~PockelsCell();
 	void turnOn(double P_mW);
 	void turnOff();

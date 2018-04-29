@@ -632,14 +632,76 @@ const std::vector<double> Stage::getPosition_mm()
 	return absPosition_mm;
 }
 
-//idea: give the tile number and get the tile number coordinate and absolute spatial position
-void Stage::stageScanningStrategy(int tileID) //tileID = 0, 1, 2, ...
+
+//Convert from absolute tile number ---> (slice number, plane number, tile number)
+// this function does NOT consider the overlaps
+void Stage::scanningStrategy(int nTileAbsolute) //Absolute tile number = 0, 1, 2, ..., total number of tiles
 {
+	int nTiles_x = 50;	//Number of tiles in x
+	int nTiles_y = 50;	//Number of tiles in y
+	int nTilesPerPlane = nTiles_x * nTiles_y; //Number of tiles in each plane
+	int nPlanesPerSlice = 100;	//Number of planes in each slice
+	int nSlice = 20; //Number of slices in the entire sample
+
+	int nSlice;
+	int nPlane;
+	std::vector<int> nTileXY;
+
+	//total number of tiles = nSlice * nPlanesPerSlice * nTilesPerPlane
+
+	/*
+	SDx = +;
+	SDy = +;
+	SDz = -		//- is down, + is up
+
+	while{
+
+	if (reached zmax) //reached bottom of the slice
+		snakeXY
+		SDz = +;
+	
+	if (reached zmin)	//reached top of the slice
+		snakeXY;
+		SDz = -;
+	}
+	*/
+
+
+	/*
+	snakeXY:
+	if (SD = +)
+		if (!reached xmax)
+			x++;
+		else if (!reached ymax)
+			y++;
+			SDx = -; //change the scanning direction
+		else //reached xmax & ymax
+			nextSlice;
+
+	else //SDx = -
+		if (!reached xmin)
+			x--;
+		else if (!reach ymax)
+			y++;
+			SDx = +; //change the scanning direction
+		else	//reached xmin & ymax
+			nextSlice;
+	*/
+
+	/*
+	nextSlice:
+			cut the surface
+			if (!reached nMaxSlice)
+				move to the next slice;
+			else
+				stop;
+	*/
 
 
 }
 
-//slide number, plane number, tile number ---> absolute position x,y,z
+//convert from (slice number, plane number, tile number) ---> absolute position (x,y,z)
+//this function considers the overlaps in x, y, and z
 std::vector<double> Stage::getAbsolutePosition_mm(int nSlice, int nPlane, std::vector<int> nTileXY)
 {
 	const double mm = 1;
@@ -650,12 +712,12 @@ std::vector<double> Stage::getAbsolutePosition_mm(int nSlice, int nPlane, std::v
 	std::vector<double> overlap_um = { 20.*um, 20.*um, 30.*um };
 	std::vector<double> FFOVxy_um = { 200.*um, 200.*um };						//Full FOV
 
-	double slideThickness_um = 100 * um;
+	double sliceThickness_um = 100 * um;
 	double stepZ_um = 1;
 
 	absPosition_mm[0] = initialPosition_mm[0] + nTileXY[0] * (FFOVxy_um[0] - overlap_um[0]);
 	absPosition_mm[1] = initialPosition_mm[1] + nTileXY[1] * (FFOVxy_um[1] - overlap_um[1]);
-	absPosition_mm[2] = initialPosition_mm[2]  - nSlice * (slideThickness_um - overlap_um[2]) - nPlane * stepZ_um;
+	absPosition_mm[2] = initialPosition_mm[2]  - nSlice * (sliceThickness_um - overlap_um[2]) - nPlane * stepZ_um;
 
 	return absPosition_mm;
 }

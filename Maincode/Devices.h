@@ -146,7 +146,7 @@ public:
 	Stage();
 	~Stage();
 	const std::vector<double> getPosition_mm();
-	void stageScanningStrategy(int tileID);
+	void Stage::scanningStrategy(int nTileAbsolute);
 	std::vector<double> getAbsolutePosition_mm(int nSection, int nPlane, std::vector<int> nTileXY);
 };
 

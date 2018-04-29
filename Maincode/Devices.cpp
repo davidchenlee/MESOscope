@@ -627,10 +627,40 @@ Stage::Stage() {}
 
 Stage::~Stage() {}
 
-const std::vector<double> Stage::getPosition()
+const std::vector<double> Stage::getPosition_mm()
 {
-	return absPosition;
+	return absPosition_mm;
 }
+
+//idea: give the tile number and get the tile number coordinate and absolute spatial position
+void Stage::stageScanningStrategy(int tileID) //tileID = 0, 1, 2, ...
+{
+
+
+}
+
+//slide number, plane number, tile number ---> absolute position x,y,z
+std::vector<double> Stage::getAbsolutePosition_mm(int nSlice, int nPlane, std::vector<int> nTileXY)
+{
+	const double mm = 1;
+	const double um = 0.001;
+
+	std::vector<double> absPosition_mm(3,0);
+	std::vector<double> initialPosition_mm = { 31.9*mm, 9.5*mm, 18.546*mm };
+	std::vector<double> overlap_um = { 20.*um, 20.*um, 30.*um };
+	std::vector<double> FFOVxy_um = { 200.*um, 200.*um };						//Full FOV
+
+	double slideThickness_um = 100 * um;
+	double stepZ_um = 1;
+
+	absPosition_mm[0] = initialPosition_mm[0] + nTileXY[0] * (FFOVxy_um[0] - overlap_um[0]);
+	absPosition_mm[1] = initialPosition_mm[1] + nTileXY[1] * (FFOVxy_um[1] - overlap_um[1]);
+	absPosition_mm[2] = initialPosition_mm[2]  - nSlice * (slideThickness_um - overlap_um[2]) - nPlane * stepZ_um;
+
+	return absPosition_mm;
+}
+
+
 
 #pragma endregion "Stages"
 
@@ -642,14 +672,12 @@ char NumberOfAxesPerController[2] = "1"; //There is only 1 stage per controller
 
 bool runPIstage()
 {
+	//TODO: open the stages concurrently
 	//Start USB connection. Make sure that the stages and servo are enabled on supplied software PIMikroMove
 	XstageID = PI_ConnectUSB("116049107"); //	X-stage (V-551.4B)
 	YstageID = PI_ConnectUSB("116049105"); //	Y-stage (V-551.2B)
 	ZstageID = PI_ConnectUSB("0165500631");	//  Z-stage (ES-100)
 
-	std::cout << XstageID << std::endl;
-	std::cout << YstageID << std::endl;
-	std::cout << ZstageID << std::endl;
 
 	if (XstageID < 0)
 	{

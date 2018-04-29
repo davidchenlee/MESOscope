@@ -139,13 +139,15 @@ public:
 
 class Stage
 {
-	std::vector<double> absPosition;			//Absolute position of the stages (x, y, z)
+	std::vector<double> absPosition_mm;			//Absolute position of the stages (x, y, z)
 	std::vector<int> Ntile;						//Tile number in x, y, z
 	std::vector<int> tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
 public:
 	Stage();
 	~Stage();
-	const std::vector<double> getPosition();
+	const std::vector<double> getPosition_mm();
+	void stageScanningStrategy(int tileID);
+	std::vector<double> getAbsolutePosition_mm(int nSection, int nPlane, std::vector<int> nTileXY);
 };
 
 

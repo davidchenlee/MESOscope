@@ -1,6 +1,6 @@
 #include "Devices.h"
 
-int main()
+int main(int argc, char* argv[])
 {
 	FPGAapi fpga;			//Open a FPGA connection
 	try

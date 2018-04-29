@@ -140,7 +140,7 @@
     <ClCompile Include="..\Maincode\FPGAapi.cpp" />
     <ClCompile Include="..\Maincode\Tiffscope.cpp" />
     <ClCompile Include="..\Maincode\UARTscope.cpp" />
-    <ClCompile Include="CDmain.cpp" />
+    <ClCompile Include="MainConfigDevices.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

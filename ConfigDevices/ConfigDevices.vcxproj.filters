@@ -41,9 +41,6 @@
     <ClCompile Include="..\Maincode\Devices.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CDmain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -51,6 +48,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Maincode\UARTscope.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MainConfigDevices.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

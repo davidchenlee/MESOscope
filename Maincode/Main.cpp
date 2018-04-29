@@ -1,7 +1,7 @@
 //#include <concrt.h> 	//Concurrency::wait(2000);
 #include "Sequences.h"
 
-int main()
+int main(int argc, char* argv[])
 {
 	FPGAapi fpga;			//Open a FPGA connection
 	try

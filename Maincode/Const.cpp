@@ -14,6 +14,7 @@ namespace Const
 	extern const int s = 1000000 * us;						//second
 	extern const int um = 1;								//micron
 	extern const int V = 1;									//volt
+	extern const int mW = 1;								//milliwatt
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It depends on the FPGA's clock
 	extern const double dt_us = 1.0 / 160;					//time step of the FPGA's clock in us
 	extern const U32 dt_tick_MIN = 2;						//Min ticks allowed because DO and AO have a latency of 2 ticks

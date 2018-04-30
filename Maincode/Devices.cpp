@@ -571,7 +571,7 @@ PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const double w
 
 PockelsCell::~PockelsCell() {}
 
-double PockelsCell::getVoltageforMinPower()
+double PockelsCell::voltageforMaxPower()
 {
 	return 0.00361 * mWavelength_nm - 0.206;
 }
@@ -586,10 +586,10 @@ void PockelsCell::setOutputVoltage(const double V_volt)
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
-void PockelsCell::turnOn(const double P_mW)
+void PockelsCell::turnOn(const double power_mW)
 {
-	mV_volt = P_mW * mVoltPermW;
-	mP_mW = P_mW;
+	mV_volt = convertPowertoVoltage_volt(power_mW);
+	mP_mW = power_mW;
 
 	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt));
 	checkFPGAstatus(__FUNCTION__, status);
@@ -597,13 +597,22 @@ void PockelsCell::turnOn(const double P_mW)
 
 void PockelsCell::turnOff()
 {
-	//double Vmin = 2.49 * V;			//@750 nm
-	double Vmin = getVoltageforMinPower();
-	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(Vmin));
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, 0);
 	checkFPGAstatus(__FUNCTION__, status);
 
-	mV_volt = Vmin;
+	mV_volt = 0;
 	mP_mW = 0;
+}
+
+
+double PockelsCell::convertPowertoVoltage_volt(double power_mW)
+{
+	//Calibration parameters
+	const double a = 277.9;
+	const double b = 0.65;
+	const double c = 0.084;
+
+	return asin(sqrt(power_mW / a)) / b + c;
 }
 
 
@@ -643,11 +652,12 @@ void Stage::scanningStrategy(int nTileAbsolute) //Absolute tile number = 0, 1, 2
 	int nPlanesPerSlice = 100;	//Number of planes in each slice
 	int nSlice = 20; //Number of slices in the entire sample
 
-	int nSlice;
 	int nPlane;
 	std::vector<int> nTileXY;
 
 	//total number of tiles = nSlice * nPlanesPerSlice * nTilesPerPlane
+
+}
 
 	/*
 	SDx = +;
@@ -657,17 +667,15 @@ void Stage::scanningStrategy(int nTileAbsolute) //Absolute tile number = 0, 1, 2
 	while{
 
 	if (reached zmax) //reached bottom of the slice
-		snakeXY
+		snakeXY();
 		SDz = +;
 	
 	if (reached zmin)	//reached top of the slice
-		snakeXY;
+		snakeXY();
 		SDz = -;
 	}
-	*/
+	
 
-
-	/*
 	snakeXY:
 	if (SD = +)
 		if (!reached xmax)
@@ -676,7 +684,7 @@ void Stage::scanningStrategy(int nTileAbsolute) //Absolute tile number = 0, 1, 2
 			y++;
 			SDx = -; //change the scanning direction
 		else //reached xmax & ymax
-			nextSlice;
+			nextSlice();
 
 	else //SDx = -
 		if (!reached xmin)
@@ -685,20 +693,17 @@ void Stage::scanningStrategy(int nTileAbsolute) //Absolute tile number = 0, 1, 2
 			y++;
 			SDx = +; //change the scanning direction
 		else	//reached xmin & ymax
-			nextSlice;
-	*/
+			nextSlice();
+	
 
-	/*
 	nextSlice:
-			cut the surface
 			if (!reached nMaxSlice)
-				move to the next slice;
+				runVibratome();
+				 next slice();
 			else
 				stop;
 	*/
 
-
-}
 
 //convert from (slice number, plane number, tile number) ---> absolute position (x,y,z)
 //this function considers the overlaps in x, y, and z

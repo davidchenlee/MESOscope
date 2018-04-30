@@ -118,12 +118,13 @@ class PockelsCell
 	double mVoltPermW = 1;											//Calibration factor
 	double mV_volt;													//Output voltage to the HV amplifier
 	double mP_mW;													//Output laser power
-	double getVoltageforMinPower();									//The output laser power depend on the wavelength
+	double voltageforMaxPower();									//The output laser power depend on the wavelength
 	void setOutputVoltage(const double V_volt);
+	double convertPowertoVoltage_volt(double power_mW);
 public:
 	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const double wavelength_nm);
 	~PockelsCell();
-	void turnOn(const double P_mW);
+	void turnOn(const double power_mW);
 	void turnOff();
 };
 

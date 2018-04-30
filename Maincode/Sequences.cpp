@@ -3,7 +3,7 @@
 void Sequence1(const FPGAapi &fpga)
 {
 
-	double wavelength_nm = 1040;
+	double wavelength_nm = 800;
 
 	//REALTIME SEQUENCE
 	RTsequence sequence(fpga);
@@ -14,7 +14,7 @@ void Sequence1(const FPGAapi &fpga)
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
 	
 	//NON-REALTIME SEQUENCE
-	pockels.turnOn(0 * V);
+	pockels.turnOn(100 * mW);
 	sequence.runRTsequence();		//Execute the RT sequence and read the photon count
 	pockels.turnOff();
 

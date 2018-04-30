@@ -3,7 +3,7 @@
 void Sequence1(const FPGAapi &fpga)
 {
 
-	double wavelength_nm = 800;
+	int wavelength_nm = 850;
 
 	//REALTIME SEQUENCE
 	RTsequence sequence(fpga);
@@ -14,14 +14,14 @@ void Sequence1(const FPGAapi &fpga)
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
 	
 	//NON-REALTIME SEQUENCE
-	pockels.turnOn(100 * mW);
+	pockels.turnOn_mW(100 * mW);
 	sequence.runRTsequence();		//Execute the RT sequence and read the photon count
 	pockels.turnOff();
 
 	/*
 	ResonantScanner RS(fpga);		//Create a resonant scanner
 	if (0)
-		RS.turnOn(200 * um);
+		RS.turnOn_mW(200 * um);
 	else
 		RS.turnOff();
 	*/

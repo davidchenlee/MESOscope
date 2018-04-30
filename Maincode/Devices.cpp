@@ -557,7 +557,7 @@ int writeFrametoTxt(unsigned char *imageArray, const std::string fileName)
 	return 0;
 }
 
-PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const double wavelength_nm) : mFpga(fpga), mID(ID), mWavelength_nm(wavelength_nm)
+PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm) : mFpga(fpga), mID(ID), mWavelength_nm(wavelength_nm)
 {
 	switch (ID)
 	{
@@ -571,25 +571,24 @@ PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const double w
 
 PockelsCell::~PockelsCell() {}
 
-double PockelsCell::voltageforMaxPower()
+//before, the output power was max at 0V and the voltage for the min power depended on the wavelength as
+double PockelsCell::voltageforMinPower()
 {
 	return 0.00361 * mWavelength_nm - 0.206;
 }
 
 
-void PockelsCell::setOutputVoltage(const double V_volt)
+void PockelsCell::turnOn_volt(const double V_volt)
 {
 	mV_volt = V_volt;
-	mP_mW = V_volt / mVoltPermW;
 
 	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt));
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
-void PockelsCell::turnOn(const double power_mW)
+void PockelsCell::turnOn_mW(const double power_mW)
 {
 	mV_volt = convertPowertoVoltage_volt(power_mW);
-	mP_mW = power_mW;
 
 	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt));
 	checkFPGAstatus(__FUNCTION__, status);
@@ -601,16 +600,38 @@ void PockelsCell::turnOff()
 	checkFPGAstatus(__FUNCTION__, status);
 
 	mV_volt = 0;
-	mP_mW = 0;
 }
 
 
 double PockelsCell::convertPowertoVoltage_volt(double power_mW)
 {
 	//Calibration parameters
-	const double a = 277.9;
-	const double b = 0.65;
-	const double c = 0.084;
+	double a;
+	double b;
+	double c;
+
+	if (mWavelength_nm == 800) {
+		a = 277.9;
+		b = 0.65;
+		c = 0.084;
+	}
+	else if (mWavelength_nm == 750) {
+		a = 277.9;
+		b = 0.65;
+		c = 0.084;
+	}
+	else if (mWavelength_nm == 940) {
+		a = 277.9;
+		b = 0.65;
+		c = 0.084;
+	}
+	else if (mWavelength_nm == 1040) {
+		a = 277.9;
+		b = 0.65;
+		c = 0.084;
+	}
+	else
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": laser wavelength " + std::to_string(mWavelength_nm) + " nm currently not calibrated");
 
 	return asin(sqrt(power_mW / a)) / b + c;
 }
@@ -652,8 +673,8 @@ void Stage::scanningStrategy(int nTileAbsolute) //Absolute tile number = 0, 1, 2
 	int nPlanesPerSlice = 100;	//Number of planes in each slice
 	int nSlice = 20; //Number of slices in the entire sample
 
-	int nPlane;
-	std::vector<int> nTileXY;
+//	int nPlane;
+	//std::vector<int> nTileXY;
 
 	//total number of tiles = nSlice * nPlanesPerSlice * nTilesPerPlane
 

@@ -114,17 +114,17 @@ class PockelsCell
 	const FPGAapi &mFpga;
 	PockelsID mID;													//Device ID
 	NiFpga_FPGAvi_ControlI16 mFPGAid;								//Internal ID of the FPGA
-	double mWavelength_nm;											//Wavelength of the laser
+	int mWavelength_nm;											//Wavelength of the laser
 	double mVoltPermW = 1;											//Calibration factor
 	double mV_volt;													//Output voltage to the HV amplifier
-	double mP_mW;													//Output laser power
-	double voltageforMaxPower();									//The output laser power depend on the wavelength
-	void setOutputVoltage(const double V_volt);
+	double voltageforMinPower();									//The output laser power depend on the wavelength
+	
 	double convertPowertoVoltage_volt(double power_mW);
 public:
-	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const double wavelength_nm);
+	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm);
 	~PockelsCell();
-	void turnOn(const double power_mW);
+	void turnOn_volt(const double V_volt);
+	void turnOn_mW(const double power_mW);
 	void turnOff();
 };
 

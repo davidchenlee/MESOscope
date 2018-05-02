@@ -125,13 +125,30 @@ double ResonantScanner::convertUm2Volt(double amplitude_um)
 
 #pragma region "Shutters"
 
-Shutter::Shutter(const FPGAapi &fpga, int ID) : mFpga(fpga), mID(ID) {}
+Shutter::Shutter(const FPGAapi &fpga, ShutterID ID) : mFpga(fpga)
+{
+	switch (ID)
+	{
+	case Shutter1:
+		mID = NiFpga_FPGAvi_ControlBool_Shutter1;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter unavailable");
+	}
+
+}
 
 Shutter::~Shutter() {}
 
-void Shutter::setOutput(const bool state)
+void Shutter::open()
 {
-	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), mID, (NiFpga_Bool)state);
+	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), mID, 1);
+	checkFPGAstatus(__FUNCTION__, status);
+}
+
+void Shutter::close()
+{
+	NiFpga_Status status = NiFpga_WriteBool(mFpga.getSession(), mID, 0);
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
@@ -618,25 +635,20 @@ double PockelsCell::convertPowertoVoltage_volt(double power_mW)
 {
 	double a, b, c;		//Calibration parameters
 
-	if (mWavelength_nm == 800) {
-		a = 277.9;
-		b = 0.650;
-		c = 0.084;
-	}
-	else if (mWavelength_nm == 750) {
-		a = 218.1;
-		b = 0.646;
-		c = 0.041;
+	if (mWavelength_nm == 750) {
+		a = 433.6;
+		b = 0.647;
+		c = 0.042;
 	}
 	else if (mWavelength_nm == 940) {
-		a = 136.8;
-		b = 0.510;
-		c = -0.059;
+		a = 245.4;
+		b = 0.513;
+		c = -0.050;
 	}
 	else if (mWavelength_nm == 1040) {
-		a = 50.9;
-		b = 0.460;
-		c = 0.056;
+		a = 100.0;
+		b = 0.458;
+		c = 0.055;
 	}
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": laser wavelength " + std::to_string(mWavelength_nm) + " nm currently not calibrated");

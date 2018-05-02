@@ -1,5 +1,8 @@
 #include "Devices.h"
 
+#define RUN 0
+
+
 int main(int argc, char* argv[])
 {
 	FPGAapi fpga;			//Open a FPGA connection
@@ -8,11 +11,20 @@ int main(int argc, char* argv[])
 		fpga.initialize();	//Initialize the FPGA
 
 		ResonantScanner RS(fpga);
-		if (0)
-			RS.turnOn_volt(0.5 * V);
+		Shutter shutter1(fpga, Shutter1);
 
+
+		if (RUN)
+		{
+			RS.turnOn_volt(0.5 * V);
+			//shutter1.open();
+		}
 		else
+		{
 			RS.turnOff();
+			//shutter1.close();
+		}
+			
 
 		fpga.close(0);		//Close the FPGA connection
 
@@ -35,8 +47,9 @@ int main(int argc, char* argv[])
 		std::cout << "An error has occurred in " << e.what() << std::endl;
 		try
 		{
-			fpga.close(1);		//Close and reset the FPGA connection. If not reset, residual data will remain
-								//in the FPGA and will probably make the next sequence crash the computer
+			//Close and reset the FPGA connection. If not reset, residual data will remain in the FPGA and will probably make the next sequence crash the computer
+			const bool enforceReset = 1;
+			fpga.close(enforceReset);
 		}
 		catch (const FPGAexception &e)
 		{
@@ -50,7 +63,7 @@ int main(int argc, char* argv[])
 	}
 
 	std::cout << "\nPress any key to continue..." << std::endl;
-	getchar();
+	//getchar();
 
 	return 0;
 }

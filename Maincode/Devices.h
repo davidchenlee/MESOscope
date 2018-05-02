@@ -53,12 +53,13 @@ public:
 class Shutter
 {
 	const FPGAapi &mFpga;
-	int mID;			//Device ID
+	NiFpga_FPGAvi_ControlBool mID;			//Device ID
 	const int mDelayTime = 10;
 public:
-	Shutter(const FPGAapi &fpga, int ID);
+	Shutter(const FPGAapi &fpga, ShutterID ID);
 	~Shutter();
-	void setOutput(const bool state);
+	void open();
+	void close();
 	void pulseHigh();
 };
 

@@ -2,9 +2,6 @@
 
 namespace Const
 {
-	extern const PhotonCounterInputSelector photonCounterInput = ext;		//ext or sim
-	extern const LineClockInputSelector lineClockInput = FG;				//RS or FG
-
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;								//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
 
@@ -35,7 +32,6 @@ namespace Const
 	extern const int nPulses = 20;												//Number of pulses
 	extern const U8 pulseArray[nPulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns	
-
 
 }
 
@@ -68,13 +64,7 @@ namespace Parameters
 	extern const int nPixPerFrame = widthPerFrame_pix * heightPerFrame_pix;		//Number of pixels in each frame
 	extern const int nLinesAllFrames = heightPerFrame_pix * nFrames;			//Total number of lines in all the frames without including the skipped lines
 	extern const int nPixAllFrames = widthPerFrame_pix * nLinesAllFrames;		//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
-	//400x400x5, skipped 60
-	//400x35x90, skipped 8
-	//400x35x70, skipped 6
-
-	//POCKELS CELLS
-	extern const double PC1_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 1
-	extern const double PC2_voltPermW = 1;										//volts per mW. Calibration factor for the pockels cell 2
+	//400x400x5, skipped 60. 400x35x90, skipped 8. 400x35x70, skipped 6
 }
 
 

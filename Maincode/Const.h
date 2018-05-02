@@ -19,14 +19,17 @@ typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
 enum PhotonCounterInputSelector {ext, sim};						//real PMT, simulated PMT, internal clock
 enum LineClockInputSelector {RS, FG};							//Resonant scanner, function generator, 
 enum RTchannel {PCLOCK, GALVO1, GALVO2, DOdebug};				//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
-enum PockelsID {Pockels1, Pockels2};							//PockelsID cell unit
-enum FilterwheelID {FW1, FW2};									//Filterwheels
-enum FilterwheelPosition {P1, P2, P3};							//Filterwheel positions
+enum PockelsID {Pockels1, Pockels2};							//Pockels cell
+enum ShutterID {Shutter1, Shutter2};							//Shutter unit
+enum FilterwheelID {FW1, FW2};									//Filterwheel
+enum FilterwheelPosition {P1, P2, P3};							//Filterwheel position
+
+extern const PhotonCounterInputSelector photonCounterInput;
+extern const LineClockInputSelector lineClockInput;
 
 namespace Const
 {
-	extern const PhotonCounterInputSelector photonCounterInput;
-	extern const LineClockInputSelector lineClockInput;
+
 
 	extern const int Nchan;
 	
@@ -74,7 +77,4 @@ namespace Parameters
 	extern const int nFrames;
 	extern const int nLinesAllFrames;
 	extern const int nPixAllFrames;
-
-	extern const double PC1_voltPermW;
-	extern const double PC2_voltPermW;
 }

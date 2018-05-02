@@ -1,6 +1,9 @@
 //#include <concrt.h> 	//Concurrency::wait(2000);
 #include "Sequences.h"
 
+extern const PhotonCounterInputSelector photonCounterInput = ext;		//ext or sim
+extern const LineClockInputSelector lineClockInput = RS;				//RS or FG
+
 int main(int argc, char* argv[])
 {
 	FPGAapi fpga;			//Open a FPGA connection
@@ -30,8 +33,9 @@ int main(int argc, char* argv[])
 		std::cout << "An error has occurred in " << e.what() << std::endl;
 		try
 		{
-			fpga.close(1);		//Close and reset the FPGA connection. If not reset, residual data will remain
-								//in the FPGA and will probably make the next sequence crash the computer
+			//Close and reset the FPGA connection. If not reset, residual data will remain in the FPGA and will probably make the next sequence crash the computer
+			const bool enforceReset = 1;
+			fpga.close(enforceReset);
 		}
 		catch (const FPGAexception &e)
 		{

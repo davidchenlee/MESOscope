@@ -165,8 +165,8 @@ void FPGAapi::initialize() const
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(heightPerFrame_pix + nLinesSkip)));	//Number of lines in a frame including the skipped lines
 
 	//Shutters
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
+	//NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
+	//NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
 
 	//Vibratome control
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_start, 0));
@@ -175,8 +175,8 @@ void FPGAapi::initialize() const
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
 
 	//Resonant scanner
-	NiFpga_MergeStatus(&status, NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));		//Output voltage
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
+	//NiFpga_MergeStatus(&status, NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));		//Output voltage
+	//NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
 
 	//PockelsID cells
 	//NiFpga_MergeStatus(&status, NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));

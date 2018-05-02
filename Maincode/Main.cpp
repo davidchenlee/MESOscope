@@ -2,7 +2,7 @@
 #include "Sequences.h"
 
 extern const PhotonCounterInputSelector photonCounterInput = ext;		//ext or sim
-extern const LineClockInputSelector lineClockInput = RS;				//RS or FG
+extern const LineClockInputSelector lineClockInput = FG;				//RS or FG
 
 int main(int argc, char* argv[])
 {

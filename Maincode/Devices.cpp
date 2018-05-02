@@ -75,7 +75,7 @@ void ResonantScanner::setOutput_volt(const double V_volt)
 {
 	const int VMAX = 5 * V;
 
-	if (V_volt > VMAX) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(VMAX) );
+	if (V_volt > VMAX) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(VMAX) + " V" );
 
 	mAmplitude_volt = V_volt;
 	mAmplitude_um = V_volt / mVoltPerUm;
@@ -770,12 +770,7 @@ std::vector<double> Stage::getAbsolutePosition_mm(int nSlice, int nPlane, std::v
 
 	return absPosition_mm;
 }
-
-
-
 #pragma endregion "Stages"
-
-
 
 // Additional Sample Functions
 int XstageID, YstageID, ZstageID;

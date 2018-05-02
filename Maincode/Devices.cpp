@@ -71,8 +71,12 @@ void ResonantScanner::startStop(const bool state){
 
 
 //Set the output voltage of the resonant scanner
-void ResonantScanner::setOutputVoltage(const double V_volt)
+void ResonantScanner::setOutput_volt(const double V_volt)
 {
+	const int VMAX = 5 * V;
+
+	if (V_volt > VMAX) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(VMAX) );
+
 	mAmplitude_volt = V_volt;
 	mAmplitude_um = V_volt / mVoltPerUm;
 
@@ -81,7 +85,7 @@ void ResonantScanner::setOutputVoltage(const double V_volt)
 }
 
 //Set the output voltage of the resonant scanner
-void ResonantScanner::setOutputAmplitude(const double amplitude_um)
+void ResonantScanner::setOutput_um(const double amplitude_um)
 {
 	mAmplitude_volt = amplitude_um * mVoltPerUm;
 	mAmplitude_um = amplitude_um;
@@ -90,9 +94,16 @@ void ResonantScanner::setOutputAmplitude(const double amplitude_um)
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
-void ResonantScanner::turnOn(const double amplitude_um)
+void ResonantScanner::turnOn_um(const double amplitude_um)
 {
-	setOutputAmplitude(amplitude_um);
+	setOutput_um(amplitude_um);
+	Sleep(mDelayTime);
+	startStop(1);
+}
+
+void ResonantScanner::turnOn_volt(const double V_volt)
+{
+	setOutput_volt(V_volt);
 	Sleep(mDelayTime);
 	startStop(1);
 }
@@ -101,7 +112,7 @@ void ResonantScanner::turnOff()
 {
 	startStop(0);
 	Sleep(mDelayTime);
-	setOutputVoltage(0);
+	setOutput_volt(0);
 }
 
 
@@ -605,35 +616,35 @@ void PockelsCell::turnOff()
 
 double PockelsCell::convertPowertoVoltage_volt(double power_mW)
 {
-	//Calibration parameters
-	double a;
-	double b;
-	double c;
+	double a, b, c;		//Calibration parameters
 
 	if (mWavelength_nm == 800) {
 		a = 277.9;
-		b = 0.65;
+		b = 0.650;
 		c = 0.084;
 	}
 	else if (mWavelength_nm == 750) {
-		a = 277.9;
-		b = 0.65;
-		c = 0.084;
+		a = 218.1;
+		b = 0.646;
+		c = 0.041;
 	}
 	else if (mWavelength_nm == 940) {
-		a = 277.9;
-		b = 0.65;
-		c = 0.084;
+		a = 136.8;
+		b = 0.510;
+		c = -0.059;
 	}
 	else if (mWavelength_nm == 1040) {
-		a = 277.9;
-		b = 0.65;
-		c = 0.084;
+		a = 50.9;
+		b = 0.460;
+		c = 0.056;
 	}
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": laser wavelength " + std::to_string(mWavelength_nm) + " nm currently not calibrated");
 
-	return asin(sqrt(power_mW / a)) / b + c;
+	double arg = sqrt(power_mW / a);
+	if (arg > 1) throw std::invalid_argument((std::string)__FUNCTION__ + ": arg of asin is greater than 1");
+
+	return asin(arg)/b + c;
 }
 
 

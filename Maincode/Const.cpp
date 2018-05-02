@@ -56,7 +56,7 @@ namespace Parameters
 	extern const double RSpkpk_um = 250 * um;									//Peak-to-peak amplitude of the resonant scanner
 	//Determine the relative delay of the pixel clock wrt the line clock
 	extern const int calibCoarse_tick = 2043;									//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan
-	extern const int calibFine_tick = -8;
+	extern const int calibFine_tick = 0;
 	//extern const int calibCoarse_tick = 2043; //RS@200 um						//calibFine_tick: In practice, the resonant scanner is not perfectly centered around the objective's back aperture. Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
 	//extern const int calibFine_tick = 10;
 

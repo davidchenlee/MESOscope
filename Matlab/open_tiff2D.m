@@ -5,6 +5,7 @@ COUNT_FREQ = 1;
 
 scale = 25.5;
 tiffHandle = Tiff('..\Maincode\_photon-counts.tif');
+%tiffHandle = Tiff('D:\OwnCloud\Data\20180425\damaging test slide.tif');
 inputImage = read(tiffHandle);
 %image(inputImage)
 

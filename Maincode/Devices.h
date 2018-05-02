@@ -38,14 +38,15 @@ class ResonantScanner
 	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
 	double mAmplitude_um = 0;
 	double mAmplitude_volt = 0;
-	void setOutputVoltage(const double Vout);
-	void setOutputAmplitude(const double amplitude_um);
+	void setOutput_volt(const double Vout);
+	void setOutput_um(const double amplitude_um);
 	double convertUm2Volt(const double Amplitude);
 public:
 	ResonantScanner(const FPGAapi &fpga);
 	~ResonantScanner();
 	void startStop(const bool state);
-	void turnOn(const double amplitude_um);
+	void turnOn_um(const double amplitude_um);
+	void turnOn_volt(const double V_volt);
 	void turnOff();
 };
 

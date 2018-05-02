@@ -153,64 +153,30 @@ void FPGAapi::initialize() const
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	NiFpga_Status status = NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotonCounterInputSelector, photonCounterInput);			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-	checkFPGAstatus(__FUNCTION__, status);
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_LineClockInputSelector, lineClockInput));					//Select the Line clock: resonant scanner or function generator
-	checkFPGAstatus(__FUNCTION__, status);
-
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));									//control-sequence trigger
-	checkFPGAstatus(__FUNCTION__, status);
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));									//data-acquisition trigger
-	checkFPGAstatus(__FUNCTION__, status);
-
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout_tick));
-	checkFPGAstatus(__FUNCTION__, status);
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)Nchan));
-	checkFPGAstatus(__FUNCTION__, status);
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, (U16)syncDOtoAO_tick));
-	checkFPGAstatus(__FUNCTION__, status);
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, (U16)syncAODOtoLineGate_tick));
-	checkFPGAstatus(__FUNCTION__, status);
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(nLinesAllFrames + nFrames * nLinesSkip)));			//Total number of lines in all the frames, including the skipped lines
-	checkFPGAstatus(__FUNCTION__, status);
-
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)heightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
-	checkFPGAstatus(__FUNCTION__, status);
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(heightPerFrame_pix + nLinesSkip)));	//Number of lines in a frame including the skipped lines
-	checkFPGAstatus(__FUNCTION__, status);
 
 	//Shutters
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
-	checkFPGAstatus(__FUNCTION__, status);
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
-	checkFPGAstatus(__FUNCTION__, status);
 
 	//Vibratome control
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_start, 0));
-	checkFPGAstatus(__FUNCTION__, status); 
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_back, 0));
-	checkFPGAstatus(__FUNCTION__, status); 
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_forward, 0));
-	checkFPGAstatus(__FUNCTION__, status); 
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
-	checkFPGAstatus(__FUNCTION__, status);
 
 	//Resonant scanner
 	NiFpga_MergeStatus(&status, NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));		//Output voltage
-	checkFPGAstatus(__FUNCTION__, status); 
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
-	checkFPGAstatus(__FUNCTION__, status);
 
 	//PockelsID cells
 	//NiFpga_MergeStatus(&status, NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
@@ -218,9 +184,8 @@ void FPGAapi::initialize() const
 
 	//Debugger
 	NiFpga_MergeStatus(&status, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
-	checkFPGAstatus(__FUNCTION__, status); 
-	
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));	//FIFO OUT
+
 	checkFPGAstatus(__FUNCTION__, status);
 
 	//std::cout << "FPGA initialization status: " << mStatus << std::endl;

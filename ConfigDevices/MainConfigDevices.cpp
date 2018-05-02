@@ -9,7 +9,8 @@ int main(int argc, char* argv[])
 
 		ResonantScanner RS(fpga);
 		if (0)
-			RS.turnOn(200 * um);
+			RS.turnOn_volt(0.5 * V);
+
 		else
 			RS.turnOff();
 

@@ -291,6 +291,7 @@ void  RTsequence::loadRTsequenceonFPGA()
 }
 
 RTsequence::PixelClock::PixelClock() {}
+
 RTsequence::PixelClock::~PixelClock() {}
 
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]

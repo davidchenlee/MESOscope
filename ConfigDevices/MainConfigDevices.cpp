@@ -47,8 +47,8 @@ int main(int argc, char* argv[])
 		std::cout << "An error has occurred in " << e.what() << std::endl;
 		try
 		{
-			//Close and reset the FPGA connection. If not reset, residual data will remain in the FPGA and will probably make the next sequence crash the computer
-			const bool enforceReset = 1;
+			//Close and reset the FPGA connection. Otherwise, residual data will remain in the FPGA and will probably crash the next sequence and the entire computer as well
+			const bool enforceReset = 1;	//DO NOT comment this line out!!
 			fpga.close(enforceReset);
 		}
 		catch (const FPGAexception &e)

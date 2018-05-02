@@ -63,7 +63,6 @@ public:
 	void pulseHigh();
 };
 
-//WARNING: copy-constructor not implemented
 class RTsequence
 {
 	const FPGAapi &mFpga;
@@ -103,6 +102,8 @@ class RTsequence
 
 public:
 	RTsequence(const FPGAapi &fpga);
+	RTsequence(const RTsequence&) = delete;	//Disable copy-constructor
+	RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
 	~RTsequence();
 	void pushQueue(const RTchannel chan, QU32& queue);
 	void pushSingleValue(const RTchannel chan, const U32 input);

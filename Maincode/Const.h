@@ -24,12 +24,10 @@ enum ShutterID {Shutter1, Shutter2};							//Shutter unit
 enum FilterwheelID {FW1, FW2};									//Filterwheel
 enum FilterwheelPosition {P1, P2, P3};							//Filterwheel position
 
-extern const PhotonCounterInputSelector photonCounterInput;
-extern const LineClockInputSelector lineClockInput;
-
 namespace Const
 {
-
+	extern const PhotonCounterInputSelector photonCounterInput;		//ext or sim
+	extern const LineClockInputSelector lineClockInput;				//RS or FG
 
 	extern const int Nchan;
 	

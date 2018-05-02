@@ -160,6 +160,7 @@
     <ClCompile Include="Tiffscope.cpp" />
     <ClCompile Include="Sequences.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="UARTscope.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Const.h" />

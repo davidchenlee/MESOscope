@@ -2,6 +2,9 @@
 
 namespace Const
 {
+	extern const PhotonCounterInputSelector photonCounterInput = ext;		//ext or sim
+	extern const LineClockInputSelector lineClockInput = FG;				//RS or FG
+
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;								//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
 

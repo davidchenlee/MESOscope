@@ -3,7 +3,8 @@
 void Sequence1(const FPGAapi &fpga)
 {
 
-	int wavelength_nm = 1040;
+	const int wavelength_nm = 1040;
+	const double laserPower_mW = 60 * mW;
 
 	//REALTIME SEQUENCE
 	RTsequence sequence(fpga);
@@ -14,7 +15,7 @@ void Sequence1(const FPGAapi &fpga)
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
 	
 	//NON-REALTIME SEQUENCE
-	pockels.turnOn_mW(60 * mW);
+	pockels.turnOn_mW(laserPower_mW);
 	//pockels.turnOn_volt(2 * V);
 	sequence.runRTsequence();		//Execute the RT sequence and read the photon count
 	pockels.turnOff();
@@ -26,6 +27,7 @@ void Sequence1(const FPGAapi &fpga)
 	else
 		RS.turnOff();
 	*/
+	RTsequence sequence2(sequence);
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock

@@ -31,12 +31,7 @@ namespace GenericFPGAfunctions {
 			return (U16)t_tick;
 	}
 
-
-	/*converts voltage (range: -10V to 10V) to a signed int 16 (range: -32768 to 32767)
-	0x7FFFF = 0d32767
-	0xFFFF = -1
-	0x8000 = -32768
-	*/
+	//Convert voltage to I16 [1]
 	I16 convertVolt2I16(double x)
 	{
 		const int VMAX = 10 * V;
@@ -275,6 +270,22 @@ void checkFPGAstatus(char functionName[], NiFpga_Status status)
 	if (status > 0)
 		std::cerr << "A warning has ocurred in " << functionName << " with FPGA code " << status << std::endl;
 }
+
+
+
+
+
+/*COMMENTS
+
+[1]
+converts voltage (range: -10V to 10V) to a signed int 16 (range: -32768 to 32767)
+0x7FFFF = 0d32767
+0xFFFF = -1
+0x8000 = -32768
+
+
+
+*/
 
 /*
 int i;

@@ -59,6 +59,9 @@
     <ClInclude Include="FPGAapi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="UARTscope.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Maincode.rc">

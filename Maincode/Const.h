@@ -26,8 +26,8 @@ enum FilterwheelPosition {P1, P2, P3};							//Filterwheel position
 
 namespace Const
 {
-	extern const PhotonCounterInputSelector photonCounterInput;		//ext or sim
 	extern const LineClockInputSelector lineClockInput;				//RS or FG
+	extern const PhotonCounterInputSelector photonCounterInput;		//ext or sim
 
 	extern const int Nchan;
 	
@@ -57,9 +57,6 @@ namespace Parameters
 	using namespace Const;
 
 	extern const double galvo_voltPerUm;
-	extern const double fFOVslow_um;
-	extern const double galvo1Amp_volt;
-	extern const double galvoTimeStep_us;
 
 	extern const double halfPeriodLineClock_us;
 	extern const double RSpkpk_um;

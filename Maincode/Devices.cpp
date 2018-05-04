@@ -63,7 +63,7 @@ ResonantScanner::ResonantScanner(const FPGAapi &fpga): mFpga(fpga){};
 ResonantScanner::~ResonantScanner() {};
 
 //Start or stop the resonant scanner
-void ResonantScanner::startStop(const bool state){
+void ResonantScanner::run(const bool state){
 	
 	NiFpga_Status status =  NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)state);
 	checkFPGAstatus(__FUNCTION__, status);
@@ -71,48 +71,48 @@ void ResonantScanner::startStop(const bool state){
 
 
 //Set the output voltage of the resonant scanner
-void ResonantScanner::setOutput_volt(const double V_volt)
+void ResonantScanner::setVcontrol_volt(const double Vcontrol_volt)
 {
-	const int VMAX = 5 * V;
+	if (Vcontrol_volt > mVMAX_volt) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(mVMAX_volt) + " V" );
 
-	if (V_volt > VMAX) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(VMAX) + " V" );
+	mVcontrol_volt = Vcontrol_volt;
+	mFFOV_um = Vcontrol_volt / mVoltPerUm;
 
-	mAmplitude_volt = V_volt;
-	mAmplitude_um = V_volt / mVoltPerUm;
-
-	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(mAmplitude_volt));
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(mVcontrol_volt));
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
 //Set the output voltage of the resonant scanner
-void ResonantScanner::setOutput_um(const double amplitude_um)
+void ResonantScanner::setFFOV_um(const double FFOV_um)
 {
-	mAmplitude_volt = amplitude_um * mVoltPerUm;
-	mAmplitude_um = amplitude_um;
+	mVcontrol_volt = FFOV_um * mVoltPerUm;
+	mFFOV_um = FFOV_um;
 
-	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(mAmplitude_volt));
+	if (mVcontrol_volt > mVMAX_volt) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(mVMAX_volt) + " V");
+
+	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(mVcontrol_volt));
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
-void ResonantScanner::turnOn_um(const double amplitude_um)
+void ResonantScanner::turnOn_um(const double FFOV_um)
 {
-	setOutput_um(amplitude_um);
+	setFFOV_um(FFOV_um);
 	Sleep(mDelayTime);
-	startStop(1);
+	run(1);
 }
 
-void ResonantScanner::turnOn_volt(const double V_volt)
+void ResonantScanner::turnOn_volt(const double Vcontrol_volt)
 {
-	setOutput_volt(V_volt);
+	setVcontrol_volt(Vcontrol_volt);
 	Sleep(mDelayTime);
-	startStop(1);
+	run(1);
 }
 
 void ResonantScanner::turnOff()
 {
-	startStop(0);
+	run(0);
 	Sleep(mDelayTime);
-	setOutput_volt(0);
+	setVcontrol_volt(0);
 }
 
 

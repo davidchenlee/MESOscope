@@ -34,19 +34,20 @@ public:
 class ResonantScanner
 {
 	const FPGAapi &mFpga;
+	const int mVMAX_volt = 5 * V;			//Max control voltage mVcontrol_volt
 	const int mDelayTime = 10;
 	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
-	double mAmplitude_um = 0;
-	double mAmplitude_volt = 0;
-	void setOutput_volt(const double Vout);
-	void setOutput_um(const double amplitude_um);
+	double mFFOV_um = 0;					//Full field of view
+	double mVcontrol_volt = 0;				//Control voltage 0-5V (max amplitude)
+	void setVcontrol_volt(const double Vcontrol);
+	void setFFOV_um(const double FFOV_um);
 	double convertUm2Volt(const double Amplitude);
 public:
 	ResonantScanner(const FPGAapi &fpga);
 	~ResonantScanner();
-	void startStop(const bool state);
-	void turnOn_um(const double amplitude_um);
-	void turnOn_volt(const double V_volt);
+	void run(const bool state);
+	void turnOn_um(const double FFOV_um);
+	void turnOn_volt(const double Vcontrol_volt);
 	void turnOff();
 };
 
@@ -117,7 +118,7 @@ class PockelsCell
 	const FPGAapi &mFpga;
 	PockelsID mID;													//Device ID
 	NiFpga_FPGAvi_ControlI16 mFPGAid;								//Internal ID of the FPGA
-	int mWavelength_nm;											//Wavelength of the laser
+	int mWavelength_nm;												//Wavelength of the laser
 	double mVoltPermW = 1;											//Calibration factor
 	double mV_volt;													//Output voltage to the HV amplifier
 	double voltageforMinPower();									//The output laser power depend on the wavelength

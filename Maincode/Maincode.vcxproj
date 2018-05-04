@@ -169,6 +169,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="Tiffscope.h" />
     <ClInclude Include="Sequences.h" />
+    <ClInclude Include="UARTscope.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Maincode.rc" />

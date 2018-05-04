@@ -2,8 +2,8 @@
 
 namespace Const
 {
+	extern const LineClockInputSelector lineClockInput = RS;				//RS or FG
 	extern const PhotonCounterInputSelector photonCounterInput = ext;		//ext or sim
-	extern const LineClockInputSelector lineClockInput = FG;				//RS or FG
 
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;								//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
@@ -42,20 +42,18 @@ namespace Parameters
 {
 	//GALVO
 	extern const double galvo_voltPerUm = 2.5*V / (210 * um);					//volts per um. Calibration factor of the galvo. Last calib 11/April/2018
-	extern const double fFOVslow_um = 50 * um;									//Full FOV in the slow axis (galvo)
-	extern const double galvo1Amp_volt = fFOVslow_um * galvo_voltPerUm;
-	extern const double galvoTimeStep_us = 8 * us;
 
 	//RESONANT SCANNER
 	//extern const double RS_voltPerUm = 1.0*V/(157*um);						//volts per um. Calibration factor for the resonant scanner (equal duration pixels). 11/April/2018
-	extern const double RS_voltPerUm = 1.3*V / ((405 - 237) * um);				//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 19/April/2018
+	//extern const double RS_voltPerUm = 1.3*V / ((405 - 237) * um);				//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 19/April/2018
+	extern const double RS_voltPerUm = 0.143 / (21 * um);
 
 	//PIXEL CLOCK
 	extern const double halfPeriodLineClock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
 	extern const double RSpkpk_um = 250 * um;									//Peak-to-peak amplitude of the resonant scanner
 	//Determine the relative delay of the pixel clock wrt the line clock
 	extern const int calibCoarse_tick = 2043;									//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan
-	extern const int calibFine_tick = 0;
+	extern const int calibFine_tick = -5;
 	//extern const int calibCoarse_tick = 2043; //RS@200 um						//calibFine_tick: In practice, the resonant scanner is not perfectly centered around the objective's back aperture. Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
 	//extern const int calibFine_tick = 10;
 

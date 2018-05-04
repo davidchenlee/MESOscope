@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 
 		if (RUN)
 		{
-			RS.turnOn_volt(0.5 * V);
+			RS.turnOn_um(100 * um);
 			//shutter1.open();
 		}
 		else

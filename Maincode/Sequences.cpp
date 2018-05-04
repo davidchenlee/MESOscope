@@ -1,10 +1,16 @@
 #include "Sequences.h"
 
+//GALVO
+extern const double FFOVslow_um = 100 * um;									//Full FOV in the slow axis (galvo)
+extern const double galvo1Amp_volt = FFOVslow_um * galvo_voltPerUm;
+extern const double galvoTimeStep_us = 8 * us;
+
+
 void Sequence1(const FPGAapi &fpga)
 {
 
-	const int wavelength_nm = 1040;
-	const double laserPower_mW = 60 * mW;
+	const int wavelength_nm = 940;
+	const double laserPower_mW = 40 * mW;
 
 	//REALTIME SEQUENCE
 	RTsequence sequence(fpga);
@@ -27,7 +33,6 @@ void Sequence1(const FPGAapi &fpga)
 	else
 		RS.turnOff();
 	*/
-	RTsequence sequence2(sequence);
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock

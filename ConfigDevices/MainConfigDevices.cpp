@@ -1,10 +1,62 @@
 #include "Devices.h"
 
-#define RUN 0
+#include <string>
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include "include/serial/serial.h"
 
+using std::string;
+using std::exception;
+using std::cout;
+using std::cerr;
+using std::endl;
+using std::vector;
+
+
+int run()
+{
+
+	//serial port
+	string port("COM6");
+
+	//  baudrate
+	unsigned long baud = 115200;
+
+	// port, baudrate, timeout in milliseconds
+	serial::Serial my_serial(port, baud, serial::Timeout::simpleTimeout(1000));
+
+	cout << "Is the serial port open?";
+	if (my_serial.isOpen())
+		cout << " Yes." << endl;
+	else
+		cout << " No." << endl;
+
+
+	size_t bytes_wrote = my_serial.write("pos?\r");
+	cout << "Bytes written: " << bytes_wrote << endl;
+
+	string RxBuffer;
+	size_t numberBytesActuallyRead = my_serial.read(RxBuffer, 256);
+
+	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
+	//std::replace(RxBuffer.begin(), RxBuffer.end(), '\r', '\n');
+	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
+
+	cout << RxBuffer << endl;
+
+	getchar();
+
+	return 0;
+}
 
 int main(int argc, char* argv[])
 {
+	if (argc < 2) {
+		std::cout << "ERROR: not enough arguments" << std::endl;
+		return 0;
+	}
+
 	FPGAapi fpga;			//Open a FPGA connection
 	try
 	{
@@ -13,16 +65,18 @@ int main(int argc, char* argv[])
 		ResonantScanner RS(fpga);
 		Shutter shutter1(fpga, Shutter1);
 
-
-		if (RUN)
+		std::string input(argv[1]);
+		if (input == "1")
 		{
-			RS.turnOn_um(100 * um);
+			RS.turnOn_um(200 * um);
 			//shutter1.open();
 		}
 		else
 		{
 			RS.turnOff();
 			//shutter1.close();
+			run();
+
 		}
 			
 
@@ -62,7 +116,7 @@ int main(int argc, char* argv[])
 		std::cout << "An unknown error has occurred" << std::endl;
 	}
 
-	std::cout << "\nPress any key to continue..." << std::endl;
+	//std::cout << "\nPress any key to continue..." << std::endl;
 	//getchar();
 
 	return 0;

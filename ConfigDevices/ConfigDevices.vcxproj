@@ -80,6 +80,8 @@
     <Link>
       <AdditionalDependencies>libtiff.lib;PI_GCS2_DLL.lib;PI_GCS2_DLL_x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;C:\Program Files %28x86%29\GnuWin32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkTimeCodeGeneration>
+      </LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -92,6 +94,8 @@
     <Link>
       <AdditionalDependencies>libtiff.lib;PI_GCS2_DLL.lib;PI_GCS2_DLL_x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;C:\Program Files %28x86%29\GnuWin32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkTimeCodeGeneration>
+      </LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -108,6 +112,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>libtiff.lib;PI_GCS2_DLL.lib;PI_GCS2_DLL_x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;C:\Program Files %28x86%29\GnuWin32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -124,22 +129,27 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>libtiff.lib;PI_GCS2_DLL.lib;PI_GCS2_DLL_x64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;C:\Program Files %28x86%29\GnuWin32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\Maincode\Const.h" />
     <ClInclude Include="..\Maincode\Devices.h" />
     <ClInclude Include="..\Maincode\FPGAapi.h" />
+    <ClInclude Include="..\Maincode\serial.h" />
     <ClInclude Include="..\Maincode\Tiffscope.h" />
     <ClInclude Include="..\Maincode\UARTscope.h" />
+    <ClInclude Include="..\Maincode\win.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c" />
     <ClCompile Include="..\Maincode\Const.cpp" />
     <ClCompile Include="..\Maincode\Devices.cpp" />
     <ClCompile Include="..\Maincode\FPGAapi.cpp" />
+    <ClCompile Include="..\Maincode\serial.cc" />
     <ClCompile Include="..\Maincode\Tiffscope.cpp" />
     <ClCompile Include="..\Maincode\UARTscope.cpp" />
+    <ClCompile Include="..\Maincode\win.cc" />
     <ClCompile Include="MainConfigDevices.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

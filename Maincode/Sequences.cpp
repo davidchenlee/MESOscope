@@ -1,21 +1,22 @@
 #include "Sequences.h"
 
 //GALVO
-extern const double FFOVslow_um = 100 * um;									//Full FOV in the slow axis (galvo)
-extern const double galvo1Amp_volt = FFOVslow_um * galvo_voltPerUm;
-extern const double galvoTimeStep_us = 8 * us;
+
 
 
 void Sequence1(const FPGAapi &fpga)
 {
-
 	const int wavelength_nm = 940;
 	const double laserPower_mW = 40 * mW;
+	const double FFOVslow_um = 200 * um;									//Full FOV in the slow axis (galvo)
+
 
 	//REALTIME SEQUENCE
 	RTsequence sequence(fpga);
-	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Amp_volt, -galvo1Amp_volt);		//Linear ramp for the galvo
-	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Amp_volt, galvo1Amp_volt);			//set the output back to the initial value
+	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
+	const double galvoTimeStep_us = 8 * us;
+	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
+	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 	sequence.loadRTsequenceonFPGA();
 
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
@@ -25,14 +26,6 @@ void Sequence1(const FPGAapi &fpga)
 	//pockels.turnOn_volt(2 * V);
 	sequence.runRTsequence();		//Execute the RT sequence and read the photon count
 	pockels.turnOff();
-
-	/*
-	ResonantScanner RS(fpga);		//Create a resonant scanner
-	if (0)
-		RS.turnOn_mW(200 * um);
-	else
-		RS.turnOff();
-	*/
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock

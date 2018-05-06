@@ -30,6 +30,12 @@
     <ClInclude Include="..\Maincode\UARTscope.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\Maincode\serial.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Maincode\win.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Maincode\Const.cpp">
@@ -51,6 +57,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MainConfigDevices.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Maincode\serial.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Maincode\win.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -119,7 +119,7 @@ int FilterWheel()
 		//(Handle of the Serial port, Temporary variable used to store the byte read from serial port buffer, used to calculate the number of bytes to read, Bytes successfully read by the ReadFile() )
 		ReadFile(hCom, &TempChar, sizeof(TempChar), &numberBytesToRead, NULL);
 
-		if (numberBytesToRead > 0 && TempChar != 0x0D && TempChar != 0x3E)	//Ignore 0x0D (ASCII CR) and 0x0D (ASCII >)
+		if (numberBytesToRead > 0 && TempChar != 0x0D && TempChar != 0x3E)	//Ignore 0x0D (ASCII CR) and 0x3E (ASCII >)
 		{
 			RxBuffer[numberBytesActuallyRead] = TempChar;// Store Tempchar into buffer
 			numberBytesActuallyRead++;

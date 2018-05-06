@@ -16,13 +16,13 @@ typedef std::queue<U32> QU32;				//Queue of unsigned integers
 typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
 
 
-enum PhotonCounterInputSelector {ext, sim};						//real PMT, simulated PMT, internal clock
-enum LineClockInputSelector {RS, FG};							//Resonant scanner, function generator, 
-enum RTchannel {PCLOCK, GALVO1, GALVO2, DOdebug};				//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
-enum PockelsID {Pockels1, Pockels2};							//Pockels cell
-enum ShutterID {Shutter1, Shutter2};							//Shutter unit
-enum FilterwheelID {FW1, FW2};									//Filterwheel
-enum FilterColor { BlueFilter = 1, GreenFilter = 2, RedFilter = 3 };			//Filter color
+enum PhotonCounterInputSelector {ext, sim};							//real PMT, simulated PMT, internal clock
+enum LineClockInputSelector {RS, FG};								//Resonant scanner, function generator, 
+enum RTchannel {PCLOCK, GALVO1, GALVO2, DOdebug};					//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
+enum PockelsID {Pockels1, Pockels2};								//Pockels cell
+enum ShutterID {Shutter1, Shutter2};								//Shutter unit
+enum FilterwheelID {FW1, FW2};										//Filterwheel
+enum FilterColor { BlueLight = 1, GreenLight = 2, RedLight = 3 };	//Filter color
 
 namespace Const
 {

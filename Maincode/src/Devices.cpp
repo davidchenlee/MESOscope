@@ -686,24 +686,25 @@ Filterwheel::~Filterwheel()
 
 void Filterwheel::readFilterPosition_()
 {
-	std::string TxBuffer = "pos?\r";	//Command to the filterwheel
+	const std::string TxBuffer = "pos?\r";	//Command to the filterwheel
 	std::string RxBuffer;				//Reply from the filterwheel
-	int RxBufSize = 10;
+	const int RxBufSize = 10;
 
 	size_t bytesWrote = mSerial->write(TxBuffer);
 	size_t bytesRead = mSerial->read(RxBuffer, RxBufSize);
 
-	//Delete echoed command
+	//Delete echoed command. Echoing could be disabled on the laser but deleting it is more general and safer
 	std::string::size_type i = RxBuffer.find(TxBuffer);
 	if (i != std::string::npos)
 		RxBuffer.erase(i, TxBuffer.length());
 
-	//Delete CR, LF, and >
+	//Delete CR and >
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
-	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
+	//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
 	mPosition = static_cast<FilterColor>(std::atoi(RxBuffer.c_str()));	//convert string to int, then to FilterColor
+	//std::cout << RxBuffer << std::endl;
 }
 
 FilterColor Filterwheel::readFilterPosition()
@@ -720,6 +721,60 @@ void Filterwheel::setFilterPosition(const FilterColor color)
 		mPosition = color;
 	}
 }
+
+Laser::Laser()
+{
+	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+	this->readWavelength_();
+};
+
+Laser::~Laser() {};
+
+void Laser::readWavelength_()
+{
+	const std::string TxBuffer = "?VW";		//Command to the filterwheel
+	std::string RxBuffer;						//Reply from the filterwheel
+	const int RxBufSize = 20;
+
+	size_t bytesWrote = mSerial->write(TxBuffer + "\r");
+	size_t bytesRead = mSerial->read(RxBuffer, RxBufSize);
+
+	//Delete echoed command. Echoing could be disabled on the laser but deleting it is more general and safer
+	std::string keyword = "?VW ";
+	std::string::size_type i = RxBuffer.find(keyword);
+	if (i != std::string::npos)
+		RxBuffer.erase(i, keyword.length());
+
+	//Delete "CHAMELEON>". This frase could be disabled on the laser but deleting it is more general and safer
+	keyword = "CHAMELEON>";
+	i = RxBuffer.find(keyword);
+	if (i != std::string::npos)
+		RxBuffer.erase(i, keyword.length());
+
+	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
+	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
+
+	mWavelength = static_cast<FilterColor>(std::atoi(RxBuffer.c_str()));	//convert string to int
+	std::cout << RxBuffer << std::endl;
+}
+
+int Laser::readWavelength()
+{
+	return mWavelength;
+}
+
+void Laser::setWavelength()
+{
+	const std::string TxBuffer = "VW=800";		//Command to the filterwheel
+	std::string RxBuffer;						//Reply from the filterwheel
+	const int RxBufSize = 256;
+
+	size_t bytesWrote = mSerial->write(TxBuffer + "\r");
+	size_t bytesRead = mSerial->read(RxBuffer, RxBufSize);
+
+	this->readWavelength_();
+}
+
 
 #pragma region "Stages"
 Stage::Stage() {}

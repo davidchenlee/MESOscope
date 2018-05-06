@@ -26,7 +26,10 @@ void Sequence1(const FPGAapi &fpga)
 
 
 	Filterwheel FW(FW1);
-	FW.setFilterPosition(RedFilter);
+	FW.setFilterPosition(BlueLight);
+	//Laser laser;
+	//laser.setWavelength();
+	//std::cout << laser.readWavelength();
 
 }
 

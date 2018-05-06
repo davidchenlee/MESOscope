@@ -148,6 +148,23 @@ public:
 	FilterColor readFilterPosition();
 };
 
+
+class Laser
+{
+	int mWavelength;
+	std::string port = "COM1";											//internal ID assigned by the OS
+	const int mBaud = 19200;
+	const int mTimeout_ms = 100;
+	serial::Serial *mSerial;
+	void Laser::readWavelength_();
+public:
+	Laser();
+	~Laser();
+	int readWavelength();
+	void setWavelength();
+};
+
+
 class Stage
 {
 	std::vector<double> absPosition_mm;			//Absolute position of the stages (x, y, z)

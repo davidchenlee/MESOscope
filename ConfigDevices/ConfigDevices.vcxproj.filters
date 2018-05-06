@@ -15,54 +15,54 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Maincode\Const.h">
+    <ClInclude Include="..\Maincode\include\Const.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Maincode\FPGAapi.h">
+    <ClInclude Include="..\Maincode\include\Devices.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Maincode\Devices.h">
+    <ClInclude Include="..\Maincode\include\FPGAapi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Maincode\Tiffscope.h">
+    <ClInclude Include="..\Maincode\include\Sequences.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Maincode\UARTscope.h">
+    <ClInclude Include="..\Maincode\include\Tiffscope.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Maincode\serial.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Maincode\win.h">
+    <ClInclude Include="..\Maincode\include\UARTscope.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Maincode\Const.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Maincode\FPGAapi.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Maincode\Devices.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Maincode\Tiffscope.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Maincode\UARTscope.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MainConfigDevices.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Maincode\serial.cc">
+    <ClCompile Include="..\Maincode\src\Const.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Maincode\win.cc">
+    <ClCompile Include="..\Maincode\src\Devices.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Maincode\src\FPGAapi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Maincode\src\Sequences.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Maincode\src\serial.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Maincode\src\Tiffscope.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Maincode\src\UARTscope.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Maincode\src\win.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

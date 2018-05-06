@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by DscopeVS.rc
+// Used by Maincode.rc
 
 // Next default values for new objects
 // 

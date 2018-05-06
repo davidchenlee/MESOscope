@@ -4,7 +4,7 @@
 #include <iostream>
 #include <cstdio>
 #include <algorithm>
-#include "include/serial/serial.h"
+#include "serial/serial.h"
 
 using std::string;
 using std::exception;

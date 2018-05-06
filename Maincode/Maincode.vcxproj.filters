@@ -15,57 +15,52 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Tiffscope.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Const.cpp">
+    <ClCompile Include="src\Const.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Sequences.cpp">
+    <ClCompile Include="src\Devices.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Devices.cpp">
+    <ClCompile Include="src\FPGAapi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FPGAapi.cpp">
+    <ClCompile Include="src\Sequences.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Tiffscope.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\UARTscope.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="UARTscope.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Const.h">
+    <ClInclude Include="include\Const.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Tiffscope.h">
+    <ClInclude Include="include\Devices.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
+    <ClInclude Include="include\FPGAapi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Sequences.h">
+    <ClInclude Include="include\PIstages.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Devices.h">
+    <ClInclude Include="include\Sequences.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FPGAapi.h">
+    <ClInclude Include="include\Tiffscope.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="UARTscope.h">
+    <ClInclude Include="include\UARTscope.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="Maincode.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
   </ItemGroup>
 </Project>

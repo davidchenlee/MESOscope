@@ -90,7 +90,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Program Files %28x86%29\GnuWin32\include;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\OwnCloud\Codes\MESOscope\Maincode\include;C:\Program Files %28x86%29\GnuWin32\include;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
     </ClCompile>
     <Link>
@@ -106,7 +106,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Program Files %28x86%29\GnuWin32\include;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\OwnCloud\Codes\MESOscope\Maincode\include;C:\Program Files %28x86%29\GnuWin32\include;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -123,7 +123,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Program Files %28x86%29\GnuWin32\include;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\OwnCloud\Codes\MESOscope\Maincode\include;C:\Program Files %28x86%29\GnuWin32\include;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -142,7 +142,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Program Files %28x86%29\GnuWin32\include;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\OwnCloud\Codes\MESOscope\Maincode\include;C:\Program Files %28x86%29\GnuWin32\include;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -154,25 +154,22 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c" />
-    <ClCompile Include="Const.cpp" />
-    <ClCompile Include="Devices.cpp" />
-    <ClCompile Include="FPGAapi.cpp" />
-    <ClCompile Include="Tiffscope.cpp" />
-    <ClCompile Include="Sequences.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="UARTscope.cpp" />
+    <ClCompile Include="src\Const.cpp" />
+    <ClCompile Include="src\Devices.cpp" />
+    <ClCompile Include="src\FPGAapi.cpp" />
+    <ClCompile Include="src\Sequences.cpp" />
+    <ClCompile Include="src\Tiffscope.cpp" />
+    <ClCompile Include="src\UARTscope.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Const.h" />
-    <ClInclude Include="Devices.h" />
-    <ClInclude Include="FPGAapi.h" />
-    <ClInclude Include="resource.h" />
-    <ClInclude Include="Tiffscope.h" />
-    <ClInclude Include="Sequences.h" />
-    <ClInclude Include="UARTscope.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="Maincode.rc" />
+    <ClInclude Include="include\Const.h" />
+    <ClInclude Include="include\Devices.h" />
+    <ClInclude Include="include\FPGAapi.h" />
+    <ClInclude Include="include\PIstages.h" />
+    <ClInclude Include="include\Sequences.h" />
+    <ClInclude Include="include\Tiffscope.h" />
+    <ClInclude Include="include\UARTscope.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

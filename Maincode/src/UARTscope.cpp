@@ -13,12 +13,12 @@ void PrintCommState(DCB dcb)
 		dcb.StopBits);
 }
 
-int FilterWheel()
+int testFilterWheel()
 {
 
 	DCB dcb = { 0 };
 	HANDLE hCom;
-	TCHAR *pcCommPort = TEXT("COM6");	//filterwheel 1
+	TCHAR *pcCommPort = TEXT("COM1");	//filterwheel 1
 
 	//Open a handle to the specified com port
 	hCom = CreateFile(pcCommPort,
@@ -50,7 +50,7 @@ int FilterWheel()
 	}
 
 	//  Fill in some DCB values and set the com state
-	dcb.BaudRate = CBR_115200;
+	dcb.BaudRate = CBR_19200;
 	dcb.ByteSize = DATABITS_8;
 	dcb.StopBits = ONESTOPBIT;
 	dcb.Parity = NOPARITY;
@@ -86,7 +86,7 @@ int FilterWheel()
 
 
 	//WRITE DATA
-	string TxCommand = "pos=2";
+	string TxCommand = "?VW";
 	DWORD dwBytesWritten;
 	int totalBytesWritten = 0;
 	for (int ii = 0; ii < TxCommand.length(); ii++)
@@ -103,40 +103,27 @@ int FilterWheel()
 	WriteFile(hCom, &CRchar, (DWORD) sizeof(CRchar), &dwBytesWritten, NULL);
 
 	//send LF
-	//char LFchar = 0x0A;
-	//WriteFile(hCom, &LFchar, (DWORD) sizeof(LFchar), &dwBytesWritten, NULL);
+	char LFchar = 0x0A;
+	WriteFile(hCom, &LFchar, (DWORD) sizeof(LFchar), &dwBytesWritten, NULL);
 
 
 
 	//READ DATA
-	char TempChar; //Temporary character used for reading
-	char RxBuffer[256];//Buffer for storing Rxed Data
-	DWORD numberBytesToRead; //Bytes successfully read by the ReadFile()
-	int numberBytesActuallyRead = 0;
+	string readMessage;
+	
+	int size = 20;
+	char *buffer = new char[size];
+	DWORD bytesRead;	//Bytes successfully read by the ReadFile()
+	ReadFile(hCom, buffer, static_cast<DWORD>(size), &bytesRead, NULL);
 
-	do
-	{
-		//(Handle of the Serial port, Temporary variable used to store the byte read from serial port buffer, used to calculate the number of bytes to read, Bytes successfully read by the ReadFile() )
-		ReadFile(hCom, &TempChar, sizeof(TempChar), &numberBytesToRead, NULL);
-
-		if (numberBytesToRead > 0 && TempChar != 0x0D && TempChar != 0x3E)	//Ignore 0x0D (ASCII CR) and 0x3E (ASCII >)
-		{
-			RxBuffer[numberBytesActuallyRead] = TempChar;// Store Tempchar into buffer
-			numberBytesActuallyRead++;
-		}
-	} while (numberBytesToRead > 0);
 
 	//PRINT OUT THE RECEIVED MESSAGE
-	cout << "Command outcome: ";
-	if (numberBytesActuallyRead > 0)
-	{
-		for (int ii = 0; ii < numberBytesActuallyRead; ii++)
-		{
-			std::cout << RxBuffer[ii] ;
-		}
-		cout << "\n";
-	}
+	readMessage.append(buffer, bytesRead);
+	cout << "Reply received: " << readMessage;
 
 	CloseHandle(hCom);
 	return 0;
 }
+
+//&& TempChar != 0x0D && TempChar != 0x3E
+

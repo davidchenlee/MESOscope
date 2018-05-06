@@ -1,30 +1,35 @@
 #include "Devices.h"
 
-#include <string>
-#include <iostream>
-#include <cstdio>
-#include <algorithm>
-#include "serial/serial.h"
-
-using std::string;
-using std::exception;
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::vector;
-
-
 int run()
 {
-
 	//serial port
-	string port("COM6");
+	string port;
+	unsigned long baud;
+	size_t bytesWrote;
+	int timeout;
 
-	//  baudrate
-	unsigned long baud = 115200;
+	if (0)
+	{
+		port = "COM6";
+		baud = 115200;
+		timeout = 150;
+	}
+	else
+	{
+		port = "COM1";
+		baud = 19200;
+		timeout = 100;
 
+	}
+	
 	// port, baudrate, timeout in milliseconds
-	serial::Serial my_serial(port, baud, serial::Timeout::simpleTimeout(1000));
+	serial::Serial my_serial(port, baud, serial::Timeout::simpleTimeout(timeout));
+
+	string TxBuffer = "pos?\r";
+	//bytesWrote = my_serial.write(TxBuffer);
+	bytesWrote = my_serial.write("?VW\r");
+
+	cout << "Bytes written: " << bytesWrote << endl;
 
 	cout << "Is the serial port open?";
 	if (my_serial.isOpen())
@@ -32,20 +37,24 @@ int run()
 	else
 		cout << " No." << endl;
 
-
-	size_t bytes_wrote = my_serial.write("pos?\r");
-	cout << "Bytes written: " << bytes_wrote << endl;
-
 	string RxBuffer;
-	size_t numberBytesActuallyRead = my_serial.read(RxBuffer, 256);
+	size_t bytesRead = my_serial.read(RxBuffer, 256);
+
+
+	//Delete echoed message
+	std::string::size_type i = RxBuffer.find(TxBuffer);
+	if (i != std::string::npos)
+		RxBuffer.erase(i, TxBuffer.length());
+
 
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
-	//std::replace(RxBuffer.begin(), RxBuffer.end(), '\r', '\n');
+	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
+	//std::replace(RxBuffer.begin(), RxBuffer.end(), '\r', '\n');
 
-	cout << RxBuffer << endl;
+	cout << RxBuffer;
 
-	getchar();
+	//getchar();
 
 	return 0;
 }
@@ -76,7 +85,7 @@ int main(int argc, char* argv[])
 			RS.turnOff();
 			//shutter1.close();
 			run();
-
+			//testFilterWheel();
 		}
 			
 

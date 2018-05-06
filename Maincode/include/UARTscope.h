@@ -6,4 +6,4 @@
 using namespace std;
 
 void PrintCommState(DCB dcb);
-int FilterWheel();
+int testFilterWheel();

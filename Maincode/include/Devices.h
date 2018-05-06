@@ -1,12 +1,13 @@
 #pragma once
 #include "FPGAapi.h"
 //#include "PIstages.h"
-//#include "UARTscope.h"
+#include "UARTscope.h"
 #include "Tiffscope.h"
 #include <windows.h>	//the stages use this lib. also Sleep
 #include <fstream>      //file management
 #include <ctime>		//Clock()
 #include "PI_GCS2_DLL.h"
+#include "serial/serial.h"
 using namespace GenericFPGAfunctions;
 
 

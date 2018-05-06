@@ -26,9 +26,8 @@ void Sequence1(const FPGAapi &fpga)
 
 
 	Filterwheel FW(FW1);
-	std::cout << FW.readFilterPosition() << std::endl;
-	FW.setFilterPosition(2);
-	std::cout << FW.readFilterPosition() << std::endl;
+	FW.setFilterPosition(RedFilter);
+
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock

@@ -675,11 +675,9 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected filterwheel unavailable");
 	}
 
-	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));		//Port, baudrate, timeout in milliseconds
+	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
 	this->readFilterPosition_();	//Read the current filter position
 }
-
-
 
 Filterwheel::~Filterwheel()
 {
@@ -688,8 +686,8 @@ Filterwheel::~Filterwheel()
 
 void Filterwheel::readFilterPosition_()
 {
-	std::string TxBuffer = "pos?\r";
-	std::string RxBuffer;
+	std::string TxBuffer = "pos?\r";	//Command to the filterwheel
+	std::string RxBuffer;				//Reply from the filterwheel
 	int RxBufSize = 10;
 
 	size_t bytesWrote = mSerial->write(TxBuffer);
@@ -705,21 +703,21 @@ void Filterwheel::readFilterPosition_()
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
 
-	mPosition =  std::atoi(RxBuffer.c_str());	//convert the string to int
+	mPosition = static_cast<FilterColor>(std::atoi(RxBuffer.c_str()));	//convert string to int, then to FilterColor
 }
 
-int Filterwheel::readFilterPosition()
+FilterColor Filterwheel::readFilterPosition()
 {
 	return mPosition;
 }
 
-void Filterwheel::setFilterPosition(const int position)
+void Filterwheel::setFilterPosition(const FilterColor color)
 {
-	if (position != mPosition)
+	if (color != mPosition)
 	{
-		std::string TxBuffer = "pos=" + std::to_string(position) + "\r";
+		std::string TxBuffer = "pos=" + std::to_string(color) + "\r";
 		size_t bytesWrote = mSerial->write(TxBuffer);
-		mPosition = position;
+		mPosition = color;
 	}
 }
 

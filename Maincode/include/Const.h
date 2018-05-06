@@ -22,7 +22,7 @@ enum RTchannel {PCLOCK, GALVO1, GALVO2, DOdebug};				//Pixel clock, analog chann
 enum PockelsID {Pockels1, Pockels2};							//Pockels cell
 enum ShutterID {Shutter1, Shutter2};							//Shutter unit
 enum FilterwheelID {FW1, FW2};									//Filterwheel
-enum FilterwheelPosition {P1, P2, P3};							//Filterwheel position
+enum FilterColor { BlueFilter = 1, GreenFilter = 2, RedFilter = 3 };			//Filter color
 
 namespace Const
 {

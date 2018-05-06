@@ -123,7 +123,6 @@ class PockelsCell
 	double mVoltPermW = 1;											//Calibration factor
 	double mV_volt;													//Output voltage to the HV amplifier
 	double voltageforMinPower();									//The output laser power depend on the wavelength
-	
 	double convertPowertoVoltage_volt(double power_mW);
 public:
 	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm);
@@ -135,19 +134,18 @@ public:
 
 class Filterwheel
 {
-	FilterwheelID mID;					//Device ID
-	std::string port;					//internal ID assigned by the OS
+	FilterwheelID mID;											//Device ID
+	std::string port;											//internal ID assigned by the OS
 	const int mBaud = 115200;
 	const int mTimeout_ms = 150;
 	serial::Serial *mSerial;
-	int mPosition;
+	FilterColor mPosition;
 	void readFilterPosition_();
 public:
 	Filterwheel(const FilterwheelID ID);
 	~Filterwheel();
-	void test();
-	void setFilterPosition(const int position);
-	int Filterwheel::readFilterPosition();
+	void setFilterPosition(const FilterColor color);
+	FilterColor readFilterPosition();
 };
 
 class Stage

@@ -1,7 +1,7 @@
 #pragma once
 #include "FPGAapi.h"
 //#include "PIstages.h"
-#include "UARTscope.h"
+//#include "UARTscope.h"
 #include "Tiffscope.h"
 #include <windows.h>	//the stages use this lib. also Sleep
 #include <fstream>      //file management
@@ -135,12 +135,19 @@ public:
 
 class Filterwheel
 {
-	FilterwheelID mID;						//Device ID
-	std::string COM = "";					//internal ID assigned by the OS
+	FilterwheelID mID;					//Device ID
+	std::string port;					//internal ID assigned by the OS
+	const int mBaud = 115200;
+	const int mTimeout_ms = 150;
+	serial::Serial *mSerial;
 	int mPosition;
+	void readFilterPosition_();
 public:
 	Filterwheel(const FilterwheelID ID);
 	~Filterwheel();
+	void test();
+	void setFilterPosition(const int position);
+	int Filterwheel::readFilterPosition();
 };
 
 class Stage
@@ -155,7 +162,6 @@ public:
 	void Stage::scanningStrategy(int nTileAbsolute);
 	std::vector<double> getAbsolutePosition_mm(int nSection, int nPlane, std::vector<int> nTileXY);
 };
-
 
 bool runPIstage();
 bool GetStageBondaries(int stageID);

@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
 		{
 			RS.turnOff();
 			//shutter1.close();
-			run();
+			//run();
 			//testFilterWheel();
 		}
 			

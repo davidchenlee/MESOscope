@@ -661,20 +661,67 @@ double PockelsCell::convertPowertoVoltage_volt(double power_mW)
 }
 
 
-Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID) {
+Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)
+{
 	switch (ID)
 	{
 	case FW1:
-		COM = "aaa";
+		port = "COM6";
 		break;
 	case FW2:
-		COM = "bbb";
+		port = "bbb";
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected filterwheel unavailable");
 	}
+
+	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));		//Port, baudrate, timeout in milliseconds
+	this->readFilterPosition_();	//Read the current filter position
 }
-Filterwheel::~Filterwheel() {}
+
+
+
+Filterwheel::~Filterwheel()
+{
+	mSerial->close();
+}
+
+void Filterwheel::readFilterPosition_()
+{
+	std::string TxBuffer = "pos?\r";
+	std::string RxBuffer;
+	int RxBufSize = 10;
+
+	size_t bytesWrote = mSerial->write(TxBuffer);
+	size_t bytesRead = mSerial->read(RxBuffer, RxBufSize);
+
+	//Delete echoed command
+	std::string::size_type i = RxBuffer.find(TxBuffer);
+	if (i != std::string::npos)
+		RxBuffer.erase(i, TxBuffer.length());
+
+	//Delete CR, LF, and >
+	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
+	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
+	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
+
+	mPosition =  std::atoi(RxBuffer.c_str());	//convert the string to int
+}
+
+int Filterwheel::readFilterPosition()
+{
+	return mPosition;
+}
+
+void Filterwheel::setFilterPosition(const int position)
+{
+	if (position != mPosition)
+	{
+		std::string TxBuffer = "pos=" + std::to_string(position) + "\r";
+		size_t bytesWrote = mSerial->write(TxBuffer);
+		mPosition = position;
+	}
+}
 
 #pragma region "Stages"
 Stage::Stage() {}
@@ -771,7 +818,7 @@ std::vector<double> Stage::getAbsolutePosition_mm(int nSlice, int nPlane, std::v
 
 	return absPosition_mm;
 }
-#pragma endregion "Stages"
+
 
 // Additional Sample Functions
 int XstageID, YstageID, ZstageID;
@@ -930,3 +977,4 @@ bool referenceStageZ()
 	std::cout << "Stage Z is referenced.\n";
 	return true;
 }
+#pragma endregion "Stages"

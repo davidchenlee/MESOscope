@@ -30,9 +30,6 @@
     <ClInclude Include="..\Maincode\include\Tiffscope.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Maincode\include\UARTscope.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c">
@@ -57,9 +54,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Maincode\src\Tiffscope.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Maincode\src\UARTscope.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Maincode\src\win.cc">

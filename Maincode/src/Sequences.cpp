@@ -1,14 +1,11 @@
 #include "Sequences.h"
 
-//GALVO
-
-
 
 void Sequence1(const FPGAapi &fpga)
 {
 	const int wavelength_nm = 940;
 	const double laserPower_mW = 40 * mW;
-	const double FFOVslow_um = 200 * um;									//Full FOV in the slow axis (galvo)
+	const double FFOVslow_um = 200 * um;	//Full FOV in the slow axis (galvo)
 
 
 	//REALTIME SEQUENCE
@@ -20,12 +17,18 @@ void Sequence1(const FPGAapi &fpga)
 	sequence.loadRTsequenceonFPGA();
 
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
-	
+		
 	//NON-REALTIME SEQUENCE
 	pockels.turnOn_mW(laserPower_mW);
 	//pockels.turnOn_volt(2 * V);
 	sequence.runRTsequence();		//Execute the RT sequence and read the photon count
 	pockels.turnOff();
+
+
+	Filterwheel FW(FW1);
+	std::cout << FW.readFilterPosition() << std::endl;
+	FW.setFilterPosition(2);
+	std::cout << FW.readFilterPosition() << std::endl;
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock

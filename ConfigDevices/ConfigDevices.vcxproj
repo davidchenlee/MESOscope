@@ -138,7 +138,6 @@
     <ClInclude Include="..\Maincode\include\FPGAapi.h" />
     <ClInclude Include="..\Maincode\include\Sequences.h" />
     <ClInclude Include="..\Maincode\include\Tiffscope.h" />
-    <ClInclude Include="..\Maincode\include\UARTscope.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\LabView\FPGA Bitfiles\NiFpga.c" />
@@ -148,7 +147,6 @@
     <ClCompile Include="..\Maincode\src\Sequences.cpp" />
     <ClCompile Include="..\Maincode\src\serial.cc" />
     <ClCompile Include="..\Maincode\src\Tiffscope.cpp" />
-    <ClCompile Include="..\Maincode\src\UARTscope.cpp" />
     <ClCompile Include="..\Maincode\src\win.cc" />
     <ClCompile Include="MainConfigDevices.cpp" />
   </ItemGroup>

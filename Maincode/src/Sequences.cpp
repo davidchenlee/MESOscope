@@ -113,3 +113,8 @@ void seq_testFilterwheel(const FPGAapi &fpga)
 	//laser.setWavelength();
 	//std::cout << laser.readWavelength();
 }
+
+void seq_testStages(const FPGAapi &fpga)
+{
+	runPIstage();
+}

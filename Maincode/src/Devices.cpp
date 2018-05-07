@@ -882,8 +882,14 @@ bool runPIstage()
 	//TODO: open the stages concurrently
 	//Start USB connection. Make sure that the stages and servo are enabled on supplied software PIMikroMove
 	XstageID = PI_ConnectUSB("116049107"); //	X-stage (V-551.4B)
+	std::cout << "X: " << XstageID << std::endl;
+
 	YstageID = PI_ConnectUSB("116049105"); //	Y-stage (V-551.2B)
-	ZstageID = PI_ConnectUSB("0165500631");	//  Z-stage (ES-100)
+	std::cout << "Y: " << YstageID << std::endl;
+
+	//ZstageID = PI_ConnectUSB("0165500631");	//  Z-stage (ES-100)
+	ZstageID = PI_ConnectRS232(3, 38400); // nPortNr = 3 for "COM3" (manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	std::cout << "Z: " << ZstageID << std::endl;
 
 
 	if (XstageID < 0)
@@ -906,7 +912,16 @@ bool runPIstage()
 		//return false;
 
 	// Query stage position
-	if (!GetStagePosition(XstageID) | !GetStagePosition(YstageID) | !GetStagePosition(ZstageID))
+	//if (!GetStagePosition(XstageID) | !GetStagePosition(YstageID) | !GetStagePosition(ZstageID))
+		//return false;
+
+	if (!GetStagePosition(XstageID))
+		return false;
+
+	if (!GetStagePosition(YstageID))
+		return false;
+
+	if (!GetStagePosition(ZstageID))
 		return false;
 
 	// Close Connection		
@@ -1031,3 +1046,10 @@ bool referenceStageZ()
 	return true;
 }
 #pragma endregion "Stages"
+
+
+/*
+[1] The stage Z has a virtual COM port that works on top of the USB connection (manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.
+nPortNr: to know the correct COM port, look at Window's device manager or use Tera Term. Use nPortNr=1 for COM1, etc..
+iBaudRate: the manual says that the baud rate does not matter (p10), but the suggested 115200 does not work. I use the default baud rate = 38400 which matches the drive's front panel configuration (using physical switches)
+*/

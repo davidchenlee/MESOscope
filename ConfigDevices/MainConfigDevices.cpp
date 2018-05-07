@@ -1,64 +1,5 @@
 #include "Devices.h"
 
-int run()
-{
-	//serial port
-	string port;
-	unsigned long baud;
-	size_t bytesWrote;
-	int timeout;
-
-	if (0)
-	{
-		port = "COM6";
-		baud = 115200;
-		timeout = 150;
-	}
-	else
-	{
-		port = "COM1";
-		baud = 19200;
-		timeout = 100;
-
-	}
-	
-	// port, baudrate, timeout in milliseconds
-	serial::Serial my_serial(port, baud, serial::Timeout::simpleTimeout(timeout));
-
-	string TxBuffer = "pos?\r";
-	//bytesWrote = my_serial.write(TxBuffer);
-	bytesWrote = my_serial.write("?VW\r");
-
-	cout << "Bytes written: " << bytesWrote << endl;
-
-	cout << "Is the serial port open?";
-	if (my_serial.isOpen())
-		cout << " Yes." << endl;
-	else
-		cout << " No." << endl;
-
-	string RxBuffer;
-	size_t bytesRead = my_serial.read(RxBuffer, 256);
-
-
-	//Delete echoed message
-	std::string::size_type i = RxBuffer.find(TxBuffer);
-	if (i != std::string::npos)
-		RxBuffer.erase(i, TxBuffer.length());
-
-
-	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
-	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
-	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
-	//std::replace(RxBuffer.begin(), RxBuffer.end(), '\r', '\n');
-
-	cout << RxBuffer;
-
-	//getchar();
-
-	return 0;
-}
-
 int main(int argc, char* argv[])
 {
 	if (argc < 2) {
@@ -84,11 +25,8 @@ int main(int argc, char* argv[])
 		{
 			RS.turnOff();
 			//shutter1.close();
-			//run();
-			//testFilterWheel();
 		}
 			
-
 		fpga.close(0);		//Close the FPGA connection
 
 	}

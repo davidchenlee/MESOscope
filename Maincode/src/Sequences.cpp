@@ -1,6 +1,5 @@
 #include "Sequences.h"
 
-
 void seq_main(const FPGAapi &fpga)
 {
 	const int wavelength_nm = 940;
@@ -116,5 +115,6 @@ void seq_testFilterwheel(const FPGAapi &fpga)
 
 void seq_testStages(const FPGAapi &fpga)
 {
-	runPIstage();
+	Stage stage;
+	stage.printPosition();
 }

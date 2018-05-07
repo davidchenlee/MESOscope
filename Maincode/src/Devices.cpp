@@ -777,159 +777,66 @@ void Laser::setWavelength()
 
 
 #pragma region "Stages"
-Stage::Stage() {}
-
-Stage::~Stage() {}
-
-const std::vector<double> Stage::getPosition_mm()
+Stage::Stage()
 {
-	return absPosition_mm;
+	//TODO: open the stages concurrently
+	mID_x = PI_ConnectUSB(mStageName_x.c_str());
+	//std::cout << "X: " << mID_x << std::endl;
+
+	mID_y = PI_ConnectUSB(mStageName_y.c_str());
+	//std::cout << "Y: " << mID_y << std::endl;
+
+	//ZstageID = PI_ConnectUSB(mStageName_z.c_str());
+	mID_z = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 3 for "COM3" (manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	//std::cout << "Z: " << mID_z << std::endl;
+
+	if (mID_x  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID_x));
+	if (mID_y  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID_y));
+	if (mID_z  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID_z));
+
+	mAbsPosition_mm.at(0)  = readPosition_mm_(mID_x);
+	mAbsPosition_mm.at(1)  = readPosition_mm_(mID_y);
+	mAbsPosition_mm.at(2)  = readPosition_mm_(mID_z);
 }
 
-
-//Convert from absolute tile number ---> (slice number, plane number, tile number)
-// this function does NOT consider the overlaps
-void Stage::scanningStrategy(int nTileAbsolute) //Absolute tile number = 0, 1, 2, ..., total number of tiles
+Stage::~Stage()
 {
-	int nTiles_x = 50;	//Number of tiles in x
-	int nTiles_y = 50;	//Number of tiles in y
-	int nTilesPerPlane = nTiles_x * nTiles_y; //Number of tiles in each plane
-	int nPlanesPerSlice = 100;	//Number of planes in each slice
-	int nSlice = 20; //Number of slices in the entire sample
-
-//	int nPlane;
-	//std::vector<int> nTileXY;
-
-	//total number of tiles = nSlice * nPlanesPerSlice * nTilesPerPlane
-
+	// Close Connections		
+	PI_CloseConnection(mID_x);
+	PI_CloseConnection(mID_y);
+	PI_CloseConnection(mID_z);
+	std::cout << "Stages connection closed.\n";
 }
 
-	/*
-	SDx = +;
-	SDy = +;
-	SDz = -		//- is down, + is up
-
-	while{
-
-	if (reached zmax) //reached bottom of the slice
-		snakeXY();
-		SDz = +;
-	
-	if (reached zmin)	//reached top of the slice
-		snakeXY();
-		SDz = -;
-	}
-	
-
-	snakeXY:
-	if (SD = +)
-		if (!reached xmax)
-			x++;
-		else if (!reached ymax)
-			y++;
-			SDx = -; //change the scanning direction
-		else //reached xmax & ymax
-			nextSlice();
-
-	else //SDx = -
-		if (!reached xmin)
-			x--;
-		else if (!reach ymax)
-			y++;
-			SDx = +; //change the scanning direction
-		else	//reached xmin & ymax
-			nextSlice();
-	
-
-	nextSlice:
-			if (!reached nMaxSlice)
-				runVibratome();
-				 next slice();
-			else
-				stop;
-	*/
-
-
-//convert from (slice number, plane number, tile number) ---> absolute position (x,y,z)
-//this function considers the overlaps in x, y, and z
-std::vector<double> Stage::getAbsolutePosition_mm(int nSlice, int nPlane, std::vector<int> nTileXY)
+double Stage::readPosition_mm_(int ID)
 {
-	const double mm = 1;
-	const double um = 0.001;
+	double position_mm;
+	if (!PI_qPOS(ID, mNAxes, &position_mm)) throw std::runtime_error((std::string)__FUNCTION__  ": Unable to query position for the stage " + std::to_string(ID));
 
-	std::vector<double> absPosition_mm(3,0);
-	std::vector<double> initialPosition_mm = { 31.9*mm, 9.5*mm, 18.546*mm };
-	std::vector<double> overlap_um = { 20.*um, 20.*um, 30.*um };
-	std::vector<double> FFOVxy_um = { 200.*um, 200.*um };						//Full FOV
-
-	double sliceThickness_um = 100 * um;
-	double stepZ_um = 1;
-
-	absPosition_mm[0] = initialPosition_mm[0] + nTileXY[0] * (FFOVxy_um[0] - overlap_um[0]);
-	absPosition_mm[1] = initialPosition_mm[1] + nTileXY[1] * (FFOVxy_um[1] - overlap_um[1]);
-	absPosition_mm[2] = initialPosition_mm[2]  - nSlice * (sliceThickness_um - overlap_um[2]) - nPlane * stepZ_um;
-
-	return absPosition_mm;
+	return position_mm;
 }
 
+dXYZ Stage::readPosition_mm()
+{
+	return mAbsPosition_mm;
+}
+
+void Stage::printPosition()
+{
+	std::cout << "Stage " << mID_x << " position = " << mAbsPosition_mm.at(0) << " mm" << std::endl;
+	std::cout << "Stage " << mID_y << " position = " << mAbsPosition_mm.at(1) << " mm" << std::endl;
+	std::cout << "Stage " << mID_z << " position = " << mAbsPosition_mm.at(2) << " mm" << std::endl;
+}
+
+void Stage::moveToPosition_mm()
+{
+	
+}
 
 // Additional Sample Functions
 int XstageID, YstageID, ZstageID;
-char NumberOfAxesPerController[2] = "1"; //There is only 1 stage per controller
+char NumberOfAxesPerController[] = "1"; //There is only 1 stage per controller
 
-bool runPIstage()
-{
-	//TODO: open the stages concurrently
-	//Start USB connection. Make sure that the stages and servo are enabled on supplied software PIMikroMove
-	XstageID = PI_ConnectUSB("116049107"); //	X-stage (V-551.4B)
-	std::cout << "X: " << XstageID << std::endl;
-
-	YstageID = PI_ConnectUSB("116049105"); //	Y-stage (V-551.2B)
-	std::cout << "Y: " << YstageID << std::endl;
-
-	//ZstageID = PI_ConnectUSB("0165500631");	//  Z-stage (ES-100)
-	ZstageID = PI_ConnectRS232(3, 38400); // nPortNr = 3 for "COM3" (manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
-	std::cout << "Z: " << ZstageID << std::endl;
-
-
-	if (XstageID < 0)
-	{
-		std::cout << "Could not connect to the controller X.\n";
-		return false;
-	}
-	else if (YstageID < 0)
-	{
-		std::cout << "Could not connect to the controller Y.\n";
-		return false;
-	}
-	else if (ZstageID < 0) {
-		std::cout << "Could not connect to the controller Z.\n";
-		return false;
-	}
-
-	// Determine boundaries for stage movement
-	//if (!GetStageBondaries(XstageID) | !GetStageBondaries(YstageID) | !GetStageBondaries(ZstageID))
-		//return false;
-
-	// Query stage position
-	//if (!GetStagePosition(XstageID) | !GetStagePosition(YstageID) | !GetStagePosition(ZstageID))
-		//return false;
-
-	if (!GetStagePosition(XstageID))
-		return false;
-
-	if (!GetStagePosition(YstageID))
-		return false;
-
-	if (!GetStagePosition(ZstageID))
-		return false;
-
-	// Close Connection		
-	PI_CloseConnection(XstageID), PI_CloseConnection(YstageID), PI_CloseConnection(ZstageID);
-	std::cout << "Connection closed.\n";
-
-	return true;
-}
 
 // Determine boundaries for stage movement
 bool GetStageBondaries(int stageID)
@@ -948,19 +855,6 @@ bool GetStageBondaries(int stageID)
 	}
 
 	std::cout << "Allowed range of movement: min: " << MinPositionValue << "\t max: " << MaxPositionValue << "\n";
-	return true;
-}
-
-// Query stage position
-bool GetStagePosition(int stageID)
-{
-	double Position;
-	if (!PI_qPOS(stageID, NumberOfAxesPerController, &Position))
-	{
-		CloseConnectionWithComment(stageID, "Unable to query stage position\n");
-		return false;
-	}
-	std::cout << "Stage at the position: " << Position << std::endl;
 	return true;
 }
 
@@ -1047,7 +941,90 @@ bool referenceStageZ()
 }
 #pragma endregion "Stages"
 
+//Convert from absolute tile number ---> (slice number, plane number, tile number)
+// this function does NOT consider the overlaps
+void Stage::scanningStrategy(int nTileAbsolute) //Absolute tile number = 0, 1, 2, ..., total number of tiles
+{
+	int nTiles_x = 50;	//Number of tiles in x
+	int nTiles_y = 50;	//Number of tiles in y
+	int nTilesPerPlane = nTiles_x * nTiles_y; //Number of tiles in each plane
+	int nPlanesPerSlice = 100;	//Number of planes in each slice
+	int nSlice = 20; //Number of slices in the entire sample
 
+	//	int nPlane;
+	//std::vector<int> nTileXY;
+
+	//total number of tiles = nSlice * nPlanesPerSlice * nTilesPerPlane
+
+}
+
+/*Pseudo code
+SDx = +;
+SDy = +;
+SDz = -		//- is down, + is up
+
+while{
+
+if (reached zmax) //reached bottom of the slice
+snakeXY();
+SDz = +;
+
+if (reached zmin)	//reached top of the slice
+snakeXY();
+SDz = -;
+}
+
+
+snakeXY:
+if (SD = +)
+if (!reached xmax)
+x++;
+else if (!reached ymax)
+y++;
+SDx = -; //change the scanning direction
+else //reached xmax & ymax
+nextSlice();
+
+else //SDx = -
+if (!reached xmin)
+x--;
+else if (!reach ymax)
+y++;
+SDx = +; //change the scanning direction
+else	//reached xmin & ymax
+nextSlice();
+
+
+nextSlice:
+if (!reached nMaxSlice)
+runVibratome();
+next slice();
+else
+stop;
+*/
+
+
+//convert from (slice number, plane number, tile number) ---> absolute position (x,y,z)
+//this function considers the overlaps in x, y, and z
+dXYZ Stage::readAbsolutePosition_mm(int nSlice, int nPlane, iXYZ nTileXY)
+{
+	const double mm = 1;
+	const double um = 0.001;
+
+	dXYZ absPosition_mm {};
+	dXYZ initialPosition_mm { 31.9*mm, 9.5*mm, 18.546*mm };
+	dXYZ overlap_um { 20.*um, 20.*um, 30.*um };
+	dXYZ FFOVxy_um { 200.*um, 200.*um };						//Full FOV
+
+	double sliceThickness_um = 100 * um;
+	double stepZ_um = 1;
+
+	absPosition_mm[0] = initialPosition_mm[0] + nTileXY[0] * (FFOVxy_um[0] - overlap_um[0]);
+	absPosition_mm[1] = initialPosition_mm[1] + nTileXY[1] * (FFOVxy_um[1] - overlap_um[1]);
+	absPosition_mm[2] = initialPosition_mm[2] - nSlice * (sliceThickness_um - overlap_um[2]) - nPlane * stepZ_um;
+
+	return absPosition_mm;
+}
 /*
 [1] The stage Z has a virtual COM port that works on top of the USB connection (manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.
 nPortNr: to know the correct COM port, look at Window's device manager or use Tera Term. Use nPortNr=1 for COM1, etc..

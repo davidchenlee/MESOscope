@@ -167,15 +167,29 @@ public:
 
 class Stage
 {
-	std::vector<double> absPosition_mm;			//Absolute position of the stages (x, y, z)
-	std::vector<int> Ntile;						//Tile number in x, y, z
-	std::vector<int> tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
+	const std::string mStageName_x = "116049107";	//X-stage (V-551.4B)
+	const std::string mStageName_y = "116049105";	//Y-stage (V-551.2B)
+	const std::string mStageName_z = "0165500631";	//Z-stage (ES-100)
+	const int mPort_z = 3;		//COM3
+	const int mBaud_z = 38400;
+	int mID_x;
+	int mID_y;
+	int mID_z;
+	char mNAxes[2] = "1";		//Number of axes per controller. There is only 1 stage per controller
+
+	dXYZ mAbsPosition_mm;			//Absolute position of the stages (x, y, z)
+	iXYZ Ntile;						//Tile number in x, y, z
+	iXYZ tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
+
+	double readPosition_mm_(int ID);
 public:
 	Stage();
 	~Stage();
-	const std::vector<double> getPosition_mm();
-	void Stage::scanningStrategy(int nTileAbsolute);
-	std::vector<double> getAbsolutePosition_mm(int nSection, int nPlane, std::vector<int> nTileXY);
+	dXYZ readPosition_mm();
+	void printPosition();
+	void moveToPosition_mm();
+	void scanningStrategy(int nTileAbsolute);
+	dXYZ readAbsolutePosition_mm(int nSection, int nPlane, iXYZ nTileXY);
 };
 
 bool runPIstage();

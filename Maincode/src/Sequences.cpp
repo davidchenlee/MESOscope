@@ -117,4 +117,5 @@ void seq_testStages(const FPGAapi &fpga)
 {
 	Stage stage;
 	stage.printPosition();
+
 }

@@ -178,8 +178,8 @@ RTsequence::RTsequence(const FPGAapi &fpga) : mFpga(fpga), mVectorOfQueues(Nchan
 {
 	PixelClock pixelclock;
 
-	//mVectorOfQueues[PCLOCK]= pixelclock.PixelClockEqualDuration();
-	mVectorOfQueues[PCLOCK] = pixelclock.PixelClockEqualDistance();
+	//mVectorOfQueues.at(PCLOCK)= pixelclock.PixelClockEqualDuration();
+	mVectorOfQueues.at(PCLOCK) = pixelclock.PixelClockEqualDistance();
 
 	dataFIFO_A = new U32[nPixAllFrames]();
 	nElemBufArray_B = new int[nBufArrays]();
@@ -253,17 +253,17 @@ QU32 RTsequence::generateLinearRamp(double TimeStep, const double RampLength, co
 
 void RTsequence::pushQueue(const RTchannel chan, QU32& queue)
 {
-	concatenateQueues(mVectorOfQueues[chan], queue);
+	concatenateQueues(mVectorOfQueues.at(chan), queue);
 }
 
 void RTsequence::pushSingleValue(const RTchannel chan, const U32 input)
 {
-	mVectorOfQueues[chan].push(input);
+	mVectorOfQueues.at(chan).push(input);
 }
 
 void RTsequence::pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
 {
-	concatenateQueues(mVectorOfQueues[chan], generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal));
+	concatenateQueues(mVectorOfQueues.at(chan), generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal));
 }
 
 //Push all the elements in 'tailQ' into 'headQ'
@@ -352,13 +352,13 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels for the image width currently not supported");
 
 	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)	//pix in [-widthPerFrame_pix/2,widthPerFrame_pix/2]
-		PixelClockEqualDistanceLUT[pix + widthPerFrame_pix / 2] = calculatePracticalDwellTime(pix);
+		PixelClockEqualDistanceLUT.at(pix + widthPerFrame_pix / 2) = calculatePracticalDwellTime(pix);
 
 	const U16 InitialTimeStep_tick = (U16)(calibCoarse_tick + calibFine_tick);		//relative delay of the pixel clock wrt the line clock
 	queue.push(packU32(InitialTimeStep_tick - mLatency_tick, 0x0000));
 
 	for (int pix = 0; pix < widthPerFrame_pix; pix++)
-		queue.push(singlePixelClock(PixelClockEqualDistanceLUT[pix], 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
+		queue.push(singlePixelClock(PixelClockEqualDistanceLUT.at(pix), 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
 
 	queue.push(singlePixelClock(dt_us_MIN, 1));								//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 
@@ -521,7 +521,7 @@ void RTsequence::stopFIFOs()
 unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
 {
 	const bool debug = 0;												//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
-
+	//CHANGE TO STD::ARRAY??
 	static unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
 
 	for (int ii = 0; ii < nPixAllFrames; ii++)							//Initialize the array
@@ -553,7 +553,7 @@ unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
 //One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 int correctInterleavedImage(unsigned char *interleavedImage)
-{
+{	//CHANGE TO STD::ARRAY??
 	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
 
 																   //for every odd-number line, reverse the pixel order
@@ -779,32 +779,24 @@ void Laser::setWavelength()
 #pragma region "Stages"
 Stage::Stage()
 {
-	//TODO: open the stages concurrently
-	mID_x = PI_ConnectUSB(mStageName_x.c_str());
-	//std::cout << "X: " << mID_x << std::endl;
-
-	mID_y = PI_ConnectUSB(mStageName_y.c_str());
-	//std::cout << "Y: " << mID_y << std::endl;
-
+	mID.at(0) = PI_ConnectUSB(mStageName_x.c_str());
+	mID.at(1) = PI_ConnectUSB(mStageName_y.c_str());
 	//ZstageID = PI_ConnectUSB(mStageName_z.c_str());
-	mID_z = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 3 for "COM3" (manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
-	//std::cout << "Z: " << mID_z << std::endl;
+	mID.at(2) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 3 for "COM3" (manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
 
-	if (mID_x  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID_x));
-	if (mID_y  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID_y));
-	if (mID_z  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID_z));
+	if (mID.at(0)  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID.at(0)));
+	if (mID.at(1)  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID.at(1)));
+	if (mID.at(2)  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID.at(2)));
 
-	mAbsPosition_mm.at(0)  = readPosition_mm_(mID_x);
-	mAbsPosition_mm.at(1)  = readPosition_mm_(mID_y);
-	mAbsPosition_mm.at(2)  = readPosition_mm_(mID_z);
+	for (int ii = 0; ii < 3; ii++)
+		mAbsPosition_mm.at(ii) = readPosition_mm_(mID.at(ii));
 }
 
 Stage::~Stage()
 {
-	// Close Connections		
-	PI_CloseConnection(mID_x);
-	PI_CloseConnection(mID_y);
-	PI_CloseConnection(mID_z);
+	// Close Connections	
+	for (int ii = 0; ii < 3; ii++)
+		PI_CloseConnection(mID.at(ii));
 	std::cout << "Stages connection closed.\n";
 }
 
@@ -816,16 +808,15 @@ double Stage::readPosition_mm_(int ID)
 	return position_mm;
 }
 
-dXYZ Stage::readPosition_mm()
+double3 Stage::readPosition_mm()
 {
 	return mAbsPosition_mm;
 }
 
 void Stage::printPosition()
 {
-	std::cout << "Stage " << mID_x << " position = " << mAbsPosition_mm.at(0) << " mm" << std::endl;
-	std::cout << "Stage " << mID_y << " position = " << mAbsPosition_mm.at(1) << " mm" << std::endl;
-	std::cout << "Stage " << mID_z << " position = " << mAbsPosition_mm.at(2) << " mm" << std::endl;
+	for (int ii = 0; ii < 3; ii++)
+		std::cout << "Stage " << mID.at(ii) << " position = " << mAbsPosition_mm.at(ii) << " mm" << std::endl;
 }
 
 void Stage::moveToPosition_mm()
@@ -1006,22 +997,22 @@ stop;
 
 //convert from (slice number, plane number, tile number) ---> absolute position (x,y,z)
 //this function considers the overlaps in x, y, and z
-dXYZ Stage::readAbsolutePosition_mm(int nSlice, int nPlane, iXYZ nTileXY)
+double3 Stage::readAbsolutePosition_mm(int nSlice, int nPlane, int3 nTileXY)
 {
 	const double mm = 1;
 	const double um = 0.001;
 
-	dXYZ absPosition_mm {};
-	dXYZ initialPosition_mm { 31.9*mm, 9.5*mm, 18.546*mm };
-	dXYZ overlap_um { 20.*um, 20.*um, 30.*um };
-	dXYZ FFOVxy_um { 200.*um, 200.*um };						//Full FOV
+	double3 absPosition_mm {};
+	double3 initialPosition_mm { 31.9*mm, 9.5*mm, 18.546*mm };
+	double3 overlap_um { 20.*um, 20.*um, 30.*um };
+	double3 FFOVxy_um { 200.*um, 200.*um };						//Full FOV
 
 	double sliceThickness_um = 100 * um;
 	double stepZ_um = 1;
 
-	absPosition_mm[0] = initialPosition_mm[0] + nTileXY[0] * (FFOVxy_um[0] - overlap_um[0]);
-	absPosition_mm[1] = initialPosition_mm[1] + nTileXY[1] * (FFOVxy_um[1] - overlap_um[1]);
-	absPosition_mm[2] = initialPosition_mm[2] - nSlice * (sliceThickness_um - overlap_um[2]) - nPlane * stepZ_um;
+	absPosition_mm.at(0) = initialPosition_mm.at(0) + nTileXY.at(0) * (FFOVxy_um.at(0) - overlap_um.at(0));
+	absPosition_mm.at(1) = initialPosition_mm.at(1) + nTileXY.at(1) * (FFOVxy_um.at(1) - overlap_um.at(1));
+	absPosition_mm.at(2) = initialPosition_mm.at(2) - nSlice * (sliceThickness_um - overlap_um.at(2)) - nPlane * stepZ_um;
 
 	return absPosition_mm;
 }

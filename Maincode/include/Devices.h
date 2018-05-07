@@ -172,24 +172,22 @@ class Stage
 	const std::string mStageName_z = "0165500631";	//Z-stage (ES-100)
 	const int mPort_z = 3;		//COM3
 	const int mBaud_z = 38400;
-	int mID_x;
-	int mID_y;
-	int mID_z;
+	int3 mID;
 	char mNAxes[2] = "1";		//Number of axes per controller. There is only 1 stage per controller
 
-	dXYZ mAbsPosition_mm;			//Absolute position of the stages (x, y, z)
-	iXYZ Ntile;						//Tile number in x, y, z
-	iXYZ tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
+	double3 mAbsPosition_mm;			//Absolute position of the stages (x, y, z)
+	int3 Ntile;						//Tile number in x, y, z
+	int3 tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
 
 	double readPosition_mm_(int ID);
 public:
 	Stage();
 	~Stage();
-	dXYZ readPosition_mm();
+	double3 readPosition_mm();
 	void printPosition();
 	void moveToPosition_mm();
 	void scanningStrategy(int nTileAbsolute);
-	dXYZ readAbsolutePosition_mm(int nSection, int nPlane, iXYZ nTileXY);
+	double3 readAbsolutePosition_mm(int nSection, int nPlane, int3 nTileXY);
 };
 
 bool runPIstage();

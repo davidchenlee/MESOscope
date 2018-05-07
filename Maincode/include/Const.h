@@ -15,8 +15,8 @@ typedef int64_t		I64;
 typedef uint64_t	U64;
 typedef std::queue<U32> QU32;				//Queue of unsigned integers
 typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
-typedef std::array<double, 3> dXYZ;			//x, y, z array of double
-typedef std::array<int, 3> iXYZ;			//x, y, z array of int
+typedef std::array<double, 3> double3;		//array of 3 doubles
+typedef std::array<int, 3> int3;			//array of 3 ints
 
 enum PhotonCounterInputSelector {ext, sim};							//real PMT, simulated PMT, internal clock
 enum LineClockInputSelector {RS, FG};								//Resonant scanner, function generator, 

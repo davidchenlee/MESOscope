@@ -1,7 +1,7 @@
 #include "Sequences.h"
 
 
-void Sequence1(const FPGAapi &fpga)
+void seq_main(const FPGAapi &fpga)
 {
 	const int wavelength_nm = 940;
 	const double laserPower_mW = 40 * mW;
@@ -23,18 +23,10 @@ void Sequence1(const FPGAapi &fpga)
 	//pockels.turnOn_volt(2 * V);
 	sequence.runRTsequence();		//Execute the RT sequence and read the photon count
 	pockels.turnOff();
-
-
-	Filterwheel FW(FW1);
-	FW.setFilterPosition(BlueLight);
-	//Laser laser;
-	//laser.setWavelength();
-	//std::cout << laser.readWavelength();
-
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock
-void TestAODO(const FPGAapi &fpga)
+void seq_testAODO(const FPGAapi &fpga)
 {
 	RTsequence sequence(fpga);
 
@@ -49,7 +41,7 @@ void TestAODO(const FPGAapi &fpga)
 	sequence.pushSingleValue(GALVO1, singleAnalogOut(4 * us, 0));
 }
 
-void testAOramp(const FPGAapi &fpga)
+void seq_testAOramp(const FPGAapi &fpga)
 {
 	double Vmax = 5;
 	double step = 4 * us;
@@ -65,7 +57,7 @@ void testAOramp(const FPGAapi &fpga)
 }
 
 //Generate a long digital pulse and check the duration with the oscilloscope
-void checkDigitalTiming(const FPGAapi &fpga)
+void seq_checkDigitalTiming(const FPGAapi &fpga)
 {
 	double step = 400 * us;
 
@@ -75,7 +67,7 @@ void checkDigitalTiming(const FPGAapi &fpga)
 }
 
 //Generate many short digital pulses and check the overall duration with the oscilloscope
-void calibDigitalLatency(const FPGAapi &fpga)
+void seq_calibDigitalLatency(const FPGAapi &fpga)
 {
 	double step = 4 * us;
 
@@ -92,7 +84,7 @@ void calibDigitalLatency(const FPGAapi &fpga)
 }
 
 //First calibrate the digital channels, then use it as a time reference
-void calibAnalogLatency(const FPGAapi &fpga)
+void seq_calibAnalogLatency(const FPGAapi &fpga)
 {
 	double delay = 400 * us;
 	double step = 4 * us;
@@ -110,4 +102,14 @@ void calibAnalogLatency(const FPGAapi &fpga)
 	sequence.pushSingleValue(DOdebug, singleDigitalOut(delay, 0));
 	sequence.pushSingleValue(DOdebug, singleDigitalOut(step, 1));
 	sequence.pushSingleValue(DOdebug, singleDigitalOut(step, 0));
+}
+
+void seq_testFilterwheel(const FPGAapi &fpga)
+{
+	//Filterwheel FW(FW1);
+	//FW.setFilterPosition(BlueLight);
+
+	//Laser laser;
+	//laser.setWavelength();
+	//std::cout << laser.readWavelength();
 }

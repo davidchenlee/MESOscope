@@ -12,6 +12,8 @@ if PLOT_VECTOR
     plot(vector)
 end
 
+maxcount = double(max(max(vector)));
+
 %Plot a heat map
 if HEATMAP
     %convert the 1D data into a 2D array
@@ -37,7 +39,7 @@ if HEATMAP
     close all hidden
     ax = hm.plot; % 'ax' will be a handle to a standard MATLAB axes.
     colorbar('Peer', ax); % Turn the colorbar on
-    caxis(ax, [0 10]); % Adjust the color limits
+    caxis(ax, [0 max(10,maxcount)]); % Adjust the color limits
 end
 
 %Tabulate the count frequency

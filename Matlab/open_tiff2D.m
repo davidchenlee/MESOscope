@@ -11,7 +11,8 @@ inputImage = read(tiffHandle);
 
 %Recover the photon counts from the tiff image
 counts =  inputImage(:,:,1)/scale;
-notBlank = max(max(counts)) ~= 0;
+maxcount = double(max(max(counts)));
+notBlank = maxcount ~= 0;
 
 if notBlank
     %Plot a heat map
@@ -20,7 +21,7 @@ if notBlank
         close all hidden
         ax = hm.plot; % 'ax' will be a handle to a standard MATLAB axes.
         colorbar('Peer', ax); % Turn the colorbar on
-        caxis(ax, [0 10]); % Adjust the color limits
+        caxis(ax, [0 max(10,maxcount)]); % Adjust the color limits
     end
     
     

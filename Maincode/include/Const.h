@@ -25,7 +25,7 @@ enum PockelsID {Pockels1, Pockels2};								//Pockels cell
 enum ShutterID {Shutter1, Shutter2};								//Shutter unit
 enum FilterwheelID {FW1, FW2};										//Filterwheel
 enum FilterColor { BlueLight = 1, GreenLight = 2, RedLight = 3 };	//Filter color
-enum StageID { stage_x, stage_y, stage_z };
+enum Axis { xx, yy, zz };
 
 
 namespace Const

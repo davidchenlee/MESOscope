@@ -122,7 +122,6 @@ class PockelsCell
 	int mWavelength_nm;												//Wavelength of the laser
 	double mVoltPermW = 1;											//Calibration factor
 	double mV_volt;													//Output voltage to the HV amplifier
-	double voltageforMinPower();									//The output laser power depend on the wavelength
 	double convertPowertoVoltage_volt(const double power_mW);
 public:
 	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm);
@@ -156,11 +155,11 @@ class Laser
 	const int mBaud = 19200;
 	const int mTimeout_ms = 100;
 	serial::Serial *mSerial;
-	void Laser::readWavelength_();
+	void Laser::downloadWavelength();
 public:
 	Laser();
 	~Laser();
-	int readWavelength();
+	int readWavelength_nm();
 	void setWavelength();
 };
 
@@ -172,20 +171,21 @@ class Stage
 	const std::string mStageName_z = "0165500631";	//Z-stage (ES-100)
 	const int mPort_z = 3;							//COM3
 	const int mBaud_z = 38400;
-	int3 mID;										//Stage ID assigned by the controllers
-	const int mNstages = 3;							//Number of stages (currently 3: X, Y, Z)
+	int3 mID;										//Controller IDs
 	const char mNstagesPerController[2] = "1";		//Number of stages per controller (currently 1)
 	double3 mAbsPosition_mm;						//Absolute position of the stages (x, y, z)
 	int3 Ntile;										//Tile number in x, y, z
 	int3 tileOverlap_pix;							//in pixels. Tile overlap in x, y, z
+	int getControllerID(const Axis axis);
 public:
 	Stage();
 	~Stage();
-	double3 readPosition_mm();
-	void printPosition();
-	void moveToPosition_mm(const double position);
+	double3 readPositions_mm();
+	void printPositions();
+	void uploadPosition(const Axis stage, const double position);
+	void uploadPositions(const double3 positions);
 	void scanningStrategy(const int nTileAbsolute);
-	double retrievePositionForSingleStage_mm(const int ID);
+	double downloadPosition_mm(const Axis axis);
 	double3 readAbsolutePosition_mm(const int nSection, const int nPlane, const int3 nTileXY);
 };
 

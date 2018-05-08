@@ -600,12 +600,6 @@ PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wave
 
 PockelsCell::~PockelsCell() {}
 
-//before, the output power was max at 0V and the voltage for the min power depended on the wavelength as
-double PockelsCell::voltageforMinPower()
-{
-	return 0.00361 * mWavelength_nm - 0.206;
-}
-
 
 void PockelsCell::turnOn_volt(const double V_volt)
 {
@@ -725,12 +719,12 @@ void Filterwheel::setFilterPosition(const FilterColor color)
 Laser::Laser()
 {
 	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
-	this->readWavelength_();
+	this->downloadWavelength();
 };
 
 Laser::~Laser() {};
 
-void Laser::readWavelength_()
+void Laser::downloadWavelength()
 {
 	const std::string TxBuffer = "?VW";		//Command to the filterwheel
 	std::string RxBuffer;						//Reply from the filterwheel
@@ -758,7 +752,7 @@ void Laser::readWavelength_()
 	std::cout << RxBuffer << std::endl;
 }
 
-int Laser::readWavelength()
+int Laser::readWavelength_nm()
 {
 	return mWavelength;
 }
@@ -772,61 +766,80 @@ void Laser::setWavelength()
 	size_t bytesWrote = mSerial->write(TxBuffer + "\r");
 	size_t bytesRead = mSerial->read(RxBuffer, RxBufSize);
 
-	this->readWavelength_();
+	this->downloadWavelength();
 }
 
 
 #pragma region "Stages"
 Stage::Stage()
 {
-	mID.at(stage_x) = PI_ConnectUSB(mStageName_x.c_str());
-	mID.at(stage_y) = PI_ConnectUSB(mStageName_y.c_str());
-	//mID.at(2) = PI_ConnectUSB(mStageName_z.c_str());
-	mID.at(stage_z) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 3 for "COM3" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	//Open connections to the stage controllers and get IDs
+	mID.at(xx) = PI_ConnectUSB(mStageName_x.c_str());
+	mID.at(yy) = PI_ConnectUSB(mStageName_y.c_str());
+	mID.at(zz) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 3 for "COM3" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	//mID.at(stage_z) = PI_ConnectUSB(mStageName_z.c_str());
 
-	if (mID.at(stage_x) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
-	if (mID.at(stage_y) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
-	if (mID.at(stage_z) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
+	if (getControllerID(xx) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
+	if (getControllerID(yy) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
+	if (getControllerID(zz) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
 
 	//Read the current position
-	for (int ii = 0; ii < mNstages; ii++)
-		mAbsPosition_mm.at(ii) = retrievePositionForSingleStage_mm(mID.at(ii));
+	mAbsPosition_mm.at(xx) = downloadPosition_mm(xx);
+	mAbsPosition_mm.at(yy) = downloadPosition_mm(yy);
+	mAbsPosition_mm.at(zz) = downloadPosition_mm(zz);
 }
 
 Stage::~Stage()
 {
-	for (int ii = 0; ii < mNstages; ii++)
-		PI_CloseConnection(mID.at(ii));					// Close Connections
+	// Close Connections
+	PI_CloseConnection(getControllerID(xx));
+	PI_CloseConnection(getControllerID(yy));
+	PI_CloseConnection(getControllerID(zz));
 	//std::cout << "Stages connection closed.\n";
 }
 
-double Stage::retrievePositionForSingleStage_mm(const int ID)
+int Stage::getControllerID(const Axis axis)
+{
+	return mID.at(axis);
+}
+
+double Stage::downloadPosition_mm(const Axis axis)
 {
 	double position_mm;
-	if (!PI_qPOS(ID, mNstagesPerController, &position_mm))
-		throw std::runtime_error((std::string)__FUNCTION__  ": Unable to query position for the stage " + std::to_string(ID));
+	if (!PI_qPOS(getControllerID(axis), mNstagesPerController, &position_mm))
+		throw std::runtime_error((std::string)__FUNCTION__  ": Unable to query position for the stage " + std::to_string(axis));
 
 	return position_mm;
 }
 
-double3 Stage::readPosition_mm()
+double3 Stage::readPositions_mm()
 {
 	return mAbsPosition_mm;
 }
 
-void Stage::printPosition()
+void Stage::printPositions()
 {
-	for (int ii = 0; ii < mNstages; ii++)
-		std::cout << "Stage " << mID.at(ii) << " position = " << mAbsPosition_mm.at(ii) << " mm" << std::endl;
+	std::cout << "Stage X position = " << mAbsPosition_mm.at(xx) << " mm" << std::endl;
+	std::cout << "Stage Y position = " << mAbsPosition_mm.at(yy) << " mm" << std::endl;
+	std::cout << "Stage Z position = " << mAbsPosition_mm.at(zz) << " mm" << std::endl;
 }
 
-void Stage::moveToPosition_mm(const double position)
+void Stage::uploadPosition(const Axis stage, const double position_mm)
 {
-	double SetPosition = 18.5520;
-	if (!PI_MOV(mID.at(stage_z), mNstagesPerController, &SetPosition))
-		throw std::runtime_error((std::string)__FUNCTION__  ": Unable to move stage to target position " + std::to_string(mID.at(stage_z)));
+	if (mAbsPosition_mm.at(stage) != position_mm )
+	{
+		if (!PI_MOV(getControllerID(stage), mNstagesPerController, &position_mm) )
+			throw std::runtime_error((std::string)__FUNCTION__  ": Unable to move stage Z to target position");
 
-	mAbsPosition_mm.at(stage_z) = SetPosition;
+		mAbsPosition_mm.at(stage) = position_mm;
+	}
+}
+
+void Stage::uploadPositions(const double3 positions_mm)
+{
+	uploadPosition(xx, positions_mm.at(xx));
+	uploadPosition(yy, positions_mm.at(yy));
+	uploadPosition(zz, positions_mm.at(zz));
 }
 
 

@@ -116,6 +116,6 @@ void seq_testFilterwheel(const FPGAapi &fpga)
 void seq_testStages(const FPGAapi &fpga)
 {
 	Stage stage;
-	stage.printPosition();
+	stage.printPositions();
 	//stage.moveToPosition_mm();
 }

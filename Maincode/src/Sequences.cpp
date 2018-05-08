@@ -9,7 +9,7 @@ void seq_main(const FPGAapi &fpga)
 	const double galvoTimeStep_us = 8 * us;
 
 
-	for (int ii = 0; ii < 2; ii++)
+	for (int ii = 0; ii < 1; ii++)
 	{
 		//REALTIME SEQUENCE
 		RTsequence sequence(fpga);

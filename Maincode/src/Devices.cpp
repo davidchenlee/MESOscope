@@ -48,7 +48,7 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 	else
 	{
 		Sleep(minPulseDuration - delay);
-		std::cerr << "WARNING in " << __FUNCTION__ << ": vibratome pulse duration too short. Duration set to the min = ~" << minPulseDuration << "ms" << std::endl;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << minPulseDuration << "ms" << std::endl;
 	}
 	status = NiFpga_WriteBool(mFpga.getSession(), selectedChannel, 0);
 	checkFPGAstatus(__FUNCTION__, status);
@@ -210,7 +210,7 @@ QU32 RTsequence::generateLinearRamp(double TimeStep, const double RampLength, co
 
 	if (TimeStep < AOdt_us)
 	{
-		std::cerr << "WARNING in " << __FUNCTION__ << ": time step too small. Time step set to " << AOdt_us << " us" << std::endl;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step set to " << AOdt_us << " us" << std::endl;
 		TimeStep = AOdt_us;		//Analog output time increment (in us)
 		return {};
 	}
@@ -219,7 +219,7 @@ QU32 RTsequence::generateLinearRamp(double TimeStep, const double RampLength, co
 
 	if (nPoints <= 1)
 	{
-		std::cerr << "ERROR in " << __FUNCTION__ << ": not enought points for the linear ramp" << std::endl;
+		std::cerr << "ERROR in " << __FUNCTION__ << ": Not enought points in the linear ramp" << std::endl;
 		std::cerr << "nPoints: " << nPoints << std::endl;
 		return {};
 	}
@@ -378,27 +378,14 @@ void RTsequence::runRTsequence()
 	if (nElemReadFIFO_A != nPixAllFrames || nElemReadFIFO_B != nPixAllFrames)
 	{
 		throw std::runtime_error((std::string)__FUNCTION__ + ": More or less elements received from the FIFO than expected ");
-		//std::cerr << "ERROR in " << __FUNCTION__ << ": more or less elements received from the FIFO than expected " << std::endl;
+		//std::cerr << "ERROR in " << __FUNCTION__ << ": More or less elements received from the FIFO than expected " << std::endl;
 	}
 	else
 	{
-<<<<<<< HEAD
-		//unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
 		unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
 		correctInterleavedImage(image);
-
 		writeFrametoTiff(image, "_photon-counts.tif");
 		writeFrametoTxt(image, "_photon-counts.txt");
-=======
-		unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
-		//correctInterleavedImage(image);
-
-
-
-		//writeFrametoTiff(image, "_photon-counts.tif");
-		//writeFrametoTxt(image, "_photon-counts.txt");
->>>>>>> parent of 202283b... VS: move the rescaled count from Tiffscope to the 'unpackFIFO' function
-
 		delete[] image;
 	}
 
@@ -475,7 +462,7 @@ void RTsequence::readFIFO()
 				checkFPGAstatus(__FUNCTION__, status);///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 				if (counterBufArray_B >= nBufArrays)
-					throw std::range_error(std::string{} +"ERROR in " + __FUNCTION__ + ": Buffer array overflow\n");
+					throw std::range_error((std::string)__FUNCTION__ + ": Buffer array overflow");
 
 				counterBufArray_B++;
 			}
@@ -533,26 +520,7 @@ void RTsequence::stopFIFOs()
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
 unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
 {
-	const bool debug = 0;
-
-<<<<<<< HEAD
-	unsigned char *image = new unsigned char[nPixAllFrames];
-
-	for (int ii = 0; ii < nPixAllFrames; ii++)
-		image[ii] = 0;
-
-	U32 pixIndex = 0;	//Index the image pixel
-	for (int ii = 0; ii < counterBufArray_B; ii++)
-	{
-		for (int jj = 0; jj < nElemBufArray_B[ii]; jj++)
-		{	
-			rescaledCount = std::floor(scale * bufArray_B[ii][jj]);
-
-			if (rescaledCount > 255) throw std::overflow_error(((std::string)__FUNCTION__ + ": Photon count to 8-bit conversion overflow"));
-
-			image[pixIndex] = (unsigned char)std::floor(scale * bufArray_B[ii][jj]);	//TOTO: change to memcpy
-			//myfile << bufArray_B[ii][jj] << std::endl;
-=======
+	const bool debug = 0;												//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
 	unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
 
 	for (int ii = 0; ii < nPixAllFrames; ii++)							//Initialize the array
@@ -565,7 +533,6 @@ unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_
 		{
 			//myfile << bufArray_B[ii][jj] << std::endl;		
 			image[pixIndex] = (unsigned char)bufArray_B[ii][jj];
->>>>>>> parent of 202283b... VS: move the rescaled count from Tiffscope to the 'unpackFIFO' function
 
 			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
 			if (debug)
@@ -586,7 +553,7 @@ unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_
 //One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 int correctInterleavedImage(unsigned char *interleavedImage)
 {
-	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to store the tmp data. In principle I could just use half the size, but why bothering...
+	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to store the temp data. In principle I could just use half the size, but why bothering...
 
 	//for every odd line, reverse the pixel order
 	for (int lineIndex = 1; lineIndex < heightPerFrame_pix; lineIndex += 2)
@@ -678,10 +645,10 @@ double PockelsCell::convertPowertoVoltage_volt(const double power_mW)
 		c = 0.055;
 	}
 	else
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": laser wavelength " + std::to_string(mWavelength_nm) + " nm currently not calibrated");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm currently not calibrated");
 
 	double arg = sqrt(power_mW / a);
-	if (arg > 1) throw std::invalid_argument((std::string)__FUNCTION__ + ": arg of asin is greater than 1");
+	if (arg > 1) throw std::invalid_argument((std::string)__FUNCTION__ + ": Arg of asin is greater than 1");
 
 	return asin(arg)/b + c;
 }

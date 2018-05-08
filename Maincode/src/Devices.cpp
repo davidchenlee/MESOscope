@@ -784,9 +784,9 @@ Stage::Stage()
 	if (getControllerID(zz) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
 
 	//Read the current position
-	mAbsPosition_mm.at(xx) = downloadPosition_mm(xx);
-	mAbsPosition_mm.at(yy) = downloadPosition_mm(yy);
-	mAbsPosition_mm.at(zz) = downloadPosition_mm(zz);
+	recordPosition(xx, downloadPosition_mm(xx));
+	recordPosition(yy, downloadPosition_mm(yy));
+	recordPosition(zz, downloadPosition_mm(zz));
 }
 
 Stage::~Stage()
@@ -803,6 +803,29 @@ int Stage::getControllerID(const Axis axis)
 	return mID.at(axis);
 }
 
+
+double Stage::recallPosition_mm(const Axis axis)
+{
+	return mPosition_mm.at(axis);
+}
+
+void Stage::recordPosition(const Axis axis, const double position_mm)
+{
+	mPosition_mm.at(axis) = position_mm;
+}
+
+double3 Stage::recallPositionXYZ_mm()
+{
+	return mPosition_mm;
+}
+
+void Stage::printPositionXYZ()
+{
+	std::cout << "Stage X position = " << recallPosition_mm(xx) << " mm" << std::endl;
+	std::cout << "Stage Y position = " << recallPosition_mm(yy) << " mm" << std::endl;
+	std::cout << "Stage Z position = " << recallPosition_mm(zz) << " mm" << std::endl;
+}
+
 double Stage::downloadPosition_mm(const Axis axis)
 {
 	double position_mm;
@@ -812,34 +835,22 @@ double Stage::downloadPosition_mm(const Axis axis)
 	return position_mm;
 }
 
-double3 Stage::readPositions_mm()
+void Stage::uploadPosition(const Axis axis, const double position_mm)
 {
-	return mAbsPosition_mm;
-}
-
-void Stage::printPositions()
-{
-	std::cout << "Stage X position = " << mAbsPosition_mm.at(xx) << " mm" << std::endl;
-	std::cout << "Stage Y position = " << mAbsPosition_mm.at(yy) << " mm" << std::endl;
-	std::cout << "Stage Z position = " << mAbsPosition_mm.at(zz) << " mm" << std::endl;
-}
-
-void Stage::uploadPosition(const Axis stage, const double position_mm)
-{
-	if (mAbsPosition_mm.at(stage) != position_mm )
+	if (recallPosition_mm(axis) != position_mm )
 	{
-		if (!PI_MOV(getControllerID(stage), mNstagesPerController, &position_mm) )
+		if (!PI_MOV(getControllerID(axis), mNstagesPerController, &position_mm) )
 			throw std::runtime_error((std::string)__FUNCTION__  ": Unable to move stage Z to target position");
 
-		mAbsPosition_mm.at(stage) = position_mm;
+		recordPosition(axis, position_mm);
 	}
 }
 
-void Stage::uploadPositions(const double3 positions_mm)
+void Stage::uploadPositionXYZ(const double3 positions_mm)
 {
-	uploadPosition(xx, positions_mm.at(xx));
-	uploadPosition(yy, positions_mm.at(yy));
-	uploadPosition(zz, positions_mm.at(zz));
+	uploadPosition(xx, recallPosition_mm(xx));
+	uploadPosition(yy, recallPosition_mm(yy));
+	uploadPosition(zz, recallPosition_mm(zz));
 }
 
 

@@ -173,19 +173,21 @@ class Stage
 	const int mBaud_z = 38400;
 	int3 mID;										//Controller IDs
 	const char mNstagesPerController[2] = "1";		//Number of stages per controller (currently 1)
-	double3 mAbsPosition_mm;						//Absolute position of the stages (x, y, z)
-	int3 Ntile;										//Tile number in x, y, z
-	int3 tileOverlap_pix;							//in pixels. Tile overlap in x, y, z
+	double3 mPosition_mm;						//Absolute position of the stages (x, y, z)
+	int3 mNtile;										//Tile number in x, y, z
+	int3 mNtileOverlap_pix;							//in pixels. Tile overlap in x, y, z
 	int getControllerID(const Axis axis);
+	double recallPosition_mm(const Axis axis);
+	void recordPosition(const Axis axis, const double position_mm);
 public:
 	Stage();
 	~Stage();
-	double3 readPositions_mm();
-	void printPositions();
+	double3 recallPositionXYZ_mm();
+	void printPositionXYZ();
 	void uploadPosition(const Axis stage, const double position);
-	void uploadPositions(const double3 positions);
-	void scanningStrategy(const int nTileAbsolute);
+	void uploadPositionXYZ(const double3 positions);
 	double downloadPosition_mm(const Axis axis);
+	void scanningStrategy(const int nTileAbsolute);
 	double3 readAbsolutePosition_mm(const int nSection, const int nPlane, const int3 nTileXY);
 };
 

@@ -176,7 +176,8 @@ class Stage
 	double3 mPosition_mm;						//Absolute position of the stages (x, y, z)
 	int3 mNtile;										//Tile number in x, y, z
 	int3 mNtileOverlap_pix;							//in pixels. Tile overlap in x, y, z
-	int getControllerID(const Axis axis);
+	int recallControllerID(const Axis axis);
+	void recordControllerID(const Axis axis, const int ID);
 	double recallPosition_mm(const Axis axis);
 	void recordPosition(const Axis axis, const double position_mm);
 public:
@@ -189,6 +190,7 @@ public:
 	double downloadPosition_mm(const Axis axis);
 	void scanningStrategy(const int nTileAbsolute);
 	double3 readAbsolutePosition_mm(const int nSection, const int nPlane, const int3 nTileXY);
+	bool isMoving(const Axis axis);
 };
 
 /*

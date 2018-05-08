@@ -773,17 +773,17 @@ void Laser::setWavelength()
 #pragma region "Stages"
 Stage::Stage()
 {
-	//Open connections to the stage controllers and get IDs
-	mID.at(xx) = PI_ConnectUSB(mStageName_x.c_str());
-	mID.at(yy) = PI_ConnectUSB(mStageName_y.c_str());
-	mID.at(zz) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 3 for "COM3" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	//Open the connections to the stage controllers and get assign their IDs
+	recordControllerID( xx, PI_ConnectUSB(mStageName_x.c_str()) );
+	recordControllerID( yy, PI_ConnectUSB(mStageName_y.c_str()) );
+	recordControllerID( zz, PI_ConnectRS232(mPort_z, mBaud_z) ); // nPortNr = 3 for "COM3" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
 	//mID.at(stage_z) = PI_ConnectUSB(mStageName_z.c_str());
 
-	if (getControllerID(xx) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
-	if (getControllerID(yy) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
-	if (getControllerID(zz) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
+	if (recallControllerID(xx) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
+	if (recallControllerID(yy) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
+	if (recallControllerID(zz) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
 
-	//Read the current position
+	//Record the current position
 	recordPosition(xx, downloadPosition_mm(xx));
 	recordPosition(yy, downloadPosition_mm(yy));
 	recordPosition(zz, downloadPosition_mm(zz));
@@ -791,29 +791,38 @@ Stage::Stage()
 
 Stage::~Stage()
 {
-	// Close Connections
-	PI_CloseConnection(getControllerID(xx));
-	PI_CloseConnection(getControllerID(yy));
-	PI_CloseConnection(getControllerID(zz));
+	//Close the Connections
+	PI_CloseConnection(recallControllerID(xx));
+	PI_CloseConnection(recallControllerID(yy));
+	PI_CloseConnection(recallControllerID(zz));
 	//std::cout << "Stages connection closed.\n";
 }
 
-int Stage::getControllerID(const Axis axis)
+//Recall the controller ID
+int Stage::recallControllerID(const Axis axis)
 {
 	return mID.at(axis);
 }
 
+//Record the controller ID
+void Stage::recordControllerID(const Axis axis, const int ID)
+{
+	mID.at(axis) = ID;
+}
 
+//Recall the current position
 double Stage::recallPosition_mm(const Axis axis)
 {
 	return mPosition_mm.at(axis);
 }
 
+//Record the current position
 void Stage::recordPosition(const Axis axis, const double position_mm)
 {
 	mPosition_mm.at(axis) = position_mm;
 }
 
+//Record the current position for the 3 stages
 double3 Stage::recallPositionXYZ_mm()
 {
 	return mPosition_mm;
@@ -826,26 +835,29 @@ void Stage::printPositionXYZ()
 	std::cout << "Stage Z position = " << recallPosition_mm(zz) << " mm" << std::endl;
 }
 
+//Retrieve the position from the stage
 double Stage::downloadPosition_mm(const Axis axis)
 {
 	double position_mm;
-	if (!PI_qPOS(getControllerID(axis), mNstagesPerController, &position_mm))
+	if (!PI_qPOS(recallControllerID(axis), mNstagesPerController, &position_mm))
 		throw std::runtime_error((std::string)__FUNCTION__  ": Unable to query position for the stage " + std::to_string(axis));
 
 	return position_mm;
 }
 
+//Move the stage to the requested position
 void Stage::uploadPosition(const Axis axis, const double position_mm)
 {
 	if (recallPosition_mm(axis) != position_mm )
 	{
-		if (!PI_MOV(getControllerID(axis), mNstagesPerController, &position_mm) )
+		if (!PI_MOV(recallControllerID(axis), mNstagesPerController, &position_mm) )	//~14 ms to execute this function
 			throw std::runtime_error((std::string)__FUNCTION__  ": Unable to move stage Z to target position");
 
 		recordPosition(axis, position_mm);
 	}
 }
 
+//Move the 3 stages to the requested position
 void Stage::uploadPositionXYZ(const double3 positions_mm)
 {
 	uploadPosition(xx, recallPosition_mm(xx));
@@ -854,6 +866,15 @@ void Stage::uploadPositionXYZ(const double3 positions_mm)
 }
 
 
+bool Stage::isMoving(const Axis axis)
+{
+	BOOL isMoving = FALSE;
+
+	if (!PI_IsMoving(recallControllerID(axis), mNstagesPerController, &isMoving))	//~55 ms to execute this function
+		throw std::runtime_error((std::string)__FUNCTION__  ": Unable to query movement status");
+
+	return isMoving;
+}
 
 
 

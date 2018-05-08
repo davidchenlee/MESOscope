@@ -115,7 +115,21 @@ void seq_testFilterwheel(const FPGAapi &fpga)
 
 void seq_testStages(const FPGAapi &fpga)
 {
+	const double newPosition = 18.5520;
+	//const double newPosition = 19.0000;
 	Stage stage;
 	stage.printPositionXYZ();
-	//stage.moveToPosition_mm();
+
+
+	stage.uploadPosition(zz, newPosition);
+
+	Sleep(1000);
+	stage.isMoving(zz);
+
+	
+	//std::cout << "It is moving. Duration: " << duration << std::endl;
+		
+	
+		
+
 }

@@ -110,7 +110,7 @@ public:
 	void pushQueue(const RTchannel chan, QU32& queue);
 	void pushSingleValue(const RTchannel chan, const U32 input);
 	void pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
-	void loadRTsequenceonFPGA();
+	void uploadRTsequenceToFPGA();
 	void runRTsequence();
 };
 

@@ -8,19 +8,21 @@ void seq_main(const FPGAapi &fpga)
 	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
 	const double galvoTimeStep_us = 8 * us;
 	
-	//REALTIME SEQUENCE
-	RTsequence sequence(fpga);
-	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
-	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
-	sequence.loadRTsequenceonFPGA();
 
-	//NON-REALTIME SEQUENCE
-	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
-	pockels.turnOn_mW(laserPower_mW);
-	sequence.runRTsequence();									//Execute the RT sequence and read the photon count
-	pockels.turnOff(); //warning: saving data delays the calling this function
-	
+	for (int ii = 0; ii < 1; ii++)
+	{
+		//REALTIME SEQUENCE
+		RTsequence sequence(fpga);
+		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
+		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
+		sequence.uploadRTsequenceToFPGA();
 
+		//NON-REALTIME SEQUENCE
+		PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
+		pockels.turnOn_mW(laserPower_mW);
+		sequence.runRTsequence();									//Execute the RT sequence and read the photon count
+		pockels.turnOff(); //warning: saving data delays the calling this function
+	}
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock

@@ -277,7 +277,7 @@ void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue)
 }
 
 //Distribute the commands among the different channels (see the implementation of the LV code), but do not execute yet
-void  RTsequence::loadRTsequenceonFPGA()
+void  RTsequence::uploadRTsequenceToFPGA()
 {
 	mFpga.writeFIFO(mVectorOfQueues);
 
@@ -377,7 +377,7 @@ void RTsequence::runRTsequence()
 	//If NOT all the expected data is read successfully
 	if (nElemReadFIFO_A != nPixAllFrames || nElemReadFIFO_B != nPixAllFrames)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": More or less elements received from the FIFO than expected ");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": More or less FIFO elements received than expected ");
 		//std::cerr << "ERROR in " << __FUNCTION__ << ": More or less elements received from the FIFO than expected " << std::endl;
 	}
 	else
@@ -386,7 +386,7 @@ void RTsequence::runRTsequence()
 		unpackFIFObuffer(image, counterBufArray_B, nElemBufArray_B, bufArray_B);
 		correctInterleavedImage(image);
 		writeFrametoTiff(image, "_photon-counts.tif");
-		//writeFrametoTxt(image, "_photon-counts.txt");
+		//writeFrametoTxt(image, "_photon-counts.txt");	//Slow function. For debugging only
 		delete[] image;
 	}
 
@@ -515,6 +515,7 @@ void RTsequence::stopFIFOs()
 
 #pragma endregion "RTsequence"
 
+//When multiplexing, each U32 element in bufArray_B must to be split in 8 parts of 4-bits each
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
 void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
 {
@@ -527,18 +528,17 @@ void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nE
 	{
 		for (int jj = 0; jj < nElemBufArray_B[ii]; jj++)
 		{		
-			scaledCount = std::floor(scaleFactor * bufArray_B[ii][jj]);
+			scaledCount = std::floor(scaleFactor * bufArray_B[ii][jj]); 
 
-			if (scaledCount > 255) throw std::overflow_error((std::string)__FUNCTION__ + ": Scaled photon-count overflows");
+			if (scaledCount > 255) throw std::overflow_error((std::string)__FUNCTION__ + ": Scaled photon-count overflow");
 
 			image[pixIndex] = (unsigned char)scaledCount;
 			//myfile << bufArray_B[ii][jj] << std::endl;
-
-			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
+			
+			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increaments
 			if (debug)
-			{
 				image[pixIndex] = pixIndex + 1;
-			}
+
 			pixIndex++;
 		}
 	}
@@ -554,15 +554,15 @@ int correctInterleavedImage(unsigned char *interleavedImage)
 {
 	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to store the temp data. In principle I could just use half the size, but why bothering...
 
-	//for every odd line, reverse the pixel order
+	//Reverse the pixel order every other line
 	for (int lineIndex = 1; lineIndex < heightPerFrame_pix; lineIndex += 2)
 	{
 		//save the data in an aux array
 		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
-			auxLine[pixIndex] = interleavedImage[lineIndex*widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];
+			auxLine[pixIndex] = interleavedImage[lineIndex*widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];	//TODO: use memcpy
 		//write the data back in reversed order
 		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
-			interleavedImage[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];
+			interleavedImage[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];		// TODO: use memcpy
 
 	}
 	delete[] auxLine;

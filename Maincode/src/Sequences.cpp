@@ -121,13 +121,11 @@ void seq_testStages(const FPGAapi &fpga)
 	stage.printPositionXYZ();
 
 
-	stage.uploadPosition(zz, newPosition);
+	stage.moveStage(zz, newPosition);
 
 	Sleep(1000);
 	stage.isMoving(zz);
-
-	
-	//std::cout << "It is moving. Duration: " << duration << std::endl;
+	std::cout << "It is moving\n";
 		
 	
 		

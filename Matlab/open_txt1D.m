@@ -1,6 +1,6 @@
 %clear all
 CORRECT_INTERLEAVED_IMAGE = 0; % Not needed anymore because I do it before saving the txt file
-PLOT_VECTOR = 0;
+PLOT_VECTOR = 1;
 HEATMAP = ~PLOT_VECTOR;
 COUNT_FREQ = ~PLOT_VECTOR;
 

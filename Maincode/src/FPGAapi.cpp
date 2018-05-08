@@ -179,7 +179,7 @@ void FPGAapi::initialize() const
 	//std::cout << "FPGA initialization status: " << mStatus << std::endl;
 }
 
-//Send every single queue in VectorOfQueue to the FPGA bufer
+//Send every single queue in VectorOfQueue to the FPGA buffer
 //For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 //Then transfer the elements in the long queue to an array to interface the FPGA
 //Alternatively, the single queues could be transferred directly to the array, but why bothering...

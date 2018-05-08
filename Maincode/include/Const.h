@@ -27,7 +27,6 @@ enum FilterwheelID {FW1, FW2};										//Filterwheel
 enum FilterColor { BlueLight = 1, GreenLight = 2, RedLight = 3 };	//Filter color
 enum Axis { xx, yy, zz };
 
-
 namespace Const
 {
 	extern const LineClockInputSelector lineClockInput;				//RS or FG

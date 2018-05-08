@@ -330,13 +330,13 @@ double RTsequence::PixelClock::calculatePracticalDwellTime(const int pix)
 QU32 RTsequence::PixelClock::PixelClockEqualDuration()
 {
 	QU32 queue;
-	const double InitialTimeStep_us = 6.25*us;							//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
+	const double initialTimeStep_us = 6.25*us;							//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
 																		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-	queue.push(packU32(convertUs2tick(InitialTimeStep_us) - mLatency_tick, 0x0000));
+	queue.push(packU32(convertUs2tick(initialTimeStep_us) - mLatency_tick, 0x0000));
 
-	const double PixelTimeStep = 0.125 * us;
+	const double timeStep_pix = 0.125 * us;
 	for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
-		queue.push(singlePixelClock(PixelTimeStep, 1));			//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
+		queue.push(singlePixelClock(timeStep_pix, 1));			//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
 																//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 	return queue;
 }
@@ -368,8 +368,10 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 //Create an array of arrays to serve as a buffer and store the data from the FIFO
 //The ReadFifo function gives chuncks of data. Store each chunck in a separate buffer-array
 //I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
-void RTsequence::runRTsequence()
+void RTsequence::runRTsequence(const std::string filename)
 {
+	mFilename = filename;
+
 	startFIFOs();				//Start the FIFO OUT to transfer data from the FPGA FIFO to the PC FIFO
 	mFpga.runRTsequence();		//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
 	readFIFO();					//Read the data
@@ -385,8 +387,8 @@ void RTsequence::runRTsequence()
 		unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
 		unpackFIFObuffer(image, counterBufArray_B, nElemBufArray_B, bufArray_B);
 		correctInterleavedImage(image);
-		writeFrametoTiff(image, "_photon-counts.tif");
-		//writeFrametoTxt(image, "_photon-counts.txt");	//Slow function. For debugging only
+		writeFrametoTiff(image, mFilename);
+		//writeFrametoTxt(image, mFilename);	//Slow function. For debugging only
 		delete[] image;
 	}
 
@@ -515,13 +517,13 @@ void RTsequence::stopFIFOs()
 
 #pragma endregion "RTsequence"
 
-//When multiplexing, each U32 element in bufArray_B must to be split in 8 parts of 4-bits each
+//When multiplexing later on, each U32 element in bufArray_B must to be split in 8 parts of 4-bits each
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
 void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
 {
 	const bool debug = 0;
-	const double scaleFactor = 25.5;	//Scale up the photon-count to cover the full 0-255 range for a 8-bit number
-	double scaledCount = 0;
+	const double scaleFactor = 1;	//Scale up the photon-count to cover the full 0-255 range for a 8-bit number
+	double scaledCount;
 
 	U32 pixIndex = 0;	//Index for the image pixel
 	for (int ii = 0; ii < counterBufArray_B; ii++)
@@ -574,7 +576,7 @@ int correctInterleavedImage(unsigned char *interleavedImage)
 int writeFrametoTxt(unsigned char *imageArray, const std::string fileName)
 {
 	std::ofstream myfile;								//Create output file
-	myfile.open(fileName);								//Open the file
+	myfile.open(fileName + ".txt");								//Open the file
 
 	for (int ii = 0; ii < nPixAllFrames; ii++)
 		myfile << (int)imageArray[ii] << std::endl;	//Write each element

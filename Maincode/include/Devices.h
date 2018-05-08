@@ -88,6 +88,8 @@ class RTsequence
 	void readFIFO();
 	void stopFIFOs();
 
+	std::string mFilename;
+
 	class PixelClock
 	{
 		const int mLatency_tick = 2;					//latency at detecting the line clock. Calibrate the latency with the oscilloscope
@@ -111,7 +113,7 @@ public:
 	void pushSingleValue(const RTchannel chan, const U32 input);
 	void pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 	void uploadRTsequenceToFPGA();
-	void runRTsequence();
+	void runRTsequence(const std::string filename = "_photon-count");
 };
 
 class PockelsCell

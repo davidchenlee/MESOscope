@@ -6,7 +6,6 @@
 using namespace Const;
 using namespace Parameters;
 
-
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/
 static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 

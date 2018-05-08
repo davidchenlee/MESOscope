@@ -20,7 +20,7 @@ void seq_main(const FPGAapi &fpga)
 		//NON-REALTIME SEQUENCE
 		PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
 		pockels.turnOn_mW(laserPower_mW);
-		sequence.runRTsequence();									//Execute the RT sequence and read the photon count
+		sequence.runRTsequence();									//Execute the RT sequence, read and save the photon count
 		pockels.turnOff(); //warning: saving data delays the calling this function
 	}
 }

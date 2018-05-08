@@ -3,7 +3,7 @@
 
 int writeFrametoTiff(unsigned char *image, std::string fileName)
 {
-	TIFF *tiffHandle = TIFFOpen(fileName.c_str(), "w");
+	TIFF *tiffHandle = TIFFOpen((fileName + ".tif").c_str(), "w");
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Saving Tiff failed");

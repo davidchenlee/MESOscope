@@ -1,23 +1,12 @@
 /* The following example is from http://research.cs.wisc.edu/graphics/Courses/638-f1999/libtiff_tutorial.htm */
-
 #include "Tiffscope.h"
 
-int writeFrametoTiff(unsigned char *imageIn, std::string fileName)
+int writeFrametoTiff(unsigned char *image, std::string fileName)
 {
-	const double scale = 25.5;																//Scale up the photon-count to cover the full 0-255 range for a 8-bit number
-
 	TIFF *tiffHandle = TIFFOpen(fileName.c_str(), "w");
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Saving Tiff failed");
-
-	unsigned char *image = new unsigned char[nPixPerFrame];			//Create an 1D array representing the image
-
-	for (int ii = 0; ii < nPixPerFrame; ii++)
-		image[ii] = 0;																	//Initialize the array
-
-	for (int ii = 0; ii < nPixPerFrame; ii++)
-		image[ii] = (unsigned char)std::floor(scale * imageIn[ii]);
 
 	//TAGS
 	TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, widthPerFrame_pix);					//Set the width of the image

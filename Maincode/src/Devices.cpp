@@ -200,7 +200,7 @@ RTsequence::~RTsequence()
 	}
 	delete[] bufArray_B;
 
-	std::cout << "RT destructor was called" << std::endl;
+	//std::cout << "RT destructor was called" << std::endl;
 }
 
 QU32 RTsequence::generateLinearRamp(double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
@@ -382,17 +382,15 @@ void RTsequence::runRTsequence()
 	}
 	else
 	{
-		unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
+		unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
+		unpackFIFObuffer(image, counterBufArray_B, nElemBufArray_B, bufArray_B);
 		correctInterleavedImage(image);
 		writeFrametoTiff(image, "_photon-counts.tif");
-		writeFrametoTxt(image, "_photon-counts.txt");
+		//writeFrametoTxt(image, "_photon-counts.txt");
 		delete[] image;
 	}
 
-	
-	
-
-	stopFIFOs();				//Close the FIFO to (maybe) flush it
+	stopFIFOs();	//Close the FIFO to (maybe) flush it
 }
 
 void RTsequence::startFIFOs()
@@ -518,21 +516,23 @@ void RTsequence::stopFIFOs()
 #pragma endregion "RTsequence"
 
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
-unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
+void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
 {
-	const bool debug = 0;												//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
-	unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
+	const bool debug = 0;
+	const double scaleFactor = 25.5;	//Scale up the photon-count to cover the full 0-255 range for a 8-bit number
+	double scaledCount = 0;
 
-	for (int ii = 0; ii < nPixAllFrames; ii++)							//Initialize the array
-		image[ii] = 0;
-
-	U32 pixIndex = 0;													//Index the image pixel
+	U32 pixIndex = 0;	//Index for the image pixel
 	for (int ii = 0; ii < counterBufArray_B; ii++)
 	{
 		for (int jj = 0; jj < nElemBufArray_B[ii]; jj++)
-		{
-			//myfile << bufArray_B[ii][jj] << std::endl;		
-			image[pixIndex] = (unsigned char)bufArray_B[ii][jj];
+		{		
+			scaledCount = std::floor(scaleFactor * bufArray_B[ii][jj]);
+
+			if (scaledCount > 255) throw std::overflow_error((std::string)__FUNCTION__ + ": Scaled photon-count overflows");
+
+			image[pixIndex] = (unsigned char)scaledCount;
+			//myfile << bufArray_B[ii][jj] << std::endl;
 
 			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
 			if (debug)
@@ -542,7 +542,6 @@ unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_
 			pixIndex++;
 		}
 	}
-	return image;
 }
 
 

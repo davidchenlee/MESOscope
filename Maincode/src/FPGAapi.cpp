@@ -19,12 +19,12 @@ namespace GenericFPGAfunctions {
 
 		if ((U32)t_tick > 0x0000FFFF)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step overflow. Time step cast to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": time step overflow. Time step cast to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
 			return _UI16_MAX;
 		}
 		else if ((U32)t_tick < dt_tick_MIN)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step underflow. Time step cast to the min: " << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": time step underflow. Time step cast to the min: " << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
 			return dt_tick_MIN;
 		}
 		else
@@ -39,12 +39,12 @@ namespace GenericFPGAfunctions {
 
 		if (x > 10)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage cast to the max: " + std::to_string(VMAX) + " V" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": voltage overflow. Voltage cast to the max: " + std::to_string(VMAX) + " V" << std::endl;
 			return (I16)_I16_MAX;
 		}
 		else if (x < -10)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage cast to the min: " + std::to_string(VMIN) + " V" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": voltage underflow. Voltage cast to the min: " + std::to_string(VMIN) + " V" << std::endl;
 			return (I16)_I16_MIN;
 		}
 		else
@@ -88,7 +88,7 @@ namespace GenericFPGAfunctions {
 
 		if (TimeStep < AOdt_us)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AOdt_us << " us" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": time step too small. Time step cast to " << AOdt_us << " us" << std::endl;
 			TimeStep = AOdt_us;						//Analog output time increment (in us)
 		}
 

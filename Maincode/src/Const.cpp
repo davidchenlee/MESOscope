@@ -3,7 +3,7 @@
 namespace Const
 {
 	extern const LineClockInputSelector lineClockInput = FG;				//RS or FG
-	extern const PhotonCounterInputSelector photonCounterInput = sim;		//ext or sim
+	extern const PhotonCounterInputSelector photonCounterInput = ext;		//ext or sim
 
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;								//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
@@ -33,8 +33,13 @@ namespace Const
 	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refer to as a 'line').
 	//Example, if I divide each line in 1000 pixels, then the pix dwell time is 62.5ns. Therefore, 62.5ns can fit at most 5 pulses separated by 12.5ns
 	extern const int nPulses = 20;												//Number of pulses
+<<<<<<< HEAD
 	extern const U8 pulseArray[nPulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
 											0, 0, 0, 0, 0, 0, 0, 0, 0, 0};		//@160MHz, one cycle through this array lasts 125ns	
+=======
+	extern const U8 pulseArray[nPulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns	
+>>>>>>> parent of 202283b... VS: move the rescaled count from Tiffscope to the 'unpackFIFO' function
 
 }
 

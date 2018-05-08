@@ -189,6 +189,7 @@ public:
 	void scanningStrategy(const int nTileAbsolute);
 	double3 readAbsolutePosition_mm(const int nSection, const int nPlane, const int3 nTileXY);
 	bool isMoving(const Axis axis);
+	void waitForMovementStop(const Axis axis);
 };
 
 /*

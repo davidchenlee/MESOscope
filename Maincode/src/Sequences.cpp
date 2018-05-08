@@ -116,17 +116,14 @@ void seq_testFilterwheel(const FPGAapi &fpga)
 void seq_testStages(const FPGAapi &fpga)
 {
 	const double newPosition = 18.5520;
-	//const double newPosition = 19.0000;
+	//const double newPosition = 19.000;
 	Stage stage;
 	stage.printPositionXYZ();
 
 
 	stage.moveStage(zz, newPosition);
-
-	Sleep(1000);
-	stage.isMoving(zz);
-	std::cout << "It is moving\n";
-		
+	stage.waitForMovementStop(zz, 1 * ms);
+	stage.printPositionXYZ();
 	
 		
 

@@ -816,7 +816,7 @@ double Stage::downloadPosition_mm(const Axis axis)
 {
 	double position_mm;
 	if (!PI_qPOS(mID[axis], mNstagesPerController, &position_mm))
-		throw std::runtime_error((std::string)__FUNCTION__  ": Unable to query position for the stage " + std::to_string(axis));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query position for the stage " + std::to_string(axis));
 
 	return position_mm;
 }
@@ -829,10 +829,10 @@ void Stage::moveStage(const Axis axis, const double position_mm)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position out of bounds for stage " + std::to_string(axis));
 
 	//Move the stage
-	if (mPosition_mm[axis] != position_mm )
+	if (mPosition_mm[axis] != position_mm ) //Move only if different position
 	{
 		if (!PI_MOV(mID[axis], mNstagesPerController, &position_mm) )	//~14 ms to execute this function
-			throw std::runtime_error((std::string)__FUNCTION__  ": Unable to move stage Z to target position");
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage Z to target position");
 
 		mPosition_mm[axis] = position_mm;
 	}
@@ -852,9 +852,22 @@ bool Stage::isMoving(const Axis axis)
 	BOOL isMoving = FALSE;
 
 	if (!PI_IsMoving(mID[axis], mNstagesPerController, &isMoving))	//~55 ms to execute this function
-		throw std::runtime_error((std::string)__FUNCTION__  ": Unable to query movement status");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage " + std::to_string(axis));
 
 	return isMoving;
+}
+
+void Stage::waitForMovementStop(const Axis axis)
+{
+	BOOL isMoving;
+	do {
+		if (!PI_IsMoving(mID[axis], mNstagesPerController, &isMoving))
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage" + std::to_string(axis));
+
+		std::cout << "#";
+	} while (isMoving);
+
+	std::cout << "\n";
 }
 
 

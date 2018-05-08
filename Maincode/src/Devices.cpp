@@ -383,10 +383,15 @@ void RTsequence::runRTsequence()
 	else
 	{
 		unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
-		correctInterleavedImage(image);
+		//correctInterleavedImage(image);
+
+
+
 		//writeFrametoTiff(image, "_photon-counts.tif");
 		//writeFrametoTxt(image, "_photon-counts.txt");
-		//delete image;
+
+
+		delete[] image;
 	}
 
 	
@@ -520,9 +525,9 @@ void RTsequence::stopFIFOs()
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
 unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
 {
-	const bool debug = 0;												//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
-	//CHANGE TO STD::ARRAY??
-	static unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
+	const bool debug = 0;
+
+	unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
 
 	for (int ii = 0; ii < nPixAllFrames; ii++)							//Initialize the array
 		image[ii] = 0;
@@ -553,16 +558,16 @@ unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
 //One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 int correctInterleavedImage(unsigned char *interleavedImage)
-{	//CHANGE TO STD::ARRAY??
-	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to temp store the data. In principle I could just use half the size, but why bothering...
+{
+	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to store the tmp data. In principle I could just use half the size, but why bothering...
 
-																   //for every odd-number line, reverse the pixel order
+	//for every odd line, reverse the pixel order
 	for (int lineIndex = 1; lineIndex < heightPerFrame_pix; lineIndex += 2)
 	{
 		//save the data in an aux array
 		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
 			auxLine[pixIndex] = interleavedImage[lineIndex*widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];
-		//write the data back
+		//write the data back in reversed order
 		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
 			interleavedImage[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];
 

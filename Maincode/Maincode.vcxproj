@@ -165,19 +165,16 @@
     <ClCompile Include="src\Sequences.cpp" />
     <ClCompile Include="src\serial.cc" />
     <ClCompile Include="src\Tiffscope.cpp" />
-    <ClCompile Include="src\UARTscope.cpp" />
     <ClCompile Include="src\win.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Const.h" />
     <ClInclude Include="include\Devices.h" />
     <ClInclude Include="include\FPGAapi.h" />
-    <ClInclude Include="include\PIstages.h" />
     <ClInclude Include="include\Sequences.h" />
     <ClInclude Include="include\serial\serial.h" />
     <ClInclude Include="include\serial\win.h" />
     <ClInclude Include="include\Tiffscope.h" />
-    <ClInclude Include="include\UARTscope.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

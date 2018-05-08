@@ -83,7 +83,7 @@ class RTsequence
 	int nElemReadFIFO_B = 0; 							//Total number of elements read from the FIFO
 	U32 **bufArray_B;									//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < nPixAllFrames
 
-	void configureFIFO(U32 depth);
+	void configureFIFO(const U32 depth);
 	void startFIFOs();
 	void readFIFO();
 	void stopFIFOs();
@@ -123,7 +123,7 @@ class PockelsCell
 	double mVoltPermW = 1;											//Calibration factor
 	double mV_volt;													//Output voltage to the HV amplifier
 	double voltageforMinPower();									//The output laser power depend on the wavelength
-	double convertPowertoVoltage_volt(double power_mW);
+	double convertPowertoVoltage_volt(const double power_mW);
 public:
 	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm);
 	~PockelsCell();
@@ -152,7 +152,7 @@ public:
 class Laser
 {
 	int mWavelength;
-	std::string port = "COM1";											//internal ID assigned by the OS
+	const std::string port = "COM1";						//internal ID assigned by the OS
 	const int mBaud = 19200;
 	const int mTimeout_ms = 100;
 	serial::Serial *mSerial;
@@ -170,30 +170,28 @@ class Stage
 	const std::string mStageName_x = "116049107";	//X-stage (V-551.4B)
 	const std::string mStageName_y = "116049105";	//Y-stage (V-551.2B)
 	const std::string mStageName_z = "0165500631";	//Z-stage (ES-100)
-	const int mPort_z = 3;		//COM3
+	const int mPort_z = 3;							//COM3
 	const int mBaud_z = 38400;
-	int3 mID;
-	char mNAxes[2] = "1";		//Number of axes per controller. There is only 1 stage per controller
-
-	double3 mAbsPosition_mm;			//Absolute position of the stages (x, y, z)
-	int3 Ntile;						//Tile number in x, y, z
-	int3 tileOverlap_pix;			//in pixels. Tile overlap in x, y, z
-
-	double readPosition_mm_(int ID);
+	int3 mID;										//Stage ID assigned by the controllers
+	const int mNstages = 3;							//Number of stages (currently 3: X, Y, Z)
+	const char mNstagesPerController[2] = "1";		//Number of stages per controller (currently 1)
+	double3 mAbsPosition_mm;						//Absolute position of the stages (x, y, z)
+	int3 Ntile;										//Tile number in x, y, z
+	int3 tileOverlap_pix;							//in pixels. Tile overlap in x, y, z
 public:
 	Stage();
 	~Stage();
 	double3 readPosition_mm();
 	void printPosition();
-	void moveToPosition_mm();
-	void scanningStrategy(int nTileAbsolute);
-	double3 readAbsolutePosition_mm(int nSection, int nPlane, int3 nTileXY);
+	void moveToPosition_mm(const double position);
+	void scanningStrategy(const int nTileAbsolute);
+	double retrievePositionForSingleStage_mm(const int ID);
+	double3 readAbsolutePosition_mm(const int nSection, const int nPlane, const int3 nTileXY);
 };
 
-bool runPIstage();
-bool GetStageBondaries(int stageID);
-bool GetStagePosition(int stageID);
+/*
 bool ReferenceIfNeeded(int PIdeviceId, char* axis);
 void CloseConnectionWithComment(int PIdeviceId, const char* comment);
 void ReportError(int PIdeviceId);
 bool referenceStageZ();
+*/

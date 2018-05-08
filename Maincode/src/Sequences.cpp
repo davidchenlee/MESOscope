@@ -3,7 +3,7 @@
 void seq_main(const FPGAapi &fpga)
 {
 	const int wavelength_nm = 940;
-	const double laserPower_mW = 40 * mW;
+	const double laserPower_mW = 60 * mW;
 	const double FFOVslow_um = 200 * um;	//Full FOV in the slow axis (galvo)
 
 
@@ -117,5 +117,5 @@ void seq_testStages(const FPGAapi &fpga)
 {
 	Stage stage;
 	stage.printPosition();
-
+	//stage.moveToPosition_mm();
 }

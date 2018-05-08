@@ -7,9 +7,9 @@ int main(int argc, char* argv[])
 	try
 	{
 		fpga.initialize();	//Initialize the FPGA
-		seq_main(fpga);	//Run the sequence
+		//seq_main(fpga);	//Run the sequence
 		
-		//seq_testStages(fpga);
+		seq_testStages(fpga);
 
 		fpga.flushFIFO();	//Flush the FPGA FIFOs as precaution
 		fpga.close(0);		//Close the FPGA connection

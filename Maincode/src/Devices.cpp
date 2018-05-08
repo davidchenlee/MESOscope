@@ -494,7 +494,7 @@ void RTsequence::readFIFO()
 	std::cout << "Total of elements read: " << nElemReadFIFO_A << "\t" << nElemReadFIFO_B << std::endl; //print the total number of elements read
 }
 
-void RTsequence::configureFIFO(U32 depth)
+void RTsequence::configureFIFO(const U32 depth)
 {
 	U32 actualDepth;
 	NiFpga_Status status = NiFpga_ConfigureFifo2(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth);
@@ -632,7 +632,7 @@ void PockelsCell::turnOff()
 }
 
 
-double PockelsCell::convertPowertoVoltage_volt(double power_mW)
+double PockelsCell::convertPowertoVoltage_volt(const double power_mW)
 {
 	double a, b, c;		//Calibration parameters
 
@@ -779,31 +779,32 @@ void Laser::setWavelength()
 #pragma region "Stages"
 Stage::Stage()
 {
-	mID.at(0) = PI_ConnectUSB(mStageName_x.c_str());
-	mID.at(1) = PI_ConnectUSB(mStageName_y.c_str());
-	//ZstageID = PI_ConnectUSB(mStageName_z.c_str());
-	mID.at(2) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 3 for "COM3" (manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	mID.at(stage_x) = PI_ConnectUSB(mStageName_x.c_str());
+	mID.at(stage_y) = PI_ConnectUSB(mStageName_y.c_str());
+	//mID.at(2) = PI_ConnectUSB(mStageName_z.c_str());
+	mID.at(stage_z) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 3 for "COM3" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
 
-	if (mID.at(0)  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID.at(0)));
-	if (mID.at(1)  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID.at(1)));
-	if (mID.at(2)  < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage " + std::to_string(mID.at(2)));
+	if (mID.at(stage_x) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
+	if (mID.at(stage_y) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
+	if (mID.at(stage_z) < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
 
-	for (int ii = 0; ii < 3; ii++)
-		mAbsPosition_mm.at(ii) = readPosition_mm_(mID.at(ii));
+	//Read the current position
+	for (int ii = 0; ii < mNstages; ii++)
+		mAbsPosition_mm.at(ii) = retrievePositionForSingleStage_mm(mID.at(ii));
 }
 
 Stage::~Stage()
 {
-	// Close Connections	
-	for (int ii = 0; ii < 3; ii++)
-		PI_CloseConnection(mID.at(ii));
-	std::cout << "Stages connection closed.\n";
+	for (int ii = 0; ii < mNstages; ii++)
+		PI_CloseConnection(mID.at(ii));					// Close Connections
+	//std::cout << "Stages connection closed.\n";
 }
 
-double Stage::readPosition_mm_(int ID)
+double Stage::retrievePositionForSingleStage_mm(const int ID)
 {
 	double position_mm;
-	if (!PI_qPOS(ID, mNAxes, &position_mm)) throw std::runtime_error((std::string)__FUNCTION__  ": Unable to query position for the stage " + std::to_string(ID));
+	if (!PI_qPOS(ID, mNstagesPerController, &position_mm))
+		throw std::runtime_error((std::string)__FUNCTION__  ": Unable to query position for the stage " + std::to_string(ID));
 
 	return position_mm;
 }
@@ -815,39 +816,27 @@ double3 Stage::readPosition_mm()
 
 void Stage::printPosition()
 {
-	for (int ii = 0; ii < 3; ii++)
+	for (int ii = 0; ii < mNstages; ii++)
 		std::cout << "Stage " << mID.at(ii) << " position = " << mAbsPosition_mm.at(ii) << " mm" << std::endl;
 }
 
-void Stage::moveToPosition_mm()
+void Stage::moveToPosition_mm(const double position)
 {
-	
+	double SetPosition = 18.5520;
+	if (!PI_MOV(mID.at(stage_z), mNstagesPerController, &SetPosition))
+		throw std::runtime_error((std::string)__FUNCTION__  ": Unable to move stage to target position " + std::to_string(mID.at(stage_z)));
+
+	mAbsPosition_mm.at(stage_z) = SetPosition;
 }
 
-// Additional Sample Functions
-int XstageID, YstageID, ZstageID;
+
+
+
+
+/*
+int ZstageID;
 char NumberOfAxesPerController[] = "1"; //There is only 1 stage per controller
 
-
-// Determine boundaries for stage movement
-bool GetStageBondaries(int stageID)
-{
-	double MinPositionValue, MaxPositionValue;
-	if (!PI_qTMN(stageID, NumberOfAxesPerController, &MinPositionValue))
-	{
-		CloseConnectionWithComment(stageID, "TMN? unable to query min. position of axis.\n");
-		return false;
-	}
-
-	if (!PI_qTMX(stageID, NumberOfAxesPerController, &MaxPositionValue))
-	{
-		CloseConnectionWithComment(stageID, "TMX?, Unable to query max. position of axis.\n");
-		return false;
-	}
-
-	std::cout << "Allowed range of movement: min: " << MinPositionValue << "\t max: " << MaxPositionValue << "\n";
-	return true;
-}
 
 bool ReferenceIfNeeded(int PIdeviceId, char* axis)
 {
@@ -930,11 +919,13 @@ bool referenceStageZ()
 	std::cout << "Stage Z is referenced.\n";
 	return true;
 }
+*/
+
 #pragma endregion "Stages"
 
 //Convert from absolute tile number ---> (slice number, plane number, tile number)
 // this function does NOT consider the overlaps
-void Stage::scanningStrategy(int nTileAbsolute) //Absolute tile number = 0, 1, 2, ..., total number of tiles
+void Stage::scanningStrategy(const int nTileAbsolute) //Absolute tile number = 0, 1, 2, ..., total number of tiles
 {
 	int nTiles_x = 50;	//Number of tiles in x
 	int nTiles_y = 50;	//Number of tiles in y
@@ -997,7 +988,7 @@ stop;
 
 //convert from (slice number, plane number, tile number) ---> absolute position (x,y,z)
 //this function considers the overlaps in x, y, and z
-double3 Stage::readAbsolutePosition_mm(int nSlice, int nPlane, int3 nTileXY)
+double3 Stage::readAbsolutePosition_mm(const int nSlice, const int nPlane, const int3 nTileXY)
 {
 	const double mm = 1;
 	const double um = 0.001;
@@ -1017,7 +1008,7 @@ double3 Stage::readAbsolutePosition_mm(int nSlice, int nPlane, int3 nTileXY)
 	return absPosition_mm;
 }
 /*
-[1] The stage Z has a virtual COM port that works on top of the USB connection (manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.
+[1] The stage Z has a virtual COM port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.
 nPortNr: to know the correct COM port, look at Window's device manager or use Tera Term. Use nPortNr=1 for COM1, etc..
 iBaudRate: the manual says that the baud rate does not matter (p10), but the suggested 115200 does not work. I use the default baud rate = 38400 which matches the drive's front panel configuration (using physical switches)
 */

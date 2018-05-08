@@ -33,9 +33,6 @@
     <ClCompile Include="src\Tiffscope.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\UARTscope.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -56,16 +53,10 @@
     <ClInclude Include="include\FPGAapi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\PIstages.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Sequences.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Tiffscope.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\UARTscope.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\serial\serial.h">

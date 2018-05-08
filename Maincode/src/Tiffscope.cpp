@@ -40,7 +40,7 @@ int writeFrametoTiff(unsigned char *imageIn, std::string fileName)
 	//Set the strip size of the file to be size of one row of pixels
 	TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, widthPerFrame_pix));
 
-	//Now writing image to the file one strip at a time
+	//Now writing image to the file one strip at a time. CURRENTLY ONLE THE FIRST FRAME IS SAVED!!!!
 	for (int row = 0; row < heightPerFrame_pix; row++)
 	{
 		memcpy(buffer, &image[(heightPerFrame_pix - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine

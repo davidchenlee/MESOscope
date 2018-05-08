@@ -382,13 +382,12 @@ void RTsequence::runRTsequence()
 	}
 	else
 	{
-		unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
-		unpackFIFObuffer(image, counterBufArray_B, nElemBufArray_B, bufArray_B);
+		//unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
+		unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
 		correctInterleavedImage(image);
 
-		//writeFrametoTiff(image, "_photon-counts.tif");
+		writeFrametoTiff(image, "_photon-counts.tif");
 		writeFrametoTxt(image, "_photon-counts.txt");
-
 
 		delete[] image;
 	}
@@ -522,22 +521,27 @@ void RTsequence::stopFIFOs()
 #pragma endregion "RTsequence"
 
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
-void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
+unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
 {
 	const bool debug = 0;
 	const double scale = 25.5;		//Scale up the photon-count to cover the full 0-255 range of a 8-bit number
 	double rescaledCount = 0;
+
+	unsigned char *image = new unsigned char[nPixAllFrames];
+
+	for (int ii = 0; ii < nPixAllFrames; ii++)
+		image[ii] = 0;
 
 	U32 pixIndex = 0;	//Index the image pixel
 	for (int ii = 0; ii < counterBufArray_B; ii++)
 	{
 		for (int jj = 0; jj < nElemBufArray_B[ii]; jj++)
 		{	
-			rescaledCount = scale * bufArray_B[ii][jj];
+			rescaledCount = std::floor(scale * bufArray_B[ii][jj]);
 
 			if (rescaledCount > 255) throw std::overflow_error(((std::string)__FUNCTION__ + ": Photon count to 8-bit conversion overflow"));
 
-			image[pixIndex] = (unsigned char)std::floor(rescaledCount);	//TOTO: change to memcpy
+			image[pixIndex] = (unsigned char)std::floor(scale * bufArray_B[ii][jj]);	//TOTO: change to memcpy
 			//myfile << bufArray_B[ii][jj] << std::endl;
 
 			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increament
@@ -548,6 +552,7 @@ void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nE
 			pixIndex++;
 		}
 	}
+	return image;
 }
 
 

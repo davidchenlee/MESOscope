@@ -12,7 +12,7 @@ using namespace GenericFPGAfunctions;
 
 
 //Image handling
-void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B);
+unsigned char *unpackFIFObuffer(const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B);
 int correctInterleavedImage(unsigned char *interleavedImage);
 int writeFrametoTxt(unsigned char *imageArray, const std::string fileName);
 

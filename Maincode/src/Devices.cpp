@@ -200,7 +200,7 @@ RTsequence::~RTsequence()
 	}
 	delete[] bufArray_B;
 
-	//std::cout << "RT destructor was called" << std::endl;
+	std::cout << "RT destructor was called" << std::endl;
 }
 
 QU32 RTsequence::generateLinearRamp(double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
@@ -211,7 +211,7 @@ QU32 RTsequence::generateLinearRamp(double TimeStep, const double RampLength, co
 	if (TimeStep < AOdt_us)
 	{
 		std::cerr << "WARNING in " << __FUNCTION__ << ": time step too small. Time step set to " << AOdt_us << " us" << std::endl;
-		TimeStep = AOdt_us;						//Analog output time increment (in us)
+		TimeStep = AOdt_us;		//Analog output time increment (in us)
 		return {};
 	}
 
@@ -384,9 +384,9 @@ void RTsequence::runRTsequence()
 	{
 		unsigned char *image = unpackFIFObuffer(counterBufArray_B, nElemBufArray_B, bufArray_B);
 		correctInterleavedImage(image);
-		writeFrametoTiff(image, "_photon-counts.tif");
+		//writeFrametoTiff(image, "_photon-counts.tif");
 		//writeFrametoTxt(image, "_photon-counts.txt");
-		delete image;
+		//delete image;
 	}
 
 	
@@ -795,7 +795,7 @@ Stage::~Stage()
 	PI_CloseConnection(mID[xx]);
 	PI_CloseConnection(mID[yy]);
 	PI_CloseConnection(mID[zz]);
-	//std::cout << "Stages connection closed.\n";
+	std::cout << "Stages connection closed.\n";
 }
 
 //Recall the current position for the 3 stages
@@ -824,7 +824,7 @@ double Stage::downloadPosition_mm(const Axis axis)
 //Move the stage to the requested position
 void Stage::moveStage(const Axis axis, const double position_mm)
 {
-	//Check if the requested position is in range
+	//Check if the requested position is within range
 	if (position_mm < mPosMin_mm[axis] || position_mm > mPosMax_mm[axis])
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position out of bounds for stage " + std::to_string(axis));
 
@@ -870,97 +870,6 @@ void Stage::waitForMovementStop(const Axis axis)
 	std::cout << "\n";
 }
 
-
-
-/*
-int ZstageID;
-char NumberOfAxesPerController[] = "1"; //There is only 1 stage per controller
-
-
-bool ReferenceIfNeeded(int PIdeviceId, char* axis)
-{
-	BOOL Referenced;
-	BOOL Flag;
-	if (!PI_qFRF(PIdeviceId, axis, &Referenced))
-		return false;
-
-	// If stage is equipped with absolute sensors, Referenced will always be set to true.
-	if (!Referenced)
-	{
-		std::cout << "Referencing axis " << axis << "\n";
-		if (!PI_FRF(PIdeviceId, axis))
-		{
-			return false;
-		}
-
-		// Wait until the reference move is done.
-		Flag = FALSE;
-		while (Flag != TRUE)
-		{
-			if (!PI_IsControllerReady(PIdeviceId, &Flag))
-				return false;
-		}
-	}
-	return true;
-}
-
-
-void CloseConnectionWithComment(int PIdeviceId, const char* comment)
-{
-	std::cout << comment << "\n";
-	ReportError(PIdeviceId);
-	PI_CloseConnection(PIdeviceId);
-}
-
-void ReportError(int PIdeviceId)
-{
-	int err = PI_GetError(PIdeviceId);
-	char zErrMsg[300];
-
-	if (PI_TranslateError(err, zErrMsg, 299))
-		std::cout << "Error " << err << " occurred: " << zErrMsg << "\n";
-}
-
-bool referenceStageZ()
-{
-	// Switch on servo
-	const BOOL ServoOn = true;
-	if (!PI_SVO(ZstageID, NumberOfAxesPerController, &ServoOn))
-	{
-		CloseConnectionWithComment(ZstageID, "SVO failed. Exiting.\n");
-		return false;
-	}
-
-	// Reference stage
-	if (!ReferenceIfNeeded(ZstageID, NumberOfAxesPerController))
-	{
-		CloseConnectionWithComment(ZstageID, "Not referenced, Referencing failed.\n");
-		return false;
-	}
-
-	// Check if referencing was successful
-	BOOL referenceCompleted;
-	referenceCompleted = false;
-
-	if (!PI_qFRF(ZstageID, NumberOfAxesPerController, &referenceCompleted))
-	{
-		CloseConnectionWithComment(ZstageID, "Failed to query reference status.\n");
-		return false;
-	}
-
-	// Abort execution if stage could not be referenced
-	if (false == referenceCompleted)
-	{
-		CloseConnectionWithComment(ZstageID, "Referencing failed.\n");
-		return false;
-	}
-
-	std::cout << "Stage Z is referenced.\n";
-	return true;
-}
-*/
-
-#pragma endregion "Stages"
 
 //Convert from absolute tile number ---> (slice number, plane number, tile number)
 // this function does NOT consider the overlaps
@@ -1046,6 +955,9 @@ double3 Stage::readAbsolutePosition_mm(const int nSlice, const int nPlane, const
 
 	return absPosition_mm;
 }
+#pragma endregion "Stages"
+
+
 /*
 [1] The stage Z has a virtual COM port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.
 nPortNr: to know the correct COM port, look at Window's device manager or use Tera Term. Use nPortNr=1 for COM1, etc..

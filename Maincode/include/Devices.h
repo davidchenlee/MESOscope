@@ -191,10 +191,3 @@ public:
 	bool isMoving(const Axis axis);
 	void waitForMovementStop(const Axis axis);
 };
-
-/*
-bool ReferenceIfNeeded(int PIdeviceId, char* axis);
-void CloseConnectionWithComment(int PIdeviceId, const char* comment);
-void ReportError(int PIdeviceId);
-bool referenceStageZ();
-*/

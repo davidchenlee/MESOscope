@@ -2,50 +2,9 @@
 
 #include "Tiffscope.h"
 
-#pragma region "Custom tags"
-//example from https://stackoverflow.com/questions/24059421/adding-custom-tags-to-a-tiff-file
-
-#define N(a) (sizeof(a) / sizeof (a[0]))
-#define TIFFTAG_EXAMPLELONG     65000
-#define TIFFTAG_EXAMPLEFLOAT	65001
-
-
-//The casts are necessary because the string literals are inherently const, but the definition of TIFFFieldInfo requires a non-const string pointer. The Intel and Microsoft compilers tolerate this, but gcc doesn't.
-static const TIFFFieldInfo xtiffFieldInfo[] = {
-	{ TIFFTAG_EXAMPLELONG,  1, 1, TIFF_LONG,  FIELD_CUSTOM, 0, 0, const_cast<char*>("ExampleLong") },
-{ TIFFTAG_EXAMPLEFLOAT, 1, 1, TIFF_FLOAT, FIELD_CUSTOM, 0, 0, const_cast<char*>("ExampleFloat") },
-};
-
-static TIFFExtendProc parent_extender = nullptr;  // In case we want a chain of extensions
-
-static void registerCustomTIFFTags(TIFF *tif)
-{
-	/* Install the extended Tag field info */
-	TIFFMergeFieldInfo(tif, xtiffFieldInfo, N(xtiffFieldInfo));
-
-	if (parent_extender)
-		(*parent_extender)(tif);
-}
-
-static void augment_libtiff_with_custom_tags() {
-	static bool first_time = true;
-	if (!first_time)
-		return;
-	first_time = false;
-	parent_extender = TIFFSetTagExtender(registerCustomTIFFTags);
-}
-
-//endregion "Custom tags"
-#pragma endregion
-
-
-
 int writeFrametoTiff(unsigned char *imageIn, std::string fileName)
 {
 	const double scale = 25.5;																//Scale up the photon-count to cover the full 0-255 range for a 8-bit number
-
-																							// Create the TIFF directory object:
-	augment_libtiff_with_custom_tags();
 
 	const char *fileNameAsChar = fileName.c_str();
 	TIFF *tiffHandle = TIFFOpen(fileNameAsChar, "w");
@@ -79,12 +38,8 @@ int writeFrametoTiff(unsigned char *imageIn, std::string fileName)
 		//TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
 
 
-		//CUSTOM TAGS
-		//TIFFSetField(tiffHandle, TIFFTAG_EXAMPLELONG, 1);
-		//TIFFSetField(tiffHandle, TIFFTAG_EXAMPLEFLOAT, 2.0);
-
 		tsize_t bytesPerLine = samplePerPixel * widthPerFrame_pix;			//Length in memory of one row of pixel in the image.
-		unsigned char *buffer = nullptr;										//Buffer used to store the row of pixel information for writing to file
+		unsigned char *buffer = nullptr;									//Buffer used to store the row of pixel information for writing to file
 
 		//Allocating memory to store pixels of current row
 		if (TIFFScanlineSize(tiffHandle))

@@ -2,9 +2,9 @@
 
 void seq_main(const FPGAapi &fpga)
 {
-	const int wavelength_nm = 940;
-	const double laserPower_mW = 60 * mW;
-	const double FFOVslow_um = 200 * um;	//Full FOV in the slow axis (galvo)
+	const int wavelength_nm = 750;
+	const double laserPower_mW = 20 * mW;
+	const double FFOVslow_um = 50 * um;	//Full FOV in the slow axis (galvo)
 	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
 	const double galvoTimeStep_us = 8 * us;
 	

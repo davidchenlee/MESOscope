@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 		std::string input(argv[1]);
 		if (input == "1")
 		{
-			RS.turnOn_um(200 * um);
+			RS.turnOn_um(50 * um);
 			//shutter1.open();
 		}
 		else

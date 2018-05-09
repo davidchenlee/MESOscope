@@ -1,14 +1,30 @@
 #include "Sequences.h"
 
+
+#include <experimental/filesystem> //standard in C++14 but not C++11
+
+std::string file_exists(std::string filename)
+{
+	std::string suffix = "";
+
+	for (int ii = 1; std::experimental::filesystem::exists(filename + suffix + ".tif") && ii <10; ii++)
+		suffix =  " (" + std::to_string(ii) + ")";
+
+	return filename + suffix;
+
+}
+
+
 void seq_main(const FPGAapi &fpga)
 {
 	const int wavelength_nm = 750;
-	const double laserPower_mW = 90 * mW;
-	const double FFOVslow_um = 50 * um;	//Full FOV in the slow axis (galvo)
+	const double laserPower_mW = 40 * mW;
+	const double FFOVslow_um = 200 * um;	//Full FOV in the slow axis (galvo)
 	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
 	const double galvoTimeStep_us = 8 * us;
 	
-
+	std::string filename = "_photon-count";
+	filename = file_exists(filename);
 	
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
 
@@ -22,7 +38,7 @@ void seq_main(const FPGAapi &fpga)
 
 		sequence.uploadRTtoFPGA();
 		pockels.turnOn_mW(laserPower_mW);//WARNING: the on/off is currently hard coded on the FPGA and triggered by the 'frame gate'
-		sequence.runRT();			//Execute the RT sequence, read and save the photon count
+		sequence.runRT(filename);			//Execute the RT sequence, read and save the photon count
 		pockels.turnOff();			//warning: saving data delays the calling this function
 	}
 }

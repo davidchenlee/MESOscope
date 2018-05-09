@@ -522,7 +522,7 @@ void RTsequence::stopFIFOs()
 void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
 {
 	const bool debug = 0;
-	const double scaleFactor = 1;	//Scale up the photon-count to cover the full 0-255 range for a 8-bit number
+	const double scaleFactor = 20;	//Scale up the photon-count to cover the full 0-255 range for a 8-bit number
 	double scaledCount;
 
 	U32 pixIndex = 0;	//Index for the image pixel

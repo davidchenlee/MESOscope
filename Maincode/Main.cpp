@@ -17,20 +17,20 @@ int main(int argc, char* argv[])
 	}
 	catch (const FPGAexception &e)
 	{
-		std::cout << "An error has occurred in " << e.what() << std::endl;
+		std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
 	}
 
 	catch (const std::invalid_argument &e)
 	{
-		std::cout << "An error has occurred in " << e.what() << std::endl;
+		std::cout << "An invalid argument has occurred in " << e.what() << std::endl;
 	}
 	catch (const std::overflow_error &e)
 	{
-		std::cout << "An error has occurred in " << e.what() << std::endl;
+		std::cout << "An overflow has occurred in " << e.what() << std::endl;
 	}
 	catch (const std::runtime_error &e)
 	{
-		std::cout << "An error has occurred in " << e.what() << std::endl;
+		std::cout << "A runtime error has occurred in " << e.what() << std::endl;
 		try
 		{
 			//Close and reset the FPGA connection. Otherwise, residual data will remain in the FPGA and will probably crash the next sequence and the entire computer as well
@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
 		}
 		catch (const FPGAexception &e)
 		{
-			std::cout << "An error has occurred in " << e.what() << std::endl;
+			std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
 		}
 
 	}

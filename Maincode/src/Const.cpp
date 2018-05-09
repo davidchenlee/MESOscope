@@ -1,10 +1,8 @@
 #include "Const.h"
 
-
-
 namespace Const
 {
-	extern const LineClockInputSelector lineClockInput = FG;				//RS or FG
+	extern const LineClockInputSelector lineClockInput = RS;				//RS or FG
 	extern const PhotonCounterInputSelector photonCounterInput = ext;		//ext or sim
 
 	//host-to-target FIFO array indices

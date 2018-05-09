@@ -3,7 +3,7 @@
 void seq_main(const FPGAapi &fpga)
 {
 	const int wavelength_nm = 750;
-	const double laserPower_mW = 20 * mW;
+	const double laserPower_mW = 90 * mW;
 	const double FFOVslow_um = 50 * um;	//Full FOV in the slow axis (galvo)
 	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
 	const double galvoTimeStep_us = 8 * us;
@@ -16,12 +16,12 @@ void seq_main(const FPGAapi &fpga)
 	for (int ii = 0; ii < 1; ii++)
 	{
 		//REALTIME SEQUENCE
-		RTsequence sequence(fpga);//For now, the same sequence has to be declared multiple times to reset the FIFO element counters. otherwise the computer will crash
+		RTsequence sequence(fpga);//WARNING: For now, the same sequence has to be declared multiple times to reset the FIFO element counters. otherwise the computer will crash
 		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
 		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 
 		sequence.uploadRTtoFPGA();
-		pockels.turnOn_mW(laserPower_mW);
+		pockels.turnOn_mW(laserPower_mW);//WARNING: the on/off is currently hard coded on the FPGA and triggered by the 'frame gate'
 		sequence.runRT();			//Execute the RT sequence, read and save the photon count
 		pockels.turnOff();			//warning: saving data delays the calling this function
 	}

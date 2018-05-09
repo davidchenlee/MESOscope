@@ -1,5 +1,5 @@
 #pragma once
-#include <queue>
+#include <deque>
 #include <vector>
 #include <array>
 //#include <limits.h>		//for _I16_MAX??
@@ -13,7 +13,7 @@ typedef int32_t		I32;
 typedef uint32_t	U32;
 typedef int64_t		I64;
 typedef uint64_t	U64;
-typedef std::queue<U32> QU32;				//Queue of unsigned integers
+typedef std::deque<U32> QU32;				//Queue of unsigned integers
 typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
 typedef std::array<double, 3> double3;		//array of 3 doubles
 typedef std::array<int, 3> int3;			//array of 3 ints

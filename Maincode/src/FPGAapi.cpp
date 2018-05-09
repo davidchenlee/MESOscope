@@ -105,7 +105,7 @@ namespace GenericFPGAfunctions {
 		for (int ii = 0; ii < nPoints; ii++)
 		{
 			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
-			queue.push(singleAnalogOut(TimeStep, V));
+			queue.push_back(singleAnalogOut(TimeStep, V));
 
 			if (debug)	std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
 		}
@@ -188,11 +188,11 @@ void FPGAapi::writeFIFO(VQU32 &vectorQueues) const
 	QU32 allQueues;										//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
 	{
-		allQueues.push(vectorQueues[i].size());			//Push the number of elements in each individual queue = VectorOfQueues[i]
+		allQueues.push_back(vectorQueues[i].size());			//Push the number of elements in each individual queue = VectorOfQueues[i]
 		while (!vectorQueues[i].empty())
 		{
-			allQueues.push(vectorQueues[i].front());	//Push all the elements in VectorOfQueues[i] to allQueues
-			vectorQueues[i].pop();
+			allQueues.push_back(vectorQueues[i].front());	//Push all the elements in VectorOfQueues[i] to allQueues
+			vectorQueues[i].pop_front();
 		}
 	}
 
@@ -205,7 +205,7 @@ void FPGAapi::writeFIFO(VQU32 &vectorQueues) const
 	for (int i = 0; i < sizeFIFOqueue; i++)
 	{
 		FIFO[i] = allQueues.front();				//Transfer the queue elements to the array
-		allQueues.pop();
+		allQueues.pop_front();
 	}
 	allQueues = {};									//Cleanup the queue (C++11 style)
 

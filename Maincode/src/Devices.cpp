@@ -234,7 +234,7 @@ QU32 RTsequence::generateLinearRamp(double TimeStep, const double RampLength, co
 		for (int ii = 0; ii < nPoints; ii++)
 		{
 			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
-			queue.push(singleAnalogOut(TimeStep, V));
+			queue.push_back(singleAnalogOut(TimeStep, V));
 
 			if (debug)
 				std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
@@ -258,7 +258,7 @@ void RTsequence::pushQueue(const RTchannel chan, QU32& queue)
 
 void RTsequence::pushSingleValue(const RTchannel chan, const U32 input)
 {
-	mVectorOfQueues.at(chan).push(input);
+	mVectorOfQueues.at(chan).push_back(input);
 }
 
 void RTsequence::pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
@@ -271,8 +271,8 @@ void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue)
 {
 	while (!givingQueue.empty())
 	{
-		receivingQueue.push(givingQueue.front());
-		givingQueue.pop();
+		receivingQueue.push_back(givingQueue.front());
+		givingQueue.pop_front();
 	}
 }
 
@@ -332,11 +332,11 @@ QU32 RTsequence::PixelClock::PixelClockEqualDuration()
 	QU32 queue;
 	const double initialTimeStep_us = 6.25*us;							//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
 																		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-	queue.push(packU32(convertUs2tick(initialTimeStep_us) - mLatency_tick, 0x0000));
+	queue.push_back(packU32(convertUs2tick(initialTimeStep_us) - mLatency_tick, 0x0000));
 
 	const double timeStep_pix = 0.125 * us;
 	for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
-		queue.push(singlePixelClock(timeStep_pix, 1));			//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
+		queue.push_back(singlePixelClock(timeStep_pix, 1));			//Generate the pixel clock. Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
 																//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 	return queue;
 }
@@ -355,12 +355,12 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 		PixelClockEqualDistanceLUT.at(pix + widthPerFrame_pix / 2) = calculatePracticalDwellTime(pix);
 
 	const U16 InitialTimeStep_tick = (U16)(calibCoarse_tick + calibFine_tick);		//relative delay of the pixel clock wrt the line clock
-	queue.push(packU32(InitialTimeStep_tick - mLatency_tick, 0x0000));
+	queue.push_back(packU32(InitialTimeStep_tick - mLatency_tick, 0x0000));
 
 	for (int pix = 0; pix < widthPerFrame_pix; pix++)
-		queue.push(singlePixelClock(PixelClockEqualDistanceLUT.at(pix), 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
+		queue.push_back(singlePixelClock(PixelClockEqualDistanceLUT.at(pix), 1));	//Generate the pixel clock.Every time HIGH is pushed, the pixel clock "ticks" (flips its requestedState), which serves as a pixel delimiter
 
-	queue.push(singlePixelClock(dt_us_MIN, 1));								//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
+	queue.push_back(singlePixelClock(dt_us_MIN, 1));								//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 
 	return queue;
 }

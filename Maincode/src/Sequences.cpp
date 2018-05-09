@@ -8,16 +8,18 @@ void seq_main(const FPGAapi &fpga)
 	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
 	const double galvoTimeStep_us = 8 * us;
 	
-	//REALTIME SEQUENCE
-	RTsequence sequence(fpga);
-	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
-	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
+
 	
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
 
 	//NON-REALTIME SEQUENCE
-	for (int ii = 0; ii < 2; ii++)
+	for (int ii = 0; ii < 1; ii++)
 	{
+		//REALTIME SEQUENCE
+		RTsequence sequence(fpga);//For now, the same sequence has to be declared multiple times to reset the FIFO element counters. otherwise the computer will crash
+		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
+		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
+
 		sequence.uploadRTtoFPGA();
 		pockels.turnOn_mW(laserPower_mW);
 		sequence.runRT();			//Execute the RT sequence, read and save the photon count

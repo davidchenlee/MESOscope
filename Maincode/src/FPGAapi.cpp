@@ -188,12 +188,19 @@ void FPGAapi::writeFIFO(VQU32 &vectorQueues) const
 	QU32 allQueues;										//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
 	{
-		allQueues.push_back(vectorQueues[i].size());			//Push the number of elements in each individual queue = VectorOfQueues[i]
+		allQueues.push_back(vectorQueues[i].size());		//Push the number of elements in VectorOfQueues[i] (individual queue)
+
+		//New version: Non-destructive. Random-access the elements in VectorOfQueues[i] and push them to allQueues
+		for (int iter = 0; iter < vectorQueues[i].size(); iter++)
+			allQueues.push_back(vectorQueues[i].at(iter));
+
+		/*Old version. Destructive
 		while (!vectorQueues[i].empty())
 		{
 			allQueues.push_back(vectorQueues[i].front());	//Push all the elements in VectorOfQueues[i] to allQueues
 			vectorQueues[i].pop_front();
 		}
+		*/
 	}
 
 	const int sizeFIFOqueue = allQueues.size();		//Total number of elements in all the queues 

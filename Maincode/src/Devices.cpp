@@ -277,7 +277,7 @@ void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue)
 }
 
 //Distribute the commands among the different channels (see the implementation of the LV code), but do not execute yet
-void  RTsequence::uploadRTsequenceToFPGA()
+void  RTsequence::uploadRTtoFPGA()
 {
 	mFpga.writeFIFO(mVectorOfQueues);
 
@@ -368,12 +368,12 @@ QU32 RTsequence::PixelClock::PixelClockEqualDistance()
 //Create an array of arrays to serve as a buffer and store the data from the FIFO
 //The ReadFifo function gives chuncks of data. Store each chunck in a separate buffer-array
 //I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
-void RTsequence::runRTsequence(const std::string filename)
+void RTsequence::runRT(const std::string filename)
 {
 	mFilename = filename;
 
-	startFIFOs();				//Start the FIFO OUT to transfer data from the FPGA FIFO to the PC FIFO
-	mFpga.runRTsequence();		//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
+	startFIFOs();				//Start transferring data from the FPGA FIFO to the PC FIFO
+	mFpga.runRT();		//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
 	readFIFO();					//Read the data
 
 	//If NOT all the expected data is read successfully

@@ -15,12 +15,12 @@ void seq_main(const FPGAapi &fpga)
 		RTsequence sequence(fpga);
 		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
 		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
-		sequence.uploadRTsequenceToFPGA();
+		sequence.uploadRTtoFPGA();
 
 		//NON-REALTIME SEQUENCE
 		PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
 		pockels.turnOn_mW(laserPower_mW);
-		sequence.runRTsequence();									//Execute the RT sequence, read and save the photon count
+		sequence.runRT();									//Execute the RT sequence, read and save the photon count
 		pockels.turnOff(); //warning: saving data delays the calling this function
 	}
 }

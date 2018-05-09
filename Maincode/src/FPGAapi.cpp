@@ -182,16 +182,16 @@ void FPGAapi::initialize() const
 //Send every single queue in VectorOfQueue to the FPGA buffer
 //For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 //Then transfer the elements in the long queue to an array to interface the FPGA
-//Alternatively, the single queues could be transferred directly to the array, but why bothering...
+//Improvement: the single queues VectorOfQueues[i] could be transferred directly to the FIFO array
 void FPGAapi::writeFIFO(VQU32 &vectorQueues) const
 {
 	QU32 allQueues;										//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
 	{
-		allQueues.push(vectorQueues[i].size());			//Push the number of elements in each individual queue VectorOfQueues[i]
+		allQueues.push(vectorQueues[i].size());			//Push the number of elements in each individual queue = VectorOfQueues[i]
 		while (!vectorQueues[i].empty())
 		{
-			allQueues.push(vectorQueues[i].front());	//Push all the elemets from the individual queues VectorOfQueues[i] to allQueues
+			allQueues.push(vectorQueues[i].front());	//Push all the elements in VectorOfQueues[i] to allQueues
 			vectorQueues[i].pop();
 		}
 	}
@@ -209,18 +209,17 @@ void FPGAapi::writeFIFO(VQU32 &vectorQueues) const
 	}
 	allQueues = {};									//Cleanup the queue (C++11 style)
 
-													//Send the data to the FPGA through the FIFO
-	const U32 timeout = -1;							// in ms. A value -1 prevents the FIFO from timing out
-	U32 r;											//empty elements remaining
+	const U32 timeout = -1;		// in ms. A value -1 prevents the FIFO from timing out
+	U32 r;						//empty elements remaining
 
-	NiFpga_Status status = NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r);
+	NiFpga_Status status = NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r); //Send the data to the FPGA through the FIFO
 
 	//std::cout << "FPGA FIFO status: " << mStatus << std::endl;
-	delete[] FIFO;									//cleanup the array
+	delete[] FIFO;		//cleanup the array
 }
 
 //Execute the commands
-void FPGAapi::runRTsequence() const
+void FPGAapi::runRT() const
 {
 	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1);
 	checkFPGAstatus(__FUNCTION__, status);

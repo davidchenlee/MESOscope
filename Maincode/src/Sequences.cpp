@@ -1,20 +1,6 @@
 #include "Sequences.h"
 
 
-#include <experimental/filesystem> //standard in C++14 but not C++11
-
-std::string file_exists(std::string filename)
-{
-	std::string suffix = "";
-
-	for (int ii = 1; std::experimental::filesystem::exists(filename + suffix + ".tif") && ii <10; ii++)
-		suffix =  " (" + std::to_string(ii) + ")";
-
-	return filename + suffix;
-
-}
-
-
 void seq_main(const FPGAapi &fpga)
 {
 	const int wavelength_nm = 750;
@@ -155,4 +141,15 @@ void seq_testStages(const FPGAapi &fpga)
 		//input = 0;
 	}
 	getchar();
+}
+
+std::string file_exists(std::string filename)
+{
+	std::string suffix = "";
+
+	for (int ii = 1; std::experimental::filesystem::exists(filename + suffix + ".tif") && ii <10; ii++)
+		suffix = " (" + std::to_string(ii) + ")";
+
+	return filename + suffix;
+
 }

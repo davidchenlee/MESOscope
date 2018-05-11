@@ -1,9 +1,12 @@
 /* The following example is from http://research.cs.wisc.edu/graphics/Courses/638-f1999/libtiff_tutorial.htm */
 #include "Tiffscope.h"
 
-int writeFrametoTiff(unsigned char *image, std::string fileName)
+int writeFrametoTiff(unsigned char *image, std::string filename)
 {
-	TIFF *tiffHandle = TIFFOpen((fileName + ".tif").c_str(), "w");
+	if (!overrideImageSaving)
+		filename = file_exists(filename);
+
+	TIFF *tiffHandle = TIFFOpen((filename + ".tif").c_str(), "w");
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Saving Tiff failed");
@@ -47,6 +50,17 @@ int writeFrametoTiff(unsigned char *image, std::string fileName)
 	return 0;
 }
 
+
+//Check if the file already exists
+std::string file_exists(std::string filename)
+{
+	std::string suffix = "";
+
+	for (int ii = 1; std::experimental::filesystem::exists(filename + suffix + ".tif") && ii <10; ii++)
+		suffix = " (" + std::to_string(ii) + ")";
+
+	return filename + suffix;
+}
 
 
 /*

@@ -24,8 +24,8 @@ void Vibratome::startStop()
 void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel channel)
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
-	const int minPulseDuration = 10; //in ms
-	const int delay = 1;	//Used to roughly calibrate the pulse length
+	const int minPulseDuration = 10;	//in ms
+	const int delay = 1;				//Used to roughly calibrate the pulse length
 	const int dt_ms = (int)pulseDuration / ms;
 
 	switch (channel)
@@ -615,10 +615,10 @@ int correctInterleavedImage(unsigned char *interleavedImage)
 int writeFrametoTxt(unsigned char *imageArray, const std::string fileName)
 {
 	std::ofstream myfile;								//Create output file
-	myfile.open(fileName + ".txt");								//Open the file
+	myfile.open(fileName + ".txt");						//Open the file
 
 	for (int ii = 0; ii < nPixAllFrames; ii++)
-		myfile << (int)imageArray[ii] << std::endl;	//Write each element
+		myfile << (int)imageArray[ii] << std::endl;		//Write each element
 
 	myfile.close();										//Close the txt file
 
@@ -719,16 +719,16 @@ Filterwheel::~Filterwheel()
 void Filterwheel::readFilterPosition_()
 {
 	const std::string TxBuffer = "pos?\r";	//Command to the filterwheel
-	std::string RxBuffer;				//Reply from the filterwheel
+	std::string RxBuffer;					//Reply from the filterwheel
 	const int RxBufSize = 10;
 
-	size_t bytesWrote = mSerial->write(TxBuffer);
-	size_t bytesRead = mSerial->read(RxBuffer, RxBufSize);
+	mSerial->write(TxBuffer);
+	mSerial->read(RxBuffer, RxBufSize);
 
 	//Delete echoed command. Echoing could be disabled on the laser but deleting it is more general and safer
-	std::string::size_type i = RxBuffer.find(TxBuffer);
-	if (i != std::string::npos)
-		RxBuffer.erase(i, TxBuffer.length());
+	std::string::size_type ii = RxBuffer.find(TxBuffer);
+	if (ii != std::string::npos)
+		RxBuffer.erase(ii, TxBuffer.length());
 
 	//Delete CR and >
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
@@ -749,7 +749,7 @@ void Filterwheel::setFilterPosition(const FilterColor color)
 	if (color != mPosition)
 	{
 		std::string TxBuffer = "pos=" + std::to_string(color) + "\r";
-		size_t bytesWrote = mSerial->write(TxBuffer);
+		mSerial->write(TxBuffer);
 		mPosition = color;
 	}
 }
@@ -765,11 +765,11 @@ Laser::~Laser() {};
 void Laser::downloadWavelength()
 {
 	const std::string TxBuffer = "?VW";		//Command to the filterwheel
-	std::string RxBuffer;						//Reply from the filterwheel
+	std::string RxBuffer;					//Reply from the filterwheel
 	const int RxBufSize = 20;
 
-	size_t bytesWrote = mSerial->write(TxBuffer + "\r");
-	size_t bytesRead = mSerial->read(RxBuffer, RxBufSize);
+	mSerial->write(TxBuffer + "\r");
+	mSerial->read(RxBuffer, RxBufSize);
 
 	//Delete echoed command. Echoing could be disabled on the laser but deleting it is more general and safer
 	std::string keyword = "?VW ";
@@ -801,8 +801,8 @@ void Laser::setWavelength()
 	std::string RxBuffer;						//Reply from the filterwheel
 	const int RxBufSize = 256;
 
-	size_t bytesWrote = mSerial->write(TxBuffer + "\r");
-	size_t bytesRead = mSerial->read(RxBuffer, RxBufSize);
+	mSerial->write(TxBuffer + "\r");
+	mSerial->read(RxBuffer, RxBufSize);
 
 	this->downloadWavelength();
 }

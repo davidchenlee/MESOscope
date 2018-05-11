@@ -32,6 +32,7 @@ namespace Const
 	extern const LineclockInputSelector lineclockInput;
 	extern const PhotonCounterInputSelector photoncounterInput;
 	extern const PixelclockSelector pixelclockType;
+	extern const bool overrideImageSaving;
 
 	extern const int Nchan;
 	

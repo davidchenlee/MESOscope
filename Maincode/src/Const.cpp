@@ -4,7 +4,8 @@ namespace Const
 {
 	extern const LineclockInputSelector lineclockInput = FG;				//RS or FG
 	extern const PhotonCounterInputSelector photoncounterInput = sim;		//ext or sim
-	extern const PixelclockSelector pixelclockType = equalDist;					//equalDuration or equalDistance
+	extern const PixelclockSelector pixelclockType = equalDist;				//equalDuration or equalDistance
+	extern const bool overrideImageSaving = 1;								//Enable file override when saving
 
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;								//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
@@ -46,7 +47,7 @@ namespace Parameters
 
 	//RESONANT SCANNER
 	//extern const double RS_voltPerUm = 1.0*V/(157*um);						//volts per um. Calibration factor for the resonant scanner (equal duration pixels). 11/April/2018
-	//extern const double RS_voltPerUm = 1.3*V / ((405 - 237) * um);				//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 19/April/2018
+	//extern const double RS_voltPerUm = 1.3*V / ((405 - 237) * um);			//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 19/April/2018
 	extern const double RS_voltPerUm = 0.143 / (21 * um);
 
 	//PIXEL CLOCK
@@ -59,7 +60,7 @@ namespace Parameters
 	//extern const int calibFine_tick = 10;
 
 	//IMAGE
-	extern const double upscaleU8 = 1;													//Upscale the photon-count to cover the full 0-255 range of a 8-bit number
+	extern const double upscaleU8 = 1;											//Upscale the photon-count to cover the full 0-255 range of a 8-bit number
 	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth

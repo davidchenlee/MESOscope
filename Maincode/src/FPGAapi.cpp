@@ -140,7 +140,7 @@ FPGAapi::~FPGAapi()
 void FPGAapi::initialize() const
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_Status status = NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput);			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+	NiFpga_Status status = NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput);				//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
 	NiFpga_MergeStatus(&status, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));					//Select the Line clock: resonant scanner or function generator
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));									//control-sequence trigger
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));									//data-acquisition trigger
@@ -163,7 +163,7 @@ void FPGAapi::initialize() const
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
 
 	//Resonant scanner
-	//NiFpga_MergeStatus(&status, NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));		//Output voltage
+	//NiFpga_MergeStatus(&status, NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));	//Output voltage
 	//NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
 
 	//PockelsID cells
@@ -185,13 +185,13 @@ void FPGAapi::initialize() const
 //Improvement: the single queues VectorOfQueues[i] could be transferred directly to the FIFO array
 void FPGAapi::writeFIFO(VQU32 &vectorQueues) const
 {
-	QU32 allQueues;										//Create a single long queue
+	QU32 allQueues;											//Create a single long queue
 	for (int i = 0; i < Nchan; i++)
 	{
 		allQueues.push_back(vectorQueues[i].size());		//Push the number of elements in VectorOfQueues[i] (individual queue)
 
-		//New version: Non-destructive. Random-access the elements in VectorOfQueues[i] and push them to allQueues
-		for (int iter = 0; iter < vectorQueues[i].size(); iter++)
+		//New version: Non-destructive. Randomly access the elements in VectorOfQueues[i] and push them to allQueues
+		for (size_t iter = 0; iter < vectorQueues[i].size(); iter++)
 			allQueues.push_back(vectorQueues[i].at(iter));
 
 		/*Old version. Destructive

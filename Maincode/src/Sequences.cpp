@@ -1,6 +1,5 @@
 #include "Sequences.h"
 
-
 void seq_main(const FPGAapi &fpga)
 {
 	const int wavelength_nm = 750;
@@ -10,7 +9,6 @@ void seq_main(const FPGAapi &fpga)
 	const double galvoTimeStep_us = 8 * us;
 	
 	std::string filename = "_photon-count";
-	filename = file_exists(filename);
 	
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
 
@@ -98,7 +96,7 @@ void seq_calibAnalogLatency(const FPGAapi &fpga)
 	sequence.pushSingleValue(GALVO1, packSingleAnalog(step, 0));
 	sequence.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5*V);			//Linear ramp to accumulate the error
 	sequence.pushSingleValue(GALVO1, packSingleAnalog(step, 10));	//Initial pulse
-	sequence.pushSingleValue(GALVO1, packSingleAnalog(step, 0));		//Final pulse
+	sequence.pushSingleValue(GALVO1, packSingleAnalog(step, 0));	//Final pulse
 
 	//DO0
 	sequence.pushSingleValue(DOdebug, packSingleDigital(step, 1));
@@ -141,16 +139,4 @@ void seq_testStages(const FPGAapi &fpga)
 		//input = 0;
 	}
 	getchar();
-}
-
-//Check if the file already exists
-std::string file_exists(std::string filename)
-{
-	std::string suffix = "";
-
-	for (int ii = 1; std::experimental::filesystem::exists(filename + suffix + ".tif") && ii <10; ii++)
-		suffix = " (" + std::to_string(ii) + ")";
-
-	return filename + suffix;
-
 }

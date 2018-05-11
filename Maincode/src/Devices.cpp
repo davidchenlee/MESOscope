@@ -176,8 +176,8 @@ void Shutter::pulseHigh()
 
 RTsequence::RTsequence(const FPGAapi &fpga) : mFpga(fpga), mVectorOfQueues(Nchan)
 {
-	PixelClock pixelclock;
-	mVectorOfQueues.at(PCLOCK) = pixelclock.readPixelClock();
+	Pixelclock pixelclock;
+	mVectorOfQueues.at(PCLOCK) = pixelclock.readPixelclock();
 
 	bufArray_A = new U32[nPixAllFrames]();
 
@@ -288,39 +288,46 @@ void  RTsequence::uploadRT()
 	//std::cout << "Pulse trigger status: " << mStatus << std::endl;
 }
 
-RTsequence::PixelClock::PixelClock()
+RTsequence::Pixelclock::Pixelclock()
 {
-	//equalDuration();
-	equalDistance();
+	switch (pixelClockType)
+	{
+	case equalDur: equalDuration();
+		break;
+	case equalDist: equalDistance();
+		break;
+	default: throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pixelclock type unavailable");
+		break;
+	}
 }
 
-RTsequence::PixelClock::~PixelClock() {}
+RTsequence::Pixelclock::~Pixelclock() {}
 
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
-double RTsequence::PixelClock::ConvertSpatialCoord2Time_us(const double x)
+double RTsequence::Pixelclock::ConvertSpatialCoord2Time_us(const double x)
 {
 	double arg = 2 * x / RSpkpk_um;
 	if (arg > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Argument of asin greater than 1");
 	else
-		return halfPeriodLineClock_us * asin(arg) / Const::PI; //The returned value in in the range [-halfPeriodLineClock_us/PI, halfPeriodLineClock_us/PI]
+		return halfPeriodLineclock_us * asin(arg) / Const::PI; //The returned value in in the range [-halfPeriodLineclock_us/PI, halfPeriodLineclock_us/PI]
 }
 
 //Discretize the spatial coordinate, then convert it to time
-double RTsequence::PixelClock::getDiscreteTime_us(const int pix)
+double RTsequence::Pixelclock::getDiscreteTime_us(const int pix)
 {
 	const double dx = 0.5 * um;
 	return ConvertSpatialCoord2Time_us(dx * pix);
 }
 
 //Calculate the dwell time for the pixel
-double RTsequence::PixelClock::calculateDwellTime_us(const int pix)
+double RTsequence::Pixelclock::calculateDwellTime_us(const int pix)
 {
 	return getDiscreteTime_us(pix + 1) - getDiscreteTime_us(pix);
 }
 
 //Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
-double RTsequence::PixelClock::calculatePracticalDwellTime_us(const int pix)
+double RTsequence::Pixelclock::calculatePracticalDwellTime_us(const int pix)
 {
 	return round(calculateDwellTime_us(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
 }
@@ -329,7 +336,7 @@ double RTsequence::PixelClock::calculatePracticalDwellTime_us(const int pix)
 //Pixel clock sequence. Every pixel has the same duration in time.
 //The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 //Pixel clock evently spaced in time
-void RTsequence::PixelClock::equalDuration()
+void RTsequence::Pixelclock::equalDuration()
 {
 	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
 	//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
@@ -340,34 +347,34 @@ void RTsequence::PixelClock::equalDuration()
 	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 	const double dwellTime_us = 0.125 * us;
 	for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
-		pixelClockQ.push_back(packSinglePixelClock(dwellTime_us, 1));		
+		pixelClockQ.push_back(packSinglePixelclock(dwellTime_us, 1));		
 }
 
 //Pixel clock sequence. Every pixel is equally spaced.
 //The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-void RTsequence::PixelClock::equalDistance()
+void RTsequence::Pixelclock::equalDistance()
 {
-	std::vector<double> PixelClockEqualDistance_us(widthPerFrame_pix);
+	std::vector<double> PixelclockEqualDistance_us(widthPerFrame_pix);
 
 	if (widthPerFrame_pix % 2 != 0)	//Throw exception if odd. Odd number of pixels not supported yet
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels in the image width currently not supported");
-
-	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)	//pix in the range [-widthPerFrame_pix/2,widthPerFrame_pix/2]
-		PixelClockEqualDistance_us.at(pix + widthPerFrame_pix / 2) = calculatePracticalDwellTime_us(pix);
 
 	//Relative delay of the pixel clock with respect to the line clock
 	const U16 InitialWaitingTime_tick = (U16)(calibCoarse_tick + calibFine_tick);
 	pixelClockQ.push_back(packU32(InitialWaitingTime_tick - mLatency_tick, 0x0000));
 
-	//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches it state which represents a pixel delimiter
+	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)	//pix in the range [-widthPerFrame_pix/2,widthPerFrame_pix/2]
+		PixelclockEqualDistance_us.at(pix + widthPerFrame_pix / 2) = calculatePracticalDwellTime_us(pix);
+
+	//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches it state which represents a pixel delimiter (the switching is implemented on the FPGA)
 	for (int pix = 0; pix < widthPerFrame_pix; pix++)
-		pixelClockQ.push_back(packSinglePixelClock(PixelClockEqualDistance_us.at(pix), 1));
+		pixelClockQ.push_back(packSinglePixelclock(PixelclockEqualDistance_us.at(pix), 1));
 
 	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	pixelClockQ.push_back(packSinglePixelClock(dtMIN_us, 1));
+	pixelClockQ.push_back(packSinglePixelclock(dtMIN_us, 1));
 }
 
-QU32 RTsequence::PixelClock::readPixelClock()
+QU32 RTsequence::Pixelclock::readPixelclock()
 {
 	return pixelClockQ;
 }

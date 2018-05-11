@@ -17,7 +17,7 @@ namespace GenericFPGAfunctions
 	I16 convertVolt2I16(double x);
 	U32 packSingleAnalog(double t, double V);
 	U32 packSingleDigital(double t, bool DO);
-	U32 packSinglePixelClock(double t, bool DO);
+	U32 packSinglePixelclock(double t, bool DO);
 	QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);
 }
 

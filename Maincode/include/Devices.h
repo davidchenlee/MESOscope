@@ -110,7 +110,7 @@ class RTsequence
 	};
 
 
-	class PixelClock
+	class Pixelclock
 	{
 		QU32 pixelClockQ;	//Queue containing the pixel-clock sequence
 		const int mLatency_tick = 2;					//latency at detecting the line clock. Calibrate the latency with the oscilloscope
@@ -121,9 +121,9 @@ class RTsequence
 		void equalDuration();
 		void equalDistance();
 	public:
-		PixelClock();
-		~PixelClock();
-		QU32 readPixelClock();
+		Pixelclock();
+		~Pixelclock();
+		QU32 readPixelclock();
 	};
 
 public:

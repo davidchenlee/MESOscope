@@ -18,7 +18,8 @@ typedef std::array<double, 3> double3;		//array of 3 doubles
 typedef std::array<int, 3> int3;			//array of 3 ints
 
 enum PhotonCounterInputSelector {ext, sim};							//real PMT, simulated PMT, internal clock
-enum LineClockInputSelector {RS, FG};								//Resonant scanner, function generator, 
+enum LineclockInputSelector {RS, FG};								//Resonant scanner, function generator, 
+enum PixelclockSelector {equalDur, equalDist};				//equalDuration, equalDistance
 enum RTchannel {PCLOCK, GALVO1, GALVO2, DOdebug};					//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
 enum PockelsID {Pockels1, Pockels2};								//Pockels cell
 enum ShutterID {Shutter1, Shutter2};								//Shutter unit
@@ -28,8 +29,9 @@ enum Axis { xx, yy, zz };
 
 namespace Const
 {
-	extern const LineClockInputSelector lineClockInput;				//RS or FG
-	extern const PhotonCounterInputSelector photonCounterInput;		//ext or sim
+	extern const LineclockInputSelector lineclockInput;
+	extern const PhotonCounterInputSelector photonCounterInput;
+	extern const PixelclockSelector pixelClockType;
 
 	extern const int Nchan;
 	
@@ -60,7 +62,7 @@ namespace Parameters
 
 	extern const double galvo_voltPerUm;
 
-	extern const double halfPeriodLineClock_us;
+	extern const double halfPeriodLineclock_us;
 	extern const double RSpkpk_um;
 	extern const int calibCoarse_tick;
 	extern const int calibFine_tick;

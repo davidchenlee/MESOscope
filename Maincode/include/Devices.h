@@ -112,7 +112,7 @@ class RTsequence
 
 	class Pixelclock
 	{
-		QU32 pixelClockQ;	//Queue containing the pixel-clock sequence
+		QU32 pixelclockQ;	//Queue containing the pixel-clock sequence
 		const int mLatency_tick = 2;					//latency at detecting the line clock. Calibrate the latency with the oscilloscope
 		double ConvertSpatialCoord2Time_us(const double x);
 		double getDiscreteTime_us(const int pix);
@@ -123,7 +123,7 @@ class RTsequence
 	public:
 		Pixelclock();
 		~Pixelclock();
-		QU32 readPixelclock();
+		QU32 readPixelclock() const;
 	};
 
 public:
@@ -168,7 +168,7 @@ public:
 	Filterwheel(const FilterwheelID ID);
 	~Filterwheel();
 	void setFilterPosition(const FilterColor color);
-	FilterColor readFilterPosition();
+	FilterColor readFilterPosition() const;
 };
 
 
@@ -183,7 +183,7 @@ class Laser
 public:
 	Laser();
 	~Laser();
-	int readWavelength_nm();
+	int readWavelength_nm() const;
 	void setWavelength();
 };
 
@@ -205,13 +205,13 @@ class Stage
 public:
 	Stage();
 	~Stage();
-	double3 recallPositionXYZ_mm();
-	void printPositionXYZ();
+	double3 recallPositionXYZ_mm() const;
+	void printPositionXYZ() const;
 	void moveStage(const Axis stage, const double position);
 	void moveStage(const double3 positions);
 	double downloadPosition_mm(const Axis axis);
 	void scanningStrategy(const int nTileAbsolute);
-	double3 readAbsolutePosition_mm(const int nSection, const int nPlane, const int3 nTileXY);
-	bool isMoving(const Axis axis);
-	void waitForMovementStop(const Axis axis);
+	double3 readAbsolutePosition_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
+	bool isMoving(const Axis axis) const;
+	void waitForMovementStop(const Axis axis) const;
 };

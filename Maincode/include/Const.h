@@ -31,7 +31,7 @@ namespace Const
 {
 	extern const LineclockInputSelector lineclockInput;
 	extern const PhotonCounterInputSelector photonCounterInput;
-	extern const PixelclockSelector pixelClockType;
+	extern const PixelclockSelector pixelclockType;
 
 	extern const int Nchan;
 	
@@ -69,6 +69,7 @@ namespace Parameters
 
 	extern const double RS_voltPerUm;
 
+	extern const double upscaleU8;
 	extern const int widthPerFrame_pix;
 	extern const int heightPerFrame_pix;
 	extern const int nPixPerFrame;

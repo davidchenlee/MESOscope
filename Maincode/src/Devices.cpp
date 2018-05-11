@@ -176,7 +176,7 @@ void Shutter::pulseHigh()
 
 RTsequence::RTsequence(const FPGAapi &fpga) : mFpga(fpga), mVectorOfQueues(Nchan)
 {
-	Pixelclock pixelclock;
+	const Pixelclock pixelclock;
 	mVectorOfQueues.at(PCLOCK) = pixelclock.readPixelclock();
 
 	bufArray_A = new U32[nPixAllFrames]();
@@ -290,7 +290,7 @@ void  RTsequence::uploadRT()
 
 RTsequence::Pixelclock::Pixelclock()
 {
-	switch (pixelClockType)
+	switch (pixelclockType)
 	{
 	case equalDur: equalDuration();
 		break;
@@ -341,42 +341,37 @@ void RTsequence::Pixelclock::equalDuration()
 	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
 	//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
 	const double initialWaitingTime_us = 6.25*us;							
-	pixelClockQ.push_back(packU32(convertUs2tick(initialWaitingTime_us) - mLatency_tick, 0x0000));
+	pixelclockQ.push_back(packU32(convertUs2tick(initialWaitingTime_us) - mLatency_tick, 0x0000));
 
 	//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches it state which represents a pixel delimiter
 	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 	const double dwellTime_us = 0.125 * us;
 	for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
-		pixelClockQ.push_back(packSinglePixelclock(dwellTime_us, 1));		
+		pixelclockQ.push_back(packSinglePixelclock(dwellTime_us, 1));		
 }
 
 //Pixel clock sequence. Every pixel is equally spaced.
 //The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 void RTsequence::Pixelclock::equalDistance()
 {
-	std::vector<double> PixelclockEqualDistance_us(widthPerFrame_pix);
-
 	if (widthPerFrame_pix % 2 != 0)	//Throw exception if odd. Odd number of pixels not supported yet
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels in the image width currently not supported");
 
 	//Relative delay of the pixel clock with respect to the line clock
 	const U16 InitialWaitingTime_tick = (U16)(calibCoarse_tick + calibFine_tick);
-	pixelClockQ.push_back(packU32(InitialWaitingTime_tick - mLatency_tick, 0x0000));
-
-	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)	//pix in the range [-widthPerFrame_pix/2,widthPerFrame_pix/2]
-		PixelclockEqualDistance_us.at(pix + widthPerFrame_pix / 2) = calculatePracticalDwellTime_us(pix);
+	pixelclockQ.push_back(packU32(InitialWaitingTime_tick - mLatency_tick, 0x0000));
 
 	//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches it state which represents a pixel delimiter (the switching is implemented on the FPGA)
-	for (int pix = 0; pix < widthPerFrame_pix; pix++)
-		pixelClockQ.push_back(packSinglePixelclock(PixelclockEqualDistance_us.at(pix), 1));
+	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)
+		pixelclockQ.push_back(packSinglePixelclock(calculatePracticalDwellTime_us(pix), 1));
 
 	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	pixelClockQ.push_back(packSinglePixelclock(dtMIN_us, 1));
+	pixelclockQ.push_back(packSinglePixelclock(dtMIN_us, 1));
 }
 
-QU32 RTsequence::Pixelclock::readPixelclock()
+QU32 RTsequence::Pixelclock::readPixelclock() const
 {
-	return pixelClockQ;
+	return pixelclockQ;
 }
 
 //Create an array of arrays to serve as a buffer and store the data from the FIFO
@@ -567,7 +562,6 @@ RTsequence::Image::~Image()
 void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
 {
 	const bool debug = 0;
-	const double upscaleU8 = 20;	//Upscale the photon-count to cover the full 0-255 range of a 8-bit number
 	double upscaledCount;
 
 	U32 pixIndex = 0;	//Index for the image pixel
@@ -745,7 +739,7 @@ void Filterwheel::readFilterPosition_()
 	//std::cout << RxBuffer << std::endl;
 }
 
-FilterColor Filterwheel::readFilterPosition()
+FilterColor Filterwheel::readFilterPosition() const
 {
 	return mPosition;
 }
@@ -796,7 +790,7 @@ void Laser::downloadWavelength()
 	std::cout << RxBuffer << std::endl;
 }
 
-int Laser::readWavelength_nm()
+int Laser::readWavelength_nm() const
 {
 	return mWavelength;
 }
@@ -843,12 +837,12 @@ Stage::~Stage()
 }
 
 //Recall the current position for the 3 stages
-double3 Stage::recallPositionXYZ_mm()
+double3 Stage::recallPositionXYZ_mm() const
 {
 	return mPosition_mm;
 }
 
-void Stage::printPositionXYZ()
+void Stage::printPositionXYZ() const
 {
 	std::cout << "Stage X position = " << mPosition_mm[xx] << " mm" << std::endl;
 	std::cout << "Stage Y position = " << mPosition_mm[yy] << " mm" << std::endl;
@@ -891,7 +885,7 @@ void Stage::moveStage(const double3 positionXYZ_mm)
 }
 
 
-bool Stage::isMoving(const Axis axis)
+bool Stage::isMoving(const Axis axis) const
 {
 	BOOL isMoving = FALSE;
 
@@ -901,7 +895,7 @@ bool Stage::isMoving(const Axis axis)
 	return isMoving;
 }
 
-void Stage::waitForMovementStop(const Axis axis)
+void Stage::waitForMovementStop(const Axis axis) const
 {
 	BOOL isMoving;
 	do {
@@ -980,7 +974,7 @@ stop;
 
 //convert from (slice number, plane number, tile number) ---> absolute position (x,y,z)
 //this function considers the overlaps in x, y, and z
-double3 Stage::readAbsolutePosition_mm(const int nSlice, const int nPlane, const int3 nTileXY)
+double3 Stage::readAbsolutePosition_mm(const int nSlice, const int nPlane, const int3 nTileXY) const
 {
 	const double mm = 1;
 	const double um = 0.001;

@@ -4,7 +4,7 @@ namespace Const
 {
 	extern const LineclockInputSelector lineclockInput = FG;				//RS or FG
 	extern const PhotonCounterInputSelector photonCounterInput = sim;		//ext or sim
-	extern const PixelclockSelector pixelClockType = equalDur;					//equalDuration or equalDistance
+	extern const PixelclockSelector pixelclockType = equalDist;					//equalDuration or equalDistance
 
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;								//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
@@ -34,8 +34,8 @@ namespace Const
 	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refer to as a 'line').
 	//Example, if I divide each line in 1000 pixels, then the pix dwell time is 62.5ns. Therefore, 62.5ns can fit at most 5 pulses separated by 12.5ns
 	extern const int nPulses = 20;												//Number of pulses
-	extern const U8 pulseArray[nPulses] = { 1, 0, 1, 1, 0, 1, 1, 0, 0, 1,
-											1, 0, 0, 0, 1, 1, 0, 1, 0, 0 };		//@160MHz, one cycle through this array lasts 125ns	
+	extern const U8 pulseArray[nPulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns	
 
 }
 
@@ -59,6 +59,7 @@ namespace Parameters
 	//extern const int calibFine_tick = 10;
 
 	//IMAGE
+	extern const double upscaleU8 = 1;													//Upscale the photon-count to cover the full 0-255 range of a 8-bit number
 	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth

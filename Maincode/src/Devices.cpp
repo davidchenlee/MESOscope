@@ -101,7 +101,7 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 	run(1);
 }
 
-void ResonantScanner::turnOn_volt(const double Vcontrol_volt)
+void ResonantScanner::turnOnSoft_volt(const double Vcontrol_volt)
 {
 	setVcontrol_volt(Vcontrol_volt);
 	Sleep(mDelayTime);
@@ -181,9 +181,9 @@ RTsequence::RTsequence(const FPGAapi &fpga) : mFpga(fpga), mVectorOfQueues(Nchan
 	//mVectorOfQueues.at(PCLOCK)= pixelclock.PixelClockEqualDuration();
 	mVectorOfQueues.at(PCLOCK) = pixelclock.PixelClockEqualDistance();
 
-	dataFIFO_A = new U32[nPixAllFrames]();
-	nElemBufArray_B = new int[nBufArrays]();
+	bufArray_A = new U32[nPixAllFrames]();
 
+	nElemBufArray_B = new int[nBufArrays]();
 	bufArray_B = new U32*[nBufArrays];
 	for (int i = 0; i < nBufArrays; i++)
 		bufArray_B[i] = new U32[nPixAllFrames]();
@@ -191,7 +191,7 @@ RTsequence::RTsequence(const FPGAapi &fpga) : mFpga(fpga), mVectorOfQueues(Nchan
 
 RTsequence::~RTsequence()
 {
-	delete[] dataFIFO_A;
+	delete[] bufArray_A;
 	delete[] nElemBufArray_B;
 
 	//clean up the buffer arrays
@@ -276,14 +276,14 @@ void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue)
 	}
 }
 
-//Distribute the commands among the different channels (see the implementation of the LV code), but do not execute yet
-void  RTsequence::uploadRTtoFPGA()
+//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute yet
+void  RTsequence::uploadRT()
 {
 	mFpga.writeFIFO(mVectorOfQueues);
 
+	//On the FPGA, transfer the commands from FIFO IN to the sub-channel buffers
 	NiFpga_Status status = NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1);
 	checkFPGAstatus(__FUNCTION__, status);
-
 	status = NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0);
 	checkFPGAstatus(__FUNCTION__, status);
 
@@ -372,11 +372,11 @@ void RTsequence::runRT(const std::string filename)
 {
 	mFilename = filename;
 
-	startFIFOs();				//Start transferring data from the FPGA FIFO to the PC FIFO
+	startFIFOs();		//Start transferring data from the FPGA FIFO to the PC FIFO
 	mFpga.runRT();		//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-	readFIFO();					//Read the data
+	readFIFO();			//Read the data
 
-	//If NOT all the expected data is read successfully
+	//If expected data is read unsuccessfully
 	if (nElemReadFIFO_A != nPixAllFrames || nElemReadFIFO_B != nPixAllFrames)
 	{
 		throw std::runtime_error((std::string)__FUNCTION__ + ": More or less FIFO elements received than expected ");
@@ -405,10 +405,10 @@ void RTsequence::startFIFOs()
 
 void RTsequence::readFIFO()
 {
-	const int readFifoWaitingTime = 15;			//Waiting time between each iteration
-	const U32 timeout = 100;					//FIFO timeout
+	const int readFifoWaitingTime_ms = 15;		//Waiting time between each iteration
+	const U32 timeout_ms = 100;					//FIFO timeout
 	U32 nRemainFIFO_A = 0;
-	U32 nRemainFIFO_B = 0;			//Elements remaining in the FIFO
+	U32 nRemainFIFO_B = 0;						//Elements remaining in the FIFO
 	int timeoutCounter = 100;					//Timeout the while-loop if the data-transfer from the FIFO fails	
 
 	//Declare and start a stopwatch
@@ -425,21 +425,21 @@ void RTsequence::readFIFO()
 	NiFpga_Status status;
 	while (nElemReadFIFO_A < nPixAllFrames || nElemReadFIFO_B < nPixAllFrames)
 	{
-		Sleep(readFifoWaitingTime); //wait till collecting big chuncks of data. Adjust the waiting time until getting max transfer bandwidth
+		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time until getting max transfer bandwidth
 
 		//FIFO OUT A
 		if (nElemReadFIFO_A < nPixAllFrames)
 		{
-			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout, &nRemainFIFO_A);//////////////////////////////////////
-			checkFPGAstatus(__FUNCTION__, status);///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout_ms, &nRemainFIFO_A);
+			checkFPGAstatus(__FUNCTION__, status);
 			//std::cout << "Number of elements remaining in the host FIFO a: " << nRemainFIFO_A << std::endl;
 
 			if (nRemainFIFO_A > 0)
 			{
 				nElemReadFIFO_A += nRemainFIFO_A;
 
-				status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dataFIFO_A, nRemainFIFO_A, timeout, &nRemainFIFO_A);/////////////////
-				checkFPGAstatus(__FUNCTION__, status);///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, bufArray_A, nRemainFIFO_A, timeout_ms, &nRemainFIFO_A);
+				checkFPGAstatus(__FUNCTION__, status);
 			}
 		}
 
@@ -447,8 +447,8 @@ void RTsequence::readFIFO()
 		if (nElemReadFIFO_B < nPixAllFrames)		//Skip if all the data have already been transferred (i.e. nElemReadFIFO_A = nPixAllFrames)
 		{
 			//By requesting 0 elements from the FIFO, the function returns the number of elements available. If no data available so far, then nRemainFIFO_A = 0 is returned
-			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout, &nRemainFIFO_B);//////////////////////////////////////
-			checkFPGAstatus(__FUNCTION__, status);///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, timeout_ms, &nRemainFIFO_B);
+			checkFPGAstatus(__FUNCTION__, status);
 			//std::cout << "Number of elements remaining in the host FIFO b: " << nRemainFIFO_B << std::endl;
 
 			//If there are data available in the FIFO, retrieve it
@@ -458,8 +458,8 @@ void RTsequence::readFIFO()
 				nElemBufArray_B[counterBufArray_B] = nRemainFIFO_B;		//Keep track of how many elements are in each FIFObuffer array												
 
 				//Read the elements in the FIFO
-				status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArray_B[counterBufArray_B], nRemainFIFO_B, timeout, &nRemainFIFO_B);//////////////////////////////////////
-				checkFPGAstatus(__FUNCTION__, status);///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				status = NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufArray_B[counterBufArray_B], nRemainFIFO_B, timeout_ms, &nRemainFIFO_B);
+				checkFPGAstatus(__FUNCTION__, status);
 
 				if (counterBufArray_B >= nBufArrays)
 					throw std::range_error((std::string)__FUNCTION__ + ": Buffer array overflow");
@@ -515,6 +515,37 @@ void RTsequence::stopFIFOs()
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
+
+RTsequence::Image::Image()
+{
+	mBufArray_A = new U32[nPixAllFrames]();
+
+	mNelemBufArray_B = new int[nBufArrays]();
+	mBufArray_B = new U32*[nBufArrays];
+	for (int i = 0; i < nBufArrays; i++)
+		mBufArray_B[i] = new U32[nPixAllFrames]();
+
+	image = new unsigned char[nPixAllFrames]();
+};
+
+RTsequence::Image::~Image()
+{
+	delete[] mBufArray_A;
+	delete[] mNelemBufArray_B;
+
+	//clean up the buffer arrays
+	for (int i = 0; i < nBufArrays; ++i) {
+		delete[] mBufArray_B[i];
+	}
+	delete[] mBufArray_B;
+
+	delete[] image;
+
+};
+
+
+
+
 #pragma endregion "RTsequence"
 
 //When multiplexing later on, each U32 element in bufArray_B must to be split in 8 parts of 4-bits each
@@ -522,19 +553,19 @@ void RTsequence::stopFIFOs()
 void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B)
 {
 	const bool debug = 0;
-	const double scaleFactor = 20;	//Scale up the photon-count to cover the full 0-255 range for a 8-bit number
-	double scaledCount;
+	const double upscaleU8 = 20;	//Upscale the photon-count to cover the full 0-255 range of a 8-bit number
+	double upscaledCount;
 
 	U32 pixIndex = 0;	//Index for the image pixel
 	for (int ii = 0; ii < counterBufArray_B; ii++)
 	{
 		for (int jj = 0; jj < nElemBufArray_B[ii]; jj++)
 		{		
-			scaledCount = std::floor(scaleFactor * bufArray_B[ii][jj]); 
+			upscaledCount = std::floor(upscaleU8 * bufArray_B[ii][jj]); 
 
-			if (scaledCount > 255) throw std::overflow_error((std::string)__FUNCTION__ + ": Scaled photon-count overflow");
+			if (upscaledCount > _UI8_MAX) throw std::overflow_error((std::string)__FUNCTION__ + ": Upscaled photon-count overflow");
 
-			image[pixIndex] = (unsigned char)scaledCount;
+			image[pixIndex] = (unsigned char)upscaledCount;
 			//myfile << bufArray_B[ii][jj] << std::endl;
 			
 			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increaments
@@ -601,18 +632,17 @@ PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wave
 PockelsCell::~PockelsCell() {}
 
 
-void PockelsCell::turnOn_volt(const double V_volt)
+void PockelsCell::turnOnSoft_volt(const double V_volt)
 {
 	mV_volt = V_volt;
-
 	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt));
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
-void PockelsCell::turnOn_mW(const double power_mW)
+//For speed and real time, on/off is hard coded on the FPGA and triggered by the 'frame gate'
+void PockelsCell::turnOnSoft_mW(const double power_mW)
 {
 	mV_volt = convertPowertoVoltage_volt(power_mW);
-
 	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt));
 	checkFPGAstatus(__FUNCTION__, status);
 }

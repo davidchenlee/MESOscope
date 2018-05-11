@@ -216,10 +216,10 @@ void FPGAapi::writeFIFO(VQU32 &vectorQueues) const
 	}
 	allQueues = {};									//Cleanup the queue (C++11 style)
 
-	const U32 timeout = -1;		// in ms. A value -1 prevents the FIFO from timing out
+	const U32 timeout_ms = -1;		// in ms. A value -1 prevents the FIFO from timing out
 	U32 r;						//empty elements remaining
 
-	NiFpga_Status status = NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout, &r); //Send the data to the FPGA through the FIFO
+	NiFpga_Status status = NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout_ms, &r); //Send the data to the FPGA through the FIFO
 
 	//std::cout << "FPGA FIFO status: " << mStatus << std::endl;
 	delete[] FIFO;		//cleanup the array

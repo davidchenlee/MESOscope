@@ -48,7 +48,7 @@ public:
 	~ResonantScanner();
 	void run(const bool state);
 	void turnOn_um(const double FFOV_um);
-	void turnOn_volt(const double Vcontrol_volt);
+	void turnOnSoft_volt(const double Vcontrol_volt);
 	void turnOff();
 };
 
@@ -67,20 +67,22 @@ public:
 
 class RTsequence
 {
+	std::string mFilename;
+
 	const FPGAapi &mFpga;
 	VQU32 mVectorOfQueues;
 	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
 	QU32 generateLinearRamp(double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 
 	//FIFO A
-	int nElemReadFIFO_A = 0; 							//Total number of elements read from the FIFO
-	U32 *dataFIFO_A;									//The buffer size does not necessarily have to be the size of a frame
+	int nElemReadFIFO_A = 0; 							//Total number of elements read from FIFO A
+	U32 *bufArray_A;									//Array to read the FIFO A
 
 	//FIFO B
 	int counterBufArray_B = 0;							//Number of buffer arrays actually used
-	const int nBufArrays = 100;
+	static const int nBufArrays = 100;							//Number of buffer arrays to use
 	int *nElemBufArray_B;								//Each elements in this array indicates the number of elements in each chunch of data
-	int nElemReadFIFO_B = 0; 							//Total number of elements read from the FIFO
+	int nElemReadFIFO_B = 0; 							//Total number of elements read from FIFO B
 	U32 **bufArray_B;									//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < nPixAllFrames
 
 	void configureFIFO(const U32 depth);
@@ -88,7 +90,25 @@ class RTsequence
 	void readFIFO();
 	void stopFIFOs();
 
-	std::string mFilename;
+	class Image
+	{
+		//FIFO A
+		int mNelemReadFIFO_A = 0; 						//Total number of elements read from the FIFO
+		U32 *mBufArray_A;								//Array to read the FIFO A
+
+		//FIFO B
+		int mCounterBufArray_B = 0;						//Number of buffer arrays actually used
+		int *mNelemBufArray_B;							//Each elements in this array indicates the number of elements in each chunch of data
+		int mNelemReadFIFO_B = 0; 						//Total number of elements read from FIFO B
+		U32 **mBufArray_B;								//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < nPixAllFrames
+
+		unsigned char *image;							//Create a long 1D array representing the image
+
+	public:
+		Image();
+		~Image();
+	};
+
 
 	class PixelClock
 	{
@@ -112,7 +132,7 @@ public:
 	void pushQueue(const RTchannel chan, QU32& queue);
 	void pushSingleValue(const RTchannel chan, const U32 input);
 	void pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
-	void uploadRTtoFPGA();
+	void uploadRT();
 	void runRT(const std::string filename = "_photon-count");
 };
 
@@ -128,8 +148,8 @@ class PockelsCell
 public:
 	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm);
 	~PockelsCell();
-	void turnOn_volt(const double V_volt);
-	void turnOn_mW(const double power_mW);
+	void turnOnSoft_volt(const double V_volt);
+	void turnOnSoft_mW(const double power_mW);
 	void turnOff();
 };
 

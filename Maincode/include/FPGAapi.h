@@ -9,8 +9,6 @@ using namespace Parameters;
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/
 static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 
-void checkFPGAstatus(char functionName[], NiFpga_Status status);
-
 namespace GenericFPGAfunctions
 {
 	void printHex(int input);
@@ -22,8 +20,6 @@ namespace GenericFPGAfunctions
 	U32 singlePixelClock(double t, bool DO);
 	QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);
 }
-
-
 
 class FPGAapi
 {	
@@ -38,6 +34,8 @@ public:
 	void close(const bool reset) const;
 	NiFpga_Session getSession() const;
 };
+
+void checkFPGAstatus(char functionName[], NiFpga_Status status);
 
 class FPGAexception : public std::runtime_error
 {

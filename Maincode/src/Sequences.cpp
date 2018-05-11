@@ -22,10 +22,10 @@ void seq_main(const FPGAapi &fpga)
 		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
 		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 
-		sequence.uploadRTtoFPGA();
-		pockels.turnOn_mW(laserPower_mW);//WARNING: the on/off is currently hard coded on the FPGA and triggered by the 'frame gate'
-		sequence.runRT(filename);			//Execute the RT sequence, read and save the photon count
-		pockels.turnOff();			//warning: saving data delays the calling this function
+		sequence.uploadRT();
+		pockels.turnOnSoft_mW(laserPower_mW);
+		sequence.runRT(filename);	//Execute the RT sequence, read and save the photon count
+		pockels.turnOff();
 	}
 }
 
@@ -94,11 +94,11 @@ void seq_calibAnalogLatency(const FPGAapi &fpga)
 	double step = 4 * us;
 
 	RTsequence sequence(fpga);
-	sequence.pushSingleValue(GALVO1, singleAnalogOut(step, 10));	//initial pulse
+	sequence.pushSingleValue(GALVO1, singleAnalogOut(step, 10));	//Initial pulse
 	sequence.pushSingleValue(GALVO1, singleAnalogOut(step, 0));
-	sequence.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5*V);			//linear ramp to accumulate the error
-	sequence.pushSingleValue(GALVO1, singleAnalogOut(step, 10));	//initial pulse
-	sequence.pushSingleValue(GALVO1, singleAnalogOut(step, 0));		//final pulse
+	sequence.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5*V);			//Linear ramp to accumulate the error
+	sequence.pushSingleValue(GALVO1, singleAnalogOut(step, 10));	//Initial pulse
+	sequence.pushSingleValue(GALVO1, singleAnalogOut(step, 0));		//Final pulse
 
 	//DO0
 	sequence.pushSingleValue(DOdebug, singleDigitalOut(step, 1));
@@ -143,6 +143,7 @@ void seq_testStages(const FPGAapi &fpga)
 	getchar();
 }
 
+//Check if the file already exists
 std::string file_exists(std::string filename)
 {
 	std::string suffix = "";

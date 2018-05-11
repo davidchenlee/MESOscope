@@ -2,7 +2,6 @@
 #include <deque>
 #include <vector>
 #include <array>
-//#include <limits.h>		//for _I16_MAX??
 
 //FPGA data types
 typedef int8_t		I8;

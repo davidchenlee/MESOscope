@@ -22,10 +22,10 @@ namespace GenericFPGAfunctions {
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step overflow. Time step cast to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
 			return _UI16_MAX;
 		}
-		else if ((U32)t_tick < dt_tick_MIN)
+		else if ((U32)t_tick < dtMIN_tick)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step underflow. Time step cast to the min: " << std::fixed << dt_tick_MIN * dt_us << " us" << std::endl;;
-			return dt_tick_MIN;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step underflow. Time step cast to the min: " << std::fixed << dtMIN_tick * dt_us << " us" << std::endl;;
+			return dtMIN_tick;
 		}
 		else
 			return (U16)t_tick;
@@ -53,15 +53,15 @@ namespace GenericFPGAfunctions {
 
 
 	//Send out an analog instruction, where the analog level 'val' is held for the amount of time 't'
-	U32 singleAnalogOut(double t, double val)
+	U32 packSingleAnalog(double t, double val)
 	{
-		const U16 AOlatency_tick = 2;	//To calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles for reading
+		const U16 AOlatency_tick = 2;	//To calibrate it, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 		return packU32(convertUs2tick(t) - AOlatency_tick, convertVolt2I16(val));
 	}
 
 
 	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
-	U32 singleDigitalOut(double t, bool DO)
+	U32 packSingleDigital(double t, bool DO)
 	{
 		const U16 DOlatency_tick = 2;	//To calibrate it, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 		if (DO)
@@ -72,7 +72,7 @@ namespace GenericFPGAfunctions {
 
 
 	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't'
-	U32 singlePixelClock(double t, bool DO)
+	U32 packSinglePixelClock(double t, bool DO)
 	{
 		const U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
 		if (DO)
@@ -105,7 +105,7 @@ namespace GenericFPGAfunctions {
 		for (int ii = 0; ii < nPoints; ii++)
 		{
 			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
-			queue.push_back(singleAnalogOut(TimeStep, V));
+			queue.push_back(packSingleAnalog(TimeStep, V));
 
 			if (debug)	std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
 		}

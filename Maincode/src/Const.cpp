@@ -17,8 +17,8 @@ namespace Const
 	extern const int mW = 1;								//milliwatt
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It depends on the FPGA's clock
 	extern const double dt_us = 1.0 / 160;					//time step of the FPGA's clock in us
-	extern const U32 dt_tick_MIN = 2;						//Min ticks allowed because DO and AO have a latency of 2 ticks
-	extern const double dt_us_MIN = dt_tick_MIN * dt_us;	//in us. Min time step allowed
+	extern const U32 dtMIN_tick = 2;						//Min ticks allowed because DO and AO have a latency of 2 ticks
+	extern const double dtMIN_us = dtMIN_tick * dt_us;	//in us. Min time step allowed
 	extern const int AOdt_us = 2 * us;						//Time step (in us) of the analog output. The AO channels take >1 us to write the output
 	extern const int syncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 	extern const int syncAODOtoLineGate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)

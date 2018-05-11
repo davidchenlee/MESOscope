@@ -42,8 +42,8 @@ namespace Const
 	extern const int mW;
 	extern const int tickPerUs;
 	extern const double dt_us;
-	extern const U32 dt_tick_MIN;
-	extern const double dt_us_MIN;
+	extern const U32 dtMIN_tick;
+	extern const double dtMIN_us;
 	extern const int AOdt_us;
 	extern const int syncDOtoAO_tick;
 	extern const int syncAODOtoLineGate_tick;

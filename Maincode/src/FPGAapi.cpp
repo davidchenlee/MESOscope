@@ -140,14 +140,14 @@ FPGAapi::~FPGAapi()
 void FPGAapi::initialize() const
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_Status status = NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotonCounterInputSelector, photonCounterInput);			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-	NiFpga_MergeStatus(&status, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_LineClockInputSelector, lineclockInput));					//Select the Line clock: resonant scanner or function generator
+	NiFpga_Status status = NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput);			//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+	NiFpga_MergeStatus(&status, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));					//Select the Line clock: resonant scanner or function generator
 	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));									//control-sequence trigger
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0));									//data-acquisition trigger
+	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));									//data-acquisition trigger
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout_tick));
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)Nchan));
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, (U16)syncDOtoAO_tick));
-	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncAODOtoLineGate, (U16)syncAODOtoLineGate_tick));
+	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate, (U16)syncAODOtoLinegate_tick));
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(nLinesAllFrames + nFrames * nLinesSkip)));			//Total number of lines in all the frames, including the skipped lines
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)heightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
 	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(heightPerFrame_pix + nLinesSkip)));	//Number of lines in a frame including the skipped lines
@@ -228,10 +228,10 @@ void FPGAapi::writeFIFO(VQU32 &vectorQueues) const
 //Execute the commands
 void FPGAapi::runRT() const
 {
-	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 1);
+	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1);
 	checkFPGAstatus(__FUNCTION__, status);
 
-	status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LineGateTrigger, 0);
+	status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0);
 	checkFPGAstatus(__FUNCTION__, status);
 
 	//std::cout << "Acquisition trigger status: " << status << std::endl;

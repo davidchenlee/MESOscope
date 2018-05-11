@@ -30,7 +30,7 @@ enum Axis { xx, yy, zz };
 namespace Const
 {
 	extern const LineclockInputSelector lineclockInput;
-	extern const PhotonCounterInputSelector photonCounterInput;
+	extern const PhotonCounterInputSelector photoncounterInput;
 	extern const PixelclockSelector pixelclockType;
 
 	extern const int Nchan;
@@ -48,7 +48,7 @@ namespace Const
 	extern const double dtMIN_us;
 	extern const int AOdt_us;
 	extern const int syncDOtoAO_tick;
-	extern const int syncAODOtoLineGate_tick;
+	extern const int syncAODOtoLinegate_tick;
 	extern const int FIFOtimeout_tick;
 	extern const int FIFOINmax;
 

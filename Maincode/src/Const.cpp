@@ -3,7 +3,7 @@
 namespace Const
 {
 	extern const LineclockInputSelector lineclockInput = FG;				//RS or FG
-	extern const PhotonCounterInputSelector photonCounterInput = sim;		//ext or sim
+	extern const PhotonCounterInputSelector photoncounterInput = sim;		//ext or sim
 	extern const PixelclockSelector pixelclockType = equalDist;					//equalDuration or equalDistance
 
 	//host-to-target FIFO array indices
@@ -22,7 +22,7 @@ namespace Const
 	extern const double dtMIN_us = dtMIN_tick * dt_us;	//in us. Min time step allowed
 	extern const int AOdt_us = 2 * us;						//Time step (in us) of the analog output. The AO channels take >1 us to write the output
 	extern const int syncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
-	extern const int syncAODOtoLineGate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
+	extern const int syncAODOtoLinegate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating. It may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before
 
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs

@@ -4,7 +4,7 @@ HEATMAP = 1;
 COUNT_FREQ = 1;
 
 scale = 1;
-tiffHandle = Tiff('..\Maincode\_photon-count.tif');
+tiffHandle = Tiff('..\Maincode\Images\photoncount.tif');
 %tiffHandle = Tiff('D:\OwnCloud\Data\20180425\damaging test slide.tif');
 inputImage = read(tiffHandle);
 %image(inputImage)

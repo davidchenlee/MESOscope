@@ -29,7 +29,7 @@ public:
 	~FPGAapi();
 	void initialize() const;
 	void writeFIFO(VQU32 &vectorqueues) const;
-	void runRT() const;
+	void triggerRT() const;
 	void flushFIFO() const;
 	void close(const bool reset) const;
 	NiFpga_Session getSession() const;

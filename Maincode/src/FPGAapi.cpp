@@ -226,7 +226,7 @@ void FPGAapi::writeFIFO(VQU32 &vectorQueues) const
 }
 
 //Execute the commands
-void FPGAapi::runRT() const
+void FPGAapi::triggerRT() const
 {
 	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1);
 	checkFPGAstatus(__FUNCTION__, status);

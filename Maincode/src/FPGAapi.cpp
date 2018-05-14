@@ -124,12 +124,11 @@ namespace GenericFPGAfunctions {
 
 FPGAapi::FPGAapi()
 {
-	NiFpga_Status status = NiFpga_Initialize();		//Must be called before any other FPGA calls
-	checkFPGAstatus(__FUNCTION__, status);
-	//std::cout << "FPGA initialize status: " << mStatus << std::endl;
+	//Must be called before any other FPGA calls
+	checkFPGAstatus(__FUNCTION__, NiFpga_Initialize());
 
-	status = NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession);		//Opens a session, downloads the bitstream. 1=no run, 0=run
-	checkFPGAstatus(__FUNCTION__, status);
+	//Opens a session, downloads the bitstream. 1=no run, 0=run
+	checkFPGAstatus(__FUNCTION__, NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession));
 }
 
 FPGAapi::~FPGAapi()
@@ -140,43 +139,38 @@ FPGAapi::~FPGAapi()
 void FPGAapi::initialize() const
 {
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	NiFpga_Status status = NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput);				//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-	NiFpga_MergeStatus(&status, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));					//Select the Line clock: resonant scanner or function generator
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));									//control-sequence trigger
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));									//data-acquisition trigger
-	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout_tick));
-	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)Nchan));
-	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, (U16)syncDOtoAO_tick));
-	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate, (U16)syncAODOtoLinegate_tick));
-	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(nLinesAllFrames + nFrames * nLinesSkip)));			//Total number of lines in all the frames, including the skipped lines
-	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)heightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
-	NiFpga_MergeStatus(&status, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(heightPerFrame_pix + nLinesSkip)));	//Number of lines in a frame including the skipped lines
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));				//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));					//Select the Line clock: resonant scanner or function generator
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));									//control-sequence trigger
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));									//data-acquisition trigger
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout_tick));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)Nchan));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncDOtoAO, (U16)syncDOtoAO_tick));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate, (U16)syncAODOtoLinegate_tick));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(nLinesAllFrames + nFrames * nLinesSkip)));			//Total number of lines in all the frames, including the skipped lines
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)heightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(heightPerFrame_pix + nLinesSkip)));	//Number of lines in a frame including the skipped lines
 
 	//Shutters
-	//NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
-	//NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
+	//checkFPGAstatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
+	//checkFPGAstatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
 
 	//Vibratome control
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_start, 0));
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_back, 0));
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_forward, 0));
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_start, 0));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_back, 0));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_forward, 0));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
 
 	//Resonant scanner
-	//NiFpga_MergeStatus(&status, NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));	//Output voltage
-	//NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
+	//checkFPGAstatus(__FUNCTION__,  NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));	//Output voltage
+	//checkFPGAstatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
 
 	//PockelsID cells
-	//NiFpga_MergeStatus(&status, NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
-	//checkFPGAstatus(__FUNCTION__, status);
+	//checkFPGAstatus(__FUNCTION__,  NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
 
 	//Debugger
-	NiFpga_MergeStatus(&status, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
-	NiFpga_MergeStatus(&status, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));	//FIFO OUT
-
-	checkFPGAstatus(__FUNCTION__, status);
-
-	//std::cout << "FPGA initialization status: " << mStatus << std::endl;
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));	//FIFO OUT
 }
 
 //Send every single queue in VectorOfQueue to the FPGA buffer
@@ -219,49 +213,35 @@ void FPGAapi::writeFIFO(VQU32 &vectorQueues) const
 	const U32 timeout_ms = -1;		// in ms. A value -1 prevents the FIFO from timing out
 	U32 r;						//empty elements remaining
 
-	NiFpga_Status status = NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout_ms, &r); //Send the data to the FPGA through the FIFO
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout_ms, &r)); //Send the data to the FPGA through the FIFO
 
-	//std::cout << "FPGA FIFO status: " << mStatus << std::endl;
 	delete[] FIFO;		//cleanup the array
 }
 
 //Execute the commands
 void FPGAapi::triggerRT() const
 {
-	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1);
-	checkFPGAstatus(__FUNCTION__, status);
-
-	status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0);
-	checkFPGAstatus(__FUNCTION__, status);
-
-	//std::cout << "Acquisition trigger status: " << status << std::endl;
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
 }
 
 //Trigger the FIFO flushing
 void FPGAapi::flushFIFO() const
 {
-	NiFpga_Status status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1);
-	checkFPGAstatus(__FUNCTION__, status);
-
-	status = NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0);
-	checkFPGAstatus(__FUNCTION__, status);
-
-	//std::cout << "Flush trigger status: " << mStatus << std::endl;
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
 }
 
 //The FPGAapi object has to be closed explicitly (in opposition to using the destructor) because it lives in main()
 void FPGAapi::close(const bool reset) const
 {
-	NiFpga_Status status = NiFpga_Close(mSession, (U32) !reset);			//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
-																			//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
-																			//0 resets, 1 does not reset
-	checkFPGAstatus(__FUNCTION__, status);
-	//std::cout << "FPGA closing-session status: " << mStatus << std::endl;
+	//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
+	//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
+	//0 resets, 1 does not reset
+	checkFPGAstatus(__FUNCTION__, NiFpga_Close(mSession, (U32)!reset));
 
 	//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
-	status =  NiFpga_Finalize();
-	checkFPGAstatus(__FUNCTION__, status);
-	//std::cout << "FPGA finalize status: " << mStatus << std::endl;
+	checkFPGAstatus(__FUNCTION__, NiFpga_Finalize());
 }
 
 NiFpga_Session FPGAapi::getSession() const

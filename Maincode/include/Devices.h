@@ -30,7 +30,7 @@ class ResonantScanner
 {
 	const FPGAapi &mFpga;
 	const int mVMAX_volt = 5 * V;			//Max control voltage mVcontrol_volt
-	const int mDelayTime = 10;
+	const int mDelayTime_ms = 10;
 	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
 	double mFFOV_um = 0;					//Full field of view
 	double mVcontrol_volt = 0;				//Control voltage 0-5V (max amplitude)
@@ -50,7 +50,7 @@ class Shutter
 {
 	const FPGAapi &mFpga;
 	NiFpga_FPGAvi_ControlBool mID;			//Device ID
-	const int mDelayTime = 10;
+	const int mDelayTime_ms = 10;
 public:
 	Shutter(const FPGAapi &fpga, ShutterID ID);
 	~Shutter();
@@ -61,8 +61,6 @@ public:
 
 class RTsequence
 {
-	std::string mFilename;
-
 	const FPGAapi &mFpga;
 	VQU32 mVectorOfQueues;
 	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
@@ -70,8 +68,8 @@ class RTsequence
 
 	class Pixelclock
 	{
-		QU32 pixelclockQ;	//Queue containing the pixel-clock sequence
-		const int mLatency_tick = 2;					//latency at detecting the line clock. Calibrate the latency with the oscilloscope
+		QU32 pixelclockQ;					//Queue containing the pixel-clock sequence
+		const int mLatency_tick = 2;		//Latency at detecting the line clock. Calibrate the latency with the oscilloscope
 		double ConvertSpatialCoord2Time_us(const double x);
 		double getDiscreteTime_us(const int pix);
 		double calculateDwellTime_us(const int pix);
@@ -86,7 +84,7 @@ class RTsequence
 
 public:
 	RTsequence(const FPGAapi &fpga);
-	RTsequence(const RTsequence&) = delete;	//Disable copy-constructor
+	RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
 	RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
 	~RTsequence();
 	void pushQueue(const RTchannel chan, QU32& queue);
@@ -103,28 +101,27 @@ class Image
 
 	const int mReadFifoWaitingTime_ms = 15;			//Waiting time between each iteration
 	const U32 mTimeout_ms = 100;					//FIFO timeout
-	int mTimeoutCounter = 100;						//Timeout the while-loop if the FIFO data transfer fails	
+	int mTimeoutCounter_iter = 100;					//Timeout the while-loop if the FIFO data transfer fails	
 
 	//FIFO A
 	U32 mNremainFIFO_A = 0;							//Elements remaining in the FIFO
-	int mNelemReadFIFO_A = 0; 						//Total number of elements read from the FIFO
 	U32 *mBufArray_A;								//Array to read the FIFO A
+	int mNelemReadFIFO_A = 0; 						//Total number of elements read from the FIFO
 
 	//FIFO B
 	U32 mNremainFIFO_B = 0;							//Elements remaining in the FIFO
-	int mCounterBufArray_B = 0;						//Number of buffer arrays actually used
 	const int nBufArrays = 100;						//Number of buffer arrays to use
-	int *mNelemBufArray_B;							//Each elements in this array indicates the number of elements in each chunch of data
+	int mCounterBufArray_B = 0;						//Number of buffer arrays actually used
+	int *mNelemBufArray_B;							//Each elements in this array indicates the number of elements read in each chunch of data
+	U32 **mBufArray_B;								//Each row stores a chunck of data from the FIFO. The row size could possibly be < nPixAllFrames
 	int mNelemReadFIFO_B = 0; 						//Total number of elements read from FIFO B
-	U32 **mBufArray_B;								//Each row stores a chunck of data from the FIFO. The row size could possibly be < nPixAllFrames.
 
 	void startFIFOs();
 	void configureFIFO(const U32 depth);			//Currently I don't use this function
 	void readFIFO();
 	void stopFIFOs();
-	void unpackFIFObuffer();
+	void unpackBuffer();
 	void correctInterleavedImage();
-
 public:
 	Image(const FPGAapi &fpga);
 	~Image();

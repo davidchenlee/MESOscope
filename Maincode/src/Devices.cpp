@@ -372,17 +372,9 @@ void Image::acquire()
 {
 	startFIFOs();		//Start transferring data from the FPGA FIFO to the PC FIFO
 	mFpga.triggerRT();	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-
-	try
-	{
-		readFIFO();			//Read the data in the FIFO and transfer it to the buffer
-		unpackBuffer();			//Move the chuncks of data in the buffer to an array
-		correctInterleavedImage();
-	}
-	catch (const std::runtime_error &e)
-	{
-		std::cout << "A runtime error has occurred in: " << e.what() << std::endl;
-	}
+	readFIFO();			//Read the data in the FIFO and transfer it to the buffer
+	unpackBuffer();		//Move the chuncks of data in the buffer to an array
+	correctInterleavedImage();
 	//stopFIFOs();	//Close the FIFO to (maybe) flush it
 }
 
@@ -448,7 +440,7 @@ void Image::readFIFO()
 				checkFPGAstatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B[mCounterBufArray_B], mNremainFIFO_B, mTimeout_ms, &mNremainFIFO_B));
 
 				if (mCounterBufArray_B >= nBufArrays)
-					throw std::range_error((std::string)__FUNCTION__ + ": Buffer array overflow");
+					throw std::runtime_error((std::string)__FUNCTION__ + ": Buffer array overflow"); //TODO: if error, flush the FIFO and move on!!!!
 
 				mCounterBufArray_B++;
 			}
@@ -456,7 +448,7 @@ void Image::readFIFO()
 
 		mTimeoutCounter_iter--;
 
-		//Data-transfer timeout
+		//Transfer timeout
 		if (mTimeoutCounter_iter == 0)
 			throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO downloading timeout");
 	}
@@ -496,9 +488,10 @@ void Image::unpackBuffer()
 	{
 		for (int jj = 0; jj < mNelemBufArray_B[ii]; jj++)
 		{
-			upscaledCount = std::floor(upscaleU8 * mBufArray_B[ii][jj]);
+			upscaledCount = std::floor(upscaleU8 * mBufArray_B[ii][jj]); //Upscale the photoncount to a 8-bit number
 
-			if (upscaledCount > _UI8_MAX) throw std::overflow_error((std::string)__FUNCTION__ + ": Upscaled photon-count overflow");
+			if (upscaledCount > _UI8_MAX)
+				throw ImageException((std::string)__FUNCTION__ + ": Upscaled photoncount overflow");
 
 			image[pixIndex] = (unsigned char)upscaledCount;
 			//myfile << bufArray_B[ii][jj] << std::endl;
@@ -542,7 +535,7 @@ void Image::saveAsTiff(std::string filename)
 	TIFF *tiffHandle = TIFFOpen((filename + ".tif").c_str(), "w");
 
 	if (tiffHandle == nullptr)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Saving Tiff failed");
+		throw ImageException((std::string)__FUNCTION__ + ": Saving Tiff failed");
 
 	//TAGS
 	TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, widthPerFrame_pix);					//Set the width of the image
@@ -607,7 +600,11 @@ PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wave
 	}
 }
 
-PockelsCell::~PockelsCell() {}
+PockelsCell::~PockelsCell()
+{
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, 0));
+	mV_volt = 0;
+}
 
 //For speed, curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
 void PockelsCell::setOutput_volt(const double V_volt)
@@ -621,12 +618,6 @@ void PockelsCell::setOutput_mW(const double power_mW)
 {
 	mV_volt = convertPowertoVoltage_volt(power_mW);
 	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt)));
-}
-
-void PockelsCell::disable()
-{
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, 0));
-	mV_volt = 0;
 }
 
 

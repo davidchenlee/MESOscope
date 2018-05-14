@@ -130,6 +130,12 @@ public:
 	void saveAsTxt(const std::string fileName);
 };
 
+class ImageException : public std::runtime_error
+{
+public:
+	ImageException(const std::string& message) : std::runtime_error(message.c_str()) {}
+};
+
 
 class PockelsCell
 {
@@ -145,7 +151,6 @@ public:
 	~PockelsCell();
 	void setOutput_volt(const double V_volt);
 	void setOutput_mW(const double power_mW);
-	void disable();
 };
 
 class Filterwheel

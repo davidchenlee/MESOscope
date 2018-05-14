@@ -30,9 +30,6 @@
     <ClCompile Include="src\Sequences.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Tiffscope.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -40,6 +37,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\win.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Tiffscope.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -56,13 +56,13 @@
     <ClInclude Include="include\Sequences.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Tiffscope.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\serial\serial.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\serial\win.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Tiffscope.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

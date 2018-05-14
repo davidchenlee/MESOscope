@@ -60,7 +60,7 @@ namespace Parameters
 	//extern const int calibFine_tick = 10;
 
 	//IMAGE
-	extern const double upscaleU8 = 23;											//Upscale the photon-count to cover the full 0-255 range of a 8-bit number
+	extern const double upscaleU8 = 23;											//Upscale the photoncount to cover the full 0-255 range of a 8-bit number
 	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth

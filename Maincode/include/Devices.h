@@ -13,8 +13,8 @@ using namespace GenericFPGAfunctions;
 
 //Image handling
 void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B);
-int correctInterleavedImage(unsigned char *interleavedImage);
-int writeFrametoTxt(unsigned char *imageArray, const std::string fileName);
+void correctInterleavedImage(unsigned char *interleavedImage);
+void saveAsTxt(unsigned char *imageArray, const std::string fileName);
 
 
 class Vibratome
@@ -107,6 +107,9 @@ class RTsequence
 	public:
 		Image();
 		~Image();
+		void unpackFIFObuffer();
+		void correctInterleavedImage();
+		void saveAsTiff(std::string filename);
 	};
 
 

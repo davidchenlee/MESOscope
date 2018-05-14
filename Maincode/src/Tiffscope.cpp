@@ -1,7 +1,7 @@
 /* The following example is from http://research.cs.wisc.edu/graphics/Courses/638-f1999/libtiff_tutorial.htm */
 #include "Tiffscope.h"
 
-int writeFrametoTiff(unsigned char *image, std::string filename)
+void saveAsTiff(unsigned char *image, std::string filename)
 {
 	if (!overrideImageSaving)
 		filename = file_exists(filename);
@@ -46,10 +46,7 @@ int writeFrametoTiff(unsigned char *image, std::string filename)
 	//Destroy the buffer
 	if (buffer)
 		_TIFFfree(buffer);
-
-	return 0;
 }
-
 
 //Check if the file already exists
 std::string file_exists(std::string filename)

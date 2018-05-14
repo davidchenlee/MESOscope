@@ -7,7 +7,7 @@
 using namespace Const;
 using namespace Parameters;
 
-int writeFrametoTiff(unsigned char *imageIn, std::string fileName);
+void saveAsTiff(unsigned char *imageIn, std::string fileName);
 std::string file_exists(std::string filename);
 //int readTiff(void);
 //int writeSyntheticTiff(void);

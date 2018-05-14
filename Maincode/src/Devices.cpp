@@ -393,17 +393,25 @@ void RTsequence::runRT(const std::string filename)
 	}
 	else
 	{
+		/*
 		unsigned char *image = new unsigned char[nPixAllFrames];		//Create a long 1D array representing the image
 		unpackFIFObuffer(image, counterBufArray_B, nElemBufArray_B, bufArray_B);
 		correctInterleavedImage(image);
-		writeFrametoTiff(image, mFilename);
-		//writeFrametoTxt(image, mFilename);	//Slow function. For debugging only
+		saveAsTiff(image, mFilename);
+		//saveAsTxt(image, mFilename);	//Slow function. For debugging only
 		delete[] image;
-
-		Image imagetest;
-
-
-
+		*/
+		try
+		{
+			Image image;
+			image.unpackFIFObuffer();
+			image.correctInterleavedImage();
+			image.saveAsTiff(mFilename);
+		}
+		catch (const std::runtime_error &e)
+		{
+			std::cout << "A runtime error has occurred: " << e.what() << ". Unable to save the file " << mFilename << std::endl;
+		}
 
 	}
 	stopFIFOs();	//Close the FIFO to (maybe) flush it
@@ -484,19 +492,15 @@ void RTsequence::readFIFO()
 
 		timeoutCounter--;
 		
-		
 		if (timeoutCounter == 0)	//Timeout the data transfer
 			throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO downloading timeout");
-	
 
 		/*
 		if (timeoutCounter == 0) {
 			std::cerr << "ERROR in " << __FUNCTION__ << ": FIFO downloading timeout" << std::endl;
 			break;
 		}
-		*/
-		
-		
+		*/		
 	}
 
 	//Stop the stopwatch
@@ -539,7 +543,7 @@ RTsequence::Image::Image()
 	for (int i = 0; i < nBufArrays; i++)
 		mBufArray_B[i] = new U32[nPixAllFrames]();
 
-	image = new unsigned char[nPixAllFrames]();
+	image = new unsigned char[nPixAllFrames](); //Add throw
 };
 
 RTsequence::Image::~Image()
@@ -560,6 +564,102 @@ RTsequence::Image::~Image()
 };
 
 
+//When multiplexing later on, each U32 element in bufArray_B must to be split in 8 parts of 4-bits each
+//Returns a single 1D array with the chucks of data stored in the buffer 2D array
+void RTsequence::Image::unpackFIFObuffer()
+{
+	const bool debug = 0;
+	double upscaledCount;
+
+	U32 pixIndex = 0;	//Index for the image pixel
+	for (int ii = 0; ii < mCounterBufArray_B; ii++)
+	{
+		for (int jj = 0; jj < mNelemBufArray_B[ii]; jj++)
+		{
+			upscaledCount = std::floor(upscaleU8 * mBufArray_B[ii][jj]);
+
+			if (upscaledCount > _UI8_MAX) throw std::overflow_error((std::string)__FUNCTION__ + ": Upscaled photon-count overflow");
+
+			image[pixIndex] = (unsigned char)upscaledCount;
+			//myfile << bufArray_B[ii][jj] << std::endl;
+
+			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increaments
+			if (debug)
+				image[pixIndex] = pixIndex + 1;
+
+			pixIndex++;
+		}
+	}
+}
+
+//The microscope scans bidirectionally. The pixel order is backwards every other line.
+//Later on, write the tiff directly from the buffer arrays. To deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
+//memset http://www.cplusplus.com/reference/cstring/memset/
+//memmove http://www.cplusplus.com/reference/cstring/memmove/
+//One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
+void RTsequence::Image::correctInterleavedImage()
+{
+	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to store the temp data. In principle I could just use half the size, but why bothering...
+
+	//Reverse the pixel order every other line
+	for (int lineIndex = 1; lineIndex < heightPerFrame_pix; lineIndex += 2)
+	{
+		//save the data in an aux array
+		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
+			auxLine[pixIndex] = image[lineIndex*widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];	//TODO: use memcpy
+																											//write the data back in reversed order
+		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
+			image[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];		//TODO: use memcpy
+	}
+	delete[] auxLine;
+}
+
+void RTsequence::Image::saveAsTiff(std::string filename)
+{
+	if (!overrideImageSaving)
+		filename = file_exists(filename);
+
+	TIFF *tiffHandle = TIFFOpen((filename + ".tif").c_str(), "w");
+
+	if (tiffHandle == nullptr)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Saving Tiff failed");
+
+	//TAGS
+	TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, widthPerFrame_pix);					//Set the width of the image
+	TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, heightPerFrame_pix);					//Set the height of the image
+	TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);								//Set number of channels per pixel
+	TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);									//Set the size of the channels
+	TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);					//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
+																						//TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);				//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
+	TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);				//Single channel with min as black
+
+	tsize_t bytesPerLine = widthPerFrame_pix;			//Length in memory of one row of pixel in the image.
+	unsigned char *buffer = nullptr;					//Buffer used to store the row of pixel information for writing to file
+
+														//Allocating memory to store pixels of current row
+	if (TIFFScanlineSize(tiffHandle))
+		buffer = (unsigned char *)_TIFFmalloc(bytesPerLine);
+	else
+		buffer = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(tiffHandle));
+
+	//Set the strip size of the file to be size of one row of pixels
+	TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, widthPerFrame_pix));
+
+	//Now writing image to the file one strip at a time. CURRENTLY ONLY ONE FRAME IS SAVED!!!
+	for (int row = 0; row < heightPerFrame_pix; row++)
+	{
+		memcpy(buffer, &image[(heightPerFrame_pix - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
+		if (TIFFWriteScanline(tiffHandle, buffer, row, 0) < 0)
+			break;
+	}
+
+	//Close the output file
+	(void)TIFFClose(tiffHandle);
+
+	//Destroy the buffer
+	if (buffer)
+		_TIFFfree(buffer);
+}
 
 
 #pragma endregion "RTsequence"
@@ -598,7 +698,7 @@ void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nE
 //memset http://www.cplusplus.com/reference/cstring/memset/
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
 //One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
-int correctInterleavedImage(unsigned char *interleavedImage)
+void correctInterleavedImage(unsigned char *interleavedImage)
 {
 	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to store the temp data. In principle I could just use half the size, but why bothering...
 
@@ -614,12 +714,10 @@ int correctInterleavedImage(unsigned char *interleavedImage)
 
 	}
 	delete[] auxLine;
-
-	return 0;
 }
 
 
-int writeFrametoTxt(unsigned char *imageArray, const std::string fileName)
+void saveAsTxt(unsigned char *imageArray, const std::string fileName)
 {
 	std::ofstream myfile;								//Create output file
 	myfile.open(fileName + ".txt");						//Open the file
@@ -628,8 +726,6 @@ int writeFrametoTxt(unsigned char *imageArray, const std::string fileName)
 		myfile << (int)imageArray[ii] << std::endl;		//Write each element
 
 	myfile.close();										//Close the txt file
-
-	return 0;
 }
 
 PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm) : mFpga(fpga), mID(ID), mWavelength_nm(wavelength_nm)

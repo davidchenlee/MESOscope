@@ -2,7 +2,6 @@
 #include "Devices.h"
 
 void seq_main(const FPGAapi &fpga);
-void seq_main_test(const FPGAapi &fpga);
 void seq_testAOramp(const FPGAapi &fpga);
 void seq_checkDigitalTiming(const FPGAapi &fpga);
 void seq_calibDigitalLatency(const FPGAapi &fpga);

@@ -11,12 +11,6 @@
 using namespace GenericFPGAfunctions;
 
 
-//Image handling
-void unpackFIFObuffer(unsigned char *image, const int counterBufArray_B, int *nElemBufArray_B, U32 **bufArray_B);
-void correctInterleavedImage(unsigned char *interleavedImage);
-void saveAsTxt(unsigned char *imageArray, const std::string fileName);
-
-
 class Vibratome
 {
 	const FPGAapi &mFpga;
@@ -74,22 +68,6 @@ class RTsequence
 	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
 	QU32 generateLinearRamp(double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 
-	//FIFO A
-	int nElemReadFIFO_A = 0; 							//Total number of elements read from FIFO A
-	U32 *bufArray_A;									//Array to read the FIFO A
-
-	//FIFO B
-	int counterBufArray_B = 0;							//Number of buffer arrays actually used
-	static const int nBufArrays = 100;					//Number of buffer arrays to use
-	int *nElemBufArray_B;								//Each elements in this array indicates the number of elements in each chunch of data
-	int nElemReadFIFO_B = 0; 							//Total number of elements read from FIFO B
-	U32 **bufArray_B;									//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < nPixAllFrames
-
-	void configureFIFO(const U32 depth);
-	void startFIFOs();
-	void readFIFO();
-	void stopFIFOs();
-
 	class Pixelclock
 	{
 		QU32 pixelclockQ;	//Queue containing the pixel-clock sequence
@@ -115,13 +93,13 @@ public:
 	void pushSingleValue(const RTchannel chan, const U32 input);
 	void pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 	void uploadRT();
-	void runRT(const std::string filename = "photoncount");
 };
 
 
 class Image
 {
 	const FPGAapi &mFpga;
+	unsigned char *image;							//Create a long 1D array representing the image
 
 	const int mReadFifoWaitingTime_ms = 15;			//Waiting time between each iteration
 	const U32 mTimeout_ms = 100;					//FIFO timeout
@@ -140,11 +118,10 @@ class Image
 	int mNelemReadFIFO_B = 0; 						//Total number of elements read from FIFO B
 	U32 **mBufArray_B;								//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < nPixAllFrames
 
-	unsigned char *image;							//Create a long 1D array representing the image
-
 	void startFIFOs();
-	void stopFIFOs();
+	void configureFIFO(const U32 depth);
 	void readFIFO();
+	void stopFIFOs();
 	void unpackFIFObuffer();
 	void correctInterleavedImage();
 
@@ -153,6 +130,7 @@ public:
 	~Image();
 	void acquire();
 	void saveAsTiff(std::string filename = ".\\Data\\photoncount");
+	void Image::saveAsTxt(const std::string fileName);
 };
 
 

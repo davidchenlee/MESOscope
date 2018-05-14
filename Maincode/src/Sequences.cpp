@@ -7,57 +7,22 @@ void seq_main(const FPGAapi &fpga)
 	const double FFOVslow_um = 200 * um;	//Full FOV in the slow axis (galvo)
 	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
 	const double galvoTimeStep_us = 8 * us;
-	
+
 	std::string filename = ".\\Data\\photoncount";
-	
+
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
 
-	//Sleep(10000);
-
-
+	//REALTIME SEQUENCE
+	RTsequence sequence(fpga);
+	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
+	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 
 	//NON-REALTIME SEQUENCE
 	for (int ii = 0; ii < 1; ii++)
 	{
-		//REALTIME SEQUENCE
-		RTsequence sequence(fpga);
-		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
-		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
-
 		sequence.uploadRT();
-		pockels.turnOnSoft_mW(laserPower_mW);
-		sequence.runRT(filename);	//Execute the RT sequence, then read and save the photon count
-		pockels.turnOff();
-
-		Sleep(1000);
-
-	}
-}
-
-
-void seq_main_test(const FPGAapi &fpga)
-{
-	const int wavelength_nm = 750;
-	const double laserPower_mW = 40 * mW;
-	const double FFOVslow_um = 200 * um;	//Full FOV in the slow axis (galvo)
-	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
-	const double galvoTimeStep_us = 8 * us;
-
-	std::string filename = ".\\Data\\photoncount";
-
-	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
-
-	//NON-REALTIME SEQUENCE
-	for (int ii = 0; ii < 2; ii++)
-	{
-		//REALTIME SEQUENCE
-		RTsequence sequence(fpga);
-		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
-		sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 
 		Image image(fpga);
-
-		sequence.uploadRT();
 		pockels.turnOnSoft_mW(laserPower_mW);
 		image.acquire();
 		pockels.turnOff();

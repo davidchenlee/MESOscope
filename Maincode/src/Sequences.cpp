@@ -14,7 +14,7 @@ void seq_main(const FPGAapi &fpga)
 
 	//Sleep(10000);
 	//REALTIME SEQUENCE
-	RTsequence sequence(fpga);//WARNING: For now, the same sequence has to be declared multiple times to reset the FIFO element counters. otherwise the computer will crash
+	RTsequence sequence(fpga);
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 
@@ -24,7 +24,7 @@ void seq_main(const FPGAapi &fpga)
 	{
 		sequence.uploadRT();
 		pockels.turnOnSoft_mW(laserPower_mW);
-		sequence.runRT(filename);	//Execute the RT sequence, read and save the photon count
+		sequence.runRT(filename);	//Execute the RT sequence, then read and save the photon count
 		pockels.turnOff();
 
 		Sleep(1000);

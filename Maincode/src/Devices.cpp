@@ -433,10 +433,15 @@ void RTsequence::readFIFO()
 	U32 nRemainFIFO_B = 0;						//Elements remaining in the FIFO
 	int timeoutCounter = 100;					//Timeout the while-loop if the data-transfer from the FIFO fails	
 
+	nElemReadFIFO_A = 0;
+	nElemReadFIFO_B = 0;
+	counterBufArray_B = 0; //reset this counter
+
 	//Declare and start a stopwatch
-	std::clock_t start;
 	double duration;
-	start = std::clock();
+	auto t_start = std::chrono::high_resolution_clock::now();
+	//std::cout << (std::chrono::duration<double>) t_start << std::endl;
+
 
 	//TODO: save the data from the FIFO saving concurrently
 	//Read the PC-FIFO as the data arrive. I ran a test and found out that two 32-bit FIFOs has a larger bandwidth than a single 64 - bit FIFO
@@ -502,14 +507,16 @@ void RTsequence::readFIFO()
 		}
 		*/		
 	}
+	//Sleep(10);
 
 	//Stop the stopwatch
-	duration = (std::clock() - start) / (double)CLOCKS_PER_SEC;
-	std::cout << "Elapsed time: " << duration << " s" << std::endl;
+	duration = std::chrono::duration<double> (std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "Elapsed time: " << duration << " s\n";
+
 	std::cout << "FIFO bandwidth: " << 2 * 32 * nPixAllFrames / duration / 1000000 << " Mbps" << std::endl; //2 FIFOs of 32 bits each
 
-	std::cout << "Buffer-arrays used: " << (U32)counterBufArray_B << std::endl; //print how many buffer arrays were actually used
-	std::cout << "Total of elements read: " << nElemReadFIFO_A << "\t" << nElemReadFIFO_B << std::endl; //print the total number of elements read
+	std::cout << "Buffer-arrays used: " << (U32)counterBufArray_B << std::endl; //Print out how many buffer arrays were actually used
+	std::cout << "Total of elements read: " << nElemReadFIFO_A << "\t" << nElemReadFIFO_B << std::endl; //Print out the total number of elements read
 }
 
 void RTsequence::configureFIFO(const U32 depth)

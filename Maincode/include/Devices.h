@@ -80,7 +80,7 @@ class RTsequence
 
 	//FIFO B
 	int counterBufArray_B = 0;							//Number of buffer arrays actually used
-	static const int nBufArrays = 100;							//Number of buffer arrays to use
+	static const int nBufArrays = 100;					//Number of buffer arrays to use
 	int *nElemBufArray_B;								//Each elements in this array indicates the number of elements in each chunch of data
 	int nElemReadFIFO_B = 0; 							//Total number of elements read from FIFO B
 	U32 **bufArray_B;									//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < nPixAllFrames
@@ -89,6 +89,15 @@ class RTsequence
 	void startFIFOs();
 	void readFIFO();
 	void stopFIFOs();
+
+
+	class FIFO
+	{
+	public:
+		FIFO();
+		~FIFO();
+	};
+
 
 	class Image
 	{

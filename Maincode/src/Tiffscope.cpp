@@ -56,7 +56,7 @@ std::string file_exists(std::string filename)
 {
 	std::string suffix = "";
 
-	for (int ii = 1; std::experimental::filesystem::exists(filename + suffix + ".tif") && ii <10; ii++)
+	for (int ii = 1; std::experimental::filesystem::exists(filename + suffix + ".tif"); ii++)
 		suffix = " (" + std::to_string(ii) + ")";
 
 	return filename + suffix;

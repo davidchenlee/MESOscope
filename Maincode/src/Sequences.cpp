@@ -3,14 +3,16 @@
 void seq_main(const FPGAapi &fpga)
 {
 	const int wavelength_nm = 750;
-	const double laserPower_mW = 40 * mW;
+	const double laserPower_mW = 30 * mW;
 	const double FFOVslow_um = 200 * um;	//Full FOV in the slow axis (galvo)
 	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
 	const double galvoTimeStep_us = 8 * us;
 	
-	std::string filename = "_photon-count";
+	std::string filename = ".\\Images\\photoncount";
 	
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
+
+	//Sleep(10000);
 
 	//NON-REALTIME SEQUENCE
 	for (int ii = 0; ii < 1; ii++)
@@ -24,6 +26,9 @@ void seq_main(const FPGAapi &fpga)
 		pockels.turnOnSoft_mW(laserPower_mW);
 		sequence.runRT(filename);	//Execute the RT sequence, read and save the photon count
 		pockels.turnOff();
+
+		//Sleep(1000);
+
 	}
 }
 

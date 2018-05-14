@@ -399,8 +399,13 @@ void RTsequence::runRT(const std::string filename)
 		writeFrametoTiff(image, mFilename);
 		//writeFrametoTxt(image, mFilename);	//Slow function. For debugging only
 		delete[] image;
-	}
 
+		Image imagetest;
+
+
+
+
+	}
 	stopFIFOs();	//Close the FIFO to (maybe) flush it
 }
 
@@ -549,6 +554,8 @@ RTsequence::Image::~Image()
 	delete[] mBufArray_B;
 
 	delete[] image;
+
+	std::cout << "Image destructor called\n";
 
 };
 

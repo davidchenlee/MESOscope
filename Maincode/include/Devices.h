@@ -135,7 +135,7 @@ public:
 	void pushSingleValue(const RTchannel chan, const U32 input);
 	void pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 	void uploadRT();
-	void runRT(const std::string filename = "_photon-count");
+	void runRT(const std::string filename = "photoncount");
 };
 
 class PockelsCell

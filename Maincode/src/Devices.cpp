@@ -369,7 +369,7 @@ Image::Image(const FPGAapi &fpga) : mFpga(fpga)
 	for (int i = 0; i < nBufArrays; i++)
 		mBufArray_B[i] = new U32[nPixAllFrames]();
 
-	image = new unsigned char[nPixAllFrames](); //Add throw
+	image = new unsigned char[nPixAllFrames]();
 };
 
 Image::~Image()
@@ -382,11 +382,8 @@ Image::~Image()
 		delete[] mBufArray_B[i];
 	}
 	delete[] mBufArray_B;
-
 	delete[] image;
-
-	std::cout << "Image destructor called\n";
-
+	//std::cout << "Image destructor called\n";
 };
 
 //Create an array of arrays to serve as a buffer and store the data from the FIFO
@@ -433,7 +430,7 @@ void Image::configureFIFO(const U32 depth)
 
 void Image::readFIFO()
 {
-	//Declare and start a stopwatch
+	//Declare and start a stopwatch [2]
 	double duration;
 	auto t_start = std::chrono::high_resolution_clock::now();
 
@@ -504,10 +501,10 @@ void Image::readFIFO()
 	//Sleep(10);
 
 	//Stop the stopwatch
-	duration = std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "Elapsed time: " << duration << " s\n";
+	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
 
-	std::cout << "FIFO bandwidth: " << 2 * 32 * nPixAllFrames / duration / 1000000 << " Mbps" << std::endl; //2 FIFOs of 32 bits each
+	std::cout << "FIFO bandwidth: " << 2 * 32 * nPixAllFrames / duration / 1000 << " Mbps" << std::endl; //2 FIFOs of 32 bits each
 
 	std::cout << "Buffer-arrays used: " << (U32)mCounterBufArray_B << std::endl; //Print out how many buffer arrays were actually used
 	std::cout << "Total of elements read: " << mNelemReadFIFO_A << "\t" << mNelemReadFIFO_B << std::endl; //Print out the total number of elements read
@@ -515,6 +512,8 @@ void Image::readFIFO()
 	//If expected data is read unsuccessfully
 	if (mNelemReadFIFO_A != nPixAllFrames || mNelemReadFIFO_B != nPixAllFrames)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": More or less FIFO elements received than expected ");
+
+	delete[] dummy;
 }
 
 void Image::stopFIFOs()
@@ -1012,4 +1011,7 @@ double3 Stage::readAbsolutePosition_mm(const int nSlice, const int nPlane, const
 [1] The stage Z has a virtual COM port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.
 nPortNr: to know the correct COM port, look at Window's device manager or use Tera Term. Use nPortNr=1 for COM1, etc..
 iBaudRate: the manual says that the baud rate does not matter (p10), but the suggested 115200 does not work. I use the default baud rate = 38400 which matches the drive's front panel configuration (using physical switches)
+
+[2] std::clock() vs std::chrono
+http://en.cppreference.com/w/cpp/chrono/c/clock
 */

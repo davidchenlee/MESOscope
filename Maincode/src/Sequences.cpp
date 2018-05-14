@@ -18,9 +18,9 @@ void seq_main(const FPGAapi &fpga)
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 
 	//NON-REALTIME SEQUENCE
-	for (int ii = 0; ii < 1; ii++)
+	for (int ii = 0; ii < 2; ii++)
 	{
-		sequence.uploadRT();
+		sequence.uploadRT(); //upload the realtime sequence
 
 		Image image(fpga);
 		pockels.turnOnSoft_mW(laserPower_mW);
@@ -28,9 +28,6 @@ void seq_main(const FPGAapi &fpga)
 		pockels.turnOff();
 
 		image.saveAsTiff();
-
-		Sleep(1000);
-
 	}
 }
 

@@ -2,7 +2,7 @@
 
 namespace Const
 {
-	extern const LineclockInputSelector lineclockInput = RS;				//RS or FG
+	extern const LineclockInputSelector lineclockInput = FG;				//RS or FG
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//ext or sim
 	extern const PixelclockSelector pixelclockType = equalDist;				//equalDuration or equalDistance
 	extern const bool overrideImageSaving = 1;								//Enable file override when saving

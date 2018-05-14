@@ -12,22 +12,22 @@ void seq_main(const FPGAapi &fpga)
 
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
 
-	//REALTIME SEQUENCE
+	//Create a realtime sequence
 	RTsequence sequence(fpga);
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 
 	//NON-REALTIME SEQUENCE
-	for (int ii = 0; ii < 2; ii++)
+	for (int ii = 0; ii < 1; ii++)
 	{
-		sequence.uploadRT(); //upload the realtime sequence
-
 		Image image(fpga);
-		pockels.turnOnSoft_mW(laserPower_mW);
-		image.acquire();
-		pockels.turnOff();
+		sequence.uploadRT(); //upload the realtime sequence to the FPGA but don't execute it yet
 
-		image.saveAsTiff();
+		pockels.setOutput_mW(laserPower_mW);
+		image.acquire(); //execute the realtime sequence and acquire the image
+		pockels.disable();
+
+		image.saveAsTiff(filename);
 	}
 }
 

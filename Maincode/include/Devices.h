@@ -103,7 +103,7 @@ class Image
 
 	const int mReadFifoWaitingTime_ms = 15;			//Waiting time between each iteration
 	const U32 mTimeout_ms = 100;					//FIFO timeout
-	int mTimeoutCounter = 100;						//Timeout the while-loop if the data-transfer from the FIFO fails	
+	int mTimeoutCounter = 100;						//Timeout the while-loop if the FIFO data transfer fails	
 
 	//FIFO A
 	U32 mNremainFIFO_A = 0;							//Elements remaining in the FIFO
@@ -116,10 +116,10 @@ class Image
 	const int nBufArrays = 100;						//Number of buffer arrays to use
 	int *mNelemBufArray_B;							//Each elements in this array indicates the number of elements in each chunch of data
 	int mNelemReadFIFO_B = 0; 						//Total number of elements read from FIFO B
-	U32 **mBufArray_B;								//Each row is used to store the data from the ReadFifo. The buffer size could possibly be < nPixAllFrames
+	U32 **mBufArray_B;								//Each row stores a chunck of data from the FIFO. The row size could possibly be < nPixAllFrames.
 
 	void startFIFOs();
-	void configureFIFO(const U32 depth);
+	void configureFIFO(const U32 depth);			//Currently I don't use this function
 	void readFIFO();
 	void stopFIFOs();
 	void unpackFIFObuffer();
@@ -129,8 +129,8 @@ public:
 	Image(const FPGAapi &fpga);
 	~Image();
 	void acquire();
-	void saveAsTiff(std::string filename = ".\\Data\\photoncount");
-	void Image::saveAsTxt(const std::string fileName);
+	void saveAsTiff(std::string filename);
+	void saveAsTxt(const std::string fileName);
 };
 
 
@@ -146,9 +146,9 @@ class PockelsCell
 public:
 	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm);
 	~PockelsCell();
-	void turnOnSoft_volt(const double V_volt);
-	void turnOnSoft_mW(const double power_mW);
-	void turnOff();
+	void setOutput_volt(const double V_volt);
+	void setOutput_mW(const double power_mW);
+	void disable();
 };
 
 class Filterwheel

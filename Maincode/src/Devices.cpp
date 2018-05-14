@@ -386,9 +386,7 @@ Image::~Image()
 	//std::cout << "Image destructor called\n";
 };
 
-//Create an array of arrays to serve as a buffer and store the data from the FIFO
-//The ReadFifo function gives chuncks of data. Store each chunck in a separate buffer-array
-//I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
+//The ReadFifo function gives chuncks of data. Store each chunck in a separate buffer-array. I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
 void Image::acquire()
 {
 	startFIFOs();		//Start transferring data from the FPGA FIFO to the PC FIFO
@@ -525,7 +523,7 @@ void Image::stopFIFOs()
 }
 
 
-//When multiplexing later on, each U32 element in bufArray_B must to be split in 8 parts of 4-bits each
+//When multiplexing later on, each U32 element in bufArray_B must be split in 8 parts of 4-bits each
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
 void Image::unpackFIFObuffer()
 {
@@ -553,7 +551,7 @@ void Image::unpackFIFObuffer()
 	}
 }
 
-//The microscope scans bidirectionally. The pixel order is backwards every other line.
+//The microscope scans bidirectionally. The pixel order is reversed every other line.
 //Later on, write the tiff directly from the buffer arrays. To deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
 //memset http://www.cplusplus.com/reference/cstring/memset/
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
@@ -650,23 +648,23 @@ PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wave
 
 PockelsCell::~PockelsCell() {}
 
-
-void PockelsCell::turnOnSoft_volt(const double V_volt)
+//For speed, curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
+void PockelsCell::setOutput_volt(const double V_volt)
 {
 	mV_volt = V_volt;
 	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt));
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
-//For speed and real time, on/off is hard coded on the FPGA and triggered by the 'frame gate'
-void PockelsCell::turnOnSoft_mW(const double power_mW)
+//For speed, curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
+void PockelsCell::setOutput_mW(const double power_mW)
 {
 	mV_volt = convertPowertoVoltage_volt(power_mW);
 	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt));
 	checkFPGAstatus(__FUNCTION__, status);
 }
 
-void PockelsCell::turnOff()
+void PockelsCell::disable()
 {
 	NiFpga_Status status = NiFpga_WriteI16(mFpga.getSession(), mFPGAid, 0);
 	checkFPGAstatus(__FUNCTION__, status);

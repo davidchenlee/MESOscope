@@ -252,7 +252,7 @@ void  RTsequence::uploadRT()
 
 RTsequence::Pixelclock::Pixelclock()
 {
-	switch (pixelclockType)
+	switch (pixelclockType) //pixelclockType defined globally
 	{
 	case equalDur: equalDuration();
 		break;
@@ -504,7 +504,6 @@ void Image::unpackBuffer()
 				throw ImageException((std::string)__FUNCTION__ + ": Upscaled photoncount overflow");
 
 			image[pixIndex] = (unsigned char)upscaledCount;
-			//myfile << bufArray_B[ii][jj] << std::endl;
 
 			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increaments
 			if (debug)
@@ -586,13 +585,13 @@ void Image::saveAsTiff(std::string filename)
 
 void Image::saveAsTxt(const std::string fileName)
 {
-	std::ofstream myfile;								//Create output file
-	myfile.open(fileName + ".txt");						//Open the file
+	std::ofstream fileHandle;								//Create output file
+	fileHandle.open(fileName + ".txt");						//Open the file
 
 	for (int ii = 0; ii < nPixAllFrames; ii++)
-		myfile << (int)image[ii] << std::endl;		//Write each element
+		fileHandle << (int)image[ii] << std::endl;		//Write each element
 
-	myfile.close();										//Close the txt file
+	fileHandle.close();										//Close the txt file
 }
 
 //Check if the file already exists
@@ -608,8 +607,8 @@ std::string Image::file_exists(const std::string filename)
 
 #pragma endregion "Image"
 
-
-PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm, const double power_mW) : mFpga(fpga), mID(ID), mWavelength_nm(wavelength_nm), mV_volt(convertPowertoVoltage_volt(power_mW))
+//Curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
+PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm) : mFpga(fpga), mID(ID), mWavelength_nm(wavelength_nm)
 {
 	switch (ID)
 	{
@@ -621,24 +620,26 @@ PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wave
 	}
 }
 
-PockelsCell::~PockelsCell()
-{
-	mV_volt = 0;
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, mV_volt));
-}
+PockelsCell::~PockelsCell() {}
 
-//For speed, curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
 void PockelsCell::setOutput_volt(const double V_volt)
 {
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(V_volt)));
 	mV_volt = V_volt;
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt)));
 }
 
-//For speed, curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
 void PockelsCell::setOutput_mW(const double power_mW)
 {
-	mV_volt = convertPowertoVoltage_volt(power_mW);
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(mV_volt)));
+	double aux = convertPowertoVoltage_volt(power_mW);
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(aux)));
+	mV_volt = aux;
+}
+
+
+void PockelsCell::off()
+{
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, 0));
+	mV_volt = 0;
 }
 
 

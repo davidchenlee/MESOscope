@@ -149,19 +149,20 @@ class PockelsCell
 	double mV_volt;													//Output voltage to the HV amplifier
 	double convertPowertoVoltage_volt(const double power_mW);
 public:
-	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm, const double power_mW = 0);
+	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm);
 	~PockelsCell();
 	void setOutput_volt(const double V_volt);
 	void setOutput_mW(const double power_mW);
+	void off();
 };
 
 class Filterwheel
 {
 	FilterwheelID mID;											//Device ID
+	serial::Serial *mSerial;
 	std::string port;											//internal ID assigned by the OS
 	const int mBaud = 115200;
 	const int mTimeout_ms = 150;
-	serial::Serial *mSerial;
 	FilterColor mPosition;
 	void readFilterPosition_();
 public:
@@ -175,10 +176,10 @@ public:
 class Laser
 {
 	int mWavelength;
+	serial::Serial *mSerial;
 	const std::string port = "COM1";						//internal ID assigned by the OS
 	const int mBaud = 19200;
 	const int mTimeout_ms = 100;
-	serial::Serial *mSerial;
 	void Laser::downloadWavelength();
 public:
 	Laser();

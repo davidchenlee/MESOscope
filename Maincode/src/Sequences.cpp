@@ -1,16 +1,17 @@
 #include "Sequences.h"
 
 void seq_main(const FPGAapi &fpga)
-{
-	const int wavelength_nm = 750;
-	const double laserPower_mW = 40 * mW;
+{							
+	const int wavelength_nm = 940;
+	const double laserPower_mW = 90 * mW;
 	const double FFOVslow_um = 200 * um;	//Full FOV in the slow axis (galvo)
 	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
 	const double galvoTimeStep_us = 8 * us;
 
-	std::string filename = ".\\Data\\photoncount";
+	std::string filename = ".\\Output\\photoncount";
 
-	PockelsCell pockels(fpga, Pockels1, wavelength_nm, laserPower_mW);			//Create a pockels cell
+	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
+	pockels.setOutput_mW(laserPower_mW);
 
 	//Create a realtime sequence
 	RTsequence sequence(fpga);
@@ -24,7 +25,32 @@ void seq_main(const FPGAapi &fpga)
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		image.acquire(filename); //Execute the realtime sequence and acquire the image
 	}
+	pockels.off();
+
+	Logger datalog(filename);
+	datalog.record("Wavelength (nm) = ", wavelength_nm);
+	datalog.record("Laser power (mW) = ", laserPower_mW);
+	datalog.record("FFOV (um) = ", FFOVslow_um);
+	datalog.record("Galvo Vmax (V) = ", galvo1Vmax_volt);
+	datalog.record("Galvo time step (us) = ", galvoTimeStep_us);
 }
+
+Logger::Logger(const std::string filename)
+{
+	mFileHandle.open(filename + ".txt");						//Open the file
+};
+
+Logger::~Logger()
+{
+	mFileHandle.close();
+};
+
+void Logger::record(const std::string description, const double input)
+{
+	mFileHandle << description << input << std::endl;
+}
+
+
 
 //Test the analog and digital output and the relative timing wrt the pixel clock
 void seq_testAODO(const FPGAapi &fpga)

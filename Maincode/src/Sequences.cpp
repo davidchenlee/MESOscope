@@ -10,8 +10,7 @@ void seq_main(const FPGAapi &fpga)
 
 	std::string filename = ".\\Data\\photoncount";
 
-	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
-	pockels.setOutput_mW(laserPower_mW);
+	PockelsCell pockels(fpga, Pockels1, wavelength_nm, laserPower_mW);			//Create a pockels cell
 
 	//Create a realtime sequence
 	RTsequence sequence(fpga);
@@ -19,20 +18,11 @@ void seq_main(const FPGAapi &fpga)
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 
 	//NON-REALTIME SEQUENCE
-	for (int ii = 0; ii < 2; ii++)
+	for (int ii = 0; ii < 1; ii++)
 	{
 		Image image(fpga);
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
-
-		try
-		{
-			image.acquire(); //Execute the realtime sequence and acquire the image
-			image.saveAsTiff(filename);
-		}
-		catch (const ImageException &e)
-		{
-			std::cout << "An ImageException has occurred in: " << e.what() << std::endl;
-		}
+		image.acquire(filename); //Execute the realtime sequence and acquire the image
 	}
 }
 

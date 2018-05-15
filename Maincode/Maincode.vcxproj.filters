@@ -39,9 +39,6 @@
     <ClCompile Include="src\win.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Tiffscope.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Const.h">
@@ -60,9 +57,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\serial\win.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Tiffscope.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

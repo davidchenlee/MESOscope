@@ -3,6 +3,8 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
+- Unmount TiffScope
+- throw error in readFIFO without crashing the computer
 - Implement the FIFO reading and data saving concurrently
 - Save the run parameters in a text file
 - Maybe install TVK to display tiff images

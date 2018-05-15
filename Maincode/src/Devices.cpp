@@ -368,17 +368,28 @@ Image::~Image()
 };
 
 //The ReadFifo function gives chuncks of data. Store each chunck in a separate buffer-array. I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
-void Image::acquire()
+void Image::acquire(const std::string filename)
 {
-	startFIFOs();		//Start transferring data from the FPGA FIFO to the PC FIFO
+	startFIFO();		//Start transferring data from the FPGA FIFO to the PC FIFO
 	mFpga.triggerRT();	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-	readFIFO();			//Read the data in the FIFO and transfer it to the buffer
-	unpackBuffer();		//Move the chuncks of data in the buffer to an array
-	correctInterleavedImage();
-	//stopFIFOs();	//Close the FIFO to (maybe) flush it
+
+	try
+	{
+		readFIFO();			//Read the data in the FIFO and transfer it to the buffer
+		unpackBuffer();		//Move the chuncks of data in the buffer to an array
+		correctInterleavedImage();
+		saveAsTiff(filename);
+		//stopFIFOs();
+	}
+	catch (const ImageException &e) //Notify the exception and move on to the next iteration
+	{
+		stopFIFO();			//Close the FIFO to flush the data in the FIFO, otherwise segmentation fault accessing the FPGA and the computer will crash
+		std::cout << "An ImageException has occurred in: " << e.what() << std::endl;
+	}
+
 }
 
-void Image::startFIFOs()
+void Image::startFIFO()
 {
 	checkFPGAstatus(__FUNCTION__, NiFpga_StartFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 	checkFPGAstatus(__FUNCTION__, NiFpga_StartFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
@@ -389,7 +400,6 @@ void Image::configureFIFO(const U32 depth)
 	U32 actualDepth;
 	checkFPGAstatus(__FUNCTION__, NiFpga_ConfigureFifo2(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
 	checkFPGAstatus(__FUNCTION__, NiFpga_ConfigureFifo2(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
-
 	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << std::endl;
 }
 
@@ -440,7 +450,7 @@ void Image::readFIFO()
 				checkFPGAstatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B[mCounterBufArray_B], mNremainFIFO_B, mTimeout_ms, &mNremainFIFO_B));
 
 				if (mCounterBufArray_B >= nBufArrays)
-					throw std::runtime_error((std::string)__FUNCTION__ + ": Buffer array overflow"); //TODO: if error, flush the FIFO and move on!!!!
+					throw ImageException((std::string)__FUNCTION__ + ": Buffer array overflow");
 
 				mCounterBufArray_B++;
 			}
@@ -450,7 +460,7 @@ void Image::readFIFO()
 
 		//Transfer timeout
 		if (mTimeoutCounter_iter == 0)
-			throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO downloading timeout");
+			throw ImageException((std::string)__FUNCTION__ + ": FIFO downloading timeout");
 	}
 
 	//Stop the stopwatch
@@ -464,12 +474,12 @@ void Image::readFIFO()
 
 	//If expected data is read unsuccessfully
 	if (mNelemReadFIFO_A != nPixAllFrames || mNelemReadFIFO_B != nPixAllFrames)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": More or less FIFO elements received than expected ");
+		throw ImageException((std::string)__FUNCTION__ + ": More or less FIFO elements received than expected ");
 
 	delete[] dummy;
 }
 
-void Image::stopFIFOs()
+void Image::stopFIFO()
 {
 	checkFPGAstatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 	checkFPGAstatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
@@ -585,10 +595,21 @@ void Image::saveAsTxt(const std::string fileName)
 	myfile.close();										//Close the txt file
 }
 
+//Check if the file already exists
+std::string Image::file_exists(const std::string filename)
+{
+	std::string suffix = "";
+
+	for (int ii = 1; std::experimental::filesystem::exists(filename + suffix + ".tif"); ii++)
+		suffix = " (" + std::to_string(ii) + ")";
+
+	return filename + suffix;
+}
+
 #pragma endregion "Image"
 
 
-PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm) : mFpga(fpga), mID(ID), mWavelength_nm(wavelength_nm)
+PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm, const double power_mW) : mFpga(fpga), mID(ID), mWavelength_nm(wavelength_nm), mV_volt(convertPowertoVoltage_volt(power_mW))
 {
 	switch (ID)
 	{
@@ -602,8 +623,8 @@ PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wave
 
 PockelsCell::~PockelsCell()
 {
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, 0));
 	mV_volt = 0;
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, mV_volt));
 }
 
 //For speed, curently the output is hard coded on the FPGA side and triggered by the 'frame gate'

@@ -1,13 +1,14 @@
 #pragma once
 #include "FPGAapi.h"
-//#include "PIstages.h"
-//#include "UARTscope.h"
-#include "Tiffscope.h"
 #include <windows.h>	//the stages use this lib. also Sleep
 #include <fstream>      //file management
 #include <ctime>		//Clock()
 #include "PI_GCS2_DLL.h"
 #include "serial/serial.h"
+#include <tiffio.h>		//for Tiff files
+#include <experimental/filesystem> //standard method in C++14 but not C++11
+
+
 using namespace GenericFPGAfunctions;
 
 
@@ -116,16 +117,17 @@ class Image
 	U32 **mBufArray_B;								//Each row stores a chunck of data from the FIFO. The row size could possibly be < nPixAllFrames
 	int mNelemReadFIFO_B = 0; 						//Total number of elements read from FIFO B
 
-	void startFIFOs();
+	void startFIFO();
 	void configureFIFO(const U32 depth);			//Currently I don't use this function
 	void readFIFO();
-	void stopFIFOs();
 	void unpackBuffer();
 	void correctInterleavedImage();
+	std::string file_exists(const std::string filename);
 public:
 	Image(const FPGAapi &fpga);
 	~Image();
-	void acquire();
+	void acquire(const std::string filename);
+	void stopFIFO();
 	void saveAsTiff(std::string filename);
 	void saveAsTxt(const std::string fileName);
 };
@@ -147,7 +149,7 @@ class PockelsCell
 	double mV_volt;													//Output voltage to the HV amplifier
 	double convertPowertoVoltage_volt(const double power_mW);
 public:
-	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm);
+	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm, const double power_mW = 0);
 	~PockelsCell();
 	void setOutput_volt(const double V_volt);
 	void setOutput_mW(const double power_mW);

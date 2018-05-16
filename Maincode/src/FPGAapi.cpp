@@ -166,7 +166,9 @@ void FPGAapi::initialize() const
 	//checkFPGAstatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
 
 	//PockelsID cells
-	//checkFPGAstatus(__FUNCTION__,  NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
+	checkFPGAstatus(__FUNCTION__,  NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_PC1_voltage, 0));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_PC1_selectTrigger, 0));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_PC1_manualOn, 0));
 
 	//Debugger
 	checkFPGAstatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));

@@ -24,12 +24,12 @@ int main(int argc, char* argv[])
 		{
 			RS.turnOn_um(FFOV_um * um);
 			std::cout << "RS FFOV set to: " << FFOV_um << " um" << std::endl;
-			//shutter1.open();
+			shutter1.open();
 		}
 		else if (runCommand == "0")
 		{
 			RS.turnOff();
-			//shutter1.close();
+			shutter1.close();
 		}
 		else
 		{

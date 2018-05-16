@@ -613,33 +613,42 @@ PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wave
 	switch (ID)
 	{
 	case Pockels1:
-		mFPGAid = NiFpga_FPGAvi_ControlI16_PC1_voltage;
+		mFPGAvoltageControllerID = NiFpga_FPGAvi_ControlI16_PC1_voltage;
+		mFPGAselectTriggerControllerID = NiFpga_FPGAvi_ControlBool_PC1_selectTrigger;
+		mFPGAmanualOnControllerID = NiFpga_FPGAvi_ControlBool_PC1_manualOn;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
 	}
 }
 
+//Do not set the output to 0 with the destructor to allow holding on the last value
 PockelsCell::~PockelsCell() {}
 
 void PockelsCell::setOutput_volt(const double V_volt)
 {
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(V_volt)));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAvoltageControllerID, convertVolt2I16(V_volt)));
 	mV_volt = V_volt;
 }
 
 void PockelsCell::setOutput_mW(const double power_mW)
 {
 	double aux = convertPowertoVoltage_volt(power_mW);
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, convertVolt2I16(aux)));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAvoltageControllerID, convertVolt2I16(aux)));
 	mV_volt = aux;
 }
 
 
-void PockelsCell::off()
+void PockelsCell::setOutputToZero()
 {
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAid, 0));
-	mV_volt = 0;
+	setOutput_volt(0);
+}
+
+//For debugging. Turn the pockels cell on without depending on the scanner
+void PockelsCell::manualOn(const bool state)
+{
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mFPGAselectTriggerControllerID, 1));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mFPGAmanualOnControllerID, (NiFpga_Bool)state));
 }
 
 

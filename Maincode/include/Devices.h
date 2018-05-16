@@ -1,16 +1,13 @@
 #pragma once
 #include "FPGAapi.h"
-#include <windows.h>	//the stages use this lib. also Sleep
-#include <fstream>      //file management
-#include <ctime>		//Clock()
+#include <windows.h>				//the stages use this lib. also Sleep
+#include <fstream>					//file management
+#include <ctime>					//Clock()
 #include "PI_GCS2_DLL.h"
 #include "serial/serial.h"
-#include <tiffio.h>		//for Tiff files
-#include <experimental/filesystem> //standard method in C++14 but not C++11
-
-
+#include <tiffio.h>					//for Tiff files
+#include <experimental/filesystem>	//standard method in C++14 but not C++11
 using namespace GenericFPGAfunctions;
-
 
 class Vibratome
 {
@@ -143,9 +140,10 @@ class PockelsCell
 {
 	const FPGAapi &mFpga;
 	PockelsID mID;													//Device ID
-	NiFpga_FPGAvi_ControlI16 mFPGAid;								//Internal ID of the FPGA
+	NiFpga_FPGAvi_ControlI16 mFPGAvoltageControllerID;				//Internal ID of the FPGA
+	NiFpga_FPGAvi_ControlBool mFPGAselectTriggerControllerID;		//Internal ID of the FPGA
+	NiFpga_FPGAvi_ControlBool mFPGAmanualOnControllerID;			//Internal ID of the FPGA
 	int mWavelength_nm;												//Wavelength of the laser
-	double mVoltPermW = 1;											//Calibration factor
 	double mV_volt;													//Output voltage to the HV amplifier
 	double convertPowertoVoltage_volt(const double power_mW);
 public:
@@ -153,7 +151,8 @@ public:
 	~PockelsCell();
 	void setOutput_volt(const double V_volt);
 	void setOutput_mW(const double power_mW);
-	void off();
+	void setOutputToZero();
+	void manualOn(const bool state);
 };
 
 class Filterwheel
@@ -172,7 +171,6 @@ public:
 	FilterColor readFilterPosition() const;
 };
 
-
 class Laser
 {
 	int mWavelength;
@@ -187,7 +185,6 @@ public:
 	int readWavelength_nm() const;
 	void setWavelength();
 };
-
 
 class Stage
 {

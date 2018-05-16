@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 	{
 		fpga.initialize();	//Initialize the FPGA
 		
-		seq_main(fpga);	//Run the sequence
+		seq_main(fpga);		//Run the sequence
 		//seq_testStages(fpga);
 
 		fpga.flushFIFO();	//Flush the FPGA FIFOs as precaution
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 		{
 			//Close and reset the FPGA connection. Otherwise, residual data will remain in the FPGA and will probably crash the next sequence and the entire computer as well
 			const bool enforceReset = 1;
-			fpga.close(enforceReset); //DO NOT comment this line out!!
+			fpga.close(enforceReset); //DO NOT comment out this line!!
 		}
 		catch (const FPGAexception &e)
 		{
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 	}
 
 	std::cout << "\nPress any key to continue..." << std::endl;
-	//getchar();
+	getchar();
 
 	return 0;
 }

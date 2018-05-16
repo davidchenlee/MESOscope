@@ -3,15 +3,25 @@
 void seq_main(const FPGAapi &fpga)
 {							
 	const int wavelength_nm = 940;
-	const double laserPower_mW = 90 * mW;
+	double laserPower_mW = 100 * mW;
 	const double FFOVslow_um = 200 * um;	//Full FOV in the slow axis (galvo)
 	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
 	const double galvoTimeStep_us = 8 * us;
 
-	std::string filename = ".\\Output\\photoncount";
+	std::string filename = ".\\Output\\photoncouny";
 
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
-	pockels.setOutput_mW(laserPower_mW);
+
+	//pockels.manualOn(0);	//For debugging
+
+	Stage stage;
+
+
+	double newPosition = 18.400;
+	stage.moveStage(zz, newPosition);
+	stage.printPositionXYZ();
+	Sleep(1000);
+
 
 	//Create a realtime sequence
 	RTsequence sequence(fpga);
@@ -19,13 +29,25 @@ void seq_main(const FPGAapi &fpga)
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 
 	//NON-REALTIME SEQUENCE
-	for (int ii = 0; ii < 1; ii++)
+	for (int ii = 0; ii < 100; ii++)
 	{
+
+
 		Image image(fpga);
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
-		image.acquire(filename); //Execute the realtime sequence and acquire the image
+		image.acquire(filename + " z = " + std::to_string(newPosition)); //Execute the realtime sequence and acquire the image
+		
+		
+		newPosition += 0.001;
+		stage.moveStage(zz, newPosition);
+		stage.printPositionXYZ();
+		laserPower_mW +=0.5;
+		pockels.setOutput_mW(laserPower_mW);
+		Sleep(1000);
+		
 	}
-	pockels.off();
+
+	//pockels.setOutputToZero();	//I don't need to do this because normaly the PC is triggered by the scanner
 
 	Logger datalog(filename);
 	datalog.record("Wavelength (nm) = ", wavelength_nm);
@@ -37,7 +59,7 @@ void seq_main(const FPGAapi &fpga)
 
 Logger::Logger(const std::string filename)
 {
-	mFileHandle.open(filename + ".txt");						//Open the file
+	mFileHandle.open(filename + ".txt");
 };
 
 Logger::~Logger()

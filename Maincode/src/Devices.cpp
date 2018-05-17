@@ -393,7 +393,7 @@ Image::Image(const FPGAapi &fpga) : mFpga(fpga)
 
 Image::~Image()
 {
-	stopFIFO(); //Close the FIFO to flush the data, otherwise access fault in the next run and the computer will crash
+	stopFIFO(); //Close the FIFO, otherwise FIFO access in the next run  will crash the computer if exception occurs
 
 	delete[] mBufArray_A;
 	delete[] mNelemBufArray_B;
@@ -441,6 +441,24 @@ void Image::configureFIFO(const U32 depth)
 	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << std::endl;
 }
 
+void Image::stopFIFO()
+{
+	checkFPGAstatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	checkFPGAstatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	//std::cout << "stopFIFO called\n";
+}
+
+
+void Image::remaining()
+{
+	U32 rem;
+	U32 *dummy = new U32[0];
+	checkFPGAstatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, mTimeout_ms, &rem));
+
+	std::cout << "remaining = " << rem << std::endl;
+}
+
+
 //TODO: save the data from the FIFO saving concurrently
 //Read the PC-FIFO as the data arrive. I ran a test and found out that two 32-bit FIFOs has a larger bandwidth than a single 64 - bit FIFO
 //Test if the bandwidth can be increased by using 'NiFpga_AcquireFifoReadElementsU32'.Ref: http://zone.ni.com/reference/en-XX/help/372928G-01/capi/functions_fifo_read_acquire/
@@ -456,13 +474,13 @@ void Image::readFIFO()
 
 	while (mNelemReadFIFO_A < nPixAllFrames || mNelemReadFIFO_B < nPixAllFrames)
 	{
-		Sleep(mReadFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time until getting max transfer bandwidth
+		Sleep(mReadFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time to max transfer bandwidth
 
 		//FIFO OUT A
 		if (mNelemReadFIFO_A < nPixAllFrames)
 		{
 			checkFPGAstatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, mTimeout_ms, &mNremainFIFO_A));
-			//std::cout << "Number of elements remaining in the host FIFO a: " << nRemainFIFO_A << std::endl;
+			//std::cout << "Number of elements remaining in the host FIFO a: " << mNremainFIFO_A << std::endl;
 
 			if (mNremainFIFO_A > 0)
 			{
@@ -476,7 +494,7 @@ void Image::readFIFO()
 		{
 			//By requesting 0 elements from the FIFO, the function returns the number of elements available. If no data available so far, then nRemainFIFO_A = 0 is returned
 			checkFPGAstatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, mTimeout_ms, &mNremainFIFO_B));
-			//std::cout << "Number of elements remaining in the host FIFO b: " << nRemainFIFO_B << std::endl;
+			//std::cout << "Number of elements remaining in the host FIFO b: " << mNremainFIFO_B << std::endl;
 
 			//If there are data available in the FIFO, retrieve it
 			if (mNremainFIFO_B > 0)
@@ -510,7 +528,7 @@ void Image::readFIFO()
 	std::cout << "Buffer-arrays used: " << (U32)mCounterBufArray_B << std::endl; //Print out how many buffer arrays were actually used
 	std::cout << "Total of elements read: " << mNelemReadFIFO_A << "\t" << mNelemReadFIFO_B << std::endl; //Print out the total number of elements read
 
-	//If expected data is read unsuccessfully
+	//If expected data is NOT read successfully
 	if (mNelemReadFIFO_A != nPixAllFrames || mNelemReadFIFO_B != nPixAllFrames)
 		throw ImageException((std::string)__FUNCTION__ + ": More or less FIFO elements received than expected ");
 
@@ -544,13 +562,6 @@ void Image::unpackBuffer()
 			pixIndex++;
 		}
 	}
-}
-
-void Image::stopFIFO()
-{
-	checkFPGAstatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	checkFPGAstatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
-	std::cout << "stopFIFO called\n";
 }
 
 //The microscope scans bidirectionally. The pixel order is reversed every other line.

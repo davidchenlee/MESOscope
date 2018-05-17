@@ -117,10 +117,11 @@ class Image
 
 	void startFIFO();
 	void configureFIFO(const U32 depth);			//Currently I don't use this function
+	void stopFIFO();
 	void readFIFO();
 	void unpackBuffer();
 	void correctInterleavedImage();
-	void stopFIFO();
+	void Image::remaining();
 public:
 	Image(const FPGAapi &fpga);
 	~Image();

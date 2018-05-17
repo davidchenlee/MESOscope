@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
 		//seq_burnSample(fpga);
 		//seq_testStages(fpga);
 
-		fpga.flushFIFO();	//Flush the FPGA FIFOs as precaution
+		fpga.flushBRAMs();  //As precaution, flush the RAM buffers on the FPGA
 		fpga.close(0);		//Close the FPGA connection
 
 	}

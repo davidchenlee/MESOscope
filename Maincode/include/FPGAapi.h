@@ -29,7 +29,7 @@ public:
 	void initialize() const;
 	void writeFIFO(VQU32 &vectorqueues) const;
 	void triggerRT() const;
-	void flushFIFO() const;
+	void flushBRAMs() const;
 	void close(const bool reset) const;
 	NiFpga_Session getSession() const;
 };

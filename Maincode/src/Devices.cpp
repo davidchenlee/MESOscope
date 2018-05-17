@@ -233,9 +233,40 @@ void RTsequence::pushAnalogSinglet(const RTchannel chan, double t, double AO)
 
 
 
-void RTsequence::pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
+void RTsequence::pushLinearRamp(const RTchannel chan, double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
 {
-	concatenateQueues(mVectorOfQueues.at(chan), generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal));
+	//concatenateQueues(mVectorOfQueues.at(chan), generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal));
+
+
+	const bool debug = 0;
+
+	if (TimeStep < AOdt_us)
+	{
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AOdt_us << " us" << std::endl;
+		TimeStep = AOdt_us;		//Analog output time increment (in us)
+	}
+
+	const int nPoints = (int)(RampLength / TimeStep);		//Number of points
+
+	if (nPoints <= 1)	throw std::invalid_argument((std::string)__FUNCTION__ + ": Not enought points to generate a linear ramp");
+
+	if (debug)
+	{
+		std::cout << "nPoints: " << nPoints << std::endl;
+		std::cout << "time \tticks \tv" << std::endl;
+	}
+
+	for (int ii = 0; ii < nPoints; ii++)
+	{
+		const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
+		mVectorOfQueues.at(chan).push_back(packAnalogSinglet(TimeStep, V));
+
+		if (debug)	std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
+	}
+
+	if (debug)
+		getchar();
+
 }
 
 //Push all the elements in 'tailQ' into 'headQ'

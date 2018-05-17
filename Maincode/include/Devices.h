@@ -88,7 +88,7 @@ public:
 	void pushQueue(const RTchannel chan, QU32& queue);
 	void pushDigitalSinglet(const RTchannel chan, double t, bool DO);
 	void pushAnalogSinglet(const RTchannel chan, double t, double AO);
-	void pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
+	void pushLinearRamp(const RTchannel chan, double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 	void uploadRT();
 };
 

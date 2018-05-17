@@ -77,45 +77,6 @@ namespace GenericFPGAfunctions {
 		else
 			return packU32(convertUs2tick(t) - PClatency_tick, 0x0000);
 	}
-
-	QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal)
-	{
-		QU32 queue;
-		const bool debug = 0;
-
-		if (TimeStep < AOdt_us)
-		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AOdt_us << " us" << std::endl;
-			TimeStep = AOdt_us;						//Analog output time increment (in us)
-		}
-
-		const int nPoints = (int)(RampLength / TimeStep);		//Number of points
-
-		if (nPoints <= 1)	throw std::invalid_argument((std::string)__FUNCTION__ + ": Not enought points to generate a linear ramp");
-
-		if (debug)
-		{
-			std::cout << "nPoints: " << nPoints << std::endl;
-			std::cout << "time \tticks \tv" << std::endl;
-		}
-
-		for (int ii = 0; ii < nPoints; ii++)
-		{
-			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
-			queue.push_back(packAnalogSinglet(TimeStep, V));
-
-			if (debug)	std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
-		}
-
-		if (debug)
-		{
-			getchar();
-			return {};
-		}
-
-		return queue;
-	}
-
 }//namespace
 
 

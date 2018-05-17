@@ -19,7 +19,6 @@ namespace GenericFPGAfunctions
 	U32 packAnalogSinglet(double t, double V);
 	U32 packDigitalSinglet(double t, bool DO);
 	U32 packPixelclockSinglet(double t, bool DO);
-	QU32 generateLinearRamp(double TimeStep, double RampLength, double Vinitial, double Vfinal);
 }
 
 class FPGAapi

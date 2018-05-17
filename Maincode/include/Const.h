@@ -43,10 +43,10 @@ namespace Const
 	extern const int V;
 	extern const int mW;
 	extern const int tickPerUs;
-	extern const double dt_us;
-	extern const U32 dtMIN_tick;
-	extern const double dtMIN_us;
-	extern const int AOdt_us;
+	extern const double usPerTick;
+	extern const U32 t_tick_MIN;
+	extern const double t_us_MIN;
+	extern const int AO_t_us_MIN;
 	extern const int syncDOtoAO_tick;
 	extern const int syncAODOtoLinegate_tick;
 	extern const int FIFOtimeout_tick;

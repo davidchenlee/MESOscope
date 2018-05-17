@@ -242,7 +242,7 @@ void RTsequence::Pixelclock::correctedDwellTimes()
 		pixelclockQ.push_back(packPixelclockSinglet(calculatePracticalDwellTime_us(pix), 1));
 
 	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	pixelclockQ.push_back(packPixelclockSinglet(dtMIN_us, 1));
+	pixelclockQ.push_back(packPixelclockSinglet(t_us_MIN, 1));
 }
 
 QU32 RTsequence::Pixelclock::readPixelclock() const
@@ -269,64 +269,23 @@ void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue)
 	}
 }
 
-QU32 RTsequence::generateLinearRamp(double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
-{
-	QU32 queue;
-	const bool debug = 0;
-
-	if (TimeStep < AOdt_us)
-	{
-		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step set to " << AOdt_us << " us" << std::endl;
-		TimeStep = AOdt_us;		//Analog output time increment (in us)
-		return {};
-	}
-
-	const int nPoints = (int)(RampLength / TimeStep);		//Number of points
-
-	if (nPoints <= 1)
-	{
-		std::cerr << "ERROR in " << __FUNCTION__ << ": Not enought points in the linear ramp" << std::endl;
-		std::cerr << "nPoints: " << nPoints << std::endl;
-		return {};
-	}
-	else
-	{
-		if (debug)
-		{
-			std::cout << "nPoints: " << nPoints << std::endl;
-			std::cout << "time \tticks \tv" << std::endl;
-		}
-		for (int ii = 0; ii < nPoints; ii++)
-		{
-			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
-			queue.push_back(packAnalogSinglet(TimeStep, V));
-
-			if (debug)
-				std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
-		}
-		if (debug)
-		{
-			getchar();
-			return {};
-		}
-	}
-	return queue;
-}
-
 void RTsequence::pushQueue(const RTchannel chan, QU32& queue)
 {
 	concatenateQueues(mVectorOfQueues.at(chan), queue);
 }
 
 
-void RTsequence::pushDigitalSinglet(const RTchannel chan, double t, bool DO)
+void RTsequence::pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO)
 {
-	mVectorOfQueues.at(chan).push_back(packDigitalSinglet(t, DO));
+	mVectorOfQueues.at(chan).push_back(packDigitalSinglet(t_us, DO));
 }
 
-void RTsequence::pushAnalogSinglet(const RTchannel chan, double t, double AO)
+void RTsequence::pushAnalogSinglet(const RTchannel chan, const double t_us, const double AO)
 {
-	mVectorOfQueues.at(chan).push_back(packAnalogSinglet(t, AO));
+	if (t_us < AO_t_us_MIN)
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_t_us_MIN << " us" << std::endl;
+
+	mVectorOfQueues.at(chan).push_back(packAnalogSinglet(AO_t_us_MIN, AO));
 }
 
 
@@ -335,10 +294,10 @@ void RTsequence::pushLinearRamp(const RTchannel chan, double TimeStep, const dou
 {
 	const bool debug = 0;
 
-	if (TimeStep < AOdt_us)
+	if (TimeStep < AO_t_us_MIN)
 	{
-		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AOdt_us << " us" << std::endl;
-		TimeStep = AOdt_us;		//Analog output time increment (in us)
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_t_us_MIN << " us" << std::endl;
+		TimeStep = AO_t_us_MIN;		//Analog output time increment (in us)
 	}
 
 	const int nPoints = (int)(RampLength / TimeStep);		//Number of points

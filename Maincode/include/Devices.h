@@ -79,15 +79,14 @@ class RTsequence
 	const FPGAapi &mFpga;
 	VQU32 mVectorOfQueues;
 	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
-	QU32 generateLinearRamp(double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 public:
 	RTsequence(const FPGAapi &fpga);
 	RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
 	RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
 	~RTsequence();
 	void pushQueue(const RTchannel chan, QU32& queue);
-	void pushDigitalSinglet(const RTchannel chan, double t, bool DO);
-	void pushAnalogSinglet(const RTchannel chan, double t, double AO);
+	void pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO);
+	void pushAnalogSinglet(const RTchannel chan, const double t_us, const double AO);
 	void pushLinearRamp(const RTchannel chan, double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 	void uploadRT();
 };

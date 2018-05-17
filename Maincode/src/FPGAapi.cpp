@@ -8,13 +8,13 @@ namespace FPGAfunctions {
 
 		if ((U32)t_tick > 0x0000FFFF)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step overflow. Time step cast to the max: " << std::fixed << _UI16_MAX * dt_us << " us" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step overflow. Time step cast to the max: " << std::fixed << _UI16_MAX * usPerTick << " us" << std::endl;
 			return _UI16_MAX;
 		}
-		else if ((U32)t_tick < dtMIN_tick)
+		else if ((U32)t_tick < t_tick_MIN)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step underflow. Time step cast to the min: " << std::fixed << dtMIN_tick * dt_us << " us" << std::endl;;
-			return dtMIN_tick;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step underflow. Time step cast to the min: " << std::fixed << t_tick_MIN * usPerTick << " us" << std::endl;;
+			return t_tick_MIN;
 		}
 		else
 			return (U16)t_tick;
@@ -46,7 +46,7 @@ namespace FPGAfunctions {
 		return (t_tick << 16) | (0x0000FFFF & val);
 	}
 
-	//Send out an analog instruction, where the analog level 'val' is held for the amount of time 't'
+	//Send out an analog instruction, where the analog level 'val' is held for the amount of time 't_us'
 	U32 packAnalogSinglet(const double t_us, const double val)
 	{
 		const U16 AOlatency_tick = 2;	//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
@@ -54,14 +54,14 @@ namespace FPGAfunctions {
 	}
 
 
-	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
+	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't_us'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 	U32 packDigitalSinglet(const double t_us, const bool DO)
 	{
 		const U16 DOlatency_tick = 2;	//To calibrate, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 		return packU32(convertUs2tick(t_us) - DOlatency_tick, (U16)DO);
 	}
 
-	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't'
+	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't_us'
 	U32 packPixelclockSinglet(const double t_us, const bool DO)
 	{
 		const U16 PixelclockLatency_tick = 1;//The pixel-clock is implemented using a SCTL. I think the latency comes from reading the LUT buffer

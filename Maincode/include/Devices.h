@@ -213,3 +213,12 @@ public:
 	bool isMoving(const Axis axis) const;
 	void waitForMovementStop(const Axis axis) const;
 };
+
+class Logger
+{
+	std::ofstream mFileHandle;
+public:
+	Logger(const std::string filename);
+	~Logger();
+	void record(const std::string description, const double input);
+};

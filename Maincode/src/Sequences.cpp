@@ -57,22 +57,6 @@ void seq_main(const FPGAapi &fpga)
 	datalog.record("Galvo time step (us) = ", galvoTimeStep_us);
 }
 
-Logger::Logger(const std::string filename)
-{
-	mFileHandle.open(filename + ".txt");
-};
-
-Logger::~Logger()
-{
-	mFileHandle.close();
-};
-
-void Logger::record(const std::string description, const double input)
-{
-	mFileHandle << description << input << std::endl;
-}
-
-
 void burnSample(const FPGAapi &fpga)
 {
 	const int wavelength_nm = 750;

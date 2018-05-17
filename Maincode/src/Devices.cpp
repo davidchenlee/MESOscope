@@ -914,6 +914,7 @@ void Stage::scanningStrategy(const int nTileAbsolute) //Absolute tile number = 0
 
 }
 
+
 /*Pseudo code
 SDx = +;
 SDy = +;
@@ -982,6 +983,23 @@ double3 Stage::readAbsolutePosition_mm(const int nSlice, const int nPlane, const
 	return absPosition_mm;
 }
 #pragma endregion "Stages"
+
+
+
+Logger::Logger(const std::string filename)
+{
+	mFileHandle.open(foldername + filename + ".txt");
+};
+
+Logger::~Logger()
+{
+	mFileHandle.close();
+};
+
+void Logger::record(const std::string description, const double input)
+{
+	mFileHandle << description << input << std::endl;
+}
 
 
 /*

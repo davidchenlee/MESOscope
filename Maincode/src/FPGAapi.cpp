@@ -1,6 +1,6 @@
 #include "FPGAapi.h"
 
-namespace FPGApacking {
+namespace FPGAfunctions {
 	//Convert microseconds to ticks
 	U16 convertUs2tick(const double t_us)
 	{
@@ -64,8 +64,8 @@ namespace FPGApacking {
 	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't'
 	U32 packPixelclockSinglet(const double t_us, const bool DO)
 	{
-		const U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
-		return packU32(convertUs2tick(t_us) - PClatency_tick, (U16)DO);
+		const U16 PixelclockLatency_tick = 1;//The pixel-clock is implemented using a SCTL. I think the latency comes from reading the LUT buffer
+		return packU32(convertUs2tick(t_us) - PixelclockLatency_tick, (U16)DO);
 
 	}
 }//namespace

@@ -10,7 +10,7 @@ using namespace Parameters;
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/
 static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 
-namespace FPGApacking
+namespace FPGAfunctions
 {
 	U16 convertUs2tick(const double t_us);
 	I16 convertVolt2I16(const double voltage_V);
@@ -39,6 +39,5 @@ void checkFPGAstatus(char functionName[], NiFpga_Status status);
 class FPGAexception : public std::runtime_error
 {
 public:
-	//FPGAexception(const char *message) : std::runtime_error(message) {}
 	FPGAexception(const std::string& message) : std::runtime_error(message.c_str()) {}
 };

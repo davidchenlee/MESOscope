@@ -1,6 +1,5 @@
 #pragma once
 #include "Devices.h"
-#include "Utilities.h"
 
 void seq_main(const FPGAapi &fpga);
 void seq_burnSample(const FPGAapi &fpga);

@@ -163,6 +163,94 @@ void Shutter::pulseHigh()
 
 #pragma region "RTsequence"
 
+RTsequence::Pixelclock::Pixelclock()
+{
+	switch (pixelclockType) //pixelclockType defined globally
+	{
+	case uniform: uniformDwellTimes();
+		break;
+	case corrected: correctedDwellTimes();
+		break;
+	default: throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pixelclock type unavailable");
+		break;
+	}
+}
+
+RTsequence::Pixelclock::~Pixelclock() {}
+
+//Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
+double RTsequence::Pixelclock::ConvertSpatialCoord2Time_us(const double x)
+{
+	double arg = 2 * x / RSpkpk_um;
+	if (arg > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Argument of asin greater than 1");
+	else
+		return halfPeriodLineclock_us * asin(arg) / Const::PI; //The returned value in in the range [-halfPeriodLineclock_us/PI, halfPeriodLineclock_us/PI]
+}
+
+//Discretize the spatial coordinate, then convert it to time
+double RTsequence::Pixelclock::getDiscreteTime_us(const int pix)
+{
+	const double dx = 0.5 * um;
+	return ConvertSpatialCoord2Time_us(dx * pix);
+}
+
+//Calculate the dwell time for the pixel
+double RTsequence::Pixelclock::calculateDwellTime_us(const int pix)
+{
+	return getDiscreteTime_us(pix + 1) - getDiscreteTime_us(pix);
+}
+
+//Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
+double RTsequence::Pixelclock::calculatePracticalDwellTime_us(const int pix)
+{
+	return round(calculateDwellTime_us(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
+}
+
+
+//Pixel clock sequence. Every pixel has the same duration in time.
+//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+//Pixel clock evently spaced in time
+void RTsequence::Pixelclock::uniformDwellTimes()
+{
+	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
+	//DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
+	//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
+	const double initialWaitingTime_us = 6.25*us;
+	pixelclockQ.push_back(packU32(convertUs2tick(initialWaitingTime_us) - mLatency_tick, 0));
+
+	//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state to represent a pixel delimiter
+	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
+	const double dwellTime_us = 0.125 * us;
+	for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
+		pixelclockQ.push_back(packPixelclockSinglet(dwellTime_us, 1));
+}
+
+//Pixel clock sequence. Every pixel is equally spaced.
+//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+void RTsequence::Pixelclock::correctedDwellTimes()
+{
+	if (widthPerFrame_pix % 2 != 0)	//Throw exception if odd. Odd number of pixels not supported yet
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels in the image width currently not supported");
+
+	//Relative delay of the pixel clock with respect to the line clock. DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
+	const U16 InitialWaitingTime_tick = (U16)(calibCoarse_tick + calibFine_tick);
+	pixelclockQ.push_back(packU32(InitialWaitingTime_tick - mLatency_tick, 0));
+
+	//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches its state to represent a pixel delimiter (the switching is implemented on the FPGA)
+	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)
+		pixelclockQ.push_back(packPixelclockSinglet(calculatePracticalDwellTime_us(pix), 1));
+
+	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
+	pixelclockQ.push_back(packPixelclockSinglet(dtMIN_us, 1));
+}
+
+QU32 RTsequence::Pixelclock::readPixelclock() const
+{
+	return pixelclockQ;
+}
+
+
 RTsequence::RTsequence(const FPGAapi &fpga) : mFpga(fpga), mVectorOfQueues(Nchan)
 {
 	const Pixelclock pixelclock;
@@ -170,6 +258,16 @@ RTsequence::RTsequence(const FPGAapi &fpga) : mFpga(fpga), mVectorOfQueues(Nchan
 }
 
 RTsequence::~RTsequence() {}
+
+//Push all the elements in 'tailQ' into 'headQ'
+void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue)
+{
+	while (!givingQueue.empty())
+	{
+		receivingQueue.push_back(givingQueue.front());
+		givingQueue.pop_front();
+	}
+}
 
 QU32 RTsequence::generateLinearRamp(double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
 {
@@ -266,16 +364,6 @@ void RTsequence::pushLinearRamp(const RTchannel chan, double TimeStep, const dou
 
 }
 
-//Push all the elements in 'tailQ' into 'headQ'
-void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue)
-{
-	while (!givingQueue.empty())
-	{
-		receivingQueue.push_back(givingQueue.front());
-		givingQueue.pop_front();
-	}
-}
-
 //Upload the commands to the FPGA (see the implementation of the LV code), but do not execute yet
 void  RTsequence::uploadRT()
 {
@@ -284,92 +372,6 @@ void  RTsequence::uploadRT()
 	//On the FPGA, transfer the commands from FIFO IN to the sub-channel buffers
 	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
-}
-
-RTsequence::Pixelclock::Pixelclock()
-{
-	switch (pixelclockType) //pixelclockType defined globally
-	{
-	case equalDur: equalDuration();
-		break;
-	case equalDist: equalDistance();
-		break;
-	default: throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pixelclock type unavailable");
-		break;
-	}
-}
-
-RTsequence::Pixelclock::~Pixelclock() {}
-
-//Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
-double RTsequence::Pixelclock::ConvertSpatialCoord2Time_us(const double x)
-{
-	double arg = 2 * x / RSpkpk_um;
-	if (arg > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Argument of asin greater than 1");
-	else
-		return halfPeriodLineclock_us * asin(arg) / Const::PI; //The returned value in in the range [-halfPeriodLineclock_us/PI, halfPeriodLineclock_us/PI]
-}
-
-//Discretize the spatial coordinate, then convert it to time
-double RTsequence::Pixelclock::getDiscreteTime_us(const int pix)
-{
-	const double dx = 0.5 * um;
-	return ConvertSpatialCoord2Time_us(dx * pix);
-}
-
-//Calculate the dwell time for the pixel
-double RTsequence::Pixelclock::calculateDwellTime_us(const int pix)
-{
-	return getDiscreteTime_us(pix + 1) - getDiscreteTime_us(pix);
-}
-
-//Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
-double RTsequence::Pixelclock::calculatePracticalDwellTime_us(const int pix)
-{
-	return round(calculateDwellTime_us(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
-}
-
-
-//Pixel clock sequence. Every pixel has the same duration in time.
-//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-//Pixel clock evently spaced in time
-void RTsequence::Pixelclock::equalDuration()
-{
-	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
-	//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-	const double initialWaitingTime_us = 6.25*us;							
-	pixelclockQ.push_back(packU32(convertUs2tick(initialWaitingTime_us) - mLatency_tick, 0));
-
-	//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches it state which represents a pixel delimiter
-	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	const double dwellTime_us = 0.125 * us;
-	for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
-		pixelclockQ.push_back(packPixelclockSinglet(dwellTime_us, 1));		
-}
-
-//Pixel clock sequence. Every pixel is equally spaced.
-//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-void RTsequence::Pixelclock::equalDistance()
-{
-	if (widthPerFrame_pix % 2 != 0)	//Throw exception if odd. Odd number of pixels not supported yet
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels in the image width currently not supported");
-
-	//Relative delay of the pixel clock with respect to the line clock
-	const U16 InitialWaitingTime_tick = (U16)(calibCoarse_tick + calibFine_tick);
-	pixelclockQ.push_back(packU32(InitialWaitingTime_tick - mLatency_tick, 0));
-
-	//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches it state which represents a pixel delimiter (the switching is implemented on the FPGA)
-	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)
-		pixelclockQ.push_back(packPixelclockSinglet(calculatePracticalDwellTime_us(pix), 1));
-
-	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	pixelclockQ.push_back(packPixelclockSinglet(dtMIN_us, 1));
-}
-
-QU32 RTsequence::Pixelclock::readPixelclock() const
-{
-	return pixelclockQ;
 }
 
 #pragma endregion "RTsequence"
@@ -391,6 +393,8 @@ Image::Image(const FPGAapi &fpga) : mFpga(fpga)
 
 Image::~Image()
 {
+	stopFIFO(); //Close the FIFO to flush the data, otherwise access fault in the next run and the computer will crash
+
 	delete[] mBufArray_A;
 	delete[] mNelemBufArray_B;
 
@@ -415,11 +419,9 @@ void Image::acquire(const std::string filename)
 		unpackBuffer();		//Move the chuncks of data in the buffer to an array
 		correctInterleavedImage();
 		saveAsTiff(filename);
-		//stopFIFOs();
 	}
 	catch (const ImageException &e) //Notify the exception and move on to the next iteration
-	{
-		stopFIFO();			//Close the FIFO to flush the data in the FIFO, otherwise segmentation fault accessing the FPGA and the computer will crash
+	{		
 		std::cout << "An ImageException has occurred in: " << e.what() << std::endl;
 	}
 
@@ -515,13 +517,6 @@ void Image::readFIFO()
 	delete[] dummy;
 }
 
-void Image::stopFIFO()
-{
-	checkFPGAstatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	checkFPGAstatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
-}
-
-
 //When multiplexing later on, each U32 element in bufArray_B must be split in 8 parts of 4-bits each
 //Returns a single 1D array with the chucks of data stored in the buffer 2D array
 void Image::unpackBuffer()
@@ -549,6 +544,13 @@ void Image::unpackBuffer()
 			pixIndex++;
 		}
 	}
+}
+
+void Image::stopFIFO()
+{
+	checkFPGAstatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	checkFPGAstatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	std::cout << "stopFIFO called\n";
 }
 
 //The microscope scans bidirectionally. The pixel order is reversed every other line.
@@ -629,17 +631,6 @@ void Image::saveAsTxt(const std::string filename)
 		fileHandle << (int)image[ii] << std::endl;		//Write each element
 
 	fileHandle.close();										//Close the txt file
-}
-
-//Check if the file already exists
-std::string Image::file_exists(const std::string filename)
-{
-	std::string suffix = "";
-
-	for (int ii = 1; std::experimental::filesystem::exists(foldername + filename + suffix + ".tif"); ii++)
-		suffix = " (" + std::to_string(ii) + ")";
-
-	return filename + suffix;
 }
 
 #pragma endregion "Image"

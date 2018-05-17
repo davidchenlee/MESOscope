@@ -3,12 +3,12 @@
 #include <fstream>					//file management
 #include <ctime>					//Clock()
 #include <tiffio.h>					//for Tiff files
-#include <experimental/filesystem>	//standard method in C++14 but not C++11
 #include "PI_GCS2_DLL.h"
 #include "serial/serial.h"
 #include "FPGAapi.h"
+#include "Utilities.h"
 
-using namespace FPGApacking;
+using namespace FPGAfunctions;
 
 class Vibratome
 {
@@ -60,11 +60,6 @@ public:
 
 class RTsequence
 {
-	const FPGAapi &mFpga;
-	VQU32 mVectorOfQueues;
-	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
-	QU32 generateLinearRamp(double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
-
 	class Pixelclock
 	{
 		QU32 pixelclockQ;					//Queue containing the pixel-clock sequence
@@ -73,13 +68,18 @@ class RTsequence
 		double getDiscreteTime_us(const int pix);
 		double calculateDwellTime_us(const int pix);
 		double calculatePracticalDwellTime_us(const int pix);
-		void equalDuration();
-		void equalDistance();
+		void uniformDwellTimes();
+		void correctedDwellTimes();
 	public:
 		Pixelclock();
 		~Pixelclock();
 		QU32 readPixelclock() const;
 	};
+
+	const FPGAapi &mFpga;
+	VQU32 mVectorOfQueues;
+	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
+	QU32 generateLinearRamp(double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 public:
 	RTsequence(const FPGAapi &fpga);
 	RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
@@ -120,12 +120,11 @@ class Image
 	void readFIFO();
 	void unpackBuffer();
 	void correctInterleavedImage();
-	std::string file_exists(const std::string filename);
+	void stopFIFO();
 public:
 	Image(const FPGAapi &fpga);
 	~Image();
 	void acquire(const std::string filename);
-	void stopFIFO();
 	void saveAsTiff(std::string filename);
 	void saveAsTxt(const std::string fileName);
 };

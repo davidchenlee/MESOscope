@@ -1,5 +1,9 @@
 #include "Utilities.h"
 
+void printHex(int input)
+{
+	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
+}
 
 std::string toString(const double number, const int nDecimalPlaces)
 {
@@ -9,10 +13,17 @@ std::string toString(const double number, const int nDecimalPlaces)
 	return str.str();
 }
 
-void printHex(int input)
+//Check if the file already exists
+std::string file_exists(const std::string filename)
 {
-	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
+	std::string suffix = "";
+
+	for (int ii = 1; std::experimental::filesystem::exists(foldername + filename + suffix + ".tif"); ii++)
+		suffix = " (" + std::to_string(ii) + ")";
+
+	return filename + suffix;
 }
+
 
 Logger::Logger(const std::string filename)
 {

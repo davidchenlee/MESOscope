@@ -2,9 +2,9 @@
 
 namespace Const
 {
-	extern const LineclockInputSelector lineclockInput = RS;				//RS or FG
+	extern const LineclockInputSelector lineclockInput = FG;				//RS or FG
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//ext or sim
-	extern const PixelclockSelector pixelclockType = equalDur;				//equalDur or equalDist
+	extern const PixelclockSelector pixelclockType = uniform;				//uniform or corrected dwell times
 	extern const bool overrideImageSaving = 1;								//Enable file override when saving
 
 	//host-to-target FIFO array indices

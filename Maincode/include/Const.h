@@ -19,7 +19,7 @@ typedef std::array<int, 3> int3;			//array of 3 ints
 
 enum PhotonCounterInputSelector {ext, sim};							//real PMT, simulated PMT, internal clock
 enum LineclockInputSelector {RS, FG};								//Resonant scanner, function generator, 
-enum PixelclockSelector {equalDur, equalDist};				//equalDuration, equalDistance
+enum PixelclockSelector {uniform, corrected};						//uniform dwell times, corrected dwell times
 enum RTchannel {PCLOCK, GALVO1, GALVO2, DOdebug};					//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
 enum PockelsID {Pockels1, Pockels2};								//Pockels cell
 enum ShutterID {Shutter1, Shutter2};								//Shutter unit

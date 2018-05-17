@@ -4,10 +4,12 @@
 #include <fstream>	//For std::ofstream
 #include <iostream>
 #include <Const.h>
+#include <experimental/filesystem>	//standard method in C++14 but not C++11
+
 using namespace Parameters;
 
+std::string file_exists(const std::string filename);
 std::string toString(const double number, const int nDecimalPlaces);
-
 void printHex(int input);
 
 class Logger

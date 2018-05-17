@@ -83,14 +83,14 @@ void seq_testAODO(const FPGAapi &fpga)
 	RTsequence sequence(fpga);
 
 	//DO
-	sequence.pushSingleValue(DOdebug, packSingleDigital(4 * us, 1));
-	sequence.pushSingleValue(DOdebug, packSingleDigital(4 * us, 0));
-	sequence.pushSingleValue(DOdebug, packSingleDigital(4 * us, 0));
-	sequence.pushSingleValue(DOdebug, packSingleDigital(4 * us, 0));
+	sequence.pushDigitalSinglet(DOdebug, 4 * us, 1);
+	sequence.pushDigitalSinglet(DOdebug, 4 * us, 0);
+	sequence.pushDigitalSinglet(DOdebug, 4 * us, 0);
+	sequence.pushDigitalSinglet(DOdebug, 4 * us, 0);
 
 	//AO
-	sequence.pushSingleValue(GALVO1, packSingleAnalog(4 * us, 5));
-	sequence.pushSingleValue(GALVO1, packSingleAnalog(4 * us, 0));
+	sequence.pushAnalogSinglet(GALVO1, 4 * us, 5);
+	sequence.pushAnalogSinglet(GALVO1, 4 * us, 0);
 }
 
 void seq_testAOramp(const FPGAapi &fpga)
@@ -104,8 +104,8 @@ void seq_testAOramp(const FPGAapi &fpga)
 	sequence.pushLinearRamp(GALVO1, step, 2 * ms, Vmax, 0);
 
 	double pulsewidth = 300 * us;
-	sequence.pushSingleValue(DOdebug, packSingleDigital(pulsewidth, 1));
-	sequence.pushSingleValue(DOdebug, packSingleDigital(4 * us, 0));
+	sequence.pushDigitalSinglet(DOdebug, pulsewidth, 1);
+	sequence.pushDigitalSinglet(DOdebug, 4 * us, 0);
 }
 
 //Generate a long digital pulse and check the duration with the oscilloscope
@@ -114,8 +114,8 @@ void seq_checkDigitalTiming(const FPGAapi &fpga)
 	double step = 400 * us;
 
 	RTsequence sequence(fpga);
-	sequence.pushSingleValue(DOdebug, packSingleDigital(step, 1));
-	sequence.pushSingleValue(DOdebug, packSingleDigital(step, 0));
+	sequence.pushDigitalSinglet(DOdebug, step, 1);
+	sequence.pushDigitalSinglet(DOdebug, step, 0);
 }
 
 //Generate many short digital pulses and check the overall duration with the oscilloscope
@@ -125,14 +125,14 @@ void seq_calibDigitalLatency(const FPGAapi &fpga)
 
 	RTsequence sequence(fpga);
 
-	sequence.pushSingleValue(DOdebug, packSingleDigital(step, 1));
+	sequence.pushDigitalSinglet(DOdebug, step, 1);
 
 	//Many short digital pulses to accumulate the error
 	for (U32 ii = 0; ii < 99; ii++)
-		sequence.pushSingleValue(DOdebug, packSingleDigital(step, 0));
+		sequence.pushDigitalSinglet(DOdebug, step, 0);
 
-	sequence.pushSingleValue(DOdebug, packSingleDigital(step, 1));
-	sequence.pushSingleValue(DOdebug, packSingleDigital(step, 0));
+	sequence.pushDigitalSinglet(DOdebug, step, 1);
+	sequence.pushDigitalSinglet(DOdebug, step, 0);
 }
 
 //First calibrate the digital channels, then use it as a time reference
@@ -142,18 +142,18 @@ void seq_calibAnalogLatency(const FPGAapi &fpga)
 	double step = 4 * us;
 
 	RTsequence sequence(fpga);
-	sequence.pushSingleValue(GALVO1, packSingleAnalog(step, 10));	//Initial pulse
-	sequence.pushSingleValue(GALVO1, packSingleAnalog(step, 0));
+	sequence.pushAnalogSinglet(GALVO1, step, 10);	//Initial pulse
+	sequence.pushAnalogSinglet(GALVO1, step, 0);
 	sequence.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5*V);			//Linear ramp to accumulate the error
-	sequence.pushSingleValue(GALVO1, packSingleAnalog(step, 10));	//Initial pulse
-	sequence.pushSingleValue(GALVO1, packSingleAnalog(step, 0));	//Final pulse
+	sequence.pushAnalogSinglet(GALVO1, step, 10);	//Initial pulse
+	sequence.pushAnalogSinglet(GALVO1, step, 0);	//Final pulse
 
 	//DO0
-	sequence.pushSingleValue(DOdebug, packSingleDigital(step, 1));
-	sequence.pushSingleValue(DOdebug, packSingleDigital(step, 0));
-	sequence.pushSingleValue(DOdebug, packSingleDigital(delay, 0));
-	sequence.pushSingleValue(DOdebug, packSingleDigital(step, 1));
-	sequence.pushSingleValue(DOdebug, packSingleDigital(step, 0));
+	sequence.pushDigitalSinglet(DOdebug, step, 1);
+	sequence.pushDigitalSinglet(DOdebug, step, 0);
+	sequence.pushDigitalSinglet(DOdebug, delay, 0);
+	sequence.pushDigitalSinglet(DOdebug, step, 1);
+	sequence.pushDigitalSinglet(DOdebug, step, 0);
 }
 
 void seq_testFilterwheel(const FPGAapi &fpga)

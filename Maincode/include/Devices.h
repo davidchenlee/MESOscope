@@ -80,16 +80,14 @@ class RTsequence
 		~Pixelclock();
 		QU32 readPixelclock() const;
 	};
-
 public:
 	RTsequence(const FPGAapi &fpga);
 	RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
 	RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
 	~RTsequence();
 	void pushQueue(const RTchannel chan, QU32& queue);
-	void pushSingleValue(const RTchannel chan, const U32 input);
-	void pushSingleDigitalValue(const RTchannel chan, double t, bool DO);
-	void pushSingleAnalogValue(const RTchannel chan, double t, double AO);
+	void pushDigitalSinglet(const RTchannel chan, double t, bool DO);
+	void pushAnalogSinglet(const RTchannel chan, double t, double AO);
 	void pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 	void uploadRT();
 };

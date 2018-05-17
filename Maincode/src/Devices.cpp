@@ -220,17 +220,13 @@ void RTsequence::pushQueue(const RTchannel chan, QU32& queue)
 	concatenateQueues(mVectorOfQueues.at(chan), queue);
 }
 
-void RTsequence::pushSingleValue(const RTchannel chan, const U32 input)
-{
-	mVectorOfQueues.at(chan).push_back(input);
-}
 
-void RTsequence::pushSingleDigitalValue(const RTchannel chan, double t, bool DO)
+void RTsequence::pushDigitalSinglet(const RTchannel chan, double t, bool DO)
 {
 	mVectorOfQueues.at(chan).push_back(packSingleDigital(t, DO));
 }
 
-void RTsequence::pushSingleAnalogValue(const RTchannel chan, double t, double AO)
+void RTsequence::pushAnalogSinglet(const RTchannel chan, double t, double AO)
 {
 	mVectorOfQueues.at(chan).push_back(packSingleAnalog(t, AO));
 }

@@ -3,7 +3,7 @@
 #include "Utilities.h"
 
 void seq_main(const FPGAapi &fpga);
-void burnSample(const FPGAapi &fpga);
+void seq_burnSample(const FPGAapi &fpga);
 void seq_testAOramp(const FPGAapi &fpga);
 void seq_checkDigitalTiming(const FPGAapi &fpga);
 void seq_calibDigitalLatency(const FPGAapi &fpga);

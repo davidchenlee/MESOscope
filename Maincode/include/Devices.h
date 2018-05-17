@@ -88,6 +88,8 @@ public:
 	~RTsequence();
 	void pushQueue(const RTchannel chan, QU32& queue);
 	void pushSingleValue(const RTchannel chan, const U32 input);
+	void pushSingleDigitalValue(const RTchannel chan, double t, bool DO);
+	void pushSingleAnalogValue(const RTchannel chan, double t, double AO);
 	void pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
 	void uploadRT();
 };

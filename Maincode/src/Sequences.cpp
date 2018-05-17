@@ -60,7 +60,7 @@ void seq_main(const FPGAapi &fpga)
 
 
 
-void burnSample(const FPGAapi &fpga)
+void seq_burnSample(const FPGAapi &fpga)
 {
 	const int wavelength_nm = 750;
 	double laserPower_mW = 400 * mW;

@@ -225,6 +225,18 @@ void RTsequence::pushSingleValue(const RTchannel chan, const U32 input)
 	mVectorOfQueues.at(chan).push_back(input);
 }
 
+void RTsequence::pushSingleDigitalValue(const RTchannel chan, double t, bool DO)
+{
+	mVectorOfQueues.at(chan).push_back(packSingleDigital(t, DO));
+}
+
+void RTsequence::pushSingleAnalogValue(const RTchannel chan, double t, double AO)
+{
+	mVectorOfQueues.at(chan).push_back(packSingleAnalog(t, AO));
+}
+
+
+
 void RTsequence::pushLinearRamp(const RTchannel chan, const double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
 {
 	concatenateQueues(mVectorOfQueues.at(chan), generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal));

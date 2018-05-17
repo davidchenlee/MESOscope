@@ -339,7 +339,7 @@ void RTsequence::Pixelclock::equalDuration()
 	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
 	//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
 	const double initialWaitingTime_us = 6.25*us;							
-	pixelclockQ.push_back(packU32(convertUs2tick(initialWaitingTime_us) - mLatency_tick, 0x0000));
+	pixelclockQ.push_back(packU32(convertUs2tick(initialWaitingTime_us) - mLatency_tick, 0));
 
 	//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches it state which represents a pixel delimiter
 	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
@@ -357,7 +357,7 @@ void RTsequence::Pixelclock::equalDistance()
 
 	//Relative delay of the pixel clock with respect to the line clock
 	const U16 InitialWaitingTime_tick = (U16)(calibCoarse_tick + calibFine_tick);
-	pixelclockQ.push_back(packU32(InitialWaitingTime_tick - mLatency_tick, 0x0000));
+	pixelclockQ.push_back(packU32(InitialWaitingTime_tick - mLatency_tick, 0));
 
 	//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches it state which represents a pixel delimiter (the switching is implemented on the FPGA)
 	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)
@@ -537,7 +537,8 @@ void Image::unpackBuffer()
 			upscaledCount = std::floor(upscaleU8 * mBufArray_B[ii][jj]); //Upscale the photoncount to a 8-bit number
 
 			if (upscaledCount > _UI8_MAX)
-				throw ImageException((std::string)__FUNCTION__ + ": Upscaled photoncount overflow");
+				upscaledCount = _UI8_MAX;
+				//throw ImageException((std::string)__FUNCTION__ + ": Upscaled photoncount overflow");
 
 			image[pixIndex] = (unsigned char)upscaledCount;
 

@@ -1,15 +1,8 @@
 #include "FPGAapi.h"
 
-namespace FPGApackingFunctions {
-
-	//Pack t in MSB and x in LSB. Time t and analog output x are encoded in 16 bits each.
-	U32 packU32(U16 t, U16 x)
-	{
-		return (t << 16) | (0x0000FFFF & x);
-	}
-
+namespace FPGApacking {
 	//Convert microseconds to ticks
-	U16 convertUs2tick(double t_us)
+	U16 convertUs2tick(const double t_us)
 	{
 		const double t_tick = t_us * tickPerUs;
 
@@ -28,47 +21,51 @@ namespace FPGApackingFunctions {
 	}
 
 	//Convert voltage to I16 [1]
-	I16 convertVolt2I16(double x)
+	I16 convertVolt2I16(const double voltage_V)
 	{
 		const int VMAX = 10 * V;
 		const int VMIN = -10 * V;
 
-		if (x > 10)
+		if (voltage_V > 10)
 		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage cast to the max: " + std::to_string(VMAX) + " V" << std::endl;
 			return (I16)_I16_MAX;
 		}
-		else if (x < -10)
+		else if (voltage_V < -10)
 		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage cast to the min: " + std::to_string(VMIN) + " V" << std::endl;
 			return (I16)_I16_MIN;
 		}
 		else
-			return (I16)(x / 10 * _I16_MAX);
+			return (I16)(voltage_V / 10 * _I16_MAX);
 	}
 
+	//Pack t in MSB and x in LSB. Time t and analog output x are encoded in 16 bits each.
+	U32 packU32(const U16 t_tick, const U16 val)
+	{
+		return (t_tick << 16) | (0x0000FFFF & val);
+	}
 
 	//Send out an analog instruction, where the analog level 'val' is held for the amount of time 't'
-	U32 packAnalogSinglet(double t, double val)
+	U32 packAnalogSinglet(const double t_us, const double val)
 	{
 		const U16 AOlatency_tick = 2;	//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
-		return packU32(convertUs2tick(t) - AOlatency_tick, convertVolt2I16(val));
+		return packU32(convertUs2tick(t_us) - AOlatency_tick, convertVolt2I16(val));
 	}
 
 
 	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
-	U32 packDigitalSinglet(double t, bool DO)
+	U32 packDigitalSinglet(const double t_us, const bool DO)
 	{
 		const U16 DOlatency_tick = 2;	//To calibrate, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
-		return packU32(convertUs2tick(t) - DOlatency_tick, (U16)DO);
+		return packU32(convertUs2tick(t_us) - DOlatency_tick, (U16)DO);
 	}
 
-
 	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't'
-	U32 packPixelclockSinglet(double t, bool DO)
+	U32 packPixelclockSinglet(const double t_us, const bool DO)
 	{
 		const U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
-		return packU32(convertUs2tick(t) - PClatency_tick, (U16)DO);
+		return packU32(convertUs2tick(t_us) - PClatency_tick, (U16)DO);
 
 	}
 }//namespace

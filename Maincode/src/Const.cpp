@@ -2,10 +2,10 @@
 
 namespace Const
 {
-	extern const LineclockInputSelector lineclockInput = FG;				//RS or FG
+	extern const LineclockInputSelector lineclockInput = RS;				//RS or FG
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//ext or sim
 	extern const PixelclockSelector pixelclockType = equalDur;				//equalDur or equalDist
-	extern const bool overrideImageSaving = 0;								//Enable file override when saving
+	extern const bool overrideImageSaving = 1;								//Enable file override when saving
 
 	//host-to-target FIFO array indices
 	extern const int Nchan = 4;								//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
@@ -62,7 +62,7 @@ namespace Parameters
 	//extern const int calibFine_tick = 10;
 
 	//IMAGE
-	extern const double upscaleU8 = 20;											//Upscale the photoncount to cover the full 0-255 range of a 8-bit number
+	extern const double upscaleU8 = 23;	//255/11 = ~23							//Upscale the photoncount to cover the full 0-255 range of a 8-bit number
 	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth

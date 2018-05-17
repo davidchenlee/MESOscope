@@ -10,15 +10,14 @@ using namespace Parameters;
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/
 static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 
-namespace FPGApackingFunctions
+namespace FPGApacking
 {
-
-	U32 packU32(U16 t, U16 x);
-	U16 convertUs2tick(double x);
-	I16 convertVolt2I16(double x);
-	U32 packAnalogSinglet(double t, double V);
-	U32 packDigitalSinglet(double t, bool DO);
-	U32 packPixelclockSinglet(double t, bool DO);
+	U16 convertUs2tick(const double t_us);
+	I16 convertVolt2I16(const double voltage_V);
+	U32 packU32(const U16 t_tick, const U16 val);
+	U32 packAnalogSinglet(const double t_us, const double val);
+	U32 packDigitalSinglet(const double t_us, const bool DO);
+	U32 packPixelclockSinglet(const double t_us, const bool DO);
 }
 
 class FPGAapi

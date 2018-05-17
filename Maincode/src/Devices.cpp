@@ -201,7 +201,7 @@ QU32 RTsequence::generateLinearRamp(double TimeStep, const double RampLength, co
 		for (int ii = 0; ii < nPoints; ii++)
 		{
 			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
-			queue.push_back(packSingleAnalog(TimeStep, V));
+			queue.push_back(packAnalogSinglet(TimeStep, V));
 
 			if (debug)
 				std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
@@ -223,12 +223,12 @@ void RTsequence::pushQueue(const RTchannel chan, QU32& queue)
 
 void RTsequence::pushDigitalSinglet(const RTchannel chan, double t, bool DO)
 {
-	mVectorOfQueues.at(chan).push_back(packSingleDigital(t, DO));
+	mVectorOfQueues.at(chan).push_back(packDigitalSinglet(t, DO));
 }
 
 void RTsequence::pushAnalogSinglet(const RTchannel chan, double t, double AO)
 {
-	mVectorOfQueues.at(chan).push_back(packSingleAnalog(t, AO));
+	mVectorOfQueues.at(chan).push_back(packAnalogSinglet(t, AO));
 }
 
 
@@ -317,7 +317,7 @@ void RTsequence::Pixelclock::equalDuration()
 	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 	const double dwellTime_us = 0.125 * us;
 	for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
-		pixelclockQ.push_back(packSinglePixelclock(dwellTime_us, 1));		
+		pixelclockQ.push_back(packPixelclockSinglet(dwellTime_us, 1));		
 }
 
 //Pixel clock sequence. Every pixel is equally spaced.
@@ -333,10 +333,10 @@ void RTsequence::Pixelclock::equalDistance()
 
 	//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches it state which represents a pixel delimiter (the switching is implemented on the FPGA)
 	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)
-		pixelclockQ.push_back(packSinglePixelclock(calculatePracticalDwellTime_us(pix), 1));
+		pixelclockQ.push_back(packPixelclockSinglet(calculatePracticalDwellTime_us(pix), 1));
 
 	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	pixelclockQ.push_back(packSinglePixelclock(dtMIN_us, 1));
+	pixelclockQ.push_back(packPixelclockSinglet(dtMIN_us, 1));
 }
 
 QU32 RTsequence::Pixelclock::readPixelclock() const

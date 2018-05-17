@@ -7,9 +7,6 @@ namespace Const
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or corrected dwell times
 	extern const bool overrideImageSaving = 1;								//Enable file override when saving
 
-	//host-to-target FIFO array indices
-	extern const int Nchan = 4;								//Number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
-
 	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//microsecond
 	extern const int ms = 1000 * us;						//millisecond

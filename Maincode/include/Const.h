@@ -20,7 +20,8 @@ typedef std::array<int, 3> int3;			//array of 3 ints
 enum PhotonCounterInputSelector {ext, sim};							//real PMT, simulated PMT, internal clock
 enum LineclockInputSelector {RS, FG};								//Resonant scanner, function generator, 
 enum PixelclockSelector {uniform, corrected};						//uniform dwell times, corrected dwell times
-enum RTchannel {PCLOCK, GALVO1, GALVO2, DOdebug};					//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
+enum RTchannel {PCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, Nchan};	//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
+																	//Nchan = number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
 enum PockelsID {Pockels1, Pockels2};								//Pockels cell
 enum ShutterID {Shutter1, Shutter2};								//Shutter unit
 enum FilterwheelID {FW1, FW2};										//Filterwheel
@@ -34,8 +35,6 @@ namespace Const
 	extern const PixelclockSelector pixelclockType;
 	extern const bool overrideImageSaving;
 
-	extern const int Nchan;
-	
 	extern const double PI;
 	extern const int us;
 	extern const int ms;

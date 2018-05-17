@@ -26,8 +26,13 @@ void seq_main(const FPGAapi &fpga)
 	
 	//Create a realtime sequence
 	RTsequence sequence(fpga);
-	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
+	const double duration_ms = 25.5 * ms;
+	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, duration_ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
+
+	double voltage_V = 2;
+	sequence.pushLinearRamp(POCKELS1, 400 * us, duration_ms, voltage_V, voltage_V);
+	sequence.pushAnalogSinglet(POCKELS1, 1 * us, 0 * V);
 
 
 	const int Nframes = 1;

@@ -2,7 +2,7 @@
 
 namespace Const
 {
-	extern const LineclockInputSelector lineclockInput = RS;				//RS or FG
+	extern const LineclockInputSelector lineclockInput = FG;				//RS or FG
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//ext or sim
 	extern const PixelclockSelector pixelclockType = equalDur;				//equalDur or equalDist
 	extern const bool overrideImageSaving = 0;								//Enable file override when saving
@@ -42,6 +42,8 @@ namespace Const
 
 namespace Parameters
 {
+	extern const std::string foldername = ".\\Output\\";
+
 	//GALVO
 	extern const double galvo_voltPerUm = 2.5*V / (210 * um);					//volts per um. Calibration factor of the galvo. Last calib 11/April/2018
 

@@ -541,7 +541,7 @@ void Image::saveAsTiff(std::string filename)
 	if (!overrideImageSaving)
 		filename = file_exists(filename);
 
-	TIFF *tiffHandle = TIFFOpen((filename + ".tif").c_str(), "w");
+	TIFF *tiffHandle = TIFFOpen((foldername + filename + ".tif").c_str(), "w");
 
 	if (tiffHandle == nullptr)
 		throw ImageException((std::string)__FUNCTION__ + ": Saving Tiff failed");
@@ -583,10 +583,10 @@ void Image::saveAsTiff(std::string filename)
 		_TIFFfree(buffer);
 }
 
-void Image::saveAsTxt(const std::string fileName)
+void Image::saveAsTxt(const std::string filename)
 {
 	std::ofstream fileHandle;								//Create output file
-	fileHandle.open(fileName + ".txt");						//Open the file
+	fileHandle.open(foldername + filename + ".txt");						//Open the file
 
 	for (int ii = 0; ii < nPixAllFrames; ii++)
 		fileHandle << (int)image[ii] << std::endl;		//Write each element
@@ -599,7 +599,7 @@ std::string Image::file_exists(const std::string filename)
 {
 	std::string suffix = "";
 
-	for (int ii = 1; std::experimental::filesystem::exists(filename + suffix + ".tif"); ii++)
+	for (int ii = 1; std::experimental::filesystem::exists(foldername + filename + suffix + ".tif"); ii++)
 		suffix = " (" + std::to_string(ii) + ")";
 
 	return filename + suffix;

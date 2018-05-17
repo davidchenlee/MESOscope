@@ -1,50 +1,50 @@
 #include "Sequences.h"
 
 void seq_main(const FPGAapi &fpga)
-{							
+{		
 	const int wavelength_nm = 940;
 	double laserPower_mW = 100 * mW;
 	const double FFOVslow_um = 200 * um;	//Full FOV in the slow axis (galvo)
 	const double galvo1Vmax_volt = FFOVslow_um * galvo_voltPerUm;
 	const double galvoTimeStep_us = 8 * us;
 
-	std::string filename = ".\\Output\\photoncouny";
+	std::string filename = "photoncount";
 
 	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
-
+	pockels.setOutput_mW(laserPower_mW);
 	//pockels.manualOn(0);	//For debugging
 
-	Stage stage;
-
-
 	double newPosition = 18.400;
+	/*
+	Stage stage;
 	stage.moveStage(zz, newPosition);
 	stage.printPositionXYZ();
 	Sleep(1000);
+	*/
 
-
+	
 	//Create a realtime sequence
 	RTsequence sequence(fpga);
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 25.5 * ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 
+
+	const int Nframes = 1;
 	//NON-REALTIME SEQUENCE
-	for (int ii = 0; ii < 100; ii++)
+	for (int ii = 0; ii < Nframes; ii++)
 	{
-
-
 		Image image(fpga);
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		image.acquire(filename + " z = " + std::to_string(newPosition)); //Execute the realtime sequence and acquire the image
 		
-		
+		/*
 		newPosition += 0.001;
 		stage.moveStage(zz, newPosition);
 		stage.printPositionXYZ();
-		laserPower_mW +=0.5;
+		laserPower_mW += 0.5;
 		pockels.setOutput_mW(laserPower_mW);
 		Sleep(1000);
-		
+		*/
 	}
 
 	//pockels.setOutputToZero();	//I don't need to do this because normaly the PC is triggered by the scanner
@@ -70,6 +70,24 @@ Logger::~Logger()
 void Logger::record(const std::string description, const double input)
 {
 	mFileHandle << description << input << std::endl;
+}
+
+
+void burnSample(const FPGAapi &fpga)
+{
+	const int wavelength_nm = 750;
+	double laserPower_mW = 400 * mW;
+
+	PockelsCell pockels(fpga, Pockels1, wavelength_nm);			//Create a pockels cell
+	pockels.setOutput_mW(laserPower_mW);
+
+
+	pockels.manualOn(1);
+	Sleep(3000);
+	pockels.manualOn(0);
+
+
+
 }
 
 

@@ -61,6 +61,8 @@ namespace Parameters
 {
 	using namespace Const;
 
+	extern const std::string foldername;
+
 	extern const double galvo_voltPerUm;
 
 	extern const double halfPeriodLineclock_us;

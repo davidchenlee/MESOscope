@@ -9,6 +9,7 @@ int main(int argc, char* argv[])
 		fpga.initialize();	//Initialize the FPGA
 		
 		seq_main(fpga);		//Run the sequence
+		//burnSample(fpga);
 		//seq_testStages(fpga);
 
 		fpga.flushFIFO();	//Flush the FPGA FIFOs as precaution

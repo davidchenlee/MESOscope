@@ -9,6 +9,11 @@ std::string toString(const double number, const int nDecimalPlaces)
 	return str.str();
 }
 
+void printHex(int input)
+{
+	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
+}
+
 Logger::Logger(const std::string filename)
 {
 	mFileHandle.open(foldername + filename + ".txt");

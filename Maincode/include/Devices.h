@@ -7,8 +7,7 @@
 #include "PI_GCS2_DLL.h"
 #include "serial/serial.h"
 #include "FPGAapi.h"
-
-using namespace GenericFPGAfunctions;
+using namespace FPGApackingFunctions;
 
 class Vibratome
 {

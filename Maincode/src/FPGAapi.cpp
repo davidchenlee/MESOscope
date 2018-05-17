@@ -1,11 +1,7 @@
 #include "FPGAapi.h"
 
-namespace GenericFPGAfunctions {
+namespace FPGApackingFunctions {
 
-	void printHex(int input)
-	{
-		std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
-	}
 	//Pack t in MSB and x in LSB. Time t and analog output x are encoded in 16 bits each.
 	U32 packU32(U16 t, U16 x)
 	{
@@ -72,10 +68,8 @@ namespace GenericFPGAfunctions {
 	U32 packPixelclockSinglet(double t, bool DO)
 	{
 		const U16 PClatency_tick = 1;//The pixel-clock is implemented in a SCTL. I think the latency comes from reading the LUT buffer
-		if (DO)
-			return packU32(convertUs2tick(t) - PClatency_tick, 0x0001);
-		else
-			return packU32(convertUs2tick(t) - PClatency_tick, 0x0000);
+		return packU32(convertUs2tick(t) - PClatency_tick, (U16)DO);
+
 	}
 }//namespace
 

@@ -10,9 +10,9 @@ using namespace Parameters;
 /*Define the full path of the bitfile. The bitfile is the FPGA code*/
 static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 
-namespace GenericFPGAfunctions
+namespace FPGApackingFunctions
 {
-	void printHex(int input);
+
 	U32 packU32(U16 t, U16 x);
 	U16 convertUs2tick(double x);
 	I16 convertVolt2I16(double x);

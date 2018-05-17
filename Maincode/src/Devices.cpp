@@ -235,9 +235,6 @@ void RTsequence::pushAnalogSinglet(const RTchannel chan, double t, double AO)
 
 void RTsequence::pushLinearRamp(const RTchannel chan, double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
 {
-	//concatenateQueues(mVectorOfQueues.at(chan), generateLinearRamp(TimeStep, RampLength, Vinitial, Vfinal));
-
-
 	const bool debug = 0;
 
 	if (TimeStep < AOdt_us)

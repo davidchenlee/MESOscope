@@ -1,8 +1,9 @@
 #pragma once
 #include <iostream>
+#include <string>	//For std::to_string
 #include "NiFpga_FPGAvi.h"
 #include "Const.h"
-#include <string>	//printing the error codes
+
 using namespace Const;
 using namespace Parameters;
 

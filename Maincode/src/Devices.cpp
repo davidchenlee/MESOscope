@@ -985,23 +985,6 @@ double3 Stage::readAbsolutePosition_mm(const int nSlice, const int nPlane, const
 #pragma endregion "Stages"
 
 
-
-Logger::Logger(const std::string filename)
-{
-	mFileHandle.open(foldername + filename + ".txt");
-};
-
-Logger::~Logger()
-{
-	mFileHandle.close();
-};
-
-void Logger::record(const std::string description, const double input)
-{
-	mFileHandle << description << input << std::endl;
-}
-
-
 /*
 [1] The stage Z has a virtual COM port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.
 nPortNr: to know the correct COM port, look at Window's device manager or use Tera Term. Use nPortNr=1 for COM1, etc..

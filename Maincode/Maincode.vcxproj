@@ -164,6 +164,7 @@
     <ClCompile Include="src\FPGAapi.cpp" />
     <ClCompile Include="src\Sequences.cpp" />
     <ClCompile Include="src\serial.cc" />
+    <ClCompile Include="src\Utilities.cpp" />
     <ClCompile Include="src\win.cc" />
   </ItemGroup>
   <ItemGroup>
@@ -173,6 +174,7 @@
     <ClInclude Include="include\Sequences.h" />
     <ClInclude Include="include\serial\serial.h" />
     <ClInclude Include="include\serial\win.h" />
+    <ClInclude Include="include\Utilities.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

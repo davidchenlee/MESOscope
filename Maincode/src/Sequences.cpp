@@ -1,16 +1,5 @@
 #include "Sequences.h"
 
-#include <iomanip> //For std::setprecision
-
-
-std::string toString(const double number, const int nDecimalPlaces)
-{
-	std::ostringstream str;
-	str << std::fixed << std::setprecision(nDecimalPlaces);
-	str << number;
-	return str.str();
-}
-
 void seq_main(const FPGAapi &fpga)
 {		
 
@@ -47,7 +36,7 @@ void seq_main(const FPGAapi &fpga)
 	{
 		Image image(fpga);
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
-		image.acquire(filename + " z = " + toString(1365.23514,4)); //Execute the realtime sequence and acquire the image
+		image.acquire(filename + " z = " + toString(newPosition,4)); //Execute the realtime sequence and acquire the image
 		
 		/*
 		newPosition += 0.001;

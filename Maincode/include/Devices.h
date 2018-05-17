@@ -1,12 +1,13 @@
 #pragma once
-#include "FPGAapi.h"
 #include <windows.h>				//the stages use this lib. also Sleep
 #include <fstream>					//file management
 #include <ctime>					//Clock()
-#include "PI_GCS2_DLL.h"
-#include "serial/serial.h"
 #include <tiffio.h>					//for Tiff files
 #include <experimental/filesystem>	//standard method in C++14 but not C++11
+#include "PI_GCS2_DLL.h"
+#include "serial/serial.h"
+#include "FPGAapi.h"
+
 using namespace GenericFPGAfunctions;
 
 class Vibratome
@@ -212,13 +213,4 @@ public:
 	double3 readAbsolutePosition_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
 	bool isMoving(const Axis axis) const;
 	void waitForMovementStop(const Axis axis) const;
-};
-
-class Logger
-{
-	std::ofstream mFileHandle;
-public:
-	Logger(const std::string filename);
-	~Logger();
-	void record(const std::string description, const double input);
 };

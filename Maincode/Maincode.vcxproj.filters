@@ -39,6 +39,9 @@
     <ClCompile Include="src\win.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Utilities.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Const.h">
@@ -57,6 +60,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\serial\win.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Utilities.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -17,18 +17,18 @@ typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
 typedef std::array<double, 3> double3;		//array of 3 doubles
 typedef std::array<int, 3> int3;			//array of 3 ints
 
-enum PhotonCounterInputSelector {ext, sim};							//real PMT, simulated PMT, internal clock
-enum LineclockInputSelector {RS, FG};								//Resonant scanner, function generator, 
-enum PixelclockSelector {uniform, corrected};						//uniform dwell times, corrected dwell times
-enum RTchannel {PCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, Nchan};	//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
-																	//Nchan = number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
-enum PockelsID {Pockels1, Pockels2};								//Pockels cell
-enum ShutterID {Shutter1, Shutter2};								//Shutter unit
-enum FilterwheelID {FW1, FW2};										//Filterwheel
-enum FilterColor { BlueLight = 1, GreenLight = 2, RedLight = 3 };	//Filter color
+enum PhotonCounterInputSelector {ext, sim};								//real PMT, simulated PMT, internal clock
+enum LineclockInputSelector {RS, FG};									//Resonant scanner, function generator, 
+enum PixelclockSelector {uniform, corrected};							//uniform dwell times, corrected dwell times
+enum RTchannel {PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, nChan};	//Pixel clock, analog channel (galvo 1), analog channel (galvo 2), digital channel (shutter 1)
+																		//nChan = number of channels available, including the pixel clock channel. WARNING: This number MUST match the implementation on the FPGA!
+enum PockelsID {Pockels1, Pockels2};									//Pockels cell
+enum ShutterID {Shutter1, Shutter2};									//Shutter unit
+enum FilterwheelID {FW1, FW2};											//Filterwheel
+enum FilterColor { BlueLight = 1, GreenLight = 2, RedLight = 3 };		//Filter color
 enum Axis { xx, yy, zz };
 
-namespace Const
+namespace Constants
 {
 	extern const LineclockInputSelector lineclockInput;
 	extern const PhotonCounterInputSelector photoncounterInput;
@@ -58,7 +58,7 @@ namespace Const
 
 namespace Parameters
 {
-	using namespace Const;
+	using namespace Constants;
 
 	extern const std::string foldername;
 

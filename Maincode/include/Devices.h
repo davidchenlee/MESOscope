@@ -8,18 +8,16 @@
 #include "FPGAapi.h"
 #include "Utilities.h"
 
-using namespace FPGAfunctions;
-
 class Vibratome
 {
-	const FPGAapi &mFpga;
+	const FPGAapi::FPGAsession &mFpga;
 	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
 	int mNslide;					//Slide number
 	double mSectionThickness;		//Thickness of the section
 	double mSpeed;					//Speed of the vibratome (manual setting)
 	double mAmplitude;				//Amplitude of the vibratome (manual setting)
 public:
-	Vibratome(const FPGAapi &fpga);
+	Vibratome(const FPGAapi::FPGAsession &fpga);
 	~Vibratome();
 	void startStop();
 	void sendCommand(const double dt, const VibratomeChannel channel);
@@ -27,7 +25,7 @@ public:
 
 class ResonantScanner
 {
-	const FPGAapi &mFpga;
+	const FPGAapi::FPGAsession &mFpga;
 	const int mVMAX_volt = 5 * V;			//Max control voltage mVcontrol_volt
 	const int mDelayTime_ms = 10;
 	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
@@ -37,64 +35,30 @@ class ResonantScanner
 	void setFFOV_um(const double FFOV_um);
 	double convertUm2Volt(const double Amplitude);
 public:
-	ResonantScanner(const FPGAapi &fpga);
+	ResonantScanner(const FPGAapi::FPGAsession &fpga);
 	~ResonantScanner();
 	void run(const bool state);
 	void turnOn_um(const double FFOV_um);
-	void turnOnSoft_volt(const double Vcontrol_volt);
+	void turnOn_volt(const double Vcontrol_volt);
 	void turnOff();
 };
 
 class Shutter
 {
-	const FPGAapi &mFpga;
+	const FPGAapi::FPGAsession &mFpga;
 	NiFpga_FPGAvi_ControlBool mID;			//Device ID
 	const int mDelayTime_ms = 10;
 public:
-	Shutter(const FPGAapi &fpga, ShutterID ID);
+	Shutter(const FPGAapi::FPGAsession &fpga, ShutterID ID);
 	~Shutter();
 	void open();
 	void close();
 	void pulseHigh();
 };
 
-class RTsequence
-{
-	class Pixelclock
-	{
-		QU32 pixelclockQ;					//Queue containing the pixel-clock sequence
-		const int mLatency_tick = 2;		//Latency at detecting the line clock. Calibrate the latency with the oscilloscope
-		double ConvertSpatialCoord2Time_us(const double x);
-		double getDiscreteTime_us(const int pix);
-		double calculateDwellTime_us(const int pix);
-		double calculatePracticalDwellTime_us(const int pix);
-		void uniformDwellTimes();
-		void correctedDwellTimes();
-	public:
-		Pixelclock();
-		~Pixelclock();
-		QU32 readPixelclock() const;
-	};
-
-	const FPGAapi &mFpga;
-	VQU32 mVectorOfQueues;
-	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
-public:
-	RTsequence(const FPGAapi &fpga);
-	RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
-	RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
-	~RTsequence();
-	void pushQueue(const RTchannel chan, QU32& queue);
-	void pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO);
-	void pushAnalogSinglet(const RTchannel chan, const double t_us, const double AO);
-	void pushLinearRamp(const RTchannel chan, double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
-	void uploadRT();
-};
-
-
 class Image
 {
-	const FPGAapi &mFpga;
+	const FPGAapi::FPGAsession &mFpga;
 	unsigned char *image;							//Create a long 1D array representing the image
 
 	const int mReadFifoWaitingTime_ms = 15;			//Waiting time between each iteration
@@ -122,7 +86,7 @@ class Image
 	void correctInterleavedImage();
 	void Image::remaining();
 public:
-	Image(const FPGAapi &fpga);
+	Image(const FPGAapi::FPGAsession &fpga);
 	~Image();
 	void acquire(const std::string filename);
 	void saveAsTiff(std::string filename);
@@ -138,16 +102,16 @@ public:
 
 class PockelsCell
 {
-	const FPGAapi &mFpga;
+	const FPGAapi::FPGAsession &mFpga;
 	PockelsID mID;													//Device ID
 	NiFpga_FPGAvi_ControlI16 mFPGAvoltageControllerID;				//Internal ID of the FPGA
 	NiFpga_FPGAvi_ControlBool mFPGAselectTriggerControllerID;		//Internal ID of the FPGA
 	NiFpga_FPGAvi_ControlBool mFPGAmanualOnControllerID;			//Internal ID of the FPGA
 	int mWavelength_nm;												//Wavelength of the laser
 	double mV_volt;													//Output voltage to the HV amplifier
-	double convertPowertoVoltage_volt(const double power_mW);
+	double convertPowerToVoltage_volt(const double power_mW);
 public:
-	PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm);
+	PockelsCell(const FPGAapi::FPGAsession &fpga, const PockelsID ID, const int wavelength_nm);
 	~PockelsCell();
 	void setOutput_volt(const double V_volt);
 	void setOutput_mW(const double power_mW);

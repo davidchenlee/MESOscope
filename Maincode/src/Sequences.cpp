@@ -1,6 +1,6 @@
 #include "Sequences.h"
 
-void seq_main(const FPGAapi &fpga)
+void seq_main(const FPGAapi::FPGAsession &fpga)
 {		
 
 	const int wavelength_nm = 940;
@@ -22,22 +22,21 @@ void seq_main(const FPGAapi &fpga)
 	stage.printPositionXYZ();
 	Sleep(1000);
 	*/
-
-	
+		
 	//Create a realtime sequence
-	RTsequence sequence(fpga);
+	FPGAapi::RTsequence sequence(fpga);
 	const double duration_ms = 25.5 * ms;
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, duration_ms, galvo1Vmax_volt, -galvo1Vmax_volt);		//Linear ramp for the galvo
 	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_volt, galvo1Vmax_volt);			//set the output back to the initial value
 
 	double voltage_V = 2;
 	sequence.pushLinearRamp(POCKELS1, 400 * us, duration_ms, voltage_V, voltage_V);
-	sequence.pushAnalogSinglet(POCKELS1, 1 * us, 0 * V);
+	sequence.pushAnalogSinglet(POCKELS1, 2 * us, 0 * V);
 
 
-	const int Nframes = 1;
+	const int nFrames = 1;
 	//NON-REALTIME SEQUENCE
-	for (int ii = 0; ii < Nframes; ii++)
+	for (int ii = 0; ii < nFrames; ii++)
 	{
 		Image image(fpga);
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
@@ -65,7 +64,7 @@ void seq_main(const FPGAapi &fpga)
 
 
 
-void seq_burnSample(const FPGAapi &fpga)
+void seq_burnSample(const FPGAapi::FPGAsession &fpga)
 {
 	const int wavelength_nm = 750;
 	double laserPower_mW = 400 * mW;
@@ -83,9 +82,9 @@ void seq_burnSample(const FPGAapi &fpga)
 
 
 //Test the analog and digital output and the relative timing wrt the pixel clock
-void seq_testAODO(const FPGAapi &fpga)
+void seq_testAODO(const FPGAapi::FPGAsession &fpga)
 {
-	RTsequence sequence(fpga);
+	FPGAapi::RTsequence sequence(fpga);
 
 	//DO
 	sequence.pushDigitalSinglet(DOdebug, 4 * us, 1);
@@ -98,12 +97,12 @@ void seq_testAODO(const FPGAapi &fpga)
 	sequence.pushAnalogSinglet(GALVO1, 4 * us, 0);
 }
 
-void seq_testAOramp(const FPGAapi &fpga)
+void seq_testAOramp(const FPGAapi::FPGAsession &fpga)
 {
 	double Vmax = 5;
 	double step = 4 * us;
 
-	RTsequence sequence(fpga);
+	FPGAapi::RTsequence sequence(fpga);
 	sequence.pushLinearRamp(GALVO1, step, 2 * ms, 0, -Vmax);
 	sequence.pushLinearRamp(GALVO1, step, 20 * ms, -Vmax, Vmax);
 	sequence.pushLinearRamp(GALVO1, step, 2 * ms, Vmax, 0);
@@ -114,21 +113,21 @@ void seq_testAOramp(const FPGAapi &fpga)
 }
 
 //Generate a long digital pulse and check the duration with the oscilloscope
-void seq_checkDigitalTiming(const FPGAapi &fpga)
+void seq_checkDigitalTiming(const FPGAapi::FPGAsession &fpga)
 {
 	double step = 400 * us;
 
-	RTsequence sequence(fpga);
+	FPGAapi::RTsequence sequence(fpga);
 	sequence.pushDigitalSinglet(DOdebug, step, 1);
 	sequence.pushDigitalSinglet(DOdebug, step, 0);
 }
 
 //Generate many short digital pulses and check the overall duration with the oscilloscope
-void seq_calibDigitalLatency(const FPGAapi &fpga)
+void seq_calibDigitalLatency(const FPGAapi::FPGAsession &fpga)
 {
 	double step = 4 * us;
 
-	RTsequence sequence(fpga);
+	FPGAapi::RTsequence sequence(fpga);
 
 	sequence.pushDigitalSinglet(DOdebug, step, 1);
 
@@ -141,12 +140,12 @@ void seq_calibDigitalLatency(const FPGAapi &fpga)
 }
 
 //First calibrate the digital channels, then use it as a time reference
-void seq_calibAnalogLatency(const FPGAapi &fpga)
+void seq_calibAnalogLatency(const FPGAapi::FPGAsession &fpga)
 {
 	double delay = 400 * us;
 	double step = 4 * us;
 
-	RTsequence sequence(fpga);
+	FPGAapi::RTsequence sequence(fpga);
 	sequence.pushAnalogSinglet(GALVO1, step, 10);	//Initial pulse
 	sequence.pushAnalogSinglet(GALVO1, step, 0);
 	sequence.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5*V);			//Linear ramp to accumulate the error
@@ -161,7 +160,7 @@ void seq_calibAnalogLatency(const FPGAapi &fpga)
 	sequence.pushDigitalSinglet(DOdebug, step, 0);
 }
 
-void seq_testFilterwheel(const FPGAapi &fpga)
+void seq_testFilterwheel(const FPGAapi::FPGAsession &fpga)
 {
 	//Filterwheel FW(FW1);
 	//FW.setFilterPosition(BlueLight);
@@ -171,7 +170,7 @@ void seq_testFilterwheel(const FPGAapi &fpga)
 	//std::cout << laser.readWavelength();
 }
 
-void seq_testStages(const FPGAapi &fpga)
+void seq_testStages(const FPGAapi::FPGAsession &fpga)
 {
 	const double newPosition = 18.5520;
 	//const double newPosition = 19.000;

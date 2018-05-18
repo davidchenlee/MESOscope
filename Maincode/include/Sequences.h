@@ -1,11 +1,11 @@
 #pragma once
 #include "Devices.h"
 
-void seq_main(const FPGAapi &fpga);
-void seq_burnSample(const FPGAapi &fpga);
-void seq_testAOramp(const FPGAapi &fpga);
-void seq_checkDigitalTiming(const FPGAapi &fpga);
-void seq_calibDigitalLatency(const FPGAapi &fpga);
-void seq_calibAnalogLatency(const FPGAapi &fpga);
-void seq_testFilterwheel(const FPGAapi &fpga);
-void seq_testStages(const FPGAapi &fpga);
+void seq_main(const FPGAapi::FPGAsession &fpga);
+void seq_burnSample(const FPGAapi::FPGAsession &fpga);
+void seq_testAOramp(const FPGAapi::FPGAsession &fpga);
+void seq_checkDigitalTiming(const FPGAapi::FPGAsession &fpga);
+void seq_calibDigitalLatency(const FPGAapi::FPGAsession &fpga);
+void seq_calibAnalogLatency(const FPGAapi::FPGAsession &fpga);
+void seq_testFilterwheel(const FPGAapi::FPGAsession &fpga);
+void seq_testStages(const FPGAapi::FPGAsession &fpga);

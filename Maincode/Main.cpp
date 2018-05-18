@@ -3,7 +3,7 @@
 
 int main(int argc, char* argv[])
 {
-	FPGAapi fpga;			//Open a FPGA connection
+	FPGAapi::FPGAsession fpga;			//Open a FPGA connection
 	try
 	{
 		fpga.initialize();	//Initialize the FPGA
@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 		fpga.close(0);		//Close the FPGA connection
 
 	}
-	catch (const FPGAexception &e)
+	catch (const FPGAapi::FPGAexception &e)
 	{
 		std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
 	}
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 			const bool enforceReset = 1;
 			fpga.close(enforceReset); //DO NOT comment out this line!!
 		}
-		catch (const FPGAexception &e)
+		catch (const FPGAapi::FPGAexception &e)
 		{
 			std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
 		}

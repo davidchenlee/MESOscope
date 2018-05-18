@@ -5,7 +5,6 @@
 #include <iostream>
 #include <Const.h>
 #include <experimental/filesystem>	//standard method in C++14 but not C++11
-
 using namespace Parameters;
 
 std::string file_exists(const std::string filename);

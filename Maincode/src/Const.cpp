@@ -1,6 +1,6 @@
 #include "Const.h"
 
-namespace Const
+namespace Constants
 {
 	extern const LineclockInputSelector lineclockInput = FG;				//RS or FG
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//ext or sim

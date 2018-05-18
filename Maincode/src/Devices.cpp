@@ -2,7 +2,7 @@
 
 #pragma region "Vibratome"
 
-Vibratome::Vibratome(const FPGAapi &fpga): mFpga(fpga){}
+Vibratome::Vibratome(const FPGAapi::FPGAsession &fpga): mFpga(fpga){}
 
 Vibratome::~Vibratome() {}
 
@@ -54,7 +54,7 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 
 #pragma region "Resonant scanner"
 
-ResonantScanner::ResonantScanner(const FPGAapi &fpga): mFpga(fpga){};
+ResonantScanner::ResonantScanner(const FPGAapi::FPGAsession &fpga): mFpga(fpga){};
 
 ResonantScanner::~ResonantScanner() {};
 
@@ -73,7 +73,7 @@ void ResonantScanner::setVcontrol_volt(const double Vcontrol_volt)
 	mVcontrol_volt = Vcontrol_volt;
 	mFFOV_um = Vcontrol_volt / mVoltPerUm;
 
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(mVcontrol_volt)));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVolt2I16(mVcontrol_volt)));
 }
 
 //Set the output voltage of the resonant scanner
@@ -84,7 +84,7 @@ void ResonantScanner::setFFOV_um(const double FFOV_um)
 
 	if (mVcontrol_volt > mVMAX_volt) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(mVMAX_volt) + " V");
 
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, convertVolt2I16(mVcontrol_volt)));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVolt2I16(mVcontrol_volt)));
 }
 
 void ResonantScanner::turnOn_um(const double FFOV_um)
@@ -94,7 +94,7 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 	run(1);
 }
 
-void ResonantScanner::turnOnSoft_volt(const double Vcontrol_volt)
+void ResonantScanner::turnOn_volt(const double Vcontrol_volt)
 {
 	setVcontrol_volt(Vcontrol_volt);
 	Sleep(mDelayTime_ms);
@@ -118,7 +118,7 @@ double ResonantScanner::convertUm2Volt(double amplitude_um)
 
 #pragma region "Shutters"
 
-Shutter::Shutter(const FPGAapi &fpga, ShutterID ID) : mFpga(fpga)
+Shutter::Shutter(const FPGAapi::FPGAsession &fpga, ShutterID ID) : mFpga(fpga)
 {
 	switch (ID)
 	{
@@ -161,184 +161,9 @@ void Shutter::pulseHigh()
 #pragma endregion "Pockels cells"
 
 
-#pragma region "RTsequence"
-
-RTsequence::Pixelclock::Pixelclock()
-{
-	switch (pixelclockType) //pixelclockType defined globally
-	{
-	case uniform: uniformDwellTimes();
-		break;
-	case corrected: correctedDwellTimes();
-		break;
-	default: throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pixelclock type unavailable");
-		break;
-	}
-}
-
-RTsequence::Pixelclock::~Pixelclock() {}
-
-//Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
-double RTsequence::Pixelclock::ConvertSpatialCoord2Time_us(const double x)
-{
-	double arg = 2 * x / RSpkpk_um;
-	if (arg > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Argument of asin greater than 1");
-	else
-		return halfPeriodLineclock_us * asin(arg) / Const::PI; //The returned value in in the range [-halfPeriodLineclock_us/PI, halfPeriodLineclock_us/PI]
-}
-
-//Discretize the spatial coordinate, then convert it to time
-double RTsequence::Pixelclock::getDiscreteTime_us(const int pix)
-{
-	const double dx = 0.5 * um;
-	return ConvertSpatialCoord2Time_us(dx * pix);
-}
-
-//Calculate the dwell time for the pixel
-double RTsequence::Pixelclock::calculateDwellTime_us(const int pix)
-{
-	return getDiscreteTime_us(pix + 1) - getDiscreteTime_us(pix);
-}
-
-//Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
-double RTsequence::Pixelclock::calculatePracticalDwellTime_us(const int pix)
-{
-	return round(calculateDwellTime_us(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
-}
-
-
-//Pixel clock sequence. Every pixel has the same duration in time.
-//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-//Pixel clock evently spaced in time
-void RTsequence::Pixelclock::uniformDwellTimes()
-{
-	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
-	//DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
-	//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-	const double initialWaitingTime_us = 6.25*us;
-	pixelclockQ.push_back(packU32(convertUs2tick(initialWaitingTime_us) - mLatency_tick, 0));
-
-	//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state to represent a pixel delimiter
-	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	const double dwellTime_us = 0.125 * us;
-	for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
-		pixelclockQ.push_back(packPixelclockSinglet(dwellTime_us, 1));
-}
-
-//Pixel clock sequence. Every pixel is equally spaced.
-//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-void RTsequence::Pixelclock::correctedDwellTimes()
-{
-	if (widthPerFrame_pix % 2 != 0)	//Throw exception if odd. Odd number of pixels not supported yet
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels in the image width currently not supported");
-
-	//Relative delay of the pixel clock with respect to the line clock. DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
-	const U16 InitialWaitingTime_tick = (U16)(calibCoarse_tick + calibFine_tick);
-	pixelclockQ.push_back(packU32(InitialWaitingTime_tick - mLatency_tick, 0));
-
-	//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches its state to represent a pixel delimiter (the switching is implemented on the FPGA)
-	for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)
-		pixelclockQ.push_back(packPixelclockSinglet(calculatePracticalDwellTime_us(pix), 1));
-
-	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	pixelclockQ.push_back(packPixelclockSinglet(t_us_MIN, 1));
-}
-
-QU32 RTsequence::Pixelclock::readPixelclock() const
-{
-	return pixelclockQ;
-}
-
-
-RTsequence::RTsequence(const FPGAapi &fpga) : mFpga(fpga), mVectorOfQueues(Nchan)
-{
-	const Pixelclock pixelclock;
-	mVectorOfQueues.at(PCLOCK) = pixelclock.readPixelclock();
-}
-
-RTsequence::~RTsequence() {}
-
-//Push all the elements in 'tailQ' into 'headQ'
-void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue)
-{
-	while (!givingQueue.empty())
-	{
-		receivingQueue.push_back(givingQueue.front());
-		givingQueue.pop_front();
-	}
-}
-
-void RTsequence::pushQueue(const RTchannel chan, QU32& queue)
-{
-	concatenateQueues(mVectorOfQueues.at(chan), queue);
-}
-
-
-void RTsequence::pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO)
-{
-	mVectorOfQueues.at(chan).push_back(packDigitalSinglet(t_us, DO));
-}
-
-void RTsequence::pushAnalogSinglet(const RTchannel chan, const double t_us, const double AO)
-{
-	if (t_us < AO_t_us_MIN)
-		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_t_us_MIN << " us" << std::endl;
-
-	mVectorOfQueues.at(chan).push_back(packAnalogSinglet(AO_t_us_MIN, AO));
-}
-
-
-
-void RTsequence::pushLinearRamp(const RTchannel chan, double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
-{
-	const bool debug = 0;
-
-	if (TimeStep < AO_t_us_MIN)
-	{
-		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_t_us_MIN << " us" << std::endl;
-		TimeStep = AO_t_us_MIN;		//Analog output time increment (in us)
-	}
-
-	const int nPoints = (int)(RampLength / TimeStep);		//Number of points
-
-	if (nPoints <= 1)	throw std::invalid_argument((std::string)__FUNCTION__ + ": Not enought points to generate a linear ramp");
-
-	if (debug)
-	{
-		std::cout << "nPoints: " << nPoints << std::endl;
-		std::cout << "time \tticks \tv" << std::endl;
-	}
-
-	for (int ii = 0; ii < nPoints; ii++)
-	{
-		const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
-		mVectorOfQueues.at(chan).push_back(packAnalogSinglet(TimeStep, V));
-
-		if (debug)	std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
-	}
-
-	if (debug)
-		getchar();
-
-}
-
-//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute yet
-void  RTsequence::uploadRT()
-{
-	mFpga.writeFIFO(mVectorOfQueues);
-
-	//On the FPGA, transfer the commands from FIFO IN to the sub-channel buffers
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
-}
-
-#pragma endregion "RTsequence"
-
-
 #pragma region "Image"
 
-Image::Image(const FPGAapi &fpga) : mFpga(fpga)
+Image::Image(const FPGAapi::FPGAsession &fpga) : mFpga(fpga)
 {
 	mBufArray_A = new U32[nPixAllFrames]();
 
@@ -606,7 +431,7 @@ void Image::saveAsTxt(const std::string filename)
 #pragma endregion "Image"
 
 //Curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
-PockelsCell::PockelsCell(const FPGAapi &fpga, const PockelsID ID, const int wavelength_nm) : mFpga(fpga), mID(ID), mWavelength_nm(wavelength_nm)
+PockelsCell::PockelsCell(const FPGAapi::FPGAsession &fpga, const PockelsID ID, const int wavelength_nm) : mFpga(fpga), mID(ID), mWavelength_nm(wavelength_nm)
 {
 	switch (ID)
 	{
@@ -625,14 +450,14 @@ PockelsCell::~PockelsCell() {}
 
 void PockelsCell::setOutput_volt(const double V_volt)
 {
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAvoltageControllerID, convertVolt2I16(V_volt)));
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAvoltageControllerID, FPGAapi::convertVolt2I16(V_volt)));
 	mV_volt = V_volt;
 }
 
 void PockelsCell::setOutput_mW(const double power_mW)
 {
-	double aux = convertPowertoVoltage_volt(power_mW);
-	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAvoltageControllerID, convertVolt2I16(aux)));
+	double aux = convertPowerToVoltage_volt(power_mW);
+	checkFPGAstatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAvoltageControllerID, FPGAapi::convertVolt2I16(aux)));
 	mV_volt = aux;
 }
 
@@ -650,7 +475,7 @@ void PockelsCell::manualOn(const bool state)
 }
 
 
-double PockelsCell::convertPowertoVoltage_volt(const double power_mW)
+double PockelsCell::convertPowerToVoltage_volt(const double power_mW)
 {
 	double a, b, c;		//Calibration parameters
 

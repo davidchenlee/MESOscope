@@ -31,8 +31,8 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	//Create a pockels cell RT sequence
 	PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
-	pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
-	pockels.outputToZero();
+	//pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
+	//pockels.outputToZero();
 
 	const int nFrames = 1;
 	//NON-REALTIME SEQUENCE
@@ -41,7 +41,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		
 		Image image(fpga);
-		image.acquire(filename + " z = " + toString(newPosition,4)); //Execute the realtime sequence and acquire the image
+		image.acquire(filename + " z = " + toString(newPosition,4), 1); //Execute the realtime sequence and acquire the image
 		
 		/*
 		newPosition += 0.001;

@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
-#include <string>	//For std::to_string
+#include <string>		//For std::to_string
+#include <windows.h>	//the stages use this lib. also Sleep
 #include "NiFpga_FPGAvi.h"
 #include "Const.h"
 using namespace Constants;
@@ -39,12 +40,12 @@ namespace FPGAapi
 		{
 			QU32 pixelclockQ;					//Queue containing the pixel-clock sequence
 			const int mLatency_tick = 2;		//Latency at detecting the line clock. Calibrate the latency with the oscilloscope
-			double convertSpatialCoordToTime_us(const double x);
-			double getDiscreteTime_us(const int pix);
-			double calculateDwellTime_us(const int pix);
-			double calculatePracticalDwellTime_us(const int pix);
-			void uniformDwellTimes();
-			void correctedDwellTimes();
+			double convertSpatialCoordToTime_us(const double x) const;
+			double getDiscreteTime_us(const int pix) const;
+			double calculateDwellTime_us(const int pix) const;
+			double calculatePracticalDwellTime_us(const int pix) const;
+			void pushUniformDwellTimes();
+			void pushCorrectedDwellTimes();
 		public:
 			Pixelclock();
 			~Pixelclock();

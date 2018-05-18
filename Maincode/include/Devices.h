@@ -1,12 +1,11 @@
 #pragma once
-#include <windows.h>				//the stages use this lib. also Sleep
 #include <fstream>					//file management
 #include <ctime>					//Clock()
 #include <tiffio.h>					//for Tiff files
-#include "PI_GCS2_DLL.h"
-#include "serial/serial.h"
 #include "FPGAapi.h"
 #include "Utilities.h"
+#include "PI_GCS2_DLL.h"
+#include "serial/serial.h"
 
 class Vibratome
 {
@@ -20,7 +19,7 @@ public:
 	Vibratome(const FPGAapi::Session &fpga);
 	~Vibratome();
 	void startStop();
-	void sendCommand(const double dt, const VibratomeChannel channel);
+	void sendCommand(const double dt, const VibratomeChannel channel) const;
 };
 
 class ResonantScanner
@@ -28,12 +27,12 @@ class ResonantScanner
 	const FPGAapi::Session &mFpga;
 	const int mVMAX_V = 5 * V;			//Max control voltage mVcontrol_V
 	const int mDelayTime_ms = 10;
-	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
-	double mFFOV_um = 0;					//Full field of view
+	double mVoltPerUm = RS_voltPerUm;	//Calibration factor. volts per microns
+	double mFFOV_um = 0;				//Full field of view
 	double mVcontrol_V = 0;				//Control voltage 0-5V (max amplitude)
-	void setVcontrol_V(const double Vcontrol);
+	void setControl_V(const double Vcontrol);
 	void setFFOV_um(const double FFOV_um);
-	double convertUm2Volt(const double Amplitude);
+	double convertUm2Volt(const double Amplitude) const;
 public:
 	ResonantScanner(const FPGAapi::Session &fpga);
 	~ResonantScanner();
@@ -51,9 +50,9 @@ class Shutter
 public:
 	Shutter(const FPGAapi::Session &fpga, ShutterID ID);
 	~Shutter();
-	void open();
-	void close();
-	void pulseHigh();
+	void open() const;
+	void close() const;
+	void pulseHigh() const;
 };
 
 class Image
@@ -78,17 +77,17 @@ class Image
 	U32 **mBufArray_B;								//Each row stores a chunck of data from the FIFO. The row size could possibly be < nPixAllFrames
 	int mNelemReadFIFO_B = 0; 						//Total number of elements read from FIFO B
 
-	void startFIFO();
-	void configureFIFO(const U32 depth);			//Currently I don't use this function
-	void stopFIFO();
+	void startFIFO() const;
+	void configureFIFO(const U32 depth) const;			//Currently I don't use this function
+	void stopFIFO() const;
 	void readFIFO();
 	void unpackBuffer();
 	void correctInterleavedImage();
-	void Image::remaining();
+	void remaining() const;
 public:
 	Image(const FPGAapi::Session &fpga);
 	~Image();
-	void acquire(const std::string filename);
+	void acquire(const std::string filename, const bool saveFile = 0);
 	void saveAsTiff(std::string filename);
 	void saveAsTxt(const std::string fileName);
 };
@@ -105,14 +104,14 @@ class PockelsCell
 	FPGAapi::RTsequence &mSequence;									
 	RTchannel mRTchannel;
 	int mWavelength_nm;												//Wavelength of the laser
-	double convertPowerToVoltage_V(const double power_mW);
-	void pushSinglet(const double t_us, const double AO);
+	double convertPowerToVoltage_V(const double power_mW) const;
+	void pushSinglet(const double t_us, const double AO) const;
 public:
 	PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsID, const int wavelength_nm);
 	~PockelsCell();
-	void voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V);
-	void powerLinearRamp(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW);
-	void outputToZero();
+	void voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V) const;
+	void powerLinearRamp(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW) const;
+	void outputToZero() const;
 };
 
 class Galvo
@@ -120,14 +119,14 @@ class Galvo
 	FPGAapi::RTsequence &mSequence;
 	RTchannel mRTchannel;
 	const double voltPerUm = 5.0 * V / (210 * um);					//volts per um. Calibration factor of the galvo. Last calib 11/April/2018
-	double convertPositionToVoltage(const double position_um);
-	void pushSinglet(const double t_us, const double AO);
+	double convertPositionToVoltage(const double position_um) const;
+	void pushSinglet(const double t_us, const double AO) const;
 public:
 	Galvo(FPGAapi::RTsequence &sequence, const RTchannel galvoID);
 	~Galvo();
-	void voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V);
-	void positionLinearRamp(const double timeStep_us, const double rampDuration, const double xi_V, const double xf_V);
-	void outputToZero();
+	void voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V) const;
+	void positionLinearRamp(const double timeStep_us, const double rampDuration, const double xi_V, const double xf_V) const;
+	void outputToZero() const;
 };
 
 class Filterwheel

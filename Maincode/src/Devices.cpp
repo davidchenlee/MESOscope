@@ -18,7 +18,7 @@ void Vibratome::startStop()
 }
 
 //Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
-void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel channel)
+void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel channel) const
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
 	const int minPulseDuration = 10;	//in ms
@@ -61,7 +61,7 @@ void ResonantScanner::run(const bool state){
 }
 
 //Set the control voltage that determines the scanning amplitude
-void ResonantScanner::setVcontrol_V(const double Vcontrol_V)
+void ResonantScanner::setControl_V(const double Vcontrol_V)
 {
 	if (Vcontrol_V > mVMAX_V) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(mVMAX_V) + " V" );
 
@@ -91,7 +91,7 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 
 void ResonantScanner::turnOn_V(const double Vcontrol_V)
 {
-	setVcontrol_V(Vcontrol_V);
+	setControl_V(Vcontrol_V);
 	Sleep(mDelayTime_ms);
 	run(1);
 }
@@ -100,11 +100,11 @@ void ResonantScanner::turnOff()
 {
 	run(0);
 	Sleep(mDelayTime_ms);
-	setVcontrol_V(0);
+	setControl_V(0);
 }
 
 
-double ResonantScanner::convertUm2Volt(double amplitude_um)
+double ResonantScanner::convertUm2Volt(double amplitude_um) const
 {
 	return amplitude_um * mVoltPerUm;
 }
@@ -128,17 +128,17 @@ Shutter::Shutter(const FPGAapi::Session &fpga, ShutterID ID) : mFpga(fpga)
 
 Shutter::~Shutter() {}
 
-void Shutter::open()
+void Shutter::open() const
 {
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mID, 1));
 }
 
-void Shutter::close()
+void Shutter::close() const
 {
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mID, 0));
 }
 
-void Shutter::pulseHigh()
+void Shutter::pulseHigh() const
 {
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mID, 1));
 
@@ -177,33 +177,13 @@ Image::~Image()
 	//std::cout << "Image destructor called\n";
 };
 
-//The ReadFifo function gives chuncks of data. Store each chunck in a separate buffer-array. I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
-void Image::acquire(const std::string filename)
-{
-	startFIFO();		//Start transferring data from the FPGA FIFO to the PC FIFO
-	mFpga.triggerRT();	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
-
-	try
-	{
-		readFIFO();			//Read the data in the FIFO and transfer it to the buffer
-		unpackBuffer();		//Move the chuncks of data in the buffer to an array
-		correctInterleavedImage();
-		saveAsTiff(filename);
-	}
-	catch (const ImageException &e) //Notify the exception and move on to the next iteration
-	{		
-		std::cout << "An ImageException has occurred in: " << e.what() << std::endl;
-	}
-
-}
-
-void Image::startFIFO()
+void Image::startFIFO() const
 {
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StartFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StartFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 }
 
-void Image::configureFIFO(const U32 depth)
+void Image::configureFIFO(const U32 depth) const
 {
 	U32 actualDepth;
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
@@ -211,7 +191,7 @@ void Image::configureFIFO(const U32 depth)
 	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << std::endl;
 }
 
-void Image::stopFIFO()
+void Image::stopFIFO() const
 {
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
@@ -219,7 +199,7 @@ void Image::stopFIFO()
 }
 
 
-void Image::remaining()
+void Image::remaining() const
 {
 	U32 rem;
 	U32 *dummy = new U32[0];
@@ -229,7 +209,7 @@ void Image::remaining()
 }
 
 
-//TODO: save the data from the FIFO saving concurrently
+//TODO: saveFile the data from the FIFO saving concurrently
 //Read the PC-FIFO as the data arrive. I ran a test and found out that two 32-bit FIFOs has a larger bandwidth than a single 64 - bit FIFO
 //Test if the bandwidth can be increased by using 'NiFpga_AcquireFifoReadElementsU32'.Ref: http://zone.ni.com/reference/en-XX/help/372928G-01/capi/functions_fifo_read_acquire/
 //pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
@@ -338,7 +318,7 @@ void Image::unpackBuffer()
 //Later on, write the tiff directly from the buffer arrays. To deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
 //memset http://www.cplusplus.com/reference/cstring/memset/
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
-//One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
+//One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and saveFile it to file using TIFFWriteScanline
 void Image::correctInterleavedImage()
 {
 	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to store the temp data. In principle I could just use half the size, but why bothering...
@@ -346,7 +326,7 @@ void Image::correctInterleavedImage()
 	//Reverse the pixel order every other line
 	for (int lineIndex = 1; lineIndex < heightPerFrame_pix; lineIndex += 2)
 	{
-		//save the data in an aux array
+		//saveFile the data in an aux array
 		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
 			auxLine[pixIndex] = image[lineIndex*widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];	//TODO: use memcpy
 																											//write the data back in reversed order
@@ -354,6 +334,29 @@ void Image::correctInterleavedImage()
 			image[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];		//TODO: use memcpy
 	}
 	delete[] auxLine;
+}
+
+//The ReadFifo function gives chuncks of data. Store each chunck in a separate buffer-array. I think I can't just make a long, concatenated 1D array because I have to pass individual arrays to the FIFO-read function
+void Image::acquire(const std::string filename, const bool saveFile)
+{
+	startFIFO();		//Start transferring data from the FPGA FIFO to the PC FIFO
+	mFpga.triggerRT();	//Trigger the acquisition. If triggered too early, the FPGA FIFO will probably overflow
+
+	if (saveFile)
+	{
+		try
+		{
+			readFIFO();			//Read the data in the FIFO and transfer it to the buffer
+			unpackBuffer();		//Move the chuncks of data in the buffer to an array
+			correctInterleavedImage();
+			saveAsTiff(filename);
+		}
+		catch (const ImageException &e) //Notify the exception and move on to the next iteration
+		{
+			std::cout << "An ImageException has occurred in: " << e.what() << std::endl;
+		}
+	}
+
 }
 
 void Image::saveAsTiff(std::string filename)
@@ -428,29 +431,29 @@ PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsI
 PockelsCell::~PockelsCell() {}
 
 
-void PockelsCell::pushSinglet(const double t_us, const double AO)
+void PockelsCell::pushSinglet(const double t_us, const double AO) const
 {
 	mSequence.pushAnalogSinglet(mRTchannel, t_us, AO);
 }
 
 
-void PockelsCell::voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V)
+void PockelsCell::voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V) const
 {
 	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, Vi_V, Vf_V);
 }
 
-void  PockelsCell::powerLinearRamp(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW)
+void  PockelsCell::powerLinearRamp(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW) const
 {
 	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, convertPowerToVoltage_V(Pi_mW), convertPowerToVoltage_V(Pf_mW));
 }
 
-void PockelsCell::outputToZero()
+void PockelsCell::outputToZero() const
 {
 	mSequence.pushAnalogSinglet(mRTchannel, AO_t_us_MIN, 0 * V);
 }
 
 
-double PockelsCell::convertPowerToVoltage_V(const double power_mW)
+double PockelsCell::convertPowerToVoltage_V(const double power_mW) const
 {
 	double a, b, c;		//Calibration parameters
 
@@ -490,27 +493,27 @@ Galvo::Galvo(FPGAapi::RTsequence &sequence, const RTchannel galvoID): mSequence(
 
 Galvo::~Galvo() {}
 
-double Galvo::convertPositionToVoltage(const double position_um)
+double Galvo::convertPositionToVoltage(const double position_um) const
 {
 	return position_um * voltPerUm;
 }
 
-void Galvo::pushSinglet(const double t_us, const double AO)
+void Galvo::pushSinglet(const double t_us, const double AO) const
 {
 	mSequence.pushAnalogSinglet(mRTchannel, t_us, AO);
 }
 
-void Galvo::voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V)
+void Galvo::voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V) const
 {
 	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, Vi_V, Vf_V);
 }
 
-void Galvo::positionLinearRamp(const double timeStep_us, const double rampDuration, const double xi_V, const double xf_V)
+void Galvo::positionLinearRamp(const double timeStep_us, const double rampDuration, const double xi_V, const double xf_V) const
 {
 	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, convertPositionToVoltage(xi_V), convertPositionToVoltage(xf_V));
 }
 
-void Galvo::outputToZero()
+void Galvo::outputToZero() const
 {
 	mSequence.pushAnalogSinglet(mRTchannel, AO_t_us_MIN, 0 * V);
 }

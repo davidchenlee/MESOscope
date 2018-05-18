@@ -24,13 +24,13 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGAvi_Signature = "A66421C481B6DCC97583BA3DBC758901";
+static const char* const NiFpga_FPGAvi_Signature = "FD9718E33C936287E929C898F7AADD93";
 
 typedef enum
 {
    NiFpga_FPGAvi_ControlBool_FIFOINtrigger = 0x62,
    NiFpga_FPGAvi_ControlBool_FIFOOUTdebug = 0x36,
-   NiFpga_FPGAvi_ControlBool_FlushTrigger = 0x22,
+   NiFpga_FPGAvi_ControlBool_FlushTrigger = 0x16,
    NiFpga_FPGAvi_ControlBool_LinegateTrigger = 0x2A,
    NiFpga_FPGAvi_ControlBool_RS_ON_OFF = 0x3E,
    NiFpga_FPGAvi_ControlBool_Shutter1 = 0x32,
@@ -43,8 +43,8 @@ typedef enum
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlU8_LineclockInputSelector = 0x1A,
-   NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector = 0x1E,
+   NiFpga_FPGAvi_ControlU8_LineclockInputSelector = 0x1E,
+   NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector = 0x22,
 } NiFpga_FPGAvi_ControlU8;
 
 typedef enum
@@ -58,7 +58,7 @@ typedef enum
    NiFpga_FPGAvi_ControlU16_Nchannels = 0x5A,
    NiFpga_FPGAvi_ControlU16_NlinesAll = 0x12,
    NiFpga_FPGAvi_ControlU16_NlinesPerFrame = 0x26,
-   NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips = 0x16,
+   NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips = 0x1A,
    NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate = 0x52,
    NiFpga_FPGAvi_ControlU16_SyncDOtoAO = 0x66,
 } NiFpga_FPGAvi_ControlU16;

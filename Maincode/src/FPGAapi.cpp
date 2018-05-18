@@ -112,15 +112,15 @@ namespace FPGAapi
 		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
 		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
 
+		//Resonant scanner
+		//checkStatus(__FUNCTION__,  NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));	//Output voltage
+		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
+
 		//Vibratome control
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_start, 0));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_back, 0));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_forward, 0));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VT_NC, 0));
-
-		//Resonant scanner
-		//checkStatus(__FUNCTION__,  NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));	//Output voltage
-		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
 
 		//Debugger
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
@@ -182,6 +182,7 @@ namespace FPGAapi
 	//Flush the block RAMs used for buffering the pixelclock, AO, and DO 
 	void Session::flushBRAMs() const
 	{
+		Sleep(100);
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
 		//std::cout << "flushBRAMs called\n";
@@ -210,9 +211,9 @@ namespace FPGAapi
 	{
 		switch (pixelclockType) //pixelclockType defined globally
 		{
-		case uniform: uniformDwellTimes();
+		case uniform: pushUniformDwellTimes();
 			break;
-		case corrected: correctedDwellTimes();
+		case corrected: pushCorrectedDwellTimes();
 			break;
 		default: throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pixelclock type unavailable");
 			break;
@@ -222,7 +223,7 @@ namespace FPGAapi
 	RTsequence::Pixelclock::~Pixelclock() {}
 
 	//Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
-	double RTsequence::Pixelclock::convertSpatialCoordToTime_us(const double x)
+	double RTsequence::Pixelclock::convertSpatialCoordToTime_us(const double x) const
 	{
 		double arg = 2 * x / RSpkpk_um;
 		if (arg > 1)
@@ -232,20 +233,20 @@ namespace FPGAapi
 	}
 
 	//Discretize the spatial coordinate, then convert it to time
-	double RTsequence::Pixelclock::getDiscreteTime_us(const int pix)
+	double RTsequence::Pixelclock::getDiscreteTime_us(const int pix) const
 	{
 		const double dx = 0.5 * um;
 		return convertSpatialCoordToTime_us(dx * pix);
 	}
 
 	//Calculate the dwell time for the pixel
-	double RTsequence::Pixelclock::calculateDwellTime_us(const int pix)
+	double RTsequence::Pixelclock::calculateDwellTime_us(const int pix) const
 	{
 		return getDiscreteTime_us(pix + 1) - getDiscreteTime_us(pix);
 	}
 
 	//Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
-	double RTsequence::Pixelclock::calculatePracticalDwellTime_us(const int pix)
+	double RTsequence::Pixelclock::calculatePracticalDwellTime_us(const int pix) const
 	{
 		return round(calculateDwellTime_us(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
 	}
@@ -254,7 +255,7 @@ namespace FPGAapi
 	//Pixel clock sequence. Every pixel has the same duration in time.
 	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 	//Pixel clock evently spaced in time
-	void RTsequence::Pixelclock::uniformDwellTimes()
+	void RTsequence::Pixelclock::pushUniformDwellTimes()
 	{
 		//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
 		//DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
@@ -271,7 +272,7 @@ namespace FPGAapi
 
 	//Pixel clock sequence. Every pixel is equally spaced.
 	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-	void RTsequence::Pixelclock::correctedDwellTimes()
+	void RTsequence::Pixelclock::pushCorrectedDwellTimes()
 	{
 		if (widthPerFrame_pix % 2 != 0)	//Throw exception if odd. Odd number of pixels not supported yet
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels in the image width currently not supported");

@@ -105,8 +105,6 @@ class PockelsCell
 	const FPGAapi::FPGAsession &mFpga;
 	PockelsID mID;													//Device ID
 	NiFpga_FPGAvi_ControlI16 mFPGAvoltageControllerID;				//Internal ID of the FPGA
-	NiFpga_FPGAvi_ControlBool mFPGAselectTriggerControllerID;		//Internal ID of the FPGA
-	NiFpga_FPGAvi_ControlBool mFPGAmanualOnControllerID;			//Internal ID of the FPGA
 	int mWavelength_nm;												//Wavelength of the laser
 	double mV_volt;													//Output voltage to the HV amplifier
 	double convertPowerToVoltage_volt(const double power_mW);
@@ -116,7 +114,6 @@ public:
 	void setOutput_volt(const double V_volt);
 	void setOutput_mW(const double power_mW);
 	void setOutputToZero();
-	void manualOn(const bool state);
 };
 
 class Filterwheel

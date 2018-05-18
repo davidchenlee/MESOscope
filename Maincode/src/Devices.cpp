@@ -423,9 +423,6 @@ PockelsCell::PockelsCell(const FPGAapi::FPGAsession &fpga, const PockelsID ID, c
 	switch (ID)
 	{
 	case Pockels1:
-		mFPGAvoltageControllerID = NiFpga_FPGAvi_ControlI16_PC1_voltage;
-		mFPGAselectTriggerControllerID = NiFpga_FPGAvi_ControlBool_PC1_selectTrigger;
-		mFPGAmanualOnControllerID = NiFpga_FPGAvi_ControlBool_PC1_manualOn;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
@@ -452,13 +449,6 @@ void PockelsCell::setOutput_mW(const double power_mW)
 void PockelsCell::setOutputToZero()
 {
 	setOutput_volt(0);
-}
-
-//For debugging. Turn the pockels cell on without depending on the scanner
-void PockelsCell::manualOn(const bool state)
-{
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mFPGAselectTriggerControllerID, 1));
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mFPGAmanualOnControllerID, (NiFpga_Bool)state));
 }
 
 

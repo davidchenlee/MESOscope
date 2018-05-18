@@ -3,7 +3,6 @@
 //#include <concrt.h> 	//Concurrency::wait(2000);
 
 void seq_main(const FPGAapi::FPGAsession &fpga);
-void seq_burnSample(const FPGAapi::FPGAsession &fpga);
 void seq_testAOramp(const FPGAapi::FPGAsession &fpga);
 void seq_checkDigitalTiming(const FPGAapi::FPGAsession &fpga);
 void seq_calibDigitalLatency(const FPGAapi::FPGAsession &fpga);

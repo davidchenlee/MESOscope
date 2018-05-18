@@ -62,25 +62,6 @@ void seq_main(const FPGAapi::FPGAsession &fpga)
 	datalog.record("Galvo time step (us) = ", galvoTimeStep_us);
 }
 
-
-
-void seq_burnSample(const FPGAapi::FPGAsession &fpga)
-{
-	const int wavelength_nm = 750;
-	double laserPower_mW = 400 * mW;
-
-	PockelsCell pockels(fpga, Pockels1, wavelength_nm);
-	pockels.setOutput_mW(laserPower_mW);
-
-
-	pockels.manualOn(1);
-	Sleep(3000);
-	pockels.manualOn(0);
-
-}
-
-
-
 //Test the analog and digital output and the relative timing wrt the pixel clock
 void seq_testAODO(const FPGAapi::FPGAsession &fpga)
 {

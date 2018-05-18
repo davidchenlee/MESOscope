@@ -2,7 +2,7 @@
 
 int main(int argc, char* argv[])
 {
-	FPGAapi::FPGAsession fpga;			//Open a FPGA connection
+	FPGAapi::Session fpga;			//Open a FPGA connection
 	try
 	{
 		fpga.initialize();	//Initialize the FPGA

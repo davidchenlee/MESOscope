@@ -19,12 +19,12 @@ namespace FPGAapi
 	U32 packPixelclockSinglet(const double t_us, const bool DO);
 	void checkStatus(char functionName[], NiFpga_Status status);
 
-	class FPGAsession
+	class Session
 	{
 		NiFpga_Session mSession;
 	public:
-		FPGAsession();
-		~FPGAsession();
+		Session();
+		~Session();
 		void initialize() const;
 		void writeFIFO(VQU32 &vectorqueues) const;
 		void triggerRT() const;
@@ -51,18 +51,18 @@ namespace FPGAapi
 			QU32 readPixelclock() const;
 		};
 
-		const FPGAapi::FPGAsession &mFpga;
+		const FPGAapi::Session &mFpga;
 		VQU32 mVectorOfQueues;
 		void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
 	public:
-		RTsequence(const FPGAapi::FPGAsession &fpga);
+		RTsequence(const FPGAapi::Session &fpga);
 		RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
 		RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
 		~RTsequence();
 		void pushQueue(const RTchannel chan, QU32& queue);
 		void pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO);
 		void pushAnalogSinglet(const RTchannel chan, const double t_us, const double AO);
-		void pushLinearRamp(const RTchannel chan, double TimeStep, const double RampLength, const double Vinitial, const double Vfinal);
+		void pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampLength, const double Vinitial, const double Vfinal);
 		void uploadRT();
 	};
 

@@ -10,14 +10,14 @@
 
 class Vibratome
 {
-	const FPGAapi::FPGAsession &mFpga;
+	const FPGAapi::Session &mFpga;
 	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
 	int mNslide;					//Slide number
 	double mSectionThickness;		//Thickness of the section
 	double mSpeed;					//Speed of the vibratome (manual setting)
 	double mAmplitude;				//Amplitude of the vibratome (manual setting)
 public:
-	Vibratome(const FPGAapi::FPGAsession &fpga);
+	Vibratome(const FPGAapi::Session &fpga);
 	~Vibratome();
 	void startStop();
 	void sendCommand(const double dt, const VibratomeChannel channel);
@@ -25,31 +25,31 @@ public:
 
 class ResonantScanner
 {
-	const FPGAapi::FPGAsession &mFpga;
-	const int mVMAX_volt = 5 * V;			//Max control voltage mVcontrol_volt
+	const FPGAapi::Session &mFpga;
+	const int mVMAX_V = 5 * V;			//Max control voltage mVcontrol_V
 	const int mDelayTime_ms = 10;
 	double mVoltPerUm = RS_voltPerUm;		//Calibration factor. volts per microns
 	double mFFOV_um = 0;					//Full field of view
-	double mVcontrol_volt = 0;				//Control voltage 0-5V (max amplitude)
-	void setVcontrol_volt(const double Vcontrol);
+	double mVcontrol_V = 0;				//Control voltage 0-5V (max amplitude)
+	void setVcontrol_V(const double Vcontrol);
 	void setFFOV_um(const double FFOV_um);
 	double convertUm2Volt(const double Amplitude);
 public:
-	ResonantScanner(const FPGAapi::FPGAsession &fpga);
+	ResonantScanner(const FPGAapi::Session &fpga);
 	~ResonantScanner();
 	void run(const bool state);
 	void turnOn_um(const double FFOV_um);
-	void turnOn_volt(const double Vcontrol_volt);
+	void turnOn_V(const double Vcontrol_V);
 	void turnOff();
 };
 
 class Shutter
 {
-	const FPGAapi::FPGAsession &mFpga;
+	const FPGAapi::Session &mFpga;
 	NiFpga_FPGAvi_ControlBool mID;			//Device ID
 	const int mDelayTime_ms = 10;
 public:
-	Shutter(const FPGAapi::FPGAsession &fpga, ShutterID ID);
+	Shutter(const FPGAapi::Session &fpga, ShutterID ID);
 	~Shutter();
 	void open();
 	void close();
@@ -58,7 +58,7 @@ public:
 
 class Image
 {
-	const FPGAapi::FPGAsession &mFpga;
+	const FPGAapi::Session &mFpga;
 	unsigned char *image;							//Create a long 1D array representing the image
 
 	const int mReadFifoWaitingTime_ms = 15;			//Waiting time between each iteration
@@ -86,7 +86,7 @@ class Image
 	void correctInterleavedImage();
 	void Image::remaining();
 public:
-	Image(const FPGAapi::FPGAsession &fpga);
+	Image(const FPGAapi::Session &fpga);
 	~Image();
 	void acquire(const std::string filename);
 	void saveAsTiff(std::string filename);
@@ -102,18 +102,18 @@ public:
 
 class PockelsCell
 {
-	const FPGAapi::FPGAsession &mFpga;
-	PockelsID mID;													//Device ID
-	NiFpga_FPGAvi_ControlI16 mFPGAvoltageControllerID;				//Internal ID of the FPGA
+	FPGAapi::RTsequence &mSequence;
+	PockelsID mPockelsID;											//Device ID
+	RTchannel mRTchannel;
 	int mWavelength_nm;												//Wavelength of the laser
-	double mV_volt;													//Output voltage to the HV amplifier
-	double convertPowerToVoltage_volt(const double power_mW);
+	double convertPowerToVoltage_V(const double power_mW);
+	void pushSinglet(const double t_us, const double AO);
 public:
-	PockelsCell(const FPGAapi::FPGAsession &fpga, const PockelsID ID, const int wavelength_nm);
+	PockelsCell(FPGAapi::RTsequence &sequence, const PockelsID pockelsID, const int wavelength_nm);
 	~PockelsCell();
-	void setOutput_volt(const double V_volt);
-	void setOutput_mW(const double power_mW);
-	void setOutputToZero();
+	void linearRamp_V(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V);
+	void linearRamp_mW(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW);
+	void outputToZero();
 };
 
 class Filterwheel

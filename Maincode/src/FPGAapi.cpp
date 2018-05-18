@@ -77,8 +77,8 @@ namespace FPGAapi
 			std::cerr << "A warning has ocurred in " << functionName << " with FPGA code " << status << std::endl;
 	}
 
-#pragma region "FPGAsession"
-	FPGAsession::FPGAsession()
+#pragma region "Session"
+	Session::Session()
 	{
 		//Must be called before any other FPGA calls
 		checkStatus(__FUNCTION__, NiFpga_Initialize());
@@ -87,12 +87,12 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession));
 	}
 
-	FPGAsession::~FPGAsession()
+	Session::~Session()
 	{
-		//std::cout << "FPGAsession destructor was called" << std::endl;
+		//std::cout << "Session destructor was called" << std::endl;
 	};
 
-	void FPGAsession::initialize() const
+	void Session::initialize() const
 	{
 		//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));				//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
@@ -131,7 +131,7 @@ namespace FPGAapi
 	//For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 	//Then transfer the elements in the long queue to an array to interface the FPGA
 	//Improvement: the single queues VectorOfQueues[i] could be transferred directly to the FIFO array
-	void FPGAsession::writeFIFO(VQU32 &vectorQueues) const
+	void Session::writeFIFO(VQU32 &vectorQueues) const
 	{
 		QU32 allQueues;											//Create a single long queue
 		for (int i = 0; i < nChan; i++)
@@ -173,22 +173,22 @@ namespace FPGAapi
 	}
 
 	//Execute the commands
-	void FPGAsession::triggerRT() const
+	void Session::triggerRT() const
 	{
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
 	}
 
 	//Flush the block RAMs used for buffering the pixelclock, AO, and DO 
-	void FPGAsession::flushBRAMs() const
+	void Session::flushBRAMs() const
 	{
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
 		//std::cout << "flushBRAMs called\n";
 	}
 
-	//The FPGAsession object has to be closed explicitly (in opposition to using the destructor) because it lives in main()
-	void FPGAsession::close(const bool reset) const
+	//The Session object has to be closed explicitly (in opposition to using the destructor) because it lives in main()
+	void Session::close(const bool reset) const
 	{
 		//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 		//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
@@ -199,11 +199,11 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_Finalize());
 	}
 
-	NiFpga_Session FPGAsession::getSession() const
+	NiFpga_Session Session::getSession() const
 	{
 		return mSession;
 	}
-#pragma endregion "FPGAsession"
+#pragma endregion "Session"
 
 #pragma region "RTsequence"
 	RTsequence::Pixelclock::Pixelclock()
@@ -294,7 +294,7 @@ namespace FPGAapi
 	}
 
 
-	RTsequence::RTsequence(const FPGAapi::FPGAsession &fpga) : mFpga(fpga), mVectorOfQueues(nChan)
+	RTsequence::RTsequence(const FPGAapi::Session &fpga) : mFpga(fpga), mVectorOfQueues(nChan)
 	{
 		const Pixelclock pixelclock;
 		mVectorOfQueues.at(PIXELCLOCK) = pixelclock.readPixelclock();
@@ -331,17 +331,17 @@ namespace FPGAapi
 		mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(AO_t_us_MIN, AO));
 	}
 
-	void RTsequence::pushLinearRamp(const RTchannel chan, double TimeStep, const double RampLength, const double Vinitial, const double Vfinal)
+	void RTsequence::pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampDuration, const double Vinitial, const double Vfinal)
 	{
 		const bool debug = 0;
 
-		if (TimeStep < AO_t_us_MIN)
+		if (timeStep_us < AO_t_us_MIN)
 		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_t_us_MIN << " us" << std::endl;
-			TimeStep = AO_t_us_MIN;		//Analog output time increment (in us)
+			timeStep_us = AO_t_us_MIN;		//Analog output time increment (in us)
 		}
 
-		const int nPoints = (int)(RampLength / TimeStep);		//Number of points
+		const int nPoints = (int)(rampDuration / timeStep_us);		//Number of points
 
 		if (nPoints <= 1)	throw std::invalid_argument((std::string)__FUNCTION__ + ": Not enought points to generate a linear ramp");
 
@@ -354,9 +354,9 @@ namespace FPGAapi
 		for (int ii = 0; ii < nPoints; ii++)
 		{
 			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
-			mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(TimeStep, V));
+			mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(timeStep_us, V));
 
-			if (debug)	std::cout << (ii + 1) * TimeStep << "\t" << (ii + 1) * FPGAapi::convertUs2tick(TimeStep) << "\t" << V << "\t" << std::endl;
+			if (debug)	std::cout << (ii + 1) * timeStep_us << "\t" << (ii + 1) * FPGAapi::convertUs2tick(timeStep_us) << "\t" << V << "\t" << std::endl;
 		}
 
 		if (debug)

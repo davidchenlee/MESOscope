@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	FPGAapi::FPGAsession fpga;			//Open a FPGA connection
+	FPGAapi::Session fpga;			//Open a FPGA connection
 	try
 	{
 		fpga.initialize();	//Initialize the FPGA

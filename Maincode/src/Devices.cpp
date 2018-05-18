@@ -1,7 +1,7 @@
 #include "Devices.h"
 
 #pragma region "Vibratome"
-Vibratome::Vibratome(const FPGAapi::FPGAsession &fpga): mFpga(fpga){}
+Vibratome::Vibratome(const FPGAapi::Session &fpga): mFpga(fpga){}
 
 Vibratome::~Vibratome() {}
 
@@ -51,7 +51,7 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 #pragma endregion "Vibratome"
 
 #pragma region "Resonant scanner"
-ResonantScanner::ResonantScanner(const FPGAapi::FPGAsession &fpga): mFpga(fpga){};
+ResonantScanner::ResonantScanner(const FPGAapi::Session &fpga): mFpga(fpga){};
 ResonantScanner::~ResonantScanner() {};
 
 //Start or stop the resonant scanner
@@ -61,25 +61,25 @@ void ResonantScanner::run(const bool state){
 }
 
 //Set the control voltage that determines the scanning amplitude
-void ResonantScanner::setVcontrol_volt(const double Vcontrol_volt)
+void ResonantScanner::setVcontrol_V(const double Vcontrol_V)
 {
-	if (Vcontrol_volt > mVMAX_volt) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(mVMAX_volt) + " V" );
+	if (Vcontrol_V > mVMAX_V) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(mVMAX_V) + " V" );
 
-	mVcontrol_volt = Vcontrol_volt;
-	mFFOV_um = Vcontrol_volt / mVoltPerUm;
+	mVcontrol_V = Vcontrol_V;
+	mFFOV_um = Vcontrol_V / mVoltPerUm;
 
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVolt2I16(mVcontrol_volt)));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVolt2I16(mVcontrol_V)));
 }
 
 //Set the FFOV
 void ResonantScanner::setFFOV_um(const double FFOV_um)
 {
-	mVcontrol_volt = FFOV_um * mVoltPerUm;
+	mVcontrol_V = FFOV_um * mVoltPerUm;
 	mFFOV_um = FFOV_um;
 
-	if (mVcontrol_volt > mVMAX_volt) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(mVMAX_volt) + " V");
+	if (mVcontrol_V > mVMAX_V) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(mVMAX_V) + " V");
 
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVolt2I16(mVcontrol_volt)));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVolt2I16(mVcontrol_V)));
 }
 
 void ResonantScanner::turnOn_um(const double FFOV_um)
@@ -89,9 +89,9 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 	run(1);
 }
 
-void ResonantScanner::turnOn_volt(const double Vcontrol_volt)
+void ResonantScanner::turnOn_V(const double Vcontrol_V)
 {
-	setVcontrol_volt(Vcontrol_volt);
+	setVcontrol_V(Vcontrol_V);
 	Sleep(mDelayTime_ms);
 	run(1);
 }
@@ -100,7 +100,7 @@ void ResonantScanner::turnOff()
 {
 	run(0);
 	Sleep(mDelayTime_ms);
-	setVcontrol_volt(0);
+	setVcontrol_V(0);
 }
 
 
@@ -113,7 +113,7 @@ double ResonantScanner::convertUm2Volt(double amplitude_um)
 
 #pragma region "Shutters"
 
-Shutter::Shutter(const FPGAapi::FPGAsession &fpga, ShutterID ID) : mFpga(fpga)
+Shutter::Shutter(const FPGAapi::Session &fpga, ShutterID ID) : mFpga(fpga)
 {
 	switch (ID)
 	{
@@ -149,7 +149,7 @@ void Shutter::pulseHigh()
 #pragma endregion "Shutters"
 
 #pragma region "Image"
-Image::Image(const FPGAapi::FPGAsession &fpga) : mFpga(fpga)
+Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga)
 {
 	mBufArray_A = new U32[nPixAllFrames]();
 
@@ -418,11 +418,12 @@ void Image::saveAsTxt(const std::string filename)
 
 #pragma region "Pockels cells"
 //Curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
-PockelsCell::PockelsCell(const FPGAapi::FPGAsession &fpga, const PockelsID ID, const int wavelength_nm) : mFpga(fpga), mID(ID), mWavelength_nm(wavelength_nm)
+PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const PockelsID pockelsID, const int wavelength_nm) : mSequence(sequence), mPockelsID(pockelsID), mWavelength_nm(wavelength_nm)
 {
-	switch (ID)
+	switch (mPockelsID)
 	{
 	case Pockels1:
+		mRTchannel = POCKELS1;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
@@ -432,27 +433,31 @@ PockelsCell::PockelsCell(const FPGAapi::FPGAsession &fpga, const PockelsID ID, c
 //Do not set the output to 0 with the destructor to allow holding on the last value
 PockelsCell::~PockelsCell() {}
 
-void PockelsCell::setOutput_volt(const double V_volt)
-{
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAvoltageControllerID, FPGAapi::convertVolt2I16(V_volt)));
-	mV_volt = V_volt;
-}
 
-void PockelsCell::setOutput_mW(const double power_mW)
+void PockelsCell::pushSinglet(const double t_us, const double AO)
 {
-	double aux = convertPowerToVoltage_volt(power_mW);
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), mFPGAvoltageControllerID, FPGAapi::convertVolt2I16(aux)));
-	mV_volt = aux;
+	mSequence.pushAnalogSinglet(mRTchannel, t_us, AO);
 }
 
 
-void PockelsCell::setOutputToZero()
+void PockelsCell::linearRamp_V(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V)
 {
-	setOutput_volt(0);
+	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, Vi_V, Vf_V);
 }
 
+void  PockelsCell::linearRamp_mW(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW)
+{
+	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, convertPowerToVoltage_V(Pi_mW), convertPowerToVoltage_V(Pf_mW));
+}
 
-double PockelsCell::convertPowerToVoltage_volt(const double power_mW)
+void PockelsCell::outputToZero()
+{
+	pushSinglet(AO_t_us_MIN, 0 * V);
+}
+;
+
+
+double PockelsCell::convertPowerToVoltage_V(const double power_mW)
 {
 	double a, b, c;		//Calibration parameters
 

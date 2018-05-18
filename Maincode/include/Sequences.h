@@ -1,5 +1,6 @@
 #pragma once
 #include "Devices.h"
+//#include <concrt.h> 	//Concurrency::wait(2000);
 
 void seq_main(const FPGAapi::FPGAsession &fpga);
 void seq_burnSample(const FPGAapi::FPGAsession &fpga);

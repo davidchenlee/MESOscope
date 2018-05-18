@@ -1,4 +1,3 @@
-//#include <concrt.h> 	//Concurrency::wait(2000);
 #include "Sequences.h"
 
 int main(int argc, char* argv[])

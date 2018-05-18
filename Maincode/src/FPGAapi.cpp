@@ -3,7 +3,7 @@
 namespace FPGAapi
 {
 	//Convert microseconds to ticks
-	U16 convertUs2tick(const double t_us)
+	U16 convertUsTotick(const double t_us)
 	{
 		const double t_tick = t_us * tickPerUs;
 
@@ -22,7 +22,7 @@ namespace FPGAapi
 	}
 
 	//Convert voltage to I16 [1]
-	I16 convertVolt2I16(const double voltage_V)
+	I16 convertVoltToI16(const double voltage_V)
 	{
 		const int VMAX = 10 * V;
 		const int VMIN = -10 * V;
@@ -51,7 +51,7 @@ namespace FPGAapi
 	U32 packAnalogSinglet(const double t_us, const double val)
 	{
 		const U16 AOlatency_tick = 2;	//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
-		return packU32(convertUs2tick(t_us) - AOlatency_tick, convertVolt2I16(val));
+		return packU32(convertUsTotick(t_us) - AOlatency_tick, convertVoltToI16(val));
 	}
 
 
@@ -59,14 +59,14 @@ namespace FPGAapi
 	U32 packDigitalSinglet(const double t_us, const bool DO)
 	{
 		const U16 DOlatency_tick = 2;	//To calibrate, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
-		return packU32(convertUs2tick(t_us) - DOlatency_tick, (U16)DO);
+		return packU32(convertUsTotick(t_us) - DOlatency_tick, (U16)DO);
 	}
 
 	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't_us'
 	U32 packPixelclockSinglet(const double t_us, const bool DO)
 	{
 		const U16 PixelclockLatency_tick = 1;//The pixel-clock is implemented using a SCTL. I think the latency comes from reading the LUT buffer
-		return packU32(convertUs2tick(t_us) - PixelclockLatency_tick, (U16)DO);
+		return packU32(convertUsTotick(t_us) - PixelclockLatency_tick, (U16)DO);
 	}
 
 	void checkStatus(char functionName[], NiFpga_Status status)
@@ -222,7 +222,7 @@ namespace FPGAapi
 	RTsequence::Pixelclock::~Pixelclock() {}
 
 	//Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
-	double RTsequence::Pixelclock::ConvertSpatialCoord2Time_us(const double x)
+	double RTsequence::Pixelclock::convertSpatialCoordToTime_us(const double x)
 	{
 		double arg = 2 * x / RSpkpk_um;
 		if (arg > 1)
@@ -235,7 +235,7 @@ namespace FPGAapi
 	double RTsequence::Pixelclock::getDiscreteTime_us(const int pix)
 	{
 		const double dx = 0.5 * um;
-		return ConvertSpatialCoord2Time_us(dx * pix);
+		return convertSpatialCoordToTime_us(dx * pix);
 	}
 
 	//Calculate the dwell time for the pixel
@@ -260,7 +260,7 @@ namespace FPGAapi
 		//DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
 		const double initialWaitingTime_us = 6.25*us;
-		pixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUs2tick(initialWaitingTime_us) - mLatency_tick, 0));
+		pixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUsTotick(initialWaitingTime_us) - mLatency_tick, 0));
 
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state to represent a pixel delimiter
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
@@ -356,7 +356,7 @@ namespace FPGAapi
 			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
 			mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(timeStep_us, V));
 
-			if (debug)	std::cout << (ii + 1) * timeStep_us << "\t" << (ii + 1) * FPGAapi::convertUs2tick(timeStep_us) << "\t" << V << "\t" << std::endl;
+			if (debug)	std::cout << (ii + 1) * timeStep_us << "\t" << (ii + 1) * FPGAapi::convertUsTotick(timeStep_us) << "\t" << V << "\t" << std::endl;
 		}
 
 		if (debug)

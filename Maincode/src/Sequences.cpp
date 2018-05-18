@@ -4,12 +4,10 @@ void seq_main(const FPGAapi::Session &fpga)
 {		
 
 	const int wavelength_nm = 940;
-	double laserPower_mW = 100 * mW;
-	const double FFOVslow_um = 200 * um;	//Full FOV in the slow axis (galvo)
-	const double galvo1Vmax_V = FFOVslow_um * galvo_voltPerUm;
-	const double galvoTimeStep_us = 8 * us;
+	const double laserPower_mW = 100 * mW;
+	const double FFOV_slowAxis_um = 200 * um;	//Galvo full FOV in the slow axis
 
-	std::string filename = "photoncount";
+	const std::string filename = "photoncount";
 
 
 	double newPosition = 18.400;
@@ -22,13 +20,18 @@ void seq_main(const FPGAapi::Session &fpga)
 		
 	//Create a realtime sequence
 	FPGAapi::RTsequence sequence(fpga);
-	const double duration_ms = 25.5 * ms;
-	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, duration_ms, galvo1Vmax_V, -galvo1Vmax_V);		//Linear ramp for the galvo
-	sequence.pushLinearRamp(GALVO1, galvoTimeStep_us, 1 * ms, -galvo1Vmax_V, galvo1Vmax_V);			//set the output back to the initial value
 
-	double power_mW = 100 * mW;
-	PockelsCell pockels(sequence, Pockels1, wavelength_nm);			//Create a pockels cell
-	pockels.linearRamp_mW(400 * us, duration_ms, power_mW, power_mW);
+	//Create a galvo RT sequence
+	Galvo galvo(sequence, GALVO1);
+	const double duration_ms = 25.5 * ms;
+	const double galvoTimeStep_us = 8 * us;
+	const double posMAX = FFOV_slowAxis_um / 2;
+	galvo.positionLinearRamp(galvoTimeStep_us, duration_ms, posMAX, -posMAX);		//Linear ramp for the galvo
+	galvo.positionLinearRamp(galvoTimeStep_us, 1 * ms, -posMAX, posMAX);			//set the output back to the initial value
+
+	//Create a pockels cell RT sequence
+	PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
+	pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
 	pockels.outputToZero();
 
 	const int nFrames = 1;
@@ -55,7 +58,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	Logger datalog(filename);
 	datalog.record("Wavelength (nm) = ", wavelength_nm);
 	datalog.record("Laser power (mW) = ", laserPower_mW);
-	datalog.record("FFOV (um) = ", FFOVslow_um);
+	datalog.record("FFOV (um) = ", FFOV_slowAxis_um);
 	datalog.record("Galvo Vmax (V) = ", galvo1Vmax_V);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep_us);
 }

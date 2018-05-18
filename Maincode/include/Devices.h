@@ -102,17 +102,31 @@ public:
 
 class PockelsCell
 {
-	FPGAapi::RTsequence &mSequence;
-	PockelsID mPockelsID;											//Device ID
+	FPGAapi::RTsequence &mSequence;									
 	RTchannel mRTchannel;
 	int mWavelength_nm;												//Wavelength of the laser
 	double convertPowerToVoltage_V(const double power_mW);
 	void pushSinglet(const double t_us, const double AO);
 public:
-	PockelsCell(FPGAapi::RTsequence &sequence, const PockelsID pockelsID, const int wavelength_nm);
+	PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsID, const int wavelength_nm);
 	~PockelsCell();
-	void linearRamp_V(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V);
-	void linearRamp_mW(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW);
+	void voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V);
+	void powerLinearRamp(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW);
+	void outputToZero();
+};
+
+class Galvo
+{
+	FPGAapi::RTsequence &mSequence;
+	RTchannel mRTchannel;
+	const double voltPerUm = 5.0 * V / (210 * um);					//volts per um. Calibration factor of the galvo. Last calib 11/April/2018
+	double convertPositionToVoltage(const double position_um);
+	void pushSinglet(const double t_us, const double AO);
+public:
+	Galvo(FPGAapi::RTsequence &sequence, const RTchannel galvoID);
+	~Galvo();
+	void voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V);
+	void positionLinearRamp(const double timeStep_us, const double rampDuration, const double xi_V, const double xf_V);
 	void outputToZero();
 };
 

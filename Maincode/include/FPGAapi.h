@@ -11,8 +11,8 @@ namespace FPGAapi
 	/*Define the full path of the bitfile. The bitfile is the code that runs on the FPGA*/
 	static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 
-	U16 convertUs2tick(const double t_us);
-	I16 convertVolt2I16(const double voltage_V);
+	U16 convertUsTotick(const double t_us);
+	I16 convertVoltToI16(const double voltage_V);
 	U32 packU32(const U16 t_tick, const U16 val);
 	U32 packAnalogSinglet(const double t_us, const double val);
 	U32 packDigitalSinglet(const double t_us, const bool DO);
@@ -39,7 +39,7 @@ namespace FPGAapi
 		{
 			QU32 pixelclockQ;					//Queue containing the pixel-clock sequence
 			const int mLatency_tick = 2;		//Latency at detecting the line clock. Calibrate the latency with the oscilloscope
-			double ConvertSpatialCoord2Time_us(const double x);
+			double convertSpatialCoordToTime_us(const double x);
 			double getDiscreteTime_us(const int pix);
 			double calculateDwellTime_us(const int pix);
 			double calculatePracticalDwellTime_us(const int pix);

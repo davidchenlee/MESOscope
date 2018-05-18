@@ -68,7 +68,7 @@ void ResonantScanner::setVcontrol_V(const double Vcontrol_V)
 	mVcontrol_V = Vcontrol_V;
 	mFFOV_um = Vcontrol_V / mVoltPerUm;
 
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVolt2I16(mVcontrol_V)));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVoltToI16(mVcontrol_V)));
 }
 
 //Set the FFOV
@@ -79,7 +79,7 @@ void ResonantScanner::setFFOV_um(const double FFOV_um)
 
 	if (mVcontrol_V > mVMAX_V) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(mVMAX_V) + " V");
 
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVolt2I16(mVcontrol_V)));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVoltToI16(mVcontrol_V)));
 }
 
 void ResonantScanner::turnOn_um(const double FFOV_um)
@@ -418,16 +418,10 @@ void Image::saveAsTxt(const std::string filename)
 
 #pragma region "Pockels cells"
 //Curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
-PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const PockelsID pockelsID, const int wavelength_nm) : mSequence(sequence), mPockelsID(pockelsID), mWavelength_nm(wavelength_nm)
+PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsID, const int wavelength_nm) : mSequence(sequence), mRTchannel(pockelsID), mWavelength_nm(wavelength_nm)
 {
-	switch (mPockelsID)
-	{
-	case Pockels1:
-		mRTchannel = POCKELS1;
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
-	}
+	if (mRTchannel != POCKELS1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell channel unavailable");
 }
 
 //Do not set the output to 0 with the destructor to allow holding on the last value
@@ -440,21 +434,20 @@ void PockelsCell::pushSinglet(const double t_us, const double AO)
 }
 
 
-void PockelsCell::linearRamp_V(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V)
+void PockelsCell::voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V)
 {
 	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, Vi_V, Vf_V);
 }
 
-void  PockelsCell::linearRamp_mW(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW)
+void  PockelsCell::powerLinearRamp(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW)
 {
 	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, convertPowerToVoltage_V(Pi_mW), convertPowerToVoltage_V(Pf_mW));
 }
 
 void PockelsCell::outputToZero()
 {
-	pushSinglet(AO_t_us_MIN, 0 * V);
+	mSequence.pushAnalogSinglet(mRTchannel, AO_t_us_MIN, 0 * V);
 }
-;
 
 
 double PockelsCell::convertPowerToVoltage_V(const double power_mW)
@@ -485,6 +478,46 @@ double PockelsCell::convertPowerToVoltage_V(const double power_mW)
 	return asin(arg)/b + c;
 }
 #pragma endregion "Pockels cells"
+
+
+#pragma region "Galvo"
+
+Galvo::Galvo(FPGAapi::RTsequence &sequence, const RTchannel galvoID): mSequence(sequence), mRTchannel(galvoID)
+{
+	if ( mRTchannel != GALVO1 )
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
+}
+
+Galvo::~Galvo() {}
+
+double Galvo::convertPositionToVoltage(const double position_um)
+{
+	return position_um * voltPerUm;
+}
+
+void Galvo::pushSinglet(const double t_us, const double AO)
+{
+	mSequence.pushAnalogSinglet(mRTchannel, t_us, AO);
+}
+
+void Galvo::voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V)
+{
+	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, Vi_V, Vf_V);
+}
+
+void Galvo::positionLinearRamp(const double timeStep_us, const double rampDuration, const double xi_V, const double xf_V)
+{
+	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, convertPositionToVoltage(xi_V), convertPositionToVoltage(xf_V));
+}
+
+void Galvo::outputToZero()
+{
+	mSequence.pushAnalogSinglet(mRTchannel, AO_t_us_MIN, 0 * V);
+}
+
+#pragma endregion "Galvo"
+
+
 
 #pragma region "Filterwheel"
 Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)

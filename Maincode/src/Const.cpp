@@ -41,9 +41,6 @@ namespace Parameters
 {
 	extern const std::string foldername = ".\\Output\\";
 
-	//GALVO
-	extern const double galvo_voltPerUm = 2.5*V / (210 * um);					//volts per um. Calibration factor of the galvo. Last calib 11/April/2018
-
 	//RESONANT SCANNER
 	//extern const double RS_voltPerUm = 1.0*V/(157*um);						//volts per um. Calibration factor for the resonant scanner (equal duration pixels). 11/April/2018
 	//extern const double RS_voltPerUm = 1.3*V / ((405 - 237) * um);			//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 19/April/2018

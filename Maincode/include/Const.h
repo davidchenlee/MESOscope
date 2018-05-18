@@ -21,7 +21,6 @@ enum PhotonCounterInputSelector {ext, sim};								//real PMT, simulated PMT, in
 enum LineclockInputSelector {RS, FG};									//Resonant scanner, function generator, 
 enum PixelclockSelector {uniform, corrected};							//uniform dwell times, corrected dwell times
 enum RTchannel {PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, nChan};	//nChan = number of RT channels available, including the pixel clock channel
-enum PockelsID {Pockels1, Pockels2};									//Pockels cell
 enum ShutterID {Shutter1, Shutter2};									//Shutter unit
 enum FilterwheelID {FW1, FW2};											//Filterwheel
 enum FilterColor { BlueLight = 1, GreenLight = 2, RedLight = 3 };		//Filter color
@@ -60,8 +59,6 @@ namespace Parameters
 	using namespace Constants;
 
 	extern const std::string foldername;
-
-	extern const double galvo_voltPerUm;
 
 	extern const double halfPeriodLineclock_us;
 	extern const double RSpkpk_um;

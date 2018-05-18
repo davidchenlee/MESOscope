@@ -25,9 +25,9 @@ void seq_main(const FPGAapi::Session &fpga)
 	Galvo galvo(sequence, GALVO1);
 	const double duration_ms = 25.5 * ms;
 	const double galvoTimeStep_us = 8 * us;
-	const double posMAX = FFOV_slowAxis_um / 2;
-	galvo.positionLinearRamp(galvoTimeStep_us, duration_ms, posMAX, -posMAX);		//Linear ramp for the galvo
-	galvo.positionLinearRamp(galvoTimeStep_us, 1 * ms, -posMAX, posMAX);			//set the output back to the initial value
+	const double posMax_um = FFOV_slowAxis_um / 2;
+	galvo.positionLinearRamp(galvoTimeStep_us, duration_ms, posMax_um, -posMax_um);		//Linear ramp for the galvo
+	galvo.positionLinearRamp(galvoTimeStep_us, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
 
 	//Create a pockels cell RT sequence
 	PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
@@ -59,7 +59,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	datalog.record("Wavelength (nm) = ", wavelength_nm);
 	datalog.record("Laser power (mW) = ", laserPower_mW);
 	datalog.record("FFOV (um) = ", FFOV_slowAxis_um);
-	datalog.record("Galvo Vmax (V) = ", galvo1Vmax_V);
+	datalog.record("Galvo Max position (um) = ", posMax_um);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep_us);
 }
 

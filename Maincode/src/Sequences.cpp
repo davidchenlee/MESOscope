@@ -3,56 +3,58 @@
 void seq_main(const FPGAapi::Session &fpga)
 {		
 
-	const int wavelength_nm = 750;
-	const double laserPower_mW = 15
-		* mW;
+	const int wavelength_nm = 940;
+	double laserPower_mW = 50 * mW;
 	const double FFOV_slowAxis_um = 200 * um;	//Galvo full FOV in the slow axis
 
-	const std::string filename = "photoncount";
+	const std::string filename = "PHAL";
 
 
-	double newPosition = 18.400;
+	double newPosition = 18.440;
 	/*
 	Stage stage;
 	stage.moveStage(zz, newPosition);
 	stage.printPositionXYZ();
 	Sleep(1000);
 	*/
-		
-	//Create a realtime sequence
-	FPGAapi::RTsequence sequence(fpga);
+	
 
-	//Create a galvo RT sequence
-	Galvo galvo(sequence, GALVO1);
 	const double duration_ms = 25.5 * ms;
 	const double galvoTimeStep_us = 8 * us;
 	const double posMax_um = FFOV_slowAxis_um / 2;
-	galvo.positionLinearRamp(galvoTimeStep_us, duration_ms, posMax_um, -posMax_um);		//Linear ramp for the galvo
-	galvo.positionLinearRamp(galvoTimeStep_us, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
 
-	//Create a pockels cell RT sequence
-	PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
-	pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
-	pockels.outputToZero();
 
 	const int nFrames = 1;
 	//NON-REALTIME SEQUENCE
 	for (int ii = 0; ii < nFrames; ii++)
 	{
+		//Create a realtime sequence
+		FPGAapi::RTsequence sequence(fpga);
+
+		//Create a galvo RT sequence
+		Galvo galvo(sequence, GALVO1);
+		galvo.positionLinearRamp(galvoTimeStep_us, duration_ms, posMax_um, -posMax_um);		//Linear ramp for the galvo
+		galvo.positionLinearRamp(galvoTimeStep_us, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
+
+		//Create a pockels cell RT sequence
+		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
+		pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
+		pockels.outputToZero();
+
+
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		
 		Image image(fpga);
 		image.acquire(filename + " z = " + toString(newPosition,4), 1); //Execute the realtime sequence and acquire the image
 		
-		Sleep(1000);
 		/*
 		newPosition += 0.001;
 		stage.moveStage(zz, newPosition);
 		stage.printPositionXYZ();
 		laserPower_mW += 0.5;
-		pockels.setOutput_mW(laserPower_mW);
 		Sleep(1000);
 		*/
+		
 	}
 
 	//pockels.setOutputToZero();	//I don't need to do this because normaly the PC is triggered by the scanner

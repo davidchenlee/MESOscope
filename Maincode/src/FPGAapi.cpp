@@ -138,17 +138,19 @@ namespace FPGAapi
 		{
 			allQueues.push_back(vectorQueues[i].size());		//Push the number of elements in VectorOfQueues[i] (individual queue)
 
-																//New version: Non-destructive. Randomly access the elements in VectorOfQueues[i] and push them to allQueues
+			//Non-destructive. Randomly access the elements in VectorOfQueues[i] and push them to allQueues
 			for (size_t iter = 0; iter < vectorQueues[i].size(); iter++)
 				allQueues.push_back(vectorQueues[i].at(iter));
 
-			/*Old version. Destructive
+			/*
+			//Destructive
 			while (!vectorQueues[i].empty())
 			{
 			allQueues.push_back(vectorQueues[i].front());	//Push all the elements in VectorOfQueues[i] to allQueues
 			vectorQueues[i].pop_front();
 			}
 			*/
+			
 		}
 
 		const int sizeFIFOqueue = allQueues.size();		//Total number of elements in all the queues 

@@ -2,7 +2,7 @@
 
 namespace Constants
 {
-	extern const LineclockInputSelector lineclockInput = FG;				//RS or FG
+	extern const LineclockInputSelector lineclockInput = RS;				//RS or FG
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//ext or sim
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or corrected dwell times
 	extern const bool overrideImageSaving = 1;								//Enable file override when saving
@@ -50,8 +50,6 @@ namespace Parameters
 	extern const double halfPeriodLineclock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
 	extern const double RSpkpk_um = 250 * um;									//Peak-to-peak amplitude of the resonant scanner
 	//Determine the relative delay of the pixel clock wrt the line clock
-	extern const int calibCoarse_tick = 2043;									//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan
-	extern const int calibFine_tick = 10;
 	//extern const int calibCoarse_tick = 2043; //RS@200 um						//calibFine_tick: In practice, the resonant scanner is not perfectly centered around the objective's back aperture. Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
 	//extern const int calibFine_tick = 10;
 

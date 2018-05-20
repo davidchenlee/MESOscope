@@ -3,8 +3,9 @@
 void seq_main(const FPGAapi::Session &fpga)
 {		
 
-	const int wavelength_nm = 940;
-	const double laserPower_mW = 100 * mW;
+	const int wavelength_nm = 750;
+	const double laserPower_mW = 15
+		* mW;
 	const double FFOV_slowAxis_um = 200 * um;	//Galvo full FOV in the slow axis
 
 	const std::string filename = "photoncount";
@@ -31,8 +32,8 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	//Create a pockels cell RT sequence
 	PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
-	//pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
-	//pockels.outputToZero();
+	pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
+	pockels.outputToZero();
 
 	const int nFrames = 1;
 	//NON-REALTIME SEQUENCE
@@ -43,6 +44,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		Image image(fpga);
 		image.acquire(filename + " z = " + toString(newPosition,4), 1); //Execute the realtime sequence and acquire the image
 		
+		Sleep(1000);
 		/*
 		newPosition += 0.001;
 		stage.moveStage(zz, newPosition);

@@ -259,16 +259,14 @@ namespace FPGAapi
 	}
 
 
-	//Pixel clock sequence. Every pixel has the same duration in time.
+	//Pixel clock sequence. Every pixel has the same duration in time
 	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-	//Pixel clock evently spaced in time
+	//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
 	void RTsequence::Pixelclock::pushUniformDwellTimes()
 	{
-		//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
-		//DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
-		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-		const double initialWaitingTime_us = 6.25*us;
-		pixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUsTotick(initialWaitingTime_us) - mLatency_tick, 0));
+		const int calibFine_tick = 10;
+		const double initialWaitingTime_us = 6.25*us;	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
+		pixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUsTotick(initialWaitingTime_us) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state to represent a pixel delimiter
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
@@ -281,7 +279,10 @@ namespace FPGAapi
 	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 	void RTsequence::Pixelclock::pushCorrectedDwellTimes()
 	{
-		if (widthPerFrame_pix % 2 != 0)	//Throw exception if odd. Odd number of pixels not supported yet
+		const int calibCoarse_tick = 2043;	//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan
+		const int calibFine_tick = 10;
+
+		if (widthPerFrame_pix % 2 != 0)		//Throw exception if odd. Odd number of pixels not supported yet
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels in the image width currently not supported");
 
 		//Relative delay of the pixel clock with respect to the line clock. DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO

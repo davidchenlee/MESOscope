@@ -62,8 +62,6 @@ namespace Parameters
 
 	extern const double halfPeriodLineclock_us;
 	extern const double RSpkpk_um;
-	extern const int calibCoarse_tick;
-	extern const int calibFine_tick;
 
 	extern const double RS_voltPerUm;
 

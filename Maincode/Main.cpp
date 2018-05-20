@@ -8,7 +8,6 @@ int main(int argc, char* argv[])
 		fpga.initialize();		//Initialize the FPGA
 		
 		seq_main(fpga);			//Run the sequence
-		//seq_burnSample(fpga);
 		//seq_testStages(fpga);
 
 		fpga.close(0);			//Close the FPGA connection under normal conditions
@@ -48,7 +47,7 @@ int main(int argc, char* argv[])
 	}
 
 	std::cout << "\nPress any key to continue..." << std::endl;
-	getchar();
+	//getchar();
 
 	return 0;
 }

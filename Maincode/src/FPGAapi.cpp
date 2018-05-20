@@ -375,7 +375,7 @@ namespace FPGAapi
 
 	}
 
-	//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute yet
+	//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute them yet
 	void  RTsequence::uploadRT()
 	{
 		mFpga.writeFIFOpc(mVectorOfQueues);

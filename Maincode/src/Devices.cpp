@@ -665,9 +665,9 @@ Stage::Stage()
 	if (mID[zz] < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
 
 	//Record the current position
-	mPosition_mm[xx] = downloadPosition_mm(xx);
-	mPosition_mm[yy] = downloadPosition_mm(yy);
-	mPosition_mm[zz] = downloadPosition_mm(zz);
+	mPosition3_mm[xx] = downloadPosition_mm(xx);
+	mPosition3_mm[yy] = downloadPosition_mm(yy);
+	mPosition3_mm[zz] = downloadPosition_mm(zz);
 }
 
 Stage::~Stage()
@@ -680,19 +680,19 @@ Stage::~Stage()
 }
 
 //Recall the current position for the 3 stages
-double3 Stage::recallPositionXYZ_mm() const
+double3 Stage::readPosition3_mm() const
 {
-	return mPosition_mm;
+	return mPosition3_mm;
 }
 
-void Stage::printPositionXYZ() const
+void Stage::printPosition3() const
 {
-	std::cout << "Stage X position = " << mPosition_mm[xx] << " mm" << std::endl;
-	std::cout << "Stage Y position = " << mPosition_mm[yy] << " mm" << std::endl;
-	std::cout << "Stage Z position = " << mPosition_mm[zz] << " mm" << std::endl;
+	std::cout << "Stage X position = " << mPosition3_mm[xx] << " mm" << std::endl;
+	std::cout << "Stage Y position = " << mPosition3_mm[yy] << " mm" << std::endl;
+	std::cout << "Stage Z position = " << mPosition3_mm[zz] << " mm" << std::endl;
 }
 
-//Retrieve the position from the stage
+//Retrieve the stage position from the controller
 double Stage::downloadPosition_mm(const Axis axis)
 {
 	double position_mm;
@@ -706,21 +706,21 @@ double Stage::downloadPosition_mm(const Axis axis)
 void Stage::moveStage(const Axis axis, const double position_mm)
 {
 	//Check if the requested position is within range
-	if (position_mm < mPosMin_mm[axis] || position_mm > mPosMax_mm[axis])
+	if (position_mm < mPosMin3_mm[axis] || position_mm > mPosMax3_mm[axis])
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position out of bounds for stage " + std::to_string(axis));
 
 	//Move the stage
-	if (mPosition_mm[axis] != position_mm ) //Move only if different position
+	if (mPosition3_mm[axis] != position_mm ) //Move only if the requested position is different from the current position
 	{
 		if (!PI_MOV(mID[axis], mNstagesPerController, &position_mm) )	//~14 ms to execute this function
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage Z to target position");
 
-		mPosition_mm[axis] = position_mm;
+		mPosition3_mm[axis] = position_mm;
 	}
 }
 
 //Move the 3 stages to the requested position
-void Stage::moveStage(const double3 positionXYZ_mm)
+void Stage::moveStage3(const double3 positionXYZ_mm)
 {
 	moveStage(xx, positionXYZ_mm[xx]);
 	moveStage(yy, positionXYZ_mm[yy]);
@@ -738,7 +738,7 @@ bool Stage::isMoving(const Axis axis) const
 	return isMoving;
 }
 
-void Stage::waitForMovementStop(const Axis axis) const
+void Stage::waitForMovementToStop(const Axis axis) const
 {
 	BOOL isMoving;
 	do {
@@ -747,6 +747,25 @@ void Stage::waitForMovementStop(const Axis axis) const
 
 		std::cout << "#";
 	} while (isMoving);
+
+	std::cout << "\n";
+}
+
+void Stage::waitForMovementToStop3() const
+{
+	BOOL isMoving_x, isMoving_y, isMoving_z;
+	do {
+		if (!PI_IsMoving(mID[xx], mNstagesPerController, &isMoving_x))
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage X");
+
+		if (!PI_IsMoving(mID[yy], mNstagesPerController, &isMoving_y))
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Y");
+
+		if (!PI_IsMoving(mID[zz], mNstagesPerController, &isMoving_z))
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Z");
+
+		std::cout << "#";
+	} while (isMoving_x || isMoving_y || isMoving_z);
 
 	std::cout << "\n";
 }
@@ -818,7 +837,7 @@ stop;
 
 //convert from (slice number, plane number, tile number) ---> absolute position (x,y,z)
 //this function considers the overlaps in x, y, and z
-double3 Stage::readAbsolutePosition_mm(const int nSlice, const int nPlane, const int3 nTileXY) const
+double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, const int3 nTileXY) const
 {
 	const double mm = 1;
 	const double um = 0.001;

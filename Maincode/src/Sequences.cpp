@@ -10,13 +10,12 @@ void seq_main(const FPGAapi::Session &fpga)
 	const std::string filename = "PHAL";
 
 
-	double newPosition = 18.440;
-	/*
 	Stage stage;
-	stage.moveStage(zz, newPosition);
-	stage.printPositionXYZ();
-	Sleep(1000);
-	*/
+	const double3 newPosition_mm = { 37.570, 12.700, 18.440 };
+	stage.moveStage3(newPosition_mm);
+	stage.waitForMovementToStop3();
+	stage.printPosition3();
+	double3 position_mm = stage.readPosition3_mm();
 	
 
 	const double duration_ms = 25.5 * ms;
@@ -41,16 +40,15 @@ void seq_main(const FPGAapi::Session &fpga)
 		pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
 		pockels.outputToZero();
 
-
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		
 		Image image(fpga);
-		image.acquire(filename + " z = " + toString(newPosition,4), 1); //Execute the realtime sequence and acquire the image
+		image.acquire(filename + " x = " + toString(position_mm.at(xx), 3) + " y = " + toString(position_mm.at(yy), 3) + " z = " + toString(position_mm.at(zz),3), 1); //Execute the realtime sequence and acquire the image
 		
 		/*
-		newPosition += 0.001;
-		stage.moveStage(zz, newPosition);
-		stage.printPositionXYZ();
+		newPosition_mm += 0.001;
+		stage.moveStage(zz, newPosition_mm);
+		stage.printPosition3();
 		laserPower_mW += 0.5;
 		Sleep(1000);
 		*/
@@ -159,13 +157,13 @@ void seq_testFilterwheel(const FPGAapi::Session &fpga)
 void seq_testStages(const FPGAapi::Session &fpga)
 {
 	const double newPosition = 18.5520;
-	//const double newPosition = 19.000;
+	//const double newPosition_mm = 19.000;
 	Stage stage;
-	//stage.printPositionXYZ();
+	//stage.printPosition3();
 
-	//stage.moveStage(zz, newPosition);
-	//stage.waitForMovementStop(zz);
-	//stage.printPositionXYZ();
+	//stage.moveStage(zz, newPosition_mm);
+	//stage.waitForMovementToStop(zz);
+	//stage.printPosition3();
 	
 	int input = 1;
 	while (input)

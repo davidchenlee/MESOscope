@@ -131,23 +131,23 @@ namespace FPGAapi
 	//For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 	//Then transfer the elements in the long queue to an array to interface the FPGA
 	//Improvement: the single queues VectorOfQueues[i] could be transferred directly to the FIFO array
-	void Session::writeFIFOpc(VQU32 &vectorQueues) const
+	void Session::writeFIFOpc(VQU32 &vectorOfQueues) const
 	{
 		QU32 allQueues;											//Create a single long queue
 		for (int i = 0; i < nChan; i++)
 		{
-			allQueues.push_back(vectorQueues[i].size());		//Push the number of elements in VectorOfQueues[i] (individual queue)
+			allQueues.push_back(vectorOfQueues.at(i).size());		//Push the number of elements in VectorOfQueues[i] (individual queue)
 
 			//Non-destructive. Randomly access the elements in VectorOfQueues[i] and push them to allQueues
-			for (size_t iter = 0; iter < vectorQueues[i].size(); iter++)
-				allQueues.push_back(vectorQueues[i].at(iter));
+			for (size_t iter = 0; iter < vectorOfQueues.at(i).size(); iter++)
+				allQueues.push_back(vectorOfQueues.at(i).at(iter));
 
 			/*
 			//Destructive
-			while (!vectorQueues[i].empty())
+			while (!vectorOfQueues.at(i).empty())
 			{
-			allQueues.push_back(vectorQueues[i].front());	//Push all the elements in VectorOfQueues[i] to allQueues
-			vectorQueues[i].pop_front();
+			allQueues.push_back(vectorOfQueues.at(i).front());	//Push all the elements in VectorOfQueues[i] to allQueues
+			vectorOfQueues.at(i).pop_front();
 			}
 			*/
 			

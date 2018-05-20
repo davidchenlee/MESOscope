@@ -2,17 +2,16 @@
 
 int main(int argc, char* argv[])
 {
-	FPGAapi::Session fpga;			//Open a FPGA connection
+	FPGAapi::Session fpga;		//Open a FPGA connection
 	try
 	{
-		fpga.initialize();	//Initialize the FPGA
+		fpga.initialize();		//Initialize the FPGA
 		
-		seq_main(fpga);		//Run the sequence
+		seq_main(fpga);			//Run the sequence
 		//seq_burnSample(fpga);
 		//seq_testStages(fpga);
 
-		fpga.flushBRAMs();  //As precaution, flush the RAM buffers on the FPGA. BUT make sure that the sequence has finished!!
-		fpga.close(0);			//Close the FPGA connection
+		fpga.close(0);			//Close the FPGA connection under normal conditions
 
 	}
 	catch (const FPGAapi::FPGAexception &e)
@@ -33,7 +32,7 @@ int main(int argc, char* argv[])
 		std::cout << "A runtime error has occurred in " << e.what() << std::endl;
 		try
 		{
-			//Close and reset the FPGA connection. Otherwise, residual data will remain in the FPGA and will probably crash the next sequence and the entire computer as well
+			//Reset the FPGA. Otherwise residual data will remain in the FPGA and will probably crash the computer in the next run
 			const bool enforceReset = 1;
 			fpga.close(enforceReset); //DO NOT comment out this line!!
 		}

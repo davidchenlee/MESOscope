@@ -61,29 +61,29 @@ class Image
 	unsigned char *image;							//Create a long 1D array representing the image
 
 	const int mReadFifoWaitingTime_ms = 15;			//Waiting time between each iteration
-	const U32 mTimeout_ms = 100;					//FIFO timeout
+	const U32 mTimeout_ms = 100;					//FIFOpc timeout
 	int mTimeoutCounter_iter = 100;					//Timeout the while-loop if the FIFO data transfer fails	
 
 	//FIFO A
-	U32 mNremainFIFO_A = 0;							//Elements remaining in the FIFO
-	U32 *mBufArray_A;								//Array to read the FIFO A
-	int mNelemReadFIFO_A = 0; 						//Total number of elements read from the FIFO
+	U32 mNremainFIFO_A = 0;							//Elements remaining in FIFOpc A
+	U32 *mBufArray_A;								//Array to read FIFOpc A
+	int mNelemReadFIFO_A = 0; 						//Total number of elements read FIFOpc A
 
 	//FIFO B
-	U32 mNremainFIFO_B = 0;							//Elements remaining in the FIFO
+	U32 mNremainFIFO_B = 0;							//Elements remaining in the FIFOpc B
 	const int nBufArrays = 100;						//Number of buffer arrays to use
 	int mCounterBufArray_B = 0;						//Number of buffer arrays actually used
 	int *mNelemBufArray_B;							//Each elements in this array indicates the number of elements read in each chunch of data
-	U32 **mBufArray_B;								//Each row stores a chunck of data from the FIFO. The row size could possibly be < nPixAllFrames
-	int mNelemReadFIFO_B = 0; 						//Total number of elements read from FIFO B
+	U32 **mBufArray_B;								//Each row stores a chunck of data from FIFOpc B. The row size could possibly be < nPixAllFrames
+	int mNelemReadFIFO_B = 0; 						//Total number of elements read from FIFOpc B
 
-	void startFIFO() const;
-	void configureFIFO(const U32 depth) const;			//Currently I don't use this function
-	void stopFIFO() const;
-	void readFIFO();
+	void startFIFOpc() const;
+	void configureFIFOpc(const U32 depth) const;			//Currently I don't use this function
+	void stopFIFOpc() const;
+	void readFIFOpc();
 	void unpackBuffer();
 	void correctInterleavedImage();
-	void remaining() const;
+	void readRemainingFIFOpc() const;
 public:
 	Image(const FPGAapi::Session &fpga);
 	~Image();

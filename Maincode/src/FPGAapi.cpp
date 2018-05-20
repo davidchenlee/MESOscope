@@ -97,8 +97,9 @@ namespace FPGAapi
 		//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));				//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));						//Select the Line clock: resonant scanner or function generator
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));											//control-sequence trigger
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));										//data-acquisition trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));											//Control-sequence trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));										//Data-acquisition trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFO, 0));												//Enable pushing data to the FIFO
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_FIFOtimeout, (U16)FIFOtimeout_tick));
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)nChan));
@@ -124,14 +125,13 @@ namespace FPGAapi
 
 		//Debugger
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOOUTdebug, 0));	//FIFO OUT
 	}
 
 	//Send every single queue in VectorOfQueue to the FPGA buffer
 	//For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 	//Then transfer the elements in the long queue to an array to interface the FPGA
 	//Improvement: the single queues VectorOfQueues[i] could be transferred directly to the FIFO array
-	void Session::writeFIFO(VQU32 &vectorQueues) const
+	void Session::writeFIFOpc(VQU32 &vectorQueues) const
 	{
 		QU32 allQueues;											//Create a single long queue
 		for (int i = 0; i < nChan; i++)
@@ -179,18 +179,25 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
 	}
 
+	void Session::enableFIFOfpga() const
+	{
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFO, 1));
+	}
+
 	//Flush the block RAMs used for buffering the pixelclock, AO, and DO 
 	void Session::flushBRAMs() const
 	{
-		Sleep(100);
+		Sleep(100);	//Do not flush too soon, otherwise the output sequence will be cut off
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
 		//std::cout << "flushBRAMs called\n";
 	}
 
-	//The Session object has to be closed explicitly (in opposition to using the destructor) because it lives in main()
+	//The object has to be closed explicitly in main() for now because of the exception-catching
 	void Session::close(const bool reset) const
 	{
+		flushBRAMs();		//Flush the RAM buffers on the FPGA as precaution. Make sure that the sequence has already finished
+
 		//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 		//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 		//0 resets, 1 does not reset
@@ -368,7 +375,7 @@ namespace FPGAapi
 	//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute yet
 	void  RTsequence::uploadRT()
 	{
-		mFpga.writeFIFO(mVectorOfQueues);
+		mFpga.writeFIFOpc(mVectorOfQueues);
 
 		//On the FPGA, transfer the commands from FIFO IN to the sub-channel buffers
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));

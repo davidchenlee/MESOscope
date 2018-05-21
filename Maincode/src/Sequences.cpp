@@ -83,12 +83,13 @@ void seq_testAODO(const FPGAapi::Session &fpga)
 	//DO
 	sequence.pushDigitalSinglet(DOdebug, 4 * us, 1);
 	sequence.pushDigitalSinglet(DOdebug, 4 * us, 0);
-	sequence.pushDigitalSinglet(DOdebug, 4 * us, 0);
-	sequence.pushDigitalSinglet(DOdebug, 4 * us, 0);
 
 	//AO
-	sequence.pushAnalogSinglet(GALVO1, 4 * us, 5);
+	sequence.pushAnalogSinglet(GALVO1, 8 * us, 4);
 	sequence.pushAnalogSinglet(GALVO1, 4 * us, 0);
+
+	sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
+	sequence.triggerRT();
 }
 
 void seq_testAOramp(const FPGAapi::Session &fpga)

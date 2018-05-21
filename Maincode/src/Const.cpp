@@ -16,9 +16,9 @@ namespace Constants
 	extern const int mW = 1;								//milliwatt
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It depends on the FPGA's clock
 	extern const double usPerTick = 1.0 / 160;				//time step of the FPGA's clock in us
-	extern const U32 t_tick_MIN = 2;						//Min ticks allowed because DO and AO have a latency of 2 ticks
-	extern const double t_us_MIN = t_tick_MIN * usPerTick;		//in us. Min time step allowed
-	extern const int AO_t_us_MIN = 2 * us;						//Time step (in us) of the analog output. The AO channels take >1 us to set the output
+	extern const U32 t_tick_MIN = 2;						//Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
+	extern const double t_us_MIN = t_tick_MIN * usPerTick;	//in us. Min time step allowed
+	extern const int AO_t_us_MIN = 2 * us;					//Time step (in us) of the analog output. The AO channels take >1 us to set the output
 	extern const int syncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 	extern const int syncAODOtoLinegate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating. It may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before

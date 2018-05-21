@@ -168,7 +168,7 @@ namespace FPGAapi
 		const U32 timeout_ms = -1;		//in ms. A value -1 prevents the FIFO from timing out
 		U32 r;							//Elements remaining
 
-		checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout_ms, &r)); //Send the data to the FPGA through the FIFO
+		checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout_ms, &r)); //Send the data to the FPGA through the FIFO. I measure a min time of 10 ms to execute
 
 		delete[] FIFO;					//Cleanup the array
 
@@ -335,12 +335,14 @@ namespace FPGAapi
 		mVectorOfQueues.at(chan).push_back(FPGAapi::packDigitalSinglet(t_us, DO));
 	}
 
-	void RTsequence::pushAnalogSinglet(const RTchannel chan, const double t_us, const double AO)
+	void RTsequence::pushAnalogSinglet(const RTchannel chan, double t_us, const double AO)
 	{
 		if (t_us < AO_t_us_MIN)
+		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_t_us_MIN << " us" << std::endl;
-
-		mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(AO_t_us_MIN, AO));
+			t_us = AO_t_us_MIN;
+		}
+		mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(t_us, AO));
 	}
 
 	void RTsequence::pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampDuration, const double Vinitial, const double Vfinal)
@@ -384,6 +386,11 @@ namespace FPGAapi
 		//On the FPGA, transfer the commands from FIFO IN to the sub-channel buffers
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
+	}
+
+	void RTsequence::triggerRT()
+	{
+		mFpga.triggerRT();
 	}
 #pragma endregion "RTsequence"
 

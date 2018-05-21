@@ -63,9 +63,10 @@ namespace FPGAapi
 		~RTsequence();
 		void pushQueue(const RTchannel chan, QU32& queue);
 		void pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO);
-		void pushAnalogSinglet(const RTchannel chan, const double t_us, const double AO);
+		void pushAnalogSinglet(const RTchannel chan, double t_us, const double AO);
 		void pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampLength, const double Vinitial, const double Vfinal);
 		void uploadRT();
+		void triggerRT();
 	};
 
 	class FPGAexception : public std::runtime_error

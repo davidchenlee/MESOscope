@@ -133,45 +133,46 @@ namespace FPGAapi
 	//Improvement: the single queues VectorOfQueues[i] could be transferred directly to the FIFO array
 	void Session::writeFIFOpc(VQU32 &vectorOfQueues) const
 	{
-		QU32 allQueues;											//Create a single long queue
+		QU32 allQueues;		//Create a single long queue
 		for (int i = 0; i < nChan; i++)
 		{
-			allQueues.push_back(vectorOfQueues.at(i).size());		//Push the number of elements in VectorOfQueues[i] (individual queue)
+			allQueues.push_back(vectorOfQueues.at(i).size());		//Number of elements in the individual queue i, VectorOfQueues.at(i)
 
-			//Non-destructive. Randomly access the elements in VectorOfQueues[i] and push them to allQueues
-			for (size_t iter = 0; iter < vectorOfQueues.at(i).size(); iter++)
+			//Non-destructive version. Randomly access the elements in VectorOfQueues[i] and push them to allQueues
+			for (int iter = 0; iter < static_cast<int>(vectorOfQueues.at(i).size()); iter++)
 				allQueues.push_back(vectorOfQueues.at(i).at(iter));
 
 			/*
-			//Destructive
+			//Destructive version
 			while (!vectorOfQueues.at(i).empty())
 			{
-			allQueues.push_back(vectorOfQueues.at(i).front());	//Push all the elements in VectorOfQueues[i] to allQueues
+			allQueues.push_back(vectorOfQueues.at(i).front());	//Number of elements in the individual queue i, VectorOfQueues.at(i)
 			vectorOfQueues.at(i).pop_front();
 			}
 			*/
-			
 		}
 
-		const int sizeFIFOqueue = allQueues.size();		//Total number of elements in all the queues 
+		const size_t sizeFIFOqueue = allQueues.size();		//Total number of elements in all the queues 
 
 		if (sizeFIFOqueue > FIFOINmax)
 			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFO IN overflow");
 
 		U32* FIFO = new U32[sizeFIFOqueue];				//Create an array for interfacing the FPGA	
-		for (int i = 0; i < sizeFIFOqueue; i++)
+		for (int i = 0; i < static_cast<int>(sizeFIFOqueue); i++)
 		{
 			FIFO[i] = allQueues.front();				//Transfer the queue elements to the array
 			allQueues.pop_front();
 		}
 		allQueues = {};									//Cleanup the queue (C++11 style)
 
-		const U32 timeout_ms = -1;		// in ms. A value -1 prevents the FIFO from timing out
-		U32 r;						//empty elements remaining
+		const U32 timeout_ms = -1;		//in ms. A value -1 prevents the FIFO from timing out
+		U32 r;							//Elements remaining
 
 		checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout_ms, &r)); //Send the data to the FPGA through the FIFO
 
-		delete[] FIFO;		//cleanup the array
+		delete[] FIFO;					//Cleanup the array
+
+
 	}
 
 	//Execute the commands

@@ -9,13 +9,14 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	const std::string filename = "PHAL";
 
-
+	/*
 	Stage stage;
 	const double3 newPosition_mm = { 37.570, 12.700, 18.440 };
 	stage.moveStage3(newPosition_mm);
 	stage.waitForMovementToStop3();
 	stage.printPosition3();
 	double3 position_mm = stage.readPosition3_mm();
+	*/
 	
 
 	const double duration_ms = 25.5 * ms;
@@ -40,10 +41,19 @@ void seq_main(const FPGAapi::Session &fpga)
 		pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
 		pockels.outputToZero();
 
+		double duration;
+		auto t_start = std::chrono::high_resolution_clock::now();
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
+		//Stop the stopwatch
+		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+		std::cout << "Elapsed time uploadRT: " << duration << " ms" << std::endl;
 		
 		Image image(fpga);
-		image.acquire(filename + " x = " + toString(position_mm.at(xx), 3) + " y = " + toString(position_mm.at(yy), 3) + " z = " + toString(position_mm.at(zz),3), 1); //Execute the realtime sequence and acquire the image
+		//image.acquire(filename + " x = " + toString(position_mm.at(xx), 3) + " y = " + toString(position_mm.at(yy), 3) + " z = " + toString(position_mm.at(zz),3), 1); //Execute the realtime sequence and acquire the image
+		image.acquire(filename, 1); //Execute the realtime sequence and acquire the image
+
+
+
 		
 		/*
 		newPosition_mm += 0.001;

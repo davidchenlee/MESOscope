@@ -6,6 +6,7 @@ namespace Constants
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//ext or sim
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or corrected dwell times
 	extern const bool overrideImageSaving = 1;								//Enable file override when saving
+	extern const bool enableFIFOfpga = 1;									//Enable pushing data to FIFOfpga
 
 	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//microsecond

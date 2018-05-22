@@ -5,7 +5,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	const int wavelength_nm = 940;
 	double laserPower_mW = 50 * mW;
-	const double FFOV_slowAxis_um = 200 * um;	//Galvo full FOV in the slow axis
+	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
 	const std::string filename = "PHAL";
 
@@ -18,11 +18,9 @@ void seq_main(const FPGAapi::Session &fpga)
 	double3 position_mm = stage.readPosition3_mm();
 	*/
 	
-
 	const double duration_ms = 25.5 * ms;
 	const double galvoTimeStep_us = 8 * us;
-	const double posMax_um = FFOV_slowAxis_um / 2;
-
+	const double posMax_um = FFOVgalvo_um / 2;
 
 	const int nFrames = 1;
 	//NON-REALTIME SEQUENCE
@@ -41,19 +39,11 @@ void seq_main(const FPGAapi::Session &fpga)
 		pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
 		pockels.outputToZero();
 
-		double duration;
-		auto t_start = std::chrono::high_resolution_clock::now();
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
-		//Stop the stopwatch
-		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-		std::cout << "Elapsed time uploadRT: " << duration << " ms" << std::endl;
 		
 		Image image(fpga);
 		//image.acquire(filename + " x = " + toString(position_mm.at(xx), 3) + " y = " + toString(position_mm.at(yy), 3) + " z = " + toString(position_mm.at(zz),3), 1); //Execute the realtime sequence and acquire the image
-		image.acquire(filename, 1); //Execute the realtime sequence and acquire the image
-
-
-
+		image.acquire(filename); //Execute the realtime sequence and acquire the image
 		
 		/*
 		newPosition_mm += 0.001;
@@ -65,12 +55,10 @@ void seq_main(const FPGAapi::Session &fpga)
 		
 	}
 
-	//pockels.setOutputToZero();	//I don't need to do this because normaly the PC is triggered by the scanner
-
 	Logger datalog(filename);
 	datalog.record("Wavelength (nm) = ", wavelength_nm);
 	datalog.record("Laser power (mW) = ", laserPower_mW);
-	datalog.record("FFOV (um) = ", FFOV_slowAxis_um);
+	datalog.record("FFOV (um) = ", FFOVgalvo_um);
 	datalog.record("Galvo Max position (um) = ", posMax_um);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep_us);
 }
@@ -88,21 +76,21 @@ void seq_testAODO(const FPGAapi::Session &fpga)
 	sequence.pushAnalogSinglet(GALVO1, 8 * us, 4);
 	sequence.pushAnalogSinglet(GALVO1, 4 * us, 0);
 
-	sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
-	sequence.triggerRT();
+	sequence.uploadRT();	//Upload the realtime sequence to the FPGA but don't execute it yet
+	sequence.triggerRT();	//Execute the realtime sequence
 }
 
 void seq_testAOramp(const FPGAapi::Session &fpga)
 {
-	double Vmax = 5;
-	double step = 4 * us;
+	const double Vmax = 5;
+	const double step = 4 * us;
 
 	FPGAapi::RTsequence sequence(fpga);
 	sequence.pushLinearRamp(GALVO1, step, 2 * ms, 0, -Vmax);
 	sequence.pushLinearRamp(GALVO1, step, 20 * ms, -Vmax, Vmax);
 	sequence.pushLinearRamp(GALVO1, step, 2 * ms, Vmax, 0);
 
-	double pulsewidth = 300 * us;
+	const double pulsewidth = 300 * us;
 	sequence.pushDigitalSinglet(DOdebug, pulsewidth, 1);
 	sequence.pushDigitalSinglet(DOdebug, 4 * us, 0);
 }
@@ -110,7 +98,7 @@ void seq_testAOramp(const FPGAapi::Session &fpga)
 //Generate a long digital pulse and check the duration with the oscilloscope
 void seq_checkDigitalTiming(const FPGAapi::Session &fpga)
 {
-	double step = 400 * us;
+	const double step = 400 * us;
 
 	FPGAapi::RTsequence sequence(fpga);
 	sequence.pushDigitalSinglet(DOdebug, step, 1);
@@ -120,7 +108,7 @@ void seq_checkDigitalTiming(const FPGAapi::Session &fpga)
 //Generate many short digital pulses and check the overall duration with the oscilloscope
 void seq_calibDigitalLatency(const FPGAapi::Session &fpga)
 {
-	double step = 4 * us;
+	const double step = 4 * us;
 
 	FPGAapi::RTsequence sequence(fpga);
 
@@ -137,8 +125,8 @@ void seq_calibDigitalLatency(const FPGAapi::Session &fpga)
 //First calibrate the digital channels, then use it as a time reference
 void seq_calibAnalogLatency(const FPGAapi::Session &fpga)
 {
-	double delay = 400 * us;
-	double step = 4 * us;
+	const double delay = 400 * us;
+	const double step = 4 * us;
 
 	FPGAapi::RTsequence sequence(fpga);
 	sequence.pushAnalogSinglet(GALVO1, step, 10);	//Initial pulse

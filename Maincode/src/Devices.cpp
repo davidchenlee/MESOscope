@@ -325,7 +325,7 @@ void Image::unpackBuffer()
 //Later on, write the tiff directly from the buffer arrays. To deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
 //memset http://www.cplusplus.com/reference/cstring/memset/
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
-//One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and saveFile it to file using TIFFWriteScanline
+//One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 void Image::correctInterleavedImage()
 {
 	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to store the temp data. In principle I could just use half the size, but why bothering...
@@ -333,7 +333,7 @@ void Image::correctInterleavedImage()
 	//Reverse the pixel order every other line
 	for (int lineIndex = 1; lineIndex < heightPerFrame_pix; lineIndex += 2)
 	{
-		//saveFile the data in an aux array
+		//save the data in an aux array
 		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
 			auxLine[pixIndex] = image[lineIndex*widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];	//TODO: use memcpy
 																											//write the data back in reversed order
@@ -344,15 +344,15 @@ void Image::correctInterleavedImage()
 }
 
 
-void Image::acquire(const std::string filename, const bool saveFile)
+void Image::acquire(const std::string filename)
 {
-	if (saveFile)
-		mFpga.enableFIFOfpga();	//Push data to the FPGA FIFO
+	if (enableFIFOfpga)
+		mFpga.enableFIFOfpga();	//Enable pushing data to FIFOfpga
 
 	startFIFOpc();		//Establish the connection between FIFOfpga and FIFOpc
 	mFpga.triggerRT();	//Trigger the RT sequence. If triggered too early, FIFOfpga will probably overflow
 
-	if (saveFile)
+	if (enableFIFOfpga)
 	{
 		try
 		{

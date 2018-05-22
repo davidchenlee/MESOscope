@@ -32,6 +32,7 @@ namespace Constants
 	extern const PhotonCounterInputSelector photoncounterInput;
 	extern const PixelclockSelector pixelclockType;
 	extern const bool overrideImageSaving;
+	extern const bool enableFIFOfpga;
 
 	extern const double PI;
 	extern const int us;

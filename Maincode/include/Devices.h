@@ -87,7 +87,7 @@ class Image
 public:
 	Image(const FPGAapi::Session &fpga);
 	~Image();
-	void acquire(const std::string filename, const bool saveFile = 0);
+	void acquire(const std::string filename);
 	void saveAsTiff(std::string filename);
 	void saveAsTxt(const std::string fileName);
 };

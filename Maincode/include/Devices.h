@@ -3,7 +3,6 @@
 #include <ctime>					//Clock()
 #include <tiffio.h>					//for Tiff files
 #include "FPGAapi.h"
-#include "Utilities.h"
 #include "PI_GCS2_DLL.h"
 #include "serial/serial.h"
 

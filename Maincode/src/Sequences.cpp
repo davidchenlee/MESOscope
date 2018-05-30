@@ -1,10 +1,15 @@
 #include "Sequences.h"
 
-void seq_main(const FPGAapi::Session &fpga)
-{		
+/*
+There are basically 2 imaging modes :
+1. Frame by frame: For each frame, a RT sequence is created, loaded onto the fpga, and a corresponding image is acquired. The z stage is moved after each image is acquired.
+2. Continuous: A single long RT sequence contains all the frames. Such sequence is loaded onto the fpga and run once. A stream of images is acquired. The z stage moves continuously
+*/
 
-	const int wavelength_nm = 940;
-	double laserPower_mW = 50 * mW;
+void seq_main(const FPGAapi::Session &fpga)
+{	
+	const int wavelength_nm = 1040;
+	double laserPower_mW = 100 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
 	const std::string filename = "PHAL";
@@ -36,9 +41,12 @@ void seq_main(const FPGAapi::Session &fpga)
 
 		//Create a pockels cell RT sequence
 		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
-		pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
+		//pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
+		pockels.voltageLinearRamp(400 * us, duration_ms, -1*V, -1*V);
 		pockels.outputToZero();
 
+		sequence.pushScalingFactor(SCALING1, 1.8);
+	
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		
 		Image image(fpga);
@@ -50,8 +58,9 @@ void seq_main(const FPGAapi::Session &fpga)
 		stage.moveStage(zz, newPosition_mm);
 		stage.printPosition3();
 		laserPower_mW += 0.5;
-		Sleep(1000);
 		*/
+		Sleep(1000);
+		
 		
 	}
 

@@ -20,7 +20,7 @@ typedef std::array<int, 3> int3;			//array of 3 ints
 enum PhotonCounterInputSelector {ext, sim};								//real PMT, simulated PMT, internal clock
 enum LineclockInputSelector {RS, FG};									//Resonant scanner, function generator, 
 enum PixelclockSelector {uniform, corrected};							//uniform dwell times, corrected dwell times
-enum RTchannel {PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, nChan};	//nChan = number of RT channels available, including the pixel clock channel
+enum RTchannel {PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan};	//nChan = number of RT channels available, including the pixel clock channel
 enum ShutterID {Shutter1, Shutter2};									//Shutter unit
 enum FilterwheelID {FW1, FW2};											//Filterwheel
 enum FilterColor { BlueLight = 1, GreenLight = 2, RedLight = 3 };		//Filter color

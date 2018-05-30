@@ -4,6 +4,7 @@
 #include <windows.h>	//the stages use this lib. also Sleep
 #include "NiFpga_FPGAvi.h"
 #include "Const.h"
+#include "Utilities.h"
 using namespace Constants;
 using namespace Parameters;
 
@@ -65,6 +66,7 @@ namespace FPGAapi
 		void pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO);
 		void pushAnalogSinglet(const RTchannel chan, double t_us, const double AO);
 		void pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampLength, const double Vinitial, const double Vfinal);
+		void pushScalingFactor(const RTchannel chan, const float scalingFactor);
 		void uploadRT();
 		void triggerRT();
 	};

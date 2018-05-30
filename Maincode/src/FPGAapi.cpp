@@ -378,6 +378,11 @@ namespace FPGAapi
 
 	}
 
+	void RTsequence::pushScalingFactor(const RTchannel chan, const float scalingFactor)
+	{
+		mVectorOfQueues.at(chan).push_back((U32)float2fix(scalingFactor));
+	}
+
 	//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute them yet
 	void  RTsequence::uploadRT()
 	{

@@ -41,17 +41,17 @@ namespace FPGAapi
 			return (I16)(voltage_V / 10 * _I16_MAX);
 	}
 
-	//Pack t in MSB and x in LSB. Time t and analog output x are encoded in 16 bits each.
-	U32 packU32(const U16 t_tick, const U16 val)
+	//Pack t in MSB and x in LSB. Time t and analog output AO_U16 are encoded in 16 bits each.
+	U32 packU32(const U16 t_tick, const U16 AO_U16)
 	{
-		return (t_tick << 16) | (0x0000FFFF & val);
+		return (t_tick << 16) | (0x0000FFFF & AO_U16);
 	}
 
-	//Send out an analog instruction, where the analog level 'val' is held for the amount of time 't_us'
-	U32 packAnalogSinglet(const double t_us, const double val)
+	//Send out an analog instruction, where the analog output 'AO_V' is held for 't_us' microseconds
+	U32 packAnalogSinglet(const double t_us, const double AO_V)
 	{
 		const U16 AOlatency_tick = 2;	//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
-		return packU32(convertUsTotick(t_us) - AOlatency_tick, convertVoltToI16(val));
+		return packU32(convertUsTotick(t_us) - AOlatency_tick, convertVoltToI16(AO_V));
 	}
 
 
@@ -335,17 +335,17 @@ namespace FPGAapi
 		mVectorOfQueues.at(chan).push_back(FPGAapi::packDigitalSinglet(t_us, DO));
 	}
 
-	void RTsequence::pushAnalogSinglet(const RTchannel chan, double t_us, const double AO)
+	void RTsequence::pushAnalogSinglet(const RTchannel chan, double t_us, const double AO_V)
 	{
 		if (t_us < AO_t_us_MIN)
 		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_t_us_MIN << " us" << std::endl;
 			t_us = AO_t_us_MIN;
 		}
-		mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(t_us, AO));
+		mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(t_us, AO_V));
 	}
 
-	void RTsequence::pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampDuration, const double Vinitial, const double Vfinal)
+	void RTsequence::pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V)
 	{
 		const bool debug = 0;
 
@@ -367,7 +367,7 @@ namespace FPGAapi
 
 		for (int ii = 0; ii < nPoints; ii++)
 		{
-			const double V = Vinitial + (Vfinal - Vinitial)*ii / (nPoints - 1);
+			const double V = Vi_V + (Vf_V - Vi_V)*ii / (nPoints - 1);
 			mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(timeStep_us, V));
 
 			if (debug)	std::cout << (ii + 1) * timeStep_us << "\t" << (ii + 1) * FPGAapi::convertUsTotick(timeStep_us) << "\t" << V << "\t" << std::endl;
@@ -378,9 +378,11 @@ namespace FPGAapi
 
 	}
 
-	void RTsequence::pushScalingFactor(const RTchannel chan, const float scalingFactor)
+	void RTsequence::pushScalingFactor(const RTchannel chan, const double scalingFactor)
 	{
-		mVectorOfQueues.at(chan).push_back((U32)float2fix(scalingFactor));
+		if ( scalingFactor < 0 || scalingFactor > 4 ) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor is outside the range 0-4");
+
+		mVectorOfQueues.at(chan).push_back((U32)convertDoubleToFix(scalingFactor));
 	}
 
 	//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute them yet

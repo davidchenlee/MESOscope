@@ -42,10 +42,10 @@ void seq_main(const FPGAapi::Session &fpga)
 		//Create a pockels cell RT sequence
 		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
 		//pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
-		pockels.voltageLinearRamp(400 * us, duration_ms, -1*V, -1*V);
+		pockels.voltageLinearRamp(400 * us, duration_ms, 1*V, 1*V);
 		pockels.outputToZero();
 
-		sequence.pushScalingFactor(SCALING1, 1.8);
+		sequence.pushScalingFactor(SCALING1, 1.0);
 	
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		

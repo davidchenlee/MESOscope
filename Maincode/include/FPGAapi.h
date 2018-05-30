@@ -15,8 +15,8 @@ namespace FPGAapi
 
 	U16 convertUsTotick(const double t_us);
 	I16 convertVoltToI16(const double voltage_V);
-	U32 packU32(const U16 t_tick, const U16 val);
-	U32 packAnalogSinglet(const double t_us, const double val);
+	U32 packU32(const U16 t_tick, const U16 AO_U16);
+	U32 packAnalogSinglet(const double t_us, const double AO_V);
 	U32 packDigitalSinglet(const double t_us, const bool DO);
 	U32 packPixelclockSinglet(const double t_us, const bool DO);
 	void checkStatus(char functionName[], NiFpga_Status status);
@@ -64,9 +64,9 @@ namespace FPGAapi
 		~RTsequence();
 		void pushQueue(const RTchannel chan, QU32& queue);
 		void pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO);
-		void pushAnalogSinglet(const RTchannel chan, double t_us, const double AO);
+		void pushAnalogSinglet(const RTchannel chan, double t_us, const double AO_V);
 		void pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampLength, const double Vinitial, const double Vfinal);
-		void pushScalingFactor(const RTchannel chan, const float scalingFactor);
+		void pushScalingFactor(const RTchannel chan, const double scalingFactor);
 		void uploadRT();
 		void triggerRT();
 	};

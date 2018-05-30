@@ -441,19 +441,25 @@ PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsI
 PockelsCell::~PockelsCell() {}
 
 
-void PockelsCell::pushSinglet(const double t_us, const double AO) const
+void PockelsCell::pushSinglet(const double t_us, const double AO_V) const
 {
-	mSequence.pushAnalogSinglet(mRTchannel, t_us, AO);
+	if (AO_V < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
+
+	mSequence.pushAnalogSinglet(mRTchannel, t_us, AO_V);
 }
 
 
 void PockelsCell::voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V) const
 {
+	if (Vi_V < 0 || Vf_V < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
+
 	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, Vi_V, Vf_V);
 }
 
 void  PockelsCell::powerLinearRamp(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW) const
 {
+	if (Pi_mW < 0 || Pf_mW < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
+
 	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, convertPowerToVoltage_V(Pi_mW), convertPowerToVoltage_V(Pf_mW));
 }
 
@@ -508,9 +514,9 @@ double Galvo::convertPositionToVoltage(const double position_um) const
 	return position_um * voltPerUm;
 }
 
-void Galvo::pushSinglet(const double t_us, const double AO) const
+void Galvo::pushSinglet(const double t_us, const double AO_V) const
 {
-	mSequence.pushAnalogSinglet(mRTchannel, t_us, AO);
+	mSequence.pushAnalogSinglet(mRTchannel, t_us, AO_V);
 }
 
 void Galvo::voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V) const

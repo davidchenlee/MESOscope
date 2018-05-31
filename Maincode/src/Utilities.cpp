@@ -10,9 +10,10 @@ void printBinary16(int input)
 	std::cout << std::bitset<16>(input) << std::endl;
 }
 
+
 U16 convertDoubleToFix(double n)
 {
-	const int FIXED_BIT = 14; //Number of decimal digits. MUST match the LV implementation: a U16 is split into 2 integer digits + 14 decimal digits
+	const int FIXED_BIT = 14; //Number of decimal digits. It MUST match the LV implementation: currently a U16 is split into 2 integer digits + 14 decimal digits
 	U16 int_part = 0, frac_part = 0;
 	double t;
 	int_part = (U16)floor(n) << FIXED_BIT;

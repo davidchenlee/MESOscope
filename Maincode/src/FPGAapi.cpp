@@ -55,6 +55,8 @@ namespace FPGAapi
 	}
 
 
+
+
 	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't_us'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 	U32 packDigitalSinglet(const double t_us, const bool DO)
 	{
@@ -99,7 +101,6 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));						//Select the Line clock: resonant scanner or function generator
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));											//Control-sequence trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));										//Data-acquisition trigger
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFO, 0));												//Enable pushing data to the FIFO
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_FIFOtimeout_tick, (U16)FIFOtimeout_tick));
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)nChan));
@@ -109,11 +110,11 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)heightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(heightPerFrame_pix + nLinesSkip)));	//Number of lines in a frame including the skipped lines
 
-		//Shutters
+		//Shutters. Commented out to allow keeping the shutter on
 		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
 		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
 
-		//Resonant scanner
+		//Resonant scanner. Commented out to allow keeping the RS on
 		//checkStatus(__FUNCTION__,  NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));	//Output voltage
 		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
 
@@ -125,6 +126,8 @@ namespace FPGAapi
 
 		//Debugger
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFO, 0));															//Enable pushing data to FIFOfpga. For debugging purposes
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Pockels1_EnableOutputGating, (NiFpga_Bool)pockels1_enableOutputGating));			//Enable output gating by framegate. For debugging purposes
 	}
 
 	//Send every single queue in VectorOfQueue to the FPGA buffer
@@ -329,6 +332,10 @@ namespace FPGAapi
 		concatenateQueues(mVectorOfQueues.at(chan), queue);
 	}
 
+	void RTsequence::clearQueue(const RTchannel chan)
+	{
+		mVectorOfQueues.at(chan).clear();
+	}
 
 	void RTsequence::pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO)
 	{
@@ -343,6 +350,11 @@ namespace FPGAapi
 			t_us = AO_t_us_MIN;
 		}
 		mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(t_us, AO_V));
+	}
+
+	void RTsequence::pushAnalogSingletFx2p16(const RTchannel chan, const double AO)
+	{
+		mVectorOfQueues.at(chan).push_back((U32)convertDoubleToFx2p14(AO));
 	}
 
 	void RTsequence::pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V)
@@ -378,13 +390,6 @@ namespace FPGAapi
 
 	}
 
-	void RTsequence::pushScalingFactor(const RTchannel chan, const double scalingFactor)
-	{
-		if ( scalingFactor < 0 || scalingFactor > 4 ) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor is outside the range 0-4");
-
-		mVectorOfQueues.at(chan).push_back((U32)convertDoubleToFix(scalingFactor));
-	}
-
 	//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute them yet
 	void  RTsequence::uploadRT()
 	{
@@ -399,6 +404,7 @@ namespace FPGAapi
 	{
 		mFpga.triggerRT();
 	}
+
 #pragma endregion "RTsequence"
 
 }//namespace

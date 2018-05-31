@@ -63,10 +63,11 @@ namespace FPGAapi
 		RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
 		~RTsequence();
 		void pushQueue(const RTchannel chan, QU32& queue);
+		void clearQueue(const RTchannel chan);
 		void pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO);
 		void pushAnalogSinglet(const RTchannel chan, double t_us, const double AO_V);
+		void pushAnalogSingletFx2p16(const RTchannel chan, const double AO_fx2p14);
 		void pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampLength, const double Vinitial, const double Vfinal);
-		void pushScalingFactor(const RTchannel chan, const double scalingFactor);
 		void uploadRT();
 		void triggerRT();
 	};

@@ -6,7 +6,8 @@ namespace Constants
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//ext or sim
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or corrected dwell times
 	extern const bool overrideImageSaving = 1;								//Enable file override when saving
-	extern const bool enableFIFOfpga = 1;									//Enable pushing data to FIFOfpga
+	extern const bool enableFIFOfpga = 0;									//Enable pushing data to FIFOfpga. For debugging purposes
+	extern const bool pockels1_enableOutputGating = 1;						//Enable output gating by framegate. For debugging purposes
 
 	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//microsecond
@@ -25,7 +26,7 @@ namespace Constants
 															//WARNING: use the same cable length when calibrating. It may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before
 
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
-	extern const size_t FIFOINmax = 32773;						//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
+	extern const size_t FIFOINmax = 32773;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 
 	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
@@ -59,7 +60,7 @@ namespace Parameters
 	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
-	extern const int nFrames = 1;												//Number of frames to acquire
+	extern const int nFrames = 2;												//Number of frames to acquire
 	extern const int nPixPerFrame = widthPerFrame_pix * heightPerFrame_pix;		//Number of pixels in each frame
 	extern const int nLinesAllFrames = heightPerFrame_pix * nFrames;			//Total number of lines in all the frames without including the skipped lines
 	extern const int nPixAllFrames = widthPerFrame_pix * nLinesAllFrames;		//Total number of pixels in all the frames (the skipped lines don't acquire pixels)

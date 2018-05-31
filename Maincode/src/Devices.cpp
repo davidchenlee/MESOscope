@@ -431,10 +431,16 @@ void Image::saveAsTxt(const std::string filename)
 
 #pragma region "Pockels cells"
 //Curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
-PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsID, const int wavelength_nm) : mSequence(sequence), mRTchannel(pockelsID), mWavelength_nm(wavelength_nm)
+PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsChannel, const int wavelength_nm) : mSequence(sequence), mPockelsChannel(pockelsChannel), mWavelength_nm(wavelength_nm)
 {
-	if (mRTchannel != POCKELS1)
+	if (mPockelsChannel != POCKELS1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell channel unavailable");
+
+	mScalingChannel = SCALING1;
+
+	//Initialize the scaling factors to 1.0 as the default value
+	for (int ii = 0; ii < nFrames; ii++)
+		mSequence.pushAnalogSingletFx2p16(mScalingChannel, 1.0);
 }
 
 //Do not set the output to 0 with the destructor to allow holding on the last value
@@ -445,7 +451,7 @@ void PockelsCell::pushSinglet(const double t_us, const double AO_V) const
 {
 	if (AO_V < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
 
-	mSequence.pushAnalogSinglet(mRTchannel, t_us, AO_V);
+	mSequence.pushAnalogSinglet(mPockelsChannel, t_us, AO_V);
 }
 
 
@@ -453,19 +459,29 @@ void PockelsCell::voltageLinearRamp(const double timeStep_us, const double rampD
 {
 	if (Vi_V < 0 || Vf_V < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
 
-	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, Vi_V, Vf_V);
+	mSequence.pushLinearRamp(mPockelsChannel, timeStep_us, rampDuration, Vi_V, Vf_V);
 }
 
 void  PockelsCell::powerLinearRamp(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW) const
 {
 	if (Pi_mW < 0 || Pf_mW < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
 
-	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, convertPowerToVoltage_V(Pi_mW), convertPowerToVoltage_V(Pf_mW));
+	mSequence.pushLinearRamp(mPockelsChannel, timeStep_us, rampDuration, convertPowerToVoltage_V(Pi_mW), convertPowerToVoltage_V(Pf_mW));
 }
 
 void PockelsCell::outputToZero() const
 {
-	mSequence.pushAnalogSinglet(mRTchannel, AO_t_us_MIN, 0 * V);
+	mSequence.pushAnalogSinglet(mPockelsChannel, AO_t_us_MIN, 0 * V);
+}
+
+void PockelsCell::pushLinearScaling(const double Si, const double Sf)
+{
+	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor is outside the range 0-4");
+
+	mSequence.clearQueue(mScalingChannel);	//Delete the default values in the scaling-factor queue
+
+	for (int ii = 0; ii < nFrames; ii++)
+		mSequence.pushAnalogSingletFx2p16(mScalingChannel, Si + (Sf - Si) / (nFrames-1) * ii);
 }
 
 
@@ -501,9 +517,9 @@ double PockelsCell::convertPowerToVoltage_V(const double power_mW) const
 
 #pragma region "Galvo"
 
-Galvo::Galvo(FPGAapi::RTsequence &sequence, const RTchannel galvoID): mSequence(sequence), mRTchannel(galvoID)
+Galvo::Galvo(FPGAapi::RTsequence &sequence, const RTchannel galvoChannel): mSequence(sequence), mGalvoChannel(galvoChannel)
 {
-	if ( mRTchannel != GALVO1 )
+	if ( mGalvoChannel != GALVO1 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 }
 
@@ -516,22 +532,22 @@ double Galvo::convertPositionToVoltage(const double position_um) const
 
 void Galvo::pushSinglet(const double t_us, const double AO_V) const
 {
-	mSequence.pushAnalogSinglet(mRTchannel, t_us, AO_V);
+	mSequence.pushAnalogSinglet(mGalvoChannel, t_us, AO_V);
 }
 
 void Galvo::voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V) const
 {
-	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, Vi_V, Vf_V);
+	mSequence.pushLinearRamp(mGalvoChannel, timeStep_us, rampDuration, Vi_V, Vf_V);
 }
 
 void Galvo::positionLinearRamp(const double timeStep_us, const double rampDuration, const double xi_V, const double xf_V) const
 {
-	mSequence.pushLinearRamp(mRTchannel, timeStep_us, rampDuration, convertPositionToVoltage(xi_V), convertPositionToVoltage(xf_V));
+	mSequence.pushLinearRamp(mGalvoChannel, timeStep_us, rampDuration, convertPositionToVoltage(xi_V), convertPositionToVoltage(xf_V));
 }
 
 void Galvo::outputToZero() const
 {
-	mSequence.pushAnalogSinglet(mRTchannel, AO_t_us_MIN, 0 * V);
+	mSequence.pushAnalogSinglet(mGalvoChannel, AO_t_us_MIN, 0 * V);
 }
 
 #pragma endregion "Galvo"

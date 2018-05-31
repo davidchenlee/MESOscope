@@ -23,7 +23,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	double3 position_mm = stage.readPosition3_mm();
 	*/
 	
-	const double duration_ms = 25.5 * ms;
+	const double duration_ms = 25 * ms; //62.5us * 400 pixels
 	const double galvoTimeStep_us = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -37,15 +37,14 @@ void seq_main(const FPGAapi::Session &fpga)
 		//Create a galvo RT sequence
 		Galvo galvo(sequence, GALVO1);
 		galvo.positionLinearRamp(galvoTimeStep_us, duration_ms, posMax_um, -posMax_um);		//Linear ramp for the galvo
-		galvo.positionLinearRamp(galvoTimeStep_us, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
+		//galvo.positionLinearRamp(galvoTimeStep_us, 1 * ms, -posMax_um, posMax_um);		//set the output back to the initial value
 
 		//Create a pockels cell RT sequence
 		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
-		//pockels.powerLinearRamp(400 * us, duration_ms, laserPower_mW, laserPower_mW);
-		pockels.voltageLinearRamp(400 * us, duration_ms, 1*V, 1*V);
-		pockels.outputToZero();
-
-		sequence.pushScalingFactor(SCALING1, 1.0);
+		//pockels.powerLinearRamp(galvoTimeStep_us, duration_ms, laserPower_mW, laserPower_mW);
+		//pockels.outputToZero();
+		pockels.voltageLinearRamp(galvoTimeStep_us, duration_ms, 1*V, 1*V);
+		//pockels.pushLinearScaling(1.0, 1.0);
 	
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		

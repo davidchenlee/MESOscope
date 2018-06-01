@@ -17,13 +17,13 @@ typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
 typedef std::array<double, 3> double3;		//array of 3 doubles
 typedef std::array<int, 3> int3;			//array of 3 ints
 
-enum PhotonCounterInputSelector {ext, sim};								//real PMT, simulated PMT, internal clock
-enum LineclockInputSelector {RS, FG};									//Resonant scanner, function generator, 
-enum PixelclockSelector {uniform, corrected};							//uniform dwell times, corrected dwell times
-enum RTchannel {PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan};	//nChan = number of RT channels available, including the pixel clock channel
-enum ShutterID {Shutter1, Shutter2};									//Shutter unit
-enum FilterwheelID {FW1, FW2};											//Filterwheel
-enum FilterColor { BlueLight = 1, GreenLight = 2, RedLight = 3 };		//Filter color
+enum PhotonCounterInputSelector {ext, sim};
+enum LineclockInputSelector {RS, FG};
+enum PixelclockSelector {uniform, corrected};
+enum RTchannel {PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan};		//nChan = number of RT channels available, including the pixel clock channel
+enum ShutterID {Shutter1, Shutter2};
+enum FilterwheelID {FW1, FW2};
+enum FilterColor { BlueLight = 1, GreenLight = 2, RedLight = 3 };
 enum Axis { xx, yy, zz };
 
 namespace Constants
@@ -31,9 +31,9 @@ namespace Constants
 	extern const LineclockInputSelector lineclockInput;
 	extern const PhotonCounterInputSelector photoncounterInput;
 	extern const PixelclockSelector pixelclockType;
-	extern const bool overrideImageSaving;
+	extern const bool overrideSaving;
 	extern const bool enableFIFOfpga;
-	extern const bool pockels1_enableOutputGating;
+	extern const bool pockels1_enableManualControl;
 
 	extern const double PI;
 	extern const int us;
@@ -44,9 +44,9 @@ namespace Constants
 	extern const int mW;
 	extern const int tickPerUs;
 	extern const double usPerTick;
-	extern const U32 t_tick_MIN;
-	extern const double t_us_MIN;
-	extern const int AO_t_us_MIN;
+	extern const U32 tMIN_tick;
+	extern const double tMIN_us;
+	extern const int AO_tMIN_us;
 	extern const int syncDOtoAO_tick;
 	extern const int syncAODOtoLinegate_tick;
 	extern const int FIFOtimeout_tick;

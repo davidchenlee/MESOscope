@@ -13,12 +13,12 @@ namespace FPGAapi
 	/*Define the full path of the bitfile. The bitfile is the code that runs on the FPGA*/
 	static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
 
-	U16 convertUsTotick(const double t_us);
+	U16 convertUsTotick(const double t);
 	I16 convertVoltToI16(const double voltage_V);
 	U32 packU32(const U16 t_tick, const U16 AO_U16);
-	U32 packAnalogSinglet(const double t_us, const double AO_V);
-	U32 packDigitalSinglet(const double t_us, const bool DO);
-	U32 packPixelclockSinglet(const double t_us, const bool DO);
+	U32 packAnalogSinglet(const double timeStep, const double AO_V);
+	U32 packDigitalSinglet(const double timeStep, const bool DO);
+	U32 packPixelclockSinglet(const double timeStep, const bool DO);
 	void checkStatus(char functionName[], NiFpga_Status status);
 
 	class Session
@@ -64,10 +64,10 @@ namespace FPGAapi
 		~RTsequence();
 		void pushQueue(const RTchannel chan, QU32& queue);
 		void clearQueue(const RTchannel chan);
-		void pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO);
-		void pushAnalogSinglet(const RTchannel chan, double t_us, const double AO_V);
-		void pushAnalogSingletFx2p16(const RTchannel chan, const double AO_fx2p14);
-		void pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampLength, const double Vinitial, const double Vfinal);
+		void pushDigitalSinglet(const RTchannel chan, double timeStep, const bool DO);
+		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V);
+		void pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor);
+		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V);
 		void uploadRT();
 		void triggerRT();
 	};

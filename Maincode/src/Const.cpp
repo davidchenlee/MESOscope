@@ -2,12 +2,12 @@
 
 namespace Constants
 {
-	extern const LineclockInputSelector lineclockInput = FG;				//RS or FG
-	extern const PhotonCounterInputSelector photoncounterInput = ext;		//ext or sim
+	extern const LineclockInputSelector lineclockInput = FG;				//Resonant scanner (RS) or Function generator (FG)
+	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or corrected dwell times
-	extern const bool overrideImageSaving = 1;								//Enable file override when saving
-	extern const bool enableFIFOfpga = 0;									//Enable pushing data to FIFOfpga. For debugging purposes
-	extern const bool pockels1_enableOutputGating = 1;						//Enable output gating by framegate. For debugging purposes
+	extern const bool overrideSaving = 1;									//Enable override when saving files
+	extern const bool enableFIFOfpga = 0;									//For debugging purposes. Enable pushing data to FIFOfpga
+	extern const bool pockels1_enableManualControl = 0;						//For debugging purposes. Framegate turn pockels on and off. Enable to have manual control
 
 	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//microsecond
@@ -18,9 +18,9 @@ namespace Constants
 	extern const int mW = 1;								//milliwatt
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It depends on the FPGA's clock
 	extern const double usPerTick = 1.0 / 160;				//time step of the FPGA's clock in us
-	extern const U32 t_tick_MIN = 2;						//Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
-	extern const double t_us_MIN = t_tick_MIN * usPerTick;	//in us. Min time step allowed
-	extern const int AO_t_us_MIN = 2 * us;					//Time step (in us) of the analog output. The AO channels take >1 us to set the output
+	extern const U32 tMIN_tick = 2;						//Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
+	extern const double tMIN_us = tMIN_tick * usPerTick;	//in us. Min time step allowed
+	extern const int AO_tMIN_us = 2 * us;					//Time step (in us) of the analog output. The AO channels take >1 us to set the output
 	extern const int syncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 	extern const int syncAODOtoLinegate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating. It may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before

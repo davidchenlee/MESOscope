@@ -2,20 +2,20 @@
 
 namespace FPGAapi
 {
-	//Convert microseconds to ticks
-	U16 convertUsTotick(const double t_us)
+	//Convert time to ticks
+	U16 convertUsTotick(const double t)
 	{
-		const double t_tick = t_us * tickPerUs;
+		const double t_tick = t/us * tickPerUs;
 
 		if ((U32)t_tick > 0x0000FFFF)
 		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step overflow. Time step cast to the max: " << std::fixed << _UI16_MAX * usPerTick << " us" << std::endl;
 			return _UI16_MAX;
 		}
-		else if ((U32)t_tick < t_tick_MIN)
+		else if ((U32)t_tick < tMIN_tick)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step underflow. Time step cast to the min: " << std::fixed << t_tick_MIN * usPerTick << " us" << std::endl;;
-			return t_tick_MIN;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step underflow. Time step cast to the min: " << std::fixed << tMIN_tick * usPerTick << " us" << std::endl;;
+			return tMIN_tick;
 		}
 		else
 			return (U16)t_tick;
@@ -47,28 +47,28 @@ namespace FPGAapi
 		return (t_tick << 16) | (0x0000FFFF & AO_U16);
 	}
 
-	//Send out an analog instruction, where the analog output 'AO_V' is held for 't_us' microseconds
-	U32 packAnalogSinglet(const double t_us, const double AO_V)
+	//Send out an analog instruction, where the analog output 'AO_V' is held for 'timeStep'
+	U32 packAnalogSinglet(const double timeStep, const double AO_V)
 	{
 		const U16 AOlatency_tick = 2;	//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
-		return packU32(convertUsTotick(t_us) - AOlatency_tick, convertVoltToI16(AO_V));
+		return packU32(convertUsTotick(timeStep) - AOlatency_tick, convertVoltToI16(AO_V));
 	}
 
 
 
 
-	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 't_us'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
-	U32 packDigitalSinglet(const double t_us, const bool DO)
+	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
+	U32 packDigitalSinglet(const double timeStep, const bool DO)
 	{
 		const U16 DOlatency_tick = 2;	//To calibrate, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
-		return packU32(convertUsTotick(t_us) - DOlatency_tick, (U16)DO);
+		return packU32(convertUsTotick(timeStep) - DOlatency_tick, (U16)DO);
 	}
 
-	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 't_us'
-	U32 packPixelclockSinglet(const double t_us, const bool DO)
+	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'
+	U32 packPixelclockSinglet(const double timeStep, const bool DO)
 	{
 		const U16 PixelclockLatency_tick = 1;//The pixel-clock is implemented using a SCTL. I think the latency comes from reading the LUT buffer
-		return packU32(convertUsTotick(t_us) - PixelclockLatency_tick, (U16)DO);
+		return packU32(convertUsTotick(timeStep) - PixelclockLatency_tick, (U16)DO);
 	}
 
 	void checkStatus(char functionName[], NiFpga_Status status)
@@ -110,11 +110,11 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)heightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(heightPerFrame_pix + nLinesSkip)));	//Number of lines in a frame including the skipped lines
 
-		//Shutters. Commented out to allow keeping the shutter on
+		//Shutters. Commented out to allow holding the shutter on
 		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
 		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
 
-		//Resonant scanner. Commented out to allow keeping the RS on
+		//Resonant scanner. Commented out to allow holding the RS on
 		//checkStatus(__FUNCTION__,  NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));	//Output voltage
 		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
 
@@ -127,7 +127,7 @@ namespace FPGAapi
 		//Debugger
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFO, 0));															//Enable pushing data to FIFOfpga. For debugging purposes
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Pockels1_EnableOutputGating, (NiFpga_Bool)pockels1_enableOutputGating));			//Enable output gating by framegate. For debugging purposes
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Pockels1_EnableManualControl, (NiFpga_Bool)pockels1_enableManualControl));			//Enable output gating by framegate. For debugging purposes
 	}
 
 	//Send every single queue in VectorOfQueue to the FPGA buffer
@@ -300,7 +300,7 @@ namespace FPGAapi
 			pixelclockQ.push_back(FPGAapi::packPixelclockSinglet(calculatePracticalDwellTime_us(pix), 1));
 
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-		pixelclockQ.push_back(FPGAapi::packPixelclockSinglet(t_us_MIN, 1));
+		pixelclockQ.push_back(FPGAapi::packPixelclockSinglet(tMIN_us, 1));
 	}
 
 	QU32 RTsequence::Pixelclock::readPixelclock() const
@@ -337,37 +337,37 @@ namespace FPGAapi
 		mVectorOfQueues.at(chan).clear();
 	}
 
-	void RTsequence::pushDigitalSinglet(const RTchannel chan, double t_us, const bool DO)
+	void RTsequence::pushDigitalSinglet(const RTchannel chan, double timeStep, const bool DO)
 	{
-		mVectorOfQueues.at(chan).push_back(FPGAapi::packDigitalSinglet(t_us, DO));
+		mVectorOfQueues.at(chan).push_back(FPGAapi::packDigitalSinglet(timeStep, DO));
 	}
 
-	void RTsequence::pushAnalogSinglet(const RTchannel chan, double t_us, const double AO_V)
+	void RTsequence::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V)
 	{
-		if (t_us < AO_t_us_MIN)
+		if (timeStep < AO_tMIN_us)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_t_us_MIN << " us" << std::endl;
-			t_us = AO_t_us_MIN;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us" << std::endl;
+			timeStep = AO_tMIN_us;
 		}
-		mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(t_us, AO_V));
+		mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(timeStep, AO_V));
 	}
 
-	void RTsequence::pushAnalogSingletFx2p16(const RTchannel chan, const double AO)
+	void RTsequence::pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor)
 	{
-		mVectorOfQueues.at(chan).push_back((U32)convertDoubleToFx2p14(AO));
+		mVectorOfQueues.at(chan).push_back((U32)convertDoubleToFx2p14(scalingFactor));
 	}
 
-	void RTsequence::pushLinearRamp(const RTchannel chan, double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V)
+	void RTsequence::pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V)
 	{
 		const bool debug = 0;
 
-		if (timeStep_us < AO_t_us_MIN)
+		if (timeStep < AO_tMIN_us)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_t_us_MIN << " us" << std::endl;
-			timeStep_us = AO_t_us_MIN;		//Analog output time increment (in us)
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us" << std::endl;
+			timeStep = AO_tMIN_us;		//Analog output time increment (in us)
 		}
 
-		const int nPoints = (int)(rampDuration / timeStep_us);		//Number of points
+		const int nPoints = (int)(rampLength / timeStep);		//Number of points
 
 		if (nPoints <= 1)	throw std::invalid_argument((std::string)__FUNCTION__ + ": Not enought points to generate a linear ramp");
 
@@ -380,9 +380,9 @@ namespace FPGAapi
 		for (int ii = 0; ii < nPoints; ii++)
 		{
 			const double V = Vi_V + (Vf_V - Vi_V)*ii / (nPoints - 1);
-			mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(timeStep_us, V));
+			mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(timeStep, V));
 
-			if (debug)	std::cout << (ii + 1) * timeStep_us << "\t" << (ii + 1) * FPGAapi::convertUsTotick(timeStep_us) << "\t" << V << "\t" << std::endl;
+			if (debug)	std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * FPGAapi::convertUsTotick(timeStep) << "\t" << V << "\t" << std::endl;
 		}
 
 		if (debug)

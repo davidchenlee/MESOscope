@@ -371,7 +371,7 @@ void Image::acquire(const std::string filename)
 
 void Image::saveAsTiff(std::string filename)
 {
-	if (!overrideImageSaving)
+	if (!overrideSaving)
 		filename = file_exists(filename);
 
 	TIFF *tiffHandle = TIFFOpen((foldername + filename + ".tif").c_str(), "w");
@@ -436,22 +436,29 @@ PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsC
 	if (mPockelsChannel != POCKELS1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell channel unavailable");
 
-	mScalingChannel = SCALING1;
+	switch (mPockelsChannel)
+	{
+	case POCKELS1:
+		mScalingChannel = SCALING1;
+		break;
+	}
 
-	//Initialize the scaling factors to 1.0 as the default value
+
+
+	//Initialize the scaling factors to 1.0 as the default value. In LV, I tried to set the LUT initial values to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
 	for (int ii = 0; ii < nFrames; ii++)
-		mSequence.pushAnalogSingletFx2p16(mScalingChannel, 1.0);
+		mSequence.pushAnalogSingletFx2p14(mScalingChannel, 1.0);
 }
 
 //Do not set the output to 0 with the destructor to allow holding on the last value
 PockelsCell::~PockelsCell() {}
 
 
-void PockelsCell::pushSinglet(const double t_us, const double AO_V) const
+void PockelsCell::pushSinglet(const double timeStep, const double AO_V) const
 {
 	if (AO_V < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
 
-	mSequence.pushAnalogSinglet(mPockelsChannel, t_us, AO_V);
+	mSequence.pushAnalogSinglet(mPockelsChannel, timeStep, AO_V);
 }
 
 
@@ -469,19 +476,19 @@ void  PockelsCell::powerLinearRamp(const double timeStep_us, const double rampDu
 	mSequence.pushLinearRamp(mPockelsChannel, timeStep_us, rampDuration, convertPowerToVoltage_V(Pi_mW), convertPowerToVoltage_V(Pf_mW));
 }
 
-void PockelsCell::outputToZero() const
+void PockelsCell::voltageToZero() const
 {
-	mSequence.pushAnalogSinglet(mPockelsChannel, AO_t_us_MIN, 0 * V);
+	mSequence.pushAnalogSinglet(mPockelsChannel, AO_tMIN_us, 0 * V);
 }
 
-void PockelsCell::pushLinearScaling(const double Si, const double Sf)
+void PockelsCell::scalingLinearRamp(const double Si, const double Sf)
 {
 	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor is outside the range 0-4");
 
 	mSequence.clearQueue(mScalingChannel);	//Delete the default values in the scaling-factor queue
 
 	for (int ii = 0; ii < nFrames; ii++)
-		mSequence.pushAnalogSingletFx2p16(mScalingChannel, Si + (Sf - Si) / (nFrames-1) * ii);
+		mSequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (nFrames-1) * ii);
 }
 
 
@@ -530,24 +537,24 @@ double Galvo::convertPositionToVoltage(const double position_um) const
 	return position_um * voltPerUm;
 }
 
-void Galvo::pushSinglet(const double t_us, const double AO_V) const
+void Galvo::pushSinglet(const double timeStep, const double AO_V) const
 {
-	mSequence.pushAnalogSinglet(mGalvoChannel, t_us, AO_V);
+	mSequence.pushAnalogSinglet(mGalvoChannel, timeStep, AO_V);
 }
 
-void Galvo::voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V) const
+void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, const double Vi_V, const double Vf_V) const
 {
-	mSequence.pushLinearRamp(mGalvoChannel, timeStep_us, rampDuration, Vi_V, Vf_V);
+	mSequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, Vi_V, Vf_V);
 }
 
-void Galvo::positionLinearRamp(const double timeStep_us, const double rampDuration, const double xi_V, const double xf_V) const
+void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const
 {
-	mSequence.pushLinearRamp(mGalvoChannel, timeStep_us, rampDuration, convertPositionToVoltage(xi_V), convertPositionToVoltage(xf_V));
+	mSequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, convertPositionToVoltage(xi_V), convertPositionToVoltage(xf_V));
 }
 
-void Galvo::outputToZero() const
+void Galvo::voltageToZero() const
 {
-	mSequence.pushAnalogSinglet(mGalvoChannel, AO_t_us_MIN, 0 * V);
+	mSequence.pushAnalogSinglet(mGalvoChannel, AO_tMIN_us, 0 * V);
 }
 
 #pragma endregion "Galvo"

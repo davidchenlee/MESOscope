@@ -443,8 +443,6 @@ PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsC
 		break;
 	}
 
-
-
 	//Initialize the scaling factors to 1.0 as the default value. In LV, I tried to set the LUT initial values to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
 	for (int ii = 0; ii < nFrames; ii++)
 		mSequence.pushAnalogSingletFx2p14(mScalingChannel, 1.0);
@@ -461,19 +459,20 @@ void PockelsCell::pushSinglet(const double timeStep, const double AO_V) const
 	mSequence.pushAnalogSinglet(mPockelsChannel, timeStep, AO_V);
 }
 
-
-void PockelsCell::voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V) const
+//Ramp the pockels cell modulation within a frame
+void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const
 {
 	if (Vi_V < 0 || Vf_V < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
 
-	mSequence.pushLinearRamp(mPockelsChannel, timeStep_us, rampDuration, Vi_V, Vf_V);
+	mSequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, Vi_V, Vf_V);
 }
 
-void  PockelsCell::powerLinearRamp(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW) const
+//Ramp the pockels modulation within a frame
+void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const
 {
 	if (Pi_mW < 0 || Pf_mW < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
 
-	mSequence.pushLinearRamp(mPockelsChannel, timeStep_us, rampDuration, convertPowerToVoltage_V(Pi_mW), convertPowerToVoltage_V(Pf_mW));
+	mSequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, convertPowerToVoltage_V(Pi_mW), convertPowerToVoltage_V(Pf_mW));
 }
 
 void PockelsCell::voltageToZero() const
@@ -481,11 +480,12 @@ void PockelsCell::voltageToZero() const
 	mSequence.pushAnalogSinglet(mPockelsChannel, AO_tMIN_us, 0 * V);
 }
 
+//Scale the pockels modulation across all the frames following a linear ramp
 void PockelsCell::scalingLinearRamp(const double Si, const double Sf)
 {
 	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor is outside the range 0-4");
 
-	mSequence.clearQueue(mScalingChannel);	//Delete the default values in the scaling-factor queue
+	mSequence.clearQueue(mScalingChannel);	//Delete the default scaling factors created in the PockelsCell constructor
 
 	for (int ii = 0; ii < nFrames; ii++)
 		mSequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (nFrames-1) * ii);

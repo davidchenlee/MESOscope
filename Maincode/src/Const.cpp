@@ -20,14 +20,14 @@ namespace Constants
 	extern const double usPerTick = 1.0 / 160;				//time step of the FPGA's clock in us
 	extern const U32 tMIN_tick = 2;							//Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
 	extern const double tMIN_us = tMIN_tick * usPerTick;	//in us. Min time step allowed
-	extern const int AO_tMIN_us = 2 * us;					//Time step (in us) of the analog output. The AO channels take >1 us to set the output
+	extern const int AO_tMIN_us = 2;						//Time step (in us) of the analog output. The AO channels take >1 us to set the output
 	extern const int syncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 	extern const int syncAODOtoLinegate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating. It may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before
 
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const size_t FIFOINmax = 32773;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
-	extern const int stageTriggerDuration_us = 10 * ms;		//Whenever framegate rises, send HIGH to the stage DIO and hold it for 'stageTriggerDuration_us' (the stage controller has a 20kHz clock)
+	extern const int stageTriggerDuration = 10 * ms;		//Whenever framegate rises, send HIGH to the stage DIO and hold it for 'stageTriggerDuration' (the stage controller has a 20kHz clock)
 
 
 	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)

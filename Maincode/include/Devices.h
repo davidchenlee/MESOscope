@@ -109,8 +109,8 @@ class PockelsCell
 public:
 	PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsChannel, const int wavelength_nm);
 	~PockelsCell();
-	void voltageLinearRamp(const double timeStep_us, const double rampDuration, const double Vi_V, const double Vf_V) const;
-	void powerLinearRamp(const double timeStep_us, const double rampDuration, const double Pi_mW, const double Pf_mW) const;
+	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const;
+	void powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const;
 	void voltageToZero() const;
 	void scalingLinearRamp(const double Si, const double Sf);
 };

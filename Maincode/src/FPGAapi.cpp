@@ -109,7 +109,7 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(nLinesAllFrames + nFrames * nLinesSkip)));		//Total number of lines in all the frames, including the skipped lines
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)heightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(heightPerFrame_pix + nLinesSkip)));	//Number of lines in a frame including the skipped lines
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(mSession, NiFpga_FPGAvi_ControlU32_StageTriggerDuration_tick, stageTriggerDuration_us * tickPerUs));
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(mSession, NiFpga_FPGAvi_ControlU32_StageTriggerDuration_tick, stageTriggerDuration * tickPerUs));
 
 		//Shutters. Commented out to allow holding the shutter on
 		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
@@ -272,12 +272,12 @@ namespace FPGAapi
 	void RTsequence::Pixelclock::pushUniformDwellTimes()
 	{
 		const int calibFine_tick = 10;
-		const double initialWaitingTime_us = 6.25*us;	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
+		const double initialWaitingTime_us = 6.25;	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
 		pixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUsTotick(initialWaitingTime_us) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state to represent a pixel delimiter
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-		const double dwellTime_us = 0.125 * us;
+		const double dwellTime_us = 0.125;
 		for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
 			pixelclockQ.push_back(FPGAapi::packPixelclockSinglet(dwellTime_us, 1));
 	}
@@ -365,7 +365,7 @@ namespace FPGAapi
 		if (timeStep < AO_tMIN_us)
 		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us" << std::endl;
-			timeStep = AO_tMIN_us;		//Analog output time increment (in us)
+			timeStep = AO_tMIN_us;		//Analog Out time increment in us
 		}
 
 		const int nPoints = (int)(rampLength / timeStep);		//Number of points

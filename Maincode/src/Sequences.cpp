@@ -23,7 +23,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	double3 position_mm = stage.readPosition3_mm();
 	*/
 	
-	const double duration = 25 * ms; //62.5us * 400 pixels
+	const double duration = 24.999 * ms; //62.5us * 400 pixels
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -44,7 +44,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		//pockels.powerLinearRamp(galvoTimeStep, duration, laserPower_mW, laserPower_mW);
 		//pockels.voltageToZero();
 		pockels.voltageLinearRamp(galvoTimeStep, duration, 1*V, 1*V);	//Ramp the pockels modulation within a frame
-		pockels.scalingLinearRamp(1.0, 1.0);							//Scale the pockels modulation across all the frames following a linear ramp
+		pockels.scalingLinearRamp(1.0, 2.0);							//Scale the pockels modulation across all the frames following a linear ramp
 	
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		

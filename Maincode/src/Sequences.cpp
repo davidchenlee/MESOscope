@@ -44,7 +44,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		//pockels.powerLinearRamp(galvoTimeStep_us, duration_ms, laserPower_mW, laserPower_mW);
 		//pockels.voltageToZero();
 		pockels.voltageLinearRamp(galvoTimeStep_us, duration_ms, 1*V, 1*V);
-		//pockels.scalingLinearRamp(1.0, 1.0);
+		pockels.scalingLinearRamp(1.0, 1.0);
 	
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		

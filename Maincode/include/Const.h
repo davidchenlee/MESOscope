@@ -51,6 +51,7 @@ namespace Constants
 	extern const int syncAODOtoLinegate_tick;
 	extern const int FIFOtimeout_tick;
 	extern const size_t FIFOINmax;
+	extern const int stageTriggerDuration_us;
 
 	extern const int nPulses;
 	extern const U8 pulseArray[];

@@ -163,7 +163,9 @@ Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga)
 
 Image::~Image()
 {
-	stopFIFOpc(); //Stop the FIFOpc, otherwise memory access in the next run  will crash the computer if any exceptions occur
+	//Stop the FIFOpc. Before implementing this function, the computer used to crash if the code was run after terminated under exception.
+	//(I think) this is because the access to the FIFO used to remain open and clashed with the next FIFO call
+	stopFIFOpc(); 
 
 	delete[] mBufArray_A;
 	delete[] mNelemBufArray_B;
@@ -283,7 +285,7 @@ void Image::readFIFOpc()
 	std::cout << "Buffer arrays used: " << (U32)mCounterBufArray_B << std::endl; //Print out how many buffer arrays were actually used
 	std::cout << "Total of elements read: " << mNelemReadFIFO_A << "\t" << mNelemReadFIFO_B << std::endl; //Print out the total number of elements read
 
-	//If expected data is NOT read successfully
+	//If all the expected data is NOT read successfully
 	if (mNelemReadFIFO_A != nPixAllFrames || mNelemReadFIFO_B != nPixAllFrames)
 		throw ImageException((std::string)__FUNCTION__ + ": More or less FIFO elements received than expected ");
 
@@ -361,7 +363,7 @@ void Image::acquire(const std::string filename)
 			correctInterleavedImage();
 			saveAsTiff(filename);
 		}
-		catch (const ImageException &e) //Notify the exception and move on to the next iteration
+		catch (const ImageException &e) //Notify the exception and move to the next iteration
 		{
 			std::cout << "An ImageException has occurred in: " << e.what() << std::endl;
 		}

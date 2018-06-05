@@ -54,9 +54,6 @@ namespace FPGAapi
 		return packU32(convertUsTotick(timeStep) - AOlatency_tick, convertVoltToI16(AO_V));
 	}
 
-
-
-
 	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 	U32 packDigitalSinglet(const double timeStep, const bool DO)
 	{
@@ -129,6 +126,7 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFO, 0));															//Enable pushing data to FIFOfpga. For debugging purposes
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Pockels1_EnableManualControl, (NiFpga_Bool)pockels1_enableManualControl));			//Enable output gating by framegate. For debugging purposes
+	
 	}
 
 	//Send every single queue in VectorOfQueue to the FPGA buffer

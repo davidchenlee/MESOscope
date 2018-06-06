@@ -1,0 +1,4 @@
+WAC DIO? 1 = 1 
+MVR 1 -0.1 
+WAC ONT? 1 = 1 
+MAC START MVRPOS

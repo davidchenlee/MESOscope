@@ -3,10 +3,9 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- In Main, the FPGAapi::Session constructor is outside try, therefore the errors thrown are unhandled
 - Implement the FIFO reading and data saving concurrently
 - Maybe install TVK to display tiff images
-- Allow reading multiple frames in the FPGA-to-PC FIFO
+- Allow saving multiple frames in the FPGA-to-PC FIFO
 - Optimize the data-transfer memory usage
 
 

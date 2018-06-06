@@ -685,10 +685,10 @@ void Laser::setWavelength()
 #pragma region "Stages"
 Stage::Stage()
 {
-	//Open the connections to the stage controllers and get assign their IDs
+	//Open the connections to the stage controllers and assign IDs
 	mID[xx] = PI_ConnectUSB(mStageName_x.c_str());
 	mID[yy] = PI_ConnectUSB(mStageName_y.c_str());
-	mID[zz] = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 3 for "COM3" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	mID[zz] = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
 	//mID[zz] = PI_ConnectUSB(mStageName_z.c_str());
 
 	if (mID[xx] < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");

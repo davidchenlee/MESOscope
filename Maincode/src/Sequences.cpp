@@ -43,8 +43,8 @@ void seq_main(const FPGAapi::Session &fpga)
 		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
 		//pockels.powerLinearRamp(galvoTimeStep, duration, laserPower_mW, laserPower_mW);
 		//pockels.voltageToZero();
-		pockels.voltageLinearRamp(galvoTimeStep, duration, 1*V, 1*V);	//Ramp the pockels modulation within a frame
-		pockels.scalingLinearRamp(1.0, 2.0);							//Scale the pockels modulation across all the frames following a linear ramp
+		pockels.voltageLinearRamp(galvoTimeStep, duration, 1*V, 1*V);	//Ramp the pockels modulation in a frame and repeat for each frame
+		pockels.scalingLinearRamp(1.0, 2.0);							//Linearly scale the pockels modulation across all the frames
 	
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		
@@ -151,7 +151,7 @@ void seq_calibAnalogLatency(const FPGAapi::Session &fpga)
 	sequence.pushDigitalSinglet(DOdebug, step, 0);
 }
 
-void seq_testFilterwheel(const FPGAapi::Session &fpga)
+void seq_testFilterwheel()
 {
 	//Filterwheel FW(FW1);
 	//FW.setFilterPosition(BlueLight);
@@ -161,7 +161,7 @@ void seq_testFilterwheel(const FPGAapi::Session &fpga)
 	//std::cout << laser.readWavelength();
 }
 
-void seq_testStages(const FPGAapi::Session &fpga)
+void seq_testStageSetPosition()
 {
 	const double newPosition = 18.5520;
 	//const double newPosition_mm = 19.000;
@@ -184,4 +184,10 @@ void seq_testStages(const FPGAapi::Session &fpga)
 		//input = 0;
 	}
 	getchar();
+}
+
+void seq_testStageTriggerConfig()
+{
+	Stage stages;
+	stages.printPosition3();
 }

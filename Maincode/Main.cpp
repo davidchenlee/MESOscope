@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 		{
 			fpga.initialize();		//Initialize the FPGA
 			seq_main(fpga);			//Run the sequence
-			//seq_testStages(fpga);
+			//seq_testStageTriggerConfig();
 			//seq_testAODO(fpga);
 		}
 		catch (const std::invalid_argument &e)

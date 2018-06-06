@@ -8,5 +8,6 @@ void seq_testAOramp(const FPGAapi::Session &fpga);
 void seq_checkDigitalTiming(const FPGAapi::Session &fpga);
 void seq_calibDigitalLatency(const FPGAapi::Session &fpga);
 void seq_calibAnalogLatency(const FPGAapi::Session &fpga);
-void seq_testFilterwheel(const FPGAapi::Session &fpga);
-void seq_testStages(const FPGAapi::Session &fpga);
+void seq_testFilterwheel();
+void seq_testStageSetPosition();
+void seq_testStageTriggerConfig();

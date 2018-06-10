@@ -11,3 +11,4 @@ void seq_calibAnalogLatency(const FPGAapi::Session &fpga);
 void seq_testFilterwheel();
 void seq_testStageSetPosition();
 void seq_testStageTriggerConfig();
+void seq_testmPMT();

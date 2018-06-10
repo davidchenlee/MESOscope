@@ -562,6 +562,31 @@ void Galvo::voltageToZero() const
 #pragma endregion "Galvo"
 
 
+#pragma region "mPMT"
+
+mPMT::mPMT()
+{
+	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+}
+
+mPMT::~mPMT()
+{
+
+}
+
+void mPMT::sendMessage()
+{
+
+	//mSerial->write("\rii\r");
+	//Sleep(100);
+	mSerial->write("\r");
+
+}
+
+
+#pragma endregion "mPMT"
+
+
 
 #pragma region "Filterwheel"
 Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)

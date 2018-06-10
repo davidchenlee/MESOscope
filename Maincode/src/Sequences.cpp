@@ -163,15 +163,24 @@ void seq_testFilterwheel()
 
 void seq_testStageSetPosition()
 {
-	const double newPosition = 18.5520;
-	//const double newPosition_mm = 19.000;
+	double duration;
+	const double newPosition_mm = 11.0;
 	Stage stage;
-	//stage.printPosition3();
+	stage.printPosition3();
 
-	//stage.moveStage(zz, newPosition_mm);
-	//stage.waitForMovementToStop(zz);
-	//stage.printPosition3();
+
+	auto t_start = std::chrono::high_resolution_clock::now();
+
+	stage.moveStage(zz, newPosition_mm);
+	stage.waitForMovementToStop(zz);
+
+	//Stop the stopwatch
+	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
+
+	stage.printPosition3();
 	
+	/*
 	int input = 1;
 	while (input)
 	{
@@ -183,6 +192,8 @@ void seq_testStageSetPosition()
 		std::cin >> input;
 		//input = 0;
 	}
+	*/
+
 	getchar();
 }
 
@@ -190,4 +201,10 @@ void seq_testStageTriggerConfig()
 {
 	Stage stages;
 	stages.printPosition3();
+}
+
+void seq_testmPMT()
+{
+	mPMT pmt;
+	pmt.sendMessage();
 }

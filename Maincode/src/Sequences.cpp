@@ -43,7 +43,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
 		//pockels.powerLinearRamp(galvoTimeStep, duration, laserPower_mW, laserPower_mW);
 		//pockels.voltageToZero();
-		pockels.voltageLinearRamp(galvoTimeStep, duration, 1*V, 1*V);	//Ramp the pockels modulation in a frame and repeat for each frame
+		pockels.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp the pockels modulation in a frame and repeat for each frame
 		pockels.scalingLinearRamp(1.0, 2.0);							//Linearly scale the pockels modulation across all the frames
 	
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet

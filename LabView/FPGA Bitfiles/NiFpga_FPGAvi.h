@@ -24,54 +24,55 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGAvi_Signature = "3D3BDFE42CA3C5737BC250CE2666C762";
+static const char* const NiFpga_FPGAvi_Signature = "A1E0DF93DE943078C68D6104FCE5021A";
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlBool_EnableFIFO = 0x3E,
-   NiFpga_FPGAvi_ControlBool_FIFOINtrigger = 0x6A,
-   NiFpga_FPGAvi_ControlBool_FlushTrigger = 0x1E,
-   NiFpga_FPGAvi_ControlBool_LinegateTrigger = 0x32,
-   NiFpga_FPGAvi_ControlBool_Pockels1_EnableManualControl = 0x1A,
-   NiFpga_FPGAvi_ControlBool_RS_ON_OFF = 0x46,
-   NiFpga_FPGAvi_ControlBool_Shutter1 = 0x3A,
-   NiFpga_FPGAvi_ControlBool_Shutter2 = 0x36,
-   NiFpga_FPGAvi_ControlBool_VT_NC = 0x56,
-   NiFpga_FPGAvi_ControlBool_VT_back = 0x4E,
-   NiFpga_FPGAvi_ControlBool_VT_forward = 0x52,
-   NiFpga_FPGAvi_ControlBool_VT_start = 0x4A,
+   NiFpga_FPGAvi_ControlBool_EnableFIFO = 0x42,
+   NiFpga_FPGAvi_ControlBool_FIFOINtrigger = 0x6E,
+   NiFpga_FPGAvi_ControlBool_FlushTrigger = 0x22,
+   NiFpga_FPGAvi_ControlBool_LinegateTrigger = 0x36,
+   NiFpga_FPGAvi_ControlBool_Pockels1_EnableManualControl = 0x1E,
+   NiFpga_FPGAvi_ControlBool_RS_ON_OFF = 0x4A,
+   NiFpga_FPGAvi_ControlBool_Shutter1 = 0x3E,
+   NiFpga_FPGAvi_ControlBool_Shutter2 = 0x3A,
+   NiFpga_FPGAvi_ControlBool_VT_NC = 0x5A,
+   NiFpga_FPGAvi_ControlBool_VT_back = 0x52,
+   NiFpga_FPGAvi_ControlBool_VT_forward = 0x56,
+   NiFpga_FPGAvi_ControlBool_VT_start = 0x4E,
 } NiFpga_FPGAvi_ControlBool;
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlU8_LineclockInputSelector = 0x26,
-   NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector = 0x2A,
+   NiFpga_FPGAvi_ControlU8_LineclockInputSelector = 0x2A,
+   NiFpga_FPGAvi_ControlU8_Nframes = 0x16,
+   NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector = 0x2E,
 } NiFpga_FPGAvi_ControlU8;
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlI16_RS_voltage = 0x42,
+   NiFpga_FPGAvi_ControlI16_RS_voltage = 0x46,
 } NiFpga_FPGAvi_ControlI16;
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlU16_FIFOtimeout_tick = 0x66,
-   NiFpga_FPGAvi_ControlU16_Nchannels = 0x62,
+   NiFpga_FPGAvi_ControlU16_FIFOtimeout_tick = 0x6A,
+   NiFpga_FPGAvi_ControlU16_Nchannels = 0x66,
    NiFpga_FPGAvi_ControlU16_NlinesAll = 0x12,
-   NiFpga_FPGAvi_ControlU16_NlinesPerFrame = 0x2E,
-   NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips = 0x22,
-   NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick = 0x5A,
-   NiFpga_FPGAvi_ControlU16_SyncDOtoAOtick = 0x6E,
+   NiFpga_FPGAvi_ControlU16_NlinesPerFrame = 0x32,
+   NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips = 0x26,
+   NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick = 0x5E,
+   NiFpga_FPGAvi_ControlU16_SyncDOtoAOtick = 0x72,
 } NiFpga_FPGAvi_ControlU16;
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlU32_StageTriggerDuration_tick = 0x14,
+   NiFpga_FPGAvi_ControlU32_StageTriggerDuration_tick = 0x18,
 } NiFpga_FPGAvi_ControlU32;
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlArrayBool_Pulsesequence = 0x5C,
+   NiFpga_FPGAvi_ControlArrayBool_Pulsesequence = 0x60,
 } NiFpga_FPGAvi_ControlArrayBool;
 
 typedef enum

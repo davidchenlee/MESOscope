@@ -491,6 +491,7 @@ void PockelsCell::scalingLinearRamp(const double Si, const double Sf)
 
 	for (int ii = 0; ii < nFrames; ii++)
 		mSequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (nFrames-1) * ii);
+
 }
 
 

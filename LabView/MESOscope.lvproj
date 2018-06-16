@@ -2073,6 +2073,7 @@
 					</Item>
 					<Item Name="lvSimController.dll" Type="Document" URL="/&lt;vilib&gt;/rvi/Simulation/lvSimController.dll"/>
 				</Item>
+				<Item Name="Subvi trigger AO DO.vi" Type="VI" URL="../Control/Subvi trigger AO DO.vi"/>
 			</Item>
 			<Item Name="Build Specifications" Type="Build">
 				<Item Name="FPGAvi" Type="{F4C5E96F-7410-48A5-BB87-3559BC9B167F}">

@@ -82,7 +82,8 @@ void seq_testAODO(const FPGAapi::Session &fpga)
 
 	//AO
 	sequence.pushAnalogSinglet(GALVO1, 8 * us, 4);
-	sequence.pushAnalogSinglet(GALVO1, 4 * us, 0);
+	sequence.pushAnalogSinglet(GALVO1, 4 * us, 2);
+	sequence.pushAnalogSinglet(GALVO1, 4 * us, 1);
 
 	sequence.uploadRT();	//Upload the realtime sequence to the FPGA but don't execute it yet
 	sequence.triggerRT();	//Execute the realtime sequence

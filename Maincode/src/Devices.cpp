@@ -445,7 +445,7 @@ PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsC
 		break;
 	}
 
-	//Initialize the scaling factors to 1.0 as the default value. In LV, I tried to set the LUT initial values to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
+	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT as 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
 	for (int ii = 0; ii < nFrames; ii++)
 		mSequence.pushAnalogSingletFx2p14(mScalingChannel, 1.0);
 }
@@ -486,8 +486,9 @@ void PockelsCell::voltageToZero() const
 void PockelsCell::scalingLinearRamp(const double Si, const double Sf)
 {
 	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor is outside the range 0-4");
+	if (nFrames < 2) throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
-	mSequence.clearQueue(mScalingChannel);	//Delete the default scaling factors created in the PockelsCell constructor
+	mSequence.clearQueue(mScalingChannel);	//Delete the default scaling factors of 1.0s created in the PockelsCell constructor
 
 	for (int ii = 0; ii < nFrames; ii++)
 		mSequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (nFrames-1) * ii);

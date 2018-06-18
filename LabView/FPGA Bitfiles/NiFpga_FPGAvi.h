@@ -24,7 +24,7 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGAvi_Signature = "004AEEE6CBEEDBD8C07AA08CBC3F0BE9";
+static const char* const NiFpga_FPGAvi_Signature = "C39F0B3218266E7ED541653DBB7D1FFB";
 
 typedef enum
 {
@@ -32,7 +32,7 @@ typedef enum
    NiFpga_FPGAvi_ControlBool_FIFOINtrigger = 0x6E,
    NiFpga_FPGAvi_ControlBool_FlushTrigger = 0x22,
    NiFpga_FPGAvi_ControlBool_LinegateTrigger = 0x36,
-   NiFpga_FPGAvi_ControlBool_Pockels1_EnableManualControl = 0x1E,
+   NiFpga_FPGAvi_ControlBool_Pockels1_EnableManualControl = 0x16,
    NiFpga_FPGAvi_ControlBool_RS_ON_OFF = 0x4A,
    NiFpga_FPGAvi_ControlBool_Shutter1 = 0x3E,
    NiFpga_FPGAvi_ControlBool_Shutter2 = 0x3A,
@@ -45,7 +45,7 @@ typedef enum
 typedef enum
 {
    NiFpga_FPGAvi_ControlU8_LineclockInputSelector = 0x2A,
-   NiFpga_FPGAvi_ControlU8_Nframes = 0x16,
+   NiFpga_FPGAvi_ControlU8_Nframes = 0x1A,
    NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector = 0x2E,
 } NiFpga_FPGAvi_ControlU8;
 
@@ -67,7 +67,7 @@ typedef enum
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlU32_StageTriggerDuration_tick = 0x18,
+   NiFpga_FPGAvi_ControlU32_StageTriggerDuration_tick = 0x1C,
 } NiFpga_FPGAvi_ControlU32;
 
 typedef enum

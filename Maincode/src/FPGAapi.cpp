@@ -225,7 +225,7 @@ namespace FPGAapi
 	{
 		switch (pixelclockType) //pixelclockType defined globally
 		{
-		case uniform: pushUniformDwellTimes();
+		case uniform: pushUniformDwellTimes(10, 6.25 * us, 0.125 * us);
 			break;
 		case corrected: pushCorrectedDwellTimes();
 			break;
@@ -269,15 +269,16 @@ namespace FPGAapi
 	//Pixel clock sequence. Every pixel has the same duration in time
 	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 	//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-	void RTsequence::Pixelclock::pushUniformDwellTimes()
+	void RTsequence::Pixelclock::pushUniformDwellTimes(const int calibFine_tick, const double initialWaitingTime_us, const double dwellTime_us)
 	{
-		const int calibFine_tick = 10;
-		const double initialWaitingTime_us = 6.25;	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
+		//const int calibFine_tick = 10;
+		//const double initialWaitingTime_us = 6.25;	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
+		//const double dwellTime_us = 0.125;
+
 		pixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUsTotick(initialWaitingTime_us) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 
-		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state to represent a pixel delimiter
+		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-		const double dwellTime_us = 0.125;
 		for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
 			pixelclockQ.push_back(FPGAapi::packPixelclockSinglet(dwellTime_us, 1));
 	}

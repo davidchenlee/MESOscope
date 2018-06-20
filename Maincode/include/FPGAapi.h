@@ -46,7 +46,7 @@ namespace FPGAapi
 			double getDiscreteTime_us(const int pix) const;
 			double calculateDwellTime_us(const int pix) const;
 			double calculatePracticalDwellTime_us(const int pix) const;
-			void pushUniformDwellTimes(const int calibFine_tick, const double initialWaitingTime_us, const double dwellTime_us);
+			void pushUniformDwellTimes(const int calibFine_tick, const double dwellTime_us);
 			void pushCorrectedDwellTimes();
 		public:
 			Pixelclock();

@@ -225,8 +225,8 @@ namespace FPGAapi
 	{
 		switch (pixelclockType) //pixelclockType defined globally
 		{
-		case uniform: pushUniformDwellTimes(10, 6.25 * us, 0.125 * us); //Dwell time = 125 ns, Npix = 400
-		//case uniform: pushUniformDwellTimes(0, 3.125 * us, 0.1875 * us); //Dwell time = 125 ns, Npix = 300
+		case uniform: pushUniformDwellTimes(10, 0.125 * us); //Dwell time = 10 * 12.5 ns = 125 ns, Npix = 400
+		//case uniform: pushUniformDwellTimes(0, 0.1875 * us); //Dwell time = 15 * 12.5 ns = 187.5 ns, Npix = 300
 			break;
 		case corrected: pushCorrectedDwellTimes();
 			break;
@@ -267,14 +267,17 @@ namespace FPGAapi
 	}
 
 
-	//Pixel clock sequence. Every pixel has the same duration in time
-	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-	//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
-	void RTsequence::Pixelclock::pushUniformDwellTimes(const int calibFine_tick, const double initialWaitingTime_us, const double dwellTime_us)
+	//Pixelclock with equal dwell times
+	//calibFine_tick: fine tune the pixelclock timing because of the imperfect microscope alignment
+	void RTsequence::Pixelclock::pushUniformDwellTimes(const int calibFine_tick, const double dwellTime_us)
 	{
-		//const int calibFine_tick = 10;
-		//const double initialWaitingTime_us = 6.25;	//Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
-		//const double dwellTime_us = 0.125;
+		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
+		const double initialWaitingTime_us = (halfPeriodLineclock_us - widthPerFrame_pix * dwellTime_us) / 2; //Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
+
+		//Check if the pixelclock overflows each Lineclock
+		if (initialWaitingTime_us <= 0)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 
 		pixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUsTotick(initialWaitingTime_us) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 
@@ -284,10 +287,10 @@ namespace FPGAapi
 			pixelclockQ.push_back(FPGAapi::packPixelclockSinglet(dwellTime_us, 1));
 	}
 
-	//Pixel clock sequence. Every pixel is equally spaced.
-	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+	//Pixelclock with equal pixel size (in space).
 	void RTsequence::Pixelclock::pushCorrectedDwellTimes()
 	{
+		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 		const int calibCoarse_tick = 2043;	//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan
 		const int calibFine_tick = 10;
 

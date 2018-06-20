@@ -58,7 +58,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		stage.printPosition3();
 		laserPower_mW += 0.5;
 		*/
-		Sleep(1000);
+		//Sleep(1000);
 		
 		
 	}

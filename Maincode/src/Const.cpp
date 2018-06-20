@@ -7,7 +7,7 @@ namespace Constants
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or corrected dwell times
 	extern const bool overrideSaving = 1;									//Enable override when saving files
 	extern const bool enableFIFOfpga = 0;									//For debugging purposes. Enable pushing data to FIFOfpga
-	extern const bool pockels1_enableManualControl = 0;						//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
+	extern const bool pockels1_enableAutoOff = 1;						//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
 
 	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//microsecond
@@ -58,9 +58,9 @@ namespace Parameters
 
 	//IMAGE
 	extern const double upscaleU8 = 23;	//255/11 = ~23							//Upscale the photoncount to cover the full 0-255 range of a 8-bit number
-	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
+	extern const int widthPerFrame_pix = 300;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
-	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
+	extern const int nLinesSkip = 2;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
 	extern const int nFrames = 2;												//Number of frames to acquire
 	extern const int nPixPerFrame = widthPerFrame_pix * heightPerFrame_pix;		//Number of pixels in each frame
 	extern const int nLinesAllFrames = heightPerFrame_pix * nFrames;			//Total number of lines in all the frames without including the skipped lines

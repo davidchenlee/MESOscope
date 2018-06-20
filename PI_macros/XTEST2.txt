@@ -1,0 +1,4 @@
+WAC DIO? 2 = 1 
+MVR 1 1 
+WAC ONT? 1 = 1 
+MAC START XTEST2

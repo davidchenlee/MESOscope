@@ -127,7 +127,7 @@ namespace FPGAapi
 		//Debugger
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFO, 0));															//Enable pushing data to FIFOfpga. For debugging purposes
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Pockels1_EnableManualControl, (NiFpga_Bool)pockels1_enableManualControl));			//Enable output gating by framegate. For debugging purposes
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Pockels1_EnableAutoOff, (NiFpga_Bool)pockels1_enableAutoOff));			//Enable output gating by framegate. For debugging purposes
 	
 	}
 
@@ -225,7 +225,8 @@ namespace FPGAapi
 	{
 		switch (pixelclockType) //pixelclockType defined globally
 		{
-		case uniform: pushUniformDwellTimes(10, 6.25 * us, 0.125 * us);
+		case uniform: pushUniformDwellTimes(10, 6.25 * us, 0.125 * us); //Dwell time = 125 ns, Npix = 400
+		//case uniform: pushUniformDwellTimes(0, 3.125 * us, 0.1875 * us); //Dwell time = 125 ns, Npix = 300
 			break;
 		case corrected: pushCorrectedDwellTimes();
 			break;

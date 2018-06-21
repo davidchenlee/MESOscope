@@ -4,7 +4,7 @@ namespace Constants
 {
 	extern const LineclockInputSelector lineclockInput = FG;				//Resonant scanner (RS) or Function generator (FG)
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
-	extern const PixelclockSelector pixelclockType = uniform;				//uniform or corrected dwell times
+	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
 	extern const bool overrideSaving = 1;									//Enable override when saving files
 	extern const bool enableFIFOfpga = 0;									//For debugging purposes. Enable pushing data to FIFOfpga
 	extern const bool pockels1_enableAutoOff = 1;						//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control

@@ -19,7 +19,7 @@ typedef std::array<int, 3> int3;			//array of 3 ints
 
 enum PhotonCounterInputSelector {ext, sim};
 enum LineclockInputSelector {RS, FG};
-enum PixelclockSelector {uniform, corrected};
+enum PixelclockSelector {uniform, nonuniform};
 enum RTchannel {PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan};		//nChan = number of RT channels available, including the pixel clock channel
 enum ShutterID {Shutter1, Shutter2};
 enum FilterwheelID {FW1, FW2};

@@ -228,7 +228,7 @@ namespace FPGAapi
 		case uniform: pushUniformDwellTimes(10, 0.125 * us); //Dwell time = 10 * 12.5 ns = 125 ns, Npix = 400
 		//case uniform: pushUniformDwellTimes(0, 0.1875 * us); //Dwell time = 15 * 12.5 ns = 187.5 ns, Npix = 300
 			break;
-		case corrected: pushCorrectedDwellTimes();
+		case nonuniform: pushCorrectedDwellTimes();
 			break;
 		default: throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pixelclock type unavailable");
 			break;
@@ -244,7 +244,7 @@ namespace FPGAapi
 		if (arg > 1)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Argument of asin greater than 1");
 		else
-			return halfPeriodLineclock_us * asin(arg) / Constants::PI; //The returned value in in the range [-halfPeriodLineclock_us/PI, halfPeriodLineclock_us/PI]
+			return halfPeriodLineclock_us * asin(arg) / Constants::PI; //The returned value is in the range [-halfPeriodLineclock_us/PI, halfPeriodLineclock_us/PI]
 	}
 
 	//Discretize the spatial coordinate, then convert it to time
@@ -260,12 +260,11 @@ namespace FPGAapi
 		return getDiscreteTime_us(pix + 1) - getDiscreteTime_us(pix);
 	}
 
-	//Calculate the dwell time of the pixel but considering that the FPGA has a finite clock rate
+	//Calculate the practical dwell time of each pixel, considering that the FPGA has discrete time steps
 	double RTsequence::Pixelclock::calculatePracticalDwellTime_us(const int pix) const
 	{
 		return round(calculateDwellTime_us(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
 	}
-
 
 	//Pixelclock with equal dwell times
 	//calibFine_tick: fine tune the pixelclock timing because of the imperfect microscope alignment
@@ -281,27 +280,27 @@ namespace FPGAapi
 
 		pixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUsTotick(initialWaitingTime_us) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 
-		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter
+		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 		for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
 			pixelclockQ.push_back(FPGAapi::packPixelclockSinglet(dwellTime_us, 1));
 	}
 
-	//Pixelclock with equal pixel size (in space).
+	//Pixelclock with equal pixel size (spatial).
 	void RTsequence::Pixelclock::pushCorrectedDwellTimes()
 	{
-		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+		//The pixel clock is triggered by the line clock (see the LV implementation) followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 		const int calibCoarse_tick = 2043;	//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan
 		const int calibFine_tick = 10;
 
-		if (widthPerFrame_pix % 2 != 0)		//Throw exception if odd. Odd number of pixels not supported yet
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels in the image width currently not supported");
+		if (widthPerFrame_pix % 2 != 0)		//Throw exception if odd number of pixels (not supported yet)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels for the image width currently not supported");
 
 		//Relative delay of the pixel clock with respect to the line clock. DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 		const U16 InitialWaitingTime_tick = (U16)(calibCoarse_tick + calibFine_tick);
 		pixelclockQ.push_back(FPGAapi::packU32(InitialWaitingTime_tick - mLatency_tick, 0));
 
-		//Generate the pixel clock. When a HIGH is pushed, the pixel clock switches its state to represent a pixel delimiter (the switching is implemented on the FPGA)
+		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 		for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)
 			pixelclockQ.push_back(FPGAapi::packPixelclockSinglet(calculatePracticalDwellTime_us(pix), 1));
 

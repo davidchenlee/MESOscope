@@ -3,8 +3,8 @@ close all
 HEATMAP = 1;
 COUNT_FREQ = 1;
 
-scale = 23;
-tiffHandle = Tiff('..\Maincode\Output\DAPI z = 18.4400.tif');
+scale = 1;
+tiffHandle = Tiff('..\Maincode\Output\PHAL.tif');
 %tiffHandle = Tiff('D:\OwnCloud\Data\20180425\damaging test slide.tif');
 inputImage = read(tiffHandle);
 %image(inputImage)

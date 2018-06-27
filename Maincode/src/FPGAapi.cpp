@@ -225,8 +225,8 @@ namespace FPGAapi
 	{
 		switch (pixelclockType) //pixelclockType defined globally
 		{
-		case uniform: pushUniformDwellTimes(10, 0.125 * us); //Dwell time = 10 * 12.5 ns = 125 ns, Npix = 400
-		//case uniform: pushUniformDwellTimes(0, 0.1875 * us); //Dwell time = 15 * 12.5 ns = 187.5 ns, Npix = 300
+		case uniform: pushUniformDwellTimes(15, 0.125 * us); //Dwell time = 10 * 12.5 ns = 125 ns, Npix = 400
+		//case uniform: pushUniformDwellTimes(15, 0.1875 * us); //Dwell time = 15 * 12.5 ns = 187.5 ns, Npix = 300
 			break;
 		case nonuniform: pushCorrectedDwellTimes();
 			break;

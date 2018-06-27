@@ -461,6 +461,13 @@ void PockelsCell::pushSinglet(const double timeStep, const double AO_V) const
 	mSequence.pushAnalogSinglet(mPockelsChannel, timeStep, AO_V);
 }
 
+void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW) const
+{
+	if (P_mW < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output power must be positive");
+
+	mSequence.pushAnalogSinglet(mPockelsChannel, timeStep, convertPowerToVoltage_V(P_mW));
+}
+
 //Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
 void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const
 {

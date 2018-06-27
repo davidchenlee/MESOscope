@@ -2,12 +2,12 @@
 
 namespace Constants
 {
-	extern const LineclockInputSelector lineclockInput = FG;				//Resonant scanner (RS) or Function generator (FG)
+	extern const LineclockInputSelector lineclockInput = RS;				//Resonant scanner (RS) or Function generator (FG)
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
 	extern const bool overrideSaving = 1;									//Enable override when saving files
-	extern const bool enableFIFOfpga = 0;									//For debugging purposes. Enable pushing data to FIFOfpga
-	extern const bool pockels1_enableAutoOff = 1;						//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
+	extern const bool enableFIFOfpga = 1;									//For debugging purposes. Enable pushing data to FIFOfpga
+	extern const bool pockels1_enableAutoOff = 1;							//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
 
 	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//microsecond
@@ -22,7 +22,7 @@ namespace Constants
 	extern const double tMIN_us = tMIN_tick * usPerTick;	//in us. Min time step allowed
 	extern const int AO_tMIN_us = 2;						//Time step (in us) of the analog output. The AO channels take >1 us to set the output
 	extern const int syncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
-	extern const int syncAODOtoLinegate_tick = 9500;		//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
+	extern const int syncAODOtoLinegate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before
 
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
@@ -57,11 +57,11 @@ namespace Parameters
 	//extern const int calibFine_tick = 10;
 
 	//IMAGE
-	extern const double upscaleU8 = 23;	//255/11 = ~23							//Upscale the photoncount to cover the full 0-255 range of a 8-bit number
+	extern const double upscaleU8 = 1;	//255/11 = ~23							//Upscale the photoncount to cover the full 0-255 range of a 8-bit number
 	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
-	extern const int nFrames = 2;												//Number of frames to acquire
+	extern const int nFrames = 1;												//Number of frames to acquire
 	extern const int nPixPerFrame = widthPerFrame_pix * heightPerFrame_pix;		//Number of pixels in each frame
 	extern const int nLinesAllFrames = heightPerFrame_pix * nFrames;			//Total number of lines in all the frames without including the skipped lines
 	extern const int nPixAllFrames = widthPerFrame_pix * nLinesAllFrames;		//Total number of pixels in all the frames (the skipped lines don't acquire pixels)

@@ -8,8 +8,8 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int wavelength_nm = 1040;
-	double laserPower_mW = 100 * mW;
+	const int wavelength_nm = 750;
+	double laserPower_mW = 50 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
 	const std::string filename = "PHAL";
@@ -23,7 +23,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	double3 position_mm = stage.readPosition3_mm();
 	*/
 	
-	const double duration = 24.999 * ms; //62.5us * 400 pixels
+	const double duration = 25.2 * ms; //halfPeriodLineclock_us * heightPerFrame_pix = 62.5us * 400 pixels
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -37,14 +37,15 @@ void seq_main(const FPGAapi::Session &fpga)
 		//Create a galvo RT sequence
 		Galvo galvo(sequence, GALVO1);
 		galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-		//galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//set the output back to the initial value
+		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//set the output back to the initial value
 
 		//Create a pockels cell RT sequence
 		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
+		pockels.pushPowerSinglet(4 * us, laserPower_mW);
 		//pockels.powerLinearRamp(galvoTimeStep, duration, laserPower_mW, laserPower_mW);
 		//pockels.voltageToZero();
-		pockels.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp the pockels modulation in a frame and repeat for each frame
-		pockels.scalingLinearRamp(1.0, 2.0);							//Linearly scale the pockels modulation across all the frames
+		//pockels.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp the pockels modulation in a frame and repeat for each frame
+		//pockels.scalingLinearRamp(1.0, 2.0);							//Linearly scale the pockels modulation across all the frames
 	
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		

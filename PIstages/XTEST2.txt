@@ -1,4 +1,6 @@
 WAC DIO? 2 = 1 
-MVR 1 1 
+MVR 1 0.2 
+DIO 1 1 
 WAC ONT? 1 = 1 
+DIO 1 0 
 MAC START XTEST2

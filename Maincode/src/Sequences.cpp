@@ -41,11 +41,11 @@ void seq_main(const FPGAapi::Session &fpga)
 
 		//Create a pockels cell RT sequence
 		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
-		pockels.pushPowerSinglet(4 * us, laserPower_mW);
-		//pockels.powerLinearRamp(galvoTimeStep, duration, laserPower_mW, laserPower_mW);
-		//pockels.voltageToZero();
-		//pockels.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp the pockels modulation in a frame and repeat for each frame
-		//pockels.scalingLinearRamp(1.0, 2.0);							//Linearly scale the pockels modulation across all the frames
+		//pockels.pushPowerSinglet(8 * us, laserPower_mW);
+		pockels.powerLinearRamp(2*us, 40*us, 0, laserPower_mW);
+		//pockels.voltageLinearRamp(4*us, 40*us, 0, 1*V);
+		//pockels.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
+		//pockels.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
 	
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		
@@ -70,6 +70,8 @@ void seq_main(const FPGAapi::Session &fpga)
 	datalog.record("FFOV (um) = ", FFOVgalvo_um);
 	datalog.record("Galvo Max position (um) = ", posMax_um);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep);
+
+
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock

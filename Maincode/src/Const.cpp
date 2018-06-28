@@ -2,7 +2,7 @@
 
 namespace Constants
 {
-	extern const LineclockInputSelector lineclockInput = RS;				//Resonant scanner (RS) or Function generator (FG)
+	extern const LineclockInputSelector lineclockInput = FG;				//Resonant scanner (RS) or Function generator (FG)
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
 	extern const bool overrideSaving = 1;									//Enable override when saving files
@@ -28,7 +28,6 @@ namespace Constants
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const size_t FIFOINmax = 32773;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 	extern const int stageTriggerDuration = 10 * ms;		//Whenever framegate rises, send HIGH to the stage DIO and hold it for 'stageTriggerDuration' (the stage controller has a 20kHz clock)
-
 
 	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
 	//The laser has a repetition rate of 80 MH and therefore the pulse separation is 12.5ns (the pulse width out from the PMT is ~1ns but can be extreched via electronics).
@@ -65,14 +64,15 @@ namespace Parameters
 	extern const int nPixPerFrame = widthPerFrame_pix * heightPerFrame_pix;		//Number of pixels in each frame
 	extern const int nLinesAllFrames = heightPerFrame_pix * nFrames;			//Total number of lines in all the frames without including the skipped lines
 	extern const int nPixAllFrames = widthPerFrame_pix * nLinesAllFrames;		//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
-	//400x400x5, skipped 60. 400x35x90, skipped 8. 400x35x70, skipped 6
 }
 
 
 //Currently, each frames is 400x400 pixels = 160000 pixels
-//For multiple beams, each fram will be 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
+//For multiple beams, each frame has 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
 //The current buffer can do 400*1200 pix ~ 480000 pix, or ~48 multiplexed frames
 //20180415 - Added an internal FIFO. Now I can do 400x480x3 = 576000 pixels, or 57.6 multiplexed frames
+//201804   - 400x400x5, skipped 60. 400x35x90, skipped 8. 400x35x70, skipped 6
+//20180628 - I could do 300x35 pixels and 100 frames
 
 
 /*

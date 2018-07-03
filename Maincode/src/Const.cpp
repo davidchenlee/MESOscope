@@ -27,7 +27,7 @@ namespace Constants
 
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const size_t FIFOINmax = 32773;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
-	extern const int stageTriggerDuration = 10 * ms;		//Whenever framegate rises, send HIGH to the stage DIO and hold it for 'stageTriggerDuration' (the stage controller has a 20kHz clock)
+	extern const int stageTriggerDuration = 1 * ms;		//Whenever framegate rises, send HIGH to the stage DIO and hold it for 'stageTriggerDuration' (the stage controller has a 20kHz clock)
 
 	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
 	//The laser has a repetition rate of 80 MH and therefore the pulse separation is 12.5ns (the pulse width out from the PMT is ~1ns but can be extreched via electronics).
@@ -56,7 +56,7 @@ namespace Parameters
 	//extern const int calibFine_tick = 10;
 
 	//IMAGE
-	extern const double upscaleU8 = 1;	//255/11 = ~23							//Upscale the photoncount to cover the full 0-255 range of a 8-bit number
+	extern const double upscaleU8 = 23;	//255/11 = ~23							//Upscale the photoncount to cover the full 0-255 range of a 8-bit number
 	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth

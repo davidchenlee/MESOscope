@@ -9,15 +9,15 @@ There are basically 2 imaging modes :
 void seq_main(const FPGAapi::Session &fpga)
 {	
 	const int wavelength_nm = 750;
-	double laserPower_mW = 50 * mW;
+	double laserPower_mW = 60 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
 	const std::string filename = "PHAL";
 
 	/*
 	Stage stage;
-	const double3 newPosition_mm = { 37.570, 12.700, 18.440 };
-	stage.moveStage3(newPosition_mm);
+	const double3 initialPosition_mm = { 34.800, 19.444, 17.847 };
+	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
 	stage.printPosition3();
 	double3 position_mm = stage.readPosition3_mm();
@@ -26,6 +26,8 @@ void seq_main(const FPGAapi::Session &fpga)
 	const double duration = 25.2 * ms; //halfPeriodLineclock_us * heightPerFrame_pix = 62.5us * 400 pixels
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
+
+	Sleep(1000);
 
 	const int nFrames = 1;
 	//NON-REALTIME SEQUENCE
@@ -41,25 +43,26 @@ void seq_main(const FPGAapi::Session &fpga)
 
 		//Create a pockels cell RT sequence
 		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
-		//pockels.pushPowerSinglet(8 * us, laserPower_mW);
-		pockels.powerLinearRamp(2*us, 40*us, 0, laserPower_mW);
+		pockels.pushPowerSinglet(8 * us, laserPower_mW);
 		//pockels.voltageLinearRamp(4*us, 40*us, 0, 1*V);
 		//pockels.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
 		//pockels.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
 	
+		Sleep(100);
+
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		
 		Image image(fpga);
-		//image.acquire(filename + " x = " + toString(position_mm.at(xx), 3) + " y = " + toString(position_mm.at(yy), 3) + " z = " + toString(position_mm.at(zz),3), 1); //Execute the realtime sequence and acquire the image
+		//image.acquire(filename + " x = " + toString(position_mm.at(xx), 3) + " y = " + toString(position_mm.at(yy), 3) + " z = " + toString(position_mm.at(zz),4)); //Execute the realtime sequence and acquire the image
 		image.acquire(filename); //Execute the realtime sequence and acquire the image
 		
 		/*
-		newPosition_mm += 0.001;
-		stage.moveStage(zz, newPosition_mm);
+		position_mm.at(zz) += 0.0005;
+		stage.moveStage(zz, position_mm.at(zz));
 		stage.printPosition3();
-		laserPower_mW += 0.5;
+		//laserPower_mW += 0.5;
 		*/
-		//Sleep(1000);
+		Sleep(1000);
 		
 		
 	}

@@ -160,8 +160,8 @@ void seq_calibAnalogLatency(const FPGAapi::Session &fpga)
 
 void seq_testFilterwheel()
 {
-	//Filterwheel FW(FW1);
-	//FW.setFilterPosition(BlueLight);
+	Filterwheel FW(FW1);
+	FW.setFilterPosition(BlueLight);
 
 	//Laser laser;
 	//laser.setWavelength();
@@ -171,7 +171,7 @@ void seq_testFilterwheel()
 void seq_testStageSetPosition()
 {
 	double duration;
-	const double newPosition_mm = 11.0;
+	const double newPosition_mm = 10;
 	Stage stage;
 	stage.printPosition3();
 
@@ -179,7 +179,8 @@ void seq_testStageSetPosition()
 	auto t_start = std::chrono::high_resolution_clock::now();
 
 	stage.moveStage(zz, newPosition_mm);
-	stage.waitForMovementToStop(zz);
+	//stage.waitForMovementToStop(zz);
+
 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
@@ -200,8 +201,6 @@ void seq_testStageSetPosition()
 		//input = 0;
 	}
 	*/
-
-	getchar();
 }
 
 void seq_testStageTriggerConfig()

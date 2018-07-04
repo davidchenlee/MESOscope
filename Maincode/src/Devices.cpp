@@ -585,13 +585,13 @@ mPMT::~mPMT()
 
 void mPMT::sendMessage()
 {
+	std::string RxBuffer;
+	mSerial->write("AB\r");
 
-	//mSerial->write("\rii\r");
-	//Sleep(100);
-	mSerial->write("\r");
-
+	const int RxBufSize = 255;
+	mSerial->read(RxBuffer, RxBufSize);
+	printHex(RxBuffer);
 }
-
 
 #pragma endregion "mPMT"
 
@@ -684,7 +684,7 @@ void Laser::downloadWavelength()
 	if (i != std::string::npos)
 		RxBuffer.erase(i, keyword.length());
 
-	//Delete "CHAMELEON>". This frase could be disabled on the laser but deleting it is more general and safer
+	//Delete "CHAMELEON>". This frase could be disabled on the laser, but deleting it is more general and safer
 	keyword = "CHAMELEON>";
 	i = RxBuffer.find(keyword);
 	if (i != std::string::npos)

@@ -11,6 +11,7 @@ using namespace Parameters;
 std::string file_exists(const std::string filename);
 std::string toString(const double number, const int nDecimalPlaces);
 void printHex(int input);
+void printHex(std::string input);
 void printBinary16(int input);
 U16 convertDoubleToFx2p14(double n);
 

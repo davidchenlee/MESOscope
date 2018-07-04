@@ -27,7 +27,7 @@ namespace Constants
 
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const size_t FIFOINmax = 32773;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
-	extern const int stageTriggerDuration = 1 * ms;		//Whenever framegate rises, send HIGH to the stage DIO and hold it for 'stageTriggerDuration' (the stage controller has a 20kHz clock)
+	extern const int stageTriggerDuration = 50* us;			//Whenever framegate rises, send HIGH to the stage DIO and hold it for 'stageTriggerDuration' (the stage controller has a 20kHz clock = 50 us)
 
 	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
 	//The laser has a repetition rate of 80 MH and therefore the pulse separation is 12.5ns (the pulse width out from the PMT is ~1ns but can be extreched via electronics).

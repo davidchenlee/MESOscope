@@ -134,7 +134,7 @@ public:
 class mPMT
 {
 	serial::Serial *mSerial;
-	std::string port = "COM5";
+	std::string port = "COM1";
 	const int mBaud = 9600;
 	const int mTimeout_ms = 300;
 public:
@@ -184,7 +184,7 @@ class Stage
 	int3 mID;										//Controller IDs
 	const char mNstagesPerController[2] = "1";		//Number of stages per controller (currently 1)
 	double3 mPosition3_mm;							//Absolute position of the stages (x, y, z)
-	const double3 mPosMin3_mm{ -10, 0, 10 };			//Min and max positions set by software, which do not necessarily match the values set by hardware (stored in the internal memory of the stages)
+	const double3 mPosMin3_mm{ -60, 0, 10 };			//Min and max positions set by software, which do not necessarily match the values set by hardware (stored in the internal memory of the stages)
 	const double3 mPosMax3_mm{ 40, 20, 25 };
 	int3 mNtile;									//Tile number in x, y, z
 	int3 mNtileOverlap_pix;							//in pixels. Tile overlap in x, y, z

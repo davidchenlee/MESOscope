@@ -5,6 +5,17 @@ void printHex(int input)
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
 
+void printHex(std::string input)
+{
+	const char *cstr = input.c_str();
+	for (size_t ii = 0; ii < input.size(); ii++)
+	{
+		std::cout << std::hex << std::uppercase << (int)cstr[ii];
+		std::cout << " ";
+	}
+	std::cout << std::nouppercase << std::dec << std::endl;
+}
+
 void printBinary16(int input)
 {
 	std::cout << std::bitset<16>(input) << std::endl;

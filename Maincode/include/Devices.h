@@ -133,18 +133,21 @@ public:
 
 class mPMT
 {
+	const int nPMTchannels = 16;		//Number of PMT channels
 	serial::Serial *mSerial;
 	std::string port = "COM1";
 	const int mBaud = 9600;
 	const int mTimeout_ms = 300;
 	const int RxBufferSize = 256;
-	void appendSumCheck(std::vector<char> &input);
-	std::vector<uint8_t> sendCommand(std::vector<char> command);
+	void appendSumCheck(std::vector<uint8_t> &input);
+	std::vector<uint8_t> sendCommand(std::vector<uint8_t> command);
 public:
 	mPMT();
 	~mPMT();
-	void readGainAll();
-	void resetGainAll();
+	void readAllGain();
+	void setAllGainToZero();
+	void setSingleGain(const uint8_t channel, const uint8_t gain);
+	void setAllGain(const uint8_t gain);
 };
 
 class Filterwheel

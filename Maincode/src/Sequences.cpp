@@ -212,5 +212,7 @@ void seq_testStageTriggerConfig()
 void seq_testmPMT()
 {
 	mPMT pmt;
-	pmt.readGainAll();
+	//pmt.readAllGain();
+	//pmt.setSingleGain(2, 150);
+	pmt.setAllGain(255);
 }

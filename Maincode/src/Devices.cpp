@@ -583,44 +583,69 @@ mPMT::~mPMT()
 
 }
 
-std::vector<uint8_t> mPMT::sendCommand(std::vector<char> command_array)
+std::vector<uint8_t> mPMT::sendCommand(std::vector<uint8_t> command_array)
 {
 	appendSumCheck(command_array);
 	std::string TxBuffer(command_array.begin(), command_array.end()); //Convert the vector<char> to string
 	TxBuffer += "\r";	//End the command line with CR
-	//printHex(TxBuffer); 
+	//printHex(TxBuffer); //For debugging
 
 	std::vector<uint8_t> RxBuffer;
 	mSerial->write("\r");						//Wake up the mPMT
 	mSerial->read(RxBuffer, RxBufferSize);		//Read the state: 0x0D(0d13) for ready, or 0x45(0d69) for error
 
+	//Throw an error if RxBuffer is empty or CR is NOT returned
+	if ( RxBuffer.empty() || RxBuffer.at(0) != 0x0D ) throw std::runtime_error((std::string)__FUNCTION__ + ": Failure waking up the mPMT microcontroller");
+	
+	//printHex(RxBuffer); //For debugging
+
 	RxBuffer.clear(); //Flush the buffer
 	mSerial->write(TxBuffer);
 	mSerial->read(RxBuffer, RxBufferSize);
+	
+	//Throw an error if RxBuffer is empty
+	if (RxBuffer.empty()) throw std::runtime_error((std::string)__FUNCTION__ + ": Failure reading the mPMT microcontroller");
+
+	//printHex(RxBuffer); //For debugging
 
 	return RxBuffer;
 }
 
-void mPMT::appendSumCheck(std::vector<char> &input)
+void mPMT::appendSumCheck(std::vector<uint8_t> &input)
 {
 	char sum = 0;
 	for (size_t ii = 0; ii < input.size(); ii++)
-		sum += input[ii];
+		sum += input.at(ii);
 	input.push_back(sum);
 }
 
-void mPMT::readGainAll()
+void mPMT::readAllGain()
 {
 	std::vector<uint8_t> parameters = sendCommand({'I'});
-	for (size_t ii = 1; ii <= 16; ii++)
-		std::cout << "Gain " << ii << " = " <<  (int)parameters.at(ii) << std::endl;
-		
+	for (int ii = 1; ii <= nPMTchannels; ii++)
+		std::cout << "Gain " << ii << " = " << (int)parameters.at(ii) << std::endl;		
 }
 
-void mPMT::resetGainAll()
+void mPMT::setAllGainToZero()
 {
-	std::vector<uint8_t> parameters = sendCommand({'R'});
+	std::vector<uint8_t> parameters = sendCommand({'R'}); //The manual says that this sets all the gains to 255, but it really does it to 0
+	printHex(parameters);
+	if (parameters.at(0) == 'R' && parameters.at(1) == 'R')
+		std::cout << "All mPMT gains successfully reset" << std::endl;
 }
+
+void mPMT::setSingleGain(const uint8_t channel, const uint8_t gain)
+{
+	std::vector<uint8_t> parameters = sendCommand({'g', channel, gain});
+	printHex(parameters);
+}
+
+void mPMT::setAllGain(const uint8_t gain)
+{
+	std::vector<uint8_t> parameters = sendCommand({ 'S', gain });
+	printHex(parameters);
+}
+
 
 #pragma endregion "mPMT"
 

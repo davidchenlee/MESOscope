@@ -214,5 +214,5 @@ void seq_testmPMT()
 	mPMT pmt;
 	//pmt.readAllGain();
 	//pmt.setSingleGain(2, 150);
-	pmt.setAllGain(255);
+	//pmt.setAllGain(255);
 }

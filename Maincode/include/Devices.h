@@ -140,14 +140,15 @@ class mPMT
 	const int mTimeout_ms = 300;
 	const int RxBufferSize = 256;
 	void appendSumCheck(std::vector<uint8_t> &input);
+	uint8_t sumCheck(std::vector<uint8_t> input);
 	std::vector<uint8_t> sendCommand(std::vector<uint8_t> command);
 public:
 	mPMT();
 	~mPMT();
 	void readAllGain();
 	void setAllGainToZero();
-	void setSingleGain(const uint8_t channel, const uint8_t gain);
-	void setAllGain(const uint8_t gain);
+	void setSingleGain(const int channel, const int gain);
+	void setAllGain(const int gain);
 };
 
 class Filterwheel

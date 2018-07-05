@@ -613,10 +613,19 @@ std::vector<uint8_t> mPMT::sendCommand(std::vector<uint8_t> command_array)
 
 void mPMT::appendSumCheck(std::vector<uint8_t> &input)
 {
-	char sum = 0;
+	uint8_t sum = 0;
 	for (size_t ii = 0; ii < input.size(); ii++)
 		sum += input.at(ii);
 	input.push_back(sum);
+}
+
+uint8_t mPMT::sumCheck(std::vector<uint8_t> input)
+{
+	uint8_t sum = 0;
+	for (size_t ii = 0; ii < input.size()-2; ii++)
+		sum += input.at(ii);
+
+	return sum;
 }
 
 void mPMT::readAllGain()
@@ -629,21 +638,41 @@ void mPMT::readAllGain()
 void mPMT::setAllGainToZero()
 {
 	std::vector<uint8_t> parameters = sendCommand({'R'}); //The manual says that this sets all the gains to 255, but it really does it to 0
-	printHex(parameters);
+	//printHex(parameters);	//For debugging
 	if (parameters.at(0) == 'R' && parameters.at(1) == 'R')
-		std::cout << "All mPMT gains successfully reset" << std::endl;
+		std::cout << "All mPMT gains successfully set to 0" << std::endl;
 }
 
-void mPMT::setSingleGain(const uint8_t channel, const uint8_t gain)
+void mPMT::setSingleGain(const int channel, const int gain)
 {
-	std::vector<uint8_t> parameters = sendCommand({'g', channel, gain});
-	printHex(parameters);
+	if (channel < 1 || channel > nPMTchannels)
+		std::invalid_argument((std::string)__FUNCTION__ + ": mPMT channel must be in the range 1-16");
+
+	if (gain < 0 || gain > 255)
+		std::invalid_argument((std::string)__FUNCTION__ + ": mPMT gain must be in the range 0-255");
+
+
+	std::vector<uint8_t> parameters = sendCommand({'g', (uint8_t)channel, (uint8_t)gain});
+	//printHex(parameters);	//For debugging
+
+	if (parameters.at(0) == 'g' && parameters.at(1) == (uint8_t)channel && parameters.at(2) == (uint8_t)gain && parameters.at(3) == sumCheck(parameters))
+		std::cout << "mPMT channel " << channel << " successfully set to " << gain << std::endl;
+	else
+		std::cout << "Warning: CheckSum error in " + (std::string)__FUNCTION__ << std::endl;
 }
 
-void mPMT::setAllGain(const uint8_t gain)
+void mPMT::setAllGain(const int gain)
 {
-	std::vector<uint8_t> parameters = sendCommand({ 'S', gain });
-	printHex(parameters);
+	if ( gain < 0 || gain > 255 )
+		std::invalid_argument((std::string)__FUNCTION__ + ": mPMT gain must be in the range 0-255");
+
+	std::vector<uint8_t> parameters = sendCommand({ 'S', (uint8_t)gain });
+	//printHex(parameters);	//For debugging
+
+	if (parameters.at(0) == 'P' && parameters.at(1) == (uint8_t)gain && parameters.at(2) == sumCheck(parameters))
+		std::cout << "All mPMT gains successfully set to " << gain << std::endl;
+	else
+		std::cout << "Warning: CheckSum error in " + (std::string)__FUNCTION__ << std::endl;
 }
 
 

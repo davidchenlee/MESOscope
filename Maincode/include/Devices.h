@@ -137,10 +137,14 @@ class mPMT
 	std::string port = "COM1";
 	const int mBaud = 9600;
 	const int mTimeout_ms = 300;
+	const int RxBufferSize = 256;
+	void appendSumCheck(std::vector<char> &input);
+	std::vector<uint8_t> sendCommand(std::vector<char> command);
 public:
 	mPMT();
 	~mPMT();
-	void sendMessage();
+	void readGainAll();
+	void resetGainAll();
 };
 
 class Filterwheel

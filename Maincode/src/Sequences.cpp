@@ -212,5 +212,5 @@ void seq_testStageTriggerConfig()
 void seq_testmPMT()
 {
 	mPMT pmt;
-	pmt.sendMessage();
+	pmt.readGainAll();
 }

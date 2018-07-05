@@ -583,14 +583,43 @@ mPMT::~mPMT()
 
 }
 
-void mPMT::sendMessage()
+std::vector<uint8_t> mPMT::sendCommand(std::vector<char> command_array)
 {
-	std::string RxBuffer;
-	mSerial->write("AB\r");
+	appendSumCheck(command_array);
+	std::string TxBuffer(command_array.begin(), command_array.end()); //Convert the vector<char> to string
+	TxBuffer += "\r";	//End the command line with CR
+	//printHex(TxBuffer); 
 
-	const int RxBufSize = 255;
-	mSerial->read(RxBuffer, RxBufSize);
-	printHex(RxBuffer);
+	std::vector<uint8_t> RxBuffer;
+	mSerial->write("\r");						//Wake up the mPMT
+	mSerial->read(RxBuffer, RxBufferSize);		//Read the state: 0x0D(0d13) for ready, or 0x45(0d69) for error
+
+	RxBuffer.clear(); //Flush the buffer
+	mSerial->write(TxBuffer);
+	mSerial->read(RxBuffer, RxBufferSize);
+
+	return RxBuffer;
+}
+
+void mPMT::appendSumCheck(std::vector<char> &input)
+{
+	char sum = 0;
+	for (size_t ii = 0; ii < input.size(); ii++)
+		sum += input[ii];
+	input.push_back(sum);
+}
+
+void mPMT::readGainAll()
+{
+	std::vector<uint8_t> parameters = sendCommand({'I'});
+	for (size_t ii = 1; ii <= 16; ii++)
+		std::cout << "Gain " << ii << " = " <<  (int)parameters.at(ii) << std::endl;
+		
+}
+
+void mPMT::resetGainAll()
+{
+	std::vector<uint8_t> parameters = sendCommand({'R'});
 }
 
 #pragma endregion "mPMT"

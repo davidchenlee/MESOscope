@@ -1,10 +1,12 @@
 #include "Utilities.h"
 
+//Convert an int to hex and print it out
 void printHex(int input)
 {
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
 
+//Convert a string to hex and print it out
 void printHex(std::string input)
 {
 	const char *cstr = input.c_str();

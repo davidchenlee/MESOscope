@@ -585,7 +585,8 @@ mPMT::~mPMT()
 
 std::vector<uint8_t> mPMT::sendCommand(std::vector<uint8_t> command_array)
 {
-	appendSumCheck(command_array);
+	command_array.push_back(sumCheck(command_array, command_array.size()));	//Append the sumcheck
+
 	std::string TxBuffer(command_array.begin(), command_array.end()); //Convert the vector<char> to string
 	TxBuffer += "\r";	//End the command line with CR
 	//printHex(TxBuffer); //For debugging
@@ -595,7 +596,8 @@ std::vector<uint8_t> mPMT::sendCommand(std::vector<uint8_t> command_array)
 	mSerial->read(RxBuffer, RxBufferSize);		//Read the state: 0x0D(0d13) for ready, or 0x45(0d69) for error
 
 	//Throw an error if RxBuffer is empty or CR is NOT returned
-	if ( RxBuffer.empty() || RxBuffer.at(0) != 0x0D ) throw std::runtime_error((std::string)__FUNCTION__ + ": Failure waking up the mPMT microcontroller");
+	if ( RxBuffer.empty() || RxBuffer.at(0) != 0x0D )
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure waking up the mPMT microcontroller");
 	
 	//printHex(RxBuffer); //For debugging
 
@@ -604,26 +606,20 @@ std::vector<uint8_t> mPMT::sendCommand(std::vector<uint8_t> command_array)
 	mSerial->read(RxBuffer, RxBufferSize);
 	
 	//Throw an error if RxBuffer is empty
-	if (RxBuffer.empty()) throw std::runtime_error((std::string)__FUNCTION__ + ": Failure reading the mPMT microcontroller");
+	if (RxBuffer.empty())
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure reading the mPMT microcontroller");
 
 	//printHex(RxBuffer); //For debugging
 
 	return RxBuffer;
 }
 
-void mPMT::appendSumCheck(std::vector<uint8_t> &input)
+//Return the sumcheck of all the elements in the array
+uint8_t mPMT::sumCheck(const std::vector<uint8_t> charArray, const int nElements)
 {
 	uint8_t sum = 0;
-	for (size_t ii = 0; ii < input.size(); ii++)
-		sum += input.at(ii);
-	input.push_back(sum);
-}
-
-uint8_t mPMT::sumCheck(std::vector<uint8_t> input)
-{
-	uint8_t sum = 0;
-	for (size_t ii = 0; ii < input.size()-2; ii++)
-		sum += input.at(ii);
+	for (int ii = 0; ii < nElements; ii++)
+		sum += charArray.at(ii);
 
 	return sum;
 }
@@ -631,48 +627,104 @@ uint8_t mPMT::sumCheck(std::vector<uint8_t> input)
 void mPMT::readAllGain()
 {
 	std::vector<uint8_t> parameters = sendCommand({'I'});
-	for (int ii = 1; ii <= nPMTchannels; ii++)
-		std::cout << "Gain " << ii << " = " << (int)parameters.at(ii) << std::endl;		
-}
 
-void mPMT::setAllGainToZero()
-{
-	std::vector<uint8_t> parameters = sendCommand({'R'}); //The manual says that this sets all the gains to 255, but it really does it to 0
-	//printHex(parameters);	//For debugging
-	if (parameters.at(0) == 'R' && parameters.at(1) == 'R')
-		std::cout << "All mPMT gains successfully set to 0" << std::endl;
+	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
+	if (parameters.at(0) != 'I' || parameters.at(17) != sumCheck(parameters, parameters.size() - 2))
+		std::cout << "Warning: CheckSum mismatch in " + (std::string)__FUNCTION__ << std::endl;
+	
+	//Print out the gains
+	std::cout << "mPMT gains:" << std::endl;
+	for (int ii = 1; ii <= 16; ii++)
+		std::cout << "Gain #" << ii << " (0-255) = " << (int)parameters.at(ii) << std::endl;		
 }
 
 void mPMT::setSingleGain(const int channel, const int gain)
 {
-	if (channel < 1 || channel > nPMTchannels)
-		std::invalid_argument((std::string)__FUNCTION__ + ": mPMT channel must be in the range 1-16");
+	//Check that the input parameters are within range
+	if (channel < 1 || channel > 16)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": mPMT channel number out of range (1-16)");
 
 	if (gain < 0 || gain > 255)
-		std::invalid_argument((std::string)__FUNCTION__ + ": mPMT gain must be in the range 0-255");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": mPMT gain out of range (0-255)");
 
 
 	std::vector<uint8_t> parameters = sendCommand({'g', (uint8_t)channel, (uint8_t)gain});
 	//printHex(parameters);	//For debugging
 
-	if (parameters.at(0) == 'g' && parameters.at(1) == (uint8_t)channel && parameters.at(2) == (uint8_t)gain && parameters.at(3) == sumCheck(parameters))
+	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
+	if (parameters.at(0) == 'g' && parameters.at(1) == (uint8_t)channel && parameters.at(2) == (uint8_t)gain && parameters.at(3) == sumCheck(parameters, parameters.size()-2))
 		std::cout << "mPMT channel " << channel << " successfully set to " << gain << std::endl;
 	else
-		std::cout << "Warning: CheckSum error in " + (std::string)__FUNCTION__ << std::endl;
+		std::cout << "Warning: CheckSum mismatch in " + (std::string)__FUNCTION__ << std::endl;
+}
+
+void mPMT::setAllGainToZero()
+{
+	std::vector<uint8_t> parameters = sendCommand({ 'R' }); //The manual says that this sets all the gains to 255, but it really does it to 0
+															//printHex(parameters);	//For debugging
+
+	//Check that the chars returned by the mPMT are correct. The second char returned is the sumcheck
+	if (parameters.at(0) == 'R' && parameters.at(1) == 'R')
+		std::cout << "All mPMT gains successfully set to 0" << std::endl;
 }
 
 void mPMT::setAllGain(const int gain)
 {
-	if ( gain < 0 || gain > 255 )
-		std::invalid_argument((std::string)__FUNCTION__ + ": mPMT gain must be in the range 0-255");
+	if (gain < 0 || gain > 255)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": mPMT gain must be in the range 0-255");
 
 	std::vector<uint8_t> parameters = sendCommand({ 'S', (uint8_t)gain });
 	//printHex(parameters);	//For debugging
 
-	if (parameters.at(0) == 'P' && parameters.at(1) == (uint8_t)gain && parameters.at(2) == sumCheck(parameters))
+	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
+	if (parameters.at(0) == 'S' && parameters.at(1) == (uint8_t)gain && parameters.at(2) == sumCheck(parameters, parameters.size() - 2))
 		std::cout << "All mPMT gains successfully set to " << gain << std::endl;
 	else
-		std::cout << "Warning: CheckSum error in " + (std::string)__FUNCTION__ << std::endl;
+		std::cout << "Warning: CheckSum mismatch in " + (std::string)__FUNCTION__ << std::endl;
+}
+
+void mPMT::setAllGain(std::vector<uint8_t> gains)
+{
+	//Check that the input parameters are within range
+	if (gains.size() != 16)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Gain array must have 16 elements");
+
+	for (int ii = 0; ii < 16; ii++)
+		if (gains.at(ii) < 0 || gains.at(ii) > 255)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ":  mPMT gain #" + std::to_string(ii) + " out of range (0-255)");
+
+	gains.insert(gains.begin(), 'G');	//Prepend the command
+	std::vector<uint8_t> parameters = sendCommand({ gains });
+	//printHex(parameters);	//For debugging
+
+	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
+	if (parameters.at(0) != 'G' || parameters.at(17) != sumCheck(parameters, parameters.size() - 2))
+		std::cout << "Warning: CheckSum mismatch in " + (std::string)__FUNCTION__ << std::endl;
+
+	//Print out the gains
+	std::cout << "mPMT gains successfully set to:" << std::endl;
+	for (int ii = 1; ii <= 16; ii++)
+		std::cout << "Gain #" << ii << " (0-255) = " << (int)parameters.at(ii) << std::endl;
+
+}
+
+void mPMT::readTemp()
+{
+	std::vector<uint8_t> parameters = sendCommand({ 'T' });
+	//printHex(parameters);	//For debugging
+
+	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
+	if (parameters.at(0) != 'T' || parameters.at(4) != sumCheck(parameters, parameters.size() - 2))
+		std::cout << "Warning: CheckSum mismatch in " + (std::string)__FUNCTION__ << std::endl;
+
+	const int TEMPH = (int)(parameters.at(1));
+	const int TEMPL = (int)(parameters.at(2));
+	const double temp_C = TEMPH + 0.01 * TEMPL; //According to the manual
+
+	const int alertTemp_C = (int)(parameters.at(3));
+
+	std::cout << "mPMT temperature = " << temp_C << " \370C" << std::endl;
+	std::cout << "mPMT alert temperature = " << alertTemp_C <<  " \370C" << std::endl;
 }
 
 

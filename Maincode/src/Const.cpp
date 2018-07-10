@@ -27,7 +27,8 @@ namespace Constants
 
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const size_t FIFOINmax = 32773;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
-	extern const int stageTriggerDuration = 50* us;			//Whenever framegate rises, send HIGH to the stage DIO and hold it for 'stageTriggerDuration' (the stage controller has a 20kHz clock = 50 us)
+	extern const int stageTriggerPulse_ms = 5 * ms;			//in ms. Pulsewidth for triggering the stages.
+															//The z stage needs a pulse >~ 2 ms because its DIs are based on ADC (the stage controller has a 20kHz clock = 50 us)
 
 	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
 	//The laser has a repetition rate of 80 MH and therefore the pulse separation is 12.5ns (the pulse width out from the PMT is ~1ns but can be extreched via electronics).
@@ -72,7 +73,7 @@ namespace Parameters
 //The current buffer can do 400*1200 pix ~ 480000 pix, or ~48 multiplexed frames
 //20180415 - Added an internal FIFO. Now I can do 400x480x3 = 576000 pixels, or 57.6 multiplexed frames
 //201804   - 400x400x5, skipped 60. 400x35x90, skipped 8. 400x35x70, skipped 6
-//20180628 - I could do 300x35 pixels and 100 frames
+//20180709 - I could do 340x35 pixels and 100 frames (340 pix wide ~ 13 photons per pix)
 
 
 /*

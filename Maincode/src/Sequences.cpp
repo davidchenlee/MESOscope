@@ -21,13 +21,14 @@ void seq_main(const FPGAapi::Session &fpga)
 	stage.waitForMovementToStop3();
 	stage.printPosition3();
 	double3 position_mm = stage.readPosition3_mm();
+	Sleep(1000);
 	*/
 	
 	const double duration = 25.2 * ms; //halfPeriodLineclock_us * heightPerFrame_pix = 62.5us * 400 pixels
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
-	Sleep(1000);
+
 
 	const int nFrames = 1;
 	//NON-REALTIME SEQUENCE
@@ -47,8 +48,6 @@ void seq_main(const FPGAapi::Session &fpga)
 		//pockels.voltageLinearRamp(4*us, 40*us, 0, 1*V);
 		//pockels.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
 		//pockels.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
-	
-		Sleep(100);
 
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		

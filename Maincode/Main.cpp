@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 	}
 	
 	std::cout << "\nPress any key to continue..." << std::endl;
-	getchar();
+	//getchar();
 
 	return 0;
 }

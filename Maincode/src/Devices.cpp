@@ -348,9 +348,6 @@ void Image::correctInterleavedImage()
 
 void Image::acquire(const std::string filename)
 {
-	if (enableFIFOfpga)
-		mFpga.enableFIFOfpga();	//Enable pushing data to FIFOfpga
-
 	startFIFOpc();		//Establish the connection between FIFOfpga and FIFOpc
 	mFpga.triggerRT();	//Trigger the RT sequence. If triggered too early, FIFOfpga will probably overflow
 

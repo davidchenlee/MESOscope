@@ -9,20 +9,20 @@ There are basically 2 imaging modes :
 void seq_main(const FPGAapi::Session &fpga)
 {	
 	const int wavelength_nm = 750;
-	double laserPower_mW = 60 * mW;
+	double laserPower_mW = 40 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
 	const std::string filename = "PHAL";
 
-	/*
+	
 	Stage stage;
-	const double3 initialPosition_mm = { 34.800, 19.444, 17.847 };
+	const double3 initialPosition_mm = { 34.55, 11.7, 18.379 };
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
 	stage.printPosition3();
 	double3 position_mm = stage.readPosition3_mm();
 	Sleep(1000);
-	*/
+	
 	
 	const double duration = 25.2 * ms; //halfPeriodLineclock_us * heightPerFrame_pix = 62.5us * 400 pixels
 	const double galvoTimeStep = 8 * us;
@@ -30,7 +30,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 
 
-	const int nFrames = 1;
+	const int nFrames = 20;
 	//NON-REALTIME SEQUENCE
 	for (int ii = 0; ii < nFrames; ii++)
 	{
@@ -52,15 +52,16 @@ void seq_main(const FPGAapi::Session &fpga)
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		
 		Image image(fpga);
-		//image.acquire(filename + " x = " + toString(position_mm.at(xx), 3) + " y = " + toString(position_mm.at(yy), 3) + " z = " + toString(position_mm.at(zz),4)); //Execute the realtime sequence and acquire the image
-		image.acquire(filename); //Execute the realtime sequence and acquire the image
+		image.acquire(filename + " x = " + toString(position_mm.at(xx), 3) + " y = " + toString(position_mm.at(yy), 3) + " z = " + toString(position_mm.at(zz),4)); //Execute the realtime sequence and acquire the image
+		//image.acquire(filename); //Execute the realtime sequence and acquire the image
 		
-		/*
+		
 		position_mm.at(zz) += 0.0005;
 		stage.moveStage(zz, position_mm.at(zz));
 		stage.printPosition3();
 		//laserPower_mW += 0.5;
-		*/
+		
+
 		Sleep(1000);
 		
 		

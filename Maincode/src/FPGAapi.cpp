@@ -125,12 +125,12 @@ namespace FPGAapi
 
 		//STAGES
 		const bool scanDirection = 0;
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(mSession, NiFpga_FPGAvi_ControlU32_StageTriggerDuration_tick, (U32)stageTriggerPulse_ms * tickPerUs));		//Trigger pulse width
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_ScanDirection, scanDirection));														//Z-stage scan direction (1 for up, 0 for down)
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(mSession, NiFpga_FPGAvi_ControlU32_StageTriggerPulse_tick, (U32)stageTriggerPulse_ms * tickPerUs));		//Trigger pulse width
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_ScanDirection, scanDirection));										//Z-stage scan direction (1 for up, 0 for down)
 
 		//DEBUGGER
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFO, 0));															//Enable pushing data to FIFOfpga. For debugging purposes
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFO, enableFIFOfpga));											//Enable pushing data to FIFOfpga. For debugging purposes
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Pockels1_EnableAutoOff, (NiFpga_Bool)pockels1_enableAutoOff));			//Enable gating the pockels by framegate. For debugging purposes
 	
 
@@ -192,10 +192,6 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
 	}
 
-	void Session::enableFIFOfpga() const
-	{
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFO, 1));
-	}
 
 	//Flush the block RAMs used for buffering the pixelclock, AO, and DO 
 	void Session::flushBRAMs() const

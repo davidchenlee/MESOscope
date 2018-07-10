@@ -30,7 +30,6 @@ namespace FPGAapi
 		void initialize() const;
 		void writeFIFOpc(VQU32 &vectorqueues) const;
 		void triggerRT() const;
-		void enableFIFOfpga() const;
 		void flushBRAMs() const;
 		void close(const bool reset) const;
 		NiFpga_Session getSession() const;

@@ -33,7 +33,7 @@ namespace Constants
 	extern const PixelclockSelector pixelclockType;
 	extern const bool overrideSaving;
 	extern const bool enableFIFOfpga;
-	extern const bool pockels1_enableAutoOff;
+	extern bool pockels1_enableAutoOff;
 
 	extern const double PI;
 	extern const int us;

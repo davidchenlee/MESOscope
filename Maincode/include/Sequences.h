@@ -12,3 +12,4 @@ void seq_testFilterwheel();
 void seq_testStageSetPosition();
 void seq_testStageTriggerConfig();
 void seq_testmPMT();
+void seq_testPockels(const FPGAapi::Session &fpga);

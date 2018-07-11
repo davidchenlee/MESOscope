@@ -9,7 +9,7 @@ There are basically 2 imaging modes :
 void seq_main(const FPGAapi::Session &fpga)
 {	
 	const int wavelength_nm = 750;
-	double laserPower_mW = 40 * mW;
+	double laserPower_mW = 50 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
 	const std::string filename = "PHAL";
@@ -30,7 +30,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 
 
-	const int nFrames = 20;
+	const int nFrames = 1;
 	//NON-REALTIME SEQUENCE
 	for (int ii = 0; ii < nFrames; ii++)
 	{
@@ -217,4 +217,27 @@ void seq_testmPMT()
 	//pmt.setAllGain(255);
 	//pmt.readTemp();
 	//pmt.setAllGain({ 100,255,255,255,255,255,255,255,255,255,255,255,255,255,100,255});
+}
+
+//pockels1_enableAutoOff = 1
+void seq_testPockels(const FPGAapi::Session &fpga)
+{
+	const int wavelength_nm = 750;
+	double laserPower_mW = 50 * mW;
+
+	//Create a realtime sequence
+	FPGAapi::RTsequence sequence(fpga);
+
+	//Turn on the pockels cell
+	PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
+	pockels.pushPowerSinglet(8 * us, laserPower_mW);
+
+	//Upload the realtime sequence to the FPGA but don't execute it yet
+	sequence.uploadRT();
+
+	//Execute the realtime sequence and acquire the image
+	Image image(fpga);
+	image.acquire();
+
+
 }

@@ -13,3 +13,4 @@ void seq_testStageSetPosition();
 void seq_testStageTriggerConfig();
 void seq_testmPMT();
 void seq_testPockels(const FPGAapi::Session &fpga);
+void seq_testLaserComm(const FPGAapi::Session &fpga);

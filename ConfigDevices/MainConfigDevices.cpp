@@ -38,6 +38,7 @@ int main(int argc, char* argv[])
 			}
 			else
 				throw std::invalid_argument("invalid start/stop command");
+
 		}
 
 		catch (const std::invalid_argument &e)

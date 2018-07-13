@@ -795,7 +795,14 @@ void Filterwheel::setFilterPosition(const FilterColor color)
 #pragma region "Laser"
 Laser::Laser()
 {
-	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+	try
+	{
+		mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+	}
+	catch (const serial::IOException)
+	{
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with " + port);
+	}
 	this->downloadWavelength();
 };
 
@@ -807,8 +814,15 @@ void Laser::downloadWavelength()
 	std::string RxBuffer;					//Reply from the filterwheel
 	const int RxBufSize = 20;
 
-	mSerial->write(TxBuffer + "\r");
-	mSerial->read(RxBuffer, RxBufSize);
+	try
+	{
+		mSerial->write(TxBuffer + "\r");
+		mSerial->read(RxBuffer, RxBufSize);
+	}
+	catch (const serial::IOException)
+	{
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with " + port);
+	}
 
 	//Delete echoed command. Echoing could be disabled on the laser but deleting it is more general and safer
 	std::string keyword = "?VW ";
@@ -826,7 +840,7 @@ void Laser::downloadWavelength()
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
 	mWavelength = static_cast<FilterColor>(std::atoi(RxBuffer.c_str()));	//convert string to int
-	std::cout << RxBuffer << std::endl;
+	//std::cout << RxBuffer << std::endl;	//For debugging
 }
 
 int Laser::readWavelength_nm() const
@@ -836,14 +850,19 @@ int Laser::readWavelength_nm() const
 
 void Laser::setWavelength()
 {
-	const std::string TxBuffer = "VW=800";		//Command to the filterwheel
-	std::string RxBuffer;						//Reply from the filterwheel
+	const std::string TxBuffer = "VW=800";		//Command to the laser
+	std::string RxBuffer;						//Reply from the laser
 	const int RxBufSize = 256;
 
-	mSerial->write(TxBuffer + "\r");
-	mSerial->read(RxBuffer, RxBufSize);
-
-	this->downloadWavelength();
+	try
+	{
+		mSerial->write(TxBuffer + "\r");
+		mSerial->read(RxBuffer, RxBufSize);
+	}
+	catch (const serial::IOException)
+	{
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with " + port);
+	}
 }
 
 #pragma endregion "Laser"

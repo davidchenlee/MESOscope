@@ -9,11 +9,12 @@ int main(int argc, char* argv[])
 		try
 		{
 			fpga.initialize();		//Initialize the FPGA
-			seq_main(fpga);			//Run the sequence
+			//seq_main(fpga);			//Run the sequence
 			//seq_testStageSetPosition();
 			//seq_testAODO(fpga);
 			//seq_testmPMT();
 			//seq_testPockels(fpga);
+			seq_testLaserComm(fpga);
 		}
 		catch (const std::invalid_argument &e)
 		{
@@ -47,7 +48,7 @@ int main(int argc, char* argv[])
 	}
 	
 	std::cout << "\nPress any key to continue..." << std::endl;
-	//getchar();
+	getchar();
 
 	return 0;
 }

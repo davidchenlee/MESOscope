@@ -792,7 +792,7 @@ void Filterwheel::setFilterPosition(const FilterColor color)
 }
 #pragma endregion "Filterwheel"
 
-#pragma region "Lasers"
+#pragma region "Laser"
 Laser::Laser()
 {
 	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
@@ -846,7 +846,7 @@ void Laser::setWavelength()
 	this->downloadWavelength();
 }
 
-#pragma endregion "Lasers"
+#pragma endregion "Laser"
 
 #pragma region "Stages"
 Stage::Stage()

@@ -1,5 +1,6 @@
 #include "Devices.h"
 
+//argv[1] = FOV, argv[2] = On/Off
 int main(int argc, char* argv[])
 {
 	if (argc < 3) {
@@ -7,7 +8,7 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	FPGAapi::Session fpga;			//Open a FPGA connection
+	FPGAapi::Session fpga;	//Open a FPGA connection
 	try
 	{
 		fpga.initialize();	//Initialize the FPGA
@@ -15,11 +16,13 @@ int main(int argc, char* argv[])
 		ResonantScanner RS(fpga);
 		Shutter shutter1(fpga, Shutter1);
 
+		//Set the FOV
 		int FFOV_um(std::stoi(argv[1]));
 		std::string runCommand(argv[2]);
 
 		if (FFOV_um < 0 || FFOV_um > 300) throw std::invalid_argument("invalid FFOV");
 
+		//Turn the RS On/Off
 		if (runCommand == "1")
 		{
 			RS.turnOn_um(FFOV_um * um);
@@ -32,9 +35,7 @@ int main(int argc, char* argv[])
 			shutter1.close();
 		}
 		else
-		{
 			throw std::invalid_argument("invalid start/stop command");
-		}
 			
 		fpga.close(0);		//Close the FPGA connection
 

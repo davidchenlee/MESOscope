@@ -9,14 +9,13 @@ There are basically 2 imaging modes :
 void seq_main(const FPGAapi::Session &fpga)
 {	
 	const int wavelength_nm = 750;
-	double laserPower_mW = 50 * mW;
+	double laserPower_mW = 35 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
 	const std::string filename = "PHAL";
-
 	
 	Stage stage;
-	const double3 initialPosition_mm = { 34.55, 11.7, 18.379 };
+	const double3 initialPosition_mm = { 34.55, 11.7, 18.4005 };
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
 	stage.printPosition3();
@@ -61,7 +60,6 @@ void seq_main(const FPGAapi::Session &fpga)
 		stage.printPosition3();
 		//laserPower_mW += 0.5;
 		
-
 		Sleep(1000);
 		
 		
@@ -219,7 +217,10 @@ void seq_testmPMT()
 	//pmt.setAllGain({ 100,255,255,255,255,255,255,255,255,255,255,255,255,255,100,255});
 }
 
-//pockels1_enableAutoOff = 1
+//Keep the pockels cell on.
+//1. Manually open the shutter
+//2. Set pockels1_enableAutoOff = 0
+//3. Set lineclockInput = FG
 void seq_testPockels(const FPGAapi::Session &fpga)
 {
 	const int wavelength_nm = 750;

@@ -134,7 +134,6 @@
     <ClInclude Include="..\Maincode\include\Const.h" />
     <ClInclude Include="..\Maincode\include\Devices.h" />
     <ClInclude Include="..\Maincode\include\FPGAapi.h" />
-    <ClInclude Include="..\Maincode\include\Sequences.h" />
     <ClInclude Include="..\Maincode\include\Utilities.h" />
   </ItemGroup>
   <ItemGroup>
@@ -142,7 +141,6 @@
     <ClCompile Include="..\Maincode\src\Const.cpp" />
     <ClCompile Include="..\Maincode\src\Devices.cpp" />
     <ClCompile Include="..\Maincode\src\FPGAapi.cpp" />
-    <ClCompile Include="..\Maincode\src\Sequences.cpp" />
     <ClCompile Include="..\Maincode\src\serial.cc" />
     <ClCompile Include="..\Maincode\src\Utilities.cpp" />
     <ClCompile Include="..\Maincode\src\win.cc" />

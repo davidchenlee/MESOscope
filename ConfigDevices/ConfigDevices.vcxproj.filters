@@ -24,9 +24,6 @@
     <ClInclude Include="..\Maincode\include\FPGAapi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Maincode\include\Sequences.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\Maincode\include\Utilities.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -45,9 +42,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Maincode\src\FPGAapi.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Maincode\src\Sequences.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Maincode\src\serial.cc">

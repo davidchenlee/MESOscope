@@ -851,7 +851,7 @@ int Laser::readWavelength_nm() const
 void Laser::setWavelength(const int wavelength_nm)
 {
 	if (wavelength_nm < 680 || wavelength_nm > 1080)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser " + port + " wavelength must be in the range 680 - 1080 nm");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser " + port + " wavelength must be in the range 680 - 1080 nm");
 
 	if (wavelength_nm == mWavelength_nm)
 	{
@@ -875,6 +875,23 @@ void Laser::setWavelength(const int wavelength_nm)
 
 		mWavelength_nm = wavelength_nm;
 		std::cout << "The laser " + port + " wavelength has been successfully set to " << wavelength_nm << " nm" << std::endl;
+	}
+}
+
+void Laser::shutter(const bool state)
+{
+	const std::string TxBuffer = "S=" + std::to_string(state);		//Command to the laser
+	std::string RxBuffer;					//Reply from the laser
+	const int RxBufSize = 20;
+
+	try
+	{
+		mSerial->write(TxBuffer + "\r");
+		mSerial->read(RxBuffer, RxBufSize);
+	}
+	catch (const serial::IOException)
+	{
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the laser " + port);
 	}
 }
 

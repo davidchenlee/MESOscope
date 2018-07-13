@@ -180,6 +180,7 @@ public:
 	~Laser();
 	int readWavelength_nm() const;
 	void setWavelength(const int wavelength_nm);
+	void Laser::shutter(const bool state);
 };
 
 class Stage

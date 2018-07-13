@@ -246,6 +246,5 @@ void seq_testPockels(const FPGAapi::Session &fpga)
 void seq_testLaserComm(const FPGAapi::Session &fpga)
 {
 	Laser vision;
-	//vision.setWavelength();
-	std::cout << vision.readWavelength_nm() << std::endl;
+	vision.setWavelength(750);
 }

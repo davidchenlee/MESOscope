@@ -100,7 +100,7 @@ threshold voltage
 gain
 
 LASER
-mWavelength: lambda
+mWavelength_nm: lambda
 pockels cell voltage (laser power): PockelsVoltage
 
 VIBRATOME

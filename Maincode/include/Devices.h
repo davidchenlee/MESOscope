@@ -169,7 +169,7 @@ public:
 
 class Laser
 {
-	int mWavelength;
+	int mWavelength_nm;
 	serial::Serial *mSerial;
 	const std::string port = "COM1";						//internal ID assigned by the OS
 	const int mBaud = 19200;
@@ -179,7 +179,7 @@ public:
 	Laser();
 	~Laser();
 	int readWavelength_nm() const;
-	void setWavelength();
+	void setWavelength(const int wavelength_nm);
 };
 
 class Stage

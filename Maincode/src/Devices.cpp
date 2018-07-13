@@ -627,7 +627,7 @@ void mPMT::readAllGain()
 
 	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) != 'I' || parameters.at(17) != sumCheck(parameters, parameters.size() - 2))
-		std::cout << "Warning: CheckSum mismatch in " + (std::string)__FUNCTION__ << std::endl;
+		std::cout << "Warning in " + (std::string)__FUNCTION__  + ": CheckSum mismatch" << std::endl;
 	
 	//Print out the gains
 	std::cout << "mPMT gains:" << std::endl;
@@ -652,7 +652,7 @@ void mPMT::setSingleGain(const int channel, const int gain)
 	if (parameters.at(0) == 'g' && parameters.at(1) == (uint8_t)channel && parameters.at(2) == (uint8_t)gain && parameters.at(3) == sumCheck(parameters, parameters.size()-2))
 		std::cout << "mPMT channel " << channel << " successfully set to " << gain << std::endl;
 	else
-		std::cout << "Warning: CheckSum mismatch in " + (std::string)__FUNCTION__ << std::endl;
+		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
 }
 
 void mPMT::setAllGainToZero()
@@ -677,7 +677,7 @@ void mPMT::setAllGain(const int gain)
 	if (parameters.at(0) == 'S' && parameters.at(1) == (uint8_t)gain && parameters.at(2) == sumCheck(parameters, parameters.size() - 2))
 		std::cout << "All mPMT gains successfully set to " << gain << std::endl;
 	else
-		std::cout << "Warning: CheckSum mismatch in " + (std::string)__FUNCTION__ << std::endl;
+		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
 }
 
 void mPMT::setAllGain(std::vector<uint8_t> gains)
@@ -696,7 +696,7 @@ void mPMT::setAllGain(std::vector<uint8_t> gains)
 
 	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) != 'G' || parameters.at(17) != sumCheck(parameters, parameters.size() - 2))
-		std::cout << "Warning: CheckSum mismatch in " + (std::string)__FUNCTION__ << std::endl;
+		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
 
 	//Print out the gains
 	std::cout << "mPMT gains successfully set to:" << std::endl;
@@ -712,7 +712,7 @@ void mPMT::readTemp()
 
 	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) != 'T' || parameters.at(4) != sumCheck(parameters, parameters.size() - 2))
-		std::cout << "Warning: CheckSum mismatch in " + (std::string)__FUNCTION__ << std::endl;
+		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
 
 	const int TEMPH = (int)(parameters.at(1));
 	const int TEMPL = (int)(parameters.at(2));
@@ -810,8 +810,8 @@ Laser::~Laser() {};
 
 void Laser::downloadWavelength()
 {
-	const std::string TxBuffer = "?VW";		//Command to the filterwheel
-	std::string RxBuffer;					//Reply from the filterwheel
+	const std::string TxBuffer = "?VW";		//Command to the laser
+	std::string RxBuffer;					//Reply from the laser
 	const int RxBufSize = 20;
 
 	try
@@ -821,7 +821,7 @@ void Laser::downloadWavelength()
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with " + port);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the laser " + port);
 	}
 
 	//Delete echoed command. Echoing could be disabled on the laser but deleting it is more general and safer
@@ -839,29 +839,42 @@ void Laser::downloadWavelength()
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
-	mWavelength = static_cast<FilterColor>(std::atoi(RxBuffer.c_str()));	//convert string to int
+	mWavelength_nm = static_cast<int>(std::atoi(RxBuffer.c_str()));	//Convert string to int
 	//std::cout << RxBuffer << std::endl;	//For debugging
 }
 
 int Laser::readWavelength_nm() const
 {
-	return mWavelength;
+	return mWavelength_nm;
 }
 
-void Laser::setWavelength()
+void Laser::setWavelength(const int wavelength_nm)
 {
-	const std::string TxBuffer = "VW=800";		//Command to the laser
-	std::string RxBuffer;						//Reply from the laser
-	const int RxBufSize = 256;
+	if (wavelength_nm < 680 || wavelength_nm > 1080)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser " + port + " wavelength must be in the range 680 - 1080 nm");
 
-	try
+	if (wavelength_nm == mWavelength_nm)
 	{
-		mSerial->write(TxBuffer + "\r");
-		mSerial->read(RxBuffer, RxBufSize);
+		std::cout << "Warning in " + (std::string)__FUNCTION__  + ": The laser " + port + " wavelength is already at " << wavelength_nm << " nm." << std::endl;
 	}
-	catch (const serial::IOException)
+	else
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with " + port);
+		const std::string TxBuffer = "VW=" + std::to_string(wavelength_nm);		//Command to the laser
+		std::string RxBuffer;									//Reply from the laser
+		const int RxBufSize = 256;
+
+		try
+		{
+			mSerial->write(TxBuffer + "\r");
+			mSerial->read(RxBuffer, RxBufSize); //Read the serial buffer but don't do anything. The message reads "CHAMELEON>"
+		}
+		catch (const serial::IOException)
+		{
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with " + port);
+		}
+
+		mWavelength_nm = wavelength_nm;
+		std::cout << "The laser " + port + " wavelength has been successfully set to " << wavelength_nm << " nm" << std::endl;
 	}
 }
 

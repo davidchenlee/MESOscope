@@ -881,7 +881,7 @@ void Laser::setWavelength(const int wavelength_nm)
 void Laser::shutter(const bool state)
 {
 	const std::string TxBuffer = "S=" + std::to_string(state);		//Command to the laser
-	std::string RxBuffer;					//Reply from the laser
+	std::string RxBuffer;											//Reply from the laser
 	const int RxBufSize = 20;
 
 	try

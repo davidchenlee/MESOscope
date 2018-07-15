@@ -9,13 +9,13 @@ There are basically 2 imaging modes :
 void seq_main(const FPGAapi::Session &fpga)
 {	
 	const int wavelength_nm = 750;
-	double laserPower_mW = 35 * mW;
+	double laserPower_mW = 45 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
-	const std::string filename = "PHAL";
+	const std::string filename = "BEADS";
 	
 	Stage stage;
-	const double3 initialPosition_mm = { 34.55, 11.7, 18.4005 };
+	const double3 initialPosition_mm = { 34.55, 11.7, 18.4185 };
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
 	stage.printPosition3();
@@ -29,7 +29,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 
 
-	const int nFrames = 1;
+	const int nFrames = 20;
 	//NON-REALTIME SEQUENCE
 	for (int ii = 0; ii < nFrames; ii++)
 	{
@@ -224,7 +224,7 @@ void seq_testmPMT()
 void seq_testPockels(const FPGAapi::Session &fpga)
 {
 	const int wavelength_nm = 750;
-	double laserPower_mW = 50 * mW;
+	double laserPower_mW = 45 * mW;
 
 	//Create a realtime sequence
 	FPGAapi::RTsequence sequence(fpga);
@@ -233,10 +233,10 @@ void seq_testPockels(const FPGAapi::Session &fpga)
 	PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
 	pockels.pushPowerSinglet(8 * us, laserPower_mW);
 
-	//Upload the realtime sequence to the FPGA but don't execute it yet
+	//Upload the pockels sequence to the FPGA but don't execute it yet
 	sequence.uploadRT();
 
-	//Execute the realtime sequence and acquire the image
+	//Execute the sequence
 	Image image(fpga);
 	image.acquire();
 

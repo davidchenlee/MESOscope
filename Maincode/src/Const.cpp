@@ -23,7 +23,7 @@ namespace Constants
 	extern const int AO_tMIN_us = 2;						//Time step (in us) of the analog output. The AO channels take >1 us to set the output
 	extern const int syncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 	extern const int syncAODOtoLinegate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
-															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration (prob. 1 tick) because I placed the comparison logics for gating AFTER the line counter instead of before
+															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration because I placed the comparison logics for gating AFTER the line counter instead of before
 
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const size_t FIFOINmax = 32773;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!

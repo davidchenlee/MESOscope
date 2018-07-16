@@ -2,7 +2,7 @@
 
 namespace Constants
 {
-	extern const LineclockInputSelector lineclockInput =RS;				//Resonant scanner (RS) or Function generator (FG)
+	extern const LineclockInputSelector lineclockInput =FG;				//Resonant scanner (RS) or Function generator (FG)
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
 	extern const bool overrideSaving = 0;									//Enable override when saving files
@@ -45,9 +45,10 @@ namespace Parameters
 	extern const std::string foldername = ".\\Output\\";
 
 	//RESONANT SCANNER
-	//extern const double RS_voltPerUm = 1.0*V/(157*um);						//volts per um. Calibration factor for the resonant scanner (equal duration pixels). 11/April/2018
-	//extern const double RS_voltPerUm = 1.3*V / ((405 - 237) * um);			//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 19/April/2018
-	extern const double RS_voltPerUm = 0.143 / (21 * um);
+	//extern const double RS_voltPerUm = 1.0 * V/(157*um);						//volts per um. Calibration factor for the resonant scanner (equal duration pixels). 11/April/2018
+	//extern const double RS_voltPerUm = 1.3 * V / ((405 - 237) * um);			//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 19/April/2018
+	//extern const double RS_voltPerUm = 0.143 * V / (21 * um);
+	extern const double RS_voltPerUm = 1.285 * V/ ((467 - 264)*um);				//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 16/July/2018
 
 	//PIXEL CLOCK
 	extern const double halfPeriodLineclock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner

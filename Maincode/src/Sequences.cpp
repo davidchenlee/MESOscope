@@ -8,14 +8,14 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int wavelength_nm = 1040;
-	double laserPower_mW = 50 * mW;
+	const int wavelength_nm = 750;
+	double laserPower_mW = 20 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
-	const std::string filename = "BEADS";
+	const std::string filename = "Beads";
 	
 	Stage stage;
-	const double3 initialPosition_mm = { 34.88, 11.35, 18.423 };
+	const double3 initialPosition_mm = { 34.88, 11.467, 18.4130};
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
 	stage.printPosition3();
@@ -51,7 +51,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		
 		Image image(fpga);
-		image.acquire(filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW,0) + "mW" +
+		image.acquire(filename + " 4um " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW,0) + "mW collar=1.47" +
 			" x=" + toString(position_mm.at(xx), 3) + " y=" + toString(position_mm.at(yy), 3) + " z=" + toString(position_mm.at(zz),4)); //Execute the realtime sequence and acquire the image
 		//image.acquire(filename); //Execute the realtime sequence and acquire the image
 		
@@ -73,6 +73,18 @@ void seq_main(const FPGAapi::Session &fpga)
 	datalog.record("Galvo Max position (um) = ", posMax_um);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep);
 
+
+}
+
+void seq_testPixelclock(const FPGAapi::Session &fpga)
+{
+	//Create a realtime sequence
+	FPGAapi::RTsequence sequence(fpga);
+
+	sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
+
+	Image image(fpga);
+	image.acquire(); //Execute the realtime sequence and acquire the image
 
 }
 
@@ -145,7 +157,7 @@ void seq_calibAnalogLatency(const FPGAapi::Session &fpga)
 	FPGAapi::RTsequence sequence(fpga);
 	sequence.pushAnalogSinglet(GALVO1, step, 10);	//Initial pulse
 	sequence.pushAnalogSinglet(GALVO1, step, 0);
-	sequence.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5*V);			//Linear ramp to accumulate the error
+	sequence.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5 * V);			//Linear ramp to accumulate the error
 	sequence.pushAnalogSinglet(GALVO1, step, 10);	//Initial pulse
 	sequence.pushAnalogSinglet(GALVO1, step, 0);	//Final pulse
 

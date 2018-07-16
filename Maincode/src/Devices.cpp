@@ -878,6 +878,7 @@ void Laser::setWavelength(const int wavelength_nm)
 	}
 }
 
+//Open or close the Vision's shutter
 void Laser::shutter(const bool state)
 {
 	const std::string TxBuffer = "S=" + std::to_string(state);		//Command to the laser

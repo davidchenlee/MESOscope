@@ -17,6 +17,7 @@ int main(int argc, char* argv[])
 
 			ResonantScanner RS(fpga);
 			Shutter shutter1(fpga, Shutter1);
+			//Laser vision;
 
 			//Set the FOV
 			int FFOV_um(std::stoi(argv[1]));
@@ -30,11 +31,13 @@ int main(int argc, char* argv[])
 				RS.turnOn_um(FFOV_um * um);
 				std::cout << "RS FFOV set to: " << FFOV_um << " um" << std::endl;
 				shutter1.open();
+				//vision.shutter(1);
 			}
 			else if (runCommand == "0")
 			{
 				RS.turnOff();
 				shutter1.close();
+				//vision.shutter(0);
 			}
 			else
 				throw std::invalid_argument("invalid start/stop command");

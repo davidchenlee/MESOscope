@@ -8,14 +8,14 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int wavelength_nm = 750;
-	double laserPower_mW = 45 * mW;
+	const int wavelength_nm = 1040;
+	double laserPower_mW = 50 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
 	const std::string filename = "BEADS";
 	
 	Stage stage;
-	const double3 initialPosition_mm = { 34.55, 11.7, 18.4185 };
+	const double3 initialPosition_mm = { 34.88, 11.35, 18.423 };
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
 	stage.printPosition3();
@@ -29,7 +29,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 
 
-	const int nFrames = 20;
+	const int nFrames = 1;
 	//NON-REALTIME SEQUENCE
 	for (int ii = 0; ii < nFrames; ii++)
 	{
@@ -51,7 +51,8 @@ void seq_main(const FPGAapi::Session &fpga)
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		
 		Image image(fpga);
-		image.acquire(filename + " x = " + toString(position_mm.at(xx), 3) + " y = " + toString(position_mm.at(yy), 3) + " z = " + toString(position_mm.at(zz),4)); //Execute the realtime sequence and acquire the image
+		image.acquire(filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW,0) + "mW" +
+			" x=" + toString(position_mm.at(xx), 3) + " y=" + toString(position_mm.at(yy), 3) + " z=" + toString(position_mm.at(zz),4)); //Execute the realtime sequence and acquire the image
 		//image.acquire(filename); //Execute the realtime sequence and acquire the image
 		
 		
@@ -223,15 +224,17 @@ void seq_testmPMT()
 //3. Set lineclockInput = FG
 void seq_testPockels(const FPGAapi::Session &fpga)
 {
-	const int wavelength_nm = 750;
-	double laserPower_mW = 45 * mW;
-
 	//Create a realtime sequence
 	FPGAapi::RTsequence sequence(fpga);
 
+	//Open the Uniblitz shutter
+	//Shutter shutter1(fpga, Shutter1);
+	//shutter1.open();
+
 	//Turn on the pockels cell
-	PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
-	pockels.pushPowerSinglet(8 * us, laserPower_mW);
+	PockelsCell pockels(sequence, POCKELS1, 750);
+	pockels.pushPowerSinglet(8 * us, 50 * mW);
+	//pockels.pushVoltageSinglet(8 * us, 3.4);
 
 	//Upload the pockels sequence to the FPGA but don't execute it yet
 	sequence.uploadRT();

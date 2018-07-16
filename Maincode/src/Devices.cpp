@@ -451,7 +451,7 @@ PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsC
 PockelsCell::~PockelsCell() {}
 
 
-void PockelsCell::pushSinglet(const double timeStep, const double AO_V) const
+void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO_V) const
 {
 	if (AO_V < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
 
@@ -505,19 +505,19 @@ double PockelsCell::convertPowerToVoltage_V(const double power_mW) const
 	double a, b, c;		//Calibration parameters
 
 	if (mWavelength_nm == 750) {
-		a = 433.6;
-		b = 0.647;
-		c = 0.042;
+		a = 356.5;
+		b = 0.6152;
+		c = -0.027;
 	}
 	else if (mWavelength_nm == 940) {
-		a = 245.4;
-		b = 0.513;
-		c = -0.050;
+		a = 306.9;
+		b = 0.488;
+		c = -0.087;
 	}
 	else if (mWavelength_nm == 1040) {
-		a = 100.0;
-		b = 0.458;
-		c = 0.055;
+		a = 116.8;
+		b = 0.435;
+		c = 0.0249;
 	}
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm currently not calibrated");
@@ -545,7 +545,7 @@ double Galvo::convertPositionToVoltage(const double position_um) const
 	return position_um * voltPerUm;
 }
 
-void Galvo::pushSinglet(const double timeStep, const double AO_V) const
+void Galvo::pushVoltageSinglet(const double timeStep, const double AO_V) const
 {
 	mSequence.pushAnalogSinglet(mGalvoChannel, timeStep, AO_V);
 }

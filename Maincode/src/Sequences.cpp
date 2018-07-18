@@ -28,7 +28,6 @@ void seq_main(const FPGAapi::Session &fpga)
 	const double posMax_um = FFOVgalvo_um / 2;
 
 
-
 	const int nFrames = 1;
 	//NON-REALTIME SEQUENCE
 	for (int ii = 0; ii < nFrames; ii++)

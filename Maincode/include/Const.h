@@ -42,6 +42,7 @@ namespace Constants
 	extern const int um;
 	extern const int V;
 	extern const int mW;
+
 	extern const int tickPerUs;
 	extern const double usPerTick;
 	extern const U32 tMIN_tick;
@@ -51,6 +52,10 @@ namespace Constants
 	extern const int syncAODOtoLinegate_tick;
 	extern const int FIFOtimeout_tick;
 	extern const size_t FIFOINmax;
+
+	extern const double halfPeriodLineclock_us;
+	extern const double RSpkpk_um;
+
 	extern const int stageTriggerPulse_ms;
 
 	extern const int nPulses;
@@ -62,9 +67,6 @@ namespace Parameters
 	using namespace Constants;
 
 	extern const std::string foldername;
-
-	extern const double halfPeriodLineclock_us;
-	extern const double RSpkpk_um;
 
 	extern const double upscaleU8;
 	extern const int widthPerFrame_pix;

@@ -9,6 +9,7 @@ namespace Constants
 	extern const bool enableFIFOfpga = 1;									//For debugging purposes. Enable pushing data to FIFOfpga
 	extern const bool pockels1_enableAutoOff = 1;							//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
 
+	//GENERAL CONSTANTS
 	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//microsecond
 	extern const int ms = 1000 * us;						//millisecond
@@ -16,24 +17,32 @@ namespace Constants
 	extern const int um = 1;								//micron
 	extern const int V = 1;									//volt
 	extern const int mW = 1;								//milliwatt
-	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It depends on the FPGA's clock
-	extern const double usPerTick = 1.0 / 160;				//time step of the FPGA's clock in us
-	extern const U32 tMIN_tick = 2;							//Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
+
+	//FPGA
+	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It corresponds to the FPGA's clock
+	extern const double usPerTick = 1.0 / 160;				//in us. Time step of the FPGA's clock
+	extern const U32 tMIN_tick = 2;							//in ticks. Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
 	extern const double tMIN_us = tMIN_tick * usPerTick;	//in us. Min time step allowed
-	extern const int AO_tMIN_us = 2;						//Time step (in us) of the analog output. The AO channels take >1 us to set the output
+	extern const int AO_tMIN_us = 2;						//in us. Time step of the analog output. The AO channels take >1 us to set the output
 	extern const int syncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 	extern const int syncAODOtoLinegate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
-															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration because I placed the comparison logics for gating AFTER the line counter instead of before
+															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
+															//because I placed the comparison logics for gating AFTER the line counter instead of before
 
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const size_t FIFOINmax = 32773;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
-	extern const int stageTriggerPulse_ms = 5 * ms;			//in ms. Pulsewidth for triggering the stages.
-															//The z stage needs a pulse >~ 2 ms because its DIs are based on ADC (the stage controller has a 20kHz clock = 50 us)
 
-	//Simulate the pulses from the PMT. When the array element is HIGH, the output flips the state at the next clock cycle (currently, 160MHz = 6.25ns)
-	//The laser has a repetition rate of 80 MH and therefore the pulse separation is 12.5ns (the pulse width out from the PMT is ~1ns but can be extreched via electronics).
-	//The resonant scanner is 8 kHz (62.5us for a single swing, which I refer to as a 'line').
-	//Example, if I divide each line in 1000 pixels, then the pix dwell time is 62.5ns. Therefore, 62.5ns can fit at most 5 pulses separated by 12.5ns
+	//PIXEL CLOCK
+	extern const double halfPeriodLineclock_us = 62.5 * us;	//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
+	extern const double RSpkpk_um = 250 * um;				//Peak-to-peak amplitude of the resonant scanner. Needed for generating a non-uniform pixelclock
+
+	//STAGES
+	extern const int stageTriggerPulse_ms = 5 * ms;			//in ms. Pulsewidth for triggering the stages. (the stage controller has a 20kHz clock = 50 us)
+															//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based.
+
+	//PMT
+	//Simulate the PMT pulses. When the array element is HIGH, the output of the subvi changes its state for the next clock cycle (currently, 160MHz = 6.25ns)
+	//Example, if I divide each line in 500 pixels, then the pix dwell time is 125 ns and each pixel could contain at most 10 laser pulses (laser pulses separated by 12.5ns = 80 MHz)
 	extern const int nPulses = 20;												//Number of pulses
 	extern const U8 pulseArray[nPulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns	
@@ -42,10 +51,6 @@ namespace Constants
 namespace Parameters
 {
 	extern const std::string foldername = ".\\Output\\";
-
-	//PIXEL CLOCK
-	extern const double halfPeriodLineclock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
-	extern const double RSpkpk_um = 250 * um;									//Peak-to-peak amplitude of the resonant scanner. Needed for generating a non-uniform pixelclock
 
 	//IMAGE
 	extern const double upscaleU8 = 19;	//255/11 = ~23							//Upscale the photoncount to cover the full 0-255 range of a 8-bit number

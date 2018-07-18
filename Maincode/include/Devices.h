@@ -24,12 +24,12 @@ public:
 class ResonantScanner
 {
 	const FPGAapi::Session &mFpga;
-	const int mVMAX_V = 5 * V;			//Max control voltage mVcontrol_V
+	const int mVMAX_V = 5 * V;										//Max control voltage mVcontrol_V
 	const int mDelayTime_ms = 10;
 	//double mVoltPerUm = 1.285 * V/ ((467 - 264)*um);				//Calibration factor. volts per um. Equal distant pixels, 200 um, 400 pix, 16/July/2018
 	double mVoltPerUm = 1.093 * V / (179 * um);						//Calibration factor. volts per um. Equal distant pixels, 170 um, 3400 pix, 16/July/2018
-	double mFFOV_um = 0;				//Full field of view
-	double mVcontrol_V = 0;				//Control voltage 0-5V (max amplitude)
+	double mFFOV_um = 0;											//Full field of view
+	double mVcontrol_V = 0;											//Control voltage 0-5V (max amplitude)
 	void setControl_V(const double Vcontrol);
 	void setFFOV_um(const double FFOV_um);
 	double convertUm2Volt(const double Amplitude) const;

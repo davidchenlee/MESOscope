@@ -29,7 +29,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 
 
-	const int nFrames = 200;
+	const int nFrames = 1;
 	//NON-REALTIME SEQUENCE
 	for (int ii = 0; ii < nFrames; ii++)
 	{
@@ -39,7 +39,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		//Create a galvo RT sequence
 		Galvo galvo(sequence, GALVO1);
 		galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//set the output back to the initial value
+		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
 
 		//Create a pockels cell RT sequence
 		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);

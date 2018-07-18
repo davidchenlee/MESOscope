@@ -2,12 +2,12 @@
 
 namespace Constants
 {
-	extern const LineclockInputSelector lineclockInput = RS;				//Resonant scanner (RS) or Function generator (FG)
+	extern const LineclockInputSelector lineclockInput = FG;				//Resonant scanner (RS) or Function generator (FG)
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
 	extern const bool overrideSaving = 1;									//Enable override when saving files
 	extern const bool enableFIFOfpga = 1;									//For debugging purposes. Enable pushing data to FIFOfpga
-	extern const bool pockels1_enableAutoOff = 1;									//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
+	extern const bool pockels1_enableAutoOff = 1;							//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
 
 	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//microsecond
@@ -37,27 +37,15 @@ namespace Constants
 	extern const int nPulses = 20;												//Number of pulses
 	extern const U8 pulseArray[nPulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns	
-
 }
 
 namespace Parameters
 {
 	extern const std::string foldername = ".\\Output\\";
 
-	//RESONANT SCANNER
-	//extern const double RS_voltPerUm = 1.0 * V/(157*um);						//volts per um. Calibration factor for the resonant scanner (equal duration pixels). 11/April/2018
-	//extern const double RS_voltPerUm = 1.3 * V / ((405 - 237) * um);			//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 19/April/2018
-	//extern const double RS_voltPerUm = 0.143 * V / (21 * um);
-	//extern const double RS_voltPerUm = 1.285 * V/ ((467 - 264)*um);				//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 16/July/2018
-	extern const double RS_voltPerUm = 1.093 * V / (179 * um);				//volts per um. Calibration factor for the resonant scanner (equal distant pixels). 16/July/2018
-
-
 	//PIXEL CLOCK
 	extern const double halfPeriodLineclock_us = 62.5 * us;						//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
-	extern const double RSpkpk_um = 250 * um;									//Peak-to-peak amplitude of the resonant scanner. Needed for generating a corrected (non-uniform) pixelclock
-	//Determine the relative delay of the pixel clock wrt the line clock
-	//extern const int calibCoarse_tick = 2043; //RS@200 um						//calibFine_tick: In practice, the resonant scanner is not perfectly centered around the objective's back aperture. Look at fluorescent beads and minimize the relative pixel shifts between forward and back scanning
-	//extern const int calibFine_tick = 10;
+	extern const double RSpkpk_um = 250 * um;									//Peak-to-peak amplitude of the resonant scanner. Needed for generating a non-uniform pixelclock
 
 	//IMAGE
 	extern const double upscaleU8 = 19;	//255/11 = ~23							//Upscale the photoncount to cover the full 0-255 range of a 8-bit number

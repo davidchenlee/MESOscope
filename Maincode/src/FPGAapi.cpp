@@ -278,7 +278,7 @@ namespace FPGAapi
 	void RTsequence::Pixelclock::pushUniformDwellTimes(const int calibFine_tick, const double dwellTime_us)
 	{
 		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-		//Currently, there are 400 pixels and the dwell time is 125ns. Then, 400*125ns = 50us. A line-scan lasts 62.5us. Therefore, the waiting time is (62.5-50)/2 = 6.25us
+		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (62.5us-400*125ns)/2 = 6.25us
 		const double initialWaitingTime_us = (halfPeriodLineclock_us - widthPerFrame_pix * dwellTime_us) / 2; //Relative delay of the pixel clock wrt the line clock (assuming perfect laser alignment, which is generally not true)
 
 		//Check if the pixelclock overflows each Lineclock

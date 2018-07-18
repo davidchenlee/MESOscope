@@ -66,8 +66,6 @@ namespace Parameters
 	extern const double halfPeriodLineclock_us;
 	extern const double RSpkpk_um;
 
-	extern const double RS_voltPerUm;
-
 	extern const double upscaleU8;
 	extern const int widthPerFrame_pix;
 	extern const int heightPerFrame_pix;

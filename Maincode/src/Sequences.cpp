@@ -8,13 +8,17 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int wavelength_nm = 750;
+	const int wavelength_nm = 940;
 	double laserPower_mW = 100 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
-	const double collar = 1.47;
-
+	const std::string collar = "1.47";
 	const std::string filename = "Liver";
+
+	//FILTERWHEEL
+	Filterwheel FW(FW1);
+	FW.setFilterwheelPosition(wavelength_nm);
 	
+	//STAGES
 	Stage stage;
 	const double3 initialPosition_mm = { 41.0-0.150, 27.650, 17.39};
 	stage.moveStage3(initialPosition_mm);
@@ -23,37 +27,38 @@ void seq_main(const FPGAapi::Session &fpga)
 	double3 position_mm = stage.readPosition3_mm();
 	Sleep(1000);
 	
-	
+	//GALVO
 	const double duration = halfPeriodLineclock_us * heightPerFrame_pix; //= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
 
 	const int nFrames = 1;
-	//NON-REALTIME SEQUENCE
 	for (int ii = 0; ii < nFrames; ii++)
 	{
-		//Create a realtime sequence
+		//CREATE A REAL-TIME SEQUENCE
 		FPGAapi::RTsequence sequence(fpga);
 
-		//Create a galvo RT sequence
+		//GALVO FOR RT
 		Galvo galvo(sequence, GALVO1);
 		galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
 
-		//Create a pockels cell RT sequence
+		//POCKELS CELL FOR RT
 		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
 		pockels.pushPowerSinglet(8 * us, laserPower_mW);
 		//pockels.voltageLinearRamp(4*us, 40*us, 0, 1*V);
 		//pockels.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
 		//pockels.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
 
-		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
+		//Upload the realtime sequence to the FPGA but don't execute it yet
+		sequence.uploadRT(); 
 		
+		//Execute the realtime sequence and acquire the image
 		Image image(fpga);
-		image.acquire(filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW,0) + "mW collar=" + toString(collar,2) +
+		image.acquire(filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW,0) + "mW collar=" + collar +
 			" x=" + toString(position_mm.at(xx), 3) + " y=" + toString(position_mm.at(yy), 3) + " z=" + toString(position_mm.at(zz),4)); //Execute the realtime sequence and acquire the image
-		//image.acquire(filename); //Execute the realtime sequence and acquire the image
+		//image.acquire(filename); 
 		
 		
 		//position_mm.at(zz) += 0.001;
@@ -166,7 +171,8 @@ void seq_calibAnalogLatency(const FPGAapi::Session &fpga)
 void seq_testFilterwheel()
 {
 	Filterwheel FW(FW1);
-	FW.setFilterPosition(BlueLight);
+	//FW.setFilterwheelPosition(RED);
+	FW.setFilterwheelPosition(2000);
 }
 
 void seq_testStageSetPosition()

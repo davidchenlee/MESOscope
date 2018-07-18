@@ -745,7 +745,7 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)
 	}
 
 	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
-	this->readFilterPosition_();	//Read the current filter position
+	this->downloadFilterwheelPosition_();	//Download the current filter position
 }
 
 Filterwheel::~Filterwheel()
@@ -753,7 +753,7 @@ Filterwheel::~Filterwheel()
 	mSerial->close();
 }
 
-void Filterwheel::readFilterPosition_()
+void Filterwheel::downloadFilterwheelPosition_()
 {
 	const std::string TxBuffer = "pos?\r";	//Command to the filterwheel
 	std::string RxBuffer;					//Reply from the filterwheel
@@ -772,24 +772,60 @@ void Filterwheel::readFilterPosition_()
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
 	//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
-	mPosition = static_cast<FilterColor>(std::atoi(RxBuffer.c_str()));	//convert string to int, then to FilterColor
+	mPosition = static_cast<Filtercolor>(std::atoi(RxBuffer.c_str()));	//convert string to int, then to Filtercolor
 	//std::cout << RxBuffer << std::endl;
 }
 
-FilterColor Filterwheel::readFilterPosition() const
+Filtercolor Filterwheel::readFilterwheelPosition() const
 {
 	return mPosition;
 }
 
-void Filterwheel::setFilterPosition(const FilterColor color)
+void Filterwheel::setFilterwheelPosition(const Filtercolor color)
 {
 	if (color != mPosition)
 	{
 		std::string TxBuffer = "pos=" + std::to_string(color) + "\r";
 		mSerial->write(TxBuffer);
+
 		mPosition = color;
+		Sleep(3000);			//Wait until the filterwheel stops moving
+
+		std::string str_color;
+		switch (color)
+		{
+		case BLUE:
+			str_color = "BLUE";
+			break;
+		case GREEN:
+			str_color = "GREEN";
+			break;
+		case RED:
+			str_color = "RED";
+			break;
+		default:
+			str_color = "UNKNOWN";
+		}
+		std::cout << "Filterwheel " << FW1 << " set to " + str_color << std::endl;
 	}
 }
+
+void Filterwheel::setFilterwheelPosition(const int wavelength_nm)
+{
+	Filtercolor color;
+	//Wavelength ranges chosen based on the 2p-excitation spectrum of the fluorescent labels (DAPI, GFP, and tdTomato)
+	if (wavelength_nm > 940)
+		color = RED;
+	else if (wavelength_nm > 790)
+		color = GREEN;
+	else
+		color = BLUE;
+
+	this->setFilterwheelPosition(color);
+}
+
+
+
 #pragma endregion "Filterwheel"
 
 #pragma region "Laser"
@@ -878,7 +914,7 @@ void Laser::setWavelength(const int wavelength_nm)
 	}
 }
 
-//Open or close the Vision's shutter
+//Open or close Vision's shutter
 void Laser::shutter(const bool state)
 {
 	const std::string TxBuffer = "S=" + std::to_string(state);		//Command to the laser

@@ -4,8 +4,7 @@ HEATMAP = 1;
 COUNT_FREQ = 1;
 
 scale = 1;
-tiffHandle = Tiff('..\Maincode\Output\PHAL.tif');
-%tiffHandle = Tiff('D:\OwnCloud\Data\20180425\damaging test slide.tif');
+tiffHandle = Tiff('..\Maincode\Output\Beads 4um 750nm 30mW collar=1.47 x=34.914 y=11.367 z=18.4130.tif');
 inputImage = read(tiffHandle);
 %image(inputImage)
 

@@ -11,8 +11,9 @@ void seq_main(const FPGAapi::Session &fpga)
 	const int wavelength_nm = 750;
 	double laserPower_mW = 100 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
+	const double collar = 1.47;
 
-	const std::string filename = "Liver ";
+	const std::string filename = "Liver";
 	
 	Stage stage;
 	const double3 initialPosition_mm = { 41.0-0.150, 27.650, 17.39};
@@ -23,7 +24,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	Sleep(1000);
 	
 	
-	const double duration = 25.2 * ms; //halfPeriodLineclock_us * heightPerFrame_pix = 62.5us * 400 pixels
+	const double duration = halfPeriodLineclock_us * heightPerFrame_pix; //= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -50,7 +51,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 		
 		Image image(fpga);
-		image.acquire(filename + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW,0) + "mW collar=1.47" +
+		image.acquire(filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW,0) + "mW collar=" + toString(collar,2) +
 			" x=" + toString(position_mm.at(xx), 3) + " y=" + toString(position_mm.at(yy), 3) + " z=" + toString(position_mm.at(zz),4)); //Execute the realtime sequence and acquire the image
 		//image.acquire(filename); //Execute the realtime sequence and acquire the image
 		
@@ -61,8 +62,6 @@ void seq_main(const FPGAapi::Session &fpga)
 		//laserPower_mW += 0.5;
 		
 		Sleep(1000);
-		
-		
 	}
 
 	Logger datalog(filename);
@@ -71,17 +70,13 @@ void seq_main(const FPGAapi::Session &fpga)
 	datalog.record("FFOV (um) = ", FFOVgalvo_um);
 	datalog.record("Galvo Max position (um) = ", posMax_um);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep);
-
-
 }
 
 void seq_testPixelclock(const FPGAapi::Session &fpga)
 {
 	//Create a realtime sequence
 	FPGAapi::RTsequence sequence(fpga);
-
 	sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
-
 	Image image(fpga);
 	image.acquire(); //Execute the realtime sequence and acquire the image
 
@@ -172,10 +167,6 @@ void seq_testFilterwheel()
 {
 	Filterwheel FW(FW1);
 	FW.setFilterPosition(BlueLight);
-
-	//Laser laser;
-	//laser.setWavelength();
-	//std::cout << laser.readWavelength();
 }
 
 void seq_testStageSetPosition()

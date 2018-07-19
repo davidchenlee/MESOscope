@@ -19,7 +19,7 @@ namespace Constants
 	extern const int V = 1;									//volt
 	extern const int mW = 1;								//milliwatt
 
-	//SERIAL PORTS. Assigned by the OS
+	//SERIAL PORTS. Assign a port to 'enum ComID'
 	extern const std::vector<std::string> COMport = { "COM1", "COM6", "", "", "" };
 
 	//FPGA

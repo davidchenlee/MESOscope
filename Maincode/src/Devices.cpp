@@ -90,6 +90,7 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 	setFFOV_(FFOV_um);
 	Sleep(mDelay_ms);
 	run(1);
+	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um" << std::endl;
 }
 
 void ResonantScanner::turnOn_V(const double Vcontrol_V)
@@ -97,6 +98,7 @@ void ResonantScanner::turnOn_V(const double Vcontrol_V)
 	setVoltage_(Vcontrol_V);
 	Sleep(mDelay_ms);
 	run(1);
+	std::cout << "RS control voltage successfully set to: " << Vcontrol_V << " V" << std::endl;
 }
 
 void ResonantScanner::turnOff()
@@ -104,6 +106,7 @@ void ResonantScanner::turnOff()
 	run(0);
 	Sleep(mDelay_ms);
 	setVoltage_(0);
+	std::cout << "RS successfully turned off" << std::endl;
 }
 
 
@@ -124,7 +127,7 @@ Shutter::Shutter(const FPGAapi::Session &fpga, ShutterID ID) : mFpga(fpga)
 		mID = NiFpga_FPGAvi_ControlBool_Shutter1;
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter unavailable");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter is NOT available");
 	}
 
 }
@@ -808,7 +811,7 @@ void Filterwheel::setColor(const Filtercolor color)
 		mSerial->write(TxBuffer);
 
 		mColor = color;
-		std::cout << "Filterwheel " << FW1 << " was successfully set to " + this->readColorStr_() << std::endl;
+		std::cout << "Filterwheel " << FW1 << " successfully set to " + this->readColorStr_() << std::endl;
 		Sleep(3000); //Wait until the filterwheel stops moving
 	}
 }
@@ -907,7 +910,7 @@ void Laser::setWavelength(const int wavelength_nm)
 		}
 
 		mWavelength_nm = wavelength_nm;
-		std::cout << "VISION laser wavelength was successfully set to " << wavelength_nm << " nm" << std::endl;
+		std::cout << "VISION laser wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
 	}
 }
 
@@ -922,6 +925,11 @@ void Laser::setShutter(const bool state)
 	{
 		mSerial->write(TxBuffer + "\r");
 		mSerial->read(RxBuffer, RxBufSize);
+
+		if ( state )
+			std::cout << "VISION laser shutter successfully opened" << std::endl;
+		else
+			std::cout << "VISION laser shutter successfully closed" << std::endl;
 	}
 	catch (const serial::IOException)
 	{

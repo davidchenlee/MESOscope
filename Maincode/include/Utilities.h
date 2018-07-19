@@ -1,6 +1,6 @@
 #pragma once
-#include <sstream>	//For std::ostringstream
-#include <iomanip>	//For std::setprecision
+#include <sstream>					//For std::ostringstream
+#include <iomanip>					//For std::setprecision
 #include <fstream>					//For std::ofstream
 #include <iostream>
 #include <Const.h>

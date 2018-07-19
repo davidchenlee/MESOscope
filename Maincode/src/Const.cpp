@@ -1,5 +1,6 @@
 #include "Const.h"
 
+//Constants that rarely change
 namespace Constants
 {
 	extern const LineclockInputSelector lineclockInput = FG;				//Resonant scanner (RS) or Function generator (FG)
@@ -17,6 +18,9 @@ namespace Constants
 	extern const int um = 1;								//micron
 	extern const int V = 1;									//volt
 	extern const int mW = 1;								//milliwatt
+
+	//SERIAL PORTS. Assigned by the OS
+	extern const std::vector<std::string> COMport = { "COM1", "COM6", "", "", "" };
 
 	//FPGA
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It corresponds to the FPGA's clock
@@ -45,9 +49,10 @@ namespace Constants
 	//Example, if I divide each line in 500 pixels, then the pix dwell time is 125 ns and each pixel could contain at most 10 laser pulses (laser pulses separated by 12.5ns = 80 MHz)
 	extern const int nPulses = 20;												//Number of pulses
 	extern const U8 pulseArray[nPulses] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns	
+											1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };		//@160MHz, one cycle through this array lasts 125ns
 }
 
+//Imaging parameters
 namespace Parameters
 {
 	extern const std::string foldername = ".\\Output\\";

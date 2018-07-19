@@ -1,6 +1,6 @@
 #pragma once
-#include <iostream>
-#include <string>		//For std::to_string
+//#include <iostream>
+//#include <string>		//For std::to_string
 #include <windows.h>	//the stages use this lib. also Sleep
 #include "NiFpga_FPGAvi.h"
 #include "Const.h"

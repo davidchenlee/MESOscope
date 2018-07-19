@@ -3,31 +3,34 @@
 #include <vector>
 #include <array>
 
-//FPGA data types
-typedef int8_t		I8;
-typedef uint8_t		U8;
-typedef int16_t		I16;
-typedef uint16_t	U16;
-typedef int32_t		I32;
-typedef uint32_t	U32;
-typedef int64_t		I64;
-typedef uint64_t	U64;
-typedef std::deque<U32> QU32;				//Queue of unsigned integers
-typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
-typedef std::array<double, 3> double3;		//array of 3 doubles
-typedef std::array<int, 3> int3;			//array of 3 ints
-
-enum PhotonCounterInputSelector { ext, sim };
-enum LineclockInputSelector { RS, FG };
-enum PixelclockSelector { uniform, nonuniform };
-enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan };		//nChan = number of RT channels available, including the pixel clock channel
-enum ShutterID { Shutter1 = 1, Shutter2 = 2 };
-enum FilterwheelID { FW1 = 1, FW2 = 2 };
-enum Filtercolor { BLUE = 1, GREEN = 2, RED = 3 };
-enum Axis { xx, yy, zz };
-
 namespace Constants
 {
+	//FPGA data types
+	typedef int8_t		I8;
+	typedef uint8_t		U8;
+	typedef int16_t		I16;
+	typedef uint16_t	U16;
+	typedef int32_t		I32;
+	typedef uint32_t	U32;
+	typedef int64_t		I64;
+	typedef uint64_t	U64;
+	typedef std::deque<U32> QU32;				//Queue of unsigned integers
+	typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
+	typedef std::array<double, 3> double3;		//array of 3 doubles
+	typedef std::array<int, 3> int3;			//array of 3 ints
+
+	enum PhotonCounterInputSelector { ext, sim };
+	enum LineclockInputSelector { RS, FG };
+	enum PixelclockSelector { uniform, nonuniform };
+	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan };		//nChan = number of RT channels available, including the pixel clock channel
+	enum ShutterID { Shutter1 = 1, Shutter2 };
+	enum FilterwheelID { FW1 = 1, FW2 };
+	enum Filtercolor { BLUE = 1, GREEN, RED };
+	enum Axis { xx, yy, zz };
+
+	enum ComID { VISIONcom, FW1com , FW2com, mPMTcom, ZSTAGEcom };
+	extern const std::vector<std::string> COMport;
+
 	extern const LineclockInputSelector lineclockInput;
 	extern const PhotonCounterInputSelector photoncounterInput;
 	extern const PixelclockSelector pixelclockType;

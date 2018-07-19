@@ -737,10 +737,10 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)
 	switch (ID)
 	{
 	case FW1:
-		port = "COM6";
+		port = COMport.at(FW1com);
 		break;
 	case FW2:
-		port = "bbb";
+		port = COMport.at(FW2com);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected filterwheel unavailable");
@@ -808,7 +808,7 @@ void Filterwheel::setColor(const Filtercolor color)
 		mSerial->write(TxBuffer);
 
 		mColor = color;
-		std::cout << "Filterwheel " << FW1 << " has been successfully set to " + this->readColorStr_() << std::endl;
+		std::cout << "Filterwheel " << FW1 << " was successfully set to " + this->readColorStr_() << std::endl;
 		Sleep(3000); //Wait until the filterwheel stops moving
 	}
 }
@@ -882,13 +882,13 @@ void Laser::downloadWavelength_()
 
 void Laser::printWavelength_nm()
 {
-	std::cout << "The laser " + port + " wavelength is " << mWavelength_nm << " nm" << std::endl;
+	std::cout << "VISION laser wavelength is " << mWavelength_nm << " nm" << std::endl;
 }
 
 void Laser::setWavelength(const int wavelength_nm)
 {
 	if (wavelength_nm < 680 || wavelength_nm > 1080)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser " + port + " wavelength must be in the range 680 - 1080 nm");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": VISION laser wavelength must be in the range 680 - 1080 nm");
 
 	if (wavelength_nm != mWavelength_nm)
 	{
@@ -907,7 +907,7 @@ void Laser::setWavelength(const int wavelength_nm)
 		}
 
 		mWavelength_nm = wavelength_nm;
-		std::cout << "The laser " + port + " wavelength has been successfully set to " << wavelength_nm << " nm" << std::endl;
+		std::cout << "VISION laser wavelength was successfully set to " << wavelength_nm << " nm" << std::endl;
 	}
 }
 
@@ -1140,8 +1140,8 @@ double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, cons
 
 
 /*
-[1] The stage Z has a virtual COM port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.
-nPortNr: to know the correct COM port, look at Window's device manager or use Tera Term. Use nPortNr=1 for COM1, etc..
+[1] The stage Z has a virtual COMport port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.
+nPortNr: to know the correct COMport port, look at Window's device manager or use Tera Term. Use nPortNr=1 for COM1, etc..
 iBaudRate: the manual says that the baud rate does not matter (p10), but the suggested 115200 does not work. I use the default baud rate = 38400 which matches the drive's front panel configuration (using physical switches)
 
 [2] std::clock() vs std::chrono

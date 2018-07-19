@@ -6,7 +6,6 @@ void printHex(int input)
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
 }
 
-
 void printHex(std::vector<uint8_t>  input)
 {
 	for (size_t ii = 0; ii < input.size(); ii++)
@@ -16,6 +15,7 @@ void printHex(std::vector<uint8_t>  input)
 	}
 	std::cout << std::nouppercase << std::dec << std::endl;
 }
+
 //Convert a string to hex and print it out
 void printHex(std::string input)
 {
@@ -28,12 +28,10 @@ void printHex(std::string input)
 	std::cout << std::nouppercase << std::dec << std::endl;
 }
 
-
 void printBinary16(int input)
 {
 	std::cout << std::bitset<16>(input) << std::endl;
 }
-
 
 U16 convertDoubleToFx2p14(double n)
 {

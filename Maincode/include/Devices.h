@@ -6,59 +6,10 @@
 #include "PI_GCS2_DLL.h"
 #include "serial/serial.h"
 
-class Vibratome
-{
-	const FPGAapi::Session &mFpga;
-	enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
-	int mNslide;					//Slide number
-	double mSectionThickness;		//Thickness of the section
-	double mSpeed;					//Speed of the vibratome (manual setting)
-	double mAmplitude;				//Amplitude of the vibratome (manual setting)
-public:
-	Vibratome(const FPGAapi::Session &fpga);
-	~Vibratome();
-	void startStop();
-	void sendCommand(const double dt, const VibratomeChannel channel) const;
-};
-
-class ResonantScanner
-{
-	const FPGAapi::Session &mFpga;
-	const int mVMAX_V = 5 * V;										//Max control voltage
-	const int mDelay_ms = 10;
-	//double mVoltPerUm = 1.285 * V/ ((467 - 264)*um);				//Calibration factor. volts per um. Equal distant pixels, 200 um, 400 pix, 16/July/2018
-	double mVoltPerUm = 1.093 * V / (179 * um);						//Calibration factor. volts per um. Equal distant pixels, 170 um, 3400 pix, 16/July/2018
-	double mFFOV_um = 0;											//Full field of view
-	double mVoltage_V = 0;											//Control voltage 0-5V (max amplitude)
-	void setVoltage_(const double Vcontrol_V);
-	void setFFOV_(const double FFOV_um);
-	double convertUmToVolt_(const double amplitude_um) const;
-public:
-	ResonantScanner(const FPGAapi::Session &fpga);
-	~ResonantScanner();
-	void run(const bool state);
-	void turnOn_um(const double FFOV_um);
-	void turnOn_V(const double Vcontrol_V);
-	void turnOff();
-};
-
-class Shutter
-{
-	const FPGAapi::Session &mFpga;
-	NiFpga_FPGAvi_ControlBool mID;			//Device ID
-	const int mDelay_ms = 10;
-public:
-	Shutter(const FPGAapi::Session &fpga, ShutterID ID);
-	~Shutter();
-	void open() const;
-	void close() const;
-	void pulseHigh() const;
-};
-
 class Image
 {
 	const FPGAapi::Session &mFpga;
-	unsigned char *image;							//Create a long 1D array representing the image
+	unsigned char *mImage;							//Create a long 1D array containing the image
 
 	const int mReadFifoWaitingTime_ms = 15;			//Waiting time between each iteration
 	const U32 mTimeout_ms = 100;					//FIFOpc timeout
@@ -80,16 +31,66 @@ class Image
 	void startFIFOpc_() const;
 	void configureFIFOpc_(const U32 depth) const;			//Currently I don't use this function
 	void stopFIFOpc_() const;
+	void readRemainingFIFOpc_() const;
 	void readFIFOpc_();
 	void unpackBuffer_();
-	void correctInterleavedImage_();
-	void readRemainingFIFOpc_() const;
+	void correctInterleaved_();
+	void analyze_() const;
 public:
 	Image(const FPGAapi::Session &fpga);
 	~Image();
 	void acquire(const std::string filename = "Untitled");
-	void saveAsTiff(std::string filename);
-	void saveAsTxt(const std::string fileName);
+	void saveAsTiff(std::string filename) const;
+	void saveAsTxt(const std::string fileName) const;
+};
+
+class Vibratome
+{
+	const FPGAapi::Session &mFpga;
+	const enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
+	int mNslide;					//Slide number
+	double mSectionThickness;		//Thickness of the section
+	double mSpeed;					//Speed of the vibratome (manual setting)
+	double mAmplitude;				//Amplitude of the vibratome (manual setting)
+public:
+	Vibratome(const FPGAapi::Session &fpga);
+	~Vibratome();
+	void startStop() const;
+	void sendCommand(const double dt, const VibratomeChannel channel) const;
+};
+
+class ResonantScanner
+{
+	const FPGAapi::Session &mFpga;
+	const int mVMAX_V = 5 * V;										//Max control voltage
+	const int mDelay_ms = 10;
+	//double mVoltPerUm = 1.285 * V/ ((467 - 264)*um);				//Calibration factor. volts per um. Equal distant pixels, 200 um, 400 pix, 16/July/2018
+	double mVoltPerUm = 1.093 * V / (179 * um);						//Calibration factor. volts per um. Equal distant pixels, 170 um, 3400 pix, 16/July/2018
+	double mFFOV_um = 0;											//Full field of view
+	double mVoltage_V = 0;											//Control voltage 0-5V (max amplitude)
+	void setVoltage_(const double Vcontrol_V);
+	void setFFOV_(const double FFOV_um);
+	double convertUmToVolt_(const double amplitude_um) const;
+public:
+	ResonantScanner(const FPGAapi::Session &fpga);
+	~ResonantScanner();
+	void run(const bool state) const;
+	void turnOn_um(const double FFOV_um);
+	void turnOn_V(const double Vcontrol_V);
+	void turnOff();
+};
+
+class Shutter
+{
+	const FPGAapi::Session &mFpga;
+	NiFpga_FPGAvi_ControlBool mID;			//Device ID
+	const int mDelay_ms = 10;
+public:
+	Shutter(const FPGAapi::Session &fpga, ShutterID ID);
+	~Shutter();
+	void open() const;
+	void close() const;
+	void pulseHigh() const;
 };
 
 class ImageException : public std::runtime_error
@@ -114,7 +115,7 @@ public:
 	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const;
 	void powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const;
 	void voltageToZero() const;
-	void scalingLinearRamp(const double Si, const double Sf);
+	void scalingLinearRamp(const double Si, const double Sf) const;
 };
 
 class Galvo
@@ -139,22 +140,22 @@ class mPMT
 	const int mBaud = 9600;
 	const int mTimeout_ms = 300;
 	const int RxBufferSize = 256;
-	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index);
-	std::vector<uint8_t> sendCommand_(std::vector<uint8_t> command);
+	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index) const;
+	std::vector<uint8_t> sendCommand_(std::vector<uint8_t> command) const;
 public:
 	mPMT();
 	~mPMT();
-	void readAllGain();
-	void setSingleGain(const int channel, const int gain);
-	void setAllGainToZero();
-	void setAllGain(const int gain);
-	void setAllGain(std::vector<uint8_t> gains);
-	void readTemp();
+	void readAllGain() const;
+	void setSingleGain(const int channel, const int gain) const;
+	void setAllGainToZero() const;
+	void setAllGain(const int gain) const;
+	void setAllGain(std::vector<uint8_t> gains) const;
+	void readTemp() const;
 };
 
 class Filterwheel
 {
-	FilterwheelID mID;										//Device ID
+	FilterwheelID mID;			//Device ID
 	serial::Serial *mSerial;
 	std::string port;
 	const int mBaud = 115200;
@@ -180,9 +181,9 @@ class Laser
 public:
 	Laser();
 	~Laser();
-	void printWavelength_nm();
+	void printWavelength_nm() const;
 	void setWavelength(const int wavelength_nm);
-	void setShutter(const bool state);
+	void setShutter(const bool state) const;
 };
 
 class Stage
@@ -207,7 +208,7 @@ public:
 	void moveStage(const Axis stage, const double position);
 	void moveStage3(const double3 positions);
 	double downloadPosition_mm(const Axis axis);
-	void scanningStrategy(const int nTileAbsolute);
+	void scanningStrategy(const int nTileAbsolute) const;
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
 	bool isMoving(const Axis axis) const;
 	void waitForMovementToStop(const Axis axis) const;

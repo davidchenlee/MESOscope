@@ -146,7 +146,7 @@ namespace FPGAapi
 	//For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 	//Then transfer the elements in the long queue to an array to interface the FPGA
 	//Improvement: the single queues VectorOfQueues[i] could be transferred directly to the FIFO array
-	void Session::writeFIFOpc(VQU32 &vectorOfQueues) const
+	void Session::writeFIFOpc(const VQU32 &vectorOfQueues) const
 	{
 		QU32 allQueues;		//Create a single long queue
 		for (int i = 0; i < nChan; i++)
@@ -285,12 +285,12 @@ namespace FPGAapi
 		if (initialWaitingTime_us <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 
-		pixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUsTotick(initialWaitingTime_us) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
+		mPixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUsTotick(initialWaitingTime_us) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 		for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
-			pixelclockQ.push_back(FPGAapi::packPixelclockSinglet(dwellTime_us, 1));
+			mPixelclockQ.push_back(FPGAapi::packPixelclockSinglet(dwellTime_us, 1));
 	}
 
 	//Pixelclock with equal pixel size (spatial).
@@ -305,19 +305,19 @@ namespace FPGAapi
 
 		//Relative delay of the pixel clock with respect to the line clock. DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 		const U16 InitialWaitingTime_tick = (U16)(calibCoarse_tick + calibFine_tick);
-		pixelclockQ.push_back(FPGAapi::packU32(InitialWaitingTime_tick - mLatency_tick, 0));
+		mPixelclockQ.push_back(FPGAapi::packU32(InitialWaitingTime_tick - mLatency_tick, 0));
 
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 		for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)
-			pixelclockQ.push_back(FPGAapi::packPixelclockSinglet(calculatePracticalDwellTime_us(pix), 1));
+			mPixelclockQ.push_back(FPGAapi::packPixelclockSinglet(calculatePracticalDwellTime_us(pix), 1));
 
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-		pixelclockQ.push_back(FPGAapi::packPixelclockSinglet(tMIN_us, 1));
+		mPixelclockQ.push_back(FPGAapi::packPixelclockSinglet(tMIN_us, 1));
 	}
 
 	QU32 RTsequence::Pixelclock::readPixelclock() const
 	{
-		return pixelclockQ;
+		return mPixelclockQ;
 	}
 
 
@@ -330,7 +330,7 @@ namespace FPGAapi
 	RTsequence::~RTsequence() {}
 
 	//Push all the elements in 'tailQ' into 'headQ'
-	void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue)
+	void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue) const
 	{
 		while (!givingQueue.empty())
 		{
@@ -403,7 +403,7 @@ namespace FPGAapi
 	}
 
 	//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute them yet
-	void  RTsequence::uploadRT()
+	void  RTsequence::uploadRT() const
 	{
 		mFpga.writeFIFOpc(mVectorOfQueues);
 
@@ -412,7 +412,7 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
 	}
 
-	void RTsequence::triggerRT()
+	void RTsequence::triggerRT() const
 	{
 		mFpga.triggerRT();
 	}

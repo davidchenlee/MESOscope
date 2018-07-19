@@ -28,7 +28,7 @@ namespace FPGAapi
 		Session();
 		~Session();
 		void initialize() const;
-		void writeFIFOpc(VQU32 &vectorqueues) const;
+		void writeFIFOpc(const VQU32 &vectorqueues) const;
 		void triggerRT() const;
 		void flushBRAMs() const;
 		void close(const bool reset) const;
@@ -39,7 +39,7 @@ namespace FPGAapi
 	{
 		class Pixelclock
 		{
-			QU32 pixelclockQ;					//Queue containing the pixel-clock sequence
+			QU32 mPixelclockQ;					//Queue containing the pixel-clock sequence
 			const int mLatency_tick = 2;		//Latency at detecting the line clock. Calibrate the latency with the oscilloscope
 			double convertSpatialCoordToTime_us(const double x) const;
 			double getDiscreteTime_us(const int pix) const;
@@ -55,7 +55,7 @@ namespace FPGAapi
 
 		const FPGAapi::Session &mFpga;
 		VQU32 mVectorOfQueues;
-		void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
+		void concatenateQueues(QU32& receivingQueue, QU32& givingQueue) const;
 	public:
 		RTsequence(const FPGAapi::Session &fpga);
 		RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
@@ -67,8 +67,8 @@ namespace FPGAapi
 		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V);
 		void pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor);
 		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V);
-		void uploadRT();
-		void triggerRT();
+		void uploadRT() const;
+		void triggerRT() const;
 	};
 
 	class FPGAexception : public std::runtime_error

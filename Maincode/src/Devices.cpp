@@ -954,15 +954,22 @@ void Laser::setShutter(const bool state) const
 #pragma region "Stages"
 Stage::Stage()
 {
-	//Open the connections to the stage controllers and assign IDs
+	//Open the connections to the stage controllers and assign the IDs
 	mID[xx] = PI_ConnectUSB(mStageName_x.c_str());
 	mID[yy] = PI_ConnectUSB(mStageName_y.c_str());
 	mID[zz] = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
 	//mID[zz] = PI_ConnectUSB(mStageName_z.c_str());
 
-	if (mID[xx] < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
-	if (mID[yy] < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
-	if (mID[zz] < 0) throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
+	if (mID[xx] < 0)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
+
+	if (mID[yy] < 0)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
+
+	if (mID[zz] < 0)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
+
+	std::cout << "Connection to the stages successfully established\n";
 
 	//Record the current position
 	mPosition3_mm[xx] = downloadPosition_mm(xx);
@@ -976,7 +983,7 @@ Stage::~Stage()
 	PI_CloseConnection(mID[xx]);
 	PI_CloseConnection(mID[yy]);
 	PI_CloseConnection(mID[zz]);
-	std::cout << "Stages connection closed.\n";
+	std::cout << "Connection to the stages successfully closed\n";
 }
 
 //Recall the current position for the 3 stages
@@ -1068,6 +1075,13 @@ void Stage::waitForMovementToStop3() const
 	} while (isMoving_x || isMoving_y || isMoving_z);
 
 	std::cout << "\n";
+}
+
+void Stage::stopALL() const
+{
+	PI_StopAll(mID[xx]);
+	PI_StopAll(mID[yy]);
+	PI_StopAll(mID[zz]);
 }
 
 

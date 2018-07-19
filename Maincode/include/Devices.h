@@ -196,7 +196,7 @@ class Stage
 	int3 mID;										//Controller IDs
 	const char mNstagesPerController[2] = "1";		//Number of stages per controller (currently 1)
 	double3 mPosition3_mm;							//Absolute position of the stages (x, y, z)
-	const double3 mPosMin3_mm{ -60, 0, 10 };			//Min and max positions set by software, which do not necessarily match the values set by hardware (stored in the internal memory of the stages)
+	const double3 mPosMin3_mm{ -60, 0, 1 };			//Min and max positions set by software, which do not necessarily match the values set by hardware (stored in the internal memory of the stages)
 	const double3 mPosMax3_mm{ 45, 30, 25 };
 	int3 mNtile;									//Tile number in x, y, z
 	int3 mNtileOverlap_pix;							//in pixels. Tile overlap in x, y, z
@@ -208,9 +208,10 @@ public:
 	void moveStage(const Axis stage, const double position);
 	void moveStage3(const double3 positions);
 	double downloadPosition_mm(const Axis axis);
-	void scanningStrategy(const int nTileAbsolute) const;
-	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
 	bool isMoving(const Axis axis) const;
 	void waitForMovementToStop(const Axis axis) const;
 	void Stage::waitForMovementToStop3() const;
+	void Stage::stopALL() const;
+	void scanningStrategy(const int nTileAbsolute) const;
+	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
 };

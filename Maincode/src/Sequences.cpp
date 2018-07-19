@@ -23,6 +23,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	const double3 initialPosition_mm = { 41.0-0.150, 27.650, 17.39};
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
+	std::cout << "Stages initial position:" << std::endl;
 	stage.printPosition3();
 	double3 position_mm = stage.readPosition3_mm();
 	Sleep(1000);
@@ -178,21 +179,22 @@ void seq_testFilterwheel()
 void seq_testStageSetPosition()
 {
 	double duration;
-	const double newPosition_mm = 10;
+	const double newPosition_mm = 5;
 	Stage stage;
-	stage.printPosition3();
 
+	std::cout << "Stages initial position:" << std::endl;
+	stage.printPosition3();
 
 	auto t_start = std::chrono::high_resolution_clock::now();
 
 	stage.moveStage(zz, newPosition_mm);
 	//stage.waitForMovementToStop(zz);
 
-
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
 
+	std::cout << "Stages final position:" << std::endl;
 	stage.printPosition3();
 	
 	/*

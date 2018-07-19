@@ -745,7 +745,7 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)
 	}
 
 	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
-	this->downloadFilterwheelPosition_();	//Download the current filter position
+	this->downloadColor_();	//Download the current filter position
 }
 
 Filterwheel::~Filterwheel()
@@ -753,7 +753,27 @@ Filterwheel::~Filterwheel()
 	mSerial->close();
 }
 
-void Filterwheel::downloadFilterwheelPosition_()
+std::string Filterwheel::getColorStr() const
+{
+	std::string str_color;
+	switch (mColor)
+	{
+	case BLUE:
+		str_color = "BLUE";
+		break;
+	case GREEN:
+		str_color = "GREEN";
+		break;
+	case RED:
+		str_color = "RED";
+		break;
+	default:
+		str_color = "UNKNOWN";
+	}
+	return str_color;
+}
+
+void Filterwheel::downloadColor_()
 {
 	const std::string TxBuffer = "pos?\r";	//Command to the filterwheel
 	std::string RxBuffer;					//Reply from the filterwheel
@@ -772,48 +792,32 @@ void Filterwheel::downloadFilterwheelPosition_()
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
 	//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
-	mPosition = static_cast<Filtercolor>(std::atoi(RxBuffer.c_str()));	//convert string to int, then to Filtercolor
+	mColor = static_cast<Filtercolor>(std::atoi(RxBuffer.c_str()));	//convert string to int, then to Filtercolor
 	//std::cout << RxBuffer << std::endl;
 }
 
-Filtercolor Filterwheel::readFilterwheelPosition() const
+Filtercolor Filterwheel::readColor() const
 {
-	return mPosition;
+	return mColor;
 }
 
-void Filterwheel::setFilterwheelPosition(const Filtercolor color)
+void Filterwheel::setColor(const Filtercolor color)
 {
-	if (color != mPosition)
+	if (color != mColor)
 	{
 		std::string TxBuffer = "pos=" + std::to_string(color) + "\r";
 		mSerial->write(TxBuffer);
 
-		mPosition = color;
-		Sleep(3000);			//Wait until the filterwheel stops moving
-
-		std::string str_color;
-		switch (color)
-		{
-		case BLUE:
-			str_color = "BLUE";
-			break;
-		case GREEN:
-			str_color = "GREEN";
-			break;
-		case RED:
-			str_color = "RED";
-			break;
-		default:
-			str_color = "UNKNOWN";
-		}
-		std::cout << "Filterwheel " << FW1 << " set to " + str_color << std::endl;
+		mColor = color;
+		std::cout << "Filterwheel " << FW1 << " set to " + this->getColorStr() << std::endl;
+		Sleep(3000); //Wait until the filterwheel stops moving
 	}
 }
 
-void Filterwheel::setFilterwheelPosition(const int wavelength_nm)
+void Filterwheel::setColor(const int wavelength_nm)
 {
 	Filtercolor color;
-	//Wavelength ranges chosen based on the 2p-excitation spectrum of the fluorescent labels (DAPI, GFP, and tdTomato)
+	//Wavelength intervals chosen based on the 2p-excitation spectrum of the fluorescent labels (DAPI, GFP, and tdTomato)
 	if (wavelength_nm > 940)
 		color = RED;
 	else if (wavelength_nm > 790)
@@ -821,7 +825,7 @@ void Filterwheel::setFilterwheelPosition(const int wavelength_nm)
 	else
 		color = BLUE;
 
-	this->setFilterwheelPosition(color);
+	this->setColor(color);
 }
 
 

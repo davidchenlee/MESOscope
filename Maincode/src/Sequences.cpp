@@ -8,7 +8,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int wavelength_nm = 940;
+	const int wavelength_nm = 750;
 	double laserPower_mW = 100 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 	const std::string collar = "1.47";
@@ -16,7 +16,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	//FILTERWHEEL
 	Filterwheel FW(FW1);
-	FW.setFilterwheelPosition(wavelength_nm);
+	FW.setColor(wavelength_nm);
 	
 	//STAGES
 	Stage stage;
@@ -171,8 +171,8 @@ void seq_calibAnalogLatency(const FPGAapi::Session &fpga)
 void seq_testFilterwheel()
 {
 	Filterwheel FW(FW1);
-	//FW.setFilterwheelPosition(RED);
-	FW.setFilterwheelPosition(2000);
+	//FW.setColor(RED);
+	FW.setColor(2000);
 }
 
 void seq_testStageSetPosition()

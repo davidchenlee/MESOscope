@@ -159,14 +159,15 @@ class Filterwheel
 	std::string port;											//internal ID assigned by the OS
 	const int mBaud = 115200;
 	const int mTimeout_ms = 150;
-	Filtercolor mPosition;
-	void downloadFilterwheelPosition_();
+	Filtercolor mColor;
+	std::string getColorStr() const;
+	void downloadColor_();
 public:
 	Filterwheel(const FilterwheelID ID);
 	~Filterwheel();
-	Filtercolor readFilterwheelPosition() const;
-	void setFilterwheelPosition(const Filtercolor color);
-	void setFilterwheelPosition(const int wavelength_nm);
+	Filtercolor readColor() const;
+	void setColor(const Filtercolor color);
+	void setColor(const int wavelength_nm);
 };
 
 class Laser
@@ -182,7 +183,7 @@ public:
 	~Laser();
 	int readWavelength_nm() const;
 	void setWavelength(const int wavelength_nm);
-	void Laser::shutter(const bool state);
+	void shutter(const bool state);
 };
 
 class Stage

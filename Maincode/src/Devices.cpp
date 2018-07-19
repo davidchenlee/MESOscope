@@ -62,37 +62,39 @@ void ResonantScanner::run(const bool state){
 }
 
 //Set the control voltage that determines the scanning amplitude
-void ResonantScanner::setControl_V(const double Vcontrol_V)
+void ResonantScanner::setVoltage_(const double Vcontrol_V)
 {
-	if (Vcontrol_V > mVMAX_V) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(mVMAX_V) + " V" );
+	if (Vcontrol_V > mVMAX_V)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage must be in the range 0-" + std::to_string(mVMAX_V) + " V" );
 
-	mVcontrol_V = Vcontrol_V;
+	mVoltage_V = Vcontrol_V;
 	mFFOV_um = Vcontrol_V / mVoltPerUm;
 
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVoltToI16(mVcontrol_V)));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVoltToI16(mVoltage_V)));
 }
 
 //Set the FFOV
-void ResonantScanner::setFFOV_um(const double FFOV_um)
+void ResonantScanner::setFFOV_(const double FFOV_um)
 {
-	mVcontrol_V = FFOV_um * mVoltPerUm;
+	mVoltage_V = FFOV_um * mVoltPerUm;
 	mFFOV_um = FFOV_um;
 
-	if (mVcontrol_V > mVMAX_V) throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage greater than " + std::to_string(mVMAX_V) + " V");
+	if (mVoltage_V > mVMAX_V)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX_V/mVoltPerUm) + " um");
 
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVoltToI16(mVcontrol_V)));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVoltToI16(mVoltage_V)));
 }
 
 void ResonantScanner::turnOn_um(const double FFOV_um)
 {
-	setFFOV_um(FFOV_um);
+	setFFOV_(FFOV_um);
 	Sleep(mDelay_ms);
 	run(1);
 }
 
 void ResonantScanner::turnOn_V(const double Vcontrol_V)
 {
-	setControl_V(Vcontrol_V);
+	setVoltage_(Vcontrol_V);
 	Sleep(mDelay_ms);
 	run(1);
 }
@@ -101,11 +103,11 @@ void ResonantScanner::turnOff()
 {
 	run(0);
 	Sleep(mDelay_ms);
-	setControl_V(0);
+	setVoltage_(0);
 }
 
 
-double ResonantScanner::convertUm2Volt(double amplitude_um) const
+double ResonantScanner::convertUmToVolt_(double amplitude_um) const
 {
 	return amplitude_um * mVoltPerUm;
 }
@@ -143,7 +145,7 @@ void Shutter::pulseHigh() const
 {
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mID, 1));
 
-	Sleep(mDelayTime_ms);
+	Sleep(mDelay_ms);
 
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mID, 0));
 }
@@ -166,7 +168,7 @@ Image::~Image()
 {
 	//Stop the FIFOpc. Before implementing this function, the computer used to crash if the code was run after terminated under exception.
 	//(I think) this is because the access to the FIFO used to remain open and clashed with the next FIFO call
-	stopFIFOpc(); 
+	stopFIFOpc_(); 
 
 	delete[] mBufArray_A;
 	delete[] mNelemBufArray_B;
@@ -181,14 +183,14 @@ Image::~Image()
 };
 
 //Establish a connection between FIFOpc and FIFOfpga
-void Image::startFIFOpc() const
+void Image::startFIFOpc_() const
 {
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StartFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StartFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 }
 
 //Configure FIFOpc
-void Image::configureFIFOpc(const U32 depth) const
+void Image::configureFIFOpc_(const U32 depth) const
 {
 	U32 actualDepth;
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
@@ -197,7 +199,7 @@ void Image::configureFIFOpc(const U32 depth) const
 }
 
 //Stop the connection between FIFOpc and FIFOfpga
-void Image::stopFIFOpc() const
+void Image::stopFIFOpc_() const
 {
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
@@ -205,7 +207,7 @@ void Image::stopFIFOpc() const
 }
 
 //Remaining elements in FIFOpc
-void Image::readRemainingFIFOpc() const
+void Image::readRemainingFIFOpc_() const
 {
 	U32 rem;
 	U32 *dummy = new U32[0];
@@ -216,7 +218,7 @@ void Image::readRemainingFIFOpc() const
 
 
 //Read the data in FIFOpc
-void Image::readFIFOpc()
+void Image::readFIFOpc_()
 {
 	//TODO: save the data concurrently
 	//I ran a test and found that two 32-bit FIFOfpga have a larger bandwidth than a single 64 - bit FIFOfpga
@@ -294,7 +296,7 @@ void Image::readFIFOpc()
 }
 
 //Returns a single 1D array with the chucks of data stored in the buffer arrays
-void Image::unpackBuffer()
+void Image::unpackBuffer_()
 {
 	//ReadFifo gives chuncks of data. Store each chunck in a separate buffer array. I think I CANNOT just make a long, concatenated 1D array because I have to pass individual arrays to the ReadFifo
 	//When multiplexing later on, each U32 element in bufArray_B must be split in 8 parts of 4-bits each
@@ -329,7 +331,7 @@ void Image::unpackBuffer()
 //memset http://www.cplusplus.com/reference/cstring/memset/
 //memmove http://www.cplusplus.com/reference/cstring/memmove/
 //One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
-void Image::correctInterleavedImage()
+void Image::correctInterleavedImage_()
 {
 	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //one line to store the temp data. In principle I could just use half the size, but why bothering...
 
@@ -349,16 +351,16 @@ void Image::correctInterleavedImage()
 
 void Image::acquire(const std::string filename)
 {
-	startFIFOpc();		//Establish the connection between FIFOfpga and FIFOpc
+	startFIFOpc_();		//Establish the connection between FIFOfpga and FIFOpc
 	mFpga.triggerRT();	//Trigger the RT sequence. If triggered too early, FIFOfpga will probably overflow
 
 	if (enableFIFOfpga)
 	{
 		try
 		{
-			readFIFOpc();		//Read the data in FIFOpc
-			unpackBuffer();		//Move the chuncks of data to a buffer array
-			correctInterleavedImage();
+			readFIFOpc_();		//Read the data in FIFOpc
+			unpackBuffer_();		//Move the chuncks of data to a buffer array
+			correctInterleavedImage_();
 			saveAsTiff(filename);
 		}
 		catch (const ImageException &e) //Notify the exception and move to the next iteration
@@ -452,7 +454,7 @@ PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsC
 PockelsCell::~PockelsCell() {}
 
 
-void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO_V) const
+void PockelsCell::pushVoltageSinglet_(const double timeStep, const double AO_V) const
 {
 	if (AO_V < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
 
@@ -463,7 +465,7 @@ void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW) con
 {
 	if (P_mW < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output power must be positive");
 
-	mSequence.pushAnalogSinglet(mPockelsChannel, timeStep, convertPowerToVoltage_V(P_mW));
+	mSequence.pushAnalogSinglet(mPockelsChannel, timeStep, convert_mWToVolt_(P_mW));
 }
 
 //Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
@@ -479,7 +481,7 @@ void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDurat
 {
 	if (Pi_mW < 0 || Pf_mW < 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
 
-	mSequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, convertPowerToVoltage_V(Pi_mW), convertPowerToVoltage_V(Pf_mW));
+	mSequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, convert_mWToVolt_(Pi_mW), convert_mWToVolt_(Pf_mW));
 }
 
 void PockelsCell::voltageToZero() const
@@ -501,7 +503,7 @@ void PockelsCell::scalingLinearRamp(const double Si, const double Sf)
 }
 
 
-double PockelsCell::convertPowerToVoltage_V(const double power_mW) const
+double PockelsCell::convert_mWToVolt_(const double power_mW) const
 {
 	double a, b, c;		//Calibration parameters
 
@@ -541,12 +543,12 @@ Galvo::Galvo(FPGAapi::RTsequence &sequence, const RTchannel galvoChannel): mSequ
 
 Galvo::~Galvo() {}
 
-double Galvo::convertPositionToVoltage(const double position_um) const
+double Galvo::convert_umToVolt_(const double position_um) const
 {
 	return position_um * voltPerUm;
 }
 
-void Galvo::pushVoltageSinglet(const double timeStep, const double AO_V) const
+void Galvo::pushVoltageSinglet_(const double timeStep, const double AO_V) const
 {
 	mSequence.pushAnalogSinglet(mGalvoChannel, timeStep, AO_V);
 }
@@ -558,7 +560,7 @@ void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, co
 
 void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const
 {
-	mSequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, convertPositionToVoltage(xi_V), convertPositionToVoltage(xf_V));
+	mSequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, convert_umToVolt_(xi_V), convert_umToVolt_(xf_V));
 }
 
 void Galvo::voltageToZero() const
@@ -581,9 +583,9 @@ mPMT::~mPMT()
 
 }
 
-std::vector<uint8_t> mPMT::sendCommand(std::vector<uint8_t> command_array)
+std::vector<uint8_t> mPMT::sendCommand_(std::vector<uint8_t> command_array)
 {
-	command_array.push_back(sumCheck(command_array, command_array.size()));	//Append the sumcheck
+	command_array.push_back(sumCheck_(command_array, command_array.size()));	//Append the sumcheck
 
 	std::string TxBuffer(command_array.begin(), command_array.end()); //Convert the vector<char> to string
 	TxBuffer += "\r";	//End the command line with CR
@@ -613,7 +615,7 @@ std::vector<uint8_t> mPMT::sendCommand(std::vector<uint8_t> command_array)
 }
 
 //Return the sumcheck of all the elements in the array
-uint8_t mPMT::sumCheck(const std::vector<uint8_t> charArray, const int nElements)
+uint8_t mPMT::sumCheck_(const std::vector<uint8_t> charArray, const int nElements)
 {
 	uint8_t sum = 0;
 	for (int ii = 0; ii < nElements; ii++)
@@ -624,10 +626,10 @@ uint8_t mPMT::sumCheck(const std::vector<uint8_t> charArray, const int nElements
 
 void mPMT::readAllGain()
 {
-	std::vector<uint8_t> parameters = sendCommand({'I'});
+	std::vector<uint8_t> parameters = sendCommand_({'I'});
 
 	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
-	if (parameters.at(0) != 'I' || parameters.at(17) != sumCheck(parameters, parameters.size() - 2))
+	if (parameters.at(0) != 'I' || parameters.at(17) != sumCheck_(parameters, parameters.size() - 2))
 		std::cout << "Warning in " + (std::string)__FUNCTION__  + ": CheckSum mismatch" << std::endl;
 	
 	//Print out the gains
@@ -646,11 +648,11 @@ void mPMT::setSingleGain(const int channel, const int gain)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": mPMT gain out of range (0-255)");
 
 
-	std::vector<uint8_t> parameters = sendCommand({'g', (uint8_t)channel, (uint8_t)gain});
+	std::vector<uint8_t> parameters = sendCommand_({'g', (uint8_t)channel, (uint8_t)gain});
 	//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
-	if (parameters.at(0) == 'g' && parameters.at(1) == (uint8_t)channel && parameters.at(2) == (uint8_t)gain && parameters.at(3) == sumCheck(parameters, parameters.size()-2))
+	if (parameters.at(0) == 'g' && parameters.at(1) == (uint8_t)channel && parameters.at(2) == (uint8_t)gain && parameters.at(3) == sumCheck_(parameters, parameters.size()-2))
 		std::cout << "mPMT channel " << channel << " successfully set to " << gain << std::endl;
 	else
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
@@ -658,7 +660,7 @@ void mPMT::setSingleGain(const int channel, const int gain)
 
 void mPMT::setAllGainToZero()
 {
-	std::vector<uint8_t> parameters = sendCommand({ 'R' }); //The manual says that this sets all the gains to 255, but it really does it to 0
+	std::vector<uint8_t> parameters = sendCommand_({ 'R' }); //The manual says that this sets all the gains to 255, but it really does it to 0
 															//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the mPMT are correct. The second char returned is the sumcheck
@@ -671,11 +673,11 @@ void mPMT::setAllGain(const int gain)
 	if (gain < 0 || gain > 255)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": mPMT gain must be in the range 0-255");
 
-	std::vector<uint8_t> parameters = sendCommand({ 'S', (uint8_t)gain });
+	std::vector<uint8_t> parameters = sendCommand_({ 'S', (uint8_t)gain });
 	//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
-	if (parameters.at(0) == 'S' && parameters.at(1) == (uint8_t)gain && parameters.at(2) == sumCheck(parameters, parameters.size() - 2))
+	if (parameters.at(0) == 'S' && parameters.at(1) == (uint8_t)gain && parameters.at(2) == sumCheck_(parameters, parameters.size() - 2))
 		std::cout << "All mPMT gains successfully set to " << gain << std::endl;
 	else
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
@@ -692,11 +694,11 @@ void mPMT::setAllGain(std::vector<uint8_t> gains)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ":  mPMT gain #" + std::to_string(ii) + " out of range (0-255)");
 
 	gains.insert(gains.begin(), 'G');	//Prepend the command
-	std::vector<uint8_t> parameters = sendCommand({ gains });
+	std::vector<uint8_t> parameters = sendCommand_({ gains });
 	//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
-	if (parameters.at(0) != 'G' || parameters.at(17) != sumCheck(parameters, parameters.size() - 2))
+	if (parameters.at(0) != 'G' || parameters.at(17) != sumCheck_(parameters, parameters.size() - 2))
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
 
 	//Print out the gains
@@ -708,11 +710,11 @@ void mPMT::setAllGain(std::vector<uint8_t> gains)
 
 void mPMT::readTemp()
 {
-	std::vector<uint8_t> parameters = sendCommand({ 'T' });
+	std::vector<uint8_t> parameters = sendCommand_({ 'T' });
 	//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
-	if (parameters.at(0) != 'T' || parameters.at(4) != sumCheck(parameters, parameters.size() - 2))
+	if (parameters.at(0) != 'T' || parameters.at(4) != sumCheck_(parameters, parameters.size() - 2))
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
 
 	const int TEMPH = (int)(parameters.at(1));

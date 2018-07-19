@@ -242,7 +242,6 @@ void seq_testPockels(const FPGAapi::Session &fpga)
 	//Turn on the pockels cell
 	PockelsCell pockels(sequence, POCKELS1, 750);
 	pockels.pushPowerSinglet(8 * us, 50 * mW);
-	//pockels.pushVoltageSinglet(8 * us, 3.4);
 
 	//Upload the pockels sequence to the FPGA but don't execute it yet
 	sequence.uploadRT();

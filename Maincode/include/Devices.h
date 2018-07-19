@@ -24,15 +24,15 @@ public:
 class ResonantScanner
 {
 	const FPGAapi::Session &mFpga;
-	const int mVMAX_V = 5 * V;										//Max control voltage mVcontrol_V
+	const int mVMAX_V = 5 * V;										//Max control voltage
 	const int mDelay_ms = 10;
 	//double mVoltPerUm = 1.285 * V/ ((467 - 264)*um);				//Calibration factor. volts per um. Equal distant pixels, 200 um, 400 pix, 16/July/2018
 	double mVoltPerUm = 1.093 * V / (179 * um);						//Calibration factor. volts per um. Equal distant pixels, 170 um, 3400 pix, 16/July/2018
 	double mFFOV_um = 0;											//Full field of view
-	double mVcontrol_V = 0;											//Control voltage 0-5V (max amplitude)
-	void setControl_V(const double Vcontrol_V);
-	void setFFOV_um(const double FFOV_um);
-	double convertUm2Volt(const double amplitude_um) const;
+	double mVoltage_V = 0;											//Control voltage 0-5V (max amplitude)
+	void setVoltage_(const double Vcontrol_V);
+	void setFFOV_(const double FFOV_um);
+	double convertUmToVolt_(const double amplitude_um) const;
 public:
 	ResonantScanner(const FPGAapi::Session &fpga);
 	~ResonantScanner();
@@ -46,7 +46,7 @@ class Shutter
 {
 	const FPGAapi::Session &mFpga;
 	NiFpga_FPGAvi_ControlBool mID;			//Device ID
-	const int mDelayTime_ms = 10;
+	const int mDelay_ms = 10;
 public:
 	Shutter(const FPGAapi::Session &fpga, ShutterID ID);
 	~Shutter();
@@ -77,13 +77,13 @@ class Image
 	U32 **mBufArray_B;								//Each row stores a chunck of data from FIFOpc B. The row size could possibly be < nPixAllFrames
 	int mNelemReadFIFO_B = 0; 						//Total number of elements read from FIFOpc B
 
-	void startFIFOpc() const;
-	void configureFIFOpc(const U32 depth) const;			//Currently I don't use this function
-	void stopFIFOpc() const;
-	void readFIFOpc();
-	void unpackBuffer();
-	void correctInterleavedImage();
-	void readRemainingFIFOpc() const;
+	void startFIFOpc_() const;
+	void configureFIFOpc_(const U32 depth) const;			//Currently I don't use this function
+	void stopFIFOpc_() const;
+	void readFIFOpc_();
+	void unpackBuffer_();
+	void correctInterleavedImage_();
+	void readRemainingFIFOpc_() const;
 public:
 	Image(const FPGAapi::Session &fpga);
 	~Image();
@@ -104,12 +104,12 @@ class PockelsCell
 	FPGAapi::RTsequence &mSequence;									
 	RTchannel mPockelsChannel;
 	RTchannel mScalingChannel;
-	int mWavelength_nm;												//Wavelength of the laser
-	double convertPowerToVoltage_V(const double power_mW) const;
+	int mWavelength_nm;		//Laser wavelength
+	double convert_mWToVolt_(const double power_mW) const;
 public:
 	PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsChannel, const int wavelength_nm);
 	~PockelsCell();
-	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
+	void pushVoltageSinglet_(const double timeStep, const double AO_V) const;
 	void pushPowerSinglet(const double timeStep, const double P_mW) const;
 	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const;
 	void powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const;
@@ -121,9 +121,9 @@ class Galvo
 {
 	FPGAapi::RTsequence &mSequence;
 	RTchannel mGalvoChannel;
-	const double voltPerUm = 5.0 * V / (210 * um);					//volts per um. Calibration factor of the galvo. Last calib 11/April/2018
-	double convertPositionToVoltage(const double position_um) const;
-	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
+	const double voltPerUm = 5.0 * V / (210 * um);		//volts per um. Calibration factor of the galvo. Last calib 11/April/2018
+	double convert_umToVolt_(const double position_um) const;
+	void pushVoltageSinglet_(const double timeStep, const double AO_V) const;
 public:
 	Galvo(FPGAapi::RTsequence &sequence, const RTchannel galvoChannel);
 	~Galvo();
@@ -139,8 +139,8 @@ class mPMT
 	const int mBaud = 9600;
 	const int mTimeout_ms = 300;
 	const int RxBufferSize = 256;
-	uint8_t sumCheck(const std::vector<uint8_t> input, const int index);
-	std::vector<uint8_t> sendCommand(std::vector<uint8_t> command);
+	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index);
+	std::vector<uint8_t> sendCommand_(std::vector<uint8_t> command);
 public:
 	mPMT();
 	~mPMT();

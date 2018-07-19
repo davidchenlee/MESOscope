@@ -52,6 +52,7 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 
 #pragma region "Resonant scanner"
 ResonantScanner::ResonantScanner(const FPGAapi::Session &fpga): mFpga(fpga){};
+
 ResonantScanner::~ResonantScanner() {};
 
 //Start or stop the resonant scanner
@@ -85,21 +86,21 @@ void ResonantScanner::setFFOV_um(const double FFOV_um)
 void ResonantScanner::turnOn_um(const double FFOV_um)
 {
 	setFFOV_um(FFOV_um);
-	Sleep(mDelayTime_ms);
+	Sleep(mDelay_ms);
 	run(1);
 }
 
 void ResonantScanner::turnOn_V(const double Vcontrol_V)
 {
 	setControl_V(Vcontrol_V);
-	Sleep(mDelayTime_ms);
+	Sleep(mDelay_ms);
 	run(1);
 }
 
 void ResonantScanner::turnOff()
 {
 	run(0);
-	Sleep(mDelayTime_ms);
+	Sleep(mDelay_ms);
 	setControl_V(0);
 }
 
@@ -728,7 +729,6 @@ void mPMT::readTemp()
 #pragma endregion "mPMT"
 
 
-
 #pragma region "Filterwheel"
 Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)
 {
@@ -753,26 +753,28 @@ Filterwheel::~Filterwheel()
 	mSerial->close();
 }
 
-std::string Filterwheel::getColorStr() const
+//Convert from enum Filtercolor to string
+std::string Filterwheel::readColorStr_() const
 {
-	std::string str_color;
+	std::string colorStr;
 	switch (mColor)
 	{
 	case BLUE:
-		str_color = "BLUE";
+		colorStr = "BLUE";
 		break;
 	case GREEN:
-		str_color = "GREEN";
+		colorStr = "GREEN";
 		break;
 	case RED:
-		str_color = "RED";
+		colorStr = "RED";
 		break;
 	default:
-		str_color = "UNKNOWN";
+		colorStr = "UNKNOWN";
 	}
-	return str_color;
+	return colorStr;
 }
 
+//Download the current filter position
 void Filterwheel::downloadColor_()
 {
 	const std::string TxBuffer = "pos?\r";	//Command to the filterwheel
@@ -782,7 +784,7 @@ void Filterwheel::downloadColor_()
 	mSerial->write(TxBuffer);
 	mSerial->read(RxBuffer, RxBufSize);
 
-	//Delete echoed command. Echoing could be disabled on the laser but deleting it is more general and safer
+	//Delete echoed command
 	std::string::size_type ii = RxBuffer.find(TxBuffer);
 	if (ii != std::string::npos)
 		RxBuffer.erase(ii, TxBuffer.length());
@@ -792,13 +794,8 @@ void Filterwheel::downloadColor_()
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
 	//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
-	mColor = static_cast<Filtercolor>(std::atoi(RxBuffer.c_str()));	//convert string to int, then to Filtercolor
+	mColor = static_cast<Filtercolor>(std::stoi(RxBuffer));	//convert string to int, and then to Filtercolor
 	//std::cout << RxBuffer << std::endl;
-}
-
-Filtercolor Filterwheel::readColor() const
-{
-	return mColor;
 }
 
 void Filterwheel::setColor(const Filtercolor color)
@@ -809,11 +806,12 @@ void Filterwheel::setColor(const Filtercolor color)
 		mSerial->write(TxBuffer);
 
 		mColor = color;
-		std::cout << "Filterwheel " << FW1 << " set to " + this->getColorStr() << std::endl;
+		std::cout << "Filterwheel " << FW1 << " has been successfully set to " + this->readColorStr_() << std::endl;
 		Sleep(3000); //Wait until the filterwheel stops moving
 	}
 }
 
+//Set the filter color using the laser wavelength
 void Filterwheel::setColor(const int wavelength_nm)
 {
 	Filtercolor color;
@@ -827,9 +825,6 @@ void Filterwheel::setColor(const int wavelength_nm)
 
 	this->setColor(color);
 }
-
-
-
 #pragma endregion "Filterwheel"
 
 #pragma region "Laser"
@@ -843,12 +838,12 @@ Laser::Laser()
 	{
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with " + port);
 	}
-	this->downloadWavelength();
+	this->downloadWavelength_();
 };
 
 Laser::~Laser() {};
 
-void Laser::downloadWavelength()
+void Laser::downloadWavelength_()
 {
 	const std::string TxBuffer = "?VW";		//Command to the laser
 	std::string RxBuffer;					//Reply from the laser
@@ -864,13 +859,13 @@ void Laser::downloadWavelength()
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the laser " + port);
 	}
 
-	//Delete echoed command. Echoing could be disabled on the laser but deleting it is more general and safer
+	//Delete echoed command. Echoing could be disabled on the laser but deleting it is safer and more general
 	std::string keyword = "?VW ";
 	std::string::size_type i = RxBuffer.find(keyword);
 	if (i != std::string::npos)
 		RxBuffer.erase(i, keyword.length());
 
-	//Delete "CHAMELEON>". This frase could be disabled on the laser, but deleting it is more general and safer
+	//Delete "CHAMELEON>". This frase could be disabled on the laser, but deleting it is safer and more general
 	keyword = "CHAMELEON>";
 	i = RxBuffer.find(keyword);
 	if (i != std::string::npos)
@@ -879,13 +874,13 @@ void Laser::downloadWavelength()
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
-	mWavelength_nm = static_cast<int>(std::atoi(RxBuffer.c_str()));	//Convert string to int
+	mWavelength_nm = std::stoi(RxBuffer);	//Convert string to int
 	//std::cout << RxBuffer << std::endl;	//For debugging
 }
 
-int Laser::readWavelength_nm() const
+void Laser::printWavelength_nm()
 {
-	return mWavelength_nm;
+	std::cout << "The laser " + port + " wavelength is " << mWavelength_nm << " nm" << std::endl;
 }
 
 void Laser::setWavelength(const int wavelength_nm)
@@ -893,14 +888,10 @@ void Laser::setWavelength(const int wavelength_nm)
 	if (wavelength_nm < 680 || wavelength_nm > 1080)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser " + port + " wavelength must be in the range 680 - 1080 nm");
 
-	if (wavelength_nm == mWavelength_nm)
-	{
-		std::cout << "Warning in " + (std::string)__FUNCTION__  + ": The laser " + port + " wavelength is already at " << wavelength_nm << " nm." << std::endl;
-	}
-	else
+	if (wavelength_nm != mWavelength_nm)
 	{
 		const std::string TxBuffer = "VW=" + std::to_string(wavelength_nm);		//Command to the laser
-		std::string RxBuffer;									//Reply from the laser
+		std::string RxBuffer;													//Reply from the laser
 		const int RxBufSize = 256;
 
 		try
@@ -918,8 +909,8 @@ void Laser::setWavelength(const int wavelength_nm)
 	}
 }
 
-//Open or close Vision's shutter
-void Laser::shutter(const bool state)
+//Open or close the shutter of Vision
+void Laser::setShutter(const bool state)
 {
 	const std::string TxBuffer = "S=" + std::to_string(state);		//Command to the laser
 	std::string RxBuffer;											//Reply from the laser

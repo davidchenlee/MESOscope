@@ -25,14 +25,14 @@ class ResonantScanner
 {
 	const FPGAapi::Session &mFpga;
 	const int mVMAX_V = 5 * V;										//Max control voltage mVcontrol_V
-	const int mDelayTime_ms = 10;
+	const int mDelay_ms = 10;
 	//double mVoltPerUm = 1.285 * V/ ((467 - 264)*um);				//Calibration factor. volts per um. Equal distant pixels, 200 um, 400 pix, 16/July/2018
 	double mVoltPerUm = 1.093 * V / (179 * um);						//Calibration factor. volts per um. Equal distant pixels, 170 um, 3400 pix, 16/July/2018
 	double mFFOV_um = 0;											//Full field of view
 	double mVcontrol_V = 0;											//Control voltage 0-5V (max amplitude)
-	void setControl_V(const double Vcontrol);
+	void setControl_V(const double Vcontrol_V);
 	void setFFOV_um(const double FFOV_um);
-	double convertUm2Volt(const double Amplitude) const;
+	double convertUm2Volt(const double amplitude_um) const;
 public:
 	ResonantScanner(const FPGAapi::Session &fpga);
 	~ResonantScanner();
@@ -154,18 +154,17 @@ public:
 
 class Filterwheel
 {
-	FilterwheelID mID;											//Device ID
+	FilterwheelID mID;										//Device ID
 	serial::Serial *mSerial;
-	std::string port;											//internal ID assigned by the OS
+	std::string port;										//internal ID assigned by the OS
 	const int mBaud = 115200;
 	const int mTimeout_ms = 150;
 	Filtercolor mColor;
-	std::string getColorStr() const;
+	std::string readColorStr_() const;
 	void downloadColor_();
 public:
 	Filterwheel(const FilterwheelID ID);
 	~Filterwheel();
-	Filtercolor readColor() const;
 	void setColor(const Filtercolor color);
 	void setColor(const int wavelength_nm);
 };
@@ -177,13 +176,13 @@ class Laser
 	const std::string port = "COM1";						//internal ID assigned by the OS
 	const int mBaud = 19200;
 	const int mTimeout_ms = 100;
-	void Laser::downloadWavelength();
+	void downloadWavelength_();
 public:
 	Laser();
 	~Laser();
-	int readWavelength_nm() const;
+	void printWavelength_nm();
 	void setWavelength(const int wavelength_nm);
-	void shutter(const bool state);
+	void setShutter(const bool state);
 };
 
 class Stage

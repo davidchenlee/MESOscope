@@ -172,7 +172,7 @@ void seq_testFilterwheel()
 {
 	Filterwheel FW(FW1);
 	//FW.setColor(RED);
-	FW.setColor(2000);
+	FW.setColor(750);
 }
 
 void seq_testStageSetPosition()
@@ -257,6 +257,6 @@ void seq_testPockels(const FPGAapi::Session &fpga)
 void seq_testLaserComm(const FPGAapi::Session &fpga)
 {
 	Laser vision;
-	vision.shutter(0);
+	//vision.setShutter(0);
 	//vision.setWavelength(750);
 }

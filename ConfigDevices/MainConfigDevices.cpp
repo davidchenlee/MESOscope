@@ -31,13 +31,13 @@ int main(int argc, char* argv[])
 				RS.turnOn_um(FFOV_um * um);
 				std::cout << "RS FFOV set to: " << FFOV_um << " um" << std::endl;
 				shutter1.open();
-				//vision.shutter(1);
+				//vision.setShutter(1);
 			}
 			else if (runCommand == "0")
 			{
 				RS.turnOff();
 				shutter1.close();
-				//vision.shutter(0);
+				//vision.setShutter(0);
 			}
 			else
 				throw std::invalid_argument("invalid start/stop command");

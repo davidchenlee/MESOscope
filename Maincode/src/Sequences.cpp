@@ -8,11 +8,12 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int wavelength_nm = 750;
-	double laserPower_mW = 100 * mW;
-	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
-	const std::string collar = "1.47";
 	const std::string filename = "Liver";
+	const std::string collar = "1.435";
+
+	const int wavelength_nm = 750;
+	double laserPower_mW = 35 * mW;
+	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
 	//FILTERWHEEL
 	Filterwheel FW(FW1);
@@ -20,7 +21,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGES
 	Stage stage;
-	const double3 initialPosition_mm = { 41.0-0.150, 27.650, 17.39};
+	const double3 initialPosition_mm = { 35.5, 19, 18.408};
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
 	std::cout << "Stages initial position:" << std::endl;

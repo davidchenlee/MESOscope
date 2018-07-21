@@ -41,12 +41,7 @@ namespace FPGAapi
 		{
 			QU32 mPixelclockQ;					//Queue containing the pixel-clock sequence
 			const int mLatency_tick = 2;		//Latency at detecting the line clock. Calibrate the latency with the oscilloscope
-			double convertSpatialCoordToTime_us(const double x) const;
-			double getDiscreteTime_us(const int pix) const;
-			double calculateDwellTime_us(const int pix) const;
-			double calculatePracticalDwellTime_us(const int pix) const;
 			void pushUniformDwellTimes(const int calibFine_tick, const double dwellTime_us);
-			void pushCorrectedDwellTimes();
 		public:
 			Pixelclock();
 			~Pixelclock();

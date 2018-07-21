@@ -37,8 +37,9 @@ namespace Constants
 	extern const size_t FIFOINmax = 32773;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 	//PIXEL CLOCK
-	extern const double halfPeriodLineclock_us = 62.5 * us;	//Half the period of the resonant scanner = Time to scan a single line = 62.5us for a 8KHz-scanner
-	extern const double RSpkpk_um = 250 * um;				//Peak-to-peak amplitude of the resonant scanner. Needed for generating a non-uniform pixelclock
+	extern const double halfPeriodLineclock_us = 63.05 * us;	//Half the period of the resonant scanner. I measure 25.220 ms for 400 half oscillations. Therefore, halfPeriodLineclock_us = 25200us/400 = 63.05 us
+																//There is a slight difference between the forward and backward oscillation time. Forward = 63.14 us, backwards = 62.99 us. Diff = 150 ns (i.e., ~ 1 pixel)
+																//(Measured by looking at RS SYNC through the FPGA)
 
 	//STAGES
 	extern const int stageTriggerPulse_ms = 5 * ms;			//in ms. Pulsewidth for triggering the stages. (the stage controller has a 20kHz clock = 50 us)

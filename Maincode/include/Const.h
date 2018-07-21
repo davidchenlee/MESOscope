@@ -57,7 +57,6 @@ namespace Constants
 	extern const size_t FIFOINmax;
 
 	extern const double halfPeriodLineclock_us;
-	extern const double RSpkpk_um;
 
 	extern const int stageTriggerPulse_ms;
 

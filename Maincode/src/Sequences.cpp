@@ -21,7 +21,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGES
 	Stage stage;
-	const double3 initialPosition_mm = { 35.5, 19, 18.411};
+	const double3 initialPosition_mm = { 35.5, 19, 18.412};
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
 	std::cout << "Stages initial position:" << std::endl;
@@ -35,7 +35,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	const double posMax_um = FFOVgalvo_um / 2;
 
 
-	const int nFrames = 10;
+	const int nFrames = 1;
 	for (int ii = 0; ii < nFrames; ii++)
 	{
 		//CREATE A REAL-TIME SEQUENCE
@@ -58,7 +58,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		
 		//Execute the realtime sequence and acquire the image
 		Image image(fpga);
-		image.acquire(filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW,0) + "mW collar=" + collar +
+		image.acquire(1,filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW,0) + "mW collar=" + collar +
 			" x=" + toString(position_mm.at(xx), 3) + " y=" + toString(position_mm.at(yy), 3) + " z=" + toString(position_mm.at(zz),4)); //Execute the realtime sequence and acquire the image
 		//image.acquire(filename); 
 		

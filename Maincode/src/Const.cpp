@@ -1,6 +1,6 @@
 #include "Const.h"
 
-//Constants that rarely change
+//Constants that are rarely changed
 namespace Constants
 {
 	extern const LineclockInputSelector lineclockInput = RS;				//Resonant scanner (RS) or Function generator (FG)
@@ -39,7 +39,7 @@ namespace Constants
 	//PIXEL CLOCK
 	extern const double halfPeriodLineclock_us = 63.05 * us;	//Half the period of the resonant scanner. I measure 25.220 ms for 400 half oscillations. Therefore, halfPeriodLineclock_us = 25200us/400 = 63.05 us
 																//There is a slight difference between the forward and backward oscillation time. Forward = 63.14 us, backwards = 62.99 us. Diff = 150 ns (i.e., ~ 1 pixel)
-																//(Measured by looking at RS SYNC through the FPGA)
+																//(Measured using the oscilloscope by looking at RS SYNC through the FPGA)
 
 	//STAGES
 	extern const int stageTriggerPulse_ms = 5 * ms;			//in ms. Pulsewidth for triggering the stages. (the stage controller has a 20kHz clock = 50 us)

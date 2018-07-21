@@ -199,7 +199,7 @@ void Image::correctInterleaved_()
 }
 
 
-void Image::acquire(const std::string filename)
+void Image::acquire(const bool saveFlag, const std::string filename)
 {
 	startFIFOpc_();		//Establish the connection between FIFOfpga and FIFOpc
 	mFpga.triggerRT();	//Trigger the RT sequence. If triggered too early, FIFOfpga will probably overflow
@@ -211,7 +211,8 @@ void Image::acquire(const std::string filename)
 			readFIFOpc_();		//Read the data in FIFOpc
 			unpackBuffer_();	//Move the chuncks of data to a buffer array
 			correctInterleaved_();
-			saveAsTiff(filename);
+			if ( saveFlag )
+				saveAsTiff(filename);
 		}
 		catch (const ImageException &e) //Notify the exception and move to the next iteration
 		{

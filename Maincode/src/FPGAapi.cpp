@@ -233,7 +233,7 @@ namespace FPGAapi
 		switch (pixelclockType) //pixelclockType defined globally
 		{
 		//case uniform: pushUniformDwellTimes(15, 0.125 * us); //Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
-		case uniform: pushUniformDwellTimes(-28, 0.1625 * us); //Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
+		case uniform: pushUniformDwellTimes(-32, 0.1625 * us); //Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
 			break;
 		//case nonuniform: pushCorrectedDwellTimes();
 			//break;
@@ -259,9 +259,6 @@ namespace FPGAapi
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 
 		mPixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUsTotick(initialWaitingTime_us) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
-
-		double aux = FPGAapi::convertUsTotick(initialWaitingTime_us) + calibFine_tick;
-		std::cout << "Total delay = " << aux << std::endl;
 
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant

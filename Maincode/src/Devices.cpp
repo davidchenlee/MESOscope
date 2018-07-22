@@ -159,7 +159,7 @@ void Image::unpackBuffer_()
 	{
 		for (int jj = 0; jj < mNelemBufArray_B[ii]; jj++)
 		{
-			upscaledCount = std::floor(upscaleU8 * mBufArray_B[ii][jj]); //Upscale the photoncount to a 8-bit number
+			upscaledCount = std::floor(upscaleU8 * mBufArray_B[ii][jj]); //Upscale the photoncount from 4-bit to a 8-bit
 
 			if (upscaledCount > _UI8_MAX)
 				upscaledCount = _UI8_MAX;
@@ -198,6 +198,15 @@ void Image::correctInterleaved_()
 	delete[] auxLine;
 }
 
+void Image::analyze_() const
+{
+	double totalCount = 0;
+	for (int index = 0; index < widthPerFrame_pix * heightPerFrame_pix; index++)
+		totalCount += mImage[index];
+
+	std::cout << "Total count = " << totalCount << std::endl;
+}
+
 
 void Image::acquire(const bool saveFlag, const std::string filename)
 {
@@ -211,6 +220,7 @@ void Image::acquire(const bool saveFlag, const std::string filename)
 			readFIFOpc_();		//Read the data in FIFOpc
 			unpackBuffer_();	//Move the chuncks of data to a buffer array
 			correctInterleaved_();
+			analyze_();
 			if ( saveFlag )
 				saveAsTiff(filename);
 		}
@@ -222,10 +232,7 @@ void Image::acquire(const bool saveFlag, const std::string filename)
 
 }
 
-void Image::analyze_() const
-{
 
-}
 
 void Image::saveAsTiff(std::string filename) const
 {
@@ -592,7 +599,7 @@ void Galvo::voltageToZero() const
 
 mPMT::mPMT()
 {
-	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+	mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
 }
 
 mPMT::~mPMT()
@@ -753,16 +760,16 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)
 	switch (ID)
 	{
 	case FW1:
-		port = COMport.at(FW1com);
+		mPort = assignCOM.at(FW1com);
 		break;
 	case FW2:
-		port = COMport.at(FW2com);
+		mPort = assignCOM.at(FW2com);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected filterwheel unavailable");
 	}
 
-	mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+	mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
 	this->downloadColor_();	//Download the current filter position
 }
 
@@ -772,7 +779,7 @@ Filterwheel::~Filterwheel()
 }
 
 //Convert from enum Filtercolor to string
-std::string Filterwheel::readColorStr_() const
+std::string Filterwheel::convertColorToString() const
 {
 	std::string colorStr;
 	switch (mColor)
@@ -824,7 +831,7 @@ void Filterwheel::setColor(const Filtercolor color)
 		mSerial->write(TxBuffer);
 
 		mColor = color;
-		std::cout << "Filterwheel " << FW1 << " successfully set to " + this->readColorStr_() << std::endl;
+		std::cout << "Filterwheel " << FW1 << " successfully set to " + this->convertColorToString() << std::endl;
 		Sleep(3000); //Wait until the filterwheel stops moving
 	}
 }
@@ -850,11 +857,11 @@ Laser::Laser()
 {
 	try
 	{
-		mSerial = new serial::Serial(port, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with " + port);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with " + mPort);
 	}
 	this->downloadWavelength_();
 };
@@ -874,7 +881,7 @@ void Laser::downloadWavelength_()
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the laser " + port);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the laser " + mPort);
 	}
 
 	//Delete echoed command. Echoing could be disabled on the laser but deleting it is safer and more general
@@ -919,7 +926,7 @@ void Laser::setWavelength(const int wavelength_nm)
 		}
 		catch (const serial::IOException)
 		{
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with " + port);
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with " + mPort);
 		}
 
 		mWavelength_nm = wavelength_nm;
@@ -946,7 +953,7 @@ void Laser::setShutter(const bool state) const
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the laser " + port);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the laser " + mPort);
 	}
 }
 
@@ -1175,8 +1182,8 @@ double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, cons
 
 
 /*
-[1] The stage Z has a virtual COMport port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.
-nPortNr: to know the correct COMport port, look at Window's device manager or use Tera Term. Use nPortNr=1 for COM1, etc..
+[1] The stage Z has a virtual COM port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.
+nPortNr: to know the correct COM port, look at Window's device manager or use Tera Term. Use nPortNr=1 for COM1, etc..
 iBaudRate: the manual says that the baud rate does not matter (p10), but the suggested 115200 does not work. I use the default baud rate = 38400 which matches the drive's front panel configuration (using physical switches)
 
 [2] std::clock() vs std::chrono

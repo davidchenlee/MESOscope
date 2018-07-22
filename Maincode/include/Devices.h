@@ -136,7 +136,7 @@ public:
 class mPMT
 {
 	serial::Serial *mSerial;
-	std::string port = COMport.at(mPMTcom);
+	std::string mPort = assignCOM.at(mPMTcom);
 	const int mBaud = 9600;
 	const int mTimeout_ms = 300;
 	const int RxBufferSize = 256;
@@ -157,11 +157,11 @@ class Filterwheel
 {
 	FilterwheelID mID;			//Device ID
 	serial::Serial *mSerial;
-	std::string port;
+	std::string mPort;
 	const int mBaud = 115200;
 	const int mTimeout_ms = 150;
 	Filtercolor mColor;
-	std::string readColorStr_() const;
+	std::string convertColorToString() const;
 	void downloadColor_();
 public:
 	Filterwheel(const FilterwheelID ID);
@@ -174,7 +174,7 @@ class Laser
 {
 	int mWavelength_nm;
 	serial::Serial *mSerial;
-	const std::string port = COMport.at(VISIONcom);
+	const std::string mPort = assignCOM.at(VISIONcom);
 	const int mBaud = 19200;
 	const int mTimeout_ms = 100;
 	void downloadWavelength_();
@@ -191,7 +191,7 @@ class Stage
 	const std::string mStageName_x = "116049107";	//X-stage (V-551.4B)
 	const std::string mStageName_y = "116049105";	//Y-stage (V-551.2B)
 	const std::string mStageName_z = "0165500631";	//Z-stage (ES-100)
-	const int mPort_z = 4;							//COMport port
+	const int mPort_z = 4;							//COM port
 	const int mBaud_z = 38400;
 	int3 mID;										//Controller IDs
 	const char mNstagesPerController[2] = "1";		//Number of stages per controller (currently 1)

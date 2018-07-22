@@ -29,7 +29,7 @@ namespace Constants
 	enum Axis { xx, yy, zz };
 
 	enum ComID { VISIONcom, FW1com , FW2com, mPMTcom, ZSTAGEcom };
-	extern const std::vector<std::string> COMport;
+	extern const std::vector<std::string> assignCOM;
 
 	extern const LineclockInputSelector lineclockInput;
 	extern const PhotonCounterInputSelector photoncounterInput;

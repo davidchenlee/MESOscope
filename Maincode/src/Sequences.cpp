@@ -8,10 +8,11 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
+	bool acquireStackFlag = 0;
+	const int nFrames = 10;
 	const std::string filename = "Liver";
-	const std::string collar = "1.435";
-
-	const int wavelength_nm = 750;
+	const std::string collar = "1.47";
+	const int wavelength_nm = 940;
 	double laserPower_mW = 35 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
 
@@ -21,11 +22,9 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGES
 	Stage stage;
-	const double3 initialPosition_mm = { 35.5, 19, 18.412};
+	const double3 initialPosition_mm = { 35.5, 19, 18.416};
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
-	std::cout << "Stages initial position:" << std::endl;
-	stage.printPosition3();
 	double3 position_mm = stage.readPosition3_mm();
 	Sleep(1000);
 	
@@ -34,8 +33,6 @@ void seq_main(const FPGAapi::Session &fpga)
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
-
-	const int nFrames = 1;
 	for (int ii = 0; ii < nFrames; ii++)
 	{
 		//CREATE A REAL-TIME SEQUENCE
@@ -62,11 +59,15 @@ void seq_main(const FPGAapi::Session &fpga)
 			" x=" + toString(position_mm.at(xx), 3) + " y=" + toString(position_mm.at(yy), 3) + " z=" + toString(position_mm.at(zz),4)); //Execute the realtime sequence and acquire the image
 		//image.acquire(filename); 
 		
-		
-		//position_mm.at(zz) += 0.0005;
-		stage.moveStage(zz, position_mm.at(zz));
 		stage.printPosition3();
-		//laserPower_mW += 0.5;
+		
+		if (acquireStackFlag)
+		{
+			position_mm.at(zz) += 0.0005;
+			stage.moveStage(zz, position_mm.at(zz));
+			//laserPower_mW += 0.5;
+		}
+
 		
 		Sleep(1000);
 	}

@@ -779,10 +779,10 @@ Filterwheel::~Filterwheel()
 }
 
 //Convert from enum Filtercolor to string
-std::string Filterwheel::convertColorToString() const
+std::string Filterwheel::convertColorToString(const Filtercolor color) const
 {
 	std::string colorStr;
-	switch (mColor)
+	switch (color)
 	{
 	case BLUE:
 		colorStr = "BLUE";
@@ -831,7 +831,7 @@ void Filterwheel::setColor(const Filtercolor color)
 		mSerial->write(TxBuffer);
 
 		mColor = color;
-		std::cout << "Filterwheel " << FW1 << " successfully set to " + this->convertColorToString() << std::endl;
+		std::cout << "Filterwheel " << FW1 << " successfully set to " + convertColorToString(mColor) << std::endl;
 		Sleep(3000); //Wait until the filterwheel stops moving
 	}
 }
@@ -861,7 +861,7 @@ Laser::Laser()
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with " + mPort);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with VISION laser");
 	}
 	this->downloadWavelength_();
 };
@@ -881,7 +881,7 @@ void Laser::downloadWavelength_()
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the laser " + mPort);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the VISION laser");
 	}
 
 	//Delete echoed command. Echoing could be disabled on the laser but deleting it is safer and more general
@@ -926,8 +926,11 @@ void Laser::setWavelength(const int wavelength_nm)
 		}
 		catch (const serial::IOException)
 		{
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with " + mPort);
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION laser");
 		}
+
+		//std::cout << "Sleep time in ms: " << (int)abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s) << std::endl;	//For debugging
+		Sleep((int)abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s));	//Wait till the laser finishes tuning
 
 		mWavelength_nm = wavelength_nm;
 		std::cout << "VISION laser wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
@@ -953,7 +956,7 @@ void Laser::setShutter(const bool state) const
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the laser " + mPort);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the VISION laser");
 	}
 }
 

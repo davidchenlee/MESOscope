@@ -161,7 +161,7 @@ class Filterwheel
 	const int mBaud = 115200;
 	const int mTimeout_ms = 150;
 	Filtercolor mColor;
-	std::string convertColorToString() const;
+	std::string convertColorToString(const Filtercolor color) const;
 	void downloadColor_();
 public:
 	Filterwheel(const FilterwheelID ID);
@@ -177,6 +177,7 @@ class Laser
 	const std::string mPort = assignCOM.at(VISIONcom);
 	const int mBaud = 19200;
 	const int mTimeout_ms = 100;
+	const double mTuningSpeed_nm_s = 35;				//in nm oer second. Laser tuning speed is ~ 40 nm/s
 	void downloadWavelength_();
 public:
 	Laser();

@@ -1,7 +1,8 @@
 #pragma once
 #include <fstream>					//file management
 #include <ctime>					//Clock()
-#include <tiffio.h>					//for Tiff files
+#include <tiffio.h>					//Tiff files
+#include <algorithm>				//std::max and std::min
 #include "FPGAapi.h"
 #include "PI_GCS2_DLL.h"
 #include "serial/serial.h"
@@ -62,12 +63,14 @@ public:
 class ResonantScanner
 {
 	const FPGAapi::Session &mFpga;
-	const int mVMAX_V = 5 * V;										//Max control voltage
+	const double mVMAX_V = 5 * V;									//Max control voltage allowed
 	const int mDelay_ms = 10;
 	//double mVoltPerUm = 1.285 * V/ ((467 - 264)*um);				//Calibration factor. volts per um. Equal distant pixels, 200 um, 400 pix, 16/July/2018
 	double mVoltPerUm = 1.093 * V / (179 * um);						//Calibration factor. volts per um. Equal distant pixels, 170 um, 3400 pix, 16/July/2018
 	double mFFOV_um = 0;											//Full field of view
-	double mVoltage_V = 0;											//Control voltage 0-5V (max amplitude)
+	double mVoltage_V = 0;											//Control voltage 0-5V
+	const double mFillFactor = widthPerFrame_pix * dwell_us / halfPeriodLineclock_us;	//Fill factor: how much of an RS swing is covered by the pixels
+
 	void setVoltage_(const double Vcontrol_V);
 	void setFFOV_(const double FFOV_um);
 	double convertUmToVolt_(const double amplitude_um) const;
@@ -106,6 +109,7 @@ class PockelsCell
 	RTchannel mPockelsChannel;
 	RTchannel mScalingChannel;
 	int mWavelength_nm;		//Laser wavelength
+
 	double convert_mWToVolt_(const double power_mW) const;
 public:
 	PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsChannel, const int wavelength_nm);
@@ -123,6 +127,7 @@ class Galvo
 	FPGAapi::RTsequence &mSequence;
 	RTchannel mGalvoChannel;
 	const double voltPerUm = 5.0 * V / (210 * um);		//volts per um. Calibration factor of the galvo. Last calib 11/April/2018
+
 	double convert_umToVolt_(const double position_um) const;
 	void pushVoltageSinglet_(const double timeStep, const double AO_V) const;
 public:
@@ -140,6 +145,7 @@ class mPMT
 	const int mBaud = 9600;
 	const int mTimeout_ms = 300;
 	const int RxBufferSize = 256;
+
 	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index) const;
 	std::vector<uint8_t> sendCommand_(std::vector<uint8_t> command) const;
 public:
@@ -155,13 +161,18 @@ public:
 
 class Filterwheel
 {
-	FilterwheelID mID;			//Device ID
+	FilterwheelID mID;						//Device ID
 	serial::Serial *mSerial;
 	std::string mPort;
 	const int mBaud = 115200;
 	const int mTimeout_ms = 150;
 	Filtercolor mColor;
-	std::string convertColorToString(const Filtercolor color) const;
+	const int mNpos = 6;						//Nunmber of filter positions
+	const double mTuningSpeed_Hz = 0.8;		//in Hz. Filterwheel tuning speed is ~ 1 position/s
+	const int mWaitToStop_ms = 3000;			//in ms. Wait until the filterwheel stops turning the turret
+	const int mRxBufSize = 256;
+
+	std::string convertToString_(const Filtercolor color) const;
 	void downloadColor_();
 public:
 	Filterwheel(const FilterwheelID ID);
@@ -177,7 +188,8 @@ class Laser
 	const std::string mPort = assignCOM.at(VISIONcom);
 	const int mBaud = 19200;
 	const int mTimeout_ms = 100;
-	const double mTuningSpeed_nm_s = 35;				//in nm oer second. Laser tuning speed is ~ 40 nm/s
+	const double mTuningSpeed_nm_s = 35;				//in nm per second. Laser tuning speed is ~ 40 nm/s
+
 	void downloadWavelength_();
 public:
 	Laser();
@@ -197,7 +209,7 @@ class Stage
 	int3 mID;										//Controller IDs
 	const char mNstagesPerController[2] = "1";		//Number of stages per controller (currently 1)
 	double3 mPosition3_mm;							//Absolute position of the stages (x, y, z)
-	const double3 mPosMin3_mm{ -60, 0, 1 };			//Min and max positions set by software, which do not necessarily match the values set by hardware (stored in the internal memory of the stages)
+	const double3 mPosMin3_mm{ -60, 0, 1 };			//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
 	const double3 mPosMax3_mm{ 45, 30, 25 };
 	int3 mNtile;									//Tile number in x, y, z
 	int3 mNtileOverlap_pix;							//in pixels. Tile overlap in x, y, z

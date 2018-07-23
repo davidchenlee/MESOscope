@@ -230,10 +230,9 @@ namespace FPGAapi
 #pragma region "RTsequence"
 	RTsequence::Pixelclock::Pixelclock()
 	{
-		switch (pixelclockType) //pixelclockType defined globally
+		switch (pixelclockType)
 		{
-		//case uniform: pushUniformDwellTimes(15, 0.125 * us); //Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
-		case uniform: pushUniformDwellTimes(-32, 0.1625 * us); //Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
+		case uniform: pushUniformDwellTimes(-32, dwell_us);
 			break;
 		//case nonuniform: pushCorrectedDwellTimes();
 			//break;

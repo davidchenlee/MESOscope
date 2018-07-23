@@ -78,4 +78,6 @@ namespace Parameters
 	extern const int nFrames;
 	extern const int nLinesAllFrames;
 	extern const int nPixAllFrames;
+
+	extern const double dwell_us;
 }

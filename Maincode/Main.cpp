@@ -16,8 +16,8 @@ int main(int argc, char* argv[])
 			//seq_testAODO(fpga);
 			//seq_testmPMT();
 			//seq_testPockels(fpga);
-			seq_testLaserComm(fpga);
-			//seq_testFilterwheel();
+			//seq_testLaserComm(fpga);
+			seq_testFilterwheel();
 		}
 		catch (const std::invalid_argument &e)
 		{

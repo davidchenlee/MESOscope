@@ -8,13 +8,18 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	bool acquireStackFlag = 0;
-	const int nFrames = 10;
+	const bool acquireStackFlag = 0;
+	const int nFrames = 1;
+	const double stepSize_mm = 0.0005;
 	const std::string filename = "Liver";
 	const std::string collar = "1.47";
-	const int wavelength_nm = 940;
-	double laserPower_mW = 35 * mW;
+	const int wavelength_nm = 750;
+	double laserPower_mW = 25 * mW;
 	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
+
+	//LASER
+	Laser vision;
+	vision.setWavelength(wavelength_nm);
 
 	//FILTERWHEEL
 	Filterwheel FW(FW1);
@@ -22,7 +27,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGES
 	Stage stage;
-	const double3 initialPosition_mm = { 35.5, 19, 18.416};
+	const double3 initialPosition_mm = { 34.1, 19.1, 18.4055};
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
 	double3 position_mm = stage.readPosition3_mm();
@@ -63,7 +68,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		
 		if (acquireStackFlag)
 		{
-			position_mm.at(zz) += 0.0005;
+			position_mm.at(zz) += stepSize_mm;
 			stage.moveStage(zz, position_mm.at(zz));
 			//laserPower_mW += 0.5;
 		}
@@ -175,7 +180,11 @@ void seq_testFilterwheel()
 {
 	Filterwheel FW(FW1);
 	//FW.setColor(RED);
-	FW.setColor(750);
+	
+	if(1)
+	FW.setColor(1040);
+	else
+	FW.setColor(940);
 }
 
 void seq_testStageSetPosition()
@@ -261,5 +270,5 @@ void seq_testLaserComm(const FPGAapi::Session &fpga)
 {
 	Laser vision;
 	//vision.setShutter(0);
-	vision.setWavelength(1040);
+	vision.setWavelength(750);
 }

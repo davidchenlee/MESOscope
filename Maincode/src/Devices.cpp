@@ -779,7 +779,7 @@ Filterwheel::~Filterwheel()
 }
 
 //Convert from enum Filtercolor to string
-std::string Filterwheel::convertColorToString(const Filtercolor color) const
+std::string Filterwheel::convertToString_(const Filtercolor color) const
 {
 	std::string colorStr;
 	switch (color)
@@ -804,10 +804,9 @@ void Filterwheel::downloadColor_()
 {
 	const std::string TxBuffer = "pos?\r";	//Command to the filterwheel
 	std::string RxBuffer;					//Reply from the filterwheel
-	const int RxBufSize = 10;
-
 	mSerial->write(TxBuffer);
-	mSerial->read(RxBuffer, RxBufSize);
+	mSerial->read(RxBuffer, mRxBufSize);
+	//std::cout << "Full RxBuffer: " << RxBuffer << std::endl; //For debugging
 
 	//Delete echoed command
 	std::string::size_type ii = RxBuffer.find(TxBuffer);
@@ -819,20 +818,36 @@ void Filterwheel::downloadColor_()
 	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
 	//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
+	//std::cout << "Cleaned RxBuffer: " << RxBuffer << std::endl; //For debugging
 	mColor = static_cast<Filtercolor>(std::stoi(RxBuffer));	//convert string to int, and then to Filtercolor
-	//std::cout << RxBuffer << std::endl;
+
 }
 
 void Filterwheel::setColor(const Filtercolor color)
 {
-	if (color != mColor)
+	//if (color != mColor)
 	{
 		std::string TxBuffer = "pos=" + std::to_string(color) + "\r";
+		std::string RxBuffer;
 		mSerial->write(TxBuffer);
 
-		mColor = color;
-		std::cout << "Filterwheel " << FW1 << " successfully set to " + convertColorToString(mColor) << std::endl;
-		Sleep(3000); //Wait until the filterwheel stops moving
+		//Find the shortest way to reach the targeted position
+		const int minPos = (std::min)(color,mColor);
+		const int maxPos = (std::max)(color, mColor);
+		const int diffPos = maxPos - minPos;
+		const int minSteps = (std::min)(diffPos, mNpos - diffPos);
+
+		std::cout << "Tuning the Filterwheel " << FW1 << " to " + convertToString_(color) << std::endl;
+		Sleep((int) (1000.0 * minSteps/mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret
+
+		mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. flush() doesn't work
+		//std::cout << "setColor full RxBuffer: " << RxBuffer << std::endl; //For debugging
+
+		this->downloadColor_();
+		if ( color == mColor )
+			std::cout << "Filterwheel " << FW1 << " successfully set to " + convertToString_(mColor) << std::endl;
+		else
+			std::cout << "WARNING: Filterwheel " << FW1 << " might not be in the correct position " + convertToString_(color) << std::endl;
 	}
 }
 
@@ -861,7 +876,7 @@ Laser::Laser()
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with VISION laser");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with VISION");
 	}
 	this->downloadWavelength_();
 };
@@ -881,7 +896,7 @@ void Laser::downloadWavelength_()
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the VISION laser");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
 	}
 
 	//Delete echoed command. Echoing could be disabled on the laser but deleting it is safer and more general
@@ -905,13 +920,13 @@ void Laser::downloadWavelength_()
 
 void Laser::printWavelength_nm() const
 {
-	std::cout << "VISION laser wavelength is " << mWavelength_nm << " nm" << std::endl;
+	std::cout << "VISION wavelength is " << mWavelength_nm << " nm" << std::endl;
 }
 
 void Laser::setWavelength(const int wavelength_nm)
 {
 	if (wavelength_nm < 680 || wavelength_nm > 1080)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": VISION laser wavelength must be in the range 680 - 1080 nm");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": VISION wavelength must be in the range 680 - 1080 nm");
 
 	if (wavelength_nm != mWavelength_nm)
 	{
@@ -926,14 +941,16 @@ void Laser::setWavelength(const int wavelength_nm)
 		}
 		catch (const serial::IOException)
 		{
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION laser");
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
 		}
 
-		//std::cout << "Sleep time in ms: " << (int)abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s) << std::endl;	//For debugging
-		Sleep((int)abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s));	//Wait till the laser finishes tuning
+
+		//std::cout << "Sleep time in ms: " << (int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s) << std::endl;	//For debugging
+		std::cout << "Tuning VISION to " << wavelength_nm << " nm" << std::endl;
+		Sleep((int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s));	//Wait till the laser finishes tuning
 
 		mWavelength_nm = wavelength_nm;
-		std::cout << "VISION laser wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
+		std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
 	}
 }
 
@@ -950,13 +967,13 @@ void Laser::setShutter(const bool state) const
 		mSerial->read(RxBuffer, RxBufSize);
 
 		if ( state )
-			std::cout << "VISION laser shutter successfully opened" << std::endl;
+			std::cout << "VISION shutter successfully opened" << std::endl;
 		else
-			std::cout << "VISION laser shutter successfully closed" << std::endl;
+			std::cout << "VISION shutter successfully closed" << std::endl;
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the VISION laser");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
 	}
 }
 

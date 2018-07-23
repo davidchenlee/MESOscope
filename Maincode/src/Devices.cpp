@@ -769,8 +769,15 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected filterwheel unavailable");
 	}
 
-	mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
-	this->downloadColor_();	//Download the current filter position
+	try
+	{
+		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+		this->downloadColor_();	//Download the current filter position
+	}
+	catch (const serial::IOException)
+	{
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with Filterwheel " + std::to_string(FW1));
+	}
 }
 
 Filterwheel::~Filterwheel()
@@ -804,23 +811,30 @@ void Filterwheel::downloadColor_()
 {
 	const std::string TxBuffer = "pos?\r";	//Command to the filterwheel
 	std::string RxBuffer;					//Reply from the filterwheel
-	mSerial->write(TxBuffer);
-	mSerial->read(RxBuffer, mRxBufSize);
-	//std::cout << "Full RxBuffer: " << RxBuffer << std::endl; //For debugging
 
-	//Delete echoed command
-	std::string::size_type ii = RxBuffer.find(TxBuffer);
-	if (ii != std::string::npos)
-		RxBuffer.erase(ii, TxBuffer.length());
+	try
+	{
+		mSerial->write(TxBuffer);
+		mSerial->read(RxBuffer, mRxBufSize);
+		//std::cout << "Full RxBuffer: " << RxBuffer << std::endl; //For debugging
 
-	//Delete CR and >
-	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
-	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
-	//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
+		//Delete echoed command
+		std::string::size_type ii = RxBuffer.find(TxBuffer);
+		if (ii != std::string::npos)
+			RxBuffer.erase(ii, TxBuffer.length());
 
-	//std::cout << "Cleaned RxBuffer: " << RxBuffer << std::endl; //For debugging
-	mColor = static_cast<Filtercolor>(std::stoi(RxBuffer));	//convert string to int, and then to Filtercolor
+		//Delete CR and >
+		RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
+		RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
+		//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
+		//std::cout << "Cleaned RxBuffer: " << RxBuffer << std::endl; //For debugging
+		mColor = static_cast<Filtercolor>(std::stoi(RxBuffer));	//convert string to int, and then to Filtercolor
+	}
+	catch (const serial::IOException)
+	{
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with Filterwheel " + std::to_string(FW1));
+	}
 }
 
 void Filterwheel::setColor(const Filtercolor color)
@@ -829,25 +843,33 @@ void Filterwheel::setColor(const Filtercolor color)
 	{
 		std::string TxBuffer = "pos=" + std::to_string(color) + "\r";
 		std::string RxBuffer;
-		mSerial->write(TxBuffer);
 
-		//Find the shortest way to reach the targeted position
-		const int minPos = (std::min)(color,mColor);
-		const int maxPos = (std::max)(color, mColor);
-		const int diffPos = maxPos - minPos;
-		const int minSteps = (std::min)(diffPos, mNpos - diffPos);
+		try
+		{
+			mSerial->write(TxBuffer);
 
-		std::cout << "Tuning the Filterwheel " << FW1 << " to " + convertToString_(color) << std::endl;
-		Sleep((int) (1000.0 * minSteps/mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret
+			//Find the shortest way to reach the targeted position
+			const int minPos = (std::min)(color, mColor);
+			const int maxPos = (std::max)(color, mColor);
+			const int diffPos = maxPos - minPos;
+			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
 
-		mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
-		//std::cout << "setColor full RxBuffer: " << RxBuffer << std::endl; //For debugging
+			std::cout << "Tuning the Filterwheel " << FW1 << " to " + convertToString_(color) << std::endl;
+			Sleep((int)(1000.0 * minSteps / mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret
 
-		this->downloadColor_();
-		if ( color == mColor )
-			std::cout << "Filterwheel " << FW1 << " successfully set to " + convertToString_(mColor) << std::endl;
-		else
-			std::cout << "WARNING: Filterwheel " << FW1 << " might not be in the correct position " + convertToString_(color) << std::endl;
+			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
+														//std::cout << "setColor full RxBuffer: " << RxBuffer << std::endl; //For debugging
+
+			this->downloadColor_();
+			if (color == mColor)
+				std::cout << "Filterwheel " << FW1 << " successfully set to " + convertToString_(mColor) << std::endl;
+			else
+				std::cout << "WARNING: Filterwheel " << FW1 << " might not be in the correct position " + convertToString_(color) << std::endl;
+		}
+		catch (const serial::IOException)
+		{
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with Filterwheel " + std::to_string(FW1));
+		}
 	}
 }
 
@@ -873,12 +895,12 @@ Laser::Laser()
 	try
 	{
 		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+		this->downloadWavelength_();
 	}
 	catch (const serial::IOException)
 	{
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with VISION");
 	}
-	this->downloadWavelength_();
 };
 
 Laser::~Laser() {};
@@ -892,29 +914,29 @@ void Laser::downloadWavelength_()
 	{
 		mSerial->write(TxBuffer + "\r");
 		mSerial->read(RxBuffer, mRxBufSize);
+
+		//Delete echoed command. Echoing could be disabled on the laser but deleting it is safer and more general
+		std::string keyword = "?VW ";
+		std::string::size_type i = RxBuffer.find(keyword);
+		if (i != std::string::npos)
+			RxBuffer.erase(i, keyword.length());
+
+		//Delete "CHAMELEON>". This frase could be disabled on the laser, but deleting it is safer and more general
+		keyword = "CHAMELEON>";
+		i = RxBuffer.find(keyword);
+		if (i != std::string::npos)
+			RxBuffer.erase(i, keyword.length());
+
+		RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
+		RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
+
+		mWavelength_nm = std::stoi(RxBuffer);	//Convert string to int
+												//std::cout << RxBuffer << std::endl;	//For debugging
 	}
 	catch (const serial::IOException)
 	{
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
 	}
-
-	//Delete echoed command. Echoing could be disabled on the laser but deleting it is safer and more general
-	std::string keyword = "?VW ";
-	std::string::size_type i = RxBuffer.find(keyword);
-	if (i != std::string::npos)
-		RxBuffer.erase(i, keyword.length());
-
-	//Delete "CHAMELEON>". This frase could be disabled on the laser, but deleting it is safer and more general
-	keyword = "CHAMELEON>";
-	i = RxBuffer.find(keyword);
-	if (i != std::string::npos)
-		RxBuffer.erase(i, keyword.length());
-
-	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
-	RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
-
-	mWavelength_nm = std::stoi(RxBuffer);	//Convert string to int
-	//std::cout << RxBuffer << std::endl;	//For debugging
 }
 
 void Laser::printWavelength_nm() const
@@ -935,23 +957,23 @@ void Laser::setWavelength(const int wavelength_nm)
 		try
 		{
 			mSerial->write(TxBuffer + "\r");
+
+			//std::cout << "Sleep time in ms: " << (int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s) << std::endl;	//For debugging
+			std::cout << "Tuning VISION to " << wavelength_nm << " nm" << std::endl;
+			Sleep((int)std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s));	//Wait till the laser finishes tuning
+
+			mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
+
+			this->downloadWavelength_();
+			if (mWavelength_nm = wavelength_nm)
+				std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
+			else
+				std::cout << "WARNING: VISION wavelength might not be in the correct wavelength " << wavelength_nm << " nm" << std::endl;
 		}
 		catch (const serial::IOException)
 		{
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
 		}
-
-		//std::cout << "Sleep time in ms: " << (int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s) << std::endl;	//For debugging
-		std::cout << "Tuning VISION to " << wavelength_nm << " nm" << std::endl;
-		Sleep((int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s));	//Wait till the laser finishes tuning
-
-		mSerial->read(RxBuffer, mRxBufSize); //Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
-		
-		this->downloadWavelength_();
-		if (mWavelength_nm = wavelength_nm)
-			std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
-		else
-			std::cout << "WARNING: VISION wavelength might not be in the correct wavelength " << wavelength_nm << " nm" << std::endl;
 	}
 }
 

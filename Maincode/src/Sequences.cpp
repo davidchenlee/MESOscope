@@ -270,5 +270,5 @@ void seq_testLaserComm(const FPGAapi::Session &fpga)
 {
 	Laser vision;
 	//vision.setShutter(0);
-	vision.setWavelength(750);
+	vision.setWavelength(940);
 }

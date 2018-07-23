@@ -189,6 +189,7 @@ class Laser
 	const int mBaud = 19200;
 	const int mTimeout_ms = 100;
 	const double mTuningSpeed_nm_s = 35;				//in nm per second. Laser tuning speed is ~ 40 nm/s
+	const int mRxBufSize = 256;
 
 	void downloadWavelength_();
 public:

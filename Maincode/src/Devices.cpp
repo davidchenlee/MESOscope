@@ -840,7 +840,7 @@ void Filterwheel::setColor(const Filtercolor color)
 		std::cout << "Tuning the Filterwheel " << FW1 << " to " + convertToString_(color) << std::endl;
 		Sleep((int) (1000.0 * minSteps/mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret
 
-		mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. flush() doesn't work
+		mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
 		//std::cout << "setColor full RxBuffer: " << RxBuffer << std::endl; //For debugging
 
 		this->downloadColor_();
@@ -887,12 +887,11 @@ void Laser::downloadWavelength_()
 {
 	const std::string TxBuffer = "?VW";		//Command to the laser
 	std::string RxBuffer;					//Reply from the laser
-	const int RxBufSize = 20;
 
 	try
 	{
 		mSerial->write(TxBuffer + "\r");
-		mSerial->read(RxBuffer, RxBufSize);
+		mSerial->read(RxBuffer, mRxBufSize);
 	}
 	catch (const serial::IOException)
 	{
@@ -932,25 +931,27 @@ void Laser::setWavelength(const int wavelength_nm)
 	{
 		const std::string TxBuffer = "VW=" + std::to_string(wavelength_nm);		//Command to the laser
 		std::string RxBuffer;													//Reply from the laser
-		const int RxBufSize = 256;
 
 		try
 		{
 			mSerial->write(TxBuffer + "\r");
-			mSerial->read(RxBuffer, RxBufSize); //Read the serial buffer but don't do anything. The message reads "CHAMELEON>"
 		}
 		catch (const serial::IOException)
 		{
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
 		}
 
-
 		//std::cout << "Sleep time in ms: " << (int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s) << std::endl;	//For debugging
 		std::cout << "Tuning VISION to " << wavelength_nm << " nm" << std::endl;
 		Sleep((int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s));	//Wait till the laser finishes tuning
 
-		mWavelength_nm = wavelength_nm;
-		std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
+		mSerial->read(RxBuffer, mRxBufSize); //Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
+		
+		this->downloadWavelength_();
+		if (mWavelength_nm = wavelength_nm)
+			std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
+		else
+			std::cout << "WARNING: VISION wavelength might not be in the correct wavelength " << wavelength_nm << " nm" << std::endl;
 	}
 }
 
@@ -959,12 +960,11 @@ void Laser::setShutter(const bool state) const
 {
 	const std::string TxBuffer = "S=" + std::to_string(state);		//Command to the laser
 	std::string RxBuffer;											//Reply from the laser
-	const int RxBufSize = 20;
 
 	try
 	{
 		mSerial->write(TxBuffer + "\r");
-		mSerial->read(RxBuffer, RxBufSize);
+		mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work.
 
 		if ( state )
 			std::cout << "VISION shutter successfully opened" << std::endl;

@@ -8,14 +8,29 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const bool acquireStackFlag = 0;
-	const int nFrames = 1;
-	const double stepSize_mm = 0.0005;
+	const bool averageFlag = 1;
+	const bool stackFlag = 0;
+	const int wavelength_nm = 940;
+	double laserPower_mW = 15 * mW;
+	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
+	const double stepSize_um = 0.5;
+	double zDelta_um = 5.0; //Acquire a stack within this range
+
 	const std::string filename = "Liver";
 	const std::string collar = "1.47";
-	const int wavelength_nm = 750;
-	double laserPower_mW = 25 * mW;
-	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
+
+	int nFrames = 1;
+	if (stackFlag)
+	{	
+		nFrames = (int)(zDelta_um / stepSize_um);
+	}
+	else
+	{
+		zDelta_um = 0.0;
+		if (averageFlag)
+			nFrames = 10;
+	}
+
 
 	//LASER
 	Laser vision;
@@ -27,7 +42,8 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGES
 	Stage stage;
-	const double3 initialPosition_mm = { 34.1, 19.095 + 0.100, 18.4095};
+	double3 initialPosition_mm = { 34.200 + 8.00, 18.190, 18.4395};
+	initialPosition_mm.at(zz) -= zDelta_um / 2 / 1000; //For acquiring a stack
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
 	double3 position_mm = stage.readPosition3_mm();
@@ -40,6 +56,8 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	for (int ii = 0; ii < nFrames; ii++)
 	{
+		std::cout << "Frame " << ii+1 << " out of " << nFrames << std::endl;
+
 		//CREATE A REAL-TIME SEQUENCE
 		FPGAapi::RTsequence sequence(fpga);
 
@@ -66,13 +84,19 @@ void seq_main(const FPGAapi::Session &fpga)
 		
 		stage.printPosition3();
 		
-		if (acquireStackFlag)
+		if (stackFlag)
 		{
-			position_mm.at(zz) += stepSize_mm;
+			position_mm.at(zz) += stepSize_um/1000;
 			stage.moveStage(zz, position_mm.at(zz));
 			//laserPower_mW += 0.5;
-			Sleep(1000);
+			Sleep(500);
 		}
+		else
+		{
+			Sleep(100);
+		}
+
+		std::cout << std::endl;
 	}
 
 	Logger datalog(filename);

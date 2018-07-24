@@ -204,7 +204,7 @@ void Image::analyze_() const
 	for (int index = 0; index < widthPerFrame_pix * heightPerFrame_pix; index++)
 		totalCount += mImage[index];
 
-	std::cout << "Total count = " << totalCount << std::endl;
+	//std::cout << "Total count = " << totalCount << std::endl;
 }
 
 
@@ -351,7 +351,7 @@ ResonantScanner::ResonantScanner(const FPGAapi::Session &fpga): mFpga(fpga)
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
-		mFillFactor = sin(PI / 2 * temporalFillFactor);				//Note that the fill factor doesn't depend on the RS amplitude because the oscillation period is fixed
+		mFillFactor = sin(PI / 2 * temporalFillFactor);				//Note that the fill factor doesn't depend on the RS amplitude because its period is fixed
 
 	//std::cout << "Fill factor = " << mFillFactor << std::endl;	//For debugging
 };

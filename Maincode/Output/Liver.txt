@@ -1,4 +1,0 @@
-Wavelength (nm) = 750
-Laser power (mW) = 25
-Galvo FFOV (um) = 200
-Galvo time step (us) = 8

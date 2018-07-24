@@ -1,5 +1,4 @@
 Wavelength (nm) = 750
 Laser power (mW) = 25
-FFOV (um) = 200
-Galvo Max position (um) = 100
+Galvo FFOV (um) = 200
 Galvo time step (us) = 8

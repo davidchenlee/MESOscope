@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 			//Turn the RS On/Off
 			if (runCommand == "1")
 			{
-				RS.turnOn_um(FFOV_um * um);
+				RS.turnOn_um(FFOV_um);
 				shutter1.open();
 				vision.setShutter(1);
 			}

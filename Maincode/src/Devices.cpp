@@ -344,16 +344,19 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 #pragma endregion "Vibratome"
 
 #pragma region "Resonant scanner"
-ResonantScanner::ResonantScanner(const FPGAapi::Session &fpga): mFpga(fpga){};
+ResonantScanner::ResonantScanner(const FPGAapi::Session &fpga): mFpga(fpga)
+{
+	const double temporalFillFactor = widthPerFrame_pix * dwell_us / halfPeriodLineclock_us;
+
+	if (temporalFillFactor > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
+	else
+		mFillFactor = sin(PI / 2 * temporalFillFactor);				//Note that the fill factor doesn't depend on the RS amplitude because the oscillation period is fixed
+
+	//std::cout << "Fill factor = " << mFillFactor << std::endl;	//For debugging
+};
 
 ResonantScanner::~ResonantScanner() {};
-
-//Start or stop the resonant scanner
-void ResonantScanner::run(const bool state) const
-{
-	
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RS_ON_OFF, (NiFpga_Bool)state));
-}
 
 //Set the control voltage that determines the scanning amplitude
 void ResonantScanner::setVoltage_(const double Vcontrol_V)
@@ -362,20 +365,21 @@ void ResonantScanner::setVoltage_(const double Vcontrol_V)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage must be in the range 0-" + std::to_string(mVMAX_V) + " V" );
 
 	mVoltage_V = Vcontrol_V;
-	mFFOV_um = Vcontrol_V / mVoltPerUm;
+	mFullScan_um = Vcontrol_V / mVoltPerUm;
 
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVoltToI16(mVoltage_V)));
 }
 
-//Set the FFOV
+//Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
 void ResonantScanner::setFFOV_(const double FFOV_um)
 {
-	mVoltage_V = FFOV_um * mVoltPerUm;
-	mFFOV_um = FFOV_um;
+	mFullScan_um = FFOV_um / mFillFactor;
+	mVoltage_V = mFullScan_um * mVoltPerUm;
 
 	if (mVoltage_V > mVMAX_V)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX_V/mVoltPerUm) + " um");
 
+	//std::cout << "mVoltage = " << mVoltage_V << std::endl; //For debugging
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVoltToI16(mVoltage_V)));
 }
 
@@ -383,7 +387,7 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 {
 	setFFOV_(FFOV_um);
 	Sleep(mDelay_ms);
-	run(1);
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 1));
 	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um" << std::endl;
 }
 
@@ -391,13 +395,13 @@ void ResonantScanner::turnOn_V(const double Vcontrol_V)
 {
 	setVoltage_(Vcontrol_V);
 	Sleep(mDelay_ms);
-	run(1);
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 1));
 	std::cout << "RS control voltage successfully set to: " << Vcontrol_V << " V" << std::endl;
 }
 
 void ResonantScanner::turnOff()
 {
-	run(0);
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));
 	Sleep(mDelay_ms);
 	setVoltage_(0);
 	std::cout << "RS successfully turned off" << std::endl;
@@ -617,7 +621,7 @@ std::vector<uint8_t> mPMT::sendCommand_(std::vector<uint8_t> command_array) cons
 
 	std::vector<uint8_t> RxBuffer;
 	mSerial->write("\r");						//Wake up the mPMT
-	mSerial->read(RxBuffer, RxBufferSize);		//Read the state: 0x0D(0d13) for ready, or 0x45(0d69) for error
+	mSerial->read(RxBuffer, mRxBufferSize);		//Read the state: 0x0D(0d13) for ready, or 0x45(0d69) for error
 
 	//Throw an error if RxBuffer is empty or CR is NOT returned
 	if ( RxBuffer.empty() || RxBuffer.at(0) != 0x0D )
@@ -627,7 +631,7 @@ std::vector<uint8_t> mPMT::sendCommand_(std::vector<uint8_t> command_array) cons
 
 	RxBuffer.clear(); //Flush the buffer
 	mSerial->write(TxBuffer);
-	mSerial->read(RxBuffer, RxBufferSize);
+	mSerial->read(RxBuffer, mRxBufferSize);
 	
 	//Throw an error if RxBuffer is empty
 	if (RxBuffer.empty())
@@ -839,7 +843,7 @@ void Filterwheel::downloadColor_()
 
 void Filterwheel::setColor(const Filtercolor color)
 {
-	//if (color != mColor)
+	if (color != mColor)
 	{
 		std::string TxBuffer = "pos=" + std::to_string(color) + "\r";
 		std::string RxBuffer;

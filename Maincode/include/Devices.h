@@ -66,10 +66,11 @@ class ResonantScanner
 	const double mVMAX_V = 5 * V;									//Max control voltage allowed
 	const int mDelay_ms = 10;
 	//double mVoltPerUm = 1.285 * V/ ((467 - 264)*um);				//Calibration factor. volts per um. Equal distant pixels, 200 um, 400 pix, 16/July/2018
-	double mVoltPerUm = 1.093 * V / (179 * um);						//Calibration factor. volts per um. Equal distant pixels, 170 um, 3400 pix, 16/July/2018
-	double mFFOV_um = 0;											//Full field of view
+	//double mVoltPerUm = 1.093 * V / (179 * um);					//Calibration factor. volts per um. Equal distant pixels, 170 um, 3400 pix, 16/July/2018
+	double mVoltPerUm = 0.00595;
+	double mFullScan_um = 0;										//Full scan = distance between turning points
 	double mVoltage_V = 0;											//Control voltage 0-5V
-	const double mFillFactor = widthPerFrame_pix * dwell_us / halfPeriodLineclock_us;	//Fill factor: how much of an RS swing is covered by the pixels
+	double mFillFactor;												//Fill factor: how much of an RS swing is covered by the pixels
 
 	void setVoltage_(const double Vcontrol_V);
 	void setFFOV_(const double FFOV_um);
@@ -77,7 +78,6 @@ class ResonantScanner
 public:
 	ResonantScanner(const FPGAapi::Session &fpga);
 	~ResonantScanner();
-	void run(const bool state) const;
 	void turnOn_um(const double FFOV_um);
 	void turnOn_V(const double Vcontrol_V);
 	void turnOff();
@@ -144,9 +144,9 @@ class mPMT
 	std::string mPort = assignCOM.at(mPMTcom);
 	const int mBaud = 9600;
 	const int mTimeout_ms = 300;
-	const int RxBufferSize = 256;
+	const int mRxBufferSize = 256;				//Serial buffer size
 
-	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index) const;
+	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index) const;		//The PMT requires a sumcheck. Refer to the manual
 	std::vector<uint8_t> sendCommand_(std::vector<uint8_t> command) const;
 public:
 	mPMT();
@@ -167,10 +167,10 @@ class Filterwheel
 	const int mBaud = 115200;
 	const int mTimeout_ms = 150;
 	Filtercolor mColor;
-	const int mNpos = 6;						//Nunmber of filter positions
-	const double mTuningSpeed_Hz = 0.8;		//in Hz. Filterwheel tuning speed is ~ 1 position/s
-	const int mWaitToStop_ms = 3000;			//in ms. Wait until the filterwheel stops turning the turret
-	const int mRxBufSize = 256;
+	const int mNpos = 6;					//Nunmber of filter positions
+	const double mTuningSpeed_Hz = 0.8;		//in Hz. The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
+	const int mWaitToStop_ms = 3000;		//in ms. Wait until the filterwheel stops turning the turret
+	const int mRxBufSize = 256;				//Serial buffer size
 
 	std::string convertToString_(const Filtercolor color) const;
 	void downloadColor_();
@@ -188,8 +188,8 @@ class Laser
 	const std::string mPort = assignCOM.at(VISIONcom);
 	const int mBaud = 19200;
 	const int mTimeout_ms = 100;
-	const double mTuningSpeed_nm_s = 35;				//in nm per second. Laser tuning speed is ~ 40 nm/s
-	const int mRxBufSize = 256;
+	const double mTuningSpeed_nm_s = 35;				//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
+	const int mRxBufSize = 256;							//Serial buffer size
 
 	void downloadWavelength_();
 public:

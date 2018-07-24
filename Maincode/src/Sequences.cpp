@@ -15,7 +15,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	const std::string collar = "1.47";
 	const int wavelength_nm = 750;
 	double laserPower_mW = 25 * mW;
-	const double FFOVgalvo_um = 200 * um;	//Galvo full FOV in the slow axis
+	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
 
 	//LASER
 	Laser vision;
@@ -27,7 +27,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGES
 	Stage stage;
-	const double3 initialPosition_mm = { 34.1, 19.1, 18.4055};
+	const double3 initialPosition_mm = { 34.1, 19.095 + 0.100, 18.4095};
 	stage.moveStage3(initialPosition_mm);
 	stage.waitForMovementToStop3();
 	double3 position_mm = stage.readPosition3_mm();
@@ -71,17 +71,14 @@ void seq_main(const FPGAapi::Session &fpga)
 			position_mm.at(zz) += stepSize_mm;
 			stage.moveStage(zz, position_mm.at(zz));
 			//laserPower_mW += 0.5;
+			Sleep(1000);
 		}
-
-		
-		Sleep(1000);
 	}
 
 	Logger datalog(filename);
 	datalog.record("Wavelength (nm) = ", wavelength_nm);
 	datalog.record("Laser power (mW) = ", laserPower_mW);
-	datalog.record("FFOV (um) = ", FFOVgalvo_um);
-	datalog.record("Galvo Max position (um) = ", posMax_um);
+	datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep);
 }
 
@@ -271,4 +268,11 @@ void seq_testLaserComm(const FPGAapi::Session &fpga)
 	Laser vision;
 	//vision.setShutter(0);
 	vision.setWavelength(940);
+}
+
+void seq_testRS(const FPGAapi::Session &fpga)
+{
+	ResonantScanner RS(fpga);
+	//RS.turnOn_um(150);
+	RS.turnOff();
 }

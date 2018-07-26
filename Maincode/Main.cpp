@@ -10,8 +10,8 @@ int main(int argc, char* argv[])
 		{
 			fpga.initialize();		//Initialize the FPGA
 
-			//seq_main(fpga);			//Run the sequence
-			seq_testPixelclock(fpga);
+			seq_main(fpga);			//Run the sequence
+			//seq_testPixelclock(fpga);
 			//seq_testStageSetPosition();
 			//seq_testAODO(fpga);
 			//seq_testmPMT();
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 	}
 	
 	std::cout << "\nPress any key to continue..." << std::endl;
-	//getchar();
+	getchar();
 
 	return 0;
 }

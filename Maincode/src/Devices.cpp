@@ -90,7 +90,7 @@ void Image::readFIFOpc_()
 		if (mNelemReadFIFO_A < nPixAllFrames)
 		{
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, mTimeout_ms, &mNremainFIFO_A));
-			std::cout << "Number of elements remaining in FIFOpc A: " << mNremainFIFO_A << std::endl;
+			//std::cout << "Number of elements remaining in FIFOpc A: " << mNremainFIFO_A << std::endl;
 
 			if (mNremainFIFO_A > 0)
 			{
@@ -104,7 +104,7 @@ void Image::readFIFOpc_()
 		{
 			//By requesting 0 elements from FIFOpc, the function returns the number of elements available. If no data available so far, then nRemainFIFO_B = 0 is returned
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, mTimeout_ms, &mNremainFIFO_B));
-			std::cout << "Number of elements remaining in FIFOpc B: " << mNremainFIFO_B << std::endl;
+			//std::cout << "Number of elements remaining in FIFOpc B: " << mNremainFIFO_B << std::endl;
 
 			//If there are data available in the FIFOpc, retrieve it
 			if (mNremainFIFO_B > 0)
@@ -1074,7 +1074,7 @@ void Stage::moveStage(const Axis axis, const double position_mm)
 	if (mPosition3_mm[axis] != position_mm ) //Move only if the requested position is different from the current position
 	{
 		if (!PI_MOV(mID[axis], mNstagesPerController, &position_mm) )	//~14 ms to execute this function
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage Z to target position");
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage" + std::to_string(axis) + " to the target position");
 
 		mPosition3_mm[axis] = position_mm;
 	}

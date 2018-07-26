@@ -13,7 +13,7 @@ class Image
 	unsigned char *mImage;							//Create a long 1D array containing the image
 
 	const int mReadFifoWaitingTime_ms = 15;			//Waiting time between each iteration
-	const U32 mTimeout_ms = 100;					//FIFOpc timeout
+	const U32 mTimeout_ms = 500;					//FIFOpc timeout
 	int mTimeoutCounter_iter = 100;					//Timeout the while-loop if the FIFO data transfer fails	
 
 	//FIFO A
@@ -40,8 +40,8 @@ class Image
 public:
 	Image(const FPGAapi::Session &fpga);
 	~Image();
-	void acquire(const bool saveFlag = FALSE, const std::string filename = "Untitled");
-	void saveAsTiff(std::string filename) const;
+	void acquire(const bool saveFlag = FALSE, const std::string filename = "Untitled", const bool overrideFile = FALSE);
+	void saveAsTiff(std::string filename, const bool overrideFile) const;
 	void saveAsTxt(const std::string fileName) const;
 };
 
@@ -65,8 +65,6 @@ class ResonantScanner
 	const FPGAapi::Session &mFpga;
 	const double mVMAX_V = 5 * V;									//Max control voltage allowed
 	const int mDelay_ms = 10;
-	//double mVoltPerUm = 1.285 * V/ ((467 - 264)*um);				//Calibration factor. volts per um. Equal distant pixels, 200 um, 400 pix, 16/July/2018
-	//double mVoltPerUm = 1.093 * V / (179 * um);					//Calibration factor. volts per um. Equal distant pixels, 170 um, 3400 pix, 16/July/2018
 	double mVoltPerUm = 0.00595;
 	double mFullScan_um = 0;										//Full scan = distance between turning points
 	double mVoltage_V = 0;											//Control voltage 0-5V
@@ -108,7 +106,8 @@ class PockelsCell
 	FPGAapi::RTsequence &mSequence;									
 	RTchannel mPockelsChannel;
 	RTchannel mScalingChannel;
-	int mWavelength_nm;		//Laser wavelength
+	int mWavelength_nm;							//Laser wavelength
+	const double maxPower_mW = 250 * mW;		//Soft limit for the laser power
 
 	double convert_mWToVolt_(const double power_mW) const;
 public:

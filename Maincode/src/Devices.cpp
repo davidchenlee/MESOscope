@@ -90,7 +90,7 @@ void Image::readFIFOpc_()
 		if (mNelemReadFIFO_A < nPixAllFrames)
 		{
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, mTimeout_ms, &mNremainFIFO_A));
-			//std::cout << "Number of elements remaining in FIFOpc A: " << mNremainFIFO_A << std::endl;
+			std::cout << "Number of elements remaining in FIFOpc A: " << mNremainFIFO_A << std::endl;
 
 			if (mNremainFIFO_A > 0)
 			{
@@ -104,7 +104,7 @@ void Image::readFIFOpc_()
 		{
 			//By requesting 0 elements from FIFOpc, the function returns the number of elements available. If no data available so far, then nRemainFIFO_B = 0 is returned
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, mTimeout_ms, &mNremainFIFO_B));
-			//std::cout << "Number of elements remaining in FIFOpc B: " << mNremainFIFO_B << std::endl;
+			std::cout << "Number of elements remaining in FIFOpc B: " << mNremainFIFO_B << std::endl;
 
 			//If there are data available in the FIFOpc, retrieve it
 			if (mNremainFIFO_B > 0)
@@ -208,7 +208,7 @@ void Image::analyze_() const
 }
 
 
-void Image::acquire(const bool saveFlag, const std::string filename)
+void Image::acquire(const bool saveFlag, const std::string filename, const bool overrideFile)
 {
 	startFIFOpc_();		//Establish the connection between FIFOfpga and FIFOpc
 	mFpga.triggerRT();	//Trigger the RT sequence. If triggered too early, FIFOfpga will probably overflow
@@ -222,7 +222,7 @@ void Image::acquire(const bool saveFlag, const std::string filename)
 			correctInterleaved_();
 			analyze_();
 			if ( saveFlag )
-				saveAsTiff(filename);
+				saveAsTiff(filename, overrideFile);
 		}
 		catch (const ImageException &e) //Notify the exception and move to the next iteration
 		{
@@ -234,9 +234,9 @@ void Image::acquire(const bool saveFlag, const std::string filename)
 
 
 
-void Image::saveAsTiff(std::string filename) const
+void Image::saveAsTiff(std::string filename, const bool overrideFile) const
 {
-	if (!overrideSaving)
+	if (!overrideFile)
 		filename = file_exists(filename);
 
 	TIFF *tiffHandle = TIFFOpen((foldername + filename + ".tif").c_str(), "w");
@@ -457,7 +457,7 @@ void Shutter::pulseHigh() const
 PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsChannel, const int wavelength_nm) : mSequence(sequence), mPockelsChannel(pockelsChannel), mWavelength_nm(wavelength_nm)
 {
 	if (mPockelsChannel != POCKELS1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell channel unavailable");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
 
 	switch (mPockelsChannel)
 	{
@@ -478,15 +478,15 @@ PockelsCell::~PockelsCell() {}
 void PockelsCell::pushVoltageSinglet_(const double timeStep, const double AO_V) const
 {
 	if (AO_V < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
 	mSequence.pushAnalogSinglet(mPockelsChannel, timeStep, AO_V);
 }
 
 void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW) const
 {
-	if (P_mW < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output power must be positive");
+	if (P_mW < 0 || P_mW > maxPower_mW)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(P_mW));
 
 	mSequence.pushAnalogSinglet(mPockelsChannel, timeStep, convert_mWToVolt_(P_mW));
 }
@@ -495,7 +495,7 @@ void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW) con
 void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const
 {
 	if (Vi_V < 0 || Vf_V < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
 	mSequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, Vi_V, Vf_V);
 }
@@ -504,7 +504,7 @@ void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDura
 void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const
 {
 	if (Pi_mW < 0 || Pf_mW < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell output voltage must be positive");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
 	mSequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, convert_mWToVolt_(Pi_mW), convert_mWToVolt_(Pf_mW));
 }
@@ -518,7 +518,7 @@ void PockelsCell::voltageToZero() const
 void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 {
 	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor is outside the range 0-4");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor must be in the range 0-4");
 	
 	if (nFrames < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");

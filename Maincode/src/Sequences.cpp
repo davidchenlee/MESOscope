@@ -8,51 +8,74 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const bool averageFlag = 1;
-	const bool stackFlag = 0;
-	const int wavelength_nm = 940;
-	double laserPower_mW = 15 * mW;
-	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
-	const double stepSize_um = 0.5;
-	double zDelta_um = 5.0; //Acquire a stack within this range
+	//FLAGS
+	const bool contFlag = 0;		//Run THE acquisition continuously
+	const bool stackFlag = 0;		//overwrites averageFlag
+	const bool averageFlag = 1;		//Take the same frame many times for averaging
 
-	const std::string filename = "Liver";
-	const std::string collar = "1.47";
 
-	int nFrames = 1;
-	if (stackFlag)
-	{	
-		nFrames = (int)(zDelta_um / stepSize_um);
-	}
-	else
-	{
-		zDelta_um = 0.0;
-		if (averageFlag)
-			nFrames = 10;
-	}
 
+
+	//STACK
+	const double stepSize_um = 1.0 * um;
+	double zDelta_um = 5.0 * um; //Acquire a stack within this range
+
+	//STAGES
+	double3 initialPosition_mm = { 38, 29.0, 16.880 };
 
 	//LASER
-	Laser vision;
-	vision.setWavelength(wavelength_nm);
+	const int wavelength_nm = 940;
+	double laserPower_mW = 100 * mW;
+//	Laser vision;
+//	vision.setWavelength(wavelength_nm);
 
-	//FILTERWHEEL
-	Filterwheel FW(FW1);
-	FW.setColor(wavelength_nm);
-	
-	//STAGES
-	Stage stage;
-	double3 initialPosition_mm = { 34.200 + 8.00, 18.190, 18.4395};
-	initialPosition_mm.at(zz) -= zDelta_um / 2 / 1000; //For acquiring a stack
-	stage.moveStage3(initialPosition_mm);
-	stage.waitForMovementToStop3();
-	double3 position_mm = stage.readPosition3_mm();
-	Sleep(1000);
-	
 	//GALVO
+	const double FFOVgalvo_um = 300 * um;	//Full FOV in the slow axis
 	const double duration = halfPeriodLineclock_us * heightPerFrame_pix; //= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
+
+	int nFrames;
+	bool overrideFlag = FALSE;
+	if (stackFlag)
+	{
+		nFrames = (int)(zDelta_um / stepSize_um);
+		overrideFlag = FALSE;
+	}
+	else if (contFlag)
+	{
+		nFrames = 1000;
+		zDelta_um = 0.0;
+		overrideFlag = TRUE;
+	}
+	else if (averageFlag)
+	{
+		nFrames = 10;
+		zDelta_um = 0.0;
+		overrideFlag = FALSE;
+	}
+	else //Take a single image
+	{
+		nFrames = 1;
+	}
+
+
+	//SAMPLE
+	const std::string filename = "Liver";
+	const double collar = 1.488;
+
+	//FILTERWHEEL
+	Filterwheel FW(FW1);
+	FW.setColor(wavelength_nm);	
+
+
+	//START OF THE CODE
+	initialPosition_mm.at(zz) -= zDelta_um / 2 / 1000; //For acquiring a stack
+	
+	Stage stage;
+	stage.moveStage3(initialPosition_mm);
+	stage.waitForMovementToStop3();
+	double3 position_mm = stage.readPosition3_mm();
 
 	for (int ii = 0; ii < nFrames; ii++)
 	{
@@ -78,8 +101,8 @@ void seq_main(const FPGAapi::Session &fpga)
 		
 		//Execute the realtime sequence and acquire the image
 		Image image(fpga);
-		image.acquire(1,filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW,0) + "mW collar=" + collar +
-			" x=" + toString(position_mm.at(xx), 3) + " y=" + toString(position_mm.at(yy), 3) + " z=" + toString(position_mm.at(zz),4)); //Execute the realtime sequence and acquire the image
+		image.acquire(1,filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW,0) + "mW "+
+			" x=" + toString(position_mm.at(xx), 3) + " y=" + toString(position_mm.at(yy), 3) + " z=" + toString(position_mm.at(zz),4), overrideFlag); //Execute the realtime sequence and acquire the image
 		//image.acquire(filename); 
 		
 		stage.printPosition3();
@@ -93,7 +116,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		}
 		else
 		{
-			Sleep(100);
+			Sleep(500);
 		}
 
 		std::cout << std::endl;
@@ -102,8 +125,9 @@ void seq_main(const FPGAapi::Session &fpga)
 	Logger datalog(filename);
 	datalog.record("Wavelength (nm) = ", wavelength_nm);
 	datalog.record("Laser power (mW) = ", laserPower_mW);
-	datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
+	datalog.record("Galvo full FOV (um) = ", FFOVgalvo_um);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep);
+	datalog.record("Correction collar = ", collar);
 }
 
 void seq_testPixelclock(const FPGAapi::Session &fpga)

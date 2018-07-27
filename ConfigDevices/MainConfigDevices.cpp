@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 			fpga.initialize();	//Initialize the FPGA
 
 			ResonantScanner RS(fpga);
-			Shutter shutter1(fpga, Shutter1);
+			//Shutter shutter1(fpga, Shutter1);
 			Laser vision;
 
 			//Set the FOV
@@ -30,13 +30,13 @@ int main(int argc, char* argv[])
 			if (runCommand == "1")
 			{
 				RS.turnOn_um(FFOV_um);
-				shutter1.open();
+				//shutter1.open();
 				vision.setShutter(1);
 			}
 			else if (runCommand == "0")
 			{
 				RS.turnOff();
-				shutter1.close();
+				//shutter1.close();
 				vision.setShutter(0);
 			}
 			else

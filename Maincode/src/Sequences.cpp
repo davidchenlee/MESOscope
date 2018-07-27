@@ -8,22 +8,30 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int runmode = 3;		//single=0, continuous=1, average=2, stack=3, stack_centered=4
+	const int runmode = 2;
+	/*
+	0 - Single image
+	1 - Image continuously the same plane
+	2 - Image many times the same plane for subsequent averaging
+	3 - Stack volume from the initial z position
+	4 - Stack volume around the initial z position
+	*/
+		
 	const RunMode runMode = static_cast<RunMode>(runmode);
 	
 	//STAGE
-	double3 X0Y0Z0_mm = { 38.3, 29.30, 16.880 };				//Initial position
+	double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
 	double zDelta_um = 10 * um;							//Acquire a stack within this range
-	int nFramesAvg = 50;
+	int nFramesAvg = 10;
 
 	//LASER
 	const int wavelength_nm = 940;
 	double laserPower_mW = 170 * mW;
-//	Laser vision;
-//	vision.setWavelength(wavelength_nm);
+	Laser vision;
+	vision.setWavelength(wavelength_nm);
 
 	//GALVO
 	const double FFOVgalvo_um = 300 * um;					//Full FOV in the slow axis
@@ -38,6 +46,9 @@ void seq_main(const FPGAapi::Session &fpga)
 	//FILTERWHEEL
 	Filterwheel fw(FW1);
 	fw.setColor(wavelength_nm);
+
+	//SHUTTER
+	Shutter shutter1(fpga, Shutter1);
 
 	//RUN MODE SETTINGS
 	int nFramesStack;
@@ -67,7 +78,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		break;
 	case stack_centered:
 		nFramesStack = (int)(zDelta_um / stepSize_um);
-		X0Y0Z0_mm.at(zz) -= zDelta_um / 2 / 1000; //For acquiring a stack
+		position_mm.at(zz) -= 0.5 * zDelta_um / 1000; //For acquiring a stack
 		overrideFlag = FALSE;
 		break;
 	default:
@@ -82,17 +93,21 @@ void seq_main(const FPGAapi::Session &fpga)
 	datalog.record("Galvo time step (us) = ", galvoTimeStep);
 	datalog.record("Correction collar = ", collar);
 
-	//THE CODE
+	//SEQUENCE
+	shutter1.open();
+	Sleep(50);
+
 	Stage stage;
-	stage.moveStage3(X0Y0Z0_mm);
+	stage.moveStage3(position_mm);
 	stage.waitForMovementToStop3();
-	double3 position_mm = stage.readPosition3_mm();
 
 	for (int ii = 0; ii < nFramesStack; ii++)
 	{
 		for (int jj = 0; jj < nFramesAvg; jj++)
 		{
-			std::cout << "Stack frame " << (ii + 1) << "\tAverage frame " << (jj + 1) << "\t\tTotal frames " << ii * nFramesAvg + (jj + 1) << " out of " << nFramesStack * nFramesAvg << std::endl;
+			std::cout << "z plane " << (ii + 1) << "/" << nFramesStack <<
+				"\tFrame " << (jj + 1) << "/" << nFramesAvg <<
+				"\tTotal frame " << ii * nFramesAvg + (jj + 1) << "/" << nFramesStack * nFramesAvg << std::endl;
 
 			//CREATE A REAL-TIME SEQUENCE
 			FPGAapi::RTsequence sequence(fpga);
@@ -114,7 +129,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 			//Execute the realtime sequence and acquire the image
 			Image image(fpga);
-			image.acquire(1, filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW, 0) + "mW " +
+			image.acquire(TRUE, filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW, 0) + "mW " +
 				" x=" + toString(position_mm.at(xx), 3) + " y=" + toString(position_mm.at(yy), 3) + " z=" + toString(position_mm.at(zz), 4), overrideFlag); //Execute the RT sequence and acquire the image
 		
 			std::cout << std::endl;
@@ -132,7 +147,77 @@ void seq_main(const FPGAapi::Session &fpga)
 			//laserPower_mW += 0.5; //Increase the laser power by this much
 		}
 	}
+
+	shutter1.close();
 }
+
+void seq_cont(const FPGAapi::Session &fpga)
+{
+	int nFramesAvg = 1;
+
+	//LASER
+	const int wavelength_nm = 940;
+	double laserPower_mW = 170 * mW;
+	Laser vision;
+	vision.setWavelength(wavelength_nm);
+
+	//GALVO
+	const double FFOVgalvo_um = 300 * um;					//Full FOV in the slow axis
+	const double duration = halfPeriodLineclock_us * heightPerFrame_pix; //= 62.5us * 400 pixels = 25 ms
+	const double galvoTimeStep = 8 * us;
+	const double posMax_um = FFOVgalvo_um / 2;
+
+	//SAMPLE
+	const std::string filename = "Liver";
+	const double collar = 1.488;
+
+	//FILTERWHEEL
+	Filterwheel fw(FW1);
+	fw.setColor(wavelength_nm);
+
+	//SHUTTER
+	Shutter shutter1(fpga, Shutter1);
+
+	//DATALOG
+	Logger datalog(filename);
+	datalog.record("Wavelength (nm) = ", wavelength_nm);
+	datalog.record("Laser power (mW) = ", laserPower_mW);
+	datalog.record("Galvo full FOV (um) = ", FFOVgalvo_um);
+	datalog.record("Galvo time step (us) = ", galvoTimeStep);
+	datalog.record("Correction collar = ", collar);
+
+	//SEQUENCE
+	shutter1.open();
+	Sleep(50);
+
+	for (int jj = 0; jj < nFramesAvg; jj++)
+	{
+		//CREATE A REAL-TIME SEQUENCE
+		FPGAapi::RTsequence sequence(fpga);
+
+		//GALVO FOR RT
+		Galvo galvo(sequence, GALVO1);
+		galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
+		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
+
+		//POCKELS CELL FOR RT
+		PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
+		pockels.pushPowerSinglet(8 * us, laserPower_mW);
+
+		//Upload the realtime sequence to the FPGA but don't execute it yet
+		sequence.uploadRT();
+
+		//Execute the realtime sequence and acquire the image
+		Image image(fpga);
+		image.acquire(TRUE,"Untitled",TRUE); //Execute the RT sequence and acquire the image
+
+		Sleep(500);
+	}
+	shutter1.close();
+}
+
+
+
 
 void seq_testPixelclock(const FPGAapi::Session &fpga)
 {
@@ -304,6 +389,7 @@ void seq_testPockels(const FPGAapi::Session &fpga)
 	//Turn on the pockels cell
 	PockelsCell pockels(sequence, POCKELS1, 750);
 	pockels.pushPowerSinglet(8 * us, 50 * mW);
+	//pockels.pushVoltageSinglet_(8 * us, 2.508 * V);
 
 	//Upload the pockels sequence to the FPGA but don't execute it yet
 	sequence.uploadRT();
@@ -311,8 +397,6 @@ void seq_testPockels(const FPGAapi::Session &fpga)
 	//Execute the sequence
 	Image image(fpga);
 	image.acquire();
-
-
 }
 
 void seq_testLaserComm(const FPGAapi::Session &fpga)

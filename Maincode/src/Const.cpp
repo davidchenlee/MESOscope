@@ -55,8 +55,8 @@ namespace Constants
 //Imaging parameters
 namespace Parameters
 {
-	//extern const std::string foldername = ".\\Output\\";
-	extern const std::string foldername = "Z:\\Location 2\\";
+	extern const std::string foldername = ".\\Output\\";
+	//extern const std::string foldername = "Z:\\Output\\";
 
 	//IMAGE
 	extern const double upscaleU8 = 19;	//255/11 = ~23							//Upscale the photoncount to cover the full 0-255 range of a 8-bit number

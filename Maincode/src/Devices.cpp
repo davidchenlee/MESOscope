@@ -430,7 +430,10 @@ Shutter::Shutter(const FPGAapi::Session &fpga, ShutterID ID) : mFpga(fpga)
 
 }
 
-Shutter::~Shutter() {}
+Shutter::~Shutter()
+{
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mID, 0));
+}
 
 void Shutter::open() const
 {
@@ -535,19 +538,19 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 	double a, b, c;		//Calibration parameters
 
 	if (mWavelength_nm == 750) {
-		a = 356.5;
+		a = 788;
 		b = 0.6152;
 		c = -0.027;
 	}
 	else if (mWavelength_nm == 940) {
-		a = 306.9;
+		a = 464;
 		b = 0.488;
 		c = -0.087;
 	}
 	else if (mWavelength_nm == 1040) {
-		a = 116.8;
-		b = 0.435;
-		c = 0.0249;
+		a = 200;
+		b = 0.441;
+		c = 0.037;
 	}
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm currently not calibrated");

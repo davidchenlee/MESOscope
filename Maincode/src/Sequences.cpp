@@ -8,7 +8,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int runmode = 2;
+	const int runmode = 1;
 	/*
 	0 - Single image
 	1 - Image continuously the same plane
@@ -20,7 +20,8 @@ void seq_main(const FPGAapi::Session &fpga)
 	const RunMode runMode = static_cast<RunMode>(runmode);
 	
 	//STAGE
-	double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
+	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
+	double3 position_mm = { -60.0, 29.150, 1.0 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -63,7 +64,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		break;
 	case continuous:
 		nFramesStack = 1;
-		nFramesAvg = 1000;
+		nFramesAvg = 10;
 		zDelta_um = 0.0;
 		overrideFlag = TRUE;
 		break;
@@ -151,9 +152,9 @@ void seq_main(const FPGAapi::Session &fpga)
 	shutter1.close();
 }
 
-void seq_cont(const FPGAapi::Session &fpga)
+void seq_contRun(const FPGAapi::Session &fpga)
 {
-	int nFramesAvg = 1;
+	int nFramesAvg = 1000;
 
 	//LASER
 	const int wavelength_nm = 940;
@@ -176,7 +177,7 @@ void seq_cont(const FPGAapi::Session &fpga)
 	fw.setColor(wavelength_nm);
 
 	//SHUTTER
-	Shutter shutter1(fpga, Shutter1);
+	//Shutter shutter1(fpga, Shutter1);
 
 	//DATALOG
 	Logger datalog(filename);
@@ -187,8 +188,8 @@ void seq_cont(const FPGAapi::Session &fpga)
 	datalog.record("Correction collar = ", collar);
 
 	//SEQUENCE
-	shutter1.open();
-	Sleep(50);
+	//shutter1.open();
+	//Sleep(50);
 
 	for (int jj = 0; jj < nFramesAvg; jj++)
 	{
@@ -211,9 +212,8 @@ void seq_cont(const FPGAapi::Session &fpga)
 		Image image(fpga);
 		image.acquire(TRUE,"Untitled",TRUE); //Execute the RT sequence and acquire the image
 
-		Sleep(500);
 	}
-	shutter1.close();
+	//shutter1.close();
 }
 
 

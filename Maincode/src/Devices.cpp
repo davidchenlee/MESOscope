@@ -221,7 +221,7 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 			unpackBuffer_();	//Move the chuncks of data to a buffer array
 			correctInterleaved_();
 			analyze_();
-			if (saveFlag)
+			if ( saveFlag )
 				//saveAsTiff(filename, overrideFile);
 				saveAsTxt(filename);
 		}

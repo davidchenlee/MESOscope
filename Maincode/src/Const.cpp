@@ -3,13 +3,8 @@
 //Constants that are rarely changed
 namespace Constants
 {
-<<<<<<< HEAD
-	extern const LineclockInputSelector lineclockInput = FG;				//RS = Resonant scanner, FG = function generator
-	extern const PhotonCounterInputSelector photoncounterInput = sim;		//ext = real PMT, sim = simulated PMT
-=======
-	extern const LineclockInputSelector lineclockInput = RS;				//Resonant scanner (RS) or Function generator (FG)
-	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
->>>>>>> parent of 67d71fd... VS: commit before doing some changes in LV
+	extern const LineclockInputSelector lineclockInput = FG;				//Resonant scanner (RS) or Function generator (FG)
+	extern const PhotonCounterInputSelector photoncounterInput = sim;		//Real PMT (ext) or simulated PMT (sim)
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
 	extern const bool enableFIFOfpga = 1;									//For debugging purposes. Enable pushing data to FIFOfpga
 	extern const bool pockels1_enableAutoOff = 1;							//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
@@ -53,28 +48,28 @@ namespace Constants
 	//Simulate the PMT pulses. When the array element is HIGH, the output of the subvi changes its state for the next clock cycle (currently, 160MHz = 6.25ns)
 	//Example, if I divide each line in 500 pixels, then the pix dwell time is 125 ns and each pixel could contain at most 10 laser pulses (laser pulses separated by 12.5ns = 80 MHz)
 	extern const int nPulses = 20;												//Number of pulses
-	extern const U8 pulseArray[nPulses] = { 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
-											1, 0, 0, 0, 0, 0, 0, 0, 0, 0 };		//@160MHz, one cycle through this array lasts 125ns
+	extern const U8 pulseArray[nPulses] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+											0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };		//@160MHz, one cycle through this array lasts 125ns
 }
 
 //Imaging parameters
 namespace Parameters
 {
 	extern const std::string foldername = ".\\Output\\";
-	//extern const std::string foldername = "Z:\\Output_Z\\";
+	//extern const std::string foldername = "Z:\\Output\\";
 
 	//IMAGE
 	extern const double upscaleU8 = 1;	//255/11 = ~23							//Upscale the photoncount to cover the full 0-255 range of a 8-bit number
-	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const int heightPerFrame_pix = 1;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const int widthPerFrame_pix = 300;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
+	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
 	extern const int nFrames = 1;												//Number of frames to acquire
 	extern const int nPixPerFrame = widthPerFrame_pix * heightPerFrame_pix;		//Number of pixels in each frame
 	extern const int nLinesAllFrames = heightPerFrame_pix * nFrames;			//Total number of lines in all the frames without including the skipped lines
 	extern const int nPixAllFrames = widthPerFrame_pix * nLinesAllFrames;		//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
-	extern const double dwell_us = 0.125 * us;									//For Npix = 340, dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), 
-																				//For Npix = 400, dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X)
+	extern const double dwell_us = 0.125 * us;	//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
+												//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 }
 
 

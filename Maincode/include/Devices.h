@@ -12,8 +12,8 @@ class Image
 	const FPGAapi::Session &mFpga;
 	unsigned char *mImage;							//Create a long 1D array containing the image
 
-	const int mReadFifoWaitingTime_ms = 5;			//Waiting time between each iteration
-	const U32 mTimeout_ms = 100;					//FIFOpc timeout
+	const int mReadFifoWaitingTime_ms = 15;			//Waiting time between each iteration
+	const U32 mTimeout_ms = 500;					//FIFOpc timeout
 	int mTimeoutCounter_iter = 100;					//Timeout the while-loop if the FIFO data transfer fails	
 
 	//FIFO A
@@ -23,7 +23,7 @@ class Image
 
 	//FIFO B
 	U32 mNremainFIFO_B = 0;							//Elements remaining in the FIFOpc B
-	const int nBufArrays = 50;						//Number of buffer arrays to use
+	const int nBufArrays = 100;						//Number of buffer arrays to use
 	int mCounterBufArray_B = 0;						//Number of buffer arrays actually used
 	int *mNelemBufArray_B;							//Each elements in this array indicates the number of elements read in each chunch of data
 	U32 **mBufArray_B;								//Each row stores a chunck of data from FIFOpc B. The row size could possibly be < nPixAllFrames

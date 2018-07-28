@@ -11,7 +11,11 @@ int main(int argc, char* argv[])
 			fpga.initialize();		//Initialize the FPGA
 
 			//seq_main(fpga);			//Run the sequence
+<<<<<<< HEAD
 			seq_contRun(fpga);			//Run the sequence
+=======
+			seq_cont(fpga);			//Run the sequence
+>>>>>>> parent of 67d71fd... VS: commit before doing some changes in LV
 			//seq_testPixelclock(fpga);
 			//seq_testStageSetPosition();
 			//seq_testAODO(fpga);

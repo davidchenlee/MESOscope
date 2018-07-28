@@ -3,8 +3,13 @@
 //Constants that are rarely changed
 namespace Constants
 {
+<<<<<<< HEAD
 	extern const LineclockInputSelector lineclockInput = FG;				//RS = Resonant scanner, FG = function generator
 	extern const PhotonCounterInputSelector photoncounterInput = sim;		//ext = real PMT, sim = simulated PMT
+=======
+	extern const LineclockInputSelector lineclockInput = RS;				//Resonant scanner (RS) or Function generator (FG)
+	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
+>>>>>>> parent of 67d71fd... VS: commit before doing some changes in LV
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
 	extern const bool enableFIFOfpga = 1;									//For debugging purposes. Enable pushing data to FIFOfpga
 	extern const bool pockels1_enableAutoOff = 1;							//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control

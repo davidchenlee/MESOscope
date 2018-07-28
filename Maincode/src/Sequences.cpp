@@ -64,7 +64,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		break;
 	case continuous:
 		nFramesStack = 1;
-		nFramesAvg = 10;
+		nFramesAvg = 1000;
 		zDelta_um = 0.0;
 		overrideFlag = TRUE;
 		break;
@@ -154,7 +154,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 void seq_contRun(const FPGAapi::Session &fpga)
 {
-	int nFramesAvg = 1000;
+	int nFramesAvg = 1;
 
 	//LASER
 	const int wavelength_nm = 940;
@@ -178,14 +178,6 @@ void seq_contRun(const FPGAapi::Session &fpga)
 
 	//SHUTTER
 	//Shutter shutter1(fpga, Shutter1);
-
-	//DATALOG
-	Logger datalog(filename);
-	datalog.record("Wavelength (nm) = ", wavelength_nm);
-	datalog.record("Laser power (mW) = ", laserPower_mW);
-	datalog.record("Galvo full FOV (um) = ", FFOVgalvo_um);
-	datalog.record("Galvo time step (us) = ", galvoTimeStep);
-	datalog.record("Correction collar = ", collar);
 
 	//SEQUENCE
 	//shutter1.open();
@@ -225,7 +217,7 @@ void seq_testPixelclock(const FPGAapi::Session &fpga)
 	FPGAapi::RTsequence sequence(fpga);
 	sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
 	Image image(fpga);
-	image.acquire(); //Execute the realtime sequence and acquire the image
+	image.acquire(TRUE); //Execute the realtime sequence and acquire the image
 
 }
 

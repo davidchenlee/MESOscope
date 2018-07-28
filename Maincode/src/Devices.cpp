@@ -221,8 +221,9 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 			unpackBuffer_();	//Move the chuncks of data to a buffer array
 			correctInterleaved_();
 			analyze_();
-			if ( saveFlag )
-				saveAsTiff(filename, overrideFile);
+			if (saveFlag)
+				//saveAsTiff(filename, overrideFile);
+				saveAsTxt(filename);
 		}
 		catch (const ImageException &e) //Notify the exception and move to the next iteration
 		{

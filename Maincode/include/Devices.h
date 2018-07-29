@@ -46,6 +46,20 @@ public:
 	void saveAsTxt(const std::string fileName) const;
 };
 
+
+class ImageDebug
+{
+	const FPGAapi::Session &mFpga;
+
+	void startFIFOpc_() const;
+	void stopFIFOpc_() const;
+	void readFIFOpcTest_();
+public:
+	ImageDebug(const FPGAapi::Session &fpga);
+	~ImageDebug();
+	void acquire(const bool saveFlag, const std::string filename, const bool overrideFile);
+};
+
 class Vibratome
 {
 	const FPGAapi::Session &mFpga;

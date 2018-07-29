@@ -154,7 +154,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 void seq_contRun(const FPGAapi::Session &fpga)
 {
-	int nFramesAvg = 1;
+	int nFrames = 100;
 
 	//LASER
 	const int wavelength_nm = 940;
@@ -168,10 +168,6 @@ void seq_contRun(const FPGAapi::Session &fpga)
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
-	//SAMPLE
-	const std::string filename = "Liver";
-	const double collar = 1.488;
-
 	//FILTERWHEEL
 	Filterwheel fw(FW1);
 	fw.setColor(wavelength_nm);
@@ -183,7 +179,7 @@ void seq_contRun(const FPGAapi::Session &fpga)
 	//shutter1.open();
 	//Sleep(50);
 
-	for (int jj = 0; jj < nFramesAvg; jj++)
+	for (int jj = 0; jj < nFrames; jj++)
 	{
 		std::cout << "Iteration: " << jj+1 << std::endl;
 
@@ -205,12 +201,28 @@ void seq_contRun(const FPGAapi::Session &fpga)
 		//Execute the realtime sequence and acquire the image
 		Image image(fpga);
 		image.acquire(TRUE,"Untitled",TRUE); //Execute the RT sequence and acquire the image
-
 	}
 	//shutter1.close();
 }
 
+void seq_debug(const FPGAapi::Session &fpga)
+{
+	int nFrames = 100;
+	for (int jj = 0; jj < nFrames; jj++)
+	{
+		std::cout << "Iteration: " << jj + 1 << std::endl;
 
+		//CREATE A REAL-TIME SEQUENCE
+		FPGAapi::RTsequence sequence(fpga);
+
+		//Upload the realtime sequence to the FPGA but don't execute it yet
+		sequence.uploadRT();
+
+		//Execute the realtime sequence and acquire the image
+		ImageDebug image(fpga);
+		image.acquire(TRUE, "Untitled", TRUE); //Execute the RT sequence and acquire the image
+	}
+}
 
 
 void seq_testPixelclock(const FPGAapi::Session &fpga)

@@ -213,10 +213,10 @@ void seq_debug(const FPGAapi::Session &fpga)
 		std::cout << "Iteration: " << jj + 1 << std::endl;
 
 		//CREATE A REAL-TIME SEQUENCE
-		//FPGAapi::RTsequence sequence(fpga);
+		FPGAapi::RTsequence sequence(fpga);
 
 		//Upload the realtime sequence to the FPGA but don't execute it yet
-		//sequence.uploadRT();
+		sequence.uploadRT();
 
 		//Execute the realtime sequence and acquire the image
 
@@ -226,59 +226,46 @@ void seq_debug(const FPGAapi::Session &fpga)
 		FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(fpga.getSession(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
 
 
-		if (enableFIFOfpga)
+		U32 NremainFIFO_A = 0;							//Elements remaining in FIFOpc A
+		U32 *BufArray_A = new U32[nPixAllFrames];		//Array to read FIFOpc A
+		int NelemReadFIFO_A = 0;
+		int TimeoutCounter_iter = 10;
+		const U32 Timeout_ms = 100;
+		const int ReadFifoWaitingTime_ms = 10;
+
+		U32 *dummy = new U32[0];
+
+		while (NelemReadFIFO_A < nPixAllFrames)
 		{
-			try
+			Sleep(ReadFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time to max transfer bandwidth
+
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, Timeout_ms, &NremainFIFO_A));
+			std::cout << "Number of elements remaining in FIFOpc A: " << NremainFIFO_A << std::endl;
+
+			if (NremainFIFO_A > 0)
 			{
-				U32 NremainFIFO_A = 0;							//Elements remaining in FIFOpc A
-				U32 *BufArray_A = new U32[nPixAllFrames];		//Array to read FIFOpc A
-				int NelemReadFIFO_A = 0;
-				int TimeoutCounter_iter = 10;
-				const U32 Timeout_ms = 100;
-				const int ReadFifoWaitingTime_ms = 10;
-
-				U32 *dummy = new U32[0];
-
-				while (NelemReadFIFO_A < nPixAllFrames)
-				{
-					Sleep(ReadFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time to max transfer bandwidth
-
-												   //FIFOpc A
-					if (NelemReadFIFO_A < nPixAllFrames)
-					{
-						FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, Timeout_ms, &NremainFIFO_A));
-						std::cout << "Number of elements remaining in FIFOpc A: " << NremainFIFO_A << std::endl;
-
-						if (NremainFIFO_A > 0)
-						{
-							NelemReadFIFO_A += NremainFIFO_A;
-							FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, BufArray_A, NremainFIFO_A, Timeout_ms, &NremainFIFO_A));
-							//std::cout << "Number of elements remaining in FIFOpc A: " << NremainFIFO_A << std::endl;
-						}
-					}
-
-					TimeoutCounter_iter--;
-					//Transfer timeout
-					if (TimeoutCounter_iter == 0)
-						break;
-				}
-				std::cout << "Total of elements read: " << NelemReadFIFO_A << std::endl; //Print out the total number of elements read
-				std::cout << std::endl;
-
-				//If all the expected data is NOT read successfully
-				if (NelemReadFIFO_A != nPixAllFrames)
-					getchar();
-
-				delete[] dummy;
-				delete[] BufArray_A;
-
-				//Sleep(100);//Simulate the shifting time of the stages
+				NelemReadFIFO_A += NremainFIFO_A;
+				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, BufArray_A, NremainFIFO_A, Timeout_ms, &NremainFIFO_A));
+				//std::cout << "Number of elements remaining in FIFOpc A: " << NremainFIFO_A << std::endl;
 			}
-			catch (const ImageException &e) //Notify the exception and continue with the next iteration
-			{
-				std::cout << "An ImageException has occurred in: " << e.what() << std::endl;
-			}
+
+			TimeoutCounter_iter--;
+			//Transfer timeout
+			if (TimeoutCounter_iter == 0)
+				break;
 		}
+		std::cout << "Total of elements read: " << NelemReadFIFO_A << std::endl; //Print out the total number of elements read
+		std::cout << std::endl;
+
+		//If all the expected data is NOT read successfully
+		if (NelemReadFIFO_A != nPixAllFrames)
+			getchar();
+
+		delete[] dummy;
+		delete[] BufArray_A;
+
+		//Sleep(100);//Simulate the shifting time of the stages
+
 		FPGAapi::checkStatus(__FUNCTION__, NiFpga_StopFifo(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 
 

@@ -8,7 +8,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int runmode = 1;
+	const int runmode = 0;
 	/*
 	0 - Single image
 	1 - Image continuously the same plane
@@ -185,6 +185,8 @@ void seq_contRun(const FPGAapi::Session &fpga)
 
 	for (int jj = 0; jj < nFramesAvg; jj++)
 	{
+		std::cout << "Iteration: " << jj+1 << std::endl;
+
 		//CREATE A REAL-TIME SEQUENCE
 		FPGAapi::RTsequence sequence(fpga);
 

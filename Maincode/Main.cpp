@@ -5,7 +5,6 @@ int main(int argc, char* argv[])
 	try
 	{
 		FPGAapi::Session fpga;		//Open the FPGA connection
-
 		try
 		{
 			fpga.initialize();		//Initialize the FPGA
@@ -45,7 +44,6 @@ int main(int argc, char* argv[])
 		fpga.close(0);		//Close the FPGA connection
 
 	}
-
 	//Catch exceptions thrown by the constructor FPGAapi::Session
 	catch (const FPGAapi::FPGAexception &e)
 	{

@@ -37,6 +37,7 @@ class Image
 	void unpackBuffer_();
 	void correctInterleaved_();
 	void analyze_() const;
+	void readFIFOpcTest_();
 public:
 	Image(const FPGAapi::Session &fpga);
 	~Image();

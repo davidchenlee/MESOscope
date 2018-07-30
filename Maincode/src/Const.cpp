@@ -21,6 +21,11 @@ namespace Constants
 	//SERIAL PORTS. Assign a port to 'enum ComID'
 	extern const std::vector<std::string> assignCOM = { "COM1", "COM6", "", "", "" };
 
+	//PIXELCLOCK
+	extern const double halfPeriodLineclock_us = 63.05 * us;	//Half the period of the resonant scanner. I measure 25.220 ms for 400 half oscillations. Therefore, halfPeriodLineclock_us = 25200us/400 = 63.05 us
+																//There is a slight difference between the forward and backward oscillation time. Forward = 63.14 us, backwards = 62.99 us. Diff = 150 ns (i.e., ~ 1 pixel)
+																//(Measured using the oscilloscope by looking at RS SYNC through the FPGA)
+
 	//FPGA
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It corresponds to the FPGA's clock
 	extern const double usPerTick = 1.0 / 160;				//in us. Time step of the FPGA's clock
@@ -31,14 +36,14 @@ namespace Constants
 	extern const int syncAODOtoLinegate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
+	
+	extern const double linegateTimeout_us = 1.5 * (2 * halfPeriodLineclock_us);	//In LV, timeout the start of the data acquisition. Otherwise, when Lineclock fails triggering (e.g.the RS is off),
+																				//pixelclock false-triggers after Lineclock is back up
 
 	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
 	extern const size_t FIFOINmax = 32773;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
-	//PIXELCLOCK
-	extern const double halfPeriodLineclock_us = 63.05 * us;	//Half the period of the resonant scanner. I measure 25.220 ms for 400 half oscillations. Therefore, halfPeriodLineclock_us = 25200us/400 = 63.05 us
-																//There is a slight difference between the forward and backward oscillation time. Forward = 63.14 us, backwards = 62.99 us. Diff = 150 ns (i.e., ~ 1 pixel)
-																//(Measured using the oscilloscope by looking at RS SYNC through the FPGA)
+
 
 	//STAGES
 	extern const int stageTriggerPulse_ms = 5 * ms;			//in ms. Pulsewidth for triggering the stages. (the stage controller has a 20kHz clock = 50 us)

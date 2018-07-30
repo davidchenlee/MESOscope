@@ -94,7 +94,7 @@ namespace FPGAapi
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
 	void Session::initialize() const
 	{
-		//INPUT SIGNALS
+		//INPUT SELECTORS
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));					//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));							//Select the Line clock: resonant scanner or function generator
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));					//For debugging the photoncounters
@@ -112,6 +112,11 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));												//Memory-flush trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncDOtoAOtick, (U16)syncDOtoAO_tick));
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, (U16)syncAODOtoLinegate_tick));
+
+		if (linegateTimeout_us <= 2 * halfPeriodLineclock_us)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": the linegate timeout must be greater than the lineclock period");
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_LinegateTimeout_tick, (U16)(linegateTimeout_us * tickPerUs)));
+
 
 		//IMAGING PARAMETERS
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_Nframes, (U8)nFrames));												//Number of frames to acquire

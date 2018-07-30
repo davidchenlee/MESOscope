@@ -46,6 +46,7 @@ namespace Constants
 	extern const int V;
 	extern const int mW;
 
+	extern const double halfPeriodLineclock_us;
 	extern const int tickPerUs;
 	extern const double usPerTick;
 	extern const U32 tMIN_tick;
@@ -53,10 +54,11 @@ namespace Constants
 	extern const int AO_tMIN_us;
 	extern const int syncDOtoAO_tick;
 	extern const int syncAODOtoLinegate_tick;
+	extern const double linegateTimeout_us;
 	extern const int FIFOtimeout_tick;
 	extern const size_t FIFOINmax;
 
-	extern const double halfPeriodLineclock_us;
+
 
 	extern const int stageTriggerPulse_ms;
 

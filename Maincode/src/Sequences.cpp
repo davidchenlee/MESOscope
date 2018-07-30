@@ -130,8 +130,8 @@ void seq_main(const FPGAapi::Session &fpga)
 
 			//Execute the realtime sequence and acquire the image
 			Image image(fpga);
-			image.acquire(TRUE, filename + " " + toString(wavelength_nm, 0) + "nm " + toString(laserPower_mW, 0) + "mW " +
-				" x=" + toString(position_mm.at(xx), 3) + " y=" + toString(position_mm.at(yy), 3) + " z=" + toString(position_mm.at(zz), 4), overrideFlag); //Execute the RT sequence and acquire the image
+			image.acquire(TRUE, filename + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
+				"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4), overrideFlag); //Execute the RT sequence and acquire the image
 		
 			std::cout << std::endl;
 		}

@@ -95,7 +95,7 @@ namespace FPGAapi
 	void Session::initialize() const
 	{
 
-		if (nChan < 0 || FIFOtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 ||
+		if (nChan < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 ||
 			linegateTimeout_us < 0 || nFrames < 0 || nLinesAllFrames < 0 || nLinesSkip < 0 || heightPerFrame_pix < 0 || stageTriggerPulse_ms < 0 )
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more scan parameters have negative values");
 
@@ -104,13 +104,13 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));							//Select the Line clock: resonant scanner or function generator
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));					//For debugging the photoncounters
 
-		//FIFO IN
+		//FIFOIN
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)nChan));											//Number of input channels
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));												//Control-sequence trigger
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_FIFOtimeout_tick, (U16)FIFOtimeout_tick));							//FIFOs timeout
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_FIFOINtimeout_tick, (U16)FIFOINtimeout_tick));						//FIFOIN timeout
 
-		//FIFO OUT
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFO, enableFIFOfpga));									//Enable pushing data to FIFOfpga. For debugging purposes
+		//FIFOOUT
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_EnableFIFOOUT, enableFIFOOUTfpga));									//Enable pushing data to FIFOOUTfpga. For debugging purposes
 
 		//TRIGGERS AND DELAYS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));											//Data-acquisition trigger
@@ -158,7 +158,7 @@ namespace FPGAapi
 	//Send every single queue in VectorOfQueue to the FPGA buffer
 	//For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 	//Then transfer the elements in the long queue to an array to interface the FPGA
-	//Improvement: the single queues VectorOfQueues[i] could be transferred directly to the FIFO array
+	//Improvement: the single queues VectorOfQueues[i] could be transferred directly to the FIFOIN array
 	void Session::writeFIFOINpc(const VQU32 &vectorOfQueues) const
 	{
 		QU32 allQueues;		//Create a single long queue
@@ -180,25 +180,25 @@ namespace FPGAapi
 			*/
 		}
 
-		const size_t sizeFIFOqueue = allQueues.size();		//Total number of elements in all the queues 
+		const size_t sizeFIFOINqueue = allQueues.size();		//Total number of elements in all the queues 
 
-		if (sizeFIFOqueue > FIFOINmax)
-			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFO IN overflow");
+		if (sizeFIFOINqueue > FIFOINmax)
+			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
 
-		U32* FIFO = new U32[sizeFIFOqueue];				//Create an array for interfacing the FPGA	
-		for (int i = 0; i < static_cast<int>(sizeFIFOqueue); i++)
+		U32* FIFOIN = new U32[sizeFIFOINqueue];				//Create an array for interfacing the FPGA	
+		for (int i = 0; i < static_cast<int>(sizeFIFOINqueue); i++)
 		{
-			FIFO[i] = allQueues.front();				//Transfer the queue elements to the array
+			FIFOIN[i] = allQueues.front();				//Transfer the queue elements to the array
 			allQueues.pop_front();
 		}
 		allQueues = {};									//Cleanup the queue (C++11 style)
 
-		const U32 timeout_ms = -1;		//in ms. A value -1 prevents the FIFO from timing out
+		const U32 timeout_ms = -1;		//in ms. A value -1 prevents the FIFOIN from timing out
 		U32 r;							//Elements remaining
 
-		checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFO, sizeFIFOqueue, timeout_ms, &r)); //Send the data to the FPGA through the FIFO. I measure a min time of 10 ms to execute
+		checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, FIFOIN, sizeFIFOINqueue, timeout_ms, &r)); //Send the data to the FPGA through the FIFOIN. I measure a min time of 10 ms to execute
 
-		delete[] FIFO;					//Cleanup the array
+		delete[] FIFOIN;					//Cleanup the array
 
 
 	}
@@ -239,43 +239,39 @@ namespace FPGAapi
 		return mSession;
 	}
 
-	//Sometimes there is residual data in the FIFO OUT from a previous run
+	//Sometimes there is residual data in the FIFOOUT from a previous run
 	void Session::FIFOOUTpcGarbageCollector_() const
 	{
 		const U32 timeout_ms = 100;
-		U32 nRemainFIFO;
+		U32 nRemainFIFOOUT;
 		U32 *garbage = new U32[nPixAllFrames];
 
-		//FIFOpc A
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nRemainFIFO));
-		std::cout << "Number of elements remaining in FIFOpc A: " << nRemainFIFO << std::endl;
-		getchar();
+		//FIFOOUTpc A
+		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nRemainFIFOOUT));
 
-		while (nRemainFIFO > 0)
+
+		while (nRemainFIFOOUT > 0)
 		{
+			std::cout << "Number of elements remaining in FIFOOUTpc A: " << nRemainFIFOOUT << std::endl;
 			getchar();
+			//Read the elements in the FIFOOUTpc
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
 
-			//Read the elements in the FIFOpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, nRemainFIFO, timeout_ms, &nRemainFIFO));
-
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nRemainFIFO));
-			//std::cout << "Number of elements remaining in FIFOpc A: " << mNremainFIFO_A << std::endl;
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nRemainFIFOOUT));
 		}
 
+		//FIFOOUTpc B
+		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nRemainFIFOOUT));
 
 
-		//FIFOpc B
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nRemainFIFO));
-		std::cout << "Number of elements remaining in FIFOpc B: " << nRemainFIFO << std::endl;
-		getchar();
-
-		while (nRemainFIFO> 0)
+		while (nRemainFIFOOUT> 0)
 		{
-			//Read the elements in the FIFOpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, nRemainFIFO, timeout_ms, &nRemainFIFO));
+			std::cout << "Number of elements remaining in FIFOOUTpc B: " << nRemainFIFOOUT << std::endl;
+			getchar();
+			//Read the elements in the FIFOOUTpc
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
 
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nRemainFIFO));
-			//std::cout << "Number of elements remaining in FIFOpc B: " << mNremainFIFO_B << std::endl;
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nRemainFIFOOUT));
 		}
 
 		delete[] garbage;
@@ -415,7 +411,7 @@ namespace FPGAapi
 	{
 		mFpga.writeFIFOINpc(mVectorOfQueues);
 
-		//On the FPGA, transfer the commands from FIFO IN to the sub-channel buffers
+		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
 	}

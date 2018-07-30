@@ -1,0 +1,5 @@
+Wavelength (nm) = 750
+Laser power (mW) = 50
+Galvo full FOV (um) = 300
+Galvo time step (us) = 8
+Correction collar = 1.47

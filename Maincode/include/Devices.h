@@ -13,27 +13,27 @@ class Image
 	unsigned char *mImage;							//Create a long 1D array containing the image
 
 	const int mReadFifoWaitingTime_ms = 5;			//Waiting time between each iteration
-	const U32 mTimeout_ms = 100;					//FIFOpc timeout
-	int mTimeoutCounter_iter = 100;					//Timeout the while-loop if the FIFO data transfer fails	
+	const U32 mTimeout_ms = 100;					//FIFOOUTpc timeout
+	int mTimeoutCounter_iter = 100;					//Timeout the while-loop if the FIFOOUT data transfer fails	
 
-	//FIFO A
-	U32 mNremainFIFO_A = 0;							//Elements remaining in FIFOpc A
-	U32 *mBufArray_A;								//Array to read FIFOpc A
-	int mNelemReadFIFO_A = 0; 						//Total number of elements read FIFOpc A
+	//FIFOOUTb
+	U32 mNremainFIFOOUTa = 0;						//Elements remaining in FIFOOUTpc A
+	U32 *mBufArray_A;								//Array to read FIFOOUTpc A
+	int mNelemReadFIFOOUTa = 0; 					//Total number of elements read FIFOOUTpc A
 
-	//FIFO B
-	U32 mNremainFIFO_B = 0;							//Elements remaining in the FIFOpc B
+	//FIFOOUTb
+	U32 mNremainFIFOOUTb = 0;						//Elements remaining in the FIFOOUTpc B
 	const int nBufArrays = 50;						//Number of buffer arrays to use
 	int mCounterBufArray_B = 0;						//Number of buffer arrays actually used
 	int *mNelemBufArray_B;							//Each elements in this array indicates the number of elements read in each chunch of data
-	U32 **mBufArray_B;								//Each row stores a chunck of data from FIFOpc B. The row size could possibly be < nPixAllFrames
-	int mNelemReadFIFO_B = 0; 						//Total number of elements read from FIFOpc B
+	U32 **mBufArray_B;								//Each row stores a chunck of data from FIFOOUTpc B. The row size could possibly be < nPixAllFrames
+	int mNelemReadFIFOOUTb = 0; 					//Total number of elements read from FIFOOUTpc B
 
-	void startFIFOpc_() const;
-	void configureFIFOpc_(const U32 depth) const;			//Currently I don't use this function
-	void stopFIFOpc_() const;
-	void readRemainingFIFOpc_() const;
-	void readFIFOpc_();
+	void startFIFOOUTpc_() const;
+	void configureFIFOOUTpc_(const U32 depth) const;	//Currently I don't use this function
+	void stopFIFOOUTpc_() const;
+	void readRemainingFIFOOUTpc_() const;				//Currently I don't use this function
+	void readFIFOOUTpc_();
 	void unpackBuffer_();
 	void correctInterleaved_();
 	void analyze_() const;

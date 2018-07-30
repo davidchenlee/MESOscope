@@ -8,7 +8,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int runmode = 0;
+	const int runmode = 3;
 	/*
 	0 - Single image
 	1 - Image continuously the same plane
@@ -21,16 +21,15 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { -60.0, 29.150, 1.0 };	//Initial position
+	double3 position_mm = { 35.0, 19.6, 18.385 };	//Initial position
 
 	//STACK
-	const double stepSize_um = 0.5 * um;
+	const double stepSize_um = 1.0 * um;
 	double zDelta_um = 10 * um;							//Acquire a stack within this range
-	int nFramesAvg = 10;
 
 	//LASER
-	const int wavelength_nm = 940;
-	double laserPower_mW = 170 * mW;
+	const int wavelength_nm = 750;
+	double laserPower_mW = 50 * mW;
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
 
@@ -41,8 +40,8 @@ void seq_main(const FPGAapi::Session &fpga)
 	const double posMax_um = FFOVgalvo_um / 2;
 
 	//SAMPLE
-	const std::string filename = "Liver";
-	const double collar = 1.488;
+	const std::string filename = "Bead4um";
+	const double collar = 1.47;
 
 	//FILTERWHEEL
 	Filterwheel fw(FW1);
@@ -53,33 +52,35 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	//RUN MODE SETTINGS
 	int nFramesStack;
+	int nFramesAvg;
 	bool overrideFlag;
 	switch (runMode)
 	{
 	case single:
-		nFramesStack = 1;
 		nFramesAvg = 1;
+		nFramesStack = 1; //Do not change this
 		zDelta_um = 0.0;
 		overrideFlag = FALSE;
 		break;
 	case continuous:
-		nFramesStack = 1;
-		nFramesAvg = 1000;
-		zDelta_um = 0.0;
+		nFramesAvg = 500;
+		nFramesStack = 1; //Do not change this
 		overrideFlag = TRUE;
 		break;
 	case average:
-		nFramesStack = 1;
-		zDelta_um = 0.0;
+		nFramesAvg = 10;
+		nFramesStack = 1; //Do not change this
 		overrideFlag = FALSE;
 		break;
 	case stack:
+		nFramesAvg = 1;
 		nFramesStack = (int)(zDelta_um / stepSize_um);
 		overrideFlag = FALSE;
 		break;
 	case stack_centered:
+		nFramesAvg = 1;
 		nFramesStack = (int)(zDelta_um / stepSize_um);
-		position_mm.at(zz) -= 0.5 * zDelta_um / 1000; //For acquiring a stack
+		position_mm.at(zz) -= 0.5 * zDelta_um / 1000; //Shift the stage to the middle of the targeted interval
 		overrideFlag = FALSE;
 		break;
 	default:
@@ -87,7 +88,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	}
 
 	//DATALOG
-	Logger datalog(filename);
+	Logger datalog("datalog_" + filename);
 	datalog.record("Wavelength (nm) = ", wavelength_nm);
 	datalog.record("Laser power (mW) = ", laserPower_mW);
 	datalog.record("Galvo full FOV (um) = ", FFOVgalvo_um);
@@ -154,11 +155,11 @@ void seq_main(const FPGAapi::Session &fpga)
 
 void seq_contAcquisition(const FPGAapi::Session &fpga)
 {
-	int nFrames = 100;
+	int nFrames = 1000;
 
 	//LASER
-	const int wavelength_nm = 940;
-	double laserPower_mW = 170 * mW;
+	const int wavelength_nm = 750;
+	double laserPower_mW = 30 * mW;
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
 
@@ -173,11 +174,11 @@ void seq_contAcquisition(const FPGAapi::Session &fpga)
 	fw.setColor(wavelength_nm);
 
 	//SHUTTER
-	//Shutter shutter1(fpga, Shutter1);
+	Shutter shutter1(fpga, Shutter1);
 
 	//SEQUENCE
-	//shutter1.open();
-	//Sleep(50);
+	shutter1.open();
+	Sleep(50);
 
 	for (int jj = 0; jj < nFrames; jj++)
 	{
@@ -202,7 +203,7 @@ void seq_contAcquisition(const FPGAapi::Session &fpga)
 		Image image(fpga);
 		image.acquire(TRUE,"Untitled",TRUE); //Execute the RT sequence and acquire the image
 	}
-	//shutter1.close();
+	shutter1.close();
 }
 
 void seq_contAcquisitionTest(const FPGAapi::Session &fpga)
@@ -220,56 +221,56 @@ void seq_contAcquisitionTest(const FPGAapi::Session &fpga)
 
 		//Execute the realtime sequence and acquire the image
 
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_StartFifo(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));		//Establish the connection between FIFOfpga and FIFOpc
+		FPGAapi::checkStatus(__FUNCTION__, NiFpga_StartFifo(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));		//Establish the connection between FIFOOUTfpga and FIFOOUTpc
 
 		FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(fpga.getSession(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
 		FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(fpga.getSession(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
 
 
-		U32 NremainFIFO_A = 0;							//Elements remaining in FIFOpc A
-		U32 *BufArray_A = new U32[nPixAllFrames];		//Array to read FIFOpc A
-		int NelemReadFIFO_A = 0;
-		int TimeoutCounter_iter = 10;
-		const U32 Timeout_ms = 100;
-		const int ReadFifoWaitingTime_ms = 10;
+		U32 nRemainFIFOOUT = 0;						//Elements remaining in FIFOOUTpc
+		U32 *bufArray = new U32[nPixAllFrames];		//Array to read FIFOOUTpc
+		int nElemReadFIFOOUT = 0;
+		int timeoutCounter_iter = 10;
+		const U32 timeout_ms = 100;
+		const int readFifoWaitingTime_ms = 10;
 
 		U32 *dummy = new U32[0];
 
-		while (NelemReadFIFO_A < nPixAllFrames)
+		while (nElemReadFIFOOUT < nPixAllFrames)
 		{
-			Sleep(ReadFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time to max transfer bandwidth
+			Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time to max transfer bandwidth
 
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, Timeout_ms, &NremainFIFO_A));
-			std::cout << "Number of elements remaining in FIFOpc A: " << NremainFIFO_A << std::endl;
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout_ms, &nRemainFIFOOUT));
+			std::cout << "Number of elements remaining in FIFOOUT: " << nRemainFIFOOUT << std::endl;
 
-			if (NremainFIFO_A > 0)
+			if (nRemainFIFOOUT > 0)
 			{
-				NelemReadFIFO_A += NremainFIFO_A;
-				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, BufArray_A, NremainFIFO_A, Timeout_ms, &NremainFIFO_A));
-				//std::cout << "Number of elements remaining in FIFOpc A: " << NremainFIFO_A << std::endl;
+				nElemReadFIFOOUT += nRemainFIFOOUT;
+				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, bufArray, nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
+				//std::cout << "Number of elements remaining in FIFOOUT: " << nRemainFIFOOUT << std::endl;
 			}
 
-			TimeoutCounter_iter--;
+			timeoutCounter_iter--;
 			//Transfer timeout
-			if (TimeoutCounter_iter == 0)
+			if (timeoutCounter_iter == 0)
 				break;
 		}
-		std::cout << "Total of elements read: " << NelemReadFIFO_A << std::endl; //Print out the total number of elements read
+		std::cout << "Total of elements read: " << nElemReadFIFOOUT << std::endl; //Print out the total number of elements read
 		std::cout << std::endl;
 
 		//If all the expected data is NOT read successfully
-		if (NelemReadFIFO_A != nPixAllFrames)
+		if (nElemReadFIFOOUT != nPixAllFrames)
 			getchar();
 
 		delete[] dummy;
-		delete[] BufArray_A;
+		delete[] bufArray;
 
 		//Sleep(100);//Simulate the shifting time of the stages
 
 		FPGAapi::checkStatus(__FUNCTION__, NiFpga_StopFifo(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 
 
-	}//For
+	}//For loop
 }
 
 

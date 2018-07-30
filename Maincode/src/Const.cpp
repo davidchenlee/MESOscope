@@ -3,10 +3,10 @@
 //Constants that are rarely changed
 namespace Constants
 {
-	extern const LineclockInputSelector lineclockInput = FG;				//Resonant scanner (RS) or Function generator (FG)
+	extern const LineclockInputSelector lineclockInput = RS;				//Resonant scanner (RS) or Function generator (FG)
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
-	extern const bool enableFIFOfpga = 1;									//For debugging purposes. Enable pushing data to FIFOfpga
+	extern const bool enableFIFOOUTfpga = 1;								//For debugging purposes. Enable pushing data to FIFOOUTfpga
 	extern const bool pockels1_enableAutoOff = 1;							//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
 
 	//GENERAL CONSTANTS
@@ -40,8 +40,8 @@ namespace Constants
 	extern const double linegateTimeout_us = 1.5 * (2 * halfPeriodLineclock_us);	//In LV, timeout the start of the data acquisition. Otherwise, when Lineclock fails triggering (e.g.the RS is off),
 																				//pixelclock false-triggers after Lineclock is back up
 
-	extern const int FIFOtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOs
-	extern const size_t FIFOINmax = 32773;					//Depth of the FIFO IN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
+	extern const int FIFOINtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOINs
+	extern const size_t FIFOINmax = 32773;					//Depth of the FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 
 
@@ -81,7 +81,7 @@ namespace Parameters
 //Currently, each frames is 400x400 pixels = 160000 pixels
 //For multiple beams, each frame has 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
 //The current buffer can do 400*1200 pix ~ 480000 pix, or ~48 multiplexed frames
-//20180415 - Added an internal FIFO. Now I can do 400x480x3 = 576000 pixels, or 57.6 multiplexed frames
+//20180415 - Added an internal FIFOOUT. Now I can do 400x480x3 = 576000 pixels, or 57.6 multiplexed frames
 //201804   - 400x400x5, skipped 60. 400x35x90, skipped 8. 400x35x70, skipped 6
 //20180709 - I could do 340x35 pixels and 100 frames (340 pix wide ~ 13 photons per pix)
 

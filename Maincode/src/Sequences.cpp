@@ -8,7 +8,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int runmode = 0;
+	const int runmode = 1;
 	/*
 	0 - Single image
 	1 - Image continuously the same plane
@@ -64,7 +64,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		break;
 	case continuous:
 		nFramesStack = 1;
-		nFramesAvg = 10;
+		nFramesAvg = 1000;
 		zDelta_um = 0.0;
 		overrideFlag = TRUE;
 		break;
@@ -152,7 +152,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	shutter1.close();
 }
 
-void seq_contRun(const FPGAapi::Session &fpga)
+void seq_contAcquisition(const FPGAapi::Session &fpga)
 {
 	int nFrames = 100;
 
@@ -205,7 +205,7 @@ void seq_contRun(const FPGAapi::Session &fpga)
 	//shutter1.close();
 }
 
-void seq_debug(const FPGAapi::Session &fpga)
+void seq_contAcquisitionTest(const FPGAapi::Session &fpga)
 {
 	int nFrames = 100;
 	for (int jj = 0; jj < nFrames; jj++)

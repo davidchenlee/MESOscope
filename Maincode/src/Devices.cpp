@@ -80,7 +80,7 @@ void Image::readFIFOpc_()
 	double duration;
 	auto t_start = std::chrono::high_resolution_clock::now();
 
-	U32 *dummy = new U32[0];
+	U32 *dummy = new U32[0]();
 
 	while (mNelemReadFIFO_A < nPixAllFrames || mNelemReadFIFO_B < nPixAllFrames)
 	{
@@ -140,73 +140,12 @@ void Image::readFIFOpc_()
 
 	//If all the expected data is NOT read successfully
 	if (mNelemReadFIFO_A != nPixAllFrames || mNelemReadFIFO_B != nPixAllFrames)
-		throw ImageException((std::string)__FUNCTION__ + ": More or less FIFO elements received than expected ");
+		throw ImageException((std::string)__FUNCTION__ + ": Received more or less FIFO elements than expected ");
 
 	delete[] dummy;
 }
 
 
-void Image::readFIFOpcTest_()
-{
-	U32 NremainFIFO_A = 0;							//Elements remaining in FIFOpc A
-	U32 *BufArray_A = new U32[nPixAllFrames]();		//Array to read FIFOpc A
-	int NelemReadFIFO_A = 0;
-	int TimeoutCounter_iter = 10;
-	const U32 Timeout_ms = 100;
-	const int ReadFifoWaitingTime_ms = 10;
-
-	U32 *dummy = new U32[0];
-
-	while (NelemReadFIFO_A < nPixAllFrames)
-	{
-		Sleep(ReadFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time to max transfer bandwidth
-
-		//Declare and start a stopwatch [2]
-		double duration;
-		auto t_start = std::chrono::high_resolution_clock::now();
-
-
-		//FIFOpc A
-		if (NelemReadFIFO_A < nPixAllFrames)
-		{
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, Timeout_ms, &NremainFIFO_A));
-			std::cout << "Number of elements remaining in FIFOpc A: " << NremainFIFO_A << std::endl;
-
-			if (NremainFIFO_A > 0)
-			{
-				NelemReadFIFO_A += NremainFIFO_A;
-				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, BufArray_A, NremainFIFO_A, Timeout_ms, &NremainFIFO_A));
-				//std::cout << "Number of elements remaining in FIFOpc A: " << NremainFIFO_A << std::endl;
-			}
-		}
-
-
-		//Stop the stopwatch
-		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-		std::cout << "Elapsed time: " << duration << " ms" << std::endl;
-
-
-		TimeoutCounter_iter--;
-		//Transfer timeout
-		if (TimeoutCounter_iter == 0)
-		{
-			break;
-			//throw ImageException((std::string)__FUNCTION__ + ": FIFOpc downloading timeout");
-		}
-	}
-	std::cout << "Total of elements read: " << NelemReadFIFO_A << std::endl; //Print out the total number of elements read
-
-
-	//If all the expected data is NOT read successfully
-	if (NelemReadFIFO_A != nPixAllFrames)
-		getchar();
-		//throw ImageException((std::string)__FUNCTION__ + ": More or less FIFO elements received than expected ");
-
-	delete[] dummy;
-	delete[] BufArray_A;
-
-	//Sleep(300);//Simulate the shifting time of the stages
-}
 
 //Returns a single 1D array with the chucks of data stored in the buffer arrays
 void Image::unpackBuffer_()

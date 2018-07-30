@@ -24,13 +24,16 @@ namespace FPGAapi
 	class Session
 	{
 		NiFpga_Session mSession;
+
+		void FIFOOUTpcGarbageCollector_() const;
+		void flushBRAMs_() const;
 	public:
 		Session();
 		~Session();
 		void initialize() const;
-		void writeFIFOpc(const VQU32 &vectorqueues) const;
+		void writeFIFOINpc(const VQU32 &vectorqueues) const;
 		void triggerRT() const;
-		void flushBRAMs() const;
+
 		void close(const bool reset) const;
 		NiFpga_Session getSession() const;
 	};

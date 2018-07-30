@@ -8,7 +8,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int runmode = 1;
+	const int runmode = 0;
 	/*
 	0 - Single image
 	1 - Image continuously the same plane

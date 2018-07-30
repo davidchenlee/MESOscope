@@ -88,12 +88,21 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	//DATALOG
 	Logger datalog("datalog_" + filename);
+	datalog.record("FPGA clock (MHz) = ", tickPerUs);
 	datalog.record("Wavelength (nm) = ", wavelength_nm);
 	datalog.record("Laser power (mW) = ", laserPower_mW);
+	datalog.record("Laser period (us) = ", VISIONpulsePeriod);
+	datalog.record("Resonant scanner period (us) = ", 2 * halfPeriodLineclock_us);
 	datalog.record("Galvo full FOV (um) = ", FFOVgalvo_um);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep);
 	datalog.record("Correction collar = ", collar);
+	datalog.record("Dwell time (us) = ", dwell_us);
+	datalog.record("Laser pulses per pixel (max) = ", pulsesPerPixel);
 	datalog.record("Upscale factor = ", upscaleU8);
+	datalog.record("Width (pix) = ", widthPerFrame_pix);
+	datalog.record("Height (pix) = ", heightPerFrame_pix);
+
+
 
 	//SEQUENCE
 	shutter1.open();

@@ -16,8 +16,8 @@ Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga)
 
 Image::~Image()
 {
-	//Stop the FIFOOUTpc. Before I implemented this function, the computer crashed if the code was executed right after an exceptional termination.
-	//(I think) this is because the access to the FIFOOUT used to remain open and clashed with the next call
+	//Stop FIFOOUTpc. Before I implemented this function, the computer crashed if the code was executed right after an exceptional termination.
+	//(I think) this is because the access to FIFOOUT used to remain open and clashed with the next call
 	stopFIFOOUTpc_();
 
 	delete[] mBufArray_A;
@@ -77,8 +77,8 @@ void Image::readFIFOOUTpc_()
 	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
 
 	//Declare and start a stopwatch [2]
-	double duration;
-	auto t_start = std::chrono::high_resolution_clock::now();
+	//double duration;
+	//auto t_start = std::chrono::high_resolution_clock::now();
 
 	U32 *dummy = new U32[0]();
 
@@ -106,13 +106,13 @@ void Image::readFIFOOUTpc_()
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, mTimeout_ms, &mNremainFIFOOUTb));
 			//std::cout << "Number of elements remaining in FIFOOUT B: " << mNremainFIFOOUTb << std::endl;
 
-			//If there are data available in the FIFOOUTpc, retrieve it
+			//If there are data available in FIFOOUTpc, retrieve it
 			if (mNremainFIFOOUTb > 0)
 			{
 				mNelemReadFIFOOUTb += mNremainFIFOOUTb;							//Keep track of the number of elements read so far
 				mNelemBufArray_B[mCounterBufArray_B] = mNremainFIFOOUTb;		//Keep track of how many elements are in each buffer array												
 
-				//Read the elements in the FIFOOUTpc
+				//Read the elements in FIFOOUTpc
 				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B[mCounterBufArray_B], mNremainFIFOOUTb, mTimeout_ms, &mNremainFIFOOUTb));
 
 				if (mCounterBufArray_B >= nBufArrays)

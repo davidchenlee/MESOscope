@@ -8,7 +8,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int runmode = 3;
+	const int runmode = 4;
 	/*
 	0 - Single image
 	1 - Image continuously the same plane
@@ -21,11 +21,11 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.0, 19.6, 18.385 };	//Initial position
+	double3 position_mm = { 35.0, 19.814, 18.400 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 1.0 * um;
-	double zDelta_um = 10 * um;							//Acquire a stack within this range
+	double zDelta_um = 10 * um;				//Acquire a stack within this interval
 
 	//LASER
 	const int wavelength_nm = 750;
@@ -34,13 +34,13 @@ void seq_main(const FPGAapi::Session &fpga)
 	vision.setWavelength(wavelength_nm);
 
 	//GALVO
-	const double FFOVgalvo_um = 300 * um;					//Full FOV in the slow axis
+	const double FFOVgalvo_um = 300 * um;				//Full FOV in the slow axis
 	const double duration = halfPeriodLineclock_us * heightPerFrame_pix; //= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
 	//SAMPLE
-	const std::string filename = "Bead4um";
+	const std::string filename = "Beads_4um";
 	const double collar = 1.47;
 
 	//FILTERWHEEL
@@ -59,7 +59,6 @@ void seq_main(const FPGAapi::Session &fpga)
 	case single:
 		nFramesAvg = 1;
 		nFramesStack = 1; //Do not change this
-		zDelta_um = 0.0;
 		overrideFlag = FALSE;
 		break;
 	case continuous:
@@ -80,7 +79,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	case stack_centered:
 		nFramesAvg = 1;
 		nFramesStack = (int)(zDelta_um / stepSize_um);
-		position_mm.at(zz) -= 0.5 * zDelta_um / 1000; //Shift the stage to the middle of the targeted interval
+		position_mm.at(zz) -= 0.5 * zDelta_um / 1000; //Shift the stage to the middle of the interval
 		overrideFlag = FALSE;
 		break;
 	default:
@@ -94,6 +93,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	datalog.record("Galvo full FOV (um) = ", FFOVgalvo_um);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep);
 	datalog.record("Correction collar = ", collar);
+	datalog.record("Upscale factor = ", upscaleU8);
 
 	//SEQUENCE
 	shutter1.open();
@@ -107,7 +107,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	{
 		for (int jj = 0; jj < nFramesAvg; jj++)
 		{
-			std::cout << "z plane " << (ii + 1) << "/" << nFramesStack <<
+			std::cout << "Z-plane " << (ii + 1) << "/" << nFramesStack <<
 				"\tFrame " << (jj + 1) << "/" << nFramesAvg <<
 				"\tTotal frame " << ii * nFramesAvg + (jj + 1) << "/" << nFramesStack * nFramesAvg << std::endl;
 
@@ -149,7 +149,6 @@ void seq_main(const FPGAapi::Session &fpga)
 			//laserPower_mW += 0.5; //Increase the laser power by this much
 		}
 	}
-
 	shutter1.close();
 }
 

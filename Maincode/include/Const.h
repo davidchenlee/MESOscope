@@ -47,6 +47,7 @@ namespace Constants
 	extern const int mW;
 
 	extern const double halfPeriodLineclock_us;
+	extern const double VISIONpulsePeriod;
 	extern const int tickPerUs;
 	extern const double usPerTick;
 	extern const U32 tMIN_tick;
@@ -72,6 +73,8 @@ namespace Parameters
 
 	extern const std::string foldername;
 
+	extern const double dwell_us;
+	extern const double pulsesPerPixel;
 	extern const double upscaleU8;
 	extern const int widthPerFrame_pix;
 	extern const int heightPerFrame_pix;
@@ -81,5 +84,5 @@ namespace Parameters
 	extern const int nLinesAllFrames;
 	extern const int nPixAllFrames;
 
-	extern const double dwell_us;
+
 }

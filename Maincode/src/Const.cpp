@@ -21,6 +21,9 @@ namespace Constants
 	//SERIAL PORTS. Assign a port to 'enum ComID'
 	extern const std::vector<std::string> assignCOM = { "COM1", "COM6", "", "", "" };
 
+	//LASER
+	extern const double VISIONpulsePeriod = 0.0125 * us;
+
 	//PIXELCLOCK
 	extern const double halfPeriodLineclock_us = 63.05 * us;	//Half the period of the resonant scanner. I measure 25.220 ms for 400 half oscillations. Therefore, halfPeriodLineclock_us = 25200us/400 = 63.05 us
 																//There is a slight difference between the forward and backward oscillation time. Forward = 63.14 us, backwards = 62.99 us. Diff = 150 ns (i.e., ~ 1 pixel)
@@ -41,7 +44,7 @@ namespace Constants
 																				//pixelclock false-triggers after Lineclock is back up
 
 	extern const int FIFOINtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOINs
-	extern const size_t FIFOINmax = 32773;					//Depth of the FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
+	extern const size_t FIFOINmax = 32773;					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 
 
@@ -64,8 +67,11 @@ namespace Parameters
 	//extern const std::string foldername = "Z:\\Output\\";
 
 	//IMAGE
-	extern const double upscaleU8 = 23;	//255/11 = ~23							//Upscale the photoncount to cover the full 0-255 range of a 8-bit number
-	extern const int widthPerFrame_pix = 300;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
+	extern const double dwell_us = 0.125 * us;									//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
+																				//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
+	extern const double pulsesPerPixel = dwell_us / VISIONpulsePeriod;			//Max number of laser pulses per pixel
+	extern const double upscaleU8 = 255/(pulsesPerPixel + 1);					//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
+	extern const int widthPerFrame_pix = 400;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
 	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
 	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
 	extern const int nFrames = 1;												//Number of frames to acquire
@@ -73,8 +79,7 @@ namespace Parameters
 	extern const int nLinesAllFrames = heightPerFrame_pix * nFrames;			//Total number of lines in all the frames without including the skipped lines
 	extern const int nPixAllFrames = widthPerFrame_pix * nLinesAllFrames;		//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
-	extern const double dwell_us = 0.1625 * us;	//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
-												//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
+
 }
 
 

@@ -14,15 +14,15 @@ class Image
 
 	const int mReadFifoWaitingTime_ms = 5;			//Waiting time between each iteration
 	const U32 mTimeout_ms = 100;					//FIFOOUTpc timeout
-	int mTimeoutCounter_iter = 100;					//Timeout the while-loop if the FIFOOUT data transfer fails	
+	int mTimeoutCounter_iter = 100;					//Timeout the while-loop if FIFOOUT data transfer fails	
 
-	//FIFOOUTb
+	//FIFOOUTa
 	U32 mNremainFIFOOUTa = 0;						//Elements remaining in FIFOOUTpc A
 	U32 *mBufArray_A;								//Array to read FIFOOUTpc A
 	int mNelemReadFIFOOUTa = 0; 					//Total number of elements read FIFOOUTpc A
 
 	//FIFOOUTb
-	U32 mNremainFIFOOUTb = 0;						//Elements remaining in the FIFOOUTpc B
+	U32 mNremainFIFOOUTb = 0;						//Elements remaining in FIFOOUTpc B
 	const int nBufArrays = 50;						//Number of buffer arrays to use
 	int mCounterBufArray_B = 0;						//Number of buffer arrays actually used
 	int *mNelemBufArray_B;							//Each elements in this array indicates the number of elements read in each chunch of data

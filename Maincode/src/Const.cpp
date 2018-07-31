@@ -1,6 +1,6 @@
 #include "Const.h"
 
-//Constants that are rarely changed
+//Constants that are never changed
 namespace Constants
 {
 	extern const LineclockInputSelector lineclockInput = RS;				//Resonant scanner (RS) or Function generator (FG)
@@ -21,8 +21,8 @@ namespace Constants
 	//SERIAL PORTS. Assign a port to 'enum ComID'
 	extern const std::vector<std::string> assignCOM = { "COM1", "COM6", "", "", "" };
 
-	//LASER
-	extern const double VISIONpulsePeriod = 0.0125 * us;
+	//VISION LASER
+	extern const double VISIONpulsePeriod = 0.0125 * us;		//The pulse repetition rate of VISION is 80 MHz
 
 	//PIXELCLOCK
 	extern const double halfPeriodLineclock_us = 63.05 * us;	//Half the period of the resonant scanner. I measure 25.220 ms for 400 half oscillations. Therefore, halfPeriodLineclock_us = 25200us/400 = 63.05 us
@@ -30,6 +30,7 @@ namespace Constants
 																//(Measured using the oscilloscope by looking at RS SYNC through the FPGA)
 
 	//FPGA
+	extern const int AOmax_V = 10 * V;						//in V. Max voltage of the AOs
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It corresponds to the FPGA's clock
 	extern const double usPerTick = 1.0 / 160;				//in us. Time step of the FPGA's clock
 	extern const U32 tMIN_tick = 2;							//in ticks. Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
@@ -41,7 +42,7 @@ namespace Constants
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
 	
 	extern const double linegateTimeout_us = 1.5 * (2 * halfPeriodLineclock_us);	//In LV, timeout the start of the data acquisition. Otherwise, when Lineclock fails triggering (e.g.the RS is off),
-																				//pixelclock false-triggers after Lineclock is back up
+																					//pixelclock false-triggers after Lineclock is back up
 
 	extern const int FIFOINtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOINs
 	extern const size_t FIFOINmax = 32773;					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
@@ -78,8 +79,6 @@ namespace Parameters
 	extern const int nPixPerFrame = widthPerFrame_pix * heightPerFrame_pix;		//Number of pixels in each frame
 	extern const int nLinesAllFrames = heightPerFrame_pix * nFrames;			//Total number of lines in all the frames without including the skipped lines
 	extern const int nPixAllFrames = widthPerFrame_pix * nLinesAllFrames;		//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
-
-
 }
 
 
@@ -89,38 +88,3 @@ namespace Parameters
 //20180415 - Added an internal FIFOOUT. Now I can do 400x480x3 = 576000 pixels, or 57.6 multiplexed frames
 //201804   - 400x400x5, skipped 60. 400x35x90, skipped 8. 400x35x70, skipped 6
 //20180709 - I could do 340x35 pixels and 100 frames (340 pix wide ~ 13 photons per pix)
-
-
-/*
-SAMPLE
-type
-immersion medium
-
-GALVO
-amplitude/voltage limit: [Vmin, Vmax] -> pixel size
-
-RS
-amplitude -> pixel size
-dwell time (pulses per pixel)
-
-TILING
-tile number: (Nx, Ny). plane number: Nz
-tile array limit: [Xmin, Xmax], [Ymin, Ymax], [Zmin, Zmax]
-tile absolute position (center of the tile): Xc, Yc, Zc
-tile size (given by the galvo and RS amplitude): Lx, Ly
-overlap: OLx, OLy, OLz
-
-PMT
-threshold voltage
-gain
-
-LASER
-mWavelength_nm: lambda
-pockels cell voltage (laser power): PockelsVoltage
-
-VIBRATOME
-section number: Nslide
-section thickness: Lslice
-sectioning amplitude and speed (manual settings)
-sectioning duration
-*/

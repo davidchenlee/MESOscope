@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 		{
 			fpga.initialize();		//Initialize the FPGA
 
-			seq_main(fpga);			//Run the sequence
+			//seq_main(fpga);			//Run the sequence
 			//seq_contAcquisition(fpga);
 			//seq_testPixelclock(fpga);
 			//seq_testStageSetPosition();
@@ -20,6 +20,7 @@ int main(int argc, char* argv[])
 			//seq_testFilterwheel();
 			//seq_testRS(fpga);
 			//seq_contAcquisitionTest(fpga);
+			seq_testConvert();
 		}
 		catch (const std::invalid_argument &e)
 		{

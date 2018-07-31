@@ -21,25 +21,55 @@ namespace FPGAapi
 			return (U16)t_tick;
 	}
 
-	//Convert voltage to I16 [1]
+	//Convert voltage (-10V to 10V) to I16 (-32768 to 32767)
+	//Examples of I16 numbers:
+	//0x7FFF = 32767
+	//0xFFFF = -1
+	//0x8000 = -32768
 	I16 convertVoltToI16(const double voltage_V)
 	{
-		const int VMAX = 10 * V;
-		const int VMIN = -10 * V;
-
-		if (voltage_V > 10)
+		if (voltage_V > AOmax_V)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage cast to the max: " + std::to_string(VMAX) + " V" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage cast to the max: " + std::to_string(AOmax_V) + " V" << std::endl;
 			return (I16)_I16_MAX;
 		}
-		else if (voltage_V < -10)
+		else if (voltage_V < -AOmax_V)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage cast to the min: " + std::to_string(VMIN) + " V" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage cast to the min: " + std::to_string(-AOmax_V) + " V" << std::endl;
 			return (I16)_I16_MIN;
 		}
 		else
-			return (I16)(voltage_V / 10 * _I16_MAX);
+			return (I16)(voltage_V / AOmax_V * _I16_MAX);
 	}
+
+	//Convert I16 (-32768 to 32767) to voltage (-10V to 10V)
+	double convertI16toVolt(const int input)
+	{
+		//Positive case
+		if (input >= 0)
+		{
+			//Check for overflow
+			if (input > _I16_MAX)
+			{
+				std::cerr << "WARNING in " << __FUNCTION__ << ": Input overflow, _I16_MAX used instead" << std::endl;
+				return AOmax_V;
+			}
+			else
+				return 1.0 * input / _I16_MAX * AOmax_V;
+		}
+		else //Negative case
+		{
+			//Check for underoverflow
+			if (input < _I16_MIN)
+			{
+				std::cerr << "WARNING in " << __FUNCTION__ << ": Input underflow, _I16_MIN used instead" << std::endl;
+				return -AOmax_V;
+			}
+			else
+				return -1.0 * input / _I16_MIN * AOmax_V;
+		}		
+	}
+
 
 	//Pack t in MSB and x in LSB. Time t and analog output AO_U16 are encoded in 16 bits each.
 	U32 packU32(const U16 t_tick, const U16 AO_U16)
@@ -239,7 +269,7 @@ namespace FPGAapi
 		return mSession;
 	}
 
-	//Sometimes there is residual data in FIFOOUT from a previous run
+	//Flush the residual data in FIFOOUTpc from a previous run, if any
 	void Session::FIFOOUTpcGarbageCollector_() const
 	{
 		const U32 timeout_ms = 100;
@@ -248,8 +278,6 @@ namespace FPGAapi
 
 		//FIFOOUTpc A
 		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nRemainFIFOOUT));
-
-
 		while (nRemainFIFOOUT > 0)
 		{
 			std::cout << "Number of elements remaining in FIFOOUTpc A: " << nRemainFIFOOUT << std::endl;
@@ -262,8 +290,6 @@ namespace FPGAapi
 
 		//FIFOOUTpc B
 		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nRemainFIFOOUT));
-
-
 		while (nRemainFIFOOUT> 0)
 		{
 			std::cout << "Number of elements remaining in FIFOOUTpc B: " << nRemainFIFOOUT << std::endl;

@@ -84,7 +84,7 @@ void Image::readFIFOOUTpc_()
 
 	while (mNelemReadFIFOOUTa < nPixAllFrames || mNelemReadFIFOOUTb < nPixAllFrames)
 	{
-		Sleep(mReadFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time to max transfer bandwidth
+		Sleep(mReadFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
 
 		//FIFOOUTpc A
 		if (mNelemReadFIFOOUTa < nPixAllFrames)

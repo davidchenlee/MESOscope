@@ -15,6 +15,7 @@ namespace FPGAapi
 
 	U16 convertUsTotick(const double t);
 	I16 convertVoltToI16(const double voltage_V);
+	double convertI16toVolt(const int input);
 	U32 packU32(const U16 t_tick, const U16 AO_U16);
 	U32 packAnalogSinglet(const double timeStep, const double AO_V);
 	U32 packDigitalSinglet(const double timeStep, const bool DO);

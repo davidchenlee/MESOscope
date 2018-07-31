@@ -474,3 +474,12 @@ void seq_testRS(const FPGAapi::Session &fpga)
 	//RS.turnOn_um(150);
 	RS.turnOff();
 }
+
+void seq_testConvert()
+{
+	std::cout << "volt to I16: " << FPGAapi::convertVoltToI16(1) << std::endl;
+
+	std::cout << "I16 to colt: " << FPGAapi::convertI16toVolt(32767) << std::endl;
+
+	std::cout << "volt to I16 to volt: " << FPGAapi::convertI16toVolt(FPGAapi::convertVoltToI16(0)) << std::endl;
+}

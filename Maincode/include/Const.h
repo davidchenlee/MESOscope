@@ -48,6 +48,8 @@ namespace Constants
 
 	extern const double halfPeriodLineclock_us;
 	extern const double VISIONpulsePeriod;
+
+	extern const int AOmax_V;
 	extern const int tickPerUs;
 	extern const double usPerTick;
 	extern const U32 tMIN_tick;

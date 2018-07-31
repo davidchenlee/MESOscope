@@ -1121,6 +1121,8 @@ void Stage::waitForMovementToStop(const Axis axis) const
 
 void Stage::waitForMovementToStop3() const
 {
+	std::cout << "Updating the stage position ";
+
 	BOOL isMoving_x, isMoving_y, isMoving_z;
 	do {
 		if (!PI_IsMoving(mID[xx], mNstagesPerController, &isMoving_x))
@@ -1132,7 +1134,7 @@ void Stage::waitForMovementToStop3() const
 		if (!PI_IsMoving(mID[zz], mNstagesPerController, &isMoving_z))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Z");
 
-		std::cout << "#";
+		std::cout << ".";
 	} while (isMoving_x || isMoving_y || isMoving_z);
 
 	std::cout << "\n";

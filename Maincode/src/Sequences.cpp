@@ -21,10 +21,10 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.0, 19.814, 18.400 };	//Initial position
+	double3 position_mm = { 35.0, 19.814, 18.4055 };	//Initial position
 
 	//STACK
-	const double stepSize_um = 1.0 * um;
+	const double stepSize_um = 0.5 * um;
 	double zDelta_um = 10 * um;				//Acquire a stack within this interval
 
 	//LASER
@@ -50,7 +50,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	//SHUTTER
 	Shutter shutter1(fpga, Shutter1);
 
-	//RUN MODE SETTINGS
+	//ACQUISITION MODE SETTINGS
 	int nFramesStack;
 	int nFramesAvg;
 	bool overrideFlag;
@@ -83,7 +83,7 @@ void seq_main(const FPGAapi::Session &fpga)
 		overrideFlag = FALSE;
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected run mode not available");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 	}
 
 	//DATALOG
@@ -114,6 +114,8 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	for (int ii = 0; ii < nFramesStack; ii++)
 	{
+		stage.printPosition3();		//Print the stage position
+
 		for (int jj = 0; jj < nFramesAvg; jj++)
 		{
 			std::cout << "Z-plane " << (ii + 1) << "/" << nFramesStack <<
@@ -142,13 +144,10 @@ void seq_main(const FPGAapi::Session &fpga)
 			Image image(fpga);
 			image.acquire(TRUE, filename + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 				"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4), overrideFlag); //Execute the RT sequence and acquire the image
-		
-			std::cout << std::endl;
 		}
-
-		stage.printPosition3();
 		std::cout << std::endl;
 
+		//Move to the new position z
 		if (runMode == stack || runMode == stack_centered)
 		{
 			position_mm.at(zz) += stepSize_um / 1000;

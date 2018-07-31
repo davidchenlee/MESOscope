@@ -21,7 +21,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.0, 19.883 - 0.075, 18.4065 };	//Initial position
+	double3 position_mm = { 35.120, 19.808, 18.4085 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -34,14 +34,15 @@ void seq_main(const FPGAapi::Session &fpga)
 	vision.setWavelength(wavelength_nm);
 
 	//GALVO
-	const double FFOVgalvo_um = 200 * um;				//Full FOV in the slow axis
-	const double duration = halfPeriodLineclock_us * heightPerFrame_pix; //= 62.5us * 400 pixels = 25 ms
+	const double FFOVgalvo_um = 200 * um;									//Full FOV in the slow axis
+	const double duration = halfPeriodLineclock_us * heightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
 	//RS
+	const double FFOVrs_um = 150 * um;
 	ResonantScanner RS(fpga);
-	RS.setFFOV(150);
+	RS.setFFOV(FFOVrs_um);
 
 	//SAMPLE
 	const std::string filename = "Beads_4um";
@@ -51,10 +52,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	Filterwheel fw(FW1);
 	fw.setColor(wavelength_nm);
 
-	//SHUTTER
-	Shutter shutter1(fpga, Shutter1);
-
-	//ACQUISITION MODE SETTINGS
+	//ACQUISITION MODE SETTING
 	int nFramesStack;
 	int nFramesAvg;
 	bool overrideFlag;
@@ -116,8 +114,8 @@ void seq_main(const FPGAapi::Session &fpga)
 	datalog.record("IMAGE--------------------------------------------------------");
 	datalog.record("Max count per pixel = ", pulsesPerPixel);
 	datalog.record("8-bit upscaling factor = ", upscaleU8);
-	datalog.record("Width (RS) (pix) = ", widthPerFrame_pix);
-	datalog.record("Height (galvo) (pix) = ", heightPerFrame_pix);
+	datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
+	datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
 	datalog.record("Resolution X (RS) (um/pix) = ", RS.mSampRes_umPerPix);
 	datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um/heightPerFrame_pix);
 
@@ -126,7 +124,8 @@ void seq_main(const FPGAapi::Session &fpga)
 	stage.moveStage3(position_mm);
 	stage.waitForMovementToStop3();
 
-	//SEQUENCE
+	//OPEN THE SHUTTER
+	Shutter shutter1(fpga, Shutter1);
 	shutter1.open();
 	Sleep(50);
 

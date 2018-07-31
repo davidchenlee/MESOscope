@@ -65,7 +65,7 @@ class ResonantScanner
 	const FPGAapi::Session &mFpga;
 	const double mVMAX_V = 5 * V;						//Max control voltage allowed
 	const int mDelay_ms = 10;
-	double mVoltPerUm = 0.00595;
+	double mVoltPerUm = 0.00595;						//Calibration factor. Last calibrated 
 	double mFullScan_um;								//Full scan = distance between turning points
 	double mControl_V;									//Control voltage 0-5V
 
@@ -129,7 +129,7 @@ class Galvo
 {
 	FPGAapi::RTsequence &mSequence;
 	RTchannel mGalvoChannel;
-	const double voltPerUm = 5.0 * V / (210 * um);		//volts per um. Calibration factor of the galvo. Last calib 11/April/2018
+	const double voltPerUm = 0.02417210 * V / um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 
 	double convert_umToVolt_(const double position_um) const;
 	void pushVoltageSinglet_(const double timeStep, const double AO_V) const;

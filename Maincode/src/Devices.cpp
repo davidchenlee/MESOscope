@@ -368,30 +368,30 @@ void ResonantScanner::setVoltage_(const double Vcontrol_V)
 	if (Vcontrol_V > mVMAX_V)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage must be in the range 0-" + std::to_string(mVMAX_V) + " V" );
 
-	mVoltage_V = Vcontrol_V;
+	mControl_V = Vcontrol_V;
 	mFullScan_um = Vcontrol_V / mVoltPerUm;
 
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVoltToI16(mVoltage_V)));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAapi::convertVoltToI16(mControl_V)));
 }
 
 //Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
 void ResonantScanner::setFFOV_(const double FFOV_um)
 {
 	mFullScan_um = FFOV_um / mFillFactor;
-	mVoltage_V = mFullScan_um * mVoltPerUm;
+	mControl_V = mFullScan_um * mVoltPerUm;
 
-	if (mVoltage_V > mVMAX_V)
+	if (mControl_V > mVMAX_V)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX_V/mVoltPerUm) + " um");
 
-	//std::cout << "mVoltage = " << mVoltage_V << std::endl; //For debugging
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RS_voltage, FPGAapi::convertVoltToI16(mVoltage_V)));
+	//std::cout << "mControl_V = " << mControl_V << std::endl; //For debugging
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAapi::convertVoltToI16(mControl_V)));
 }
 
 void ResonantScanner::turnOn_um(const double FFOV_um)
 {
 	setFFOV_(FFOV_um);
 	Sleep(mDelay_ms);
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 1));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSon, 1));
 	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um" << std::endl;
 }
 
@@ -399,23 +399,30 @@ void ResonantScanner::turnOn_V(const double Vcontrol_V)
 {
 	setVoltage_(Vcontrol_V);
 	Sleep(mDelay_ms);
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 1));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSon, 1));
 	std::cout << "RS control voltage successfully set to: " << Vcontrol_V << " V" << std::endl;
 }
 
 void ResonantScanner::turnOff()
 {
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSon, 0));
 	Sleep(mDelay_ms);
 	setVoltage_(0);
 	std::cout << "RS successfully turned off" << std::endl;
 }
 
-
-double ResonantScanner::convertUmToVolt_(double amplitude_um) const
+//Read the current control voltage on the RS and convert it into FFOV
+double ResonantScanner::readFFOV_um()
 {
-	return amplitude_um * mVoltPerUm;
+	I16 control_I16;
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getSession(), NiFpga_FPGAvi_IndicatorI16_RScontrolMon_I16, &control_I16));
+
+	const double control_V = FPGAapi::convertI16toVolt(control_I16);
+	const double fullScan_um = control_V / mVoltPerUm; //Distance from turning point to turning point
+
+	return round(fullScan_um * mFillFactor);
 }
+
 
 #pragma endregion "Resonant scanner"
 

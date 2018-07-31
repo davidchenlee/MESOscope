@@ -18,9 +18,9 @@ int main(int argc, char* argv[])
 			//seq_testPockels(fpga);
 			//seq_testLaserComm(fpga);
 			//seq_testFilterwheel();
-			//seq_testRS(fpga);
+			seq_testRS(fpga);
 			//seq_contAcquisitionTest(fpga);
-			seq_testConvert();
+			//seq_testConvertI16toVoltage();
 		}
 		catch (const std::invalid_argument &e)
 		{

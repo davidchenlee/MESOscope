@@ -67,18 +67,18 @@ class ResonantScanner
 	const int mDelay_ms = 10;
 	double mVoltPerUm = 0.00595;
 	double mFullScan_um = 0;										//Full scan = distance between turning points
-	double mVoltage_V = 0;											//Control voltage 0-5V
+	double mControl_V = 0;											//Control voltage 0-5V
 	double mFillFactor;												//Fill factor: how much of an RS swing is covered by the pixels
 
 	void setVoltage_(const double Vcontrol_V);
 	void setFFOV_(const double FFOV_um);
-	double convertUmToVolt_(const double amplitude_um) const;
 public:
 	ResonantScanner(const FPGAapi::Session &fpga);
 	~ResonantScanner();
 	void turnOn_um(const double FFOV_um);
 	void turnOn_V(const double Vcontrol_V);
 	void turnOff();
+	double readFFOV_um();
 };
 
 class Shutter

@@ -471,8 +471,9 @@ void seq_testLaserComm(const FPGAapi::Session &fpga)
 void seq_testRS(const FPGAapi::Session &fpga)
 {
 	ResonantScanner RS(fpga);
+	std::cout << "aaa = " << RS.readFFOV_um() << std::endl;
 	//RS.turnOn_um(150);
-	RS.turnOff();
+	//RS.turnOff();
 }
 
 void seq_testConvert()

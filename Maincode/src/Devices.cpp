@@ -349,60 +349,77 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 
 #pragma region "Resonant scanner"
 ResonantScanner::ResonantScanner(const FPGAapi::Session &fpga): mFpga(fpga)
-{
+{	
+	//Calculate the spatial fill factor
 	const double temporalFillFactor = widthPerFrame_pix * dwell_us / halfPeriodLineclock_us;
-
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
-		mFillFactor = sin(PI / 2 * temporalFillFactor);				//Note that the fill factor doesn't depend on the RS amplitude because its period is fixed
+		mFillFactor = sin(PI / 2 * temporalFillFactor);				//Note that the fill factor doesn't depend on the RS amplitude because the RS period is fixed
 
 	//std::cout << "Fill factor = " << mFillFactor << std::endl;	//For debugging
+
+	//Download the current control voltage from the FPGA and update the scan parameters
+	mControl_V = downloadControl_V();					//Control voltage
+	mFullScan_um = mControl_V / mVoltPerUm;					//Full scan FOV = distance from turning point to turning point
+	mFFOV_um = mFullScan_um * mFillFactor;					//FFOV
+	mSampRes_umPerPix = mFFOV_um / widthPerFrame_pix;		//Spatial sampling resolution
 };
 
 ResonantScanner::~ResonantScanner() {};
 
 //Set the control voltage that determines the scanning amplitude
-void ResonantScanner::setVoltage_(const double Vcontrol_V)
+void ResonantScanner::setVoltage_(const double control_V)
 {
-	if (Vcontrol_V > mVMAX_V)
+	if (control_V < 0 || control_V > mVMAX_V)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage must be in the range 0-" + std::to_string(mVMAX_V) + " V" );
 
-	mControl_V = Vcontrol_V;
-	mFullScan_um = Vcontrol_V / mVoltPerUm;
+	//Update the scan parameters
+	mControl_V = control_V;									//Control voltage
+	mFullScan_um = control_V / mVoltPerUm;					//Full scan FOV
+	mFFOV_um = mFullScan_um * mFillFactor;					//FFOV
+	mSampRes_umPerPix = mFFOV_um / widthPerFrame_pix;		//Spatial sampling resolution
 
+	//Upload the control voltage
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAapi::convertVoltToI16(mControl_V)));
 }
 
 //Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
-void ResonantScanner::setFFOV_(const double FFOV_um)
+void ResonantScanner::setFFOV(const double FFOV_um)
 {
-	mFullScan_um = FFOV_um / mFillFactor;
-	mControl_V = mFullScan_um * mVoltPerUm;
+	//Update the scan parameters
+	mFullScan_um = FFOV_um / mFillFactor;					//Full scan FOV
+	mControl_V = mFullScan_um * mVoltPerUm;					//Control voltage
+	mFFOV_um = FFOV_um;										//FFOV
+	mSampRes_umPerPix = mFFOV_um / widthPerFrame_pix;		//Spatial sampling resolution
+	//std::cout << "mControl_V = " << mControl_V << std::endl; //For debugging
 
-	if (mControl_V > mVMAX_V)
+	if (mControl_V < 0 || mControl_V > mVMAX_V)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX_V/mVoltPerUm) + " um");
 
-	//std::cout << "mControl_V = " << mControl_V << std::endl; //For debugging
+	//Upload the control voltage
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAapi::convertVoltToI16(mControl_V)));
 }
 
+//First set the FFOV, then set RSenable on
 void ResonantScanner::turnOn_um(const double FFOV_um)
 {
-	setFFOV_(FFOV_um);
+	setFFOV(FFOV_um);
 	Sleep(mDelay_ms);
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSon, 1));
 	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um" << std::endl;
 }
 
-void ResonantScanner::turnOn_V(const double Vcontrol_V)
+//First set the control voltage, then set RSenable on
+void ResonantScanner::turnOn_V(const double control_V)
 {
-	setVoltage_(Vcontrol_V);
+	setVoltage_(control_V);
 	Sleep(mDelay_ms);
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSon, 1));
-	std::cout << "RS control voltage successfully set to: " << Vcontrol_V << " V" << std::endl;
+	std::cout << "RS control voltage successfully set to: " << control_V << " V" << std::endl;
 }
 
+//First set RSenable off, then set the control voltage to 0
 void ResonantScanner::turnOff()
 {
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSon, 0));
@@ -411,16 +428,19 @@ void ResonantScanner::turnOff()
 	std::cout << "RS successfully turned off" << std::endl;
 }
 
-//Read the current control voltage on the RS and convert it into FFOV
-double ResonantScanner::readFFOV_um()
+//Download the current control voltage of the RS from the FPGA
+double ResonantScanner::downloadControl_V()
 {
 	I16 control_I16;
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getSession(), NiFpga_FPGAvi_IndicatorI16_RScontrolMon_I16, &control_I16));
 
-	const double control_V = FPGAapi::convertI16toVolt(control_I16);
-	const double fullScan_um = control_V / mVoltPerUm; //Distance from turning point to turning point
+	return FPGAapi::convertI16toVolt(control_I16);
+}
 
-	return round(fullScan_um * mFillFactor);
+//Spatial sampling resolution (um per pixel)
+double ResonantScanner::getSamplingResolution_um()
+{
+	return mSampRes_umPerPix;
 }
 
 
@@ -790,7 +810,7 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)
 	try
 	{
 		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
-		this->downloadColor_();	//Download the current filter position
+		downloadColor_();	//Download the current filter position
 	}
 	catch (const serial::IOException)
 	{
@@ -878,7 +898,7 @@ void Filterwheel::setColor(const Filtercolor color)
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
 														//std::cout << "setColor full RxBuffer: " << RxBuffer << std::endl; //For debugging
 
-			this->downloadColor_();
+			downloadColor_();
 			if (color == mColor)
 				std::cout << "Filterwheel " << FW1 << " successfully set to " + convertToString_(mColor) << std::endl;
 			else
@@ -903,7 +923,7 @@ void Filterwheel::setColor(const int wavelength_nm)
 	else
 		color = BLUE;
 
-	this->setColor(color);
+	setColor(color);
 }
 #pragma endregion "Filterwheel"
 
@@ -913,7 +933,7 @@ Laser::Laser()
 	try
 	{
 		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
-		this->downloadWavelength_();
+		downloadWavelength_();
 	}
 	catch (const serial::IOException)
 	{
@@ -982,7 +1002,7 @@ void Laser::setWavelength(const int wavelength_nm)
 
 			mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
 
-			this->downloadWavelength_();
+			downloadWavelength_();
 			if (mWavelength_nm = wavelength_nm)
 				std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
 			else

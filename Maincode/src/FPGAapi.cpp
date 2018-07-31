@@ -360,7 +360,7 @@ namespace FPGAapi
 	RTsequence::~RTsequence() {}
 
 	//Push all the elements in 'tailQ' into 'headQ'
-	void RTsequence::concatenateQueues(QU32& receivingQueue, QU32& givingQueue) const
+	void RTsequence::concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const
 	{
 		while (!givingQueue.empty())
 		{
@@ -371,7 +371,7 @@ namespace FPGAapi
 
 	void RTsequence::pushQueue(const RTchannel chan, QU32& queue)
 	{
-		concatenateQueues(mVectorOfQueues.at(chan), queue);
+		concatenateQueues_(mVectorOfQueues.at(chan), queue);
 	}
 
 	void RTsequence::clearQueue(const RTchannel chan)

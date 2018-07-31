@@ -8,7 +8,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int runmode = 4;
+	const int runmode = 0;
 	/*
 	0 - Single image
 	1 - Image continuously the same plane
@@ -21,11 +21,11 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.0, 19.814, 18.4055 };	//Initial position
+	double3 position_mm = { 35.0, 19.883 - 0.075, 18.4065 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
-	double zDelta_um = 10 * um;				//Acquire a stack within this interval
+	double zDelta_um = 5 * um;				//Acquire a stack within this interval
 
 	//LASER
 	const int wavelength_nm = 750;
@@ -34,10 +34,14 @@ void seq_main(const FPGAapi::Session &fpga)
 	vision.setWavelength(wavelength_nm);
 
 	//GALVO
-	const double FFOVgalvo_um = 300 * um;				//Full FOV in the slow axis
+	const double FFOVgalvo_um = 200 * um;				//Full FOV in the slow axis
 	const double duration = halfPeriodLineclock_us * heightPerFrame_pix; //= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
+
+	//RS
+	ResonantScanner RS(fpga);
+	RS.setFFOV(150);
 
 	//SAMPLE
 	const std::string filename = "Beads_4um";
@@ -88,29 +92,43 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	//DATALOG
 	Logger datalog("datalog_" + filename);
-	datalog.record("FPGA clock (MHz) = ", tickPerUs);
-	datalog.record("Wavelength (nm) = ", wavelength_nm);
-	datalog.record("Laser power (mW) = ", laserPower_mW);
-	datalog.record("Laser period (us) = ", VISIONpulsePeriod);
-	datalog.record("Resonant scanner period (us) = ", 2 * halfPeriodLineclock_us);
-	datalog.record("Galvo full FOV (um) = ", FFOVgalvo_um);
-	datalog.record("Galvo time step (us) = ", galvoTimeStep);
+	datalog.record("SAMPLE-------------------------------------------------------");
+	datalog.record("Sample = ", filename);
 	datalog.record("Correction collar = ", collar);
-	datalog.record("Dwell time (us) = ", dwell_us);
-	datalog.record("Laser pulses per pixel (max) = ", pulsesPerPixel);
-	datalog.record("Upscale factor = ", upscaleU8);
-	datalog.record("Width (pix) = ", widthPerFrame_pix);
-	datalog.record("Height (pix) = ", heightPerFrame_pix);
+
+	datalog.record("FPGA---------------------------------------------------------");
+	datalog.record("FPGA clock (MHz) = ", tickPerUs);
+
+	datalog.record("LASER--------------------------------------------------------");
+	datalog.record("Laser wavelength (nm) = ", wavelength_nm);
+	datalog.record("Laser power (mW) = ", laserPower_mW);
+	datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod);
+
+	datalog.record("SCAN---------------------------------------------------------");
+	datalog.record("RS FFOV (um) = ", RS.mFFOV_um);
+	datalog.record("RS period (us) = ", 2 * halfPeriodLineclock_us);
+	datalog.record("Pixel dwell time (us) = ", dwell_us);
+	datalog.record("RS fill factor = ", RS.mFillFactor);
+	datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
+	datalog.record("Galvo time step (us) = ", galvoTimeStep);
 
 
+	datalog.record("IMAGE--------------------------------------------------------");
+	datalog.record("Max count per pixel = ", pulsesPerPixel);
+	datalog.record("8-bit upscaling factor = ", upscaleU8);
+	datalog.record("Width (RS) (pix) = ", widthPerFrame_pix);
+	datalog.record("Height (galvo) (pix) = ", heightPerFrame_pix);
+	datalog.record("Resolution X (RS) (um/pix) = ", RS.mSampRes_umPerPix);
+	datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um/heightPerFrame_pix);
+
+	//PRESET THE STAGES
+	Stage stage;
+	stage.moveStage3(position_mm);
+	stage.waitForMovementToStop3();
 
 	//SEQUENCE
 	shutter1.open();
 	Sleep(50);
-
-	Stage stage;
-	stage.moveStage3(position_mm);
-	stage.waitForMovementToStop3();
 
 	for (int ii = 0; ii < nFramesStack; ii++)
 	{
@@ -471,12 +489,12 @@ void seq_testLaserComm(const FPGAapi::Session &fpga)
 void seq_testRS(const FPGAapi::Session &fpga)
 {
 	ResonantScanner RS(fpga);
-	std::cout << "aaa = " << RS.readFFOV_um() << std::endl;
+	std::cout << "aaa = " << RS.downloadControl_V() << std::endl;
 	//RS.turnOn_um(150);
 	//RS.turnOff();
 }
 
-void seq_testConvert()
+void seq_testConvertI16toVolt()
 {
 	std::cout << "volt to I16: " << FPGAapi::convertVoltToI16(1) << std::endl;
 

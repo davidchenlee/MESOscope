@@ -83,7 +83,18 @@ Logger::~Logger()
 	mFileHandle.close();
 };
 
+void Logger::record(const std::string description)
+{
+	mFileHandle << "\n";
+	mFileHandle << description << std::endl;
+}
+
 void Logger::record(const std::string description, const double input)
+{
+	mFileHandle << description << input << std::endl;
+}
+
+void Logger::record(const std::string description, const std::string input)
 {
 	mFileHandle << description << input << std::endl;
 }

@@ -54,7 +54,8 @@ namespace FPGAapi
 
 		const FPGAapi::Session &mFpga;
 		VQU32 mVectorOfQueues;
-		void concatenateQueues(QU32& receivingQueue, QU32& givingQueue) const;
+
+		void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
 	public:
 		RTsequence(const FPGAapi::Session &fpga);
 		RTsequence(const RTsequence&) = delete;				//Disable copy-constructor

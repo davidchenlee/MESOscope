@@ -18,4 +18,4 @@ void seq_testmPMT();
 void seq_testPockels(const FPGAapi::Session &fpga);
 void seq_testLaserComm(const FPGAapi::Session &fpga);
 void seq_testRS(const FPGAapi::Session &fpga);
-void seq_testConvert();
+void seq_testConvertI16toVolt();

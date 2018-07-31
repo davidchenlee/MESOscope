@@ -72,8 +72,8 @@ namespace Parameters
 																				//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 	extern const double pulsesPerPixel = dwell_us / VISIONpulsePeriod;			//Max number of laser pulses per pixel
 	extern const double upscaleU8 = 255/(pulsesPerPixel + 1);					//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
-	extern const int widthPerFrame_pix = 300;									//Width in pixels of a frame. This direction corresponds to the resonant scanner. I call each swing of the RS a "line"
-	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame. This direction corresponds to the galvo. This sets the number of "lines" in the image
+	extern const int widthPerFrame_pix = 300;									//Width in pixels of a frame (RS scam). I call each swing of the RS a "line"
+	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame (galvo scan). This sets the number of "lines" in the image
 	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
 	extern const int nFrames = 1;												//Number of frames to acquire
 	extern const int nPixPerFrame = widthPerFrame_pix * heightPerFrame_pix;		//Number of pixels in each frame

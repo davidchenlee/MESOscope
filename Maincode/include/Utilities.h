@@ -22,5 +22,7 @@ class Logger
 public:
 	Logger(const std::string filename);
 	~Logger();
+	void record(const std::string description);
 	void record(const std::string description, const double input);
+	void record(const std::string description, const std::string input);
 };

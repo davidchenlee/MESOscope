@@ -8,7 +8,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int runmode = 0;
+	const int runmode = 4;
 	/*
 	0 - Single image
 	1 - Image continuously the same plane
@@ -21,7 +21,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.120, 19.808, 18.4085 };	//Initial position
+	double3 position_mm = { 35.120, 19.808, 18.4160 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -188,8 +188,8 @@ void seq_contAcquisition(const FPGAapi::Session &fpga)
 	vision.setWavelength(wavelength_nm);
 
 	//GALVO
-	const double FFOVgalvo_um = 300 * um;					//Full FOV in the slow axis
-	const double duration = halfPeriodLineclock_us * heightPerFrame_pix; //= 62.5us * 400 pixels = 25 ms
+	const double FFOVgalvo_um = 300 * um;									//Full FOV in the slow axis
+	const double duration = halfPeriodLineclock_us * heightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -300,11 +300,10 @@ void seq_contAcquisitionTest(const FPGAapi::Session &fpga)
 
 void seq_testPixelclock(const FPGAapi::Session &fpga)
 {
-	//Create a realtime sequence
-	FPGAapi::RTsequence sequence(fpga);
-	sequence.uploadRT(); //Upload the realtime sequence to the FPGA but don't execute it yet
+	FPGAapi::RTsequence sequence(fpga); 	//Create a realtime sequence
+	sequence.uploadRT();					//Upload the realtime sequence to the FPGA but don't execute it yet
 	Image image(fpga);
-	image.acquire(); //Execute the realtime sequence and acquire the image
+	image.acquire(TRUE);					//Execute the realtime sequence and acquire the image
 
 }
 
@@ -500,4 +499,75 @@ void seq_testConvertI16toVolt()
 	std::cout << "I16 to colt: " << FPGAapi::convertI16toVolt(32767) << std::endl;
 
 	std::cout << "volt to I16 to volt: " << FPGAapi::convertI16toVolt(FPGAapi::convertVoltToI16(0)) << std::endl;
+}
+
+
+//Test the speed for saving a Tiff file
+void seq_saveAsTiffTest()
+{
+
+	//const std::string foldername = "D:\\OwnCloud\\Data\\_output_D\\";
+	const std::string foldername = "Z:\\_output_Z\\";
+	std::string filename = "Untitled";
+
+
+	const int width_pix = 400;
+	const int height_pix = 400 * 200; // 100 um in 0.5 um-steps = 200 planes
+
+	U8 *image = new U8[width_pix * height_pix]();
+
+	//Declare and start a stopwatch
+	double duration;
+	auto t_start = std::chrono::high_resolution_clock::now();
+
+	//This gives some overhead
+	//filename = file_exists(filename);
+
+	TIFF *tiffHandle = TIFFOpen((foldername + filename + ".tif").c_str(), "w");
+
+	if (tiffHandle == nullptr)
+		throw ImageException((std::string)__FUNCTION__ + ": Saving Tiff failed");
+
+	//TAGS
+	TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, width_pix);							//Set the width of the image
+	TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, height_pix);							//Set the height of the image
+	TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);								//Set number of channels per pixel
+	TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);									//Set the size of the channels
+	TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);					//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
+																						//TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);				//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
+	TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);				//Single channel with min as black
+
+	tsize_t bytesPerLine = width_pix;			//Length in memory of one row of pixel in the image.
+	unsigned char *buffer = nullptr;			//Buffer used to store the row of pixel information for writing to file
+
+	//Allocating memory to store pixels of current row
+	if (TIFFScanlineSize(tiffHandle))
+		buffer = (unsigned char *)_TIFFmalloc(bytesPerLine);
+	else
+		buffer = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(tiffHandle));
+
+	//Set the strip size of the file to be size of one row of pixels
+	TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, width_pix));
+
+	//Now writing image to the file one strip at a time. CURRENTLY ONLY ONE FRAME IS SAVED!!!
+	for (int row = 0; row < height_pix; row++)
+	{
+		memcpy(buffer, &image[(height_pix - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
+		if (TIFFWriteScanline(tiffHandle, buffer, row, 0) < 0)
+			break;
+	}
+
+	delete[] image;
+
+	//Close the output file
+	(void)TIFFClose(tiffHandle);
+
+	//Destroy the buffer
+	if (buffer)
+		_TIFFfree(buffer);
+
+	//Stop the stopwatch
+	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
+
 }

@@ -64,8 +64,8 @@ namespace Constants
 //Imaging parameters
 namespace Parameters
 {
-	//extern const std::string foldername = ".\\Output\\";
-	extern const std::string foldername = "Z:\\Output_Z\\";
+	extern const std::string foldername = "D:\\OwnCloud\\Data\\_output_D\\";
+	//extern const std::string foldername = "Z:\\_output_Z\\";
 
 	//IMAGE
 	extern const double dwell_us = 0.1625 * us;									//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340

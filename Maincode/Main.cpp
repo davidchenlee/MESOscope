@@ -21,35 +21,36 @@ int main(int argc, char* argv[])
 			//seq_testRS(fpga);
 			//seq_contAcquisitionTest(fpga);
 			//seq_testConvertI16toVoltage();
+			//seq_saveAsTiffTest();
 		}
 		catch (const std::invalid_argument &e)
 		{
 			std::cout << "An invalid argument has occurred in " << e.what() << std::endl;
-			std::cout << "\nPress any key to continue..." << std::endl;
+			std::cout << "Press any key to continue..." << std::endl;
 			getchar();
 		}
 		catch (const std::overflow_error &e)
 		{
 			std::cout << "An overflow has occurred in " << e.what() << std::endl;
-			std::cout << "\nPress any key to continue..." << std::endl;
+			std::cout << "Press any key to continue..." << std::endl;
 			getchar();
 		}
 		catch (const FPGAapi::FPGAexception &e)
 		{
 			std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
-			std::cout << "\nPress any key to continue..." << std::endl;
+			std::cout << "Press any key to continue..." << std::endl;
 			getchar();
 		}
 		catch (const std::runtime_error &e)
 		{
 			std::cout << "A runtime error has occurred in " << e.what() << std::endl;
-			std::cout << "\nPress any key to continue..." << std::endl;
+			std::cout << "Press any key to continue..." << std::endl;
 			getchar();
 		}
 		catch (...)
 		{
 			std::cout << "An unknown error has occurred" << std::endl;
-			std::cout << "\nPress any key to continue..." << std::endl;
+			std::cout << "Press any key to continue..." << std::endl;
 			getchar();
 		}
 
@@ -60,9 +61,12 @@ int main(int argc, char* argv[])
 	catch (const FPGAapi::FPGAexception &e)
 	{
 		std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
-		std::cout << "\nPress any key to continue..." << std::endl;
+		std::cout << "Press any key to continue..." << std::endl;
 		getchar();
 	}
+	std::cout << "Press any key to continue..." << std::endl;
+	getchar();
+
 	
 	return 0;
 }

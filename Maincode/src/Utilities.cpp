@@ -72,7 +72,6 @@ std::string file_exists(const std::string filename)
 	return filename + suffix;
 }
 
-
 Logger::Logger(const std::string filename)
 {
 	mFileHandle.open(foldername + filename + ".txt");
@@ -98,3 +97,4 @@ void Logger::record(const std::string description, const std::string input)
 {
 	mFileHandle << description << input << std::endl;
 }
+

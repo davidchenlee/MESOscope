@@ -5,11 +5,7 @@
 Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga)
 {
 	mBufArray_A = new U32[nPixAllFrames]();
-
-	mNelemBufArray_B = new int[nBufArrays]();
-	mBufArray_B = new U32*[nBufArrays];
-	for (int i = 0; i < nBufArrays; i++)
-		mBufArray_B[i] = new U32[nPixAllFrames]();
+	mBufArray_B = new U32[nPixAllFrames]();
 
 	mImage = new unsigned char[nPixAllFrames]();
 };
@@ -21,12 +17,6 @@ Image::~Image()
 	stopFIFOOUTpc_();
 
 	delete[] mBufArray_A;
-	delete[] mNelemBufArray_B;
-
-	//clean up the buffer arrays
-	for (int i = 0; i < nBufArrays; ++i) {
-		delete[] mBufArray_B[i];
-	}
 	delete[] mBufArray_B;
 	delete[] mImage;
 	//std::cout << "Image destructor called\n";
@@ -80,8 +70,8 @@ void Image::readFIFOOUTpc_()
 	//double duration;
 	//auto t_start = std::chrono::high_resolution_clock::now();
 
-	U32 *dummy = new U32[0]();
-	U32 *ptr_index = 0;
+	U32 dummy;
+	U32 bufIndex_B = 0;
 
 	while (mNelemReadFIFOOUTa < nPixAllFrames || mNelemReadFIFOOUTb < nPixAllFrames)
 	{
@@ -90,7 +80,7 @@ void Image::readFIFOOUTpc_()
 		//FIFOOUTpc A
 		if (mNelemReadFIFOOUTa < nPixAllFrames)
 		{
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, mTimeout_ms, &mNremainFIFOOUTa));
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArray_A, 0, mTimeout_ms, &mNremainFIFOOUTa));
 			//std::cout << "Number of elements remaining in FIFOOUT A: " << mNremainFIFOOUTa << std::endl;
 
 			if (mNremainFIFOOUTa > 0)
@@ -103,23 +93,19 @@ void Image::readFIFOOUTpc_()
 		//FIFOOUTpc B
 		if (mNelemReadFIFOOUTb < nPixAllFrames)		//Skip if all the data have already been transferred (i.e. mNelemReadFIFOOUTa = nPixAllFrames)
 		{
-			//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data available so far, then mNremainFIFOOUTb = 0 is returned
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, dummy, 0, mTimeout_ms, &mNremainFIFOOUTb));
+			//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, mNremainFIFOOUTb = 0 is returned
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B, 0, mTimeout_ms, &mNremainFIFOOUTb));
 			//std::cout << "Number of elements remaining in FIFOOUT B: " << mNremainFIFOOUTb << std::endl;
 
-			//If there are data available in FIFOOUTpc, retrieve it
+			//If data available in FIFOOUTpc, retrieve it
 			if (mNremainFIFOOUTb > 0)
 			{
-				mNelemReadFIFOOUTb += mNremainFIFOOUTb;							//Keep track of the number of elements read so far
-				mNelemBufArray_B[mCounterBufArray_B] = mNremainFIFOOUTb;		//Keep track of how many elements are in each buffer array												
-
+				//Keep track of the number of elements read so far		
+				mNelemReadFIFOOUTb += mNremainFIFOOUTb;		
+				
 				//Read the elements in FIFOOUTpc
-				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B[mCounterBufArray_B], mNremainFIFOOUTb, mTimeout_ms, &mNremainFIFOOUTb));
-
-				if (mCounterBufArray_B >= nBufArrays)
-					throw ImageException((std::string)__FUNCTION__ + ": Buffer array overflow");
-
-				mCounterBufArray_B++;
+				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B + bufIndex_B, mNremainFIFOOUTb, mTimeout_ms, &dummy));
+				bufIndex_B += mNremainFIFOOUTb;
 			}
 		}
 
@@ -139,12 +125,9 @@ void Image::readFIFOOUTpc_()
 	std::cout << "Total of elements read: " << mNelemReadFIFOOUTa << "\t" << mNelemReadFIFOOUTb << std::endl; //Print out the total number of elements read
 	*/
 
-
 	//If all the expected data is NOT read successfully
 	if (mNelemReadFIFOOUTa != nPixAllFrames || mNelemReadFIFOOUTb != nPixAllFrames)
 		throw ImageException((std::string)__FUNCTION__ + ": Received more or less FIFOOUT elements than expected ");
-
-	delete[] dummy;
 }
 
 
@@ -155,28 +138,17 @@ void Image::unpackBuffer_()
 	//ReadFifo gives chuncks of data. Store each chunck in a separate buffer array. I think I CANNOT just make a long, concatenated 1D array because I have to pass individual arrays to the ReadFifo
 	//When multiplexing later on, each U32 element in bufArray_B must be split in 8 parts of 4-bits each
 
-	const bool debug = 0;
 	double upscaledCount;
-
-	U32 pixIndex = 0;	//Index for the image pixel
-	for (int ii = 0; ii < mCounterBufArray_B; ii++)
+	for (int pixIndex = 0; pixIndex < nPixAllFrames; pixIndex++)
 	{
-		for (int jj = 0; jj < mNelemBufArray_B[ii]; jj++)
-		{
-			upscaledCount = std::floor(upscaleU8 * mBufArray_B[ii][jj]); //Upscale the photoncount from 4-bit to a 8-bit
+		upscaledCount = std::floor(upscaleU8 * mBufArray_B[pixIndex]); //Upscale the photoncount from 4-bit to a 8-bit
 
-			if (upscaledCount > _UI8_MAX)
-				upscaledCount = _UI8_MAX;
-			//throw ImageException((std::string)__FUNCTION__ + ": Upscaled photoncount overflow");
+		//If count overflow
+		if (upscaledCount > _UI8_MAX)
+			upscaledCount = _UI8_MAX;
+		//throw ImageException((std::string)__FUNCTION__ + ": Upscaled photoncount overflow");
 
-			mImage[pixIndex] = (unsigned char)upscaledCount;
-
-			//For debugging. Generate numbers from 1 to nPixAllFrames with +1 increaments
-			if (debug)
-				mImage[pixIndex] = pixIndex + 1;
-
-			pixIndex++;
-		}
+		mImage[pixIndex] = (unsigned char)upscaledCount;
 	}
 }
 
@@ -194,10 +166,11 @@ void Image::correctInterleaved_()
 	{
 		//save the data in an aux array
 		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
-			auxLine[pixIndex] = mImage[lineIndex*widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];	//TODO: use memcpy
-																											//write the data back in reversed order
+			auxLine[pixIndex] = mImage[lineIndex * widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];
+		
+		//write the data back in the reversed order. pixIndex goes from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
 		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
-			mImage[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];								//TODO: use memcpy
+			mImage[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];
 	}
 	delete[] auxLine;
 }

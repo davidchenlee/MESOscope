@@ -23,10 +23,7 @@ class Image
 
 	//FIFOOUTb
 	U32 mNremainFIFOOUTb = 0;						//Elements remaining in FIFOOUTpc B
-	const int nBufArrays = 50;						//Number of buffer arrays to use
-	int mCounterBufArray_B = 0;						//Number of buffer arrays actually used
-	int *mNelemBufArray_B;							//Each elements in this array indicates the number of elements read in each chunch of data
-	U32 **mBufArray_B;								//Each row stores a chunck of data from FIFOOUTpc B. The row size could possibly be < nPixAllFrames
+	U32 *mBufArray_B;								//Each row stores a chunck of data from FIFOOUTpc B. The row size could possibly be < nPixAllFrames
 	int mNelemReadFIFOOUTb = 0; 					//Total number of elements read from FIFOOUTpc B
 
 	void startFIFOOUTpc_() const;

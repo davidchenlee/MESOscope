@@ -8,7 +8,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAapi::Session &fpga)
 {	
-	const int runmode = 4;
+	const int runmode = 0;
 	/*
 	0 - Single image
 	1 - Image continuously the same plane
@@ -21,7 +21,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.120, 19.808, 18.4160 };	//Initial position
+	double3 position_mm = { 35.120, 19.808, 18.4175 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;

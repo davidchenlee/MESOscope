@@ -196,7 +196,7 @@ void Image::correctInterleaved_()
 			auxLine[pixIndex] = mImage[lineIndex*widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];	//TODO: use memcpy
 																											//write the data back in reversed order
 		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
-			mImage[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];		//TODO: use memcpy
+			mImage[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];								//TODO: use memcpy
 	}
 	delete[] auxLine;
 }
@@ -214,15 +214,15 @@ void Image::analyze_() const
 void Image::acquire(const bool saveFlag, const std::string filename, const bool overrideFile)
 {
 	startFIFOOUTpc_();		//Establish the connection between FIFOOUTfpga and FIFOOUTpc
-	mFpga.triggerRT();	//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
+	mFpga.triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
 	if (enableFIFOOUTfpga)
 	{
 		try
 		{
 			readFIFOOUTpc_();		//Read the data in FIFOOUTpc
-			unpackBuffer_();	//Move the chuncks of data to a buffer array
+			unpackBuffer_();		//Move the chuncks of data to a buffer array
 			correctInterleaved_();
-			analyze_();
+			//analyze_();
 			if ( saveFlag )
 				saveAsTiff(filename, overrideFile);
 				//saveAsTxt(filename);

@@ -215,7 +215,7 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 {
 	startFIFOOUTpc_();		//Establish the connection between FIFOOUTfpga and FIFOOUTpc
 	mFpga.triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
-	if (enableFIFOOUTfpga)
+	if (FIFOOUTfpgaEnable)
 	{
 		try
 		{
@@ -307,11 +307,11 @@ void Vibratome::startStop() const
 {
 	const int SleepTime = 20; //in ms. It has to be ~ 12 ms or longer to 
 	
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_VT_start, 1));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_VTstart, 1));
 
 	Sleep(SleepTime);
 
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_VT_start, 0));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_VTstart, 0));
 }
 
 //Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
@@ -325,10 +325,10 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 	switch (channel)
 	{
 	case VibratomeBack:
-		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_back;
+		selectedChannel = NiFpga_FPGAvi_ControlBool_VTback;
 		break;
 	case VibratomeForward:
-		selectedChannel = NiFpga_FPGAvi_ControlBool_VT_forward;
+		selectedChannel = NiFpga_FPGAvi_ControlBool_VTforward;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected vibratome channel unavailable");
@@ -406,7 +406,7 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 {
 	setFFOV(FFOV_um);
 	Sleep(mDelay_ms);
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSon, 1));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
 	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um" << std::endl;
 }
 
@@ -415,14 +415,14 @@ void ResonantScanner::turnOn_V(const double control_V)
 {
 	setVoltage_(control_V);
 	Sleep(mDelay_ms);
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSon, 1));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
 	std::cout << "RS control voltage successfully set to: " << control_V << " V" << std::endl;
 }
 
 //First set RSenable off, then set the control voltage to 0
 void ResonantScanner::turnOff()
 {
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSon, 0));
+	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSenable, 0));
 	Sleep(mDelay_ms);
 	setVoltage_(0);
 	std::cout << "RS successfully turned off" << std::endl;

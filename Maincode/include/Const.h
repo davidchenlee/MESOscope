@@ -35,7 +35,7 @@ namespace Constants
 	extern const LineclockInputSelector lineclockInput;
 	extern const PhotonCounterInputSelector photoncounterInput;
 	extern const PixelclockSelector pixelclockType;
-	extern const bool enableFIFOOUTfpga;
+	extern const bool FIFOOUTfpgaEnable;
 	extern const bool pockels1_enableAutoOff;
 
 	extern const double PI;

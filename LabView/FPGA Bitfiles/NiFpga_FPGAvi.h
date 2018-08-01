@@ -24,7 +24,7 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGAvi_Signature = "63EB3E98921DBFCCB30FB0DDB8EE0F83";
+static const char* const NiFpga_FPGAvi_Signature = "2DD1B4CE6851DF2AFEC2A73BE5B6F480";
 
 typedef enum
 {
@@ -33,18 +33,18 @@ typedef enum
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlBool_EnableFIFOOUT = 0x4E,
    NiFpga_FPGAvi_ControlBool_FIFOINtrigger = 0x76,
+   NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable = 0x4E,
    NiFpga_FPGAvi_ControlBool_FlushTrigger = 0x2E,
    NiFpga_FPGAvi_ControlBool_LinegateTrigger = 0x42,
    NiFpga_FPGAvi_ControlBool_Pockels1_EnableAutoOff = 0x22,
-   NiFpga_FPGAvi_ControlBool_RSon = 0x56,
+   NiFpga_FPGAvi_ControlBool_RSenable = 0x56,
    NiFpga_FPGAvi_ControlBool_ScanDirection = 0x1E,
    NiFpga_FPGAvi_ControlBool_Shutter1 = 0x4A,
    NiFpga_FPGAvi_ControlBool_Shutter2 = 0x46,
-   NiFpga_FPGAvi_ControlBool_VT_back = 0x5E,
-   NiFpga_FPGAvi_ControlBool_VT_forward = 0x62,
-   NiFpga_FPGAvi_ControlBool_VT_start = 0x5A,
+   NiFpga_FPGAvi_ControlBool_VTback = 0x5E,
+   NiFpga_FPGAvi_ControlBool_VTforward = 0x62,
+   NiFpga_FPGAvi_ControlBool_VTstart = 0x5A,
 } NiFpga_FPGAvi_ControlBool;
 
 typedef enum

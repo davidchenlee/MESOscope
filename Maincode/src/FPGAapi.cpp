@@ -273,30 +273,32 @@ namespace FPGAapi
 	void Session::FIFOOUTpcGarbageCollector_() const
 	{
 		const U32 timeout_ms = 100;
-		U32 nRemainFIFOOUT;
+		U32 nRemainFIFOOUT = 0;
 		U32 *garbage = new U32[nPixAllFrames];
 
 		//FIFOOUTpc A
+		//Check if there are elements in FIFOOUTpc
 		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nRemainFIFOOUT));
 		while (nRemainFIFOOUT > 0)
 		{
 			std::cout << "Number of elements remaining in FIFOOUTpc A: " << nRemainFIFOOUT << std::endl;
 			getchar();
-			//Read the elements in FIFOOUTpc
+			//Retrieve the elements in FIFOOUTpc
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
-
+			//Check if there are elements in FIFOOUTpc
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nRemainFIFOOUT));
 		}
 
 		//FIFOOUTpc B
+		//Check if there are elements in FIFOOUTpc
 		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nRemainFIFOOUT));
 		while (nRemainFIFOOUT> 0)
 		{
 			std::cout << "Number of elements remaining in FIFOOUTpc B: " << nRemainFIFOOUT << std::endl;
 			getchar();
-			//Read the elements in FIFOOUTpc
+			//Retrieve the elements in FIFOOUTpc
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
-
+			//Check if there are elements in FIFOOUTpc
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nRemainFIFOOUT));
 		}
 

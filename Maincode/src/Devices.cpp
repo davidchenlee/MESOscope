@@ -86,7 +86,7 @@ void Image::readFIFOOUTpc_()
 			if (mNremainFIFOOUTa > 0)
 			{
 				mNelemReadFIFOOUTa += mNremainFIFOOUTa;
-				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArray_A, mNremainFIFOOUTa, mTimeout_ms, &mNremainFIFOOUTa));
+				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArray_A, mNremainFIFOOUTa, mTimeout_ms, &dummy));
 			}
 		}
 
@@ -153,10 +153,6 @@ void Image::unpackBuffer_()
 }
 
 //The microscope scans bidirectionally. The pixel order is reversed every other line.
-//Later on, write the tiff directly from the buffer arrays. To deal with segmented pointers, use memcpy, memset, memmove or the Tiff versions for such functions
-//memset http://www.cplusplus.com/reference/cstring/memset/
-//memmove http://www.cplusplus.com/reference/cstring/memmove/
-//One idea is to read bufArray_B line by line (1 line = Width_pix x 1) and save it to file using TIFFWriteScanline
 void Image::correctInterleaved_()
 {
 	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //a single line to store the temp data. In principle I could just use half the size, but why bothering...

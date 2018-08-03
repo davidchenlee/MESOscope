@@ -4,7 +4,6 @@
 
 void seq_main(const FPGAapi::Session &fpga);
 void seq_contAcquisition(const FPGAapi::Session &fpga);
-void seq_contAcquisitionTest(const FPGAapi::Session &fpga);
 void seq_testPixelclock(const FPGAapi::Session &fpga);
 void seq_testAODO(const FPGAapi::Session &fpga);
 void seq_testAOramp(const FPGAapi::Session &fpga);

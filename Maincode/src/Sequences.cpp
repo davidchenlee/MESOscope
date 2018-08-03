@@ -145,7 +145,8 @@ void seq_main(const FPGAapi::Session &fpga)
 			//GALVO FOR RT
 			Galvo galvo(sequence, GALVO1);
 			galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-			galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
+			if ( nFrames%2 )
+				galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
 
 			//POCKELS CELL FOR RT
 			PockelsCell pockels(sequence, POCKELS1, wavelength_nm);
@@ -228,73 +229,6 @@ void seq_contAcquisition(const FPGAapi::Session &fpga)
 		image.acquire(TRUE,"Untitled",TRUE); //Execute the RT sequence and acquire the image
 	}
 	shutter1.close();
-}
-
-void seq_contAcquisitionTest(const FPGAapi::Session &fpga)
-{
-	int nFrames = 100;
-	for (int jj = 0; jj < nFrames; jj++)
-	{
-		std::cout << "Iteration: " << jj + 1 << std::endl;
-
-		//CREATE A REAL-TIME SEQUENCE
-		FPGAapi::RTsequence sequence(fpga);
-
-		//Upload the realtime sequence to the FPGA but don't execute it yet
-		sequence.uploadRT();
-
-		//Execute the realtime sequence and acquire the image
-
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_StartFifo(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));		//Establish the connection between FIFOOUTfpga and FIFOOUTpc
-
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(fpga.getSession(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(fpga.getSession(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
-
-
-		U32 nRemainFIFOOUT = 0;						//Elements remaining in FIFOOUTpc
-		U32 *bufArray = new U32[nPixAllFrames];		//Array to read FIFOOUTpc
-		int nElemReadFIFOOUT = 0;
-		int timeoutCounter_iter = 10;
-		const U32 timeout_ms = 100;
-		const int readFifoWaitingTime_ms = 10;
-
-		U32 *dummy = new U32[0];
-
-		while (nElemReadFIFOOUT < nPixAllFrames)
-		{
-			Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time to max transfer bandwidth
-
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, dummy, 0, timeout_ms, &nRemainFIFOOUT));
-			std::cout << "Number of elements remaining in FIFOOUT: " << nRemainFIFOOUT << std::endl;
-
-			if (nRemainFIFOOUT > 0)
-			{
-				nElemReadFIFOOUT += nRemainFIFOOUT;
-				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, bufArray, nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
-				//std::cout << "Number of elements remaining in FIFOOUT: " << nRemainFIFOOUT << std::endl;
-			}
-
-			timeoutCounter_iter--;
-			//Transfer timeout
-			if (timeoutCounter_iter == 0)
-				break;
-		}
-		std::cout << "Total of elements read: " << nElemReadFIFOOUT << std::endl; //Print out the total number of elements read
-		std::cout << std::endl;
-
-		//If all the expected data is NOT read successfully
-		if (nElemReadFIFOOUT != nPixAllFrames)
-			getchar();
-
-		delete[] dummy;
-		delete[] bufArray;
-
-		//Sleep(100);//Simulate the shifting time of the stages
-
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_StopFifo(fpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-
-
-	}//For loop
 }
 
 
@@ -514,7 +448,7 @@ void seq_saveAsTiffTest()
 	const int width_pix = 400;
 	const int height_pix = 400 * 200; // 100 um in 0.5 um-steps = 200 planes
 
-	U8 *image = new U8[width_pix * height_pix]();
+	std::vector<U8> image(width_pix * height_pix);
 
 	//Declare and start a stopwatch
 	double duration;
@@ -556,8 +490,6 @@ void seq_saveAsTiffTest()
 		if (TIFFWriteScanline(tiffHandle, buffer, row, 0) < 0)
 			break;
 	}
-
-	delete[] image;
 
 	//Close the output file
 	(void)TIFFClose(tiffHandle);

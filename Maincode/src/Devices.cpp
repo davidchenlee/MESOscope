@@ -201,6 +201,9 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 
 void Image::saveAsTiff(std::string filename, const bool overrideFile) const
 {
+	const int width_pix = widthPerFrame_pix;
+	const int height_pix = nLinesAllFrames;
+
 	if (!overrideFile)
 		filename = file_exists(filename);
 
@@ -210,15 +213,15 @@ void Image::saveAsTiff(std::string filename, const bool overrideFile) const
 		throw ImageException((std::string)__FUNCTION__ + ": Saving Tiff failed");
 
 	//TAGS
-	TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, widthPerFrame_pix);					//Set the width of the image
-	TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, heightPerFrame_pix);					//Set the height of the image
+	TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, width_pix);					//Set the width of the image
+	TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, height_pix);					//Set the height of the image
 	TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);								//Set number of channels per pixel
 	TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);									//Set the size of the channels
 	TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);					//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
 																						//TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);				//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
 	TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);				//Single channel with min as black
 
-	tsize_t bytesPerLine = widthPerFrame_pix;			//Length in memory of one row of pixel in the image.
+	tsize_t bytesPerLine = width_pix;			//Length in memory of one row of pixel in the image.
 	unsigned char *buffer = nullptr;					//Buffer used to store the row of pixel information for writing to file
 
 	//Allocating memory to store pixels of current row
@@ -228,12 +231,12 @@ void Image::saveAsTiff(std::string filename, const bool overrideFile) const
 		buffer = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(tiffHandle));
 
 	//Set the strip size of the file to be size of one row of pixels
-	TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, widthPerFrame_pix));
+	TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, width_pix));
 
 	//Now writing image to the file one strip at a time. CURRENTLY ONLY ONE FRAME IS SAVED!!!
-	for (int row = 0; row < heightPerFrame_pix; row++)
+	for (int row = 0; row < height_pix; row++)
 	{
-		memcpy(buffer, &mImage[(heightPerFrame_pix - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
+		memcpy(buffer, &mImage[(height_pix - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
 		if (TIFFWriteScanline(tiffHandle, buffer, row, 0) < 0)
 			break;
 	}

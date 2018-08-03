@@ -10,7 +10,7 @@
 class Image
 {
 	const FPGAapi::Session &mFpga;
-	unsigned char *mImage;							//Create a long 1D array containing the image
+	std::vector<unsigned char> mImage;							//Create a long 1D array containing the image
 
 	const int mReadFifoWaitingTime_ms = 5;			//Waiting time between each iteration
 	const U32 mTimeout_ms = 100;					//FIFOOUTpc timeout

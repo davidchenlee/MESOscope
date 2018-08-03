@@ -2,12 +2,12 @@
 
 #pragma region "Image"
 
-Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga), mBufArray_B(nPixAllFrames)
+Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga), mBufArray_B(nPixAllFrames), mImage(nPixAllFrames)
 {
 	mBufArray_A = new U32[nPixAllFrames]();
 	//mBufArray_B = new U32[nPixAllFrames]();
 
-	mImage = new unsigned char[nPixAllFrames]();
+	//mImage = new unsigned char[nPixAllFrames]();
 };
 
 Image::~Image()
@@ -18,8 +18,8 @@ Image::~Image()
 
 	delete[] mBufArray_A;
 	//delete[] mBufArray_B;
-	delete[] mImage;
-	std::cout << "Image destructor called\n";
+	//delete[] mImage;
+	//std::cout << "Image destructor called\n";
 };
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga
@@ -140,23 +140,12 @@ void Image::readFIFOOUTpc_()
 }
 
 
-//The RS scans bidirectionally. The pixel order has to be reversed every other line.
+//The RS scans bidirectionally. The pixel order has to be reversed for the odd lines.
 void Image::correctInterleaved_()
 {
-	U32 *auxLine = new U32[widthPerFrame_pix]; //a single line to store the temp data. In principle I could just use half the size, but why bothering...
-
-	//Reverse the pixel order every other line
+	//Within an odd line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
 	for (int lineIndex = 1; lineIndex < heightPerFrame_pix; lineIndex += 2)
-	{
-		//save the data in an aux array
-		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
-			auxLine[pixIndex] = mBufArray_B[lineIndex * widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];
-
-		//write the data back in the reversed order. pixIndex goes from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
-		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
-			mBufArray_B[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];
-	}
-	delete[] auxLine;
+		std::reverse(mBufArray_B.begin() + lineIndex * widthPerFrame_pix, mBufArray_B.begin() + lineIndex * widthPerFrame_pix + widthPerFrame_pix);
 }
 
 //When multiplexing later on, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
@@ -165,14 +154,14 @@ void Image::demuxBuffer_()
 	double upscaled;
 	for (int pixIndex = 0; pixIndex < nPixAllFrames; pixIndex++)
 	{
-		upscaled = std::floor(upscaleU8 * mBufArray_B[pixIndex]); //Upscale the buffer from 4-bit to a 8-bit
+		upscaled = std::floor(upscaleU8 * mBufArray_B.at(pixIndex)); //Upscale the buffer from 4-bit to a 8-bit
 
 		//If upscaled overflows
 		if (upscaled > _UI8_MAX)
 			upscaled = _UI8_MAX;
 		//throw ImageException((std::string)__FUNCTION__ + ": Upscaled photoncount overflow");
 
-		mImage[pixIndex] = (unsigned char)upscaled;
+		mImage.at(pixIndex) = (unsigned char)upscaled;
 	}
 }
 
@@ -181,7 +170,7 @@ void Image::analyze_() const
 {
 	double totalCount = 0;
 	for (int index = 0; index < widthPerFrame_pix * heightPerFrame_pix; index++)
-		totalCount += mImage[index];
+		totalCount += mImage.at(index);
 
 	//std::cout << "Total count = " << totalCount << std::endl;
 }
@@ -197,14 +186,13 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 		{
 			readFIFOOUTpc_();		//Read the data received in FIFOOUTpc
 			correctInterleaved_();
-			//demuxBuffer_();		//Move the chuncks of data to a buffer array
+			demuxBuffer_();		//Move the chuncks of data to a buffer array
 			//analyze_();
 
 			if (saveFlag)
 			{
-				saveU32vectorToTxt(filename, mBufArray_B);
-				std::cout << "mark\n";
-				//saveAsTiff(filename, overrideFile);
+				//saveU32vectorToTxt(filename, mBufArray_B);
+				saveAsTiff(filename, overrideFile);
 				//saveAsTxt(filename);
 			}
 

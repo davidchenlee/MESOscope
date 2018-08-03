@@ -15,7 +15,7 @@ void printHex(std::vector<uint8_t>  input);
 void printHex(std::string input);
 void printBinary16(int input);
 U16 convertDoubleToFx2p14(double n);
-void saveU32Txt(const std::string filename, const U32* inputArray);
+void saveU32vectorToTxt(const std::string filename, const std::vector<U32> &inputVector);
 
 class Logger
 {

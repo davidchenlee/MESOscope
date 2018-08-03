@@ -2,10 +2,10 @@
 
 #pragma region "Image"
 
-Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga)
+Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga), mBufArray_B(nPixAllFrames)
 {
 	mBufArray_A = new U32[nPixAllFrames]();
-	mBufArray_B = new U32[nPixAllFrames]();
+	//mBufArray_B = new U32[nPixAllFrames]();
 
 	mImage = new unsigned char[nPixAllFrames]();
 };
@@ -17,9 +17,9 @@ Image::~Image()
 	stopFIFOOUTpc_();
 
 	delete[] mBufArray_A;
-	delete[] mBufArray_B;
+	//delete[] mBufArray_B;
 	delete[] mImage;
-	//std::cout << "Image destructor called\n";
+	std::cout << "Image destructor called\n";
 };
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga
@@ -99,7 +99,7 @@ void Image::readFIFOOUTpc_()
 		if (mNelemReadFIFOOUTb < nPixAllFrames)		//Skip if all the data have already been transferred (i.e. mNelemReadFIFOOUTa = nPixAllFrames)
 		{
 			//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, mNelementsToReadFIFOOUTb = 0 is returned
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B, 0, mTimeout_ms, &mNelementsToReadFIFOOUTb));
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &mBufArray_B[0], 0, mTimeout_ms, &mNelementsToReadFIFOOUTb));
 			//std::cout << "Number of elements remaining in FIFOOUT B: " << mNelementsToReadFIFOOUTb << std::endl;
 
 			//If data available in FIFOOUTpc, retrieve it
@@ -113,7 +113,7 @@ void Image::readFIFOOUTpc_()
 					throw std::runtime_error((std::string)__FUNCTION__ + ": mBufArray_B overflow");
 				
 				//Read the elements in FIFOOUTpc
-				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B + bufIndex_B, mNelementsToReadFIFOOUTb, mTimeout_ms, &dummy));
+				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &mBufArray_B[0] + bufIndex_B, mNelementsToReadFIFOOUTb, mTimeout_ms, &dummy));
 				bufIndex_B += mNelementsToReadFIFOOUTb;
 			}
 		}
@@ -139,6 +139,26 @@ void Image::readFIFOOUTpc_()
 		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFOOUT elements than expected ");
 }
 
+
+//The RS scans bidirectionally. The pixel order has to be reversed every other line.
+void Image::correctInterleaved_()
+{
+	U32 *auxLine = new U32[widthPerFrame_pix]; //a single line to store the temp data. In principle I could just use half the size, but why bothering...
+
+	//Reverse the pixel order every other line
+	for (int lineIndex = 1; lineIndex < heightPerFrame_pix; lineIndex += 2)
+	{
+		//save the data in an aux array
+		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
+			auxLine[pixIndex] = mBufArray_B[lineIndex * widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];
+
+		//write the data back in the reversed order. pixIndex goes from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
+		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
+			mBufArray_B[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];
+	}
+	delete[] auxLine;
+}
+
 //When multiplexing later on, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
 void Image::demuxBuffer_()
 {
@@ -156,24 +176,6 @@ void Image::demuxBuffer_()
 	}
 }
 
-//The RS scans bidirectionally. The pixel order has to be reversed every other line.
-void Image::correctInterleaved_()
-{
-	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //a single line to store the temp data. In principle I could just use half the size, but why bothering...
-
-	//Reverse the pixel order every other line
-	for (int lineIndex = 1; lineIndex < heightPerFrame_pix; lineIndex += 2)
-	{
-		//save the data in an aux array
-		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
-			auxLine[pixIndex] = mImage[lineIndex * widthPerFrame_pix + (widthPerFrame_pix - pixIndex - 1)];
-		
-		//write the data back in the reversed order. pixIndex goes from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
-		for (int pixIndex = 0; pixIndex < widthPerFrame_pix; pixIndex++)
-			mImage[lineIndex*widthPerFrame_pix + pixIndex] = auxLine[pixIndex];
-	}
-	delete[] auxLine;
-}
 
 void Image::analyze_() const
 {
@@ -194,14 +196,19 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 		try
 		{
 			readFIFOOUTpc_();		//Read the data received in FIFOOUTpc
-			demuxBuffer_();		//Move the chuncks of data to a buffer array
 			correctInterleaved_();
+			//demuxBuffer_();		//Move the chuncks of data to a buffer array
 			//analyze_();
 
-			if ( saveFlag )
+			if (saveFlag)
+			{
+				saveU32vectorToTxt(filename, mBufArray_B);
+				std::cout << "mark\n";
 				//saveAsTiff(filename, overrideFile);
 				//saveAsTxt(filename);
-				saveU32Txt(filename, mBufArray_B);
+			}
+
+
 		}
 		catch (const ImageException &e) //Notify the exception and continue with the next iteration
 		{

@@ -80,10 +80,9 @@ namespace Parameters
 	extern const double upscaleU8;
 	extern const int widthPerFrame_pix;
 	extern const int heightPerFrame_pix;
-	extern const int nPixPerFrame;
 	extern const int nLinesSkip;
 	extern const int nFrames;
-	extern const int nLinesAllFrames;
+	extern const int heightAllFrames_pix;
 	extern const int nPixAllFrames;
 
 

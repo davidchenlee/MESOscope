@@ -125,7 +125,7 @@ namespace FPGAapi
 	void Session::initialize() const
 	{
 		if (nChan < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 ||
-			linegateTimeout_us < 0 || nFrames < 0 || nLinesAllFrames < 0 || nLinesSkip < 0 || heightPerFrame_pix < 0 || stageTriggerPulse_ms < 0 )
+			linegateTimeout_us < 0 || nFrames < 0 || heightAllFrames_pix < 0 || nLinesSkip < 0 || heightPerFrame_pix < 0 || stageTriggerPulse_ms < 0 )
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more scan parameters have negative values");
 
 		//INPUT SELECTORS
@@ -155,7 +155,7 @@ namespace FPGAapi
 		//IMAGING PARAMETERS
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_Nframes, (U8)nFrames));												//Number of frames to acquire
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession,
-			NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(nLinesAllFrames + nFrames * nLinesSkip - nLinesSkip)));											//Total number of lines in all the frames, including the skipped lines, minus the very last skipped lines)
+			NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(heightAllFrames_pix + nFrames * nLinesSkip - nLinesSkip)));											//Total number of lines in all the frames, including the skipped lines, minus the very last skipped lines)
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)heightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(heightPerFrame_pix + nLinesSkip)));	//Number of lines in a frame including the skipped lines
 
@@ -269,8 +269,10 @@ namespace FPGAapi
 	void Session::FIFOOUTpcGarbageCollector_() const
 	{
 		const U32 timeout_ms = 100;
+		const int bufSize = 10000;
 		U32 nRemainFIFOOUT = 0;
-		std::vector<U32> garbage(nPixAllFrames);
+		U32 nRetrieveFIFOOUT = 0;
+		std::vector<U32> garbage(bufSize);
 
 		//FIFOOUTpc A
 		//Check if there are elements in FIFOOUTpc
@@ -279,9 +281,13 @@ namespace FPGAapi
 		{
 			std::cout << "Number of elements remaining in FIFOOUTpc A: " << nRemainFIFOOUT << std::endl;
 			getchar();
+
+			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
+
 			//Retrieve the elements in FIFOOUTpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
-			//Check if there are elements in FIFOOUTpc
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], nRetrieveFIFOOUT, timeout_ms, &nRemainFIFOOUT));
+
+			//Check if there are elements left in FIFOOUTpc
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
 		}
 
@@ -292,9 +298,13 @@ namespace FPGAapi
 		{
 			std::cout << "Number of elements remaining in FIFOOUTpc B: " << nRemainFIFOOUT << std::endl;
 			getchar();
+
+			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
+
 			//Retrieve the elements in FIFOOUTpc
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
-			//Check if there are elements in FIFOOUTpc
+
+			//Check if there are elements left in FIFOOUTpc
 			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
 		}
 	}

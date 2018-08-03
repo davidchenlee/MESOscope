@@ -178,6 +178,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	shutter1.close();
 }
 
+//For live optimization of the objective's correction collar
 void seq_contAcquisition(const FPGAapi::Session &fpga)
 {
 	int nFrames = 1000;

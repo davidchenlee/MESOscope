@@ -139,7 +139,7 @@ void Image::readFIFOOUTpc_()
 void Image::correctInterleaved_()
 {
 	//Within an odd line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
-	for (int lineIndex = 1; lineIndex < heightPerFrame_pix; lineIndex += 2)
+	for (int lineIndex = 1; lineIndex < heightAllFrames_pix; lineIndex += 2)
 		std::reverse(mBufArray_B.begin() + lineIndex * widthPerFrame_pix, mBufArray_B.begin() + lineIndex * widthPerFrame_pix + widthPerFrame_pix);
 }
 
@@ -202,7 +202,7 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 void Image::saveAsTiff(std::string filename, const bool overrideFile) const
 {
 	const int width_pix = widthPerFrame_pix;
-	const int height_pix = nLinesAllFrames;
+	const int height_pix = heightAllFrames_pix;
 
 	if (!overrideFile)
 		filename = file_exists(filename);

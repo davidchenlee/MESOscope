@@ -10,20 +10,18 @@
 class Image
 {
 	const FPGAapi::Session &mFpga;
-	std::vector<unsigned char> mImage;				//Create a long 1D vector containing the image
 
-	//FIFOOUTa
-	std::vector<U32> mBufArray_A;					//Vector to read FIFOOUTpc A
-
-	//FIFOOUTb
-	std::vector<U32> mBufArray_B;					//Vector to read FIFOOUTpc B
+	std::vector<U32> mBufArrayA;					//Vector to read FIFOOUTpc A
+	std::vector<U32> mBufArrayB;					//Vector to read FIFOOUTpc B
+	std::vector<unsigned char> mImage;				//Demux image
 
 	void startFIFOOUTpc_() const;
 	void configureFIFOOUTpc_(const U32 depth) const;	//Currently I don't use this function
 	void stopFIFOOUTpc_() const;
 	void readFIFOOUTpc_();
+	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, std::vector<U32> &buffer);
 	void correctInterleaved_();
-	void demuxBuffer_();
+	void demux_();
 	void analyze_() const;
 public:
 	Image(const FPGAapi::Session &fpga);

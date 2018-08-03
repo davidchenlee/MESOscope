@@ -2,7 +2,7 @@
 
 #pragma region "Image"
 
-Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga), mBufArray_A(nPixAllFrames), mBufArray_B(nPixAllFrames), mImage(nPixAllFrames)
+Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga), mBufArrayA(nPixAllFrames), mBufArrayB(nPixAllFrames), mImage(nPixAllFrames)
 {
 };
 
@@ -51,70 +51,24 @@ void Image::readFIFOOUTpc_()
 	//Declare and start a stopwatch [2]
 	//double duration;
 	//auto t_start = std::chrono::high_resolution_clock::now();
-
-	U32 dummy;
-	U32 bufIndexA = 0;
-	U32 bufIndexB = 0;
-
+	
 	const int readFifoWaitingTime_ms = 5;			//Waiting time between each iteration
 	const U32 timeout_ms = 100;						//FIFOOUTpc timeout
 	int timeout_iter = 100;							//Timeout the while-loop if FIFOOUT data transfer fails	
 
-	//FIFOOUTa
-	U32 mNelementsToReadFIFOOUTa = 0;				//Elements remaining in FIFOOUTpc A
-	int mNelemReadFIFOOUTa = 0; 					//Total number of elements read FIFOOUTpc A
-	//FIFOOUTb
-	U32 mNelementsToReadFIFOOUTb = 0;				//Elements remaining in FIFOOUTpc B
-	int mNelemReadFIFOOUTb = 0; 					//Total number of elements read from FIFOOUTpc B
+	//FIFOOUT
+	int nElemReadFIFOOUTa = 0; 					//Total number of elements read from FIFOOUTpc A
+	int nElemReadFIFOOUTb = 0; 					//Total number of elements read from FIFOOUTpc B
 
 
-	while (mNelemReadFIFOOUTa < nPixAllFrames || mNelemReadFIFOOUTb < nPixAllFrames)
+	while (nElemReadFIFOOUTa < nPixAllFrames || nElemReadFIFOOUTb < nPixAllFrames)
 	{
 		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
 
-		//FIFOOUTpc A
-		if (mNelemReadFIFOOUTa < nPixAllFrames)
-		{
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &mBufArray_A[0], 0, timeout_ms, &mNelementsToReadFIFOOUTa));
-			//std::cout << "Number of elements remaining in FIFOOUT A: " << mNelementsToReadFIFOOUTa << std::endl;
-
-			if (mNelementsToReadFIFOOUTa > 0)
-			{
-				mNelemReadFIFOOUTa += mNelementsToReadFIFOOUTa;
-
-				//If more data than expected
-				if (mNelemReadFIFOOUTb > nPixAllFrames)
-					throw std::runtime_error((std::string)__FUNCTION__ + ": mBufArray_A overflow");
-
-				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &mBufArray_A[0], mNelementsToReadFIFOOUTa, timeout_ms, &dummy));
-			}
-		}
-
-		//FIFOOUTpc B
-		if (mNelemReadFIFOOUTb < nPixAllFrames)		//Skip if all the data have already been transferred (i.e. mNelemReadFIFOOUTa = nPixAllFrames)
-		{
-			//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, mNelementsToReadFIFOOUTb = 0 is returned
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &mBufArray_B[0], 0, timeout_ms, &mNelementsToReadFIFOOUTb));
-			//std::cout << "Number of elements remaining in FIFOOUT B: " << mNelementsToReadFIFOOUTb << std::endl;
-
-			//If data available in FIFOOUTpc, retrieve it
-			if (mNelementsToReadFIFOOUTb > 0)
-			{
-				//Keep track of the total number of elements
-				mNelemReadFIFOOUTb += mNelementsToReadFIFOOUTb;		
-
-				//If more data than expected
-				if ( mNelemReadFIFOOUTb > nPixAllFrames)
-					throw std::runtime_error((std::string)__FUNCTION__ + ": mBufArray_B overflow");
-				
-				//Read the elements in FIFOOUTpc
-				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &mBufArray_B[0] + bufIndexB, mNelementsToReadFIFOOUTb, timeout_ms, &dummy));
-				bufIndexB += mNelementsToReadFIFOOUTb;
-			}
-		}
+		readChunk_(nElemReadFIFOOUTa, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArrayA);	//FIFOOUTpc A
+		readChunk_(nElemReadFIFOOUTb, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArrayB);	//FIFOOUTpc B
 
 		timeout_iter--;
-
 		//Transfer timeout
 		if (timeout_iter == 0)
 			throw ImageException((std::string)__FUNCTION__ + ": FIFOOUTpc downloading timeout");
@@ -126,12 +80,41 @@ void Image::readFIFOOUTpc_()
 	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
 	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * nPixAllFrames / duration / 1000 << " Mbps" << std::endl; //2 FIFOOUTs of 32 bits each
 	std::cout << "Buffer arrays used: " << (U32)mCounterBufArray_B << std::endl; //Print out how many buffer arrays were actually used
-	std::cout << "Total of elements read: " << mNelemReadFIFOOUTa << "\t" << mNelemReadFIFOOUTb << std::endl; //Print out the total number of elements read
+	std::cout << "Total of elements read: " << nElemReadFIFOOUTa << "\t" << nElemReadFIFOOUTb << std::endl; //Print out the total number of elements read
 	*/
 
 	//If all the expected data is NOT read successfully
-	if (mNelemReadFIFOOUTa < nPixAllFrames || mNelemReadFIFOOUTb < nPixAllFrames)
+	if (nElemReadFIFOOUTa < nPixAllFrames || nElemReadFIFOOUTb < nPixAllFrames)
 		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFOOUT elements than expected ");
+}
+
+//Read a chunk of data in the FIFOpc
+void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, std::vector<U32> &buffer)
+{
+	U32 dummy;
+	U32 nElemToRead = 0;				//Elements remaining in FIFOOUTpc
+	const U32 timeout_ms = 100;			//FIFOOUTpc timeout
+
+	if (nElemRead < nPixAllFrames)		//Skip if all the data have already been transferred
+	{
+		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
+		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), FIFOOUTpc, &buffer[0], 0, timeout_ms, &nElemToRead));
+		//std::cout << "Number of elements remaining in FIFOOUT: " << mNelemToReadFIFOOUTb << std::endl;
+
+		//If data available in FIFOOUTpc, retrieve it
+		if (nElemToRead > 0)
+		{
+			//If more data than expected
+			if ( static_cast<int>(nElemRead + nElemToRead) > nPixAllFrames)
+				throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO buffer overflow");
+
+			//Retrieve the elements in FIFOOUTpc
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), FIFOOUTpc, &buffer[0] + nElemRead, nElemToRead, timeout_ms, &dummy));
+			
+			//Keep track of the total number of elements read
+			nElemRead += nElemToRead;
+		}
+	}
 }
 
 
@@ -140,16 +123,16 @@ void Image::correctInterleaved_()
 {
 	//Within an odd line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
 	for (int lineIndex = 1; lineIndex < heightAllFrames_pix; lineIndex += 2)
-		std::reverse(mBufArray_B.begin() + lineIndex * widthPerFrame_pix, mBufArray_B.begin() + lineIndex * widthPerFrame_pix + widthPerFrame_pix);
+		std::reverse(mBufArrayB.begin() + lineIndex * widthPerFrame_pix, mBufArrayB.begin() + lineIndex * widthPerFrame_pix + widthPerFrame_pix);
 }
 
 //When multiplexing later on, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
-void Image::demuxBuffer_()
+void Image::demux_()
 {
 	double upscaled;
 	for (int pixIndex = 0; pixIndex < nPixAllFrames; pixIndex++)
 	{
-		upscaled = std::floor(upscaleU8 * mBufArray_B.at(pixIndex)); //Upscale the buffer from 4-bit to a 8-bit
+		upscaled = std::floor(upscaleU8 * mBufArrayB.at(pixIndex)); //Upscale the buffer from 4-bit to a 8-bit
 
 		//If upscaled overflows
 		if (upscaled > _UI8_MAX)
@@ -181,7 +164,7 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 		{
 			readFIFOOUTpc_();		//Read the data received in FIFOOUTpc
 			correctInterleaved_();
-			demuxBuffer_();		//Move the chuncks of data to a buffer array
+			demux_();		//Move the chuncks of data to a buffer array
 			//analyze_();
 
 			if (saveFlag)
@@ -257,7 +240,7 @@ void Image::saveAsTxt(const std::string filename) const
 	for (int ii = 0; ii < nPixAllFrames; ii++)
 	{
 		//fileHandle << (int)mImage.at(ii) << std::endl;		//Write each element
-		fileHandle << mBufArray_B.at(ii) << std::endl;		//Write each element
+		fileHandle << mBufArrayB.at(ii) << std::endl;		//Write each element
 	}
 
 	fileHandle.close();									//Close the txt file

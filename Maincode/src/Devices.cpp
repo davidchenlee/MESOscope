@@ -80,32 +80,41 @@ void Image::readFIFOOUTpc_()
 		//FIFOOUTpc A
 		if (mNelemReadFIFOOUTa < nPixAllFrames)
 		{
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArray_A, 0, mTimeout_ms, &mNremainFIFOOUTa));
-			//std::cout << "Number of elements remaining in FIFOOUT A: " << mNremainFIFOOUTa << std::endl;
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArray_A, 0, mTimeout_ms, &mNelementsToReadFIFOOUTa));
+			//std::cout << "Number of elements remaining in FIFOOUT A: " << mNelementsToReadFIFOOUTa << std::endl;
 
-			if (mNremainFIFOOUTa > 0)
+			if (mNelementsToReadFIFOOUTa > 0)
 			{
-				mNelemReadFIFOOUTa += mNremainFIFOOUTa;
-				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArray_A, mNremainFIFOOUTa, mTimeout_ms, &dummy));
+				mNelemReadFIFOOUTa += mNelementsToReadFIFOOUTa;
+
+				//If more data than expected
+				if (mNelemReadFIFOOUTb > nPixAllFrames)
+					throw std::runtime_error((std::string)__FUNCTION__ + ": mBufArray_A overflow");
+
+				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArray_A, mNelementsToReadFIFOOUTa, mTimeout_ms, &dummy));
 			}
 		}
 
 		//FIFOOUTpc B
 		if (mNelemReadFIFOOUTb < nPixAllFrames)		//Skip if all the data have already been transferred (i.e. mNelemReadFIFOOUTa = nPixAllFrames)
 		{
-			//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, mNremainFIFOOUTb = 0 is returned
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B, 0, mTimeout_ms, &mNremainFIFOOUTb));
-			//std::cout << "Number of elements remaining in FIFOOUT B: " << mNremainFIFOOUTb << std::endl;
+			//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, mNelementsToReadFIFOOUTb = 0 is returned
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B, 0, mTimeout_ms, &mNelementsToReadFIFOOUTb));
+			//std::cout << "Number of elements remaining in FIFOOUT B: " << mNelementsToReadFIFOOUTb << std::endl;
 
 			//If data available in FIFOOUTpc, retrieve it
-			if (mNremainFIFOOUTb > 0)
+			if (mNelementsToReadFIFOOUTb > 0)
 			{
-				//Keep track of the number of elements read so far		
-				mNelemReadFIFOOUTb += mNremainFIFOOUTb;		
+				//Keep track of the total number of elements
+				mNelemReadFIFOOUTb += mNelementsToReadFIFOOUTb;		
+
+				//If more data than expected
+				if ( mNelemReadFIFOOUTb > nPixAllFrames)
+					throw std::runtime_error((std::string)__FUNCTION__ + ": mBufArray_B overflow");
 				
 				//Read the elements in FIFOOUTpc
-				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B + bufIndex_B, mNremainFIFOOUTb, mTimeout_ms, &dummy));
-				bufIndex_B += mNremainFIFOOUTb;
+				FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArray_B + bufIndex_B, mNelementsToReadFIFOOUTb, mTimeout_ms, &dummy));
+				bufIndex_B += mNelementsToReadFIFOOUTb;
 			}
 		}
 
@@ -126,33 +135,28 @@ void Image::readFIFOOUTpc_()
 	*/
 
 	//If all the expected data is NOT read successfully
-	if (mNelemReadFIFOOUTa != nPixAllFrames || mNelemReadFIFOOUTb != nPixAllFrames)
-		throw ImageException((std::string)__FUNCTION__ + ": Received more or less FIFOOUT elements than expected ");
+	if (mNelemReadFIFOOUTa < nPixAllFrames || mNelemReadFIFOOUTb < nPixAllFrames)
+		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFOOUT elements than expected ");
 }
 
-
-
-//Returns a single 1D array with the chucks of data stored in the buffer arrays
-void Image::unpackBuffer_()
+//When multiplexing later on, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
+void Image::demuxBuffer_()
 {
-	//ReadFifo gives chuncks of data. Store each chunck in a separate buffer array. I think I CANNOT just make a long, concatenated 1D array because I have to pass individual arrays to the ReadFifo
-	//When multiplexing later on, each U32 element in bufArray_B must be split in 8 parts of 4-bits each
-
-	double upscaledCount;
+	double upscaled;
 	for (int pixIndex = 0; pixIndex < nPixAllFrames; pixIndex++)
 	{
-		upscaledCount = std::floor(upscaleU8 * mBufArray_B[pixIndex]); //Upscale the photoncount from 4-bit to a 8-bit
+		upscaled = std::floor(upscaleU8 * mBufArray_B[pixIndex]); //Upscale the buffer from 4-bit to a 8-bit
 
-		//If count overflow
-		if (upscaledCount > _UI8_MAX)
-			upscaledCount = _UI8_MAX;
+		//If upscaled overflows
+		if (upscaled > _UI8_MAX)
+			upscaled = _UI8_MAX;
 		//throw ImageException((std::string)__FUNCTION__ + ": Upscaled photoncount overflow");
 
-		mImage[pixIndex] = (unsigned char)upscaledCount;
+		mImage[pixIndex] = (unsigned char)upscaled;
 	}
 }
 
-//The microscope scans bidirectionally. The pixel order is reversed every other line.
+//The RS scans bidirectionally. The pixel order has to be reversed every other line.
 void Image::correctInterleaved_()
 {
 	unsigned char *auxLine = new unsigned char[widthPerFrame_pix]; //a single line to store the temp data. In principle I could just use half the size, but why bothering...
@@ -189,24 +193,22 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 	{
 		try
 		{
-			readFIFOOUTpc_();		//Read the data in FIFOOUTpc
-			unpackBuffer_();		//Move the chuncks of data to a buffer array
+			readFIFOOUTpc_();		//Read the data received in FIFOOUTpc
+			demuxBuffer_();		//Move the chuncks of data to a buffer array
 			correctInterleaved_();
 			//analyze_();
 
 			if ( saveFlag )
-				saveAsTiff(filename, overrideFile);
+				//saveAsTiff(filename, overrideFile);
 				//saveAsTxt(filename);
+				saveU32Txt(filename, mBufArray_B);
 		}
 		catch (const ImageException &e) //Notify the exception and continue with the next iteration
 		{
 			std::cout << "An ImageException has occurred in: " << e.what() << std::endl;
 		}
 	}
-
 }
-
-
 
 void Image::saveAsTiff(std::string filename, const bool overrideFile) const
 {

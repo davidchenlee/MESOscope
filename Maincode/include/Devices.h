@@ -17,12 +17,12 @@ class Image
 	int mTimeoutCounter_iter = 100;					//Timeout the while-loop if FIFOOUT data transfer fails	
 
 	//FIFOOUTa
-	U32 mNremainFIFOOUTa = 0;						//Elements remaining in FIFOOUTpc A
+	U32 mNelementsToReadFIFOOUTa = 0;						//Elements remaining in FIFOOUTpc A
 	U32 *mBufArray_A;								//Array to read FIFOOUTpc A
 	int mNelemReadFIFOOUTa = 0; 					//Total number of elements read FIFOOUTpc A
 
 	//FIFOOUTb
-	U32 mNremainFIFOOUTb = 0;						//Elements remaining in FIFOOUTpc B
+	U32 mNelementsToReadFIFOOUTb = 0;						//Elements remaining in FIFOOUTpc B
 	U32 *mBufArray_B;								//Each row stores a chunck of data from FIFOOUTpc B. The row size could possibly be < nPixAllFrames
 	int mNelemReadFIFOOUTb = 0; 					//Total number of elements read from FIFOOUTpc B
 
@@ -31,7 +31,7 @@ class Image
 	void stopFIFOOUTpc_() const;
 	void readRemainingFIFOOUTpc_() const;				//Currently I don't use this function
 	void readFIFOOUTpc_();
-	void unpackBuffer_();
+	void demuxBuffer_();
 	void correctInterleaved_();
 	void analyze_() const;
 public:

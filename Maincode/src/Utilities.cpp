@@ -72,6 +72,19 @@ std::string file_exists(const std::string filename)
 	return filename + suffix;
 }
 
+//Save a U32 array in a text file
+void saveU32Txt(const std::string filename, const U32* inputArray)
+{
+	std::ofstream fileHandle;								//Create output file
+	fileHandle.open(foldername + filename + ".txt");		//Open the file
+
+	for (int ii = 0; ii < nPixAllFrames; ii++)
+		fileHandle << inputArray[ii] << std::endl;		//Write each element
+
+	fileHandle.close();										//Close the txt file
+}
+
+
 Logger::Logger(const std::string filename)
 {
 	mFileHandle.open(foldername + filename + ".txt");

@@ -10,26 +10,17 @@
 class Image
 {
 	const FPGAapi::Session &mFpga;
-	std::vector<unsigned char> mImage;							//Create a long 1D array containing the image
-
-	const int mReadFifoWaitingTime_ms = 5;			//Waiting time between each iteration
-	const U32 mTimeout_ms = 100;					//FIFOOUTpc timeout
-	int mTimeoutCounter_iter = 100;					//Timeout the while-loop if FIFOOUT data transfer fails	
+	std::vector<unsigned char> mImage;				//Create a long 1D vector containing the image
 
 	//FIFOOUTa
-	U32 mNelementsToReadFIFOOUTa = 0;				//Elements remaining in FIFOOUTpc A
-	U32 *mBufArray_A;								//Array to read FIFOOUTpc A
-	int mNelemReadFIFOOUTa = 0; 					//Total number of elements read FIFOOUTpc A
+	std::vector<U32> mBufArray_A;					//Vector to read FIFOOUTpc A
 
 	//FIFOOUTb
-	U32 mNelementsToReadFIFOOUTb = 0;				//Elements remaining in FIFOOUTpc B
-	std::vector<U32> mBufArray_B;	//Array to read FIFOOUTpc B
-	int mNelemReadFIFOOUTb = 0; 					//Total number of elements read from FIFOOUTpc B
+	std::vector<U32> mBufArray_B;					//Vector to read FIFOOUTpc B
 
 	void startFIFOOUTpc_() const;
 	void configureFIFOOUTpc_(const U32 depth) const;	//Currently I don't use this function
 	void stopFIFOOUTpc_() const;
-	void readRemainingFIFOOUTpc_() const;				//Currently I don't use this function
 	void readFIFOOUTpc_();
 	void correctInterleaved_();
 	void demuxBuffer_();

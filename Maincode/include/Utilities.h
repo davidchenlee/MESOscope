@@ -6,6 +6,7 @@
 #include <Const.h>
 #include <experimental/filesystem>	//standard method in C++14 but not C++11
 #include <bitset>					//For  std::bitset
+#include <tiffio.h>					//Tiff files
 using namespace Parameters;
 
 std::string file_exists(const std::string filename);
@@ -25,4 +26,20 @@ public:
 	void record(const std::string description);
 	void record(const std::string description, const double input);
 	void record(const std::string description, const std::string input);
+};
+
+
+class Tiffer
+{
+	std::vector<unsigned char> mImage;
+	int mWidth_pix;
+	int mHeight_pix;
+	int mStripSize_pix;
+	int mBytesPerLine;
+public:
+	Tiffer(std::string filename);
+	~Tiffer();
+	void saveToTiff(std::string filename, const int nPages);
+	void verticalFlip(const int page);
+	void average();
 };

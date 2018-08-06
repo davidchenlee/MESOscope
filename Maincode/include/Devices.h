@@ -1,7 +1,6 @@
 #pragma once
 #include <fstream>					//file management
 #include <ctime>					//Clock()
-#include <tiffio.h>					//Tiff files
 #include <algorithm>				//std::max and std::min
 #include "FPGAapi.h"
 #include "PI_GCS2_DLL.h"
@@ -118,13 +117,14 @@ class Galvo
 	const double voltPerUm = 0.02417210 * V / um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 
 	double convert_umToVolt_(const double position_um) const;
-	void pushVoltageSinglet_(const double timeStep, const double AO_V) const;
+
 public:
 	Galvo(FPGAapi::RTsequence &sequence, const RTchannel galvoChannel);
 	~Galvo();
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi_V, const double Vf_V) const;
 	void positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const;
 	void voltageToZero() const;
+	void pushVoltageSinglet_(const double timeStep, const double AO_V) const;
 };
 
 class mPMT

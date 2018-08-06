@@ -19,3 +19,5 @@ void seq_testLaserComm(const FPGAapi::Session &fpga);
 void seq_testRS(const FPGAapi::Session &fpga);
 void seq_testConvertI16toVolt();
 void seq_saveAsTiffTest();
+void seq_testGalvoSync(const FPGAapi::Session &fpga);
+void seq_testTiff();

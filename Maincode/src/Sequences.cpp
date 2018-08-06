@@ -10,9 +10,9 @@ void seq_main(const FPGAapi::Session &fpga)
 {	
 	const int runmode = 0;
 	/*
-	0 - Single image
-	1 - Image continuously the same plane
-	2 - Image many times the same plane for subsequent averaging
+	0 - Single shot
+	1 - Continuous: image the same plane many times
+	2 - Average: Image many times the same plane for averaging
 	3 - Stack volume from the initial z position
 	4 - Stack volume around the initial z position
 	*/
@@ -21,7 +21,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.120, 19.808, 18.4285 };	//Initial position
+	double3 position_mm = { 35.120, 19.808, 18.451 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -35,7 +35,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	//GALVO
 	const double FFOVgalvo_um = 200 * um;									//Full FOV in the slow axis
-	const double duration = halfPeriodLineclock_us * heightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+	const double duration = 62.5 * us * heightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -437,7 +437,7 @@ void seq_testConvertI16toVolt()
 }
 
 
-//Test the speed for saving a Tiff file
+//Test the speed of saving a Tiff file
 void seq_saveAsTiffTest()
 {
 
@@ -503,4 +503,40 @@ void seq_saveAsTiffTest()
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
 
+}
+
+void seq_testGalvoSync(const FPGAapi::Session &fpga)
+{
+
+	//GALVO
+	const double FFOVgalvo_um = 200 * um;									//Full FOV in the slow axis
+	const double duration = halfPeriodLineclock_us * heightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+	const double galvoTimeStep = 8 * us;
+	const double posMax_um = FFOVgalvo_um / 2;
+
+	//CREATE A REAL-TIME SEQUENCE
+	FPGAapi::RTsequence sequence(fpga);
+
+	//GALVO FOR RT
+	Galvo galvo(sequence, GALVO1);
+
+	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
+	galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//Linear ramp for the galvo
+	//galvo.pushVoltageSinglet_(2 * us, 1);											//Mark the end of the galvo ramp
+																						
+	sequence.uploadRT();//Upload the realtime sequence to the FPGA but don't execute it yet
+
+	//Execute the realtime sequence and acquire the image
+	Image image(fpga);
+	image.acquire(); //Execute the RT sequence and acquire the image
+}
+
+void seq_testTiff()
+{
+	std::string inputFilename = "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4510";
+	std::string outputFilename = "test";
+
+	Tiffer image(inputFilename);
+	image.verticalFlip(1);
+	image.saveToTiff(outputFilename, 2);
 }

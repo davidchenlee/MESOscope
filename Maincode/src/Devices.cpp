@@ -1099,7 +1099,7 @@ void Stage::waitForMovementToStop(const Axis axis) const
 
 void Stage::waitForMovementToStop3() const
 {
-	std::cout << "Updating the stage position ";
+	std::cout << "Updating the stage position: ";
 
 	BOOL isMoving_x, isMoving_y, isMoving_z;
 	do {

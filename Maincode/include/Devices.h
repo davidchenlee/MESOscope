@@ -27,8 +27,8 @@ public:
 	Image(const FPGAapi::Session &fpga);
 	~Image();
 	void acquire(const bool saveFlag = FALSE, const std::string filename = "Untitled", const bool overrideFile = FALSE);
-	void saveAsTiff(std::string filename, const bool overrideFile) const;
-	void saveAsTxt(const std::string fileName) const;
+	void saveToTiff(std::string filename, const bool overrideFile) const;
+	void saveToTxt(const std::string fileName) const;
 };
 
 class Vibratome

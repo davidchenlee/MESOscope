@@ -33,6 +33,7 @@ void printBinary16(int input)
 	std::cout << std::bitset<16>(input) << std::endl;
 }
 
+//Convert a double to a fixed 2p14
 U16 convertDoubleToFx2p14(double n)
 {
 	const int FIXED_BIT = 14; //Number of decimal digits. It MUST match the LV implementation: currently fx2.14 (U16 is split into 2 integer digits + 14 decimal digits)
@@ -53,6 +54,7 @@ U16 convertDoubleToFx2p14(double n)
 	return int_part + frac_part;
 }
 
+//Convert a double to a string with decimal places
 std::string toString(const double number, const int nDecimalPlaces)
 {
 	std::ostringstream str;
@@ -97,4 +99,3 @@ void Logger::record(const std::string description, const std::string input)
 {
 	mFileHandle << description << input << std::endl;
 }
-

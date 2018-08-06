@@ -61,8 +61,6 @@ namespace Constants
 	extern const int FIFOINtimeout_tick;
 	extern const size_t FIFOINmax;
 
-
-
 	extern const int stageTriggerPulse_ms;
 
 	extern const int nPulses;
@@ -74,16 +72,15 @@ namespace Parameters
 	using namespace Constants;
 
 	extern const std::string foldername;
-
 	extern const double dwell_us;
 	extern const double pulsesPerPixel;
 	extern const double upscaleU8;
 	extern const int widthPerFrame_pix;
 	extern const int heightPerFrame_pix;
 	extern const int nLinesSkip;
-	extern const int nFrames;
-	extern const int heightAllFrames_pix;
-	extern const int nPixAllFrames;
+//	extern const int nFrames;
+//	extern const int heightAllFrames_pix;
+//	extern const int nPixAllFrames;
 
 
 }

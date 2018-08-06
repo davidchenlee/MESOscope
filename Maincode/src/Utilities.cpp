@@ -152,7 +152,7 @@ Tiffer::~Tiffer()
 
 }
 
-
+//Split the image into nPages
 void Tiffer::saveToTiff(std::string filename, const int nPages)
 {
 	TIFF *tiffHandle = TIFFOpen((foldername + filename + ".tif").c_str(), "w");
@@ -204,7 +204,7 @@ void Tiffer::saveToTiff(std::string filename, const int nPages)
 	std::cout << "File successfully saved" << std::endl;
 }
 
-//Flip a particular page = 0, 1, 2, ...
+//Vertically flip a particular page = 0, 1, 2, ...
 void Tiffer::verticalFlip(const int page)
 {
 	if (mBytesPerLine == NULL)

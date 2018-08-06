@@ -6,8 +6,9 @@ There are basically 2 imaging modes :
 2. Continuous: A single long RT sequence contains all the frames. Such sequence is loaded onto the fpga and run once. A stream of images is acquired. The z stage moves continuously
 */
 
+
 void seq_main(const FPGAapi::Session &fpga)
-{	
+{
 	const int runmode = 0;
 	/*
 	0 - Single shot
@@ -145,7 +146,7 @@ void seq_main(const FPGAapi::Session &fpga)
 			//GALVO FOR RT
 			Galvo galvo(sequence, GALVO1);
 			galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-			if ( nFrames%2 )
+			if (sequence.getNframes() % 2 )
 				galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
 
 			//POCKELS CELL FOR RT

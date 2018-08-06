@@ -2,7 +2,7 @@
 
 #pragma region "Image"
 
-Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga), mBufArrayA(nPixAllFrames), mBufArrayB(nPixAllFrames), mImage(nPixAllFrames)
+Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga), mBufArrayA(mFpga.mNpixAllFrames), mBufArrayB(mFpga.mNpixAllFrames), mImage(mFpga.mNpixAllFrames)
 {
 };
 
@@ -61,7 +61,7 @@ void Image::readFIFOOUTpc_()
 	int nElemReadFIFOOUTb = 0; 					//Total number of elements read from FIFOOUTpc B
 
 
-	while (nElemReadFIFOOUTa < nPixAllFrames || nElemReadFIFOOUTb < nPixAllFrames)
+	while (nElemReadFIFOOUTa < mFpga.mNpixAllFrames || nElemReadFIFOOUTb < mFpga.mNpixAllFrames)
 	{
 		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
 
@@ -84,7 +84,7 @@ void Image::readFIFOOUTpc_()
 	*/
 
 	//If all the expected data is NOT read successfully
-	if (nElemReadFIFOOUTa < nPixAllFrames || nElemReadFIFOOUTb < nPixAllFrames)
+	if (nElemReadFIFOOUTa < mFpga.mNpixAllFrames || nElemReadFIFOOUTb < mFpga.mNpixAllFrames)
 		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFOOUT elements than expected ");
 }
 
@@ -95,7 +95,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	U32 nElemToRead = 0;				//Elements remaining in FIFOOUTpc
 	const U32 timeout_ms = 100;			//FIFOOUTpc timeout
 
-	if (nElemRead < nPixAllFrames)		//Skip if all the data have already been transferred
+	if (nElemRead < mFpga.mNpixAllFrames)		//Skip if all the data have already been transferred
 	{
 		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
 		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), FIFOOUTpc, &buffer[0], 0, timeout_ms, &nElemToRead));
@@ -105,7 +105,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 		if (nElemToRead > 0)
 		{
 			//If more data than expected
-			if ( static_cast<int>(nElemRead + nElemToRead) > nPixAllFrames)
+			if ( static_cast<int>(nElemRead + nElemToRead) > mFpga.mNpixAllFrames)
 				throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO buffer overflow");
 
 			//Retrieve the elements in FIFOOUTpc
@@ -122,7 +122,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 void Image::correctInterleaved_()
 {
 	//Within an odd line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
-	for (int lineIndex = 1; lineIndex < heightAllFrames_pix; lineIndex += 2)
+	for (int lineIndex = 1; lineIndex < mFpga.mHeightAllFrames_pix; lineIndex += 2)
 		std::reverse(mBufArrayB.begin() + lineIndex * widthPerFrame_pix, mBufArrayB.begin() + lineIndex * widthPerFrame_pix + widthPerFrame_pix);
 }
 
@@ -130,7 +130,7 @@ void Image::correctInterleaved_()
 void Image::demux_()
 {
 	double upscaled;
-	for (int pixIndex = 0; pixIndex < nPixAllFrames; pixIndex++)
+	for (int pixIndex = 0; pixIndex < mFpga.mNpixAllFrames; pixIndex++)
 	{
 		upscaled = std::floor(upscaleU8 * mBufArrayB.at(pixIndex)); //Upscale the buffer from 4-bit to a 8-bit
 
@@ -164,7 +164,7 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 		{
 			readFIFOOUTpc_();		//Read the data received in FIFOOUTpc
 			correctInterleaved_();
-			demux_();		//Move the chuncks of data to a buffer array
+			demux_();				//Move the chuncks of data to the buffer array
 			//analyze_();
 
 			if (saveFlag)
@@ -185,7 +185,7 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 void Image::saveToTiff(std::string filename, const bool overrideFile) const
 {
 	const int width_pix = widthPerFrame_pix;
-	const int height_pix = heightAllFrames_pix;
+	const int height_pix = mFpga.mHeightAllFrames_pix;
 
 	if (!overrideFile)
 		filename = file_exists(filename);
@@ -237,7 +237,7 @@ void Image::saveToTxt(const std::string filename) const
 	std::ofstream fileHandle;							//Create output file
 	fileHandle.open(foldername + filename + ".txt");	//Open the file
 
-	for (int ii = 0; ii < nPixAllFrames; ii++)
+	for (int ii = 0; ii < mFpga.mNpixAllFrames; ii++)
 	{
 		//fileHandle << (int)mImage.at(ii) << std::endl;		//Write each element
 		fileHandle << mBufArrayB.at(ii) << std::endl;		//Write each element
@@ -452,7 +452,7 @@ PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsC
 	}
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT as 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
-	for (int ii = 0; ii < nFrames; ii++)
+	for (int ii = 0; ii < mSequence.getNframes(); ii++)
 		mSequence.pushAnalogSingletFx2p14(mScalingChannel, 1.0);
 }
 
@@ -505,13 +505,13 @@ void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor must be in the range 0-4");
 	
-	if (nFrames < 2)
+	if (mSequence.getNframes() < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
 	mSequence.clearQueue(mScalingChannel);	//Delete the default scaling factors of 1.0s created in the PockelsCell constructor
 
-	for (int ii = 0; ii < nFrames; ii++)
-		mSequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (nFrames-1) * ii);
+	for (int ii = 0; ii < mSequence.getNframes(); ii++)
+		mSequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (mSequence.getNframes() -1) * ii);
 }
 
 

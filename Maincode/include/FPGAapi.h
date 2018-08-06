@@ -22,6 +22,7 @@ namespace FPGAapi
 	U32 packPixelclockSinglet(const double timeStep, const bool DO);
 	void checkStatus(char functionName[], NiFpga_Status status);
 
+	//Establish a connection with the FPGA
 	class Session
 	{
 		NiFpga_Session mSession;
@@ -29,18 +30,28 @@ namespace FPGAapi
 		void FIFOOUTpcGarbageCollector_() const;
 		void flushBRAMs_() const;
 	public:
+		int mNframes = 1;
+		int mHeightAllFrames_pix = heightPerFrame_pix * mNframes;
+		int mNpixAllFrames = widthPerFrame_pix * mHeightAllFrames_pix;
+
 		Session();
 		~Session();
 		void initialize() const;
 		void writeFIFOINpc(const VQU32 &vectorqueues) const;
 		void triggerRT() const;
-
 		void close(const bool reset) const;
 		NiFpga_Session getSession() const;
 	};
 
+	//Create a realtime sequence and pixelclock
 	class RTsequence
 	{
+		const FPGAapi::Session &mFpga;
+		VQU32 mVectorOfQueues;
+
+		void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
+
+		//Private subclass
 		class Pixelclock
 		{
 			QU32 mPixelclockQ;					//Queue containing the pixel-clock sequence
@@ -52,10 +63,6 @@ namespace FPGAapi
 			QU32 readPixelclock() const;
 		};
 
-		const FPGAapi::Session &mFpga;
-		VQU32 mVectorOfQueues;
-
-		void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
 	public:
 		RTsequence(const FPGAapi::Session &fpga);
 		RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
@@ -69,6 +76,7 @@ namespace FPGAapi
 		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V);
 		void uploadRT() const;
 		void triggerRT() const;
+		int getNframes() const;
 	};
 
 	class FPGAexception : public std::runtime_error

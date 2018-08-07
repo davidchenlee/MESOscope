@@ -68,14 +68,4 @@ namespace Constants
 
 	extern const int nPulses;
 	extern const U8 pulseArray[];
-
-	extern double mDwell_us;									//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340. Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
-	extern double mPulsesPerPixel;			//Max number of laser pulses per pixel
-	extern double mUpscaleU8;				//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
-	extern int mWidthPerFrame_pix;									//Width in pixels of a frame (RS axis). I call each swing of the RS a "line"
-	extern int mHeightPerFrame_pix;									//Height in pixels of a frame (galvo axis). This sets the number of "lines" in the image
-	extern int mNlinesSkip;											//Number of lines to skip beetween frames to reduce the acquisition bandwidt
-	extern int mNframes;												//Number of frames to acquire
-	extern int mHeightAllFrames_pix;		//Total number of lines in all the frames without including the skipped lines
-	extern int mNpixAllFrames;	//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 }

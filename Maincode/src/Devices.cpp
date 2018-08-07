@@ -2,7 +2,7 @@
 
 #pragma region "Image"
 
-Image::Image(FPGAns::RTsequence &RTsequence) : mRTsequence(RTsequence), mBufArrayA(mNpixAllFrames), mBufArrayB(mNpixAllFrames), mImage(mNpixAllFrames)
+Image::Image(FPGAns::RTsequence &RTsequence) : mRTsequence(RTsequence), mBufArrayA(mRTsequence.mNpixAllFrames), mBufArrayB(mRTsequence.mNpixAllFrames), mImage(mRTsequence.mNpixAllFrames)
 {
 }
 
@@ -61,7 +61,7 @@ void Image::readFIFOOUTpc_()
 	int nElemReadFIFOOUTb = 0; 					//Total number of elements read from FIFOOUTpc B
 
 
-	while (nElemReadFIFOOUTa < mNpixAllFrames || nElemReadFIFOOUTb < mNpixAllFrames)
+	while (nElemReadFIFOOUTa < mRTsequence.mNpixAllFrames || nElemReadFIFOOUTb < mRTsequence.mNpixAllFrames)
 	{
 		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
 
@@ -84,7 +84,7 @@ void Image::readFIFOOUTpc_()
 	*/
 
 	//If all the expected data is NOT read successfully
-	if (nElemReadFIFOOUTa < mNpixAllFrames || nElemReadFIFOOUTb < mNpixAllFrames)
+	if (nElemReadFIFOOUTa < mRTsequence.mNpixAllFrames || nElemReadFIFOOUTb < mRTsequence.mNpixAllFrames)
 		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFOOUT elements than expected ");
 }
 
@@ -95,7 +95,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	U32 nElemToRead = 0;				//Elements remaining in FIFOOUTpc
 	const U32 timeout_ms = 100;			//FIFOOUTpc timeout
 
-	if (nElemRead < mNpixAllFrames)		//Skip if all the data have already been transferred
+	if (nElemRead < mRTsequence.mNpixAllFrames)		//Skip if all the data have already been transferred
 	{
 		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), FIFOOUTpc, &buffer[0], 0, timeout_ms, &nElemToRead));
@@ -105,7 +105,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 		if (nElemToRead > 0)
 		{
 			//If more data than expected
-			if ( static_cast<int>(nElemRead + nElemToRead) > mNpixAllFrames)
+			if ( static_cast<int>(nElemRead + nElemToRead) > mRTsequence.mNpixAllFrames)
 				throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO buffer overflow");
 
 			//Retrieve the elements in FIFOOUTpc
@@ -122,17 +122,17 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 void Image::correctInterleaved_()
 {
 	//Within an odd line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
-	for (int lineIndex = 1; lineIndex < mHeightAllFrames_pix; lineIndex += 2)
-		std::reverse(mBufArrayB.begin() + lineIndex * mWidthPerFrame_pix, mBufArrayB.begin() + lineIndex * mWidthPerFrame_pix + mWidthPerFrame_pix);
+	for (int lineIndex = 1; lineIndex < mRTsequence.mHeightAllFrames_pix; lineIndex += 2)
+		std::reverse(mBufArrayB.begin() + lineIndex * mRTsequence.mWidthPerFrame_pix, mBufArrayB.begin() + lineIndex * mRTsequence.mWidthPerFrame_pix + mRTsequence.mWidthPerFrame_pix);
 }
 
 //When multiplexing later on, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
 void Image::demux_()
 {
 	double upscaled;
-	for (int pixIndex = 0; pixIndex < mNpixAllFrames; pixIndex++)
+	for (int pixIndex = 0; pixIndex < mRTsequence.mNpixAllFrames; pixIndex++)
 	{
-		upscaled = std::floor(mUpscaleU8 * mBufArrayB.at(pixIndex)); //Upscale the buffer from 4-bit to a 8-bit
+		upscaled = std::floor(mRTsequence.mUpscaleU8 * mBufArrayB.at(pixIndex)); //Upscale the buffer from 4-bit to a 8-bit
 
 		//If upscaled overflows
 		if (upscaled > _UI8_MAX)
@@ -147,7 +147,7 @@ void Image::demux_()
 void Image::analyze_() const
 {
 	double totalCount = 0;
-	for (int index = 0; index < mWidthPerFrame_pix * mHeightPerFrame_pix; index++)
+	for (int index = 0; index < mRTsequence.mWidthPerFrame_pix * mRTsequence.mHeightPerFrame_pix; index++)
 		totalCount += mImage.at(index);
 
 	//std::cout << "Total count = " << totalCount << std::endl;
@@ -184,8 +184,8 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 
 void Image::saveToTiff(std::string filename, const bool overrideFile) const
 {
-	const int width_pix = mWidthPerFrame_pix;
-	const int height_pix = mHeightAllFrames_pix;
+	const int width_pix = mRTsequence.mWidthPerFrame_pix;
+	const int height_pix = mRTsequence.mHeightAllFrames_pix;
 
 	if (!overrideFile)
 		filename = file_exists(filename);
@@ -237,7 +237,7 @@ void Image::saveToTxt(const std::string filename) const
 	std::ofstream fileHandle;							//Create output file
 	fileHandle.open(folderPath + filename + ".txt");	//Open the file
 
-	for (int ii = 0; ii < mNpixAllFrames; ii++)
+	for (int ii = 0; ii < mRTsequence.mNpixAllFrames; ii++)
 	{
 		//fileHandle << (int)mImage.at(ii) << std::endl;		//Write each element
 		fileHandle << mBufArrayB.at(ii) << std::endl;		//Write each element
@@ -299,10 +299,10 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 #pragma endregion "Vibratome"
 
 #pragma region "Resonant scanner"
-ResonantScanner::ResonantScanner(const FPGAns::FPGA &fpga): mFpga(fpga)
+ResonantScanner::ResonantScanner(const FPGAns::RTsequence &RTsequence): mRTsequence(RTsequence)
 {	
 	//Calculate the spatial fill factor
-	const double temporalFillFactor = mWidthPerFrame_pix * mDwell_us / halfPeriodLineclock_us;
+	const double temporalFillFactor = mRTsequence.mWidthPerFrame_pix * mRTsequence.mDwell_us / halfPeriodLineclock_us;
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
@@ -314,7 +314,7 @@ ResonantScanner::ResonantScanner(const FPGAns::FPGA &fpga): mFpga(fpga)
 	mControl_V = downloadControl_V();					//Control voltage
 	mFullScan_um = mControl_V / mVoltPerUm;					//Full scan FOV = distance from turning point to turning point
 	mFFOV_um = mFullScan_um * mFillFactor;					//FFOV
-	mSampRes_umPerPix = mFFOV_um / mWidthPerFrame_pix;		//Spatial sampling resolution
+	mSampRes_umPerPix = mFFOV_um / mRTsequence.mWidthPerFrame_pix;		//Spatial sampling resolution
 };
 
 ResonantScanner::~ResonantScanner() {};
@@ -329,10 +329,10 @@ void ResonantScanner::setVoltage_(const double control_V)
 	mControl_V = control_V;									//Control voltage
 	mFullScan_um = control_V / mVoltPerUm;					//Full scan FOV
 	mFFOV_um = mFullScan_um * mFillFactor;					//FFOV
-	mSampRes_umPerPix = mFFOV_um / mWidthPerFrame_pix;		//Spatial sampling resolution
+	mSampRes_umPerPix = mFFOV_um / mRTsequence.mWidthPerFrame_pix;		//Spatial sampling resolution
 
 	//Upload the control voltage
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAns::convertVoltToI16(mControl_V)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAns::convertVoltToI16(mControl_V)));
 }
 
 //Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
@@ -342,14 +342,14 @@ void ResonantScanner::setFFOV(const double FFOV_um)
 	mFullScan_um = FFOV_um / mFillFactor;					//Full scan FOV
 	mControl_V = mFullScan_um * mVoltPerUm;					//Control voltage
 	mFFOV_um = FFOV_um;										//FFOV
-	mSampRes_umPerPix = mFFOV_um / mWidthPerFrame_pix;		//Spatial sampling resolution
+	mSampRes_umPerPix = mFFOV_um / mRTsequence.mWidthPerFrame_pix;		//Spatial sampling resolution
 	//std::cout << "mControl_V = " << mControl_V << std::endl; //For debugging
 
 	if (mControl_V < 0 || mControl_V > mVMAX_V)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX_V/mVoltPerUm) + " um");
 
 	//Upload the control voltage
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAns::convertVoltToI16(mControl_V)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAns::convertVoltToI16(mControl_V)));
 }
 
 //First set the FFOV, then set RSenable on
@@ -357,7 +357,7 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 {
 	setFFOV(FFOV_um);
 	Sleep(mDelay_ms);
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
 	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um" << std::endl;
 }
 
@@ -366,14 +366,14 @@ void ResonantScanner::turnOn_V(const double control_V)
 {
 	setVoltage_(control_V);
 	Sleep(mDelay_ms);
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
 	std::cout << "RS control voltage successfully set to: " << control_V << " V" << std::endl;
 }
 
 //First set RSenable off, then set the control voltage to 0
 void ResonantScanner::turnOff()
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 0));
 	Sleep(mDelay_ms);
 	setVoltage_(0);
 	std::cout << "RS successfully turned off" << std::endl;
@@ -383,7 +383,7 @@ void ResonantScanner::turnOff()
 double ResonantScanner::downloadControl_V()
 {
 	I16 control_I16;
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorI16_RScontrolMon_I16, &control_I16));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorI16_RScontrolMon_I16, &control_I16));
 
 	return FPGAns::convertI16toVolt(control_I16);
 }
@@ -452,7 +452,7 @@ PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockels
 	}
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT as 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
-	for (int ii = 0; ii < mNframes; ii++)
+	for (int ii = 0; ii < mRTsequence.mNframes; ii++)
 		mRTsequence.pushAnalogSingletFx2p14(mScalingChannel, 1.0);
 }
 
@@ -505,13 +505,13 @@ void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor must be in the range 0-4");
 	
-	if (mNframes < 2)
+	if (mRTsequence.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
 	mRTsequence.clearQueue(mScalingChannel);	//Delete the default scaling factors of 1.0s created in the PockelsCell constructor
 
-	for (int ii = 0; ii < mNframes; ii++)
-		mRTsequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (mNframes -1) * ii);
+	for (int ii = 0; ii < mRTsequence.mNframes; ii++)
+		mRTsequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (mRTsequence.mNframes -1) * ii);
 }
 
 

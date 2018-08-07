@@ -20,7 +20,6 @@ void seq_main(const FPGAns::FPGA &fpga)
 		
 	const RunMode runMode = static_cast<RunMode>(runmode);
 	
-
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
 	double3 position_mm = { 35.120, 19.808, 18.4545 };	//Initial position
@@ -36,8 +35,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	vision.setWavelength(wavelength_nm);
 
 	//GALVO
-	const double FFOVgalvo_um = 200 * um;									//Full FOV in the slow axis
-	const double duration = 62.5 * us * mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+	const double FFOVgalvo_um = 200 * um;						//Full FOV in the slow axis
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -90,37 +88,6 @@ void seq_main(const FPGAns::FPGA &fpga)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 	}
 
-	//DATALOG
-	Logger datalog("datalog_" + filename);
-	datalog.record("SAMPLE-------------------------------------------------------");
-	datalog.record("Sample = ", filename);
-	datalog.record("Correction collar = ", collar);
-
-	datalog.record("FPGA---------------------------------------------------------");
-	datalog.record("FPGA clock (MHz) = ", tickPerUs);
-
-	datalog.record("LASER--------------------------------------------------------");
-	datalog.record("Laser wavelength (nm) = ", wavelength_nm);
-	datalog.record("Laser power (mW) = ", laserPower_mW);
-	datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod);
-
-	datalog.record("SCAN---------------------------------------------------------");
-	datalog.record("RS FFOV (um) = ", RS.mFFOV_um);
-	datalog.record("RS period (us) = ", 2 * halfPeriodLineclock_us);
-	datalog.record("Pixel dwell time (us) = ", mDwell_us);
-	datalog.record("RS fill factor = ", RS.mFillFactor);
-	datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
-	datalog.record("Galvo time step (us) = ", galvoTimeStep);
-
-
-	datalog.record("IMAGE--------------------------------------------------------");
-	datalog.record("Max count per pixel = ", mPulsesPerPixel);
-	datalog.record("8-bit upscaling factor = ", mUpscaleU8);
-	datalog.record("Width X (RS) (pix) = ", mWidthPerFrame_pix);
-	datalog.record("Height Y (galvo) (pix) = ", mHeightPerFrame_pix);
-	datalog.record("Resolution X (RS) (um/pix) = ", RS.mSampRes_umPerPix);
-	datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um/mHeightPerFrame_pix);
-
 	//PRESET THE STAGES
 	Stage stage;
 	stage.moveStage3(position_mm);
@@ -143,11 +110,13 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 			//CREATE A REAL-TIME SEQUENCE
 			FPGAns::RTsequence RTsequence(fpga);
+			RTsequence.setParameters(300, 400, 0, 2);
 
 			//GALVO FOR RT
 			Galvo galvo(RTsequence, GALVO1);
+			const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 			galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-			if (mNframes % 2 )
+			if (RTsequence.mNframes % 2 )
 				galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
 
 			//POCKELS CELL FOR RT
@@ -164,6 +133,40 @@ void seq_main(const FPGAns::FPGA &fpga)
 			Image image(RTsequence);
 			image.acquire(TRUE, filename + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 				"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4), overrideFlag); //Execute the RT sequence and acquire the image
+
+			if (ii == 0 && jj == 0)
+			{
+				//DATALOG
+				Logger datalog("datalog_" + filename);
+				datalog.record("SAMPLE-------------------------------------------------------");
+				datalog.record("Sample = ", filename);
+				datalog.record("Correction collar = ", collar);
+
+				datalog.record("FPGA---------------------------------------------------------");
+				datalog.record("FPGA clock (MHz) = ", tickPerUs);
+
+				datalog.record("LASER--------------------------------------------------------");
+				datalog.record("Laser wavelength (nm) = ", wavelength_nm);
+				datalog.record("Laser power (mW) = ", laserPower_mW);
+				datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod);
+
+				datalog.record("SCAN---------------------------------------------------------");
+				datalog.record("RS FFOV (um) = ", RS.mFFOV_um);
+				datalog.record("RS period (us) = ", 2 * halfPeriodLineclock_us);
+				datalog.record("Pixel dwell time (us) = ", RTsequence.mDwell_us);
+				datalog.record("RS fill factor = ", RS.mFillFactor);
+				datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
+				datalog.record("Galvo time step (us) = ", galvoTimeStep);
+
+
+				datalog.record("IMAGE--------------------------------------------------------");
+				datalog.record("Max count per pixel = ", RTsequence.mPulsesPerPixel);
+				datalog.record("8-bit upscaling factor = ", RTsequence.mUpscaleU8);
+				datalog.record("Width X (RS) (pix) = ", RTsequence.mWidthPerFrame_pix);
+				datalog.record("Height Y (galvo) (pix) = ", RTsequence.mHeightPerFrame_pix);
+				datalog.record("Resolution X (RS) (um/pix) = ", RS.mSampRes_umPerPix);
+				datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um / RTsequence.mHeightPerFrame_pix);
+			}
 		}
 		std::cout << std::endl;
 
@@ -193,7 +196,6 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 
 	//GALVO
 	const double FFOVgalvo_um = 300 * um;									//Full FOV in the slow axis
-	const double duration = halfPeriodLineclock_us * mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -217,6 +219,7 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 
 		//GALVO FOR RT
 		Galvo galvo(RTsequence, GALVO1);
+		const double duration = halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 		galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
 
@@ -237,10 +240,11 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 
 void seq_testPixelclock(const FPGAns::FPGA &fpga)
 {
-	FPGAns::RTsequence RTsequence(fpga); 	//Create a realtime sequence
+	FPGAns::RTsequence RTsequence(fpga); 		//Create a realtime sequence
+//	RTsequence.setParameters(100, 100, 0, 1);
 	RTsequence.initializeRT();					//Upload the realtime sequence to the FPGA but don't execute it yet
 	Image image(RTsequence);
-	image.acquire(TRUE);					//Execute the realtime sequence and acquire the image
+	image.acquire(TRUE);						//Execute the realtime sequence and acquire the image
 
 }
 
@@ -509,6 +513,8 @@ void seq_saveAsTiffTest()
 
 void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 {
+	const int heightPerFrame_pix = 400;
+
 	//GALVO
 	const double FFOVgalvo_um = 200 * um;		//Full FOV in the slow axis
 	const double galvoTimeStep = 8 * us;
@@ -519,9 +525,9 @@ void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 
 	//GALVO FOR RT
 	Galvo galvo(RTsequence, GALVO1);
-	const double duration = halfPeriodLineclock_us * mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+	const double duration = halfPeriodLineclock_us * heightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);	//Linear ramp for the galvo
-	if (mNframes % 2)
+	if (RTsequence.mNframes % 2)
 		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//Linear ramp for the galvo
 	//galvo.pushVoltageSinglet_(2 * us, 1);										//Mark the end of the galvo ramp
 																						

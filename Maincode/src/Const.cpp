@@ -64,16 +64,6 @@ namespace Constants
 	extern const int nPulses = 20;												//Number of pulses
 	extern const U8 pulseArray[nPulses] = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 											0, 0, 0, 0, 0, 0, 0, 0, 1, 0 };		//@160MHz, one cycle through this array lasts 125ns
-
-	extern double mDwell_us = 0.1625 * us;									//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340. Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
-	extern double mPulsesPerPixel = mDwell_us / VISIONpulsePeriod;			//Max number of laser pulses per pixel
-	extern double mUpscaleU8 = 255 / (mPulsesPerPixel + 1);				//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
-	extern int mWidthPerFrame_pix = 300;									//Width in pixels of a frame (RS axis). I call each swing of the RS a "line"
-	extern int mHeightPerFrame_pix = 400;									//Height in pixels of a frame (galvo axis). This sets the number of "lines" in the image
-	extern int mNlinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidt
-	extern int mNframes = 1;												//Number of frames to acquire
-	extern int mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;		//Total number of lines in all the frames without including the skipped lines
-	extern int mNpixAllFrames = mWidthPerFrame_pix * mHeightAllFrames_pix;	//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 }
 
 //Currently, each frames is 400x400 pixels = 160000 pixels

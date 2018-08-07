@@ -27,7 +27,7 @@ namespace FPGAns
 		FPGA();
 		~FPGA();
 		void close(const bool reset) const;
-		NiFpga_Session getFpgaHandle() const;								//Access the FPGA handle indirectly to avoid modifying it
+		NiFpga_Session getFpgaHandle() const;								//Access the handle indirectly to avoid modifying it by mistake
 	};
 
 	//Create a realtime sequence and pixelclock
@@ -43,18 +43,29 @@ namespace FPGAns
 		//Private subclass
 		class Pixelclock
 		{
-			const FPGAns::FPGA &mFpga;
 			QU32 mPixelclockQ;					//Queue containing the pixel-clock sequence
+			double mDwell_us;
+			int mWidthPerFrame_pix;
 			const int mLatency_tick = 2;		//Latency at detecting the line clock. Calibrate the latency with the oscilloscope
-			void pushUniformDwellTimes(const int calibFine_tick, const double dwellTime_us);
+
+			void pushUniformDwellTimes(const int calibFine_tick);
 		public:
-			Pixelclock(const FPGAns::FPGA &fpga);
+			Pixelclock(const int widthPerFrame_pix, const double dwell_us);
 			~Pixelclock();
 			QU32 readPixelclock() const;
 		};
 
 	public:
 		const FPGAns::FPGA &mFpga;
+		double mDwell_us = 0.1625 * us;									//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340. Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
+		double mPulsesPerPixel = mDwell_us / VISIONpulsePeriod;			//Max number of laser pulses per pixel
+		double mUpscaleU8 = 255 / (mPulsesPerPixel + 1);				//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
+		int mWidthPerFrame_pix = 300;									//Width in pixels of a frame (RS axis). I call each swing of the RS a "line"
+		int mHeightPerFrame_pix = 400;									//Height in pixels of a frame (galvo axis). This sets the number of "lines" in the image
+		int mNlinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidt
+		int mNframes = 1;												//Number of frames to acquire
+		int mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;		//Total number of lines in all the frames without including the skipped lines
+		int mNpixAllFrames = mWidthPerFrame_pix * mHeightAllFrames_pix;	//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
 		RTsequence(const FPGAns::FPGA &fpga);
 		RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
@@ -66,8 +77,9 @@ namespace FPGAns
 		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V);
 		void pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor);
 		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V);
-		void initializeRT() const;
+		void initializeRT();
 		void triggerRT() const;
+		void setParameters(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nLinesSkip, const int nFrames);
 	};
 
 	class FPGAexception : public std::runtime_error

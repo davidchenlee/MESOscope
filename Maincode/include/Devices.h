@@ -48,7 +48,7 @@ public:
 
 class ResonantScanner
 {
-	const FPGAns::FPGA &mFpga;
+	const FPGAns::RTsequence &mRTsequence;
 	const double mVMAX_V = 5 * V;						//Max control voltage allowed
 	const int mDelay_ms = 10;
 	double mVoltPerUm = 0.00595;						//Calibration factor. Last calibrated 
@@ -57,7 +57,7 @@ class ResonantScanner
 
 	void setVoltage_(const double Vcontrol_V);
 public:
-	ResonantScanner(const FPGAns::FPGA &fpga);
+	ResonantScanner(const FPGAns::RTsequence &RTsequence);
 	~ResonantScanner();
 	double mFillFactor;									//Fill factor: how much of an RS swing is covered by the pixels
 	double mFFOV_um;									//Current FFOV

@@ -147,11 +147,11 @@ namespace FPGAns
 #pragma endregion "FPGA"
 
 #pragma region "RTsequence"
-	RTsequence::Pixelclock::Pixelclock(const FPGAns::FPGA &fpga): mFpga(fpga)
+	RTsequence::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell_us): mWidthPerFrame_pix(widthPerFrame_pix), mDwell_us(dwell_us)
 	{
 		switch (pixelclockType)
 		{
-		case uniform: pushUniformDwellTimes(-32, mDwell_us);
+		case uniform: pushUniformDwellTimes(-32);
 			break;
 		//case nonuniform: pushCorrectedDwellTimes();
 			//break;
@@ -165,12 +165,12 @@ namespace FPGAns
 
 	//Pixelclock with equal dwell times
 	//calibFine_tick: fine tune the pixelclock timing
-	void RTsequence::Pixelclock::pushUniformDwellTimes(const int calibFine_tick, const double dwellTime_us)
+	void RTsequence::Pixelclock::pushUniformDwellTimes(const int calibFine_tick)
 	{
 		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (halfPeriodLineclock_us-400*125ns)/2
 
-		const double initialWaitingTime_us = (halfPeriodLineclock_us - mWidthPerFrame_pix * dwellTime_us) / 2; //Relative delay of the pixel clock wrt the line clock
+		const double initialWaitingTime_us = (halfPeriodLineclock_us - mWidthPerFrame_pix * mDwell_us) / 2; //Relative delay of the pixel clock wrt the line clock
 
 		//Check if the pixelclock overflows each Lineclock
 		if (initialWaitingTime_us <= 0)
@@ -181,7 +181,7 @@ namespace FPGAns
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 		for (int pix = 0; pix < mWidthPerFrame_pix + 1; pix++)
-			mPixelclockQ.push_back(FPGAns::packPixelclockSinglet(dwellTime_us, 1));
+			mPixelclockQ.push_back(FPGAns::packPixelclockSinglet(mDwell_us, 1));
 	}
 
 	QU32 RTsequence::Pixelclock::readPixelclock() const
@@ -190,11 +190,7 @@ namespace FPGAns
 	}
 
 
-	RTsequence::RTsequence(const FPGAns::FPGA &fpga) : mFpga(fpga), mVectorOfQueues(nChan)
-	{
-		const Pixelclock pixelclock(mFpga);
-		mVectorOfQueues.at(PIXELCLOCK) = pixelclock.readPixelclock();
-	}
+	RTsequence::RTsequence(const FPGAns::FPGA &fpga) : mFpga(fpga), mVectorOfQueues(nChan) {}
 
 	RTsequence::~RTsequence() {}
 
@@ -407,7 +403,7 @@ namespace FPGAns
 		//FIFOOUTpc B
 		//Check if there are elements in FIFOOUTpc
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
-		while (nRemainFIFOOUT> 0)
+		while (nRemainFIFOOUT > 0)
 		{
 			std::cout << "Number of elements remaining in FIFOOUTpc B: " << nRemainFIFOOUT << std::endl;
 			getchar();
@@ -423,10 +419,17 @@ namespace FPGAns
 	}
 
 	//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute it yet
-	void  RTsequence::initializeRT() const
+	void  RTsequence::initializeRT()
 	{
-		initializeFpga_();					//Initialize the FPGA
-		writeFIFOINpc_(mVectorOfQueues);	//Upload the RT sequence
+		//Initialize the FPGA
+		initializeFpga_();
+
+		//Generate a pixelclock
+		const Pixelclock pixelclock(mWidthPerFrame_pix, mDwell_us);
+		mVectorOfQueues.at(PIXELCLOCK) = pixelclock.readPixelclock();
+
+		//Upload the RT sequence
+		writeFIFOINpc_(mVectorOfQueues);
 
 		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
@@ -439,6 +442,18 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
 	}
+
+	void RTsequence::setParameters(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nLinesSkip, const int nFrames)
+	{
+		mWidthPerFrame_pix = widthPerFrame_pix;
+		mHeightPerFrame_pix = heightPerFrame_pix;
+		mNlinesSkip = nLinesSkip;
+		mNframes = nFrames;
+		mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;
+		mNpixAllFrames = mWidthPerFrame_pix * mHeightAllFrames_pix;
+	}
+
+
 
 #pragma endregion "RTsequence"
 

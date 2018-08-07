@@ -32,6 +32,9 @@ namespace Constants
 	enum ComID { VISIONcom, FW1com , FW2com, mPMTcom, ZSTAGEcom };
 	extern const std::vector<std::string> assignCOM;
 
+	extern const std::string folderPath;
+	extern const std::string bitfilePath;
+
 	extern const LineclockInputSelector lineclockInput;
 	extern const PhotonCounterInputSelector photoncounterInput;
 	extern const PixelclockSelector pixelclockType;
@@ -71,13 +74,12 @@ namespace Parameters
 {
 	using namespace Constants;
 
-	extern const std::string foldername;
 	extern const double dwell_us;
-	extern const double pulsesPerPixel;
-	extern const double upscaleU8;
+//	extern const double pulsesPerPixel;
+//	extern const double upscaleU8;
 	extern const int widthPerFrame_pix;
-	extern const int heightPerFrame_pix;
-	extern const int nLinesSkip;
+//	extern const int heightPerFrame_pix;
+//	extern const int nLinesSkip;
 //	extern const int nFrames;
 //	extern const int heightAllFrames_pix;
 //	extern const int nPixAllFrames;

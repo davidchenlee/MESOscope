@@ -3,7 +3,12 @@
 //Constants that are never changed
 namespace Constants
 {
-	extern const LineclockInputSelector lineclockInput = RS;				//Resonant scanner (RS) or Function generator (FG)
+	extern const std::string folderPath = "D:\\OwnCloud\\Data\\_output_D\\";
+	//extern const std::string folderPath = "Z:\\_output_Z\\";
+
+	extern const std::string bitfilePath = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\";	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
+
+	extern const LineclockInputSelector lineclockInput = FG;				//Resonant scanner (RS) or Function generator (FG)
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
 	extern const bool FIFOOUTfpgaEnable = 1;								//For debugging purposes. Enable pushing data to FIFOOUTfpga
@@ -64,17 +69,14 @@ namespace Constants
 //Imaging parameters
 namespace Parameters
 {
-	extern const std::string foldername = "D:\\OwnCloud\\Data\\_output_D\\";
-	//extern const std::string foldername = "Z:\\_output_Z\\";
-
 	//IMAGE
 	extern const double dwell_us = 0.1625 * us;									//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
 																				//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
-	extern const double pulsesPerPixel = dwell_us / VISIONpulsePeriod;			//Max number of laser pulses per pixel
-	extern const double upscaleU8 = 255/(pulsesPerPixel + 1);					//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
+//	extern const double pulsesPerPixel = dwell_us / VISIONpulsePeriod;			//Max number of laser pulses per pixel
+//	extern const double upscaleU8 = 255/(pulsesPerPixel + 1);					//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
 	extern const int widthPerFrame_pix = 300;									//Width in pixels of a frame (RS scam). I call each swing of the RS a "line"
-	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame (galvo scan). This sets the number of "lines" in the image
-	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
+//	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame (galvo scan). This sets the number of "lines" in the image
+//	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
 //	extern const int nFrames = 2;												//Number of frames to acquire
 //	extern const int heightAllFrames_pix = heightPerFrame_pix * nFrames;		//Total number of lines in all the frames without including the skipped lines
 //	extern const int nPixAllFrames = widthPerFrame_pix * heightAllFrames_pix;	//Total number of pixels in all the frames (the skipped lines don't acquire pixels)

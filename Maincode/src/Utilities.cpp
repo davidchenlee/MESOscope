@@ -68,7 +68,7 @@ std::string file_exists(const std::string filename)
 {
 	std::string suffix = "";
 
-	for (int ii = 1; std::experimental::filesystem::exists(foldername + filename + suffix + ".tif"); ii++)
+	for (int ii = 1; std::experimental::filesystem::exists(folderPath + filename + suffix + ".tif"); ii++)
 		suffix = " (" + std::to_string(ii) + ")";
 
 	return filename + suffix;
@@ -76,7 +76,7 @@ std::string file_exists(const std::string filename)
 
 Logger::Logger(const std::string filename)
 {
-	mFileHandle.open(foldername + filename + ".txt");
+	mFileHandle.open(folderPath + filename + ".txt");
 };
 
 Logger::~Logger()
@@ -104,7 +104,7 @@ void Logger::record(const std::string description, const std::string input)
 //open a Tiff in the constructor
 Tiffer::Tiffer(std::string filename)
 {
-	TIFF *tiffHandle = TIFFOpen((foldername + filename + ".tif").c_str(), "r");
+	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "r");
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error("Opening Tiff failed");
@@ -155,7 +155,7 @@ Tiffer::~Tiffer()
 //Split the image into nPages
 void Tiffer::saveToTiff(std::string filename, const int nPages)
 {
-	TIFF *tiffHandle = TIFFOpen((foldername + filename + ".tif").c_str(), "w");
+	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
 
 	mHeight_pix = mHeight_pix / nPages; //Divide the large image into nPages
 

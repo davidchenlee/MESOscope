@@ -113,7 +113,7 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_Initialize());
 
 		//Opens a session, downloads the bitstream. 1=no run, 0=run
-		checkStatus(__FUNCTION__, NiFpga_Open(Bitfile, NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession));
+		checkStatus(__FUNCTION__, NiFpga_Open(mBitfile.c_str(), NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession));
 	}
 
 	Session::~Session()
@@ -125,7 +125,7 @@ namespace FPGAapi
 	void Session::initialize() const
 	{
 		if (nChan < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 ||
-			linegateTimeout_us < 0 || mNframes < 0 || mHeightAllFrames_pix < 0 || nLinesSkip < 0 || heightPerFrame_pix < 0 || stageTriggerPulse_ms < 0 )
+			linegateTimeout_us < 0 || mNframes < 0 || mHeightAllFrames_pix < 0 || mNlinesSkip < 0 || mHeightPerFrame_pix < 0 || stageTriggerPulse_ms < 0 )
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more scan parameters have negative values");
 
 		//INPUT SELECTORS
@@ -155,9 +155,9 @@ namespace FPGAapi
 		//IMAGING PARAMETERS
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_Nframes, (U8)mNframes));												//Number of frames to acquire
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession,
-			NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(mHeightAllFrames_pix + mNframes * nLinesSkip - nLinesSkip)));											//Total number of lines in all the frames, including the skipped lines, minus the very last skipped lines)
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)heightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(heightPerFrame_pix + nLinesSkip)));	//Number of lines in a frame including the skipped lines
+			NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(mHeightAllFrames_pix + mNframes * mNlinesSkip - mNlinesSkip)));											//Total number of lines in all the frames, including the skipped lines, minus the very last skipped lines)
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)mHeightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(mHeightPerFrame_pix + mNlinesSkip)));	//Number of lines in a frame including the skipped lines
 
 		//POCKELS CELLS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Pockels1_EnableAutoOff, (NiFpga_Bool)pockels1_enableAutoOff));	//Enable gating the pockels by framegate. For debugging purposes

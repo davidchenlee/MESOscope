@@ -4,7 +4,7 @@
 
 Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga), mBufArrayA(mFpga.mNpixAllFrames), mBufArrayB(mFpga.mNpixAllFrames), mImage(mFpga.mNpixAllFrames)
 {
-};
+}
 
 Image::~Image()
 {
@@ -13,7 +13,7 @@ Image::~Image()
 	stopFIFOOUTpc_();
 
 	//std::cout << "Image destructor called\n";
-};
+}
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga
 void Image::startFIFOOUTpc_() const
@@ -132,7 +132,7 @@ void Image::demux_()
 	double upscaled;
 	for (int pixIndex = 0; pixIndex < mFpga.mNpixAllFrames; pixIndex++)
 	{
-		upscaled = std::floor(upscaleU8 * mBufArrayB.at(pixIndex)); //Upscale the buffer from 4-bit to a 8-bit
+		upscaled = std::floor(mFpga.mUpscaleU8 * mBufArrayB.at(pixIndex)); //Upscale the buffer from 4-bit to a 8-bit
 
 		//If upscaled overflows
 		if (upscaled > _UI8_MAX)
@@ -147,7 +147,7 @@ void Image::demux_()
 void Image::analyze_() const
 {
 	double totalCount = 0;
-	for (int index = 0; index < widthPerFrame_pix * heightPerFrame_pix; index++)
+	for (int index = 0; index < widthPerFrame_pix * mFpga.mHeightPerFrame_pix; index++)
 		totalCount += mImage.at(index);
 
 	//std::cout << "Total count = " << totalCount << std::endl;
@@ -190,7 +190,7 @@ void Image::saveToTiff(std::string filename, const bool overrideFile) const
 	if (!overrideFile)
 		filename = file_exists(filename);
 
-	TIFF *tiffHandle = TIFFOpen((foldername + filename + ".tif").c_str(), "w");
+	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
 
 	if (tiffHandle == nullptr)
 		throw ImageException((std::string)__FUNCTION__ + ": Saving Tiff failed");
@@ -235,7 +235,7 @@ void Image::saveToTiff(std::string filename, const bool overrideFile) const
 void Image::saveToTxt(const std::string filename) const
 {
 	std::ofstream fileHandle;							//Create output file
-	fileHandle.open(foldername + filename + ".txt");	//Open the file
+	fileHandle.open(folderPath + filename + ".txt");	//Open the file
 
 	for (int ii = 0; ii < mFpga.mNpixAllFrames; ii++)
 	{

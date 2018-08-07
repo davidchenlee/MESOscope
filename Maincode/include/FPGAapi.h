@@ -10,9 +10,6 @@ using namespace Parameters;
 
 namespace FPGAapi
 {
-	/*Define the full path of the bitfile. The bitfile is the code that runs on the FPGA*/
-	static const char* Bitfile = "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" NiFpga_FPGAvi_Bitfile;
-
 	U16 convertUsTotick(const double t);
 	I16 convertVoltToI16(const double voltage_V);
 	double convertI16toVolt(const int input);
@@ -24,15 +21,22 @@ namespace FPGAapi
 
 	//Establish a connection with the FPGA
 	class Session
-	{
+	{	
 		NiFpga_Session mSession;
+		const std::string mBitfile = bitfilePath + NiFpga_FPGAvi_Bitfile;	//FPGA bitfile location
 
 		void FIFOOUTpcGarbageCollector_() const;
 		void flushBRAMs_() const;
 	public:
-		int mNframes = 1;
-		int mHeightAllFrames_pix = heightPerFrame_pix * mNframes;
-		int mNpixAllFrames = widthPerFrame_pix * mHeightAllFrames_pix;
+		double mDwell_us = 0.1625 * us;									//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
+																		//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
+		double mPulsesPerPixel = mDwell_us / VISIONpulsePeriod;			//Max number of laser pulses per pixel
+		double mUpscaleU8 = 255 / (mPulsesPerPixel + 1);					//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
+		int mHeightPerFrame_pix = 400;									//Height in pixels of a frame (galvo scan). This sets the number of "lines" in the image
+		int mNlinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidt
+		int mNframes = 1;												//Number of frames to acquire
+		int mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;		//Total number of lines in all the frames without including the skipped lines
+		int mNpixAllFrames = widthPerFrame_pix * mHeightAllFrames_pix;	//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
 		Session();
 		~Session();

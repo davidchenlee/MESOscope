@@ -36,7 +36,7 @@ void seq_main(const FPGAapi::Session &fpga)
 
 	//GALVO
 	const double FFOVgalvo_um = 200 * um;									//Full FOV in the slow axis
-	const double duration = 62.5 * us * heightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+	const double duration = 62.5 * us * fpga.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -113,12 +113,12 @@ void seq_main(const FPGAapi::Session &fpga)
 
 
 	datalog.record("IMAGE--------------------------------------------------------");
-	datalog.record("Max count per pixel = ", pulsesPerPixel);
-	datalog.record("8-bit upscaling factor = ", upscaleU8);
+	datalog.record("Max count per pixel = ", fpga.mPulsesPerPixel);
+	datalog.record("8-bit upscaling factor = ", fpga.mUpscaleU8);
 	datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
-	datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
+	datalog.record("Height Y (galvo) (pix) = ", fpga.mHeightPerFrame_pix);
 	datalog.record("Resolution X (RS) (um/pix) = ", RS.mSampRes_umPerPix);
-	datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um/heightPerFrame_pix);
+	datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um/fpga.mHeightPerFrame_pix);
 
 	//PRESET THE STAGES
 	Stage stage;
@@ -146,7 +146,7 @@ void seq_main(const FPGAapi::Session &fpga)
 			//GALVO FOR RT
 			Galvo galvo(sequence, GALVO1);
 			galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-			if (sequence.getNframes() % 2 )
+			if (fpga.mNframes % 2 )
 				galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
 
 			//POCKELS CELL FOR RT
@@ -192,7 +192,7 @@ void seq_contAcquisition(const FPGAapi::Session &fpga)
 
 	//GALVO
 	const double FFOVgalvo_um = 300 * um;									//Full FOV in the slow axis
-	const double duration = halfPeriodLineclock_us * heightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+	const double duration = halfPeriodLineclock_us * fpga.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -442,8 +442,8 @@ void seq_testConvertI16toVolt()
 void seq_saveAsTiffTest()
 {
 
-	//const std::string foldername = "D:\\OwnCloud\\Data\\_output_D\\";
-	const std::string foldername = "Z:\\_output_Z\\";
+	//const std::string folderPath = "D:\\OwnCloud\\Data\\_output_D\\";
+	const std::string folderPath = "Z:\\_output_Z\\";
 	std::string filename = "Untitled";
 
 
@@ -459,7 +459,7 @@ void seq_saveAsTiffTest()
 	//This gives some overhead
 	//filename = file_exists(filename);
 
-	TIFF *tiffHandle = TIFFOpen((foldername + filename + ".tif").c_str(), "w");
+	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
 
 	if (tiffHandle == nullptr)
 		throw ImageException((std::string)__FUNCTION__ + ": Saving Tiff failed");
@@ -511,7 +511,6 @@ void seq_testGalvoSync(const FPGAapi::Session &fpga)
 
 	//GALVO
 	const double FFOVgalvo_um = 200 * um;									//Full FOV in the slow axis
-	const double duration = halfPeriodLineclock_us * heightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -520,7 +519,7 @@ void seq_testGalvoSync(const FPGAapi::Session &fpga)
 
 	//GALVO FOR RT
 	Galvo galvo(sequence, GALVO1);
-
+	const double duration = halfPeriodLineclock_us * fpga.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 	galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//Linear ramp for the galvo
 	//galvo.pushVoltageSinglet_(2 * us, 1);											//Mark the end of the galvo ramp

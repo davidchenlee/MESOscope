@@ -7,10 +7,9 @@ int main(int argc, char* argv[])
 		FPGAns::FPGA fpga;		//Create a FPGA session
 		try
 		{
-			//Run the sequence
-			seq_main(fpga);			
+			//seq_main(fpga);			
 			//seq_contAcquisition(fpga);
-			//seq_testPixelclock(fpga);
+			seq_testPixelclock(fpga);
 			//seq_testStageSetPosition();
 			//seq_testAODO(fpga);
 			//seq_testmPMT();

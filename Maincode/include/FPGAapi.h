@@ -23,26 +23,22 @@ namespace FPGAns
 	{	
 		NiFpga_Session mFpgaHandle;											//FPGA handle. Non-const to let the FPGA API assign the handle
 		const std::string mBitfile = bitfilePath + NiFpga_FPGAvi_Bitfile;	//FPGA bitfile location
-
-		void FIFOOUTpcGarbageCollector_() const;
-		void flushBRAMs_() const;
 	public:
 		FPGA();
 		~FPGA();
-		void initialize() const;
-		void writeFIFOINpc(const VQU32 &vectorqueues) const;
-		void triggerRT() const;
 		void close(const bool reset) const;
-		NiFpga_Session getFpgaHandle() const;
+		NiFpga_Session getFpgaHandle() const;								//Access the FPGA handle indirectly to avoid modifying it
 	};
 
 	//Create a realtime sequence and pixelclock
 	class RTsequence
 	{
-		const FPGAns::FPGA &mFpga;
 		VQU32 mVectorOfQueues;
 
 		void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
+		void initializeFpga_() const;
+		void writeFIFOINpc_(const VQU32 &vectorqueues) const;
+		void FIFOOUTpcGarbageCollector_() const;
 
 		//Private subclass
 		class Pixelclock
@@ -58,6 +54,8 @@ namespace FPGAns
 		};
 
 	public:
+		const FPGAns::FPGA &mFpga;
+
 		RTsequence(const FPGAns::FPGA &fpga);
 		RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
 		RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
@@ -69,7 +67,7 @@ namespace FPGAns
 		void pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor);
 		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V);
 		void initializeRT() const;
-		FPGAns::FPGA getSession() const;
+		void triggerRT() const;
 	};
 
 	class FPGAexception : public std::runtime_error

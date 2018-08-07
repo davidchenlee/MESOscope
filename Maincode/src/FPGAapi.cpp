@@ -121,135 +121,14 @@ namespace FPGAns
 		//std::cout << "FPGA destructor was called" << std::endl;
 	};
 
-	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	void FPGA::initialize() const
+	//The object has to be closed explicitly in main() for now because of the exception-catching
+	void FPGA::close(const bool reset) const
 	{
-		if (nChan < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 ||
-			linegateTimeout_us < 0 || mNframes < 0 || mHeightAllFrames_pix < 0 || mNlinesSkip < 0 || mHeightPerFrame_pix < 0 || stageTriggerPulse_ms < 0 )
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more scan parameters have negative values");
-
-		//INPUT SELECTORS
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpgaHandle, NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));					//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpgaHandle, NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));							//Select the Line clock: resonant scanner or function generator
-		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mFpgaHandle, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));					//For debugging the photoncounters
-
-		//FIFOIN
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)nChan));											//Number of input channels
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));												//Control-sequence trigger
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_FIFOINtimeout_tick, (U16)FIFOINtimeout_tick));						//FIFOIN timeout
-
-		//FIFOOUT
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, FIFOOUTfpgaEnable));							//Enable pushing data to FIFOOUTfpga. For debugging purposes
-
-		//TRIGGERS AND DELAYS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));											//Data-acquisition trigger
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));												//Memory-flush trigger
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_SyncDOtoAOtick, (U16)syncDOtoAO_tick));							//DO and AO relative sync
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, (U16)syncAODOtoLinegate_tick));			//DO and AO sync to linegate
-
-		if (linegateTimeout_us <= 2 * halfPeriodLineclock_us)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_LinegateTimeout_tick, (U16)(linegateTimeout_us * tickPerUs)));		//Sequence trigger timeout
-
-
-		//IMAGING PARAMETERS
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpgaHandle, NiFpga_FPGAvi_ControlU8_Nframes, (U8)mNframes));												//Number of frames to acquire
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle,
-			NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(mHeightAllFrames_pix + mNframes * mNlinesSkip - mNlinesSkip)));											//Total number of lines in all the frames, including the skipped lines, minus the very last skipped lines)
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)mHeightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(mHeightPerFrame_pix + mNlinesSkip)));	//Number of lines in a frame including the skipped lines
-
-		//POCKELS CELLS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_Pockels1_EnableAutoOff, (NiFpga_Bool)pockels1_enableAutoOff));	//Enable gating the pockels by framegate. For debugging purposes
-
-		//VIBRATOME
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_VTstart, 0));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_VTback, 0));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_VTforward, 0));
-
-		//STAGES
-		const bool scanDirection = 0;
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpgaHandle, NiFpga_FPGAvi_ControlU32_StageTriggerPulse_tick, (U32)stageTriggerPulse_ms * tickPerUs));		//Trigger pulse width
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_ScanDirection, scanDirection));										//Z-stage scan direction (1 for up, 0 for down)
-	
-		//SHUTTERS. Commented out to allow keeping the shutter on
-		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
-		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
-
-		//RESONANT SCANNER. Commented out to allow keeping the RS on
-		//checkStatus(__FUNCTION__,  NiFpga_WriteI16(mFpgaHandle, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));	//Output voltage
-		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
-
-		//Flush the residual data in FIFOOUT from a previous run, if any
-		FIFOOUTpcGarbageCollector_();
-
-	}
-
-	//Send every single queue in VectorOfQueue to the FPGA buffer
-	//For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
-	//Then transfer the elements in the long queue to an array to interface the FPGA
-	//Improvement: the single queues VectorOfQueues[i] could be transferred directly to FIFOIN array
-	void FPGA::writeFIFOINpc(const VQU32 &vectorOfQueues) const
-	{
-		QU32 allQueues;		//Create a single long queue
-		for (int i = 0; i < nChan; i++)
-		{
-			allQueues.push_back(vectorOfQueues.at(i).size());		//Number of elements in the individual queue i, VectorOfQueues.at(i)
-
-			//Non-destructive version. Randomly access the elements in VectorOfQueues[i] and push them to allQueues
-			for (int iter = 0; iter < static_cast<int>(vectorOfQueues.at(i).size()); iter++)
-				allQueues.push_back(vectorOfQueues.at(i).at(iter));
-
-			/*
-			//Destructive version
-			while (!vectorOfQueues.at(i).empty())
-			{
-			allQueues.push_back(vectorOfQueues.at(i).front());	//Number of elements in the individual queue i, VectorOfQueues.at(i)
-			vectorOfQueues.at(i).pop_front();
-			}
-			*/
-		}
-
-		const size_t sizeFIFOINqueue = allQueues.size();		//Total number of elements in all the queues 
-
-		if (sizeFIFOINqueue > FIFOINmax)
-			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
-
-		std::vector<U32> FIFOIN(sizeFIFOINqueue);				//Create an array for interfacing the FPGA	
-		for (int i = 0; i < static_cast<int>(sizeFIFOINqueue); i++)
-		{
-			FIFOIN[i] = allQueues.front();				//Transfer the queue elements to the array
-			allQueues.pop_front();
-		}
-		allQueues = {};									//Cleanup the queue (C++11 style)
-
-		const U32 timeout_ms = -1;		//in ms. A value -1 prevents FIFOIN from timing out
-		U32 r;							//Elements remaining
-
-		checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpgaHandle, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, timeout_ms, &r)); //Send the data to the FPGA through FIFOIN. I measure a min time of 10 ms to execute
-	}
-
-	//Execute the commands
-	void FPGA::triggerRT() const
-	{
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
-	}
-
-
-	//Flush the block RAMs used for buffering the pixelclock, AO, and DO 
-	void FPGA::flushBRAMs_() const
-	{
+		//Flush the RAM buffers on the FPGA as precaution. Make sure that the sequence has already finished
 		Sleep(100);	//Do not flush too soon, otherwise the output sequence will be cut off
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
 		//std::cout << "flushBRAMs called\n";
-	}
-
-	//The object has to be closed explicitly in main() for now because of the exception-catching
-	void FPGA::close(const bool reset) const
-	{
-		flushBRAMs_();		//Flush the RAM buffers on the FPGA as precaution. Make sure that the sequence has already finished
 
 		//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 		//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
@@ -264,52 +143,6 @@ namespace FPGAns
 	{
 		return mFpgaHandle;
 	}
-
-	//Flush the residual data in FIFOOUTpc from a previous run, if any
-	void FPGA::FIFOOUTpcGarbageCollector_() const
-	{
-		const U32 timeout_ms = 100;
-		const int bufSize = 10000;
-		U32 nRemainFIFOOUT = 0;
-		U32 nRetrieveFIFOOUT = 0;
-		std::vector<U32> garbage(bufSize);
-
-		//FIFOOUTpc A
-		//Check if there are elements in FIFOOUTpc
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
-		while (nRemainFIFOOUT > 0)
-		{
-			std::cout << "Number of elements remaining in FIFOOUTpc A: " << nRemainFIFOOUT << std::endl;
-			getchar();
-
-			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
-
-			//Retrieve the elements in FIFOOUTpc
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], nRetrieveFIFOOUT, timeout_ms, &nRemainFIFOOUT));
-
-			//Check if there are elements left in FIFOOUTpc
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
-		}
-
-		//FIFOOUTpc B
-		//Check if there are elements in FIFOOUTpc
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
-		while (nRemainFIFOOUT> 0)
-		{
-			std::cout << "Number of elements remaining in FIFOOUTpc B: " << nRemainFIFOOUT << std::endl;
-			getchar();
-
-			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
-
-			//Retrieve the elements in FIFOOUTpc
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
-
-			//Check if there are elements left in FIFOOUTpc
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
-		}
-	}
-
-
 
 #pragma endregion "FPGA"
 
@@ -435,23 +268,176 @@ namespace FPGAns
 
 		if (debug)
 			getchar();
+	}
 
+	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
+	void RTsequence::initializeFpga_() const
+	{
+		if (nChan < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 ||
+			linegateTimeout_us < 0 || mNframes < 0 || mHeightAllFrames_pix < 0 || mNlinesSkip < 0 || mHeightPerFrame_pix < 0 || stageTriggerPulse_ms < 0)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more scan parameters have negative values");
+
+		//INPUT SELECTORS
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));						//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));								//Select the Line clock: resonant scanner or function generator
+		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));						//For debugging the photoncounters
+
+		//FIFOIN
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, (U16)nChan));												//Number of input channels
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));													//Control-sequence trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_FIFOINtimeout_tick, (U16)FIFOINtimeout_tick));						//FIFOIN timeout
+
+		//FIFOOUT
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, FIFOOUTfpgaEnable));								//Enable pushing data to FIFOOUTfpga. For debugging purposes
+
+		//TRIGGERS AND DELAYS
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));												//Data-acquisition trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));													//Memory-flush trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncDOtoAOtick, (U16)syncDOtoAO_tick));								//DO and AO relative sync
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, (U16)syncAODOtoLinegate_tick));				//DO and AO sync to linegate
+
+		if (linegateTimeout_us <= 2 * halfPeriodLineclock_us)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_LinegateTimeout_tick, (U16)(linegateTimeout_us * tickPerUs)));		//Sequence trigger timeout
+
+		//IMAGING PARAMETERS
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU8_Nframes, (U8)mNframes));												//Number of frames to acquire
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(),
+			NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(mHeightAllFrames_pix + mNframes * mNlinesSkip - mNlinesSkip)));													//Total number of lines in all the frames, including the skipped lines, minus the very last skipped lines)
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)mHeightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(mHeightPerFrame_pix + mNlinesSkip)));	//Number of lines in a frame including the skipped lines
+
+		//POCKELS CELLS
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_Pockels1_EnableAutoOff, (NiFpga_Bool)pockels1_enableAutoOff));		//Enable gating the pockels by framegate. For debugging purposes
+
+		//VIBRATOME
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, 0));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTback, 0));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTforward, 0));
+
+		//STAGES
+		const bool scanDirection = 0;
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU32_StageTriggerPulse_tick, (U32)stageTriggerPulse_ms * tickPerUs));		//Trigger pulse width
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ScanDirection, scanDirection));										//Z-stage scan direction (1 for up, 0 for down)
+
+		/*
+		//SHUTTERS. Commented out to allow keeping the shutter on
+		checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_Shutter1, 0));
+		checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_Shutter2, 0));
+
+		//RESONANT SCANNER. Commented out to allow keeping the RS on
+		checkStatus(__FUNCTION__,  NiFpga_WriteI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, 0));	//Output voltage
+		checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 0));	//Turn on/off
+		*/
+		
+		FIFOOUTpcGarbageCollector_();	//Flush the residual data in FIFOOUT from a previous run, if any
+	}
+
+	//Send every single queue in VectorOfQueue to the FPGA buffer
+	//For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
+	//Then transfer the elements in the long queue to an array to interface the FPGA
+	//Improvement: the single queues VectorOfQueues[i] could be transferred directly to FIFOIN array
+	void RTsequence::writeFIFOINpc_(const VQU32 &vectorOfQueues) const
+	{
+		QU32 allQueues;		//Create a single long queue
+		for (int i = 0; i < nChan; i++)
+		{
+			allQueues.push_back(vectorOfQueues.at(i).size());		//Number of elements in the individual queue i, VectorOfQueues.at(i)
+
+			//Non-destructive version. Randomly access the elements in VectorOfQueues[i] and push them to allQueues
+			for (int iter = 0; iter < static_cast<int>(vectorOfQueues.at(i).size()); iter++)
+				allQueues.push_back(vectorOfQueues.at(i).at(iter));
+
+			/*
+			//Destructive version
+			while (!vectorOfQueues.at(i).empty())
+			{
+			allQueues.push_back(vectorOfQueues.at(i).front());	//Number of elements in the individual queue i, VectorOfQueues.at(i)
+			vectorOfQueues.at(i).pop_front();
+			}
+			*/
+		}
+
+		const size_t sizeFIFOINqueue = allQueues.size();		//Total number of elements in all the queues 
+
+		if (sizeFIFOINqueue > FIFOINmax)
+			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
+
+		std::vector<U32> FIFOIN(sizeFIFOINqueue);				//Create an array for interfacing the FPGA	
+		for (int i = 0; i < static_cast<int>(sizeFIFOINqueue); i++)
+		{
+			FIFOIN[i] = allQueues.front();						//Transfer the queue elements to the array
+			allQueues.pop_front();
+		}
+		allQueues = {};					//Cleanup the queue (C++11 style)
+
+		const U32 timeout_ms = -1;		//in ms. A value -1 prevents FIFOIN from timing out
+		U32 r;							//Elements remaining
+
+		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
+		checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, timeout_ms, &r));
+	}
+
+	//Flush the residual data in FIFOOUTpc from a previous run, if any
+	void RTsequence::FIFOOUTpcGarbageCollector_() const
+	{
+		const U32 timeout_ms = 100;
+		const int bufSize = 10000;
+		U32 nRemainFIFOOUT = 0;
+		U32 nRetrieveFIFOOUT = 0;
+		std::vector<U32> garbage(bufSize);
+
+		//FIFOOUTpc A
+		//Check if there are elements in FIFOOUTpc
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+		while (nRemainFIFOOUT > 0)
+		{
+			std::cout << "Number of elements remaining in FIFOOUTpc A: " << nRemainFIFOOUT << std::endl;
+			getchar();
+
+			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
+
+			//Retrieve the elements in FIFOOUTpc
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], nRetrieveFIFOOUT, timeout_ms, &nRemainFIFOOUT));
+
+			//Check if there are elements left in FIFOOUTpc
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+		}
+
+		//FIFOOUTpc B
+		//Check if there are elements in FIFOOUTpc
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+		while (nRemainFIFOOUT> 0)
+		{
+			std::cout << "Number of elements remaining in FIFOOUTpc B: " << nRemainFIFOOUT << std::endl;
+			getchar();
+
+			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
+
+			//Retrieve the elements in FIFOOUTpc
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
+
+			//Check if there are elements left in FIFOOUTpc
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+		}
 	}
 
 	//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute it yet
 	void  RTsequence::initializeRT() const
 	{
-		mFpga.initialize();		//Initialize the FPGA
-		mFpga.writeFIFOINpc(mVectorOfQueues); //Upload the RT sequence
+		initializeFpga_();					//Initialize the FPGA
+		writeFIFOINpc_(mVectorOfQueues);	//Upload the RT sequence
 
 		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
 	}
 
-	FPGAns::FPGA RTsequence::getSession() const
+	//Execute the commands
+	void RTsequence::triggerRT() const
 	{
-		return mFpga;
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
 	}
 
 #pragma endregion "RTsequence"

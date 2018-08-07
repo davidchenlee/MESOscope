@@ -18,24 +18,24 @@ Image::~Image()
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga
 void Image::startFIFOOUTpc_() const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 }
 
 //Configure FIFOOUTpc. The configuration is optional
 void Image::configureFIFOOUTpc_(const U32 depth) const
 {
 	U32 actualDepth;
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
 	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << std::endl;
 }
 
 //Stop the connection between FIFOOUTpc and FIFOOUTfpga
 void Image::stopFIFOOUTpc_() const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 	//std::cout << "stopFIFO called\n";
 }
 
@@ -98,7 +98,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	if (nElemRead < mNpixAllFrames)		//Skip if all the data have already been transferred
 	{
 		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.getSession()).getFpgaHandle(), FIFOOUTpc, &buffer[0], 0, timeout_ms, &nElemToRead));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), FIFOOUTpc, &buffer[0], 0, timeout_ms, &nElemToRead));
 		//std::cout << "Number of elements remaining in FIFOOUT: " << mNelemToReadFIFOOUTb << std::endl;
 
 		//If data available in FIFOOUTpc, retrieve it
@@ -109,7 +109,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 				throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO buffer overflow");
 
 			//Retrieve the elements in FIFOOUTpc
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.getSession()).getFpgaHandle(), FIFOOUTpc, &buffer[0] + nElemRead, nElemToRead, timeout_ms, &dummy));
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), FIFOOUTpc, &buffer[0] + nElemRead, nElemToRead, timeout_ms, &dummy));
 			
 			//Keep track of the total number of elements read
 			nElemRead += nElemToRead;
@@ -157,7 +157,7 @@ void Image::analyze_() const
 void Image::acquire(const bool saveFlag, const std::string filename, const bool overrideFile)
 {
 	startFIFOOUTpc_();		//Establish the connection between FIFOOUTfpga and FIFOOUTpc
-	(mRTsequence.getSession()).triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
+	mRTsequence.triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
 	if (FIFOOUTfpgaEnable)
 	{
 		try

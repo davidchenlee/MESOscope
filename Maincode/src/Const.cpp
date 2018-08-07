@@ -66,23 +66,6 @@ namespace Constants
 											0, 0, 0, 0, 0, 0, 0, 0, 1, 0 };		//@160MHz, one cycle through this array lasts 125ns
 }
 
-//Imaging parameters
-namespace Parameters
-{
-	//IMAGE
-	extern const double dwell_us = 0.1625 * us;									//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
-																				//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
-//	extern const double pulsesPerPixel = dwell_us / VISIONpulsePeriod;			//Max number of laser pulses per pixel
-//	extern const double upscaleU8 = 255/(pulsesPerPixel + 1);					//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
-	extern const int widthPerFrame_pix = 300;									//Width in pixels of a frame (RS scam). I call each swing of the RS a "line"
-//	extern const int heightPerFrame_pix = 400;									//Height in pixels of a frame (galvo scan). This sets the number of "lines" in the image
-//	extern const int nLinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidth
-//	extern const int nFrames = 2;												//Number of frames to acquire
-//	extern const int heightAllFrames_pix = heightPerFrame_pix * nFrames;		//Total number of lines in all the frames without including the skipped lines
-//	extern const int nPixAllFrames = widthPerFrame_pix * heightAllFrames_pix;	//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
-}
-
-
 //Currently, each frames is 400x400 pixels = 160000 pixels
 //For multiple beams, each frame has 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
 //The current buffer can do 400*1200 pix ~ 480000 pix, or ~48 multiplexed frames

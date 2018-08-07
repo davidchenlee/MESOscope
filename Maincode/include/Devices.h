@@ -97,6 +97,7 @@ class PockelsCell
 	RTchannel mScalingChannel;
 	int mWavelength_nm;							//Laser wavelength
 	const double maxPower_mW = 250 * mW;		//Soft limit for the laser power
+	int mNframes = 1;
 
 	double convert_mWToVolt_(const double power_mW) const;
 public:

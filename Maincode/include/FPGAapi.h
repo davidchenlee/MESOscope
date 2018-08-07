@@ -6,7 +6,6 @@
 #include "Const.h"
 #include "Utilities.h"
 using namespace Constants;
-using namespace Parameters;
 
 namespace FPGAapi
 {
@@ -22,21 +21,21 @@ namespace FPGAapi
 	//Establish a connection with the FPGA
 	class Session
 	{	
-		NiFpga_Session mSession;
+		NiFpga_Session mFpgaHandle;											//FPGA handle
 		const std::string mBitfile = bitfilePath + NiFpga_FPGAvi_Bitfile;	//FPGA bitfile location
 
 		void FIFOOUTpcGarbageCollector_() const;
 		void flushBRAMs_() const;
 	public:
-		double mDwell_us = 0.1625 * us;									//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
-																		//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
+		double mDwell_us = 0.1625 * us;									//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340. Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 		double mPulsesPerPixel = mDwell_us / VISIONpulsePeriod;			//Max number of laser pulses per pixel
-		double mUpscaleU8 = 255 / (mPulsesPerPixel + 1);					//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
-		int mHeightPerFrame_pix = 400;									//Height in pixels of a frame (galvo scan). This sets the number of "lines" in the image
+		double mUpscaleU8 = 255 / (mPulsesPerPixel + 1);				//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
+		int mWidthPerFrame_pix = 300;									//Width in pixels of a frame (RS axis). I call each swing of the RS a "line"
+		int mHeightPerFrame_pix = 400;									//Height in pixels of a frame (galvo axis). This sets the number of "lines" in the image
 		int mNlinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidt
 		int mNframes = 1;												//Number of frames to acquire
 		int mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;		//Total number of lines in all the frames without including the skipped lines
-		int mNpixAllFrames = widthPerFrame_pix * mHeightAllFrames_pix;	//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
+		int mNpixAllFrames = mWidthPerFrame_pix * mHeightAllFrames_pix;	//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
 		Session();
 		~Session();
@@ -58,11 +57,12 @@ namespace FPGAapi
 		//Private subclass
 		class Pixelclock
 		{
+			const FPGAapi::Session &mFpga;
 			QU32 mPixelclockQ;					//Queue containing the pixel-clock sequence
 			const int mLatency_tick = 2;		//Latency at detecting the line clock. Calibrate the latency with the oscilloscope
 			void pushUniformDwellTimes(const int calibFine_tick, const double dwellTime_us);
 		public:
-			Pixelclock();
+			Pixelclock(const FPGAapi::Session &fpga);
 			~Pixelclock();
 			QU32 readPixelclock() const;
 		};
@@ -80,7 +80,7 @@ namespace FPGAapi
 		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V);
 		void uploadRT() const;
 		void triggerRT() const;
-		int getNframes() const;
+		FPGAapi::Session getSession() const;
 	};
 
 	class FPGAexception : public std::runtime_error

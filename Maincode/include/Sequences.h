@@ -2,7 +2,7 @@
 #include "Devices.h"
 //#include <concrt.h> 	//Concurrency::wait(2000);
 
-void seq_main(const FPGAapi::Session &fpga);
+void seq_main(FPGAapi::Session &fpga);
 void seq_contAcquisition(const FPGAapi::Session &fpga);
 void seq_testPixelclock(const FPGAapi::Session &fpga);
 void seq_testAODO(const FPGAapi::Session &fpga);
@@ -19,5 +19,5 @@ void seq_testLaserComm(const FPGAapi::Session &fpga);
 void seq_testRS(const FPGAapi::Session &fpga);
 void seq_testConvertI16toVolt();
 void seq_saveAsTiffTest();
-void seq_testGalvoSync(const FPGAapi::Session &fpga);
+void seq_testGalvoSync(FPGAapi::Session &fpga);
 void seq_testTiff();

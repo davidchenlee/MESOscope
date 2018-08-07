@@ -7,7 +7,7 @@ There are basically 2 imaging modes :
 */
 
 
-void seq_main(const FPGAapi::Session &fpga)
+void seq_main(FPGAapi::Session &fpga)
 {
 	const int runmode = 0;
 	/*
@@ -22,7 +22,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.120, 19.808, 18.451 };	//Initial position
+	double3 position_mm = { 35.120, 19.808, 18.4545 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -54,34 +54,34 @@ void seq_main(const FPGAapi::Session &fpga)
 	fw.setColor(wavelength_nm);
 
 	//ACQUISITION MODE SETTING
-	int nFramesStack;
-	int nFramesAvg;
+	int nFramesDiffZ;
+	int nFramesSameZ;
 	bool overrideFlag;
 	switch (runMode)
 	{
 	case single:
-		nFramesAvg = 1;
-		nFramesStack = 1; //Do not change this
+		nFramesSameZ = 1;
+		nFramesDiffZ = 1; //Do not change this
 		overrideFlag = FALSE;
 		break;
 	case continuous:
-		nFramesAvg = 500;
-		nFramesStack = 1; //Do not change this
+		nFramesSameZ = 500;
+		nFramesDiffZ = 1; //Do not change this
 		overrideFlag = TRUE;
 		break;
 	case average:
-		nFramesAvg = 10;
-		nFramesStack = 1; //Do not change this
+		nFramesSameZ = 10;
+		nFramesDiffZ = 1; //Do not change this
 		overrideFlag = FALSE;
 		break;
 	case stack:
-		nFramesAvg = 1;
-		nFramesStack = (int)(zDelta_um / stepSize_um);
+		nFramesSameZ = 1;
+		nFramesDiffZ = (int)(zDelta_um / stepSize_um);
 		overrideFlag = FALSE;
 		break;
 	case stack_centered:
-		nFramesAvg = 1;
-		nFramesStack = (int)(zDelta_um / stepSize_um);
+		nFramesSameZ = 1;
+		nFramesDiffZ = (int)(zDelta_um / stepSize_um);
 		position_mm.at(zz) -= 0.5 * zDelta_um / 1000; //Shift the stage to the middle of the interval
 		overrideFlag = FALSE;
 		break;
@@ -106,7 +106,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	datalog.record("SCAN---------------------------------------------------------");
 	datalog.record("RS FFOV (um) = ", RS.mFFOV_um);
 	datalog.record("RS period (us) = ", 2 * halfPeriodLineclock_us);
-	datalog.record("Pixel dwell time (us) = ", dwell_us);
+	datalog.record("Pixel dwell time (us) = ", fpga.mDwell_us);
 	datalog.record("RS fill factor = ", RS.mFillFactor);
 	datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep);
@@ -115,7 +115,7 @@ void seq_main(const FPGAapi::Session &fpga)
 	datalog.record("IMAGE--------------------------------------------------------");
 	datalog.record("Max count per pixel = ", fpga.mPulsesPerPixel);
 	datalog.record("8-bit upscaling factor = ", fpga.mUpscaleU8);
-	datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
+	datalog.record("Width X (RS) (pix) = ", fpga.mWidthPerFrame_pix);
 	datalog.record("Height Y (galvo) (pix) = ", fpga.mHeightPerFrame_pix);
 	datalog.record("Resolution X (RS) (um/pix) = ", RS.mSampRes_umPerPix);
 	datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um/fpga.mHeightPerFrame_pix);
@@ -130,15 +130,15 @@ void seq_main(const FPGAapi::Session &fpga)
 	shutter1.open();
 	Sleep(50);
 
-	for (int ii = 0; ii < nFramesStack; ii++)
+	for (int ii = 0; ii < nFramesDiffZ; ii++)
 	{
 		stage.printPosition3();		//Print the stage position
 
-		for (int jj = 0; jj < nFramesAvg; jj++)
+		for (int jj = 0; jj < nFramesSameZ; jj++)
 		{
-			std::cout << "Z-plane " << (ii + 1) << "/" << nFramesStack <<
-				"\tFrame " << (jj + 1) << "/" << nFramesAvg <<
-				"\tTotal frame " << ii * nFramesAvg + (jj + 1) << "/" << nFramesStack * nFramesAvg << std::endl;
+			std::cout << "Z-plane " << (ii + 1) << "/" << nFramesDiffZ <<
+				"\tFrame " << (jj + 1) << "/" << nFramesSameZ <<
+				"\tTotal frame " << ii * nFramesSameZ + (jj + 1) << "/" << nFramesDiffZ * nFramesSameZ << std::endl;
 
 			//CREATE A REAL-TIME SEQUENCE
 			FPGAapi::RTsequence sequence(fpga);
@@ -506,11 +506,12 @@ void seq_saveAsTiffTest()
 
 }
 
-void seq_testGalvoSync(const FPGAapi::Session &fpga)
+void seq_testGalvoSync(FPGAapi::Session &fpga)
 {
+	fpga.mNframes = 2;
 
 	//GALVO
-	const double FFOVgalvo_um = 200 * um;									//Full FOV in the slow axis
+	const double FFOVgalvo_um = 200 * um;		//Full FOV in the slow axis
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -520,9 +521,10 @@ void seq_testGalvoSync(const FPGAapi::Session &fpga)
 	//GALVO FOR RT
 	Galvo galvo(sequence, GALVO1);
 	const double duration = halfPeriodLineclock_us * fpga.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
-	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-	galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//Linear ramp for the galvo
-	//galvo.pushVoltageSinglet_(2 * us, 1);											//Mark the end of the galvo ramp
+	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);	//Linear ramp for the galvo
+	if (fpga.mNframes % 2)
+		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//Linear ramp for the galvo
+	//galvo.pushVoltageSinglet_(2 * us, 1);										//Mark the end of the galvo ramp
 																						
 	sequence.uploadRT();//Upload the realtime sequence to the FPGA but don't execute it yet
 

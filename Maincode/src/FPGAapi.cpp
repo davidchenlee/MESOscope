@@ -112,8 +112,8 @@ namespace FPGAapi
 		//Must be called before any other FPGA calls
 		checkStatus(__FUNCTION__, NiFpga_Initialize());
 
-		//Opens a session, downloads the bitstream. 1=no run, 0=run
-		checkStatus(__FUNCTION__, NiFpga_Open(mBitfile.c_str(), NiFpga_FPGAvi_Signature, "RIO0", 0, &mSession));
+		//Opens a session, uploads the bitfile to the FPGA. 1=no run, 0=run
+		checkStatus(__FUNCTION__, NiFpga_Open(mBitfile.c_str(), NiFpga_FPGAvi_Signature, "RIO0", 0, &mFpgaHandle));
 	}
 
 	Session::~Session()
@@ -129,56 +129,56 @@ namespace FPGAapi
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more scan parameters have negative values");
 
 		//INPUT SELECTORS
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));					//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));							//Select the Line clock: resonant scanner or function generator
-		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mSession, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));					//For debugging the photoncounters
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpgaHandle, NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));					//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpgaHandle, NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));							//Select the Line clock: resonant scanner or function generator
+		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mFpgaHandle, NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));					//For debugging the photoncounters
 
 		//FIFOIN
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)nChan));											//Number of input channels
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));												//Control-sequence trigger
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_FIFOINtimeout_tick, (U16)FIFOINtimeout_tick));						//FIFOIN timeout
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_Nchannels, (U16)nChan));											//Number of input channels
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));												//Control-sequence trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_FIFOINtimeout_tick, (U16)FIFOINtimeout_tick));						//FIFOIN timeout
 
 		//FIFOOUT
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, FIFOOUTfpgaEnable));							//Enable pushing data to FIFOOUTfpga. For debugging purposes
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, FIFOOUTfpgaEnable));							//Enable pushing data to FIFOOUTfpga. For debugging purposes
 
 		//TRIGGERS AND DELAYS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));											//Data-acquisition trigger
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));												//Memory-flush trigger
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncDOtoAOtick, (U16)syncDOtoAO_tick));							//DO and AO relative sync
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, (U16)syncAODOtoLinegate_tick));			//DO and AO sync to linegate
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));											//Data-acquisition trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));												//Memory-flush trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_SyncDOtoAOtick, (U16)syncDOtoAO_tick));							//DO and AO relative sync
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, (U16)syncAODOtoLinegate_tick));			//DO and AO sync to linegate
 
 		if (linegateTimeout_us <= 2 * halfPeriodLineclock_us)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_LinegateTimeout_tick, (U16)(linegateTimeout_us * tickPerUs)));		//Sequence trigger timeout
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_LinegateTimeout_tick, (U16)(linegateTimeout_us * tickPerUs)));		//Sequence trigger timeout
 
 
 		//IMAGING PARAMETERS
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(mSession, NiFpga_FPGAvi_ControlU8_Nframes, (U8)mNframes));												//Number of frames to acquire
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession,
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpgaHandle, NiFpga_FPGAvi_ControlU8_Nframes, (U8)mNframes));												//Number of frames to acquire
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle,
 			NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(mHeightAllFrames_pix + mNframes * mNlinesSkip - mNlinesSkip)));											//Total number of lines in all the frames, including the skipped lines, minus the very last skipped lines)
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)mHeightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mSession, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(mHeightPerFrame_pix + mNlinesSkip)));	//Number of lines in a frame including the skipped lines
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)mHeightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpgaHandle, NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(mHeightPerFrame_pix + mNlinesSkip)));	//Number of lines in a frame including the skipped lines
 
 		//POCKELS CELLS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Pockels1_EnableAutoOff, (NiFpga_Bool)pockels1_enableAutoOff));	//Enable gating the pockels by framegate. For debugging purposes
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_Pockels1_EnableAutoOff, (NiFpga_Bool)pockels1_enableAutoOff));	//Enable gating the pockels by framegate. For debugging purposes
 
 		//VIBRATOME
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VTstart, 0));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VTback, 0));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_VTforward, 0));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_VTstart, 0));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_VTback, 0));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_VTforward, 0));
 
 		//STAGES
 		const bool scanDirection = 0;
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(mSession, NiFpga_FPGAvi_ControlU32_StageTriggerPulse_tick, (U32)stageTriggerPulse_ms * tickPerUs));		//Trigger pulse width
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_ScanDirection, scanDirection));										//Z-stage scan direction (1 for up, 0 for down)
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpgaHandle, NiFpga_FPGAvi_ControlU32_StageTriggerPulse_tick, (U32)stageTriggerPulse_ms * tickPerUs));		//Trigger pulse width
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_ScanDirection, scanDirection));										//Z-stage scan direction (1 for up, 0 for down)
 	
 		//SHUTTERS. Commented out to allow keeping the shutter on
-		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
-		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
+		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_Shutter1, 0));
+		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_Shutter2, 0));
 
 		//RESONANT SCANNER. Commented out to allow keeping the RS on
-		//checkStatus(__FUNCTION__,  NiFpga_WriteI16(mSession, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));	//Output voltage
-		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
+		//checkStatus(__FUNCTION__,  NiFpga_WriteI16(mFpgaHandle, NiFpga_FPGAvi_ControlI16_RS_voltage, 0));	//Output voltage
+		//checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_RS_ON_OFF, 0));	//Turn on/off
 
 		//Flush the residual data in FIFOOUT from a previous run, if any
 		FIFOOUTpcGarbageCollector_();
@@ -226,14 +226,14 @@ namespace FPGAapi
 		const U32 timeout_ms = -1;		//in ms. A value -1 prevents FIFOIN from timing out
 		U32 r;							//Elements remaining
 
-		checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mSession, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, timeout_ms, &r)); //Send the data to the FPGA through FIFOIN. I measure a min time of 10 ms to execute
+		checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpgaHandle, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, timeout_ms, &r)); //Send the data to the FPGA through FIFOIN. I measure a min time of 10 ms to execute
 	}
 
 	//Execute the commands
 	void Session::triggerRT() const
 	{
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
 	}
 
 
@@ -241,8 +241,8 @@ namespace FPGAapi
 	void Session::flushBRAMs_() const
 	{
 		Sleep(100);	//Do not flush too soon, otherwise the output sequence will be cut off
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mSession, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));
 		//std::cout << "flushBRAMs called\n";
 	}
 
@@ -254,7 +254,7 @@ namespace FPGAapi
 		//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 		//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 		//0 resets, 1 does not reset
-		checkStatus(__FUNCTION__, NiFpga_Close(mSession, (U32)!reset));
+		checkStatus(__FUNCTION__, NiFpga_Close(mFpgaHandle, (U32)!reset));
 
 		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 		checkStatus(__FUNCTION__, NiFpga_Finalize());
@@ -262,7 +262,7 @@ namespace FPGAapi
 
 	NiFpga_Session Session::getSession() const
 	{
-		return mSession;
+		return mFpgaHandle;
 	}
 
 	//Flush the residual data in FIFOOUTpc from a previous run, if any
@@ -276,7 +276,7 @@ namespace FPGAapi
 
 		//FIFOOUTpc A
 		//Check if there are elements in FIFOOUTpc
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
 		while (nRemainFIFOOUT > 0)
 		{
 			std::cout << "Number of elements remaining in FIFOOUTpc A: " << nRemainFIFOOUT << std::endl;
@@ -285,15 +285,15 @@ namespace FPGAapi
 			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
 
 			//Retrieve the elements in FIFOOUTpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], nRetrieveFIFOOUT, timeout_ms, &nRemainFIFOOUT));
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], nRetrieveFIFOOUT, timeout_ms, &nRemainFIFOOUT));
 
 			//Check if there are elements left in FIFOOUTpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
 		}
 
 		//FIFOOUTpc B
 		//Check if there are elements in FIFOOUTpc
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
 		while (nRemainFIFOOUT> 0)
 		{
 			std::cout << "Number of elements remaining in FIFOOUTpc B: " << nRemainFIFOOUT << std::endl;
@@ -302,10 +302,10 @@ namespace FPGAapi
 			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
 
 			//Retrieve the elements in FIFOOUTpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
 
 			//Check if there are elements left in FIFOOUTpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mSession, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
 		}
 	}
 
@@ -314,11 +314,11 @@ namespace FPGAapi
 #pragma endregion "Session"
 
 #pragma region "RTsequence"
-	RTsequence::Pixelclock::Pixelclock()
+	RTsequence::Pixelclock::Pixelclock(const FPGAapi::Session &fpga): mFpga(fpga)
 	{
 		switch (pixelclockType)
 		{
-		case uniform: pushUniformDwellTimes(-32, dwell_us);
+		case uniform: pushUniformDwellTimes(-32, mFpga.mDwell_us);
 			break;
 		//case nonuniform: pushCorrectedDwellTimes();
 			//break;
@@ -337,7 +337,7 @@ namespace FPGAapi
 		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (halfPeriodLineclock_us-400*125ns)/2
 
-		const double initialWaitingTime_us = (halfPeriodLineclock_us - widthPerFrame_pix * dwellTime_us) / 2; //Relative delay of the pixel clock wrt the line clock
+		const double initialWaitingTime_us = (halfPeriodLineclock_us - mFpga.mWidthPerFrame_pix * dwellTime_us) / 2; //Relative delay of the pixel clock wrt the line clock
 
 		//Check if the pixelclock overflows each Lineclock
 		if (initialWaitingTime_us <= 0)
@@ -347,7 +347,7 @@ namespace FPGAapi
 
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-		for (int pix = 0; pix < widthPerFrame_pix + 1; pix++)
+		for (int pix = 0; pix < mFpga.mWidthPerFrame_pix + 1; pix++)
 			mPixelclockQ.push_back(FPGAapi::packPixelclockSinglet(dwellTime_us, 1));
 	}
 
@@ -359,7 +359,7 @@ namespace FPGAapi
 
 	RTsequence::RTsequence(const FPGAapi::Session &fpga) : mFpga(fpga), mVectorOfQueues(nChan)
 	{
-		const Pixelclock pixelclock;
+		const Pixelclock pixelclock(mFpga);
 		mVectorOfQueues.at(PIXELCLOCK) = pixelclock.readPixelclock();
 	}
 
@@ -453,9 +453,9 @@ namespace FPGAapi
 		mFpga.triggerRT();
 	}
 
-	int RTsequence::getNframes() const
+	FPGAapi::Session RTsequence::getSession() const
 	{
-		return mFpga.mNframes;
+		return mFpga;
 	}
 
 #pragma endregion "RTsequence"

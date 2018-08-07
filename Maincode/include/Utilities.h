@@ -7,7 +7,7 @@
 #include <experimental/filesystem>	//standard method in C++14 but not C++11
 #include <bitset>					//For  std::bitset
 #include <tiffio.h>					//Tiff files
-using namespace Parameters;
+using namespace Constants;
 
 std::string file_exists(const std::string filename);
 std::string toString(const double number, const int nDecimalPlaces);

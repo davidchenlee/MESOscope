@@ -69,20 +69,3 @@ namespace Constants
 	extern const int nPulses;
 	extern const U8 pulseArray[];
 }
-
-namespace Parameters
-{
-	using namespace Constants;
-
-	extern const double dwell_us;
-//	extern const double pulsesPerPixel;
-//	extern const double upscaleU8;
-	extern const int widthPerFrame_pix;
-//	extern const int heightPerFrame_pix;
-//	extern const int nLinesSkip;
-//	extern const int nFrames;
-//	extern const int heightAllFrames_pix;
-//	extern const int nPixAllFrames;
-
-
-}

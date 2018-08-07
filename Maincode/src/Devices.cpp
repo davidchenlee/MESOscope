@@ -123,7 +123,7 @@ void Image::correctInterleaved_()
 {
 	//Within an odd line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
 	for (int lineIndex = 1; lineIndex < mFpga.mHeightAllFrames_pix; lineIndex += 2)
-		std::reverse(mBufArrayB.begin() + lineIndex * widthPerFrame_pix, mBufArrayB.begin() + lineIndex * widthPerFrame_pix + widthPerFrame_pix);
+		std::reverse(mBufArrayB.begin() + lineIndex * mFpga.mWidthPerFrame_pix, mBufArrayB.begin() + lineIndex * mFpga.mWidthPerFrame_pix + mFpga.mWidthPerFrame_pix);
 }
 
 //When multiplexing later on, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
@@ -147,7 +147,7 @@ void Image::demux_()
 void Image::analyze_() const
 {
 	double totalCount = 0;
-	for (int index = 0; index < widthPerFrame_pix * mFpga.mHeightPerFrame_pix; index++)
+	for (int index = 0; index < mFpga.mWidthPerFrame_pix * mFpga.mHeightPerFrame_pix; index++)
 		totalCount += mImage.at(index);
 
 	//std::cout << "Total count = " << totalCount << std::endl;
@@ -184,7 +184,7 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 
 void Image::saveToTiff(std::string filename, const bool overrideFile) const
 {
-	const int width_pix = widthPerFrame_pix;
+	const int width_pix = mFpga.mWidthPerFrame_pix;
 	const int height_pix = mFpga.mHeightAllFrames_pix;
 
 	if (!overrideFile)
@@ -302,7 +302,7 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 ResonantScanner::ResonantScanner(const FPGAapi::Session &fpga): mFpga(fpga)
 {	
 	//Calculate the spatial fill factor
-	const double temporalFillFactor = widthPerFrame_pix * dwell_us / halfPeriodLineclock_us;
+	const double temporalFillFactor = mFpga.mWidthPerFrame_pix * mFpga.mDwell_us / halfPeriodLineclock_us;
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
@@ -314,7 +314,7 @@ ResonantScanner::ResonantScanner(const FPGAapi::Session &fpga): mFpga(fpga)
 	mControl_V = downloadControl_V();					//Control voltage
 	mFullScan_um = mControl_V / mVoltPerUm;					//Full scan FOV = distance from turning point to turning point
 	mFFOV_um = mFullScan_um * mFillFactor;					//FFOV
-	mSampRes_umPerPix = mFFOV_um / widthPerFrame_pix;		//Spatial sampling resolution
+	mSampRes_umPerPix = mFFOV_um / mFpga.mWidthPerFrame_pix;		//Spatial sampling resolution
 };
 
 ResonantScanner::~ResonantScanner() {};
@@ -329,7 +329,7 @@ void ResonantScanner::setVoltage_(const double control_V)
 	mControl_V = control_V;									//Control voltage
 	mFullScan_um = control_V / mVoltPerUm;					//Full scan FOV
 	mFFOV_um = mFullScan_um * mFillFactor;					//FFOV
-	mSampRes_umPerPix = mFFOV_um / widthPerFrame_pix;		//Spatial sampling resolution
+	mSampRes_umPerPix = mFFOV_um / mFpga.mWidthPerFrame_pix;		//Spatial sampling resolution
 
 	//Upload the control voltage
 	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAapi::convertVoltToI16(mControl_V)));
@@ -342,7 +342,7 @@ void ResonantScanner::setFFOV(const double FFOV_um)
 	mFullScan_um = FFOV_um / mFillFactor;					//Full scan FOV
 	mControl_V = mFullScan_um * mVoltPerUm;					//Control voltage
 	mFFOV_um = FFOV_um;										//FFOV
-	mSampRes_umPerPix = mFFOV_um / widthPerFrame_pix;		//Spatial sampling resolution
+	mSampRes_umPerPix = mFFOV_um / mFpga.mWidthPerFrame_pix;		//Spatial sampling resolution
 	//std::cout << "mControl_V = " << mControl_V << std::endl; //For debugging
 
 	if (mControl_V < 0 || mControl_V > mVMAX_V)
@@ -439,7 +439,7 @@ void Shutter::pulseHigh() const
 
 #pragma region "Pockels cells"
 //Curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
-PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsChannel, const int wavelength_nm) : mSequence(sequence), mPockelsChannel(pockelsChannel), mWavelength_nm(wavelength_nm)
+PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsChannel, const int wavelength_nm) : mSequence(sequence), mPockelsChannel(pockelsChannel), mWavelength_nm(wavelength_nm), mNframes((mSequence.getSession()).mNframes)
 {
 	if (mPockelsChannel != POCKELS1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
@@ -452,7 +452,7 @@ PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsC
 	}
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT as 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
-	for (int ii = 0; ii < mSequence.getNframes(); ii++)
+	for (int ii = 0; ii < mNframes; ii++)
 		mSequence.pushAnalogSingletFx2p14(mScalingChannel, 1.0);
 }
 
@@ -505,13 +505,13 @@ void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor must be in the range 0-4");
 	
-	if (mSequence.getNframes() < 2)
+	if (mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
 	mSequence.clearQueue(mScalingChannel);	//Delete the default scaling factors of 1.0s created in the PockelsCell constructor
 
-	for (int ii = 0; ii < mSequence.getNframes(); ii++)
-		mSequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (mSequence.getNframes() -1) * ii);
+	for (int ii = 0; ii < mNframes; ii++)
+		mSequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (mNframes -1) * ii);
 }
 
 

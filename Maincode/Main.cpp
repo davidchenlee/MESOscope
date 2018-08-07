@@ -4,12 +4,11 @@ int main(int argc, char* argv[])
 {
 	try
 	{
-		FPGAapi::Session fpga;		//Create a FPGA session
+		FPGAns::FPGA fpga;		//Create a FPGA session
 		try
 		{
-			fpga.initialize();		//Initialize the FPGA
-
-			//seq_main(fpga);			//Run the sequence
+			//Run the sequence
+			seq_main(fpga);			
 			//seq_contAcquisition(fpga);
 			//seq_testPixelclock(fpga);
 			//seq_testStageSetPosition();
@@ -22,7 +21,7 @@ int main(int argc, char* argv[])
 			//seq_contAcquisitionTest(fpga);
 			//seq_testConvertI16toVoltage();
 			//seq_saveAsTiffTest();
-			seq_testGalvoSync(fpga);
+			//seq_testGalvoSync(fpga);
 			//seq_testTiff();
 		}
 		catch (const std::invalid_argument &e)
@@ -37,7 +36,7 @@ int main(int argc, char* argv[])
 			std::cout << "Press any key to continue..." << std::endl;
 			getchar();
 		}
-		catch (const FPGAapi::FPGAexception &e)
+		catch (const FPGAns::FPGAexception &e)
 		{
 			std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
 			std::cout << "Press any key to continue..." << std::endl;
@@ -59,8 +58,8 @@ int main(int argc, char* argv[])
 		fpga.close(0);		//Close the FPGA connection
 
 	}
-	//Catch exceptions thrown by the constructor FPGAapi::Session
-	catch (const FPGAapi::FPGAexception &e)
+	//Catch exceptions thrown by the constructor FPGAns::FPGA
+	catch (const FPGAns::FPGAexception &e)
 	{
 		std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
 		std::cout << "Press any key to continue..." << std::endl;

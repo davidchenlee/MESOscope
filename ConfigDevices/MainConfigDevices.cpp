@@ -10,11 +10,9 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		FPGAapi::Session fpga;	//Open a FPGA connection
+		FPGAns::FPGA fpga;	//Open a FPGA connection
 		try
 		{
-			fpga.initialize();	//Initialize the FPGA
-
 			ResonantScanner RS(fpga);
 			//Shutter shutter1(fpga, Shutter1);
 			Laser vision;
@@ -52,7 +50,7 @@ int main(int argc, char* argv[])
 		{
 			std::cout << "An overflow has occurred: " << e.what() << std::endl;
 		}
-		catch (const FPGAapi::FPGAexception &e)
+		catch (const FPGAns::FPGAexception &e)
 		{
 			std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
 		}
@@ -68,7 +66,7 @@ int main(int argc, char* argv[])
 		fpga.close(0);		//Close the FPGA connection
 	}
 
-	catch (const FPGAapi::FPGAexception &e)
+	catch (const FPGAns::FPGAexception &e)
 	{
 		std::cout << "An FPGA exception has occurred: " << e.what() << std::endl;
 	}

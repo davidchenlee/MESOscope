@@ -7,7 +7,7 @@ There are basically 2 imaging modes :
 */
 
 
-void seq_main(FPGAapi::Session &fpga)
+void seq_main(const FPGAns::FPGA &fpga)
 {
 	const int runmode = 0;
 	/*
@@ -20,6 +20,7 @@ void seq_main(FPGAapi::Session &fpga)
 		
 	const RunMode runMode = static_cast<RunMode>(runmode);
 	
+
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
 	double3 position_mm = { 35.120, 19.808, 18.4545 };	//Initial position
@@ -36,7 +37,7 @@ void seq_main(FPGAapi::Session &fpga)
 
 	//GALVO
 	const double FFOVgalvo_um = 200 * um;									//Full FOV in the slow axis
-	const double duration = 62.5 * us * fpga.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+	const double duration = 62.5 * us * mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -106,19 +107,19 @@ void seq_main(FPGAapi::Session &fpga)
 	datalog.record("SCAN---------------------------------------------------------");
 	datalog.record("RS FFOV (um) = ", RS.mFFOV_um);
 	datalog.record("RS period (us) = ", 2 * halfPeriodLineclock_us);
-	datalog.record("Pixel dwell time (us) = ", fpga.mDwell_us);
+	datalog.record("Pixel dwell time (us) = ", mDwell_us);
 	datalog.record("RS fill factor = ", RS.mFillFactor);
 	datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
 	datalog.record("Galvo time step (us) = ", galvoTimeStep);
 
 
 	datalog.record("IMAGE--------------------------------------------------------");
-	datalog.record("Max count per pixel = ", fpga.mPulsesPerPixel);
-	datalog.record("8-bit upscaling factor = ", fpga.mUpscaleU8);
-	datalog.record("Width X (RS) (pix) = ", fpga.mWidthPerFrame_pix);
-	datalog.record("Height Y (galvo) (pix) = ", fpga.mHeightPerFrame_pix);
+	datalog.record("Max count per pixel = ", mPulsesPerPixel);
+	datalog.record("8-bit upscaling factor = ", mUpscaleU8);
+	datalog.record("Width X (RS) (pix) = ", mWidthPerFrame_pix);
+	datalog.record("Height Y (galvo) (pix) = ", mHeightPerFrame_pix);
 	datalog.record("Resolution X (RS) (um/pix) = ", RS.mSampRes_umPerPix);
-	datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um/fpga.mHeightPerFrame_pix);
+	datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um/mHeightPerFrame_pix);
 
 	//PRESET THE STAGES
 	Stage stage;
@@ -141,12 +142,12 @@ void seq_main(FPGAapi::Session &fpga)
 				"\tTotal frame " << ii * nFramesSameZ + (jj + 1) << "/" << nFramesDiffZ * nFramesSameZ << std::endl;
 
 			//CREATE A REAL-TIME SEQUENCE
-			FPGAapi::RTsequence sequence(fpga);
+			FPGAns::RTsequence sequence(fpga);
 
 			//GALVO FOR RT
 			Galvo galvo(sequence, GALVO1);
 			galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-			if (fpga.mNframes % 2 )
+			if (mNframes % 2 )
 				galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
 
 			//POCKELS CELL FOR RT
@@ -157,10 +158,10 @@ void seq_main(FPGAapi::Session &fpga)
 			//pockels.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
 
 			//Upload the realtime sequence to the FPGA but don't execute it yet
-			sequence.uploadRT();
+			sequence.initializeRT();
 
 			//Execute the realtime sequence and acquire the image
-			Image image(fpga);
+			Image image(sequence);
 			image.acquire(TRUE, filename + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 				"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4), overrideFlag); //Execute the RT sequence and acquire the image
 		}
@@ -180,7 +181,7 @@ void seq_main(FPGAapi::Session &fpga)
 }
 
 //For live optimization of the objective's correction collar
-void seq_contAcquisition(const FPGAapi::Session &fpga)
+void seq_contAcquisition(const FPGAns::FPGA &fpga)
 {
 	int nFrames = 1000;
 
@@ -192,7 +193,7 @@ void seq_contAcquisition(const FPGAapi::Session &fpga)
 
 	//GALVO
 	const double FFOVgalvo_um = 300 * um;									//Full FOV in the slow axis
-	const double duration = halfPeriodLineclock_us * fpga.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+	const double duration = halfPeriodLineclock_us * mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -212,7 +213,7 @@ void seq_contAcquisition(const FPGAapi::Session &fpga)
 		std::cout << "Iteration: " << jj+1 << std::endl;
 
 		//CREATE A REAL-TIME SEQUENCE
-		FPGAapi::RTsequence sequence(fpga);
+		FPGAns::RTsequence sequence(fpga);
 
 		//GALVO FOR RT
 		Galvo galvo(sequence, GALVO1);
@@ -224,29 +225,29 @@ void seq_contAcquisition(const FPGAapi::Session &fpga)
 		pockels.pushPowerSinglet(8 * us, laserPower_mW);
 
 		//Upload the realtime sequence to the FPGA but don't execute it yet
-		sequence.uploadRT();
+		sequence.initializeRT();
 
 		//Execute the realtime sequence and acquire the image
-		Image image(fpga);
+		Image image(sequence);
 		image.acquire(TRUE,"Untitled",TRUE); //Execute the RT sequence and acquire the image
 	}
 	shutter1.close();
 }
 
 
-void seq_testPixelclock(const FPGAapi::Session &fpga)
+void seq_testPixelclock(const FPGAns::FPGA &fpga)
 {
-	FPGAapi::RTsequence sequence(fpga); 	//Create a realtime sequence
-	sequence.uploadRT();					//Upload the realtime sequence to the FPGA but don't execute it yet
-	Image image(fpga);
+	FPGAns::RTsequence sequence(fpga); 	//Create a realtime sequence
+	sequence.initializeRT();					//Upload the realtime sequence to the FPGA but don't execute it yet
+	Image image(sequence);
 	image.acquire(TRUE);					//Execute the realtime sequence and acquire the image
 
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock
-void seq_testAODO(const FPGAapi::Session &fpga)
+void seq_testAODO(const FPGAns::FPGA &fpga)
 {
-	FPGAapi::RTsequence sequence(fpga);
+	FPGAns::RTsequence sequence(fpga);
 
 	//DO
 	sequence.pushDigitalSinglet(DOdebug, 4 * us, 1);
@@ -257,16 +258,16 @@ void seq_testAODO(const FPGAapi::Session &fpga)
 	sequence.pushAnalogSinglet(GALVO1, 4 * us, 2);
 	sequence.pushAnalogSinglet(GALVO1, 4 * us, 1);
 
-	sequence.uploadRT();	//Upload the realtime sequence to the FPGA but don't execute it yet
-	sequence.triggerRT();	//Execute the realtime sequence
+	sequence.initializeRT();	//Upload the realtime sequence to the FPGA but don't execute it yet
+	fpga.triggerRT();	//Execute the realtime sequence
 }
 
-void seq_testAOramp(const FPGAapi::Session &fpga)
+void seq_testAOramp(const FPGAns::FPGA &fpga)
 {
 	const double Vmax = 5;
 	const double step = 4 * us;
 
-	FPGAapi::RTsequence sequence(fpga);
+	FPGAns::RTsequence sequence(fpga);
 	sequence.pushLinearRamp(GALVO1, step, 2 * ms, 0, -Vmax);
 	sequence.pushLinearRamp(GALVO1, step, 20 * ms, -Vmax, Vmax);
 	sequence.pushLinearRamp(GALVO1, step, 2 * ms, Vmax, 0);
@@ -277,21 +278,21 @@ void seq_testAOramp(const FPGAapi::Session &fpga)
 }
 
 //Generate a long digital pulse and check the duration with the oscilloscope
-void seq_checkDigitalTiming(const FPGAapi::Session &fpga)
+void seq_checkDigitalTiming(const FPGAns::FPGA &fpga)
 {
 	const double step = 400 * us;
 
-	FPGAapi::RTsequence sequence(fpga);
+	FPGAns::RTsequence sequence(fpga);
 	sequence.pushDigitalSinglet(DOdebug, step, 1);
 	sequence.pushDigitalSinglet(DOdebug, step, 0);
 }
 
 //Generate many short digital pulses and check the overall duration with the oscilloscope
-void seq_calibDigitalLatency(const FPGAapi::Session &fpga)
+void seq_calibDigitalLatency(const FPGAns::FPGA &fpga)
 {
 	const double step = 4 * us;
 
-	FPGAapi::RTsequence sequence(fpga);
+	FPGAns::RTsequence sequence(fpga);
 
 	sequence.pushDigitalSinglet(DOdebug, step, 1);
 
@@ -304,12 +305,12 @@ void seq_calibDigitalLatency(const FPGAapi::Session &fpga)
 }
 
 //First calibrate the digital channels, then use it as a time reference
-void seq_calibAnalogLatency(const FPGAapi::Session &fpga)
+void seq_calibAnalogLatency(const FPGAns::FPGA &fpga)
 {
 	const double delay = 400 * us;
 	const double step = 4 * us;
 
-	FPGAapi::RTsequence sequence(fpga);
+	FPGAns::RTsequence sequence(fpga);
 	sequence.pushAnalogSinglet(GALVO1, step, 10);	//Initial pulse
 	sequence.pushAnalogSinglet(GALVO1, step, 0);
 	sequence.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5 * V);			//Linear ramp to accumulate the error
@@ -391,10 +392,10 @@ void seq_testmPMT()
 //1. Manually open the shutter
 //2. Set pockels1_enableAutoOff = 0
 //3. Set lineclockInput = FG
-void seq_testPockels(const FPGAapi::Session &fpga)
+void seq_testPockels(const FPGAns::FPGA &fpga)
 {
 	//Create a realtime sequence
-	FPGAapi::RTsequence sequence(fpga);
+	FPGAns::RTsequence sequence(fpga);
 
 	//Open the Uniblitz shutter
 	//Shutter shutter1(fpga, Shutter1);
@@ -406,21 +407,21 @@ void seq_testPockels(const FPGAapi::Session &fpga)
 	//pockels.pushVoltageSinglet_(8 * us, 2.508 * V);
 
 	//Upload the pockels sequence to the FPGA but don't execute it yet
-	sequence.uploadRT();
+	sequence.initializeRT();
 
 	//Execute the sequence
-	Image image(fpga);
+	Image image(sequence);
 	image.acquire();
 }
 
-void seq_testLaserComm(const FPGAapi::Session &fpga)
+void seq_testLaserComm(const FPGAns::FPGA &fpga)
 {
 	Laser vision;
 	//vision.setShutter(0);
 	vision.setWavelength(940);
 }
 
-void seq_testRS(const FPGAapi::Session &fpga)
+void seq_testRS(const FPGAns::FPGA &fpga)
 {
 	ResonantScanner RS(fpga);
 	std::cout << "aaa = " << RS.downloadControl_V() << std::endl;
@@ -430,11 +431,11 @@ void seq_testRS(const FPGAapi::Session &fpga)
 
 void seq_testConvertI16toVolt()
 {
-	std::cout << "volt to I16: " << FPGAapi::convertVoltToI16(1) << std::endl;
+	std::cout << "volt to I16: " << FPGAns::convertVoltToI16(1) << std::endl;
 
-	std::cout << "I16 to colt: " << FPGAapi::convertI16toVolt(32767) << std::endl;
+	std::cout << "I16 to colt: " << FPGAns::convertI16toVolt(32767) << std::endl;
 
-	std::cout << "volt to I16 to volt: " << FPGAapi::convertI16toVolt(FPGAapi::convertVoltToI16(0)) << std::endl;
+	std::cout << "volt to I16 to volt: " << FPGAns::convertI16toVolt(FPGAns::convertVoltToI16(0)) << std::endl;
 }
 
 
@@ -506,30 +507,28 @@ void seq_saveAsTiffTest()
 
 }
 
-void seq_testGalvoSync(FPGAapi::Session &fpga)
+void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 {
-	fpga.mNframes = 2;
-
 	//GALVO
 	const double FFOVgalvo_um = 200 * um;		//Full FOV in the slow axis
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
 	//CREATE A REAL-TIME SEQUENCE
-	FPGAapi::RTsequence sequence(fpga);
+	FPGAns::RTsequence sequence(fpga);
 
 	//GALVO FOR RT
 	Galvo galvo(sequence, GALVO1);
-	const double duration = halfPeriodLineclock_us * fpga.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+	const double duration = halfPeriodLineclock_us * mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);	//Linear ramp for the galvo
-	if (fpga.mNframes % 2)
+	if (mNframes % 2)
 		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//Linear ramp for the galvo
 	//galvo.pushVoltageSinglet_(2 * us, 1);										//Mark the end of the galvo ramp
 																						
-	sequence.uploadRT();//Upload the realtime sequence to the FPGA but don't execute it yet
+	sequence.initializeRT();//Upload the realtime sequence to the FPGA but don't execute it yet
 
 	//Execute the realtime sequence and acquire the image
-	Image image(fpga);
+	Image image(sequence);
 	image.acquire(); //Execute the RT sequence and acquire the image
 }
 

@@ -1,6 +1,6 @@
 #include "FPGAapi.h"
 
-namespace FPGAapi
+namespace FPGAns
 {
 	//Convert time to ticks
 	U16 convertUsTotick(const double t)
@@ -101,13 +101,13 @@ namespace FPGAapi
 	void checkStatus(char functionName[], NiFpga_Status status)
 	{
 		if (status < 0)
-			throw  FPGAapi::FPGAexception((std::string)functionName + " with FPGA code " + std::to_string(status));
+			throw  FPGAns::FPGAexception((std::string)functionName + " with FPGA code " + std::to_string(status));
 		if (status > 0)
 			std::cerr << "A warning has ocurred in " << functionName << " with FPGA code " << status << std::endl;
 	}
 
-#pragma region "Session"
-	Session::Session()
+#pragma region "FPGA"
+	FPGA::FPGA()
 	{
 		//Must be called before any other FPGA calls
 		checkStatus(__FUNCTION__, NiFpga_Initialize());
@@ -116,13 +116,13 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_Open(mBitfile.c_str(), NiFpga_FPGAvi_Signature, "RIO0", 0, &mFpgaHandle));
 	}
 
-	Session::~Session()
+	FPGA::~FPGA()
 	{
-		//std::cout << "Session destructor was called" << std::endl;
+		//std::cout << "FPGA destructor was called" << std::endl;
 	};
 
 	//Initialize the FPGA variables. See 'Const.cpp' for the definition of each variable
-	void Session::initialize() const
+	void FPGA::initialize() const
 	{
 		if (nChan < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 ||
 			linegateTimeout_us < 0 || mNframes < 0 || mHeightAllFrames_pix < 0 || mNlinesSkip < 0 || mHeightPerFrame_pix < 0 || stageTriggerPulse_ms < 0 )
@@ -189,7 +189,7 @@ namespace FPGAapi
 	//For this, concatenate all the single queues in a single long queue. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL	
 	//Then transfer the elements in the long queue to an array to interface the FPGA
 	//Improvement: the single queues VectorOfQueues[i] could be transferred directly to FIFOIN array
-	void Session::writeFIFOINpc(const VQU32 &vectorOfQueues) const
+	void FPGA::writeFIFOINpc(const VQU32 &vectorOfQueues) const
 	{
 		QU32 allQueues;		//Create a single long queue
 		for (int i = 0; i < nChan; i++)
@@ -230,7 +230,7 @@ namespace FPGAapi
 	}
 
 	//Execute the commands
-	void Session::triggerRT() const
+	void FPGA::triggerRT() const
 	{
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
@@ -238,7 +238,7 @@ namespace FPGAapi
 
 
 	//Flush the block RAMs used for buffering the pixelclock, AO, and DO 
-	void Session::flushBRAMs_() const
+	void FPGA::flushBRAMs_() const
 	{
 		Sleep(100);	//Do not flush too soon, otherwise the output sequence will be cut off
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, 1));
@@ -247,7 +247,7 @@ namespace FPGAapi
 	}
 
 	//The object has to be closed explicitly in main() for now because of the exception-catching
-	void Session::close(const bool reset) const
+	void FPGA::close(const bool reset) const
 	{
 		flushBRAMs_();		//Flush the RAM buffers on the FPGA as precaution. Make sure that the sequence has already finished
 
@@ -260,13 +260,13 @@ namespace FPGAapi
 		checkStatus(__FUNCTION__, NiFpga_Finalize());
 	}
 
-	NiFpga_Session Session::getSession() const
+	NiFpga_Session FPGA::getFpgaHandle() const
 	{
 		return mFpgaHandle;
 	}
 
 	//Flush the residual data in FIFOOUTpc from a previous run, if any
-	void Session::FIFOOUTpcGarbageCollector_() const
+	void FPGA::FIFOOUTpcGarbageCollector_() const
 	{
 		const U32 timeout_ms = 100;
 		const int bufSize = 10000;
@@ -276,7 +276,7 @@ namespace FPGAapi
 
 		//FIFOOUTpc A
 		//Check if there are elements in FIFOOUTpc
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
 		while (nRemainFIFOOUT > 0)
 		{
 			std::cout << "Number of elements remaining in FIFOOUTpc A: " << nRemainFIFOOUT << std::endl;
@@ -285,15 +285,15 @@ namespace FPGAapi
 			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
 
 			//Retrieve the elements in FIFOOUTpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], nRetrieveFIFOOUT, timeout_ms, &nRemainFIFOOUT));
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], nRetrieveFIFOOUT, timeout_ms, &nRemainFIFOOUT));
 
 			//Check if there are elements left in FIFOOUTpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
 		}
 
 		//FIFOOUTpc B
 		//Check if there are elements in FIFOOUTpc
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
 		while (nRemainFIFOOUT> 0)
 		{
 			std::cout << "Number of elements remaining in FIFOOUTpc B: " << nRemainFIFOOUT << std::endl;
@@ -302,23 +302,23 @@ namespace FPGAapi
 			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
 
 			//Retrieve the elements in FIFOOUTpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
 
 			//Check if there are elements left in FIFOOUTpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpgaHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
 		}
 	}
 
 
 
-#pragma endregion "Session"
+#pragma endregion "FPGA"
 
 #pragma region "RTsequence"
-	RTsequence::Pixelclock::Pixelclock(const FPGAapi::Session &fpga): mFpga(fpga)
+	RTsequence::Pixelclock::Pixelclock(const FPGAns::FPGA &fpga): mFpga(fpga)
 	{
 		switch (pixelclockType)
 		{
-		case uniform: pushUniformDwellTimes(-32, mFpga.mDwell_us);
+		case uniform: pushUniformDwellTimes(-32, mDwell_us);
 			break;
 		//case nonuniform: pushCorrectedDwellTimes();
 			//break;
@@ -337,18 +337,18 @@ namespace FPGAapi
 		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (halfPeriodLineclock_us-400*125ns)/2
 
-		const double initialWaitingTime_us = (halfPeriodLineclock_us - mFpga.mWidthPerFrame_pix * dwellTime_us) / 2; //Relative delay of the pixel clock wrt the line clock
+		const double initialWaitingTime_us = (halfPeriodLineclock_us - mWidthPerFrame_pix * dwellTime_us) / 2; //Relative delay of the pixel clock wrt the line clock
 
 		//Check if the pixelclock overflows each Lineclock
 		if (initialWaitingTime_us <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 
-		mPixelclockQ.push_back(FPGAapi::packU32(FPGAapi::convertUsTotick(initialWaitingTime_us) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
+		mPixelclockQ.push_back(FPGAns::packU32(FPGAns::convertUsTotick(initialWaitingTime_us) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-		for (int pix = 0; pix < mFpga.mWidthPerFrame_pix + 1; pix++)
-			mPixelclockQ.push_back(FPGAapi::packPixelclockSinglet(dwellTime_us, 1));
+		for (int pix = 0; pix < mWidthPerFrame_pix + 1; pix++)
+			mPixelclockQ.push_back(FPGAns::packPixelclockSinglet(dwellTime_us, 1));
 	}
 
 	QU32 RTsequence::Pixelclock::readPixelclock() const
@@ -357,7 +357,7 @@ namespace FPGAapi
 	}
 
 
-	RTsequence::RTsequence(const FPGAapi::Session &fpga) : mFpga(fpga), mVectorOfQueues(nChan)
+	RTsequence::RTsequence(const FPGAns::FPGA &fpga) : mFpga(fpga), mVectorOfQueues(nChan)
 	{
 		const Pixelclock pixelclock(mFpga);
 		mVectorOfQueues.at(PIXELCLOCK) = pixelclock.readPixelclock();
@@ -387,7 +387,7 @@ namespace FPGAapi
 
 	void RTsequence::pushDigitalSinglet(const RTchannel chan, double timeStep, const bool DO)
 	{
-		mVectorOfQueues.at(chan).push_back(FPGAapi::packDigitalSinglet(timeStep, DO));
+		mVectorOfQueues.at(chan).push_back(FPGAns::packDigitalSinglet(timeStep, DO));
 	}
 
 	void RTsequence::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V)
@@ -397,7 +397,7 @@ namespace FPGAapi
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us" << std::endl;
 			timeStep = AO_tMIN_us;
 		}
-		mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(timeStep, AO_V));
+		mVectorOfQueues.at(chan).push_back(FPGAns::packAnalogSinglet(timeStep, AO_V));
 	}
 
 	void RTsequence::pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor)
@@ -428,9 +428,9 @@ namespace FPGAapi
 		for (int ii = 0; ii < nPoints; ii++)
 		{
 			const double V = Vi_V + (Vf_V - Vi_V)*ii / (nPoints - 1);
-			mVectorOfQueues.at(chan).push_back(FPGAapi::packAnalogSinglet(timeStep, V));
+			mVectorOfQueues.at(chan).push_back(FPGAns::packAnalogSinglet(timeStep, V));
 
-			if (debug)	std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * FPGAapi::convertUsTotick(timeStep) << "\t" << V << "\t" << std::endl;
+			if (debug)	std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * FPGAns::convertUsTotick(timeStep) << "\t" << V << "\t" << std::endl;
 		}
 
 		if (debug)
@@ -438,22 +438,18 @@ namespace FPGAapi
 
 	}
 
-	//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute them yet
-	void  RTsequence::uploadRT() const
+	//Upload the commands to the FPGA (see the implementation of the LV code), but do not execute it yet
+	void  RTsequence::initializeRT() const
 	{
-		mFpga.writeFIFOINpc(mVectorOfQueues);
+		mFpga.initialize();		//Initialize the FPGA
+		mFpga.writeFIFOINpc(mVectorOfQueues); //Upload the RT sequence
 
 		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
 	}
 
-	void RTsequence::triggerRT() const
-	{
-		mFpga.triggerRT();
-	}
-
-	FPGAapi::Session RTsequence::getSession() const
+	FPGAns::FPGA RTsequence::getSession() const
 	{
 		return mFpga;
 	}
@@ -509,14 +505,14 @@ throw std::invalid_argument((std::string)__FUNCTION__ + ": Odd number of pixels 
 
 //Relative delay of the pixel clock with respect to the line clock. DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 const U16 InitialWaitingTime_tick = (U16)(calibCoarse_tick + calibFine_tick);
-mPixelclockQ.push_back(FPGAapi::packU32(InitialWaitingTime_tick - mLatency_tick, 0));
+mPixelclockQ.push_back(FPGAns::packU32(InitialWaitingTime_tick - mLatency_tick, 0));
 
 //Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 for (int pix = -widthPerFrame_pix / 2; pix < widthPerFrame_pix / 2; pix++)
-mPixelclockQ.push_back(FPGAapi::packPixelclockSinglet(calculatePracticalDwellTime_us(pix), 1));
+mPixelclockQ.push_back(FPGAns::packPixelclockSinglet(calculatePracticalDwellTime_us(pix), 1));
 
 //Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-mPixelclockQ.push_back(FPGAapi::packPixelclockSinglet(tMIN_us, 1));
+mPixelclockQ.push_back(FPGAns::packPixelclockSinglet(tMIN_us, 1));
 }
 
 */

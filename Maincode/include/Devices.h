@@ -8,7 +8,7 @@
 
 class Image
 {
-	const FPGAapi::Session &mFpga;
+	const FPGAns::RTsequence &mRTsequence;			//(Const because the variables referenced by mRTsequence are not changed by the methods of this class)
 
 	std::vector<U32> mBufArrayA;					//Vector to read FIFOOUTpc A
 	std::vector<U32> mBufArrayB;					//Vector to read FIFOOUTpc B
@@ -23,8 +23,9 @@ class Image
 	void demux_();
 	void analyze_() const;
 public:
-	Image(const FPGAapi::Session &fpga);
+	Image(FPGAns::RTsequence &RTsequence);
 	~Image();
+	//(const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence)
 	void acquire(const bool saveFlag = FALSE, const std::string filename = "Untitled", const bool overrideFile = FALSE);
 	void saveToTiff(std::string filename, const bool overrideFile) const;
 	void saveToTxt(const std::string fileName) const;
@@ -32,14 +33,14 @@ public:
 
 class Vibratome
 {
-	const FPGAapi::Session &mFpga;
+	const FPGAns::FPGA &mFpga;
 	const enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
 	int mNslide;					//Slide number
 	double mSectionThickness;		//Thickness of the section
 	double mSpeed;					//Speed of the vibratome (manual setting)
 	double mAmplitude;				//Amplitude of the vibratome (manual setting)
 public:
-	Vibratome(const FPGAapi::Session &fpga);
+	Vibratome(const FPGAns::FPGA &fpga);
 	~Vibratome();
 	void startStop() const;
 	void sendCommand(const double dt, const VibratomeChannel channel) const;
@@ -47,7 +48,7 @@ public:
 
 class ResonantScanner
 {
-	const FPGAapi::Session &mFpga;
+	const FPGAns::FPGA &mFpga;
 	const double mVMAX_V = 5 * V;						//Max control voltage allowed
 	const int mDelay_ms = 10;
 	double mVoltPerUm = 0.00595;						//Calibration factor. Last calibrated 
@@ -56,7 +57,7 @@ class ResonantScanner
 
 	void setVoltage_(const double Vcontrol_V);
 public:
-	ResonantScanner(const FPGAapi::Session &fpga);
+	ResonantScanner(const FPGAns::FPGA &fpga);
 	~ResonantScanner();
 	double mFillFactor;									//Fill factor: how much of an RS swing is covered by the pixels
 	double mFFOV_um;									//Current FFOV
@@ -72,11 +73,11 @@ public:
 
 class Shutter
 {
-	const FPGAapi::Session &mFpga;
+	const FPGAns::FPGA &mFpga;
 	NiFpga_FPGAvi_ControlBool mID;			//Device ID
 	const int mDelay_ms = 10;
 public:
-	Shutter(const FPGAapi::Session &fpga, ShutterID ID);
+	Shutter(const FPGAns::FPGA &fpga, ShutterID ID);
 	~Shutter();
 	void open() const;
 	void close() const;
@@ -92,17 +93,17 @@ public:
 
 class PockelsCell
 {
-	FPGAapi::RTsequence &mSequence;									
+	FPGAns::RTsequence &mRTsequence;			//Non-const because some methods in this class change the variables referenced by mRTsequence						
 	RTchannel mPockelsChannel;
 	RTchannel mScalingChannel;
 	int mWavelength_nm;							//Laser wavelength
 	const double maxPower_mW = 250 * mW;		//Soft limit for the laser power
-	int mNframes = 1;
 
 	double convert_mWToVolt_(const double power_mW) const;
 public:
-	PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsChannel, const int wavelength_nm);
+	PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockelsChannel, const int wavelength_nm);
 	~PockelsCell();
+	//(const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence)
 	void pushVoltageSinglet_(const double timeStep, const double AO_V) const;
 	void pushPowerSinglet(const double timeStep, const double P_mW) const;
 	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const;
@@ -113,15 +114,16 @@ public:
 
 class Galvo
 {
-	FPGAapi::RTsequence &mSequence;
+	FPGAns::RTsequence &mRTsequence;					//Non-const because some methods in this class change the variables referenced by mRTsequence	
 	RTchannel mGalvoChannel;
 	const double voltPerUm = 0.02417210 * V / um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 
 	double convert_umToVolt_(const double position_um) const;
 
 public:
-	Galvo(FPGAapi::RTsequence &sequence, const RTchannel galvoChannel);
+	Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel);
 	~Galvo();
+	//(const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence)
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi_V, const double Vf_V) const;
 	void positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const;
 	void voltageToZero() const;

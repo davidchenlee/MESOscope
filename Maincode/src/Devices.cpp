@@ -2,7 +2,7 @@
 
 #pragma region "Image"
 
-Image::Image(const FPGAapi::Session &fpga) : mFpga(fpga), mBufArrayA(mFpga.mNpixAllFrames), mBufArrayB(mFpga.mNpixAllFrames), mImage(mFpga.mNpixAllFrames)
+Image::Image(FPGAns::RTsequence &RTsequence) : mRTsequence(RTsequence), mBufArrayA(mNpixAllFrames), mBufArrayB(mNpixAllFrames), mImage(mNpixAllFrames)
 {
 }
 
@@ -18,24 +18,24 @@ Image::~Image()
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga
 void Image::startFIFOOUTpc_() const
 {
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StartFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StartFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 }
 
 //Configure FIFOOUTpc. The configuration is optional
 void Image::configureFIFOOUTpc_(const U32 depth) const
 {
 	U32 actualDepth;
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
 	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << std::endl;
 }
 
 //Stop the connection between FIFOOUTpc and FIFOOUTfpga
 void Image::stopFIFOOUTpc_() const
 {
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_StopFifo(mFpga.getSession(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTsequence.getSession()).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 	//std::cout << "stopFIFO called\n";
 }
 
@@ -61,7 +61,7 @@ void Image::readFIFOOUTpc_()
 	int nElemReadFIFOOUTb = 0; 					//Total number of elements read from FIFOOUTpc B
 
 
-	while (nElemReadFIFOOUTa < mFpga.mNpixAllFrames || nElemReadFIFOOUTb < mFpga.mNpixAllFrames)
+	while (nElemReadFIFOOUTa < mNpixAllFrames || nElemReadFIFOOUTb < mNpixAllFrames)
 	{
 		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
 
@@ -84,7 +84,7 @@ void Image::readFIFOOUTpc_()
 	*/
 
 	//If all the expected data is NOT read successfully
-	if (nElemReadFIFOOUTa < mFpga.mNpixAllFrames || nElemReadFIFOOUTb < mFpga.mNpixAllFrames)
+	if (nElemReadFIFOOUTa < mNpixAllFrames || nElemReadFIFOOUTb < mNpixAllFrames)
 		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFOOUT elements than expected ");
 }
 
@@ -95,21 +95,21 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	U32 nElemToRead = 0;				//Elements remaining in FIFOOUTpc
 	const U32 timeout_ms = 100;			//FIFOOUTpc timeout
 
-	if (nElemRead < mFpga.mNpixAllFrames)		//Skip if all the data have already been transferred
+	if (nElemRead < mNpixAllFrames)		//Skip if all the data have already been transferred
 	{
 		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
-		FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), FIFOOUTpc, &buffer[0], 0, timeout_ms, &nElemToRead));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.getSession()).getFpgaHandle(), FIFOOUTpc, &buffer[0], 0, timeout_ms, &nElemToRead));
 		//std::cout << "Number of elements remaining in FIFOOUT: " << mNelemToReadFIFOOUTb << std::endl;
 
 		//If data available in FIFOOUTpc, retrieve it
 		if (nElemToRead > 0)
 		{
 			//If more data than expected
-			if ( static_cast<int>(nElemRead + nElemToRead) > mFpga.mNpixAllFrames)
+			if ( static_cast<int>(nElemRead + nElemToRead) > mNpixAllFrames)
 				throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO buffer overflow");
 
 			//Retrieve the elements in FIFOOUTpc
-			FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.getSession(), FIFOOUTpc, &buffer[0] + nElemRead, nElemToRead, timeout_ms, &dummy));
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.getSession()).getFpgaHandle(), FIFOOUTpc, &buffer[0] + nElemRead, nElemToRead, timeout_ms, &dummy));
 			
 			//Keep track of the total number of elements read
 			nElemRead += nElemToRead;
@@ -122,17 +122,17 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 void Image::correctInterleaved_()
 {
 	//Within an odd line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
-	for (int lineIndex = 1; lineIndex < mFpga.mHeightAllFrames_pix; lineIndex += 2)
-		std::reverse(mBufArrayB.begin() + lineIndex * mFpga.mWidthPerFrame_pix, mBufArrayB.begin() + lineIndex * mFpga.mWidthPerFrame_pix + mFpga.mWidthPerFrame_pix);
+	for (int lineIndex = 1; lineIndex < mHeightAllFrames_pix; lineIndex += 2)
+		std::reverse(mBufArrayB.begin() + lineIndex * mWidthPerFrame_pix, mBufArrayB.begin() + lineIndex * mWidthPerFrame_pix + mWidthPerFrame_pix);
 }
 
 //When multiplexing later on, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
 void Image::demux_()
 {
 	double upscaled;
-	for (int pixIndex = 0; pixIndex < mFpga.mNpixAllFrames; pixIndex++)
+	for (int pixIndex = 0; pixIndex < mNpixAllFrames; pixIndex++)
 	{
-		upscaled = std::floor(mFpga.mUpscaleU8 * mBufArrayB.at(pixIndex)); //Upscale the buffer from 4-bit to a 8-bit
+		upscaled = std::floor(mUpscaleU8 * mBufArrayB.at(pixIndex)); //Upscale the buffer from 4-bit to a 8-bit
 
 		//If upscaled overflows
 		if (upscaled > _UI8_MAX)
@@ -147,7 +147,7 @@ void Image::demux_()
 void Image::analyze_() const
 {
 	double totalCount = 0;
-	for (int index = 0; index < mFpga.mWidthPerFrame_pix * mFpga.mHeightPerFrame_pix; index++)
+	for (int index = 0; index < mWidthPerFrame_pix * mHeightPerFrame_pix; index++)
 		totalCount += mImage.at(index);
 
 	//std::cout << "Total count = " << totalCount << std::endl;
@@ -157,7 +157,7 @@ void Image::analyze_() const
 void Image::acquire(const bool saveFlag, const std::string filename, const bool overrideFile)
 {
 	startFIFOOUTpc_();		//Establish the connection between FIFOOUTfpga and FIFOOUTpc
-	mFpga.triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
+	(mRTsequence.getSession()).triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
 	if (FIFOOUTfpgaEnable)
 	{
 		try
@@ -184,8 +184,8 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 
 void Image::saveToTiff(std::string filename, const bool overrideFile) const
 {
-	const int width_pix = mFpga.mWidthPerFrame_pix;
-	const int height_pix = mFpga.mHeightAllFrames_pix;
+	const int width_pix = mWidthPerFrame_pix;
+	const int height_pix = mHeightAllFrames_pix;
 
 	if (!overrideFile)
 		filename = file_exists(filename);
@@ -237,7 +237,7 @@ void Image::saveToTxt(const std::string filename) const
 	std::ofstream fileHandle;							//Create output file
 	fileHandle.open(folderPath + filename + ".txt");	//Open the file
 
-	for (int ii = 0; ii < mFpga.mNpixAllFrames; ii++)
+	for (int ii = 0; ii < mNpixAllFrames; ii++)
 	{
 		//fileHandle << (int)mImage.at(ii) << std::endl;		//Write each element
 		fileHandle << mBufArrayB.at(ii) << std::endl;		//Write each element
@@ -249,7 +249,7 @@ void Image::saveToTxt(const std::string filename) const
 
 
 #pragma region "Vibratome"
-Vibratome::Vibratome(const FPGAapi::Session &fpga): mFpga(fpga){}
+Vibratome::Vibratome(const FPGAns::FPGA &fpga): mFpga(fpga){}
 
 Vibratome::~Vibratome() {}
 
@@ -258,11 +258,11 @@ void Vibratome::startStop() const
 {
 	const int SleepTime = 20; //in ms. It has to be ~ 12 ms or longer to 
 	
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_VTstart, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, 1));
 
 	Sleep(SleepTime);
 
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_VTstart, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, 0));
 }
 
 //Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
@@ -285,7 +285,7 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected vibratome channel unavailable");
 	}
 
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), selectedChannel, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, 1));
 
 	if (dt_ms >= minPulseDuration)
 		Sleep(dt_ms - delay);
@@ -294,15 +294,15 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 		Sleep(minPulseDuration - delay);
 		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << minPulseDuration << "ms" << std::endl;
 	}
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), selectedChannel, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, 0));
 }
 #pragma endregion "Vibratome"
 
 #pragma region "Resonant scanner"
-ResonantScanner::ResonantScanner(const FPGAapi::Session &fpga): mFpga(fpga)
+ResonantScanner::ResonantScanner(const FPGAns::FPGA &fpga): mFpga(fpga)
 {	
 	//Calculate the spatial fill factor
-	const double temporalFillFactor = mFpga.mWidthPerFrame_pix * mFpga.mDwell_us / halfPeriodLineclock_us;
+	const double temporalFillFactor = mWidthPerFrame_pix * mDwell_us / halfPeriodLineclock_us;
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
@@ -314,7 +314,7 @@ ResonantScanner::ResonantScanner(const FPGAapi::Session &fpga): mFpga(fpga)
 	mControl_V = downloadControl_V();					//Control voltage
 	mFullScan_um = mControl_V / mVoltPerUm;					//Full scan FOV = distance from turning point to turning point
 	mFFOV_um = mFullScan_um * mFillFactor;					//FFOV
-	mSampRes_umPerPix = mFFOV_um / mFpga.mWidthPerFrame_pix;		//Spatial sampling resolution
+	mSampRes_umPerPix = mFFOV_um / mWidthPerFrame_pix;		//Spatial sampling resolution
 };
 
 ResonantScanner::~ResonantScanner() {};
@@ -329,10 +329,10 @@ void ResonantScanner::setVoltage_(const double control_V)
 	mControl_V = control_V;									//Control voltage
 	mFullScan_um = control_V / mVoltPerUm;					//Full scan FOV
 	mFFOV_um = mFullScan_um * mFillFactor;					//FFOV
-	mSampRes_umPerPix = mFFOV_um / mFpga.mWidthPerFrame_pix;		//Spatial sampling resolution
+	mSampRes_umPerPix = mFFOV_um / mWidthPerFrame_pix;		//Spatial sampling resolution
 
 	//Upload the control voltage
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAapi::convertVoltToI16(mControl_V)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAns::convertVoltToI16(mControl_V)));
 }
 
 //Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
@@ -342,14 +342,14 @@ void ResonantScanner::setFFOV(const double FFOV_um)
 	mFullScan_um = FFOV_um / mFillFactor;					//Full scan FOV
 	mControl_V = mFullScan_um * mVoltPerUm;					//Control voltage
 	mFFOV_um = FFOV_um;										//FFOV
-	mSampRes_umPerPix = mFFOV_um / mFpga.mWidthPerFrame_pix;		//Spatial sampling resolution
+	mSampRes_umPerPix = mFFOV_um / mWidthPerFrame_pix;		//Spatial sampling resolution
 	//std::cout << "mControl_V = " << mControl_V << std::endl; //For debugging
 
 	if (mControl_V < 0 || mControl_V > mVMAX_V)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX_V/mVoltPerUm) + " um");
 
 	//Upload the control voltage
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getSession(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAapi::convertVoltToI16(mControl_V)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAns::convertVoltToI16(mControl_V)));
 }
 
 //First set the FFOV, then set RSenable on
@@ -357,7 +357,7 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 {
 	setFFOV(FFOV_um);
 	Sleep(mDelay_ms);
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
 	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um" << std::endl;
 }
 
@@ -366,14 +366,14 @@ void ResonantScanner::turnOn_V(const double control_V)
 {
 	setVoltage_(control_V);
 	Sleep(mDelay_ms);
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
 	std::cout << "RS control voltage successfully set to: " << control_V << " V" << std::endl;
 }
 
 //First set RSenable off, then set the control voltage to 0
 void ResonantScanner::turnOff()
 {
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), NiFpga_FPGAvi_ControlBool_RSenable, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 0));
 	Sleep(mDelay_ms);
 	setVoltage_(0);
 	std::cout << "RS successfully turned off" << std::endl;
@@ -383,9 +383,9 @@ void ResonantScanner::turnOff()
 double ResonantScanner::downloadControl_V()
 {
 	I16 control_I16;
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getSession(), NiFpga_FPGAvi_IndicatorI16_RScontrolMon_I16, &control_I16));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorI16_RScontrolMon_I16, &control_I16));
 
-	return FPGAapi::convertI16toVolt(control_I16);
+	return FPGAns::convertI16toVolt(control_I16);
 }
 
 //Spatial sampling resolution (um per pixel)
@@ -399,7 +399,7 @@ double ResonantScanner::getSamplingResolution_um()
 
 #pragma region "Shutters"
 
-Shutter::Shutter(const FPGAapi::Session &fpga, ShutterID ID) : mFpga(fpga)
+Shutter::Shutter(const FPGAns::FPGA &fpga, ShutterID ID) : mFpga(fpga)
 {
 	switch (ID)
 	{
@@ -414,32 +414,32 @@ Shutter::Shutter(const FPGAapi::Session &fpga, ShutterID ID) : mFpga(fpga)
 
 Shutter::~Shutter()
 {
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mID, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, 0));
 }
 
 void Shutter::open() const
 {
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mID, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, 1));
 }
 
 void Shutter::close() const
 {
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mID, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, 0));
 }
 
 void Shutter::pulseHigh() const
 {
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mID, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, 1));
 
 	Sleep(mDelay_ms);
 
-	FPGAapi::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getSession(), mID, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, 0));
 }
 #pragma endregion "Shutters"
 
 #pragma region "Pockels cells"
 //Curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
-PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsChannel, const int wavelength_nm) : mSequence(sequence), mPockelsChannel(pockelsChannel), mWavelength_nm(wavelength_nm), mNframes((mSequence.getSession()).mNframes)
+PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockelsChannel, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsChannel(pockelsChannel), mWavelength_nm(wavelength_nm)
 {
 	if (mPockelsChannel != POCKELS1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
@@ -453,7 +453,7 @@ PockelsCell::PockelsCell(FPGAapi::RTsequence &sequence, const RTchannel pockelsC
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT as 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
 	for (int ii = 0; ii < mNframes; ii++)
-		mSequence.pushAnalogSingletFx2p14(mScalingChannel, 1.0);
+		mRTsequence.pushAnalogSingletFx2p14(mScalingChannel, 1.0);
 }
 
 //Do not set the output to 0 with the destructor to allow holding on the last value
@@ -465,7 +465,7 @@ void PockelsCell::pushVoltageSinglet_(const double timeStep, const double AO_V) 
 	if (AO_V < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mSequence.pushAnalogSinglet(mPockelsChannel, timeStep, AO_V);
+	mRTsequence.pushAnalogSinglet(mPockelsChannel, timeStep, AO_V);
 }
 
 void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW) const
@@ -473,7 +473,7 @@ void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW) con
 	if (P_mW < 0 || P_mW > maxPower_mW)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(P_mW));
 
-	mSequence.pushAnalogSinglet(mPockelsChannel, timeStep, convert_mWToVolt_(P_mW));
+	mRTsequence.pushAnalogSinglet(mPockelsChannel, timeStep, convert_mWToVolt_(P_mW));
 }
 
 //Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
@@ -482,7 +482,7 @@ void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDura
 	if (Vi_V < 0 || Vf_V < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mSequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, Vi_V, Vf_V);
+	mRTsequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, Vi_V, Vf_V);
 }
 
 //Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
@@ -491,12 +491,12 @@ void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDurat
 	if (Pi_mW < 0 || Pf_mW < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mSequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, convert_mWToVolt_(Pi_mW), convert_mWToVolt_(Pf_mW));
+	mRTsequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, convert_mWToVolt_(Pi_mW), convert_mWToVolt_(Pf_mW));
 }
 
 void PockelsCell::voltageToZero() const
 {
-	mSequence.pushAnalogSinglet(mPockelsChannel, AO_tMIN_us, 0 * V);
+	mRTsequence.pushAnalogSinglet(mPockelsChannel, AO_tMIN_us, 0 * V);
 }
 
 //Scale the pockels modulation across all the frames following a linear ramp
@@ -508,10 +508,10 @@ void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 	if (mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
-	mSequence.clearQueue(mScalingChannel);	//Delete the default scaling factors of 1.0s created in the PockelsCell constructor
+	mRTsequence.clearQueue(mScalingChannel);	//Delete the default scaling factors of 1.0s created in the PockelsCell constructor
 
 	for (int ii = 0; ii < mNframes; ii++)
-		mSequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (mNframes -1) * ii);
+		mRTsequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (mNframes -1) * ii);
 }
 
 
@@ -548,7 +548,7 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 
 #pragma region "Galvo"
 
-Galvo::Galvo(FPGAapi::RTsequence &sequence, const RTchannel galvoChannel): mSequence(sequence), mGalvoChannel(galvoChannel)
+Galvo::Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel): mRTsequence(RTsequence), mGalvoChannel(galvoChannel)
 {
 	if ( mGalvoChannel != GALVO1 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -563,22 +563,22 @@ double Galvo::convert_umToVolt_(const double position_um) const
 
 void Galvo::pushVoltageSinglet_(const double timeStep, const double AO_V) const
 {
-	mSequence.pushAnalogSinglet(mGalvoChannel, timeStep, AO_V);
+	mRTsequence.pushAnalogSinglet(mGalvoChannel, timeStep, AO_V);
 }
 
 void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, const double Vi_V, const double Vf_V) const
 {
-	mSequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, Vi_V, Vf_V);
+	mRTsequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, Vi_V, Vf_V);
 }
 
 void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const
 {
-	mSequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, convert_umToVolt_(xi_V), convert_umToVolt_(xf_V));
+	mRTsequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, convert_umToVolt_(xi_V), convert_umToVolt_(xf_V));
 }
 
 void Galvo::voltageToZero() const
 {
-	mSequence.pushAnalogSinglet(mGalvoChannel, AO_tMIN_us, 0 * V);
+	mRTsequence.pushAnalogSinglet(mGalvoChannel, AO_tMIN_us, 0 * V);
 }
 
 #pragma endregion "Galvo"

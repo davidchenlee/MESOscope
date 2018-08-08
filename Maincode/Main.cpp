@@ -19,8 +19,8 @@ int main(int argc, char* argv[])
 			//seq_testRS(fpga);
 			//seq_contAcquisitionTest(fpga);
 			//seq_testConvertI16toVoltage();
-			//seq_testGalvoSync(fpga);
-			seq_testTiff();
+			seq_testGalvoSync(fpga);
+			//seq_testTiff();
 		}
 		catch (const std::invalid_argument &e)
 		{
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 			getchar();
 		}
 
-		fpga.close(0);		//Close the FPGA connection
+		fpga.close(1);		//Close the FPGA connection
 
 	}
 	//Catch exceptions thrown by the constructor FPGAns::FPGA

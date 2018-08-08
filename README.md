@@ -5,7 +5,6 @@ Code in C++ for controlling the NI USB-7852R card
 ### C++
 - Implement the FIFO reading and data saving concurrently
 - Maybe install VTK to display tiff images
-- Allow saving multiple frames in the FPGA-to-PC FIFO
 
 ### LabView
 - Pre-set the output of a sequence so that there are no big jumps

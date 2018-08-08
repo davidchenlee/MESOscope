@@ -178,7 +178,7 @@ void Tiffer::saveTiff(std::string filename, const int nSegments) const
 		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);							//Single channel with min as black				
 		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, mWidth_pix));	//Set the strip size of the file to be size of one row of pixels
 		//TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, 3);												//Specify that it's a segment within the multipage file
-		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, segment, nSegments);									//Specify the segment number
+		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, segment, nSegments);								//Specify the segment number
 
 		if (buffer == NULL) //Check that the buffer memory was allocated
 		{

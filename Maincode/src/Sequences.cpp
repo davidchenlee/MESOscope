@@ -21,7 +21,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.120, 19.808, 18.4545 };	//Initial position
+	double3 position_mm = { 35.120, 19.808, 18.461 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -108,13 +108,13 @@ void seq_main(const FPGAns::FPGA &fpga)
 				"\tTotal frame " << ii * nFramesSameZ + (jj + 1) << "/" << nFramesDiffZ * nFramesSameZ << std::endl;
 
 			//CREATE A REAL-TIME SEQUENCE
-			FPGAns::RTsequence RTsequence(fpga, RS);
+			FPGAns::RTsequence RTsequence(fpga, RS, 4);
 
 			//GALVO FOR RT
 			Galvo galvo(RTsequence, GALVO1);
-			const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= 62.5us * 400 pixels = 25 ms
+			const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
 			galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-			if (RTsequence.mNframes % 2 )
+			if ( RTsequence.mNframes == 1 )
 				galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//set the output back to the initial value
 
 			//POCKELS CELL FOR RT
@@ -438,13 +438,13 @@ void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 	const double posMax_um = FFOVgalvo_um / 2;
 
 	//CREATE A REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga);
+	FPGAns::RTsequence RTsequence(fpga, FG, 3);
 
 	//GALVO FOR RT
 	Galvo galvo(RTsequence, GALVO1);
 	const double duration = halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);			//Linear ramp for the galvo
-	if (RTsequence.mNframes % 2)
+	if ( RTsequence.mNframes == 1 )
 		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//Linear ramp for the galvo
 	//galvo.pushVoltageSinglet_(2 * us, 1);												//Mark the end of the galvo ramp
 																						
@@ -455,13 +455,16 @@ void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 
 void seq_testTiff()
 {
-	std::string inputFilename = "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4285";
+	std::string inputFilename = "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610";
 	std::string outputFilename = "test";
 
-	const int nSegments = 2;
+	const int nSegments = 4;
 	Tiffer image(inputFilename);
 	image.verticalFlip(nSegments);
-	//image.saveTiff(outputFilename, nSegments); //The second argument specifies the number of segments
+	image.saveTiff(outputFilename, nSegments);//The second argument specifies the number of segments
+
+	/*
 	image.average(nSegments);
-	image.saveTiff(outputFilename, 1);
+	image.saveTiff(outputFilename);
+	*/
 }

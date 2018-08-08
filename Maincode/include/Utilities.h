@@ -40,7 +40,7 @@ class Tiffer
 public:
 	Tiffer(std::string filename);
 	~Tiffer();
-	void saveTiff(std::string filename, const int nPages) const;
+	void saveTiff(std::string filename, const int nPages = 1) const;
 	void verticalFlip(const int nPages);
 	void average(const int nSegments);
 };

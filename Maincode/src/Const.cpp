@@ -10,7 +10,7 @@ namespace Constants
 
 	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
-	extern const bool FIFOOUTfpgaEnable = 1;								//For debugging purposes. Enable pushing data to FIFOOUTfpga
+	extern const bool FIFOOUTfpgaEnable = 0;								//For debugging purposes. Enable pushing data to FIFOOUTfpga
 	extern const bool pockels1_enableAutoOff = 1;							//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
 
 	//GENERAL CONSTANTS
@@ -49,7 +49,7 @@ namespace Constants
 																					//pixelclock false-triggers after Lineclock is back up
 
 	extern const int FIFOINtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOINs
-	extern const size_t FIFOINmax = 32773;					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
+	extern const int FIFOINmax = 32773;					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 
 

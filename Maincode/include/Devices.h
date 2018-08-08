@@ -8,7 +8,7 @@
 
 class Image
 {
-	const FPGAns::RTsequence &mRTsequence;			//(Const because the variables referenced by mRTsequence are not changed by the methods of this class)
+	const FPGAns::RTsequence &mRTsequence;			//Const because the variables referenced by mRTsequence are not changed by the methods in this class
 
 	std::vector<U32> mBufArrayA;					//Vector to read FIFOOUTpc A
 	std::vector<U32> mBufArrayB;					//Vector to read FIFOOUTpc B
@@ -114,7 +114,7 @@ public:
 
 class Galvo
 {
-	FPGAns::RTsequence &mRTsequence;					//Non-const because some methods in this class change the variables referenced by mRTsequence	
+	FPGAns::RTsequence &mRTsequence;					//Non-const because some of methods in this class change the variables referenced by mRTsequence	
 	RTchannel mGalvoChannel;
 	const double voltPerUm = 0.02417210 * V / um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 

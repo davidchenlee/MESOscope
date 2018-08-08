@@ -80,6 +80,7 @@ namespace FPGAns
 		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V);
 		void pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor);
 		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V);
+		void uploadPreRT() const;
 		void uploadRT() const;
 		void triggerRT() const;
 	};

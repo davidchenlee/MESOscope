@@ -27,8 +27,8 @@ public:
 	~Image();
 	//(const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence)
 	void acquire(const bool saveFlag = FALSE, const std::string filename = "Untitled", const bool overrideFile = FALSE);
-	void saveToTiff(std::string filename, const bool overrideFile) const;
-	void saveToTxt(const std::string fileName) const;
+	void saveTiff(std::string filename, const bool overrideFile) const;
+	void saveTxt(const std::string fileName) const;
 };
 
 class Vibratome

@@ -170,8 +170,8 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 
 			if (saveFlag)
 			{
-				saveToTiff(filename, overrideFile);
-				//saveToTxt(filename);
+				saveTiff(filename, overrideFile);
+				//saveTxt(filename);
 			}
 
 
@@ -183,7 +183,7 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 	}
 }
 
-void Image::saveToTiff(std::string filename, const bool overrideFile) const
+void Image::saveTiff(std::string filename, const bool overrideFile) const
 {
 	const int width_pix = mRTsequence.mWidthPerFrame_pix;
 	const int height_pix = mRTsequence.mHeightAllFrames_pix;
@@ -233,7 +233,7 @@ void Image::saveToTiff(std::string filename, const bool overrideFile) const
 		_TIFFfree(buffer);
 }
 
-void Image::saveToTxt(const std::string filename) const
+void Image::saveTxt(const std::string filename) const
 {
 	std::ofstream fileHandle;							//Create output file
 	fileHandle.open(folderPath + filename + ".txt");	//Open the file

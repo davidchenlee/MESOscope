@@ -458,7 +458,8 @@ void seq_testTiff()
 	std::string inputFilename = "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4285";
 	std::string outputFilename = "test";
 
+	const int nSegments = 2;
 	Tiffer image(inputFilename);
-	image.verticalFlip(1);
-	image.saveToTiff(outputFilename, 2);
+	image.verticalFlip(nSegments);
+	image.saveTiff(outputFilename, nSegments); //The second argument sets the number of segments
 }

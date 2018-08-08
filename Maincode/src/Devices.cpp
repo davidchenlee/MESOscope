@@ -84,7 +84,7 @@ void Image::readFIFOOUTpc_()
 	*/
 
 	//If all the expected data is NOT read successfully
-	if (nElemReadFIFOOUTa < mRTsequence.mNpixAllFrames || nElemReadFIFOOUTb < mRTsequence.mNpixAllFrames)
+	if (nElemReadFIFOOUTa <mRTsequence.mNpixAllFrames || nElemReadFIFOOUTb < mRTsequence.mNpixAllFrames)
 		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFOOUT elements than expected ");
 }
 
@@ -156,8 +156,9 @@ void Image::analyze_() const
 
 void Image::acquire(const bool saveFlag, const std::string filename, const bool overrideFile)
 {
-	startFIFOOUTpc_();		//Establish the connection between FIFOOUTfpga and FIFOOUTpc
-	mRTsequence.triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
+	mRTsequence.uploadRT();		//Load the RT sequence to the FPGA
+	startFIFOOUTpc_();			//Establish the connection between FIFOOUTfpga and FIFOOUTpc
+	mRTsequence.triggerRT();	//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
 	if (FIFOOUTfpgaEnable)
 	{
 		try

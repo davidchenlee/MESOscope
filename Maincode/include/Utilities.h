@@ -7,6 +7,7 @@
 #include <experimental/filesystem>	//standard method in C++14 but not C++11
 #include <bitset>					//For  std::bitset
 #include <tiffio.h>					//Tiff files
+#include <numeric>
 using namespace Constants;
 
 std::string file_exists(const std::string filename);
@@ -39,7 +40,7 @@ class Tiffer
 public:
 	Tiffer(std::string filename);
 	~Tiffer();
-	void saveTiff(std::string filename, const int nPages);
+	void saveTiff(std::string filename, const int nPages) const;
 	void verticalFlip(const int nPages);
-	void average();
+	void average(const int nSegments);
 };

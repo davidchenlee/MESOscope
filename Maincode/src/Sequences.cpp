@@ -34,7 +34,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	vision.setWavelength(wavelength_nm);
 
 	//GALVO
-	const double FFOVgalvo_um = 200 * um;							//Full FOV in the slow axis
+	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -112,10 +112,10 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 			//GALVO FOR RT
 			Galvo galvo(RTsequence, GALVO1);
-			const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+			const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= 62.5us * 400 pixels = 25 ms
 			galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 			if (RTsequence.mNframes % 2 )
-				galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
+				galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//set the output back to the initial value
 
 			//POCKELS CELL FOR RT
 			PockelsCell pockels(RTsequence, POCKELS1, wavelength_nm);
@@ -216,8 +216,8 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 		//GALVO FOR RT
 		Galvo galvo(RTsequence, GALVO1);
 		const double duration = halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
-		galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//set the output back to the initial value
+		galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);			//Linear ramp for the galvo
+		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);				//set the output back to the initial value
 
 		//POCKELS CELL FOR RT
 		PockelsCell pockels(RTsequence, POCKELS1, wavelength_nm);
@@ -306,11 +306,11 @@ void seq_calibAnalogLatency(const FPGAns::FPGA &fpga)
 	const double step = 4 * us;
 
 	FPGAns::RTsequence RTsequence(fpga);
-	RTsequence.pushAnalogSinglet(GALVO1, step, 10);	//Initial pulse
+	RTsequence.pushAnalogSinglet(GALVO1, step, 10);						//Initial pulse
 	RTsequence.pushAnalogSinglet(GALVO1, step, 0);
 	RTsequence.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5 * V);			//Linear ramp to accumulate the error
-	RTsequence.pushAnalogSinglet(GALVO1, step, 10);	//Initial pulse
-	RTsequence.pushAnalogSinglet(GALVO1, step, 0);	//Final pulse
+	RTsequence.pushAnalogSinglet(GALVO1, step, 10);						//Initial pulse
+	RTsequence.pushAnalogSinglet(GALVO1, step, 0);						//Final pulse
 
 	//DO0
 	RTsequence.pushDigitalSinglet(DOdebug, step, 1);
@@ -443,10 +443,10 @@ void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 	//GALVO FOR RT
 	Galvo galvo(RTsequence, GALVO1);
 	const double duration = halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
-	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);	//Linear ramp for the galvo
+	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);			//Linear ramp for the galvo
 	if (RTsequence.mNframes % 2)
-		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//Linear ramp for the galvo
-	//galvo.pushVoltageSinglet_(2 * us, 1);										//Mark the end of the galvo ramp
+		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);			//Linear ramp for the galvo
+	//galvo.pushVoltageSinglet_(2 * us, 1);												//Mark the end of the galvo ramp
 																						
 	//Execute the realtime sequence and acquire the image
 	Image image(RTsequence);
@@ -461,5 +461,7 @@ void seq_testTiff()
 	const int nSegments = 2;
 	Tiffer image(inputFilename);
 	image.verticalFlip(nSegments);
-	image.saveTiff(outputFilename, nSegments); //The second argument sets the number of segments
+	//image.saveTiff(outputFilename, nSegments); //The second argument specifies the number of segments
+	image.average(nSegments);
+	image.saveTiff(outputFilename, 1);
 }

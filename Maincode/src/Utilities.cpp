@@ -153,7 +153,7 @@ Tiffer::~Tiffer()
 
 //Split mImage into sub-images (or "segment")
 //Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image, which has to be re-structured into sub-images
-void Tiffer::saveTiff(std::string filename, const int nSegments)
+void Tiffer::saveTiff(std::string filename, const int nSegments) const
 {
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
 
@@ -165,12 +165,12 @@ void Tiffer::saveTiff(std::string filename, const int nSegments)
 
 	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);	//Buffer used to store the row of pixel information for writing to file
 
-	const int heightSinglePage_pix = mHeight_pix / nSegments; //Divide the total height
+	const int heightSingle_pix = mHeight_pix / nSegments; //Divide the total height
 	for (int segment = 0; segment < nSegments; segment++)
 	{
 		//TAGS
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, mWidth_pix);										//Set the width of the image
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, heightSinglePage_pix);								//Set the height of the image
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, heightSingle_pix);								//Set the height of the image
 		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);											//Set number of channels per pixel
 		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);												//Set the size of the channels
 		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);								//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
@@ -187,9 +187,9 @@ void Tiffer::saveTiff(std::string filename, const int nSegments)
 		}
 
 		//Write the sub-image to the file one strip at a time
-		for (int rowIndex = 0; rowIndex < heightSinglePage_pix; rowIndex++)
+		for (int rowIndex = 0; rowIndex < heightSingle_pix; rowIndex++)
 		{
-			std::memcpy(buffer, &mImage[(segment * heightSinglePage_pix + heightSinglePage_pix - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
+			std::memcpy(buffer, &mImage[(segment * heightSingle_pix + heightSingle_pix - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
 			if (TIFFWriteScanline(tiffHandle, buffer, rowIndex, 0) < 0)
 				break;
 		}
@@ -204,8 +204,7 @@ void Tiffer::saveTiff(std::string filename, const int nSegments)
 }
 
 //The galvo (vectical axis of the image) performs bi-directional scanning
-//The pages = 1, 3, 5, ... have to be vertically flipped
-//Divide the vertically long image in nSegments and vertically flip the odd pages
+//Divide the vertically long image in nSegments and vertically flip the odd segments
 void Tiffer::verticalFlip(const int nSegments)
 {
 	if (mBytesPerLine == NULL)
@@ -216,22 +215,38 @@ void Tiffer::verticalFlip(const int nSegments)
 	if (buffer == NULL) //Check that the buffer memory was allocated
 		std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory");
 
-	const int heightSinglePage_pix = mHeight_pix / nSegments; //Divide the total height
+	const int heightSingle_pix = mHeight_pix / nSegments; //Divide the total height
 
 	for (int segment = 1; segment < nSegments; segment+=2)
 	{
 		//Swap the first and last rows of the sub-image, then do to the second first and second last rows, etc
-		for (int rowIndex = 0; rowIndex < heightSinglePage_pix / 2; rowIndex++)
+		for (int rowIndex = 0; rowIndex < heightSingle_pix / 2; rowIndex++)
 		{
-			std::memcpy(buffer, &mImage[(segment*heightSinglePage_pix + rowIndex)*mBytesPerLine], mBytesPerLine);
-			std::memcpy(&mImage[(segment*heightSinglePage_pix + rowIndex)*mBytesPerLine], &mImage[(segment*heightSinglePage_pix + heightSinglePage_pix - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
-			std::memcpy(&mImage[(segment*heightSinglePage_pix + heightSinglePage_pix - rowIndex - 1)*mBytesPerLine], buffer, mBytesPerLine);
+			int eneTene = segment * heightSingle_pix + rowIndex;			//Swap this row
+			int moneMei = (segment + 1) * heightSingle_pix - rowIndex - 1;	//With this one
+			std::memcpy(buffer, &mImage[eneTene*mBytesPerLine], mBytesPerLine);
+			std::memcpy(&mImage[eneTene*mBytesPerLine], &mImage[moneMei*mBytesPerLine], mBytesPerLine);
+			std::memcpy(&mImage[moneMei*mBytesPerLine], buffer, mBytesPerLine);
 		}
 	}
 	_TIFFfree(buffer);//Release the memory
 }
 
-void Tiffer::average()
+//Split the vertically long image into nSegments and calculate the average
+void Tiffer::average(const int nSegments)
 {
+	mHeight_pix = mHeight_pix / nSegments; //Divide the total height
+	const int nPix = mWidth_pix * mHeight_pix;
 
+	std::vector<double> avg(nPix);
+
+	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
+		for (int segment = 0; segment < nSegments; segment++)
+			//avg.at(pixIndex) += 1.0 * mImage.at(segment * nPix + pixIndex);
+			avg.at(pixIndex) += 1.0 * mImage.at(segment * nPix + pixIndex) / nSegments;
+
+	mImage.resize(nPix);
+
+	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
+		mImage.at(pixIndex) = (unsigned char)avg.at(pixIndex);
 }

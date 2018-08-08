@@ -7,7 +7,7 @@ There are basically 2 imaging modes :
 */
 
 
-void seq_main(FPGAns::FPGA &fpga)
+void seq_main(const FPGAns::FPGA &fpga)
 {
 	const int runmode = 0;
 	/*
@@ -40,8 +40,8 @@ void seq_main(FPGAns::FPGA &fpga)
 
 	//RS
 	const double FFOVrs_um = 150 * um;
-	ResonantScanner RS(fpga);
-	RS.setFFOV(FFOVrs_um);
+	ResonantScanner RScanner(fpga);
+	RScanner.setFFOV(FFOVrs_um);
 
 	//SAMPLE
 	const std::string filename = "Beads_4um";
@@ -108,7 +108,7 @@ void seq_main(FPGAns::FPGA &fpga)
 				"\tTotal frame " << ii * nFramesSameZ + (jj + 1) << "/" << nFramesDiffZ * nFramesSameZ << std::endl;
 
 			//CREATE A REAL-TIME SEQUENCE
-			FPGAns::RTsequence RTsequence(fpga);
+			FPGAns::RTsequence RTsequence(fpga, RS);
 
 			//GALVO FOR RT
 			Galvo galvo(RTsequence, GALVO1);
@@ -146,10 +146,10 @@ void seq_main(FPGAns::FPGA &fpga)
 				datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod);
 
 				datalog.record("SCAN---------------------------------------------------------");
-				datalog.record("RS FFOV (um) = ", RS.mFFOV_um);
+				datalog.record("RS FFOV (um) = ", RScanner.mFFOV_um);
 				datalog.record("RS period (us) = ", 2 * halfPeriodLineclock_us);
 				datalog.record("Pixel dwell time (us) = ", RTsequence.mDwell_us);
-				datalog.record("RS fill factor = ", RS.mFillFactor);
+				datalog.record("RS fill factor = ", RScanner.mFillFactor);
 				datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
 				datalog.record("Galvo time step (us) = ", galvoTimeStep);
 
@@ -159,7 +159,7 @@ void seq_main(FPGAns::FPGA &fpga)
 				datalog.record("8-bit upscaling factor = ", RTsequence.mUpscaleU8);
 				datalog.record("Width X (RS) (pix) = ", RTsequence.mWidthPerFrame_pix);
 				datalog.record("Height Y (galvo) (pix) = ", RTsequence.mHeightPerFrame_pix);
-				datalog.record("Resolution X (RS) (um/pix) = ", RS.mSampRes_umPerPix);
+				datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes_umPerPix);
 				datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um / RTsequence.mHeightPerFrame_pix);
 			}
 		}
@@ -177,6 +177,7 @@ void seq_main(FPGAns::FPGA &fpga)
 	}
 	shutter1.close();
 }
+
 
 //For live optimization of the objective's correction collar
 void seq_contAcquisition(const FPGAns::FPGA &fpga)
@@ -210,7 +211,7 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 		std::cout << "Iteration: " << jj+1 << std::endl;
 
 		//CREATE A REAL-TIME SEQUENCE
-		FPGAns::RTsequence RTsequence(fpga);
+		FPGAns::RTsequence RTsequence(fpga, RS);
 
 		//GALVO FOR RT
 		Galvo galvo(RTsequence, GALVO1);
@@ -230,7 +231,7 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 }
 
 
-void seq_testPixelclock(FPGAns::FPGA &fpga)
+void seq_testPixelclock(const FPGAns::FPGA &fpga)
 {
 	FPGAns::RTsequence RTsequence(fpga); 		//Create a realtime sequence
 
@@ -325,9 +326,9 @@ void seq_testFilterwheel()
 	//FW.setColor(RED);
 	
 	if(1)
-	FW.setColor(1040);
+		FW.setColor(1040);
 	else
-	FW.setColor(940);
+		FW.setColor(940);
 }
 
 void seq_testStageSetPosition()
@@ -414,10 +415,10 @@ void seq_testLaserComm(const FPGAns::FPGA &fpga)
 
 void seq_testRS(const FPGAns::FPGA &fpga)
 {
-	ResonantScanner RS(fpga);
-	std::cout << "aaa = " << RS.downloadControl_V() << std::endl;
-	//RS.turnOn_um(150);
-	//RS.turnOff();
+	ResonantScanner RScanner(fpga);
+	std::cout << "aaa = " << RScanner.downloadControl_V() << std::endl;
+	//RScanner.turnOn_um(150);
+	//RScanner.turnOff();
 }
 
 void seq_testConvertI16toVolt()
@@ -429,75 +430,6 @@ void seq_testConvertI16toVolt()
 	std::cout << "volt to I16 to volt: " << FPGAns::convertI16toVolt(FPGAns::convertVoltToI16(0)) << std::endl;
 }
 
-
-//Test the speed of saving a Tiff file
-void seq_saveAsTiffTest()
-{
-
-	//const std::string folderPath = "D:\\OwnCloud\\Data\\_output_D\\";
-	const std::string folderPath = "Z:\\_output_Z\\";
-	std::string filename = "Untitled";
-
-
-	const int width_pix = 400;
-	const int height_pix = 400 * 200; // 100 um in 0.5 um-steps = 200 planes
-
-	std::vector<U8> image(width_pix * height_pix);
-
-	//Declare and start a stopwatch
-	double duration;
-	auto t_start = std::chrono::high_resolution_clock::now();
-
-	//This gives some overhead
-	//filename = file_exists(filename);
-
-	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
-
-	if (tiffHandle == nullptr)
-		throw ImageException((std::string)__FUNCTION__ + ": Saving Tiff failed");
-
-	//TAGS
-	TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, width_pix);							//Set the width of the image
-	TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, height_pix);							//Set the height of the image
-	TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);								//Set number of channels per pixel
-	TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);									//Set the size of the channels
-	TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);					//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
-																						//TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);				//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
-	TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);				//Single channel with min as black
-
-	tsize_t bytesPerLine = width_pix;			//Length in memory of one row of pixel in the image.
-	unsigned char *buffer = nullptr;			//Buffer used to store the row of pixel information for writing to file
-
-	//Allocating memory to store pixels of current row
-	if (TIFFScanlineSize(tiffHandle))
-		buffer = (unsigned char *)_TIFFmalloc(bytesPerLine);
-	else
-		buffer = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(tiffHandle));
-
-	//Set the strip size of the file to be size of one row of pixels
-	TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, width_pix));
-
-	//Now writing image to the file one strip at a time. CURRENTLY ONLY ONE FRAME IS SAVED!!!
-	for (int row = 0; row < height_pix; row++)
-	{
-		memcpy(buffer, &image[(height_pix - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
-		if (TIFFWriteScanline(tiffHandle, buffer, row, 0) < 0)
-			break;
-	}
-
-	//Close the output file
-	(void)TIFFClose(tiffHandle);
-
-	//Destroy the buffer
-	if (buffer)
-		_TIFFfree(buffer);
-
-	//Stop the stopwatch
-	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
-
-}
-
 void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 {
 	//GALVO
@@ -506,7 +438,7 @@ void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 	const double posMax_um = FFOVgalvo_um / 2;
 
 	//CREATE A REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, 2);
+	FPGAns::RTsequence RTsequence(fpga);
 
 	//GALVO FOR RT
 	Galvo galvo(RTsequence, GALVO1);
@@ -523,7 +455,7 @@ void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 
 void seq_testTiff()
 {
-	std::string inputFilename = "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4510";
+	std::string inputFilename = "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4285";
 	std::string outputFilename = "test";
 
 	Tiffer image(inputFilename);

@@ -115,6 +115,9 @@ namespace FPGAns
 		//Opens a session, uploads the bitfile to the FPGA. 1=no run, 0=run
 		checkStatus(__FUNCTION__, NiFpga_Open(mBitfile.c_str(), NiFpga_FPGAvi_Signature, "RIO0", 0, &mFpgaHandle));
 
+		//Set up the FPGA parameters
+		initializeFpga_();
+
 		//Flush any residual data in FIFOOUT from the previous run just in case
 		FIFOOUTpcGarbageCollector_();
 	}
@@ -192,14 +195,13 @@ namespace FPGAns
 	}
 
 	//Load the imaging parameters to the FPGA. See 'Const.cpp' for the definition of each variable
-	void FPGA::initializeFpga() const
+	void FPGA::initializeFpga_() const
 	{
 		if (nChan < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 || linegateTimeout_us < 0 || stageTriggerPulse_ms < 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 		//INPUT SELECTORS
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(getFpgaHandle(), NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));						//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(getFpgaHandle(), NiFpga_FPGAvi_ControlU8_LineclockInputSelector, lineclockInput));								//Select the Line clock: resonant scanner or function generator
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getFpgaHandle(), NiFpga_FPGAvi_ControlArrayBool_Pulsesequence, pulseArray, nPulses));					//For debugging the photoncounters
 
 		//FIFOIN
@@ -289,9 +291,10 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix) :
-		mFpga(fpga), mVectorOfQueues(nChan), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix)
+	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const LineclockInputSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix) :
+		mFpga(fpga), mVectorOfQueues(nChan), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix)
 	{
+		//Set the imaging parameters
 		mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;
 		mNpixAllFrames = mWidthPerFrame_pix * mHeightAllFrames_pix;
 		uploadImagingParameters_();
@@ -312,6 +315,9 @@ namespace FPGAns
 			NiFpga_FPGAvi_ControlU16_NlinesAll, (U16)(mHeightAllFrames_pix + mNframes * mNlinesSkip - mNlinesSkip)));													//Total number of lines in all the frames, including the skipped lines, minus the very last skipped lines)
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_NlinesPerFrame, (U16)mHeightPerFrame_pix));							//Number of lines in a frame, without including the skipped lines
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, (U16)(mHeightPerFrame_pix + mNlinesSkip)));	//Number of lines in a frame including the skipped lines
+	
+		//FG, RS selector
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU8_LineclockInputSelector, mLineclockInput));							//Select the Line clock: resonant scanner or function generator
 	}
 
 	RTsequence::~RTsequence() {}

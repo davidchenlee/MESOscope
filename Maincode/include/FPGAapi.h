@@ -17,6 +17,7 @@ namespace FPGAns
 	U32 packDigitalSinglet(const double timeStep, const bool DO);
 	U32 packPixelclockSinglet(const double timeStep, const bool DO);
 	void checkStatus(char functionName[], NiFpga_Status status);
+	void linearRamp(QU32 &queue, double timeStep, const double rampLength, const double Vi_V, const double Vf_V);
 
 	//Establish a connection to the FPGA
 	class FPGA

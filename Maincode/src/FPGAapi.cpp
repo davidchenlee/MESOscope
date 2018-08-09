@@ -106,6 +106,40 @@ namespace FPGAns
 			std::cerr << "A warning has ocurred in " << functionName << " with FPGA code " << status << std::endl;
 	}
 
+	void linearRamp(QU32 &queue, double timeStep, const double rampLength, const double Vi_V, const double Vf_V)
+	{
+		const bool debug = 0;
+
+		if (timeStep < AO_tMIN_us)
+		{
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us" << std::endl;
+			timeStep = AO_tMIN_us;		//Analog Out time increment in us
+		}
+
+		const int nPoints = (int)(rampLength / timeStep);		//Number of points
+
+		if (nPoints <= 1)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Not enought points to generate a linear ramp");
+
+		if (debug)
+		{
+			std::cout << "nPoints: " << nPoints << std::endl;
+			std::cout << "time \tticks \tv" << std::endl;
+		}
+
+		for (int ii = 0; ii < nPoints; ii++)
+		{
+			const double V = Vi_V + (Vf_V - Vi_V)*ii / (nPoints - 1);
+			queue.push_back(FPGAns::packAnalogSinglet(timeStep, V));
+
+			if (debug)
+				std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * FPGAns::convertUsTotick(timeStep) << "\t" << V << "\t" << std::endl;
+		}
+
+		if (debug)
+			getchar();
+	}
+
 #pragma region "FPGA"
 	FPGA::FPGA()
 	{
@@ -170,6 +204,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));												//Memory-flush trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncDOtoAOtick, (U16)syncDOtoAO_tick));								//DO and AO relative sync
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, (U16)syncAODOtoLinegate_tick));			//DO and AO sync to linegate
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 0));												//Trigger the FPGA outputs (non-RT)
 
 		if (linegateTimeout_us <= 2 * halfPeriodLineclock_us)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
@@ -317,63 +352,32 @@ namespace FPGAns
 
 	void RTsequence::pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V)
 	{
-		const bool debug = 0;
-
-		if (timeStep < AO_tMIN_us)
-		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us" << std::endl;
-			timeStep = AO_tMIN_us;		//Analog Out time increment in us
-		}
-
-		const int nPoints = (int)(rampLength / timeStep);		//Number of points
-
-		if (nPoints <= 1)	throw std::invalid_argument((std::string)__FUNCTION__ + ": Not enought points to generate a linear ramp");
-
-		if (debug)
-		{
-			std::cout << "nPoints: " << nPoints << std::endl;
-			std::cout << "time \tticks \tv" << std::endl;
-		}
-
-		for (int ii = 0; ii < nPoints; ii++)
-		{
-			const double V = Vi_V + (Vf_V - Vi_V)*ii / (nPoints - 1);
-			mVectorOfQueues.at(chan).push_back(FPGAns::packAnalogSinglet(timeStep, V));
-
-			if (debug)	std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * FPGAns::convertUsTotick(timeStep) << "\t" << V << "\t" << std::endl;
-		}
-
-		if (debug)
-			getchar();
+		linearRamp(mVectorOfQueues.at(chan), timeStep, rampLength, Vi_V, Vf_V);
 	}
 
-	//Preset the output of the FPGA
+	//To avoid any jump in the output value of the FPGA at the beginning of the RT sequence, preset the output to the first value of sequence in advance
 	void RTsequence::presetFPGAoutput() const
 	{
-		//Disable pushing data to FIFOOUTfpga on the FPGA
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, 0));
 
-		QU32 allQueues;		//Create a single long queue
-
-		//Pixelclock. Push the entire pixelclock to avoid any conflict when triggering the digital and analog channels
-		allQueues.push_back(mVectorOfQueues.at(PIXELCLOCK).size());
-		for (int iter = 0; iter < static_cast<int>(mVectorOfQueues.at(PIXELCLOCK).size()); iter++)
-			allQueues.push_back(mVectorOfQueues.at(PIXELCLOCK).at(iter));
-			
-		//allQueues.push_back(0);
-
-		//Do the rest of the channels
+		//
+		VQU32 vectorOfQueues(nChan);
 		for (int chan = 1; chan < nChan; chan++)
 		{
-			const int sizePerChannel = static_cast<int>(mVectorOfQueues.at(chan).size());
-			if (sizePerChannel == 0)
-				allQueues.push_back(0);									//If the individual queue is empty
-			else
+			const int sizeChannel = static_cast<int>(mVectorOfQueues.at(chan).size());
+			if (sizeChannel != 0)
 			{
-				allQueues.push_back(1);									//Push the number of elements in each individual queue, i.e, only 1 element
-				allQueues.push_back(mVectorOfQueues.at(chan).at(0));	//Push the first element in VectorOfQueues[i]
+				const double Vi_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).back());
+				const double Vf_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).front());
+				linearRamp(vectorOfQueues.at(chan), 80 * us, 20 * ms, Vi_V, Vf_V);
 			}
-
+		}
+			
+		QU32 allQueues;		//Create a single long queue
+		for (int chan = 0; chan < nChan; chan++)
+		{
+			allQueues.push_back(vectorOfQueues.at(chan).size());	//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'		
+			for (int iter = 0; iter < static_cast<int>(vectorOfQueues.at(chan).size()); iter++)
+				allQueues.push_back(vectorOfQueues.at(chan).at(iter));	//Push VectorOfQueues[i]
 		}
 
 		const int sizeFIFOINqueue = allQueues.size();		//Total number of elements in all the queues 
@@ -399,13 +403,11 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
 
-		triggerRT();
+		//Trigger the FPGA outputs (non-RT)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 1));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 0));
 
-		Sleep(100); //Wait long enough so that the sequence above does not wash out the following sequence
-
-		//Set back 'NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable' to the original state on the FPGA
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, FIFOOUTfpgaEnable));
-
+		Sleep(50); //Wait long enough so that the sequence above does not wash out the following sequence
 	}
 
 	//Send every single queue in 'mVectorOfQueue' to the FPGA buffer

@@ -196,11 +196,12 @@ void Image::analyze_() const
 
 void Image::acquire(const bool saveFlag, const std::string filename, const bool overrideFile)
 {
-	//mRTsequence.presetFPGAoutput();	//Preset the ouput of the FPGA
+	mRTsequence.presetFPGAoutput();	//Preset the ouput of the FPGA
 
-	mRTsequence.uploadRT();		//Load the RT sequence in mVectorOfQueues to the FPGA
-	startFIFOOUTpc_();			//Establish the connection between FIFOOUTfpga and FIFOOUTpc. It also cleans up any residual data in FIFOOUTpc
-	mRTsequence.triggerRT();	//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
+	mRTsequence.uploadRT();			//Load the RT sequence in mVectorOfQueues to the FPGA
+	startFIFOOUTpc_();				//Establish the connection between FIFOOUTfpga and FIFOOUTpc and cleans up any residual data from the previous run
+	mRTsequence.triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
+
 	if (FIFOOUTfpgaEnable)
 	{
 		try

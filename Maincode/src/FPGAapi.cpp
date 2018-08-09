@@ -204,7 +204,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));												//Memory-flush trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncDOtoAOtick, (U16)syncDOtoAO_tick));								//DO and AO relative sync
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, (U16)syncAODOtoLinegate_tick));			//DO and AO sync to linegate
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 0));												//Trigger the FPGA outputs (non-RT)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 0));											//Trigger the FPGA outputs (non-RT trigger)
 
 		if (linegateTimeout_us <= 2 * halfPeriodLineclock_us)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
@@ -358,7 +358,6 @@ namespace FPGAns
 	//To avoid any jump in the output value of the FPGA at the beginning of the RT sequence, preset the output to the first value of sequence in advance
 	void RTsequence::presetFPGAoutput() const
 	{
-
 		//
 		VQU32 vectorOfQueues(nChan);
 		for (int chan = 1; chan < nChan; chan++)
@@ -366,9 +365,16 @@ namespace FPGAns
 			const int sizeChannel = static_cast<int>(mVectorOfQueues.at(chan).size());
 			if (sizeChannel != 0)
 			{
-				const double Vi_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).back());
-				const double Vf_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).front());
-				linearRamp(vectorOfQueues.at(chan), 80 * us, 20 * ms, Vi_V, Vf_V);
+				if (TRUE) //Do a jump
+				{
+					vectorOfQueues.at(chan).push_back(mVectorOfQueues.at(chan).front());	//Push the first element in VectorOfQueues[i]
+				}
+				else //Do a linear ramp
+				{
+					const double Vi_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).back());
+					const double Vf_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).front());
+					linearRamp(vectorOfQueues.at(chan), 80 * us, 20 * ms, Vi_V, Vf_V);
+				}
 			}
 		}
 			
@@ -403,11 +409,11 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
 
-		//Trigger the FPGA outputs (non-RT)
+		//Trigger the FPGA outputs (non-RT trigger)
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 0));
 
-		Sleep(50); //Wait long enough so that the sequence above does not wash out the following sequence
+		Sleep(50); //Wait long enough so that the sequence above does not wash out the subsequent sequence
 	}
 
 	//Send every single queue in 'mVectorOfQueue' to the FPGA buffer

@@ -22,6 +22,7 @@ class Image
 	void correctInterleaved_();
 	void demux_();
 	void analyze_() const;
+	void FIFOOUTpcGarbageCollector_() const;
 public:
 	Image(FPGAns::RTsequence &RTsequence);
 	~Image();

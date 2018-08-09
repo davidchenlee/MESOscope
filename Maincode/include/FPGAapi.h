@@ -25,7 +25,6 @@ namespace FPGAns
 		const std::string mBitfile = bitfilePath + NiFpga_FPGAvi_Bitfile;	//FPGA bitfile location
 
 		void initializeFpga_() const;
-		void FIFOOUTpcGarbageCollector_() const;
 	public:
 		FPGA();
 		~FPGA();
@@ -80,7 +79,7 @@ namespace FPGAns
 		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V);
 		void pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor);
 		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V);
-		void uploadPreRT() const;
+		void presetFPGAoutput() const;
 		void uploadRT() const;
 		void triggerRT() const;
 	};

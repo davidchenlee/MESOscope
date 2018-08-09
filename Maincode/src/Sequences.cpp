@@ -108,7 +108,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 				"\tTotal frame " << ii * nFramesSameZ + (jj + 1) << "/" << nFramesDiffZ * nFramesSameZ << std::endl;
 
 			//CREATE A REAL-TIME SEQUENCE
-			FPGAns::RTsequence RTsequence(fpga, RS, 4);
+			FPGAns::RTsequence RTsequence(fpga, RS, 10);
 
 			//GALVO FOR RT
 			Galvo galvo(RTsequence, GALVO1);
@@ -438,7 +438,7 @@ void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 	const double posMax_um = FFOVgalvo_um / 2;
 
 	//CREATE A REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, FG, 3);
+	FPGAns::RTsequence RTsequence(fpga, FG, 20);
 
 	//GALVO FOR RT
 	Galvo galvo(RTsequence, GALVO1);
@@ -458,7 +458,7 @@ void seq_testTiff()
 	std::string inputFilename = "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610";
 	std::string outputFilename = "test";
 
-	const int nSegments = 4;
+	const int nSegments = 10;
 	Tiffer image(inputFilename);
 	image.verticalFlip(nSegments);
 	image.saveTiff(outputFilename, nSegments);//The second argument specifies the number of segments

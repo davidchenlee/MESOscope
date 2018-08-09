@@ -117,59 +117,12 @@ namespace FPGAns
 
 		//Set up the FPGA parameters
 		initializeFpga_();
-
-		//Flush any residual data in FIFOOUT from the previous run just in case
-		FIFOOUTpcGarbageCollector_();
 	}
 
 	FPGA::~FPGA()
 	{
 		//std::cout << "FPGA destructor was called" << std::endl;
 	};
-
-	//Flush the residual data in FIFOOUTpc from a previous run, if any
-	void FPGA::FIFOOUTpcGarbageCollector_() const
-	{
-		const U32 timeout_ms = 100;
-		const int bufSize = 10000;
-		U32 nRemainFIFOOUT = 0;
-		U32 nRetrieveFIFOOUT = 0;
-		std::vector<U32> garbage(bufSize);
-
-		//FIFOOUTpc A
-		//Check if there are elements in FIFOOUTpc
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
-		while (nRemainFIFOOUT > 0)
-		{
-			std::cout << "Number of elements remaining in FIFOOUTpc A: " << nRemainFIFOOUT << std::endl;
-			getchar();
-
-			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
-
-			//Retrieve the elements in FIFOOUTpc
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], nRetrieveFIFOOUT, timeout_ms, &nRemainFIFOOUT));
-
-			//Check if there are elements left in FIFOOUTpc
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
-		}
-
-		//FIFOOUTpc B
-		//Check if there are elements in FIFOOUTpc
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
-		while (nRemainFIFOOUT > 0)
-		{
-			std::cout << "Number of elements remaining in FIFOOUTpc B: " << nRemainFIFOOUT << std::endl;
-			getchar();
-
-			nRetrieveFIFOOUT = bufSize < nRemainFIFOOUT ? bufSize : nRemainFIFOOUT; //Min between bufSize and nRemainFIFOOUT
-
-			//Retrieve the elements in FIFOOUTpc
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], nRemainFIFOOUT, timeout_ms, &nRemainFIFOOUT));
-
-			//Check if there are elements left in FIFOOUTpc
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nRemainFIFOOUT));
-		}
-	}
 
 	//The object has to be closed explicitly because of the exception catching
 	void FPGA::close(const bool reset) const
@@ -394,11 +347,11 @@ namespace FPGAns
 			getchar();
 	}
 
-	void RTsequence::uploadPreRT() const
+
+	void RTsequence::presetFPGAoutput() const
 	{
 		//FIFOOUTfpga. Disable pushing data to FIFOOUTfpga
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, 0));
-
 
 		QU32 allQueues;		//Create a single long queue
 
@@ -448,7 +401,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
 
-		Sleep(100);
+		Sleep(100); //Wait long enough so that the sequence above does not wash out the following sequence
 
 		//FIFOOUTfpga.Set back 'NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable' to the original state
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, FIFOOUTfpgaEnable));

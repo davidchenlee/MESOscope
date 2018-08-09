@@ -19,8 +19,8 @@ int main(int argc, char* argv[])
 			//seq_testRS(fpga);
 			//seq_contAcquisitionTest(fpga);
 			//seq_testConvertI16toVoltage();
-			seq_testGalvoSync(fpga);
-			//seq_testTiff();
+			//seq_testGalvoSync(fpga);
+			seq_testTiff();
 		}
 		catch (const std::invalid_argument &e)
 		{

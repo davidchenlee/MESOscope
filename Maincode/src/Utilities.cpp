@@ -101,7 +101,7 @@ void Logger::record(const std::string description, const std::string input)
 }
 
 
-//Open a Tiff in the constructor
+//Open a Tiff using the constructor
 Tiffer::Tiffer(std::string filename)
 {
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "r");
@@ -123,7 +123,7 @@ Tiffer::Tiffer(std::string filename)
 	mBytesPerLine = TIFFScanlineSize(tiffHandle);	//Length in memory of one row of pixel in the image.
 
 	if (mBytesPerLine == NULL)
-		throw std::runtime_error((std::string)__FUNCTION__ + "Assigning mBytesPerLine failed");
+		throw std::runtime_error((std::string)__FUNCTION__ + "Failed assigning mBytesPerLine");
 
 	unsigned char* buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);
 
@@ -147,6 +147,11 @@ Tiffer::Tiffer(std::string filename)
 	TIFFClose(tiffHandle);	//Close the tif file
 }
 
+Tiffer::Tiffer(const Tiffer &a): 
+	mWidth_pix(a.mWidth_pix), mHeight_pix(a.mHeight_pix/2), mStripSize_pix(a.mStripSize_pix), mBytesPerLine(a.mBytesPerLine), mImage(a.mImage.begin(), a.mImage.begin() + a.mWidth_pix * a.mHeight_pix / 2)
+{
+}
+
 Tiffer::~Tiffer()
 {
 }
@@ -159,9 +164,6 @@ void Tiffer::saveTiff(std::string filename, const int nSegments) const
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Saving Tiff failed");
-
-	if (mBytesPerLine == NULL)
-		throw std::runtime_error((std::string)__FUNCTION__ + "mBytesPerLine is NULL");
 
 	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);	//Buffer used to store the row of pixel information for writing to file
 
@@ -207,9 +209,6 @@ void Tiffer::saveTiff(std::string filename, const int nSegments) const
 //Divide the vertically long image in nSegments and vertically flip the odd segments
 void Tiffer::verticalFlip(const int nSegments)
 {
-	if (mBytesPerLine == NULL)
-		throw std::runtime_error((std::string)__FUNCTION__ + "mBytesPerLine is NULL");
-
 	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);		//Buffer used to store the row of pixel information for writing to file
 
 	if (buffer == NULL) //Check that the buffer memory was allocated
@@ -232,6 +231,44 @@ void Tiffer::verticalFlip(const int nSegments)
 	_TIFFfree(buffer);//Release the memory
 }
 
+void Tiffer::averageEvenOddSeparately(const int nSegments)
+{
+	const int height_pix = mHeight_pix / nSegments; //Divide the total height
+	const int nPix = mWidth_pix * height_pix;
+
+	//EVEN SEGMENTS
+	//Calculate the average
+	std::vector<double> evenAvg(nPix);
+	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
+		for (int segment = 0; segment < nSegments; segment += 2)
+			evenAvg.at(pixIndex) += 1.0 * mImage.at(segment * nPix + pixIndex) / nSegments;
+
+	//Cast the average
+	std::vector<unsigned char> evenImage(nPix);
+	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
+		evenImage.at(pixIndex) = static_cast<unsigned char>(evenAvg.at(pixIndex));
+
+
+	//ODD SEGMENTS
+	//Calculate the average
+	std::vector<double> oddAvg(nPix);
+	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
+		for (int segment = 1; segment < nSegments; segment += 2)
+			oddAvg.at(pixIndex) += 1.0 * mImage.at(segment * nPix + pixIndex) / nSegments;
+
+	//Cast the average
+	std::vector<unsigned char> oddImage(nPix);
+	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
+		oddImage.at(pixIndex) = static_cast<unsigned char>(oddAvg.at(pixIndex));
+
+
+	//Put 'evenImage' and 'oddImage' back into mImage. Concatenate odd after even
+	mHeight_pix = 2* height_pix;
+	mImage.resize(2 * nPix);
+	std::memcpy(&mImage, &evenImage, nPix);
+	std::memcpy(&mImage, &oddImage[nPix], nPix);
+}
+
 //Split the vertically long image into nSegments and calculate the average
 void Tiffer::average(const int nSegments)
 {
@@ -239,14 +276,11 @@ void Tiffer::average(const int nSegments)
 	const int nPix = mWidth_pix * mHeight_pix;
 
 	std::vector<double> avg(nPix);
-
 	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
 		for (int segment = 0; segment < nSegments; segment++)
-			//avg.at(pixIndex) += 1.0 * mImage.at(segment * nPix + pixIndex);
 			avg.at(pixIndex) += 1.0 * mImage.at(segment * nPix + pixIndex) / nSegments;
 
 	mImage.resize(nPix);
-
 	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		mImage.at(pixIndex) = (unsigned char)avg.at(pixIndex);
+		mImage.at(pixIndex) = static_cast<unsigned char>(avg.at(pixIndex));
 }

@@ -172,14 +172,14 @@ void Image::demux_()
 	double upscaled;
 	for (int pixIndex = 0; pixIndex < mRTsequence.mNpixAllFrames; pixIndex++)
 	{
-		upscaled = std::floor(mRTsequence.mUpscaleU8 * mBufArrayB.at(pixIndex)); //Upscale the buffer from 4-bit to a 8-bit
+		upscaled = std::floor(mRTsequence.mUpscaleU8 * mBufArrayB[pixIndex]); //Upscale the buffer from 4-bit to a 8-bit
 
 		//If upscaled overflows
 		if (upscaled > _UI8_MAX)
 			upscaled = _UI8_MAX;
 		//throw ImageException((std::string)__FUNCTION__ + ": Upscaled photoncount overflow");
 
-		mImage.at(pixIndex) = (unsigned char)upscaled;
+		mImage[pixIndex] = (unsigned char)upscaled;
 	}
 }
 
@@ -188,7 +188,7 @@ void Image::analyze_() const
 {
 	double totalCount = 0;
 	for (int index = 0; index < mRTsequence.mWidthPerFrame_pix * mRTsequence.mHeightPerFrame_pix; index++)
-		totalCount += mImage.at(index);
+		totalCount += mImage[index];
 
 	//std::cout << "Total count = " << totalCount << std::endl;
 }
@@ -284,7 +284,7 @@ void Image::saveTxt(const std::string filename) const
 	for (int ii = 0; ii < mRTsequence.mNpixAllFrames; ii++)
 	{
 		//fileHandle << (int)mImage.at(ii) << std::endl;		//Write each element
-		fileHandle << mBufArrayB.at(ii) << std::endl;		//Write each element
+		fileHandle << mBufArrayB[ii] << std::endl;		//Write each element
 	}
 
 	fileHandle.close();									//Close the txt file

@@ -461,7 +461,7 @@ void seq_testTiff()
 	const int nSegments = 10;
 	Tiffer image(inputFilename);
 	image.verticalFlip(nSegments);
-	image.saveTiff(outputFilename, nSegments);//The second argument specifies the number of segments
+	//image.saveTiff(outputFilename, 1);//The second argument specifies the number of segments
 
 	/*
 	image.average(nSegments);

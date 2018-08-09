@@ -39,8 +39,10 @@ class Tiffer
 	int mBytesPerLine;
 public:
 	Tiffer(std::string filename);
+	Tiffer(const Tiffer &a);
 	~Tiffer();
 	void saveTiff(std::string filename, const int nPages = 1) const;
-	void verticalFlip(const int nPages);
+	void verticalFlip(const int nSegments);
+	void averageEvenOddSeparately(const int nSegments);
 	void average(const int nSegments);
 };

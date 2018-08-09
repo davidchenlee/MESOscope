@@ -347,10 +347,10 @@ namespace FPGAns
 			getchar();
 	}
 
-
+	//Preset the output of the FPGA
 	void RTsequence::presetFPGAoutput() const
 	{
-		//FIFOOUTfpga. Disable pushing data to FIFOOUTfpga
+		//Disable pushing data to FIFOOUTfpga on the FPGA
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, 0));
 
 		QU32 allQueues;		//Create a single long queue
@@ -359,8 +359,10 @@ namespace FPGAns
 		allQueues.push_back(mVectorOfQueues.at(PIXELCLOCK).size());
 		for (int iter = 0; iter < static_cast<int>(mVectorOfQueues.at(PIXELCLOCK).size()); iter++)
 			allQueues.push_back(mVectorOfQueues.at(PIXELCLOCK).at(iter));
+			
+		//allQueues.push_back(0);
 
-		//The rest of the channels
+		//Do the rest of the channels
 		for (int chan = 1; chan < nChan; chan++)
 		{
 			const int sizePerChannel = static_cast<int>(mVectorOfQueues.at(chan).size());
@@ -397,14 +399,13 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
 
-		//Execute the commands
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 0));
+		triggerRT();
 
 		Sleep(100); //Wait long enough so that the sequence above does not wash out the following sequence
 
-		//FIFOOUTfpga.Set back 'NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable' to the original state
+		//Set back 'NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable' to the original state on the FPGA
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, FIFOOUTfpgaEnable));
+
 	}
 
 	//Send every single queue in 'mVectorOfQueue' to the FPGA buffer

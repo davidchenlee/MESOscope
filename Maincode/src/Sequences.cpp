@@ -438,7 +438,7 @@ void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 	const double posMax_um = FFOVgalvo_um / 2;
 
 	//CREATE A REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, FG, 20);
+	FPGAns::RTsequence RTsequence(fpga, FG, 4);
 
 	//GALVO FOR RT
 	Galvo galvo(RTsequence, GALVO1);

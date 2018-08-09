@@ -36,11 +36,6 @@ namespace FPGAns
 	//Create a realtime sequence and pixelclock
 	class RTsequence
 	{
-		VQU32 mVectorOfQueues;
-		
-		void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
-		void uploadImagingParameters_() const;
-
 		//Private subclass
 		class Pixelclock
 		{
@@ -55,6 +50,11 @@ namespace FPGAns
 			~Pixelclock();
 			QU32 readPixelclock() const;
 		};
+
+		VQU32 mVectorOfQueues;
+
+		void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
+		void uploadImagingParameters_() const;
 
 	public:
 		const FPGAns::FPGA &mFpga;

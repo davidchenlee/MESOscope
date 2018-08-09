@@ -33,8 +33,8 @@ void Image::FIFOOUTpcGarbageCollector_() const
 
 	U32 dummy;
 	std::vector<U32> garbage(bufSize);
-	U32 nElemToReadA, nElemToReadB;
-	int nElemReadA = 0, nElemReadB = 0; 			//Total number of elements read from FIFOOUTpc A and B
+	U32 nElemToReadA, nElemToReadB;					//Elements to read from FIFOOUTpc A and B
+	int nElemTotalA = 0, nElemTotalB = 0; 			//Total number of elements read from FIFOOUTpc A and B
 	while (TRUE)
 	{
 		//Check if there are elements in FIFOOUTpc
@@ -50,16 +50,17 @@ void Image::FIFOOUTpcGarbageCollector_() const
 		{
 			nElemToReadA = min(bufSize, nElemToReadA);	//Min between bufSize and nElemToReadA
 			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], nElemToReadA, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
-			nElemReadA += nElemToReadA;
+			nElemTotalA += nElemToReadA;
 		}
 		if (nElemToReadB > 0)
 		{
 			nElemToReadB = min(bufSize, nElemToReadB);	//Min between bufSize and nElemToReadB
 			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], nElemToReadB, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
-			nElemReadB += nElemToReadB;
+			nElemTotalB += nElemToReadB;
 		}
 	}
-	std::cout << "FIFOOUTpc cleanup. Number of elements cleaned up in FIFOOUTpc A/B: " << nElemReadA << "/" << nElemReadB << std::endl;
+	if (nElemTotalA > 0 || nElemTotalB > 0)
+		std::cout << "FIFOOUTpc garbage collector called. Number of elements cleaned up in FIFOOUTpc A/B: " << nElemTotalA << "/" << nElemTotalB << std::endl;
 }
 
 //Configure FIFOOUTpc. According to NI, this step is optional
@@ -97,16 +98,15 @@ void Image::readFIFOOUTpc_()
 	int timeout_iter = 100;							//Timeout the while-loop if FIFOOUT data transfer fails	
 
 	//FIFOOUT
-	int nElemReadA = 0; 					//Total number of elements read from FIFOOUTpc A
-	int nElemReadB = 0; 					//Total number of elements read from FIFOOUTpc B
-
-
-	while (nElemReadA < mRTsequence.mNpixAllFrames || nElemReadB < mRTsequence.mNpixAllFrames)
+	int nElemTotalA = 0; 					//Total number of elements read from FIFOOUTpc A
+	int nElemTotalB = 0; 					//Total number of elements read from FIFOOUTpc B
+	
+	while (nElemTotalA < mRTsequence.mNpixAllFrames || nElemTotalB < mRTsequence.mNpixAllFrames)
 	{
 		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
 
-		readChunk_(nElemReadA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArrayA);	//FIFOOUTpc A
-		readChunk_(nElemReadB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArrayB);	//FIFOOUTpc B
+		readChunk_(nElemTotalA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArrayA);	//FIFOOUTpc A
+		readChunk_(nElemTotalB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArrayB);	//FIFOOUTpc B
 
 		timeout_iter--;
 		//Transfer timeout
@@ -124,7 +124,7 @@ void Image::readFIFOOUTpc_()
 	*/
 
 	//If all the expected data is NOT read successfully
-	if (nElemReadA <mRTsequence.mNpixAllFrames || nElemReadB < mRTsequence.mNpixAllFrames)
+	if (nElemTotalA <mRTsequence.mNpixAllFrames || nElemTotalB < mRTsequence.mNpixAllFrames)
 		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFOOUT elements than expected ");
 }
 
@@ -196,9 +196,10 @@ void Image::analyze_() const
 
 void Image::acquire(const bool saveFlag, const std::string filename, const bool overrideFile)
 {
-	mRTsequence.presetFPGAoutput();
+	//mRTsequence.presetFPGAoutput();	//Preset the ouput of the FPGA
+
 	mRTsequence.uploadRT();		//Load the RT sequence in mVectorOfQueues to the FPGA
-	startFIFOOUTpc_();			//Establish the connection between FIFOOUTfpga and FIFOOUTpc
+	startFIFOOUTpc_();			//Establish the connection between FIFOOUTfpga and FIFOOUTpc. It also cleans up any residual data in FIFOOUTpc
 	mRTsequence.triggerRT();	//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
 	if (FIFOOUTfpgaEnable)
 	{

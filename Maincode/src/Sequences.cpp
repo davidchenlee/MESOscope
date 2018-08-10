@@ -137,7 +137,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 			image.acquire(); //Execute the RT sequence and acquire the image
 			image.verticalFlip();
 			image.average();
-			image.push(stackOfAverages);
+			image.pushToVector(stackOfAverages);
 			//image.saveTiff(filename, overrideFlag);
 			//image.saveTxt(filename);
 
@@ -249,7 +249,7 @@ void seq_testPixelclock(const FPGAns::FPGA &fpga)
 	FPGAns::RTsequence RTsequence(fpga); 		//Create a realtime sequence
 	Image image(RTsequence);
 	image.acquire();						//Execute the realtime sequence and acquire the image
-	//image.push(stackOfAverages);
+	//image.pushToVector(stackOfAverages);
 	//std::cout << "size: " << stackOfAverages.size() << std::endl;
 	//TiffU8 aa(stackOfAverages, 300, 400);
 	//aa.saveTiff("Untitled");

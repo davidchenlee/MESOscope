@@ -328,7 +328,7 @@ void Image::saveTxt(const std::string filename) const
 }
 
 //Push mImage to inputVector. Not very efficient because there is not memory preallocation
-void Image::push(std::vector<unsigned char> &inputVector) const
+void Image::pushToVector(std::vector<unsigned char> &inputVector) const
 {
 	inputVector.insert(inputVector.end(), mImage.begin(), mImage.end());
 }

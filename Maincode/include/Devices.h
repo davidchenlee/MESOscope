@@ -31,7 +31,7 @@ public:
 	void average();
 	void saveTiff(std::string filename, const bool overrideFile = FALSE) const;
 	void saveTxt(const std::string fileName) const;
-	void push(std::vector<unsigned char> &inputVector) const;
+	void pushToVector(std::vector<unsigned char> &inputVector) const;
 };
 
 class Vibratome

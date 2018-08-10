@@ -292,6 +292,8 @@ namespace FPGAns
 		mVectorOfQueues.at(PIXELCLOCK) = pixelclock.readPixelclock();
 	}
 
+	RTsequence::~RTsequence() {}
+
 	//Load the imaging parameters onto the FPGA
 	void RTsequence::uploadImagingParameters_() const
 	{
@@ -308,7 +310,52 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU8_LineclockInputSelector, mLineclockInput));							//Select the Line clock: resonant scanner or function generator
 	}
 
-	RTsequence::~RTsequence() {}
+	//Send every single queue in 'vectorOfQueue' to the FPGA buffer
+	//For this, concatenate all the individual queues 'vectorOfQueues.at(ii)' in the queue 'allQueues'.
+	//The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
+	//Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
+	void RTsequence::uploadFIFOIN_(const VQU32 &vectorOfQueues) const
+	{
+		{
+			QU32 allQueues;		//Create a single long queue
+			for (int chan = 0; chan < nChan; chan++)
+			{
+				allQueues.push_back(vectorOfQueues.at(chan).size());	//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'			
+				for (int iter = 0; iter < static_cast<int>(vectorOfQueues.at(chan).size()); iter++)
+					allQueues.push_back(vectorOfQueues.at(chan).at(iter));	//Push VectorOfQueues[i]
+			}
+
+			const int sizeFIFOINqueue = allQueues.size();		//Total number of elements in all the queues 
+
+			if (sizeFIFOINqueue > FIFOINmax)
+				throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
+
+			std::vector<U32> FIFOIN(sizeFIFOINqueue);				//Create a 1D array with the channels concatenated
+			for (int ii = 0; ii < sizeFIFOINqueue; ii++)
+			{
+				FIFOIN[ii] = allQueues.front();						//Transfer the queue elements to the array
+				allQueues.pop_front();
+			}
+			allQueues = {};					//Cleanup the queue C++11 style
+
+			const U32 timeout_ms = -1;		//in ms. A value -1 prevents FIFOIN from timing out
+			U32 r;							//Elements remaining
+
+			//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
+			checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, timeout_ms, &r));
+
+			//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers
+			checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
+			checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
+		}
+	}
+	
+	//Trigger the FPGA outputs in a non-realtime way (see the LV implementation)
+	void RTsequence::triggerNonRT_() const
+	{	
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 1));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 0));
+	}
 
 	//Push all the elements in 'tailQ' into 'headQ'
 	void RTsequence::concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const
@@ -355,10 +402,10 @@ namespace FPGAns
 		linearRamp(mVectorOfQueues.at(chan), timeStep, rampLength, Vi_V, Vf_V);
 	}
 
-	//To avoid any jump in the output value of the FPGA at the beginning of the RT sequence, preset the output to the first value of sequence in advance
+	//Preset the FPGA output to the first value of the RT sequence to avoid jumps at the start of the sequence,
 	void RTsequence::presetFPGAoutput() const
 	{
-		//
+		//Create a vector of queues. Each queue has the first element of the sequence. The pixelclock is empty
 		VQU32 vectorOfQueues(nChan);
 		for (int chan = 1; chan < nChan; chan++)
 		{
@@ -378,83 +425,18 @@ namespace FPGAns
 			}
 		}
 			
-		QU32 allQueues;		//Create a single long queue
-		for (int chan = 0; chan < nChan; chan++)
-		{
-			allQueues.push_back(vectorOfQueues.at(chan).size());	//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'		
-			for (int iter = 0; iter < static_cast<int>(vectorOfQueues.at(chan).size()); iter++)
-				allQueues.push_back(vectorOfQueues.at(chan).at(iter));	//Push VectorOfQueues[i]
-		}
-
-		const int sizeFIFOINqueue = allQueues.size();		//Total number of elements in all the queues 
-
-		if (sizeFIFOINqueue > FIFOINmax)
-			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
-
-		std::vector<U32> FIFOIN(sizeFIFOINqueue);				//Create a 1D array with the channels concatenated
-		for (int ii = 0; ii < sizeFIFOINqueue; ii++)
-		{
-			FIFOIN[ii] = allQueues.front();						//Transfer the queue elements to the array
-			allQueues.pop_front();
-		}
-		allQueues = {};					//Cleanup the queue C++11 style
-
-		const U32 timeout_ms = -1;		//in ms. A value -1 prevents FIFOIN from timing out
-		U32 r;							//Elements remaining
-
-		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
-		checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, timeout_ms, &r));
-
-		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
-
-		//Trigger the FPGA outputs (non-RT trigger)
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 1));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 0));
-
-		Sleep(50); //Wait long enough so that the sequence above does not wash out the subsequent sequence
+		uploadFIFOIN_(vectorOfQueues);		//Load the sequence on the FPGA
+		triggerNonRT_();					//Trigger the FPGA outputs (non-RT trigger)
+		Sleep(50);							//Wait long enough so that the sequence above does not wash out the subsequent sequence
 	}
 
-	//Send every single queue in 'mVectorOfQueue' to the FPGA buffer
-	//For this, concatenate all the single queues 'VectorOfQueues.at(ii)' in the single queue 'allQueues'.
-	//The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
-	//Then, transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
 	void RTsequence::uploadRT() const
 	{
-		QU32 allQueues;		//Create a single long queue
-		for (int chan = 0; chan < nChan; chan++)
-		{
-			allQueues.push_back(mVectorOfQueues.at(chan).size());	//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'			
-			for (int iter = 0; iter < static_cast<int>(mVectorOfQueues.at(chan).size()); iter++)
-				allQueues.push_back(mVectorOfQueues.at(chan).at(iter));	//Push VectorOfQueues[i]
-		}
-
-		const int sizeFIFOINqueue = allQueues.size();		//Total number of elements in all the queues 
-
-		if (sizeFIFOINqueue > FIFOINmax)
-			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
-
-		std::vector<U32> FIFOIN(sizeFIFOINqueue);				//Create a 1D array with the channels concatenated
-		for (int ii = 0; ii < sizeFIFOINqueue; ii++)
-		{
-			FIFOIN[ii] = allQueues.front();						//Transfer the queue elements to the array
-			allQueues.pop_front();
-		}
-		allQueues = {};					//Cleanup the queue C++11 style
-
-		const U32 timeout_ms = -1;		//in ms. A value -1 prevents FIFOIN from timing out
-		U32 r;							//Elements remaining
-
-		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
-		checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, timeout_ms, &r));
-
-		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 1));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, 0));
+		uploadFIFOIN_(mVectorOfQueues);
 	}
 
-	//Execute the commands
+
+	//Trigger the RT sequence on the FPGA
 	void RTsequence::triggerRT() const
 	{
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LinegateTrigger, 1));

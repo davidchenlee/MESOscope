@@ -101,26 +101,27 @@ void Logger::record(const std::string description, const std::string input)
 }
 
 
-//Open a Tiff using the constructor
-Tiffer::Tiffer(std::string filename)
+//Construct a tiff from a file
+TiffU8::TiffU8(std::string filename)
 {
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "r");
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error((std::string)__FUNCTION__ + "Opening Tiff failed");
 
-	TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &mWidth_pix);
-	TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &mHeight_pix);
-	TIFFGetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, &mStripSize_pix);
+	TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &mWidth);
+	TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &mHeight);
+	//TIFFGetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, &mStripSize);
 
-	if (mHeight_pix % 2)
+	if (mHeight % 2)
 		throw std::runtime_error((std::string)__FUNCTION__ + "Odd number of rows not supported");
 
-	std::cout << "Width = " << mWidth_pix << "\n";
-	std::cout << "Height = " << mHeight_pix << "\n";
-	std::cout << "Strip size = " << mStripSize_pix << "\n";
+	std::cout << "Width = " << mWidth << "\n";
+	std::cout << "Height = " << mHeight << "\n";
+	//std::cout << "Strip size = " << mStripSize << "\n";
 
-	mBytesPerLine = TIFFScanlineSize(tiffHandle);	//Length in memory of one row of pixel in the image.
+	//mBytesPerLine = TIFFScanlineSize(tiffHandle);	//Length in memory of one row of pixel in the image
+	mBytesPerLine = mWidth * mHeight * sizeof(unsigned char);	//Targeting 'unsigned char' only
 
 	if (mBytesPerLine == NULL)
 		throw std::runtime_error((std::string)__FUNCTION__ + "Failed assigning mBytesPerLine");
@@ -133,32 +134,33 @@ Tiffer::Tiffer(std::string filename)
 		std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory for raster of TIFF image");
 	}
 
-	mImage.resize(mWidth_pix * mHeight_pix);	//Allocate memory for the image
+	mImage.resize(mWidth * mHeight);	//Allocate memory for the image
 
 	//Read the tiff one strip at a time
-	for (int rowIndex = 0; rowIndex < mHeight_pix; rowIndex++)
+	for (int rowIndex = 0; rowIndex < mHeight; rowIndex++)
 	{
 		if (TIFFReadScanline(tiffHandle, buffer, rowIndex, 0) < 0)
 			break;
-		std::memcpy(&mImage[(mHeight_pix - rowIndex - 1)*mBytesPerLine], buffer, mBytesPerLine);
+		std::memcpy(&mImage[(mHeight - rowIndex - 1)*mBytesPerLine], buffer, mBytesPerLine);
 	}
 
 	_TIFFfree(buffer);		//Release the memory
 	TIFFClose(tiffHandle);	//Close the tif file
 }
 
-Tiffer::Tiffer(const Tiffer &a): 
-	mWidth_pix(a.mWidth_pix), mHeight_pix(a.mHeight_pix/2), mStripSize_pix(a.mStripSize_pix), mBytesPerLine(a.mBytesPerLine), mImage(a.mImage.begin(), a.mImage.begin() + a.mWidth_pix * a.mHeight_pix / 2)
+//Construct a Tiff from a vector
+TiffU8::TiffU8(std::vector<unsigned char> &inputImage, const int width, const int height) : mWidth(width), mHeight(height), mBytesPerLine(width*height * sizeof(unsigned char))
+{
+	std::memcpy(&mImage[0], &inputImage[0], mWidth * mHeight * sizeof(unsigned char));
+}
+
+TiffU8::~TiffU8()
 {
 }
 
-Tiffer::~Tiffer()
-{
-}
-
-//Split mImage into sub-images (or "segment")
+//Split mImage into sub-images (or "frames")
 //Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image, which has to be re-structured into sub-images
-void Tiffer::saveTiff(std::string filename, const int nSegments) const
+void TiffU8::saveTiff(std::string filename, const int nFrames) const
 {
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
 
@@ -167,20 +169,20 @@ void Tiffer::saveTiff(std::string filename, const int nSegments) const
 
 	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);	//Buffer used to store the row of pixel information for writing to file
 
-	const int heightSingle_pix = mHeight_pix / nSegments; //Divide the total height
-	for (int segment = 0; segment < nSegments; segment++)
+	const int heightSingle_pix = mHeight / nFrames; //Divide the total height
+	for (int frame = 0; frame < nFrames; frame++)
 	{
 		//TAGS
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, mWidth_pix);										//Set the width of the image
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, mWidth);											//Set the width of the image
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, heightSingle_pix);								//Set the height of the image
 		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);											//Set number of channels per pixel
 		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);												//Set the size of the channels
 		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);								//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
 		//TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);							//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
 		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);							//Single channel with min as black				
-		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, mWidth_pix));	//Set the strip size of the file to be size of one row of pixels
-		//TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, 3);												//Specify that it's a segment within the multipage file
-		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, segment, nSegments);								//Specify the segment number
+		//TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, mWidth));		//Set the strip size of the file to be size of one row of pixels
+		//TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, 3);												//Specify that it's a frame within the multipage file
+		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, frame, nFrames);									//Specify the frame number
 
 		if (buffer == NULL) //Check that the buffer memory was allocated
 		{
@@ -191,7 +193,7 @@ void Tiffer::saveTiff(std::string filename, const int nSegments) const
 		//Write the sub-image to the file one strip at a time
 		for (int rowIndex = 0; rowIndex < heightSingle_pix; rowIndex++)
 		{
-			std::memcpy(buffer, &mImage[(segment * heightSingle_pix + heightSingle_pix - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
+			std::memcpy(buffer, &mImage[(frame * heightSingle_pix + heightSingle_pix - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
 			if (TIFFWriteScanline(tiffHandle, buffer, rowIndex, 0) < 0)
 				break;
 		}
@@ -206,23 +208,23 @@ void Tiffer::saveTiff(std::string filename, const int nSegments) const
 }
 
 //The galvo (vectical axis of the image) performs bi-directional scanning
-//Divide the vertically long image in nSegments and vertically flip the odd segments
-void Tiffer::verticalFlip(const int nSegments)
+//Divide the vertically long image in nFrames and vertically flip the odd frames
+void TiffU8::verticalFlip(const int nFrames)
 {
 	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);		//Buffer used to store the row of pixel information for writing to file
 
 	if (buffer == NULL) //Check that the buffer memory was allocated
 		std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory");
 
-	const int heightSingle_pix = mHeight_pix / nSegments; //Divide the total height
+	const int heightSingle_pix = mHeight / nFrames; //Divide the total height
 
-	for (int segment = 1; segment < nSegments; segment+=2)
+	for (int frame = 1; frame < nFrames; frame+=2)
 	{
 		//Swap the first and last rows of the sub-image, then do to the second first and second last rows, etc
 		for (int rowIndex = 0; rowIndex < heightSingle_pix / 2; rowIndex++)
 		{
-			int eneTene = segment * heightSingle_pix + rowIndex;			//Swap this row
-			int moneMei = (segment + 1) * heightSingle_pix - rowIndex - 1;	//With this one
+			int eneTene = frame * heightSingle_pix + rowIndex;			//Swap this row
+			int moneMei = (frame + 1) * heightSingle_pix - rowIndex - 1;	//With this one
 			std::memcpy(buffer, &mImage[eneTene*mBytesPerLine], mBytesPerLine);
 			std::memcpy(&mImage[eneTene*mBytesPerLine], &mImage[moneMei*mBytesPerLine], mBytesPerLine);
 			std::memcpy(&mImage[moneMei*mBytesPerLine], buffer, mBytesPerLine);
@@ -231,56 +233,57 @@ void Tiffer::verticalFlip(const int nSegments)
 	_TIFFfree(buffer);//Release the memory
 }
 
-void Tiffer::averageEvenOddSeparately(const int nSegments)
+void TiffU8::averageEvenOddSeparately(const int nFrames)
 {
-	const int height_pix = mHeight_pix / nSegments; //Divide the total height
-	const int nPix = mWidth_pix * height_pix;
+	const int height_pix = mHeight / nFrames; //Divide the total height
+	const int nPix = mWidth * height_pix;
 
-	//EVEN SEGMENTS
+	//EVEN FRAMES
 	//Calculate the average
 	std::vector<double> evenAvg(nPix);
 	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		for (int segment = 0; segment < nSegments; segment += 2)
-			evenAvg.at(pixIndex) += 1.0 * mImage.at(segment * nPix + pixIndex) / nSegments;
+		for (int frame = 0; frame < nFrames; frame += 2)
+			evenAvg[pixIndex] += 1.0 * mImage[frame * nPix + pixIndex] / nFrames;
 
 	//Cast the average
 	std::vector<unsigned char> evenImage(nPix);
 	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		evenImage.at(pixIndex) = static_cast<unsigned char>(evenAvg.at(pixIndex));
+		evenImage[pixIndex] = static_cast<unsigned char>(evenAvg[pixIndex]);
 
 
-	//ODD SEGMENTS
+	//ODD FRAMES
 	//Calculate the average
 	std::vector<double> oddAvg(nPix);
 	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		for (int segment = 1; segment < nSegments; segment += 2)
-			oddAvg.at(pixIndex) += 1.0 * mImage.at(segment * nPix + pixIndex) / nSegments;
+		for (int frame = 1; frame < nFrames; frame += 2)
+			oddAvg[pixIndex] += 1.0 * mImage[frame * nPix + pixIndex] / nFrames;
 
 	//Cast the average
 	std::vector<unsigned char> oddImage(nPix);
 	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		oddImage.at(pixIndex) = static_cast<unsigned char>(oddAvg.at(pixIndex));
+		oddImage[pixIndex] = static_cast<unsigned char>(oddAvg[pixIndex]);
 
 
-	//Put 'evenImage' and 'oddImage' back into mImage. Concatenate odd after even
-	mHeight_pix = 2* height_pix;
+	//Put 'evenImage' and 'oddImage' back into mImage. Concatenate 'oddImage' after 'evenImage'
+	mHeight = 2* height_pix;
 	mImage.resize(2 * nPix);
-	std::memcpy(&mImage, &evenImage, nPix);
-	std::memcpy(&mImage, &oddImage[nPix], nPix);
+
+	std::memcpy(&mImage[0], &evenImage[0], nPix * sizeof(unsigned char));
+	std::memcpy(&mImage[nPix], &oddImage[0], nPix * sizeof(unsigned char));
 }
 
-//Split the vertically long image into nSegments and calculate the average
-void Tiffer::average(const int nSegments)
+//Split the vertically long image into nFrames and calculate the average
+void TiffU8::average(const int nFrames)
 {
-	mHeight_pix = mHeight_pix / nSegments; //Divide the total height
-	const int nPix = mWidth_pix * mHeight_pix;
+	mHeight = mHeight / nFrames; //Divide the total height
+	const int nPix = mWidth * mHeight;
 
 	std::vector<double> avg(nPix);
 	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		for (int segment = 0; segment < nSegments; segment++)
-			avg.at(pixIndex) += 1.0 * mImage.at(segment * nPix + pixIndex) / nSegments;
+		for (int frame = 0; frame < nFrames; frame++)
+			avg[pixIndex] += 1.0 * mImage[frame * nPix + pixIndex] / nFrames;
 
 	mImage.resize(nPix);
 	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		mImage.at(pixIndex) = static_cast<unsigned char>(avg.at(pixIndex));
+		mImage[pixIndex] = static_cast<unsigned char>(avg[pixIndex]);
 }

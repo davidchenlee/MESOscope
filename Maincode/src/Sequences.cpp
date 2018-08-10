@@ -44,7 +44,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	RScanner.setFFOV(FFOVrs_um);
 
 	//SAMPLE
-	const std::string filename = "Beads_4um";
+	const std::string sampleName = "Beads_4um";
 	const double collar = 1.47;
 
 	//FILTERWHEEL
@@ -125,16 +125,17 @@ void seq_main(const FPGAns::FPGA &fpga)
 			//pockels.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
 
 			//Execute the realtime sequence and acquire the image
+			std::string filename = sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
+				"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4);
 			Image image(RTsequence);
-			image.acquire(TRUE, filename + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
-				"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4), overrideFlag); //Execute the RT sequence and acquire the image
+			image.acquire(TRUE, filename , overrideFlag); //Execute the RT sequence and acquire the image
 
 			if (ii == 0 && jj == 0)
 			{
 				//DATALOG
-				Logger datalog("datalog_" + filename);
+				Logger datalog("datalog_" + sampleName);
 				datalog.record("SAMPLE-------------------------------------------------------");
-				datalog.record("Sample = ", filename);
+				datalog.record("Sample = ", sampleName);
 				datalog.record("Correction collar = ", collar);
 
 				datalog.record("FPGA---------------------------------------------------------");
@@ -458,13 +459,14 @@ void seq_testTiff()
 	std::string inputFilename = "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610";
 	std::string outputFilename = "test";
 
-	const int nSegments = 10;
-	Tiffer image(inputFilename);
-	image.verticalFlip(nSegments);
-	//image.saveTiff(outputFilename, 1);//The second argument specifies the number of segments
+	const int nFrames = 10;
+	TiffU8 image(inputFilename);
+	image.verticalFlip(nFrames);
+	image.averageEvenOddSeparately(nFrames);
+	image.saveTiff(outputFilename, 2);//The second argument specifies the number of Frames
 
 	/*
-	image.average(nSegments);
+	image.average(nFrames);
 	image.saveTiff(outputFilename);
 	*/
 }

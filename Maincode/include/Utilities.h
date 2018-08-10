@@ -30,19 +30,20 @@ public:
 };
 
 
-class Tiffer
+class TiffU8
 {
 	std::vector<unsigned char> mImage;
-	int mWidth_pix;
-	int mHeight_pix;
-	int mStripSize_pix;
-	int mBytesPerLine;
+	int mWidth;
+	int mHeight;
+//	int mStripSize;	//I think this is originally implemented to allow different channels (e.g., RGB) at each pixel
+	int mBytesPerLine; 
 public:
-	Tiffer(std::string filename);
-	Tiffer(const Tiffer &a);
-	~Tiffer();
-	void saveTiff(std::string filename, const int nPages = 1) const;
-	void verticalFlip(const int nSegments);
-	void averageEvenOddSeparately(const int nSegments);
-	void average(const int nSegments);
+	TiffU8(std::string filename);
+	TiffU8(std::vector<unsigned char> &inputImage, const int width, const int height);
+	~TiffU8();
+	void saveTiff(std::string filename, const int nFrames = 1) const;
+	void verticalFlip(const int nFrames);
+	void averageEvenOddSeparately(const int nFrames);
+	void average(const int nFrames);
 };
+

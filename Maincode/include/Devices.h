@@ -8,11 +8,10 @@
 
 class Image
 {
-	const FPGAns::RTsequence &mRTsequence;			//Const because the variables referenced by mRTsequence are not changed by the methods in this class
-
-	std::vector<U32> mBufArrayA;					//Vector to read FIFOOUTpc A
-	std::vector<U32> mBufArrayB;					//Vector to read FIFOOUTpc B
-	std::vector<unsigned char> mImage;				//Demux image
+	FPGAns::RTsequence &mRTsequence;				//Const because the variables referenced by mRTsequence are not changed by the methods in this class
+	std::vector<U32> mBufArrayA;						//Vector to read FIFOOUTpc A
+	std::vector<U32> mBufArrayB;						//Vector to read FIFOOUTpc B
+	std::vector<unsigned char> mImage;					//Image
 
 	void startFIFOOUTpc_() const;
 	void configureFIFOOUTpc_(const U32 depth) const;	//Currently I don't use this function
@@ -27,9 +26,12 @@ public:
 	Image(FPGAns::RTsequence &RTsequence);
 	~Image();
 	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
-	void acquire(const bool saveFlag = FALSE, const std::string filename = "Untitled", const bool overrideFile = FALSE);
-	void saveTiff(std::string filename, const bool overrideFile) const;
+	void acquire();
+	void verticalFlip();
+	void average();
+	void saveTiff(std::string filename, const bool overrideFile = FALSE) const;
 	void saveTxt(const std::string fileName) const;
+	void push(std::vector<unsigned char> &inputVector) const;
 };
 
 class Vibratome
@@ -221,4 +223,13 @@ public:
 	void Stage::stopALL() const;
 	void scanningStrategy(const int nTileAbsolute) const;
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
+};
+
+class stackOfAverages
+{
+	std::vector<unsigned char> mStack;	//create a long blank image to store the data
+public:
+	stackOfAverages();
+	~stackOfAverages();
+	void push(Image image);
 };

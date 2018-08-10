@@ -120,8 +120,8 @@ TiffU8::TiffU8(std::string filename)
 	std::cout << "Height = " << mHeight << "\n";
 	//std::cout << "Strip size = " << mStripSize << "\n";
 
-	//mBytesPerLine = TIFFScanlineSize(tiffHandle);	//Length in memory of one row of pixel in the image
-	mBytesPerLine = mWidth * mHeight * sizeof(unsigned char);	//Targeting 'unsigned char' only
+	mBytesPerLine = mWidth * sizeof(unsigned char);	//Length in memory of one row of pixel in the image. Targeting 'unsigned char' only
+													//alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
 
 	if (mBytesPerLine == NULL)
 		throw std::runtime_error((std::string)__FUNCTION__ + "Failed assigning mBytesPerLine");
@@ -149,8 +149,9 @@ TiffU8::TiffU8(std::string filename)
 }
 
 //Construct a Tiff from a vector
-TiffU8::TiffU8(std::vector<unsigned char> &inputImage, const int width, const int height) : mWidth(width), mHeight(height), mBytesPerLine(width*height * sizeof(unsigned char))
+TiffU8::TiffU8(std::vector<unsigned char> &inputImage, const int width, const int height) : mImage(width * height), mWidth(width), mHeight(height), mBytesPerLine(width * sizeof(unsigned char))
 {
+	//Copy the entire vector inputImage into mImage
 	std::memcpy(&mImage[0], &inputImage[0], mWidth * mHeight * sizeof(unsigned char));
 }
 
@@ -170,6 +171,7 @@ void TiffU8::saveTiff(std::string filename, const int nFrames) const
 	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);	//Buffer used to store the row of pixel information for writing to file
 
 	const int heightSingle_pix = mHeight / nFrames; //Divide the total height
+
 	for (int frame = 0; frame < nFrames; frame++)
 	{
 		//TAGS

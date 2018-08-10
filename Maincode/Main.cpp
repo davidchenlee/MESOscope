@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 		FPGAns::FPGA fpga;		//Create a FPGA session
 		try
 		{
-			//seq_main(fpga);			
+			seq_main(fpga);			
 			//seq_contAcquisition(fpga);
 			//seq_testPixelclock(fpga);
 			//seq_testStageSetPosition();
@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 			//seq_testRS(fpga);
 			//seq_contAcquisitionTest(fpga);
 			//seq_testConvertI16toVoltage();
-			seq_testGalvoSync(fpga);
+			//seq_testGalvoSync(fpga);
 			//seq_testTiff();
 		}
 		catch (const std::invalid_argument &e)

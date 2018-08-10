@@ -35,8 +35,8 @@ class TiffU8
 	std::vector<unsigned char> mImage;
 	int mWidth;
 	int mHeight;
-//	int mStripSize;	//I think this is originally implemented to allow different channels (e.g., RGB) at each pixel
 	int mBytesPerLine; 
+	//int mStripSize;	//I think this is originally implemented to allow different channels (e.g., RGB) at each pixel
 public:
 	TiffU8(std::string filename);
 	TiffU8(std::vector<unsigned char> &inputImage, const int width, const int height);
@@ -46,4 +46,3 @@ public:
 	void averageEvenOddSeparately(const int nFrames);
 	void average(const int nFrames);
 };
-

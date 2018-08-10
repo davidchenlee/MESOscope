@@ -194,7 +194,7 @@ void Image::analyze_() const
 }
 
 
-void Image::acquire(const bool saveFlag, const std::string filename, const bool overrideFile)
+void Image::acquire()
 {
 	mRTsequence.presetFPGAoutput();	//Preset the ouput of the FPGA
 
@@ -210,14 +210,6 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 			correctInterleaved_();
 			demux_();				//Move the chuncks of data to the buffer array
 			//analyze_();
-
-			if (saveFlag)
-			{
-				saveTiff(filename, overrideFile);
-				//saveTxt(filename);
-			}
-
-
 		}
 		catch (const ImageException &e) //Notify the exception and continue with the next iteration
 		{
@@ -226,69 +218,121 @@ void Image::acquire(const bool saveFlag, const std::string filename, const bool 
 	}
 }
 
+//The galvo (vectical axis of the image) performs bi-directional scanning
+//Divide the vertically long image in nFrames and vertically flip the odd frames
+void Image::verticalFlip()
+{
+	const int mBytesPerLine = mRTsequence.mWidthPerFrame_pix * sizeof(unsigned char);				//Targeting 'unsigned char' only
+	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);		//Buffer used to store the row of pixel information for writing to file
+
+	if (buffer == NULL) //Check that the buffer memory was allocated
+		std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory");
+
+	const int heightSingle_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes; //Divide the total height
+
+	for (int frame = 1; frame < mRTsequence.mNframes; frame += 2)
+	{
+		//Swap the first and last rows of the sub-image, then do to the second first and second last rows, etc
+		for (int rowIndex = 0; rowIndex < heightSingle_pix / 2; rowIndex++)
+		{
+			int eneTene = frame * heightSingle_pix + rowIndex;				//Swap this row
+			int moneMei = (frame + 1) * heightSingle_pix - rowIndex - 1;	//With this one
+			std::memcpy(buffer, &mImage[eneTene*mBytesPerLine], mBytesPerLine);
+			std::memcpy(&mImage[eneTene*mBytesPerLine], &mImage[moneMei*mBytesPerLine], mBytesPerLine);
+			std::memcpy(&mImage[moneMei*mBytesPerLine], buffer, mBytesPerLine);
+		}
+	}
+	_TIFFfree(buffer);		//Release the memory
+}
+
+//Split the vertically long image into nFrames and calculate the average
+void Image::average()
+{
+	mRTsequence.mHeightAllFrames_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes; //Divide the total height
+	const int nPix = mRTsequence.mWidthPerFrame_pix * mRTsequence.mHeightAllFrames_pix;
+
+	std::vector<double> avg(nPix);
+	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
+		for (int frame = 0; frame < mRTsequence.mNframes; frame++)
+			avg[pixIndex] += 1.0 * mImage[frame * nPix + pixIndex] / mRTsequence.mNframes;
+
+	mImage.resize(nPix);
+	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
+		mImage[pixIndex] = static_cast<unsigned char>(avg[pixIndex]);
+
+	mRTsequence.mNframes = 1;
+}
+
 void Image::saveTiff(std::string filename, const bool overrideFile) const
 {
-	const int width_pix = mRTsequence.mWidthPerFrame_pix;
-	const int height_pix = mRTsequence.mHeightAllFrames_pix;
-
 	if (!overrideFile)
 		filename = file_exists(filename);
 
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
 
-	if (tiffHandle == nullptr)
-		throw ImageException((std::string)__FUNCTION__ + ": Saving Tiff failed");
+	const int mBytesPerLine = mRTsequence.mWidthPerFrame_pix * sizeof(unsigned char);			//Targeting 'unsigned char' only
+	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);	//Buffer used to store the row of pixel information for writing to file
 
-	//TAGS
-	TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, width_pix);						//Set the width of the image
-	TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, height_pix);						//Set the height of the image
-	TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);							//Set number of channels per pixel
-	TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);								//Set the size of the channels
-	TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);				//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
-	//TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);			//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
-	TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);			//Single channel with min as black
-
-	tsize_t bytesPerLine = width_pix;			//Length in memory of one row of pixel in the image.
-	unsigned char *buffer = nullptr;			//Buffer used to store the row of pixel information for writing to file
-
-	//Allocating memory to store pixels of current row
-	if (TIFFScanlineSize(tiffHandle))
-		buffer = (unsigned char *)_TIFFmalloc(bytesPerLine);
-	else
-		buffer = (unsigned char *)_TIFFmalloc(TIFFScanlineSize(tiffHandle));
-
-	//Set the strip size of the file to be size of one row of pixels
-	TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, width_pix));
-
-	//Now writing image to the file one strip at a time
-	for (int row = 0; row < height_pix; row++)
+	const int heightSingle_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes; //Divide the total height
+	for (int frame = 0; frame < mRTsequence.mNframes; frame++)
 	{
-		memcpy(buffer, &mImage[(height_pix - row - 1)*bytesPerLine], bytesPerLine);    // check the index here, and figure tiffHandle why not using h*bytesPerLine
-		if (TIFFWriteScanline(tiffHandle, buffer, row, 0) < 0)
-			break;
+		//TAGS
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, mRTsequence.mWidthPerFrame_pix);										//Set the width of the image
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, heightSingle_pix);								//Set the height of the image
+		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);											//Set number of channels per pixel
+		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);												//Set the size of the channels
+		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);								//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
+		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);							//Single channel with min as black		
+		/*
+		TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);							//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
+		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, mWidth));		//Set the strip size of the file to be size of one row of pixels
+		TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, 3);												//Specify that it's a frame within the multipage file
+		TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, frame, nFrames);									//Specify the frame number
+		*/
+
+		if (buffer == NULL) //Check that the buffer memory was allocated
+		{
+			TIFFClose(tiffHandle);
+			std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory for raster of TIFF image");
+		}
+
+		//Write the sub-image to the file one strip at a time
+		for (int rowIndex = 0; rowIndex < heightSingle_pix; rowIndex++)
+		{
+			std::memcpy(buffer, &mImage[(frame * heightSingle_pix + heightSingle_pix - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
+			if (TIFFWriteScanline(tiffHandle, buffer, rowIndex, 0) < 0)
+				break;
+		}
+
+		TIFFWriteDirectory(tiffHandle); //Create a page structure
 	}
 
-	//Close the output file
-	(void)TIFFClose(tiffHandle);
+	_TIFFfree(buffer);					//Destroy the buffer
+	TIFFClose(tiffHandle);				//Close the output tiff file
 
-	//Destroy the buffer
-	if (buffer)
-		_TIFFfree(buffer);
+	std::cout << "Tiff successfully saved" << std::endl;
 }
 
 void Image::saveTxt(const std::string filename) const
 {
-	std::ofstream fileHandle;							//Create output file
-	fileHandle.open(folderPath + filename + ".txt");	//Open the file
+	std::ofstream fileHandle;									//Create output file
+	fileHandle.open(folderPath + filename + ".txt");			//Open the file
 
 	for (int ii = 0; ii < mRTsequence.mNpixAllFrames; ii++)
 	{
 		//fileHandle << (int)mImage.at(ii) << std::endl;		//Write each element
-		fileHandle << mBufArrayB[ii] << std::endl;		//Write each element
+		fileHandle << mBufArrayB[ii] << std::endl;				//Write each element
 	}
 
-	fileHandle.close();									//Close the txt file
+	fileHandle.close();											//Close the txt file
 }
+
+//Push mImage to inputVector. Not very efficient because there is not memory preallocation
+void Image::push(std::vector<unsigned char> &inputVector) const
+{
+	inputVector.insert(inputVector.end(), mImage.begin(), mImage.end());
+}
+
 #pragma endregion "Image"
 
 
@@ -350,14 +394,14 @@ ResonantScanner::ResonantScanner(const FPGAns::RTsequence &RTsequence): mRTseque
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
-		mFillFactor = sin(PI / 2 * temporalFillFactor);				//Note that the fill factor doesn't depend on the RS amplitude because the RS period is fixed
+		mFillFactor = sin(PI / 2 * temporalFillFactor);					//Note that the fill factor doesn't depend on the RS amplitude because the RS period is fixed
 
-	//std::cout << "Fill factor = " << mFillFactor << std::endl;	//For debugging
+	//std::cout << "Fill factor = " << mFillFactor << std::endl;		//For debugging
 
 	//Download the current control voltage from the FPGA and update the scan parameters
-	mControl_V = downloadControl_V();					//Control voltage
-	mFullScan_um = mControl_V / mVoltPerUm;					//Full scan FOV = distance from turning point to turning point
-	mFFOV_um = mFullScan_um * mFillFactor;					//FFOV
+	mControl_V = downloadControl_V();									//Control voltage
+	mFullScan_um = mControl_V / mVoltPerUm;								//Full scan FOV = distance from turning point to turning point
+	mFFOV_um = mFullScan_um * mFillFactor;								//FFOV
 	mSampRes_umPerPix = mFFOV_um / mRTsequence.mWidthPerFrame_pix;		//Spatial sampling resolution
 };
 
@@ -370,9 +414,9 @@ void ResonantScanner::setVoltage_(const double control_V)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage must be in the range 0-" + std::to_string(mVMAX_V) + " V" );
 
 	//Update the scan parameters
-	mControl_V = control_V;									//Control voltage
-	mFullScan_um = control_V / mVoltPerUm;					//Full scan FOV
-	mFFOV_um = mFullScan_um * mFillFactor;					//FFOV
+	mControl_V = control_V;												//Control voltage
+	mFullScan_um = control_V / mVoltPerUm;								//Full scan FOV
+	mFFOV_um = mFullScan_um * mFillFactor;								//FFOV
 	mSampRes_umPerPix = mFFOV_um / mRTsequence.mWidthPerFrame_pix;		//Spatial sampling resolution
 
 	//Upload the control voltage
@@ -383,9 +427,9 @@ void ResonantScanner::setVoltage_(const double control_V)
 void ResonantScanner::setFFOV(const double FFOV_um)
 {
 	//Update the scan parameters
-	mFullScan_um = FFOV_um / mFillFactor;					//Full scan FOV
-	mControl_V = mFullScan_um * mVoltPerUm;					//Control voltage
-	mFFOV_um = FFOV_um;										//FFOV
+	mFullScan_um = FFOV_um / mFillFactor;								//Full scan FOV
+	mControl_V = mFullScan_um * mVoltPerUm;								//Control voltage
+	mFFOV_um = FFOV_um;													//FFOV
 	mSampRes_umPerPix = mFFOV_um / mRTsequence.mWidthPerFrame_pix;		//Spatial sampling resolution
 	//std::cout << "mControl_V = " << mControl_V << std::endl; //For debugging
 
@@ -697,7 +741,7 @@ void mPMT::readAllGain() const
 
 void mPMT::setSingleGain(const int channel, const int gain) const
 {
-	//Check that the input parameters are within range
+	//Check that the inputVector parameters are within range
 	if (channel < 1 || channel > 16)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": mPMT channel number out of range (1-16)");
 
@@ -742,7 +786,7 @@ void mPMT::setAllGain(const int gain) const
 
 void mPMT::setAllGain(std::vector<uint8_t> gains) const
 {
-	//Check that the input parameters are within range
+	//Check that the inputVector parameters are within range
 	if (gains.size() != 16)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Gain array must have 16 elements");
 

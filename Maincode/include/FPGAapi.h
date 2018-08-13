@@ -60,16 +60,16 @@ namespace FPGAns
 		void triggerNonRT_() const;
 	public:
 		const FPGAns::FPGA &mFpga;
-		LineclockInputSelector mLineclockInput;								//Resonant scanner (RS) or Function generator (FG)
-		const double mDwell_us = 0.1625 * us;								//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340. Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
-		const double mPulsesPerPixel = mDwell_us / VISIONpulsePeriod;		//Max number of laser pulses per pixel
-		const double mUpscaleU8 = 255 / (mPulsesPerPixel + 1);				//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
-		const int mNlinesSkip = 0;											//Number of lines to skip beetween frames to reduce the acquisition bandwidt
-		int mWidthPerFrame_pix;												//Width in pixels of a frame (RS axis). I call each swing of the RS a "line"
-		int mHeightPerFrame_pix;											//Height in pixels of a frame (galvo axis). This sets the number of "lines" in the image
-		int mNframes;														//Number of frames to acquire
-		int mHeightAllFrames_pix;											//Total number of lines in all the frames without including the skipped lines
-		int mNpixAllFrames;													//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
+		LineclockInputSelector mLineclockInput;														//Resonant scanner (RS) or Function generator (FG)
+		const double mDwell_us = 0.1625 * us;														//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340. Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
+		const double mPulsesPerPixel = mDwell_us / VISIONpulsePeriod;								//Max number of laser pulses per pixel
+		const unsigned char mUpscaleU8 = static_cast<unsigned char>(255 / (mPulsesPerPixel + 1));	//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
+		const int mNlinesSkip = 0;																	//Number of lines to skip beetween frames to reduce the acquisition bandwidt
+		int mWidthPerFrame_pix;																		//Width in pixels of a frame (RS axis). I call each swing of the RS a "line"
+		int mHeightPerFrame_pix;																	//Height in pixels of a frame (galvo axis). This sets the number of "lines" in the image
+		int mNframes;																				//Number of frames to acquire
+		int mHeightAllFrames_pix;																	//Total number of lines in all the frames without including the skipped lines
+		int mNpixAllFrames;																			//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
 		RTsequence(const FPGAns::FPGA &fpga, const LineclockInputSelector lineclockInput = FG, const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix = 400);
 		RTsequence(const RTsequence&) = delete;				//Disable copy-constructor

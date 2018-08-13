@@ -4,6 +4,7 @@
 
 void seq_main(const FPGAns::FPGA &fpga);
 void seq_contAcquisition(const FPGAns::FPGA &fpga);
+void seq_testInterframeTiming(const FPGAns::FPGA &fpga);
 void seq_testPixelclock(const FPGAns::FPGA &fpga);
 void seq_testAODO(const FPGAns::FPGA &fpga);
 void seq_testAOramp(const FPGAns::FPGA &fpga);

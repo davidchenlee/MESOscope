@@ -9,7 +9,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAns::FPGA &fpga)
 {
-	const int runmode = 4;
+	const int runmode = 0;
 	/*
 	0 - Single shot
 	1 - Continuous: image the same plane many times
@@ -21,7 +21,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.120, 19.808, 18.479 };	//Initial position
+	double3 position_mm = { 35.120, 19.808, 18.480 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -29,7 +29,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 750;
-	double laserPower_mW = 40 * mW;
+	double laserPower_mW = 35 * mW;
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
 
@@ -108,7 +108,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		//Frames at the same Z
 		for (int frameSameZ = 0; frameSameZ < nFramesSameZ; frameSameZ++)
 		{
-			std::cout << "Frame diff Z: " << (frameDiffZ + 1) << "/" << nFramesDiffZ << "\tFrame same Z: " << (frameSameZ + 1) << "/" << nFramesSameZ <<
+			std::cout << "Frame # (diff-Z): " << (frameDiffZ + 1) << "/" << nFramesDiffZ << "\tFrame # (same-Z): " << (frameSameZ + 1) << "/" << nFramesSameZ <<
 				"\tTotal frame: " << frameDiffZ * nFramesSameZ + (frameSameZ + 1) << "/" << nFramesDiffZ * nFramesSameZ << std::endl;
 
 			//CREATE THE REAL-TIME SEQUENCE
@@ -177,14 +177,14 @@ void seq_main(const FPGAns::FPGA &fpga)
 		{
 			position_mm.at(zz) += stepSize_um / 1000;
 			stage.moveStage(zz, position_mm.at(zz));
-			//stage.waitForMovementToStop3();
-			Sleep(500);
+			stage.waitForMovementToStop3();
+			//Sleep(300);
 			//laserPower_mW += 0.5; //Increase the laser power by this much
 		}
 	}
 	shutter1.close();
 
-	TiffU8 aa(stackOfAverages, 300, 400 * nFramesDiffZ);
+	TiffU8 aa(stackOfAverages, 300, 400 * nFramesDiffZ); //FIX THIS!!!!
 	aa.saveTiff("Untitled", nFramesDiffZ);
 }
 
@@ -241,6 +241,33 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 	shutter1.close();
 }
 
+//For live optimization of the objective's correction collar
+void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
+{
+	//GALVO
+	const double FFOVgalvo_um = 300 * um;				//Full FOV in the slow axis
+	const double galvoTimeStep = 8 * us;
+	const double posMax_um = FFOVgalvo_um / 2;
+
+	for (int jj = 0; jj < 5; jj++)
+	{
+		std::cout << "Iteration: " << jj + 1 << std::endl;
+
+		//CREATE A REAL-TIME SEQUENCE
+		FPGAns::RTsequence RTsequence(fpga, RS);
+
+		//GALVO FOR RT
+		Galvo galvo(RTsequence, GALVO1);
+		const double duration = halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+		galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);			//Linear ramp for the galvo
+		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);				//set the output back to the initial value
+
+		//Execute the realtime sequence and acquire the image
+		Image image(RTsequence);
+		image.acquire(); //Execute the RT sequence and acquire the image
+		image.saveTiff("Untitled", TRUE);
+	}
+}
 
 void seq_testPixelclock(const FPGAns::FPGA &fpga)
 {
@@ -399,7 +426,7 @@ void seq_testmPMT()
 }
 
 //Keep the pockels cell on.
-//1. Manually open the shutter
+//1. Manually open the laser and Uniblitz shutters
 //2. Set pockels1_enableAutoOff = 0
 //3. Set lineclockInput = FG
 void seq_testPockels(const FPGAns::FPGA &fpga)
@@ -413,7 +440,7 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 
 	//Turn on the pockels cell
 	PockelsCell pockels(RTsequence, POCKELS1, 750);
-	pockels.pushPowerSinglet(8 * us, 50 * mW);
+	pockels.pushPowerSinglet(8 * us, 40 * mW);
 	//pockels.pushVoltageSinglet_(8 * us, 2.508 * V);
 
 	//Execute the sequence
@@ -439,9 +466,7 @@ void seq_testRS(const FPGAns::FPGA &fpga)
 void seq_testConvertI16toVolt()
 {
 	std::cout << "volt to I16: " << FPGAns::convertVoltToI16(1) << std::endl;
-
 	std::cout << "I16 to colt: " << FPGAns::convertI16toVolt(32767) << std::endl;
-
 	std::cout << "volt to I16 to volt: " << FPGAns::convertI16toVolt(FPGAns::convertVoltToI16(0)) << std::endl;
 }
 

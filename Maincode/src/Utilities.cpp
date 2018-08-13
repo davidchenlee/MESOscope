@@ -289,3 +289,4 @@ void TiffU8::average(const int nFrames)
 	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
 		mImage[pixIndex] = static_cast<unsigned char>(avg[pixIndex]);
 }
+

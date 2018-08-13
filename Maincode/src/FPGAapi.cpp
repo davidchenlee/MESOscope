@@ -427,7 +427,7 @@ namespace FPGAns
 			
 		uploadFIFOIN_(vectorOfQueues);		//Load the sequence on the FPGA
 		triggerNonRT_();					//Trigger the FPGA outputs (non-RT trigger)
-		Sleep(50);							//Wait long enough so that the sequence above does not wash out the subsequent sequence
+		//Sleep(5);							//Wait long enough so that the sequence above does not wash out the subsequent sequence
 	}
 
 	void RTsequence::uploadRT() const

@@ -169,17 +169,15 @@ void Image::correctInterleaved_()
 //When multiplexing later on, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
 void Image::demux_()
 {
-	double upscaled;
 	for (int pixIndex = 0; pixIndex < mRTsequence.mNpixAllFrames; pixIndex++)
 	{
-		upscaled = std::floor(mRTsequence.mUpscaleU8 * mBufArrayB[pixIndex]); //Upscale the buffer from 4-bit to a 8-bit
+		unsigned char upscaled = mRTsequence.mUpscaleU8 * mBufArrayB[pixIndex]; //Upscale the buffer from 4-bit to 8-bit
 
 		//If upscaled overflows
 		if (upscaled > _UI8_MAX)
 			upscaled = _UI8_MAX;
-		//throw ImageException((std::string)__FUNCTION__ + ": Upscaled photoncount overflow");
 
-		mImage[pixIndex] = (unsigned char)upscaled;
+		mImage[pixIndex] = upscaled;
 	}
 }
 
@@ -197,7 +195,6 @@ void Image::analyze_() const
 void Image::acquire()
 {
 	mRTsequence.presetFPGAoutput();	//Preset the ouput of the FPGA
-
 	mRTsequence.uploadRT();			//Load the RT sequence in mVectorOfQueues to the FPGA
 	startFIFOOUTpc_();				//Establish the connection between FIFOOUTfpga and FIFOOUTpc and cleans up any residual data from the previous run
 	mRTsequence.triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
@@ -252,15 +249,15 @@ void Image::average()
 	const int nPix = mRTsequence.mWidthPerFrame_pix * mRTsequence.mHeightAllFrames_pix;
 
 	std::vector<double> avg(nPix);
-	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		for (int frame = 0; frame < mRTsequence.mNframes; frame++)
-			avg[pixIndex] += 1.0 * mImage[frame * nPix + pixIndex] / mRTsequence.mNframes;
+	for (int frame = 0; frame < mRTsequence.mNframes; frame++)
+		for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
+			avg[pixIndex] += mImage[frame * nPix + pixIndex];
 
 	mImage.resize(nPix);
 	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		mImage[pixIndex] = static_cast<unsigned char>(avg[pixIndex]);
+		mImage[pixIndex] = static_cast<unsigned char>(avg[pixIndex] / mRTsequence.mNframes);
 
-	mRTsequence.mNframes = 1;
+	mRTsequence.mNframes = 1; //Update to 1 the number of frames
 }
 
 void Image::saveTiff(std::string filename, const bool overrideFile) const
@@ -270,14 +267,14 @@ void Image::saveTiff(std::string filename, const bool overrideFile) const
 
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
 
-	const int mBytesPerLine = mRTsequence.mWidthPerFrame_pix * sizeof(unsigned char);			//Targeting 'unsigned char' only
-	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);	//Buffer used to store the row of pixel information for writing to file
+	const int mBytesPerLine = mRTsequence.mWidthPerFrame_pix * sizeof(unsigned char);					//Targeting 'unsigned char' only
+	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);								//Buffer used to store the row of pixel information for writing to file
 
-	const int heightSingle_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes; //Divide the total height
+	const int heightSingle_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes;				//Divide the total height
 	for (int frame = 0; frame < mRTsequence.mNframes; frame++)
 	{
 		//TAGS
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, mRTsequence.mWidthPerFrame_pix);										//Set the width of the image
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, mRTsequence.mWidthPerFrame_pix);					//Set the width of the image
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, heightSingle_pix);								//Set the height of the image
 		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);											//Set number of channels per pixel
 		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);												//Set the size of the channels
@@ -296,7 +293,7 @@ void Image::saveTiff(std::string filename, const bool overrideFile) const
 			std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory for raster of TIFF image");
 		}
 
-		//Write the sub-image to the file one strip at a time
+		//Write the sub-image (frame) to the file one strip at a time
 		for (int rowIndex = 0; rowIndex < heightSingle_pix; rowIndex++)
 		{
 			std::memcpy(buffer, &mImage[(frame * heightSingle_pix + heightSingle_pix - rowIndex - 1)*mBytesPerLine], mBytesPerLine);

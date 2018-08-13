@@ -8,16 +8,16 @@
 
 class Image
 {
-	FPGAns::RTsequence &mRTsequence;				//Const because the variables referenced by mRTsequence are not changed by the methods in this class
-	std::vector<U32> mBufArrayA;						//Vector to read FIFOOUTpc A
-	std::vector<U32> mBufArrayB;						//Vector to read FIFOOUTpc B
-	std::vector<unsigned char> mImage;					//Image
+	FPGAns::RTsequence &mRTsequence;		//Const because the variables referenced by mRTsequence are not changed by the methods in this class
+	U32* mBufArrayA;						//Vector to read FIFOOUTpc A
+	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
+	unsigned char* mImage;		//Image
 
 	void startFIFOOUTpc_() const;
 	void configureFIFOOUTpc_(const U32 depth) const;	//Currently I don't use this function
 	void stopFIFOOUTpc_() const;
 	void readFIFOOUTpc_();
-	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, std::vector<U32> &buffer);
+	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer);
 	void correctInterleaved_();
 	void demux_();
 	void analyze_() const;

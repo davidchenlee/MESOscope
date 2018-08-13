@@ -31,7 +31,7 @@ public:
 
 class TiffU8
 {
-	std::vector<unsigned char> mImage;
+	unsigned char* mImage;
 	int mWidth;
 	int mHeight;
 	int mBytesPerLine; 

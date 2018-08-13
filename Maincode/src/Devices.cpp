@@ -2,8 +2,11 @@
 
 #pragma region "Image"
 
-Image::Image(FPGAns::RTsequence &RTsequence) : mRTsequence(RTsequence), mBufArrayA(mRTsequence.mNpixAllFrames), mBufArrayB(mRTsequence.mNpixAllFrames), mImage(mRTsequence.mNpixAllFrames)
+Image::Image(FPGAns::RTsequence &RTsequence) : mRTsequence(RTsequence)
 {
+	mBufArrayA = new U32[mRTsequence.mNpixAllFrames];
+	mBufArrayB = new U32[mRTsequence.mNpixAllFrames];
+	mImage = new unsigned char[mRTsequence.mNpixAllFrames];
 }
 
 Image::~Image()
@@ -12,6 +15,9 @@ Image::~Image()
 	//(I think) this is because the access to FIFOOUT used to remain open and clashed with the next call
 	stopFIFOOUTpc_();
 
+	delete[] mBufArrayA;
+	delete[] mBufArrayB;
+	delete[] mImage;
 	//std::cout << "Image destructor called\n";
 }
 
@@ -32,14 +38,14 @@ void Image::FIFOOUTpcGarbageCollector_() const
 	const int bufSize = 10000;
 
 	U32 dummy;
-	std::vector<U32> garbage(bufSize);
+	U32* garbage = new U32[bufSize];
 	U32 nElemToReadA, nElemToReadB;					//Elements to read from FIFOOUTpc A and B
 	int nElemTotalA = 0, nElemTotalB = 0; 			//Total number of elements read from FIFOOUTpc A and B
 	while (TRUE)
 	{
 		//Check if there are elements in FIFOOUTpc
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], 0, timeout_ms, &nElemToReadA));
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], 0, timeout_ms, &nElemToReadB));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nElemToReadA));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nElemToReadB));
 		//std::cout << "FIFOOUTpc cleanup A/B: " << nElemToReadA << "/" << nElemToReadB << std::endl;
 		//getchar();
 
@@ -49,13 +55,13 @@ void Image::FIFOOUTpcGarbageCollector_() const
 		if (nElemToReadA > 0)
 		{
 			nElemToReadA = min(bufSize, nElemToReadA);	//Min between bufSize and nElemToReadA
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, &garbage[0], nElemToReadA, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, nElemToReadA, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
 			nElemTotalA += nElemToReadA;
 		}
 		if (nElemToReadB > 0)
 		{
 			nElemToReadB = min(bufSize, nElemToReadB);	//Min between bufSize and nElemToReadB
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, &garbage[0], nElemToReadB, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, nElemToReadB, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
 			nElemTotalB += nElemToReadB;
 		}
 	}
@@ -118,9 +124,8 @@ void Image::readFIFOOUTpc_()
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
-	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * nPixAllFrames / duration / 1000 << " Mbps" << std::endl; //2 FIFOOUTs of 32 bits each
-	std::cout << "Buffer arrays used: " << (U32)mCounterBufArray_B << std::endl; //Print out how many buffer arrays were actually used
-	std::cout << "Total of elements read: " << nElemReadFIFOOUTa << "\t" << nElemReadFIFOOUTb << std::endl; //Print out the total number of elements read
+	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * mRTsequence.mNpixAllFrames / duration / 1000 << " Mbps" << std::endl; //2 FIFOOUTs of 32 bits each
+	std::cout << "Total of elements read: " << nElemTotalA << "\t" << nElemTotalB << std::endl; //Print out the total number of elements read
 	*/
 
 	//If all the expected data is NOT read successfully
@@ -129,7 +134,7 @@ void Image::readFIFOOUTpc_()
 }
 
 //Read a chunk of data in the FIFOpc
-void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, std::vector<U32> &buffer)
+void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer)
 {
 	U32 dummy;
 	U32 nElemToRead = 0;				//Elements remaining in FIFOOUTpc
@@ -138,7 +143,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	if (nElemRead < mRTsequence.mNpixAllFrames)		//Skip if all the data have already been transferred
 	{
 		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), FIFOOUTpc, &buffer[0], 0, timeout_ms, &nElemToRead));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), FIFOOUTpc, buffer, 0, timeout_ms, &nElemToRead));
 		//std::cout << "Number of elements remaining in FIFOOUT: " << mNelemToReadFIFOOUTb << std::endl;
 
 		//If data available in FIFOOUTpc, retrieve it
@@ -149,7 +154,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 				throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO buffer overflow");
 
 			//Retrieve the elements in FIFOOUTpc
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), FIFOOUTpc, &buffer[0] + nElemRead, nElemToRead, timeout_ms, &dummy));
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), FIFOOUTpc, buffer + nElemRead, nElemToRead, timeout_ms, &dummy));
 			
 			//Keep track of the total number of elements read
 			nElemRead += nElemToRead;
@@ -163,7 +168,7 @@ void Image::correctInterleaved_()
 {
 	//Within an odd line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
 	for (int lineIndex = 1; lineIndex < mRTsequence.mHeightAllFrames_pix; lineIndex += 2)
-		std::reverse(mBufArrayB.begin() + lineIndex * mRTsequence.mWidthPerFrame_pix, mBufArrayB.begin() + lineIndex * mRTsequence.mWidthPerFrame_pix + mRTsequence.mWidthPerFrame_pix);
+		std::reverse(mBufArrayB + lineIndex * mRTsequence.mWidthPerFrame_pix, mBufArrayB + lineIndex * mRTsequence.mWidthPerFrame_pix + mRTsequence.mWidthPerFrame_pix);
 }
 
 //When multiplexing later on, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
@@ -245,21 +250,24 @@ void Image::verticalFlip()
 //Split the vertically long image into nFrames and calculate the average
 void Image::average()
 {
-	mRTsequence.mHeightAllFrames_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes; //Divide the total height
-	const int nPix = mRTsequence.mWidthPerFrame_pix * mRTsequence.mHeightAllFrames_pix;
+	mRTsequence.mHeightAllFrames_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes;		//Update the total height to that of a single frame
+	const int nPixSingleFrame = mRTsequence.mWidthPerFrame_pix * mRTsequence.mHeightAllFrames_pix;
 
-	std::vector<double> avg(nPix);
+	unsigned int* avg = new unsigned int[nPixSingleFrame]();
 	for (int frame = 0; frame < mRTsequence.mNframes; frame++)
-		for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-			avg[pixIndex] += mImage[frame * nPix + pixIndex];
+		for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
+			avg[pixIndex] += mImage[frame * nPixSingleFrame + pixIndex];
 
-	mImage.resize(nPix);
-	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		mImage[pixIndex] = static_cast<unsigned char>(avg[pixIndex] / mRTsequence.mNframes);
+	//Pu the average back to mImage. Ignore the rest of the data in mImage
+	for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
+		mImage[pixIndex] = static_cast<unsigned char>( 1.0 * avg[pixIndex] / mRTsequence.mNframes);
 
 	mRTsequence.mNframes = 1; //Update to 1 the number of frames
+
+	delete[] avg;
 }
 
+//Save each frame in mImage in a different Tiff page
 void Image::saveTiff(std::string filename, const bool overrideFile) const
 {
 	if (!overrideFile)
@@ -327,7 +335,7 @@ void Image::saveTxt(const std::string filename) const
 //Push mImage to inputVector. Not very efficient because there is not memory preallocation
 void Image::pushToVector(std::vector<unsigned char> &inputVector) const
 {
-	inputVector.insert(inputVector.end(), mImage.begin(), mImage.end());
+	inputVector.insert(inputVector.end(), mImage, mImage+mRTsequence.mNpixAllFrames);
 }
 
 #pragma endregion "Image"

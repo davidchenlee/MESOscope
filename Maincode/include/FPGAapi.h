@@ -57,7 +57,7 @@ namespace FPGAns
 		void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
 		void uploadImagingParameters_() const;
 		void uploadFIFOIN_(const VQU32 &vectorOfQueues) const;
-		void triggerNonRT_() const;
+		void triggerNRT_() const;
 	public:
 		const FPGAns::FPGA &mFpga;
 		LineclockInputSelector mLineclockInput;														//Resonant scanner (RS) or Function generator (FG)

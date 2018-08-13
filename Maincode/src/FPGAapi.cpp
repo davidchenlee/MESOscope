@@ -351,7 +351,7 @@ namespace FPGAns
 	}
 	
 	//Trigger the FPGA outputs in a non-realtime way (see the LV implementation)
-	void RTsequence::triggerNonRT_() const
+	void RTsequence::triggerNRT_() const
 	{	
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 1));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 0));
@@ -426,8 +426,7 @@ namespace FPGAns
 		}
 			
 		uploadFIFOIN_(vectorOfQueues);		//Load the sequence on the FPGA
-		triggerNonRT_();					//Trigger the FPGA outputs (non-RT trigger)
-		//Sleep(5);							//Wait long enough so that the sequence above does not wash out the subsequent sequence
+		triggerNRT_();					//Trigger the FPGA outputs (non-RT trigger)
 	}
 
 	void RTsequence::uploadRT() const

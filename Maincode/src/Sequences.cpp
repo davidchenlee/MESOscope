@@ -21,7 +21,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.120, 19.808, 18.480 };	//Initial position
+	double3 position_mm = { 35.120, 19.808, 18.497 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -29,7 +29,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 750;
-	double laserPower_mW = 35 * mW;
+	double laserPower_mW = 40 * mW;
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
 
@@ -137,8 +137,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 			image.acquire(); //Execute the RT sequence and acquire the image
 			image.verticalFlip();
 			image.average();
-			image.pushToVector(stackOfAverages);
-			//image.saveTiff(filename, overrideFlag);
+			//image.pushToVector(stackOfAverages);
+			image.saveTiff(filename, overrideFlag);
 			//image.saveTxt(filename);
 
 			if (frameDiffZ == 0 && frameSameZ == 0)
@@ -184,8 +184,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	}
 	shutter1.close();
 
-	TiffU8 aa(stackOfAverages, 300, 400 * nFramesDiffZ); //FIX THIS!!!!
-	aa.saveTiff("Untitled", nFramesDiffZ);
+	//TiffU8 aa(stackOfAverages, 300, 400 * nFramesDiffZ); //FIX THIS!!!!
+	//aa.saveTiff("Untitled", nFramesDiffZ);
 }
 
 
@@ -254,7 +254,7 @@ void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 		std::cout << "Iteration: " << jj + 1 << std::endl;
 
 		//CREATE A REAL-TIME SEQUENCE
-		FPGAns::RTsequence RTsequence(fpga, RS);
+		FPGAns::RTsequence RTsequence(fpga, FG);
 
 		//GALVO FOR RT
 		Galvo galvo(RTsequence, GALVO1);
@@ -500,12 +500,14 @@ void seq_testTiff()
 
 	const int nFrames = 10;
 	TiffU8 image(inputFilename);
+	
 	image.verticalFlip(nFrames);
 	image.averageEvenOddSeparately(nFrames);
-	image.saveTiff(outputFilename, 2);//The second argument specifies the number of Frames
+	image.saveTiff(outputFilename, 2);
 
-	/*
-	image.average(nFrames);
-	image.saveTiff(outputFilename);
-	*/
+	//image.verticalFlip(nFrames);
+	//image.averageEvenOddSeparately(nFrames);
+	//image.saveTiff(outputFilename, 2);//The second argument specifies the number of Frames
+
+
 }

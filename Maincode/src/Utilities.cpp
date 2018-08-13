@@ -134,7 +134,7 @@ TiffU8::TiffU8(std::string filename)
 		std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory for raster of TIFF image");
 	}
 
-	mImage.resize(mWidth * mHeight);	//Allocate memory for the image
+	mImage = new unsigned char[mWidth * mHeight];	//Allocate memory for the image
 
 	//Read the tiff one strip at a time
 	for (int rowIndex = 0; rowIndex < mHeight; rowIndex++)
@@ -149,14 +149,17 @@ TiffU8::TiffU8(std::string filename)
 }
 
 //Construct a Tiff from a vector
-TiffU8::TiffU8(std::vector<unsigned char> &inputImage, const int width, const int height) : mImage(width * height), mWidth(width), mHeight(height), mBytesPerLine(width * sizeof(unsigned char))
+TiffU8::TiffU8(std::vector<unsigned char> &inputImage, const int width, const int height) : mWidth(width), mHeight(height), mBytesPerLine(width * sizeof(unsigned char))
 {
+	mImage = new unsigned char[width * height];
+
 	//Copy the entire vector inputImage into mImage
 	std::memcpy(&mImage[0], &inputImage[0], mWidth * mHeight * sizeof(unsigned char));
 }
 
 TiffU8::~TiffU8()
 {
+	delete[] mImage;
 }
 
 //Split mImage into sub-images (or "frames")
@@ -238,55 +241,52 @@ void TiffU8::verticalFlip(const int nFrames)
 void TiffU8::averageEvenOddSeparately(const int nFrames)
 {
 	const int height_pix = mHeight / nFrames; //Divide the total height
-	const int nPix = mWidth * height_pix;
+	const int nPixSingleFrame = mWidth * height_pix;
 
-	//EVEN FRAMES
+
 	//Calculate the average
-	std::vector<double> evenAvg(nPix);
-	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		for (int frame = 0; frame < nFrames; frame += 2)
-			evenAvg[pixIndex] += 1.0 * mImage[frame * nPix + pixIndex] / nFrames;
+	unsigned int* avg = new unsigned int[2 * nPixSingleFrame]();
+	for (int frame = 0; frame < nFrames; frame ++)
+		for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
+		{
+			if ( frame%2)
+				avg[pixIndex] += mImage[frame * nPixSingleFrame + pixIndex];		//ODD FRAMES
+			else
+				avg[nPixSingleFrame + pixIndex] += mImage[frame * nPixSingleFrame + pixIndex];	//EVEN FRAMES
+		}
+			
 
 	//Cast the average
-	std::vector<unsigned char> evenImage(nPix);
-	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		evenImage[pixIndex] = static_cast<unsigned char>(evenAvg[pixIndex]);
 
+	int	nFramesHalf = nFrames / 2;
+	for (int pixIndex = 0; pixIndex < 2 * nPixSingleFrame; pixIndex++)
+	{
+		if (nFrames % 2)	//Odd number of frames
+			mImage[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / (nFramesHalf + 1));
+		else				//Even number of frames
+			mImage[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / nFramesHalf);
+	}
 
-	//ODD FRAMES
-	//Calculate the average
-	std::vector<double> oddAvg(nPix);
-	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		for (int frame = 1; frame < nFrames; frame += 2)
-			oddAvg[pixIndex] += 1.0 * mImage[frame * nPix + pixIndex] / nFrames;
-
-	//Cast the average
-	std::vector<unsigned char> oddImage(nPix);
-	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		oddImage[pixIndex] = static_cast<unsigned char>(oddAvg[pixIndex]);
-
-
-	//Put 'evenImage' and 'oddImage' back into mImage. Concatenate 'oddImage' after 'evenImage'
+	//Put 'evenImage' and 'oddImage' back into mImage. Concatenate 'oddImage' after 'evenImage'. Ignore the rest of the data in mImage
 	mHeight = 2* height_pix;
-	mImage.resize(2 * nPix);
 
-	std::memcpy(&mImage[0], &evenImage[0], nPix * sizeof(unsigned char));
-	std::memcpy(&mImage[nPix], &oddImage[0], nPix * sizeof(unsigned char));
+	delete[] avg;
 }
 
 //Split the vertically long image into nFrames and calculate the average
 void TiffU8::average(const int nFrames)
 {
-	mHeight = mHeight / nFrames; //Divide the total height
-	const int nPix = mWidth * mHeight;
+	mHeight = mHeight / nFrames; //Update the total height to that of a single frame
+	const int nPixSingleFrame = mWidth * mHeight;
 
-	std::vector<double> avg(nPix);
-	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		for (int frame = 0; frame < nFrames; frame++)
-			avg[pixIndex] += 1.0 * mImage[frame * nPix + pixIndex] / nFrames;
+	unsigned int* avg = new unsigned int[nPixSingleFrame]();
+	for (int frame = 0; frame < nFrames; frame++)
+		for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
+			avg[pixIndex] += mImage[frame * nPixSingleFrame + pixIndex];
 
-	mImage.resize(nPix);
-	for (int pixIndex = 0; pixIndex < nPix; pixIndex++)
-		mImage[pixIndex] = static_cast<unsigned char>(avg[pixIndex]);
+	for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
+		mImage[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / nFrames);
+
+	delete[] avg;
 }
 

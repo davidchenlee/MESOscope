@@ -66,8 +66,6 @@ namespace Constants
 }
 
 //Currently, each frames is 400x400 pixels = 160000 pixels
-//For multiple beams, each frame has 400x25 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
-//The current buffer can do 400*1200 pix ~ 480000 pix, or ~48 multiplexed frames
-//20180415 - Added an internal FIFOOUT. Now I can do 400x480x3 = 576000 pixels, or 57.6 multiplexed frames
-//201804   - 400x400x5, skipped 60. 400x35x90, skipped 8. 400x35x70, skipped 6
-//20180709 - I could do 340x35 pixels and 100 frames (340 pix wide ~ 13 photons per pix)
+//For multiple beams, each frame has 400x35 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
+//The current buffer can do 448k pixels. For 400x560 multiplexed frames (16 stripes of 400x35), this is equivalent to 70 planes
+//By concatenating the FPGA FIFO, I hope to get ~ 90 planes

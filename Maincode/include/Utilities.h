@@ -31,17 +31,22 @@ public:
 
 class TiffU8
 {
-	unsigned char* mImage;
 	int mWidth;
 	int mHeight;
 	int mBytesPerLine; 
 	//int mStripSize;	//I think this is originally implemented to allow different channels (e.g., RGB) at each pixel
 public:
-	TiffU8(std::string filename);
-	TiffU8(std::vector<unsigned char> &inputImage, const int width, const int height);
+	unsigned char* mArray;
+	TiffU8(const std::string filename);
+	TiffU8(const unsigned char* inputImage, const int width, const int height);
+	TiffU8(const std::vector<unsigned char> &inputImage, const int width, const int height);
+	TiffU8(const int width, const int height);
 	~TiffU8();
 	void saveTiff(std::string filename, const int nFrames = 1) const;
-	void verticalFlip(const int nFrames);
-	void averageEvenOddSeparately(const int nFrames);
+	void mirrorVertical(const int nFrames);
+	void averageSeparately(const int nFrames);
 	void average(const int nFrames);
+	void analyze() const;
+	void saveTxt(const std::string fileName) const;
+	void push(const unsigned char* inputArray, const int frame, const int height_pix) const;
 };

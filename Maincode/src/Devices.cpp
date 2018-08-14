@@ -2,11 +2,10 @@
 
 #pragma region "Image"
 
-Image::Image(FPGAns::RTsequence &RTsequence) : mRTsequence(RTsequence)
+Image::Image(FPGAns::RTsequence &RTsequence) : mRTsequence(RTsequence), mTiff(mRTsequence.mWidthPerFrame_pix, mRTsequence.mHeightAllFrames_pix)
 {
 	mBufArrayA = new U32[mRTsequence.mNpixAllFrames];
 	mBufArrayB = new U32[mRTsequence.mNpixAllFrames];
-	mImage = new unsigned char[mRTsequence.mNpixAllFrames];
 }
 
 Image::~Image()
@@ -17,7 +16,6 @@ Image::~Image()
 
 	delete[] mBufArrayA;
 	delete[] mBufArrayB;
-	delete[] mImage;
 	//std::cout << "Image destructor called\n";
 }
 
@@ -172,30 +170,20 @@ void Image::correctInterleaved_()
 }
 
 //When multiplexing later on, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
-void Image::demux_()
+void Image::demultiplex_()
 {
 	for (int pixIndex = 0; pixIndex < mRTsequence.mNpixAllFrames; pixIndex++)
 	{
-		unsigned char upscaled = mRTsequence.mUpscaleU8 * mBufArrayB[pixIndex]; //Upscale the buffer from 4-bit to 8-bit
+		unsigned char upscaled = mRTsequence.mUpscaleU8 * mBufArrayB[pixIndex]; //Upscale the buffer to go from 4-bit to 8-bit
 
 		//If upscaled overflows
 		if (upscaled > _UI8_MAX)
 			upscaled = _UI8_MAX;
 
-		mImage[pixIndex] = upscaled;
+		//Transfer the result to Tiff
+		mTiff.mArray[pixIndex] = upscaled;
 	}
 }
-
-
-void Image::analyze_() const
-{
-	double totalCount = 0;
-	for (int index = 0; index < mRTsequence.mWidthPerFrame_pix * mRTsequence.mHeightPerFrame_pix; index++)
-		totalCount += mImage[index];
-
-	//std::cout << "Total count = " << totalCount << std::endl;
-}
-
 
 void Image::acquire()
 {
@@ -210,8 +198,7 @@ void Image::acquire()
 		{
 			readFIFOOUTpc_();		//Read the data received in FIFOOUTpc
 			correctInterleaved_();
-			demux_();				//Move the chuncks of data to the buffer array
-			//analyze_();
+			demultiplex_();				//Move the chuncks of data to the buffer array
 		}
 		catch (const ImageException &e) //Notify the exception and continue with the next iteration
 		{
@@ -221,122 +208,35 @@ void Image::acquire()
 }
 
 //The galvo (vectical axis of the image) performs bi-directional scanning
-//Divide the vertically long image in nFrames and vertically flip the odd frames
-void Image::verticalFlip()
+//Divide the long image (vertical stripe) in nFrames and vertically mirror the odd frames
+void Image::mirrorVertical()
 {
-	const int mBytesPerLine = mRTsequence.mWidthPerFrame_pix * sizeof(unsigned char);				//Targeting 'unsigned char' only
-	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);		//Buffer used to store the row of pixel information for writing to file
-
-	if (buffer == NULL) //Check that the buffer memory was allocated
-		std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory");
-
-	const int heightSingle_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes; //Divide the total height
-
-	for (int frame = 1; frame < mRTsequence.mNframes; frame += 2)
-	{
-		//Swap the first and last rows of the sub-image, then do to the second first and second last rows, etc
-		for (int rowIndex = 0; rowIndex < heightSingle_pix / 2; rowIndex++)
-		{
-			int eneTene = frame * heightSingle_pix + rowIndex;				//Swap this row
-			int moneMei = (frame + 1) * heightSingle_pix - rowIndex - 1;	//With this one
-			std::memcpy(buffer, &mImage[eneTene*mBytesPerLine], mBytesPerLine);
-			std::memcpy(&mImage[eneTene*mBytesPerLine], &mImage[moneMei*mBytesPerLine], mBytesPerLine);
-			std::memcpy(&mImage[moneMei*mBytesPerLine], buffer, mBytesPerLine);
-		}
-	}
-	_TIFFfree(buffer);		//Release the memory
+	mTiff.mirrorVertical(mRTsequence.mNframes);
 }
 
-//Split the vertically long image into nFrames and calculate the average
+//Split the long image (vertical stripe) into nFrames and calculate the average
 void Image::average()
 {
-	mRTsequence.mHeightAllFrames_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes;		//Update the total height to that of a single frame
-	const int nPixSingleFrame = mRTsequence.mWidthPerFrame_pix * mRTsequence.mHeightAllFrames_pix;
-
-	unsigned int* avg = new unsigned int[nPixSingleFrame]();
-	for (int frame = 0; frame < mRTsequence.mNframes; frame++)
-		for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
-			avg[pixIndex] += mImage[frame * nPixSingleFrame + pixIndex];
-
-	//Pu the average back to mImage. Ignore the rest of the data in mImage
-	for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
-		mImage[pixIndex] = static_cast<unsigned char>( 1.0 * avg[pixIndex] / mRTsequence.mNframes);
-
-	mRTsequence.mNframes = 1; //Update to 1 the number of frames
-
-	delete[] avg;
+	mRTsequence.mHeightAllFrames_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes;		//Update the mHeightAllFrames_pix to that of a single frame
+	mTiff.average(mRTsequence.mNframes);
+	mRTsequence.mNframes = 1;
 }
 
-//Save each frame in mImage in a different Tiff page
+
+//Save each frame in mTiff in a different Tiff page
 void Image::saveTiff(std::string filename, const bool overrideFile) const
 {
-	if (!overrideFile)
-		filename = file_exists(filename);
-
-	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
-
-	const int mBytesPerLine = mRTsequence.mWidthPerFrame_pix * sizeof(unsigned char);					//Targeting 'unsigned char' only
-	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);								//Buffer used to store the row of pixel information for writing to file
-
-	const int heightSingle_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes;				//Divide the total height
-	for (int frame = 0; frame < mRTsequence.mNframes; frame++)
-	{
-		//TAGS
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, mRTsequence.mWidthPerFrame_pix);					//Set the width of the image
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, heightSingle_pix);								//Set the height of the image
-		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);											//Set number of channels per pixel
-		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);												//Set the size of the channels
-		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);								//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
-		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);							//Single channel with min as black		
-		/*
-		TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);							//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
-		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, mWidth));		//Set the strip size of the file to be size of one row of pixels
-		TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, 3);												//Specify that it's a frame within the multipage file
-		TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, frame, nFrames);									//Specify the frame number
-		*/
-
-		if (buffer == NULL) //Check that the buffer memory was allocated
-		{
-			TIFFClose(tiffHandle);
-			std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory for raster of TIFF image");
-		}
-
-		//Write the sub-image (frame) to the file one strip at a time
-		for (int rowIndex = 0; rowIndex < heightSingle_pix; rowIndex++)
-		{
-			std::memcpy(buffer, &mImage[(frame * heightSingle_pix + heightSingle_pix - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
-			if (TIFFWriteScanline(tiffHandle, buffer, rowIndex, 0) < 0)
-				break;
-		}
-
-		TIFFWriteDirectory(tiffHandle); //Create a page structure
-	}
-
-	_TIFFfree(buffer);					//Destroy the buffer
-	TIFFClose(tiffHandle);				//Close the output tiff file
-
-	std::cout << "Tiff successfully saved" << std::endl;
+	mTiff.saveTiff(filename, mRTsequence.mNframes);
 }
 
-void Image::saveTxt(const std::string filename) const
+unsigned char* Image::getTiffArray()
 {
-	std::ofstream fileHandle;									//Create output file
-	fileHandle.open(folderPath + filename + ".txt");			//Open the file
-
-	for (int ii = 0; ii < mRTsequence.mNpixAllFrames; ii++)
-	{
-		//fileHandle << (int)mImage.at(ii) << std::endl;		//Write each element
-		fileHandle << mBufArrayB[ii] << std::endl;				//Write each element
-	}
-
-	fileHandle.close();											//Close the txt file
+	return mTiff.mArray;
 }
 
-//Push mImage to inputVector. Not very efficient because there is not memory preallocation
-void Image::pushToVector(std::vector<unsigned char> &inputVector) const
-{
-	inputVector.insert(inputVector.end(), mImage, mImage+mRTsequence.mNpixAllFrames);
-}
+
+
+
 
 #pragma endregion "Image"
 

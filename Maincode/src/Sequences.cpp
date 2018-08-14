@@ -9,7 +9,7 @@ There are basically 2 imaging modes :
 
 void seq_main(const FPGAns::FPGA &fpga)
 {
-	const int runmode = 0;
+	const int runmode = 4;
 	/*
 	0 - Single shot
 	1 - Continuous: image the same plane many times
@@ -21,7 +21,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.120, 19.808, 18.497 };	//Initial position
+	double3 position_mm = { 35.120, 19.808, 18.501 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -52,6 +52,9 @@ void seq_main(const FPGAns::FPGA &fpga)
 	fw.setColor(wavelength_nm);
 
 	//ACQUISITION MODE SETTING
+	const int nFrames = 10;
+	const int width_pix = 300;
+	const int height_pix = 400;
 	int nFramesDiffZ;
 	int nFramesSameZ;
 	bool overrideFlag;
@@ -97,8 +100,9 @@ void seq_main(const FPGAns::FPGA &fpga)
 	shutter1.open();
 	Sleep(50);
 
-
-	std::vector<unsigned char> stackOfAverages;
+	//Create a stack vector for dynamically pushing the averages
+	//std::vector<unsigned char> stackOfAverages;
+	TiffU8 stackOfAverages(width_pix, height_pix * nFramesDiffZ);
 
 	//Frames at different Z
 	for (int frameDiffZ = 0; frameDiffZ < nFramesDiffZ; frameDiffZ++)
@@ -112,8 +116,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 				"\tTotal frame: " << frameDiffZ * nFramesSameZ + (frameSameZ + 1) << "/" << nFramesDiffZ * nFramesSameZ << std::endl;
 
 			//CREATE THE REAL-TIME SEQUENCE
-			const int nFrames = 10;
-			FPGAns::RTsequence RTsequence(fpga, RS, nFrames);
+			FPGAns::RTsequence RTsequence(fpga, RS, nFrames, width_pix, height_pix);
 
 			//GALVO FOR RT
 			Galvo galvo(RTsequence, GALVO1);
@@ -135,10 +138,12 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 			Image image(RTsequence);
 			image.acquire(); //Execute the RT sequence and acquire the image
-			image.verticalFlip();
+			image.mirrorVertical();
 			image.average();
-			//image.pushToVector(stackOfAverages);
-			image.saveTiff(filename, overrideFlag);
+
+			stackOfAverages.push(image.getTiffArray(), frameDiffZ, height_pix);
+
+			//image.saveTiff(filename, overrideFlag);
 			//image.saveTxt(filename);
 
 			if (frameDiffZ == 0 && frameSameZ == 0)
@@ -184,8 +189,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	}
 	shutter1.close();
 
-	//TiffU8 aa(stackOfAverages, 300, 400 * nFramesDiffZ); //FIX THIS!!!!
-	//aa.saveTiff("Untitled", nFramesDiffZ);
+	stackOfAverages.saveTiff("Untitled", nFramesDiffZ);
 }
 
 
@@ -241,26 +245,31 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 	shutter1.close();
 }
 
-//For live optimization of the objective's correction collar
+
 void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 {
+	const int width_pix = 300;
+	const int height_pix = 400;
+	const int nFrames = 2;
+
 	//GALVO
 	const double FFOVgalvo_um = 300 * um;				//Full FOV in the slow axis
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
-	for (int jj = 0; jj < 5; jj++)
+	for (int jj = 0; jj < nFrames; jj++)
 	{
 		std::cout << "Iteration: " << jj + 1 << std::endl;
 
 		//CREATE A REAL-TIME SEQUENCE
-		FPGAns::RTsequence RTsequence(fpga, FG);
+		FPGAns::RTsequence RTsequence(fpga, FG, nFrames, width_pix, height_pix);
 
 		//GALVO FOR RT
 		Galvo galvo(RTsequence, GALVO1);
 		const double duration = halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 		galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);			//Linear ramp for the galvo
-		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);				//set the output back to the initial value
+		if (RTsequence.mNframes == 1)
+			galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);				//set the output back to the initial value
 
 		//Execute the realtime sequence and acquire the image
 		Image image(RTsequence);
@@ -501,12 +510,12 @@ void seq_testTiff()
 	const int nFrames = 10;
 	TiffU8 image(inputFilename);
 	
-	image.verticalFlip(nFrames);
-	image.averageEvenOddSeparately(nFrames);
+	image.mirrorVertical(nFrames);
+	image.averageSeparately(nFrames);
 	image.saveTiff(outputFilename, 2);
 
-	//image.verticalFlip(nFrames);
-	//image.averageEvenOddSeparately(nFrames);
+	//image.mirrorVertical(nFrames);
+	//image.averageSeparately(nFrames);
 	//image.saveTiff(outputFilename, 2);//The second argument specifies the number of Frames
 
 

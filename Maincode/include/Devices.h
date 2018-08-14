@@ -11,7 +11,7 @@ class Image
 	FPGAns::RTsequence &mRTsequence;		//Const because the variables referenced by mRTsequence are not changed by the methods in this class
 	U32* mBufArrayA;						//Vector to read FIFOOUTpc A
 	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
-	unsigned char* mImage;		//Image
+	TiffU8 mTiff;						//Image that will combine mBufArrayA and mBufArrayB after demultiplexing
 
 	void startFIFOOUTpc_() const;
 	void configureFIFOOUTpc_(const U32 depth) const;	//Currently I don't use this function
@@ -19,19 +19,17 @@ class Image
 	void readFIFOOUTpc_();
 	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer);
 	void correctInterleaved_();
-	void demux_();
-	void analyze_() const;
+	void demultiplex_();
 	void FIFOOUTpcGarbageCollector_() const;
 public:
 	Image(FPGAns::RTsequence &RTsequence);
 	~Image();
 	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
 	void acquire();
-	void verticalFlip();
+	void mirrorVertical();
 	void average();
 	void saveTiff(std::string filename, const bool overrideFile = FALSE) const;
-	void saveTxt(const std::string fileName) const;
-	void pushToVector(std::vector<unsigned char> &inputVector) const;
+	unsigned char* getTiffArray();
 };
 
 class Vibratome
@@ -223,13 +221,4 @@ public:
 	void Stage::stopALL() const;
 	void scanningStrategy(const int nTileAbsolute) const;
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
-};
-
-class stackOfAverages
-{
-	std::vector<unsigned char> mStack;	//create a long blank image to store the data
-public:
-	stackOfAverages();
-	~stackOfAverages();
-	void push(Image image);
 };

@@ -100,9 +100,10 @@ void Logger::record(const std::string description, const std::string input)
 	mFileHandle << description << input << std::endl;
 }
 
+#pragma region "TiffU8"
 
 //Construct a tiff from a file
-TiffU8::TiffU8(std::string filename)
+TiffU8::TiffU8(const std::string filename)
 {
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "r");
 
@@ -134,35 +135,50 @@ TiffU8::TiffU8(std::string filename)
 		std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory for raster of TIFF image");
 	}
 
-	mImage = new unsigned char[mWidth * mHeight];	//Allocate memory for the image
+	mArray = new unsigned char[mWidth * mHeight];	//Allocate memory for the image
 
 	//Read the tiff one strip at a time
 	for (int rowIndex = 0; rowIndex < mHeight; rowIndex++)
 	{
 		if (TIFFReadScanline(tiffHandle, buffer, rowIndex, 0) < 0)
 			break;
-		std::memcpy(&mImage[(mHeight - rowIndex - 1)*mBytesPerLine], buffer, mBytesPerLine);
+		std::memcpy(&mArray[(mHeight - rowIndex - 1)*mBytesPerLine], buffer, mBytesPerLine);
 	}
 
 	_TIFFfree(buffer);		//Release the memory
 	TIFFClose(tiffHandle);	//Close the tif file
 }
 
-//Construct a Tiff from a vector
-TiffU8::TiffU8(std::vector<unsigned char> &inputImage, const int width, const int height) : mWidth(width), mHeight(height), mBytesPerLine(width * sizeof(unsigned char))
+//Construct a Tiff from an array
+TiffU8::TiffU8(const unsigned char* inputImage, const int width, const int height) : mWidth(width), mHeight(height), mBytesPerLine(width * sizeof(unsigned char))
 {
-	mImage = new unsigned char[width * height];
+	mArray = new unsigned char[width * height];
 
-	//Copy the entire vector inputImage into mImage
-	std::memcpy(&mImage[0], &inputImage[0], mWidth * mHeight * sizeof(unsigned char));
+	//CopyinputImage onto mArray
+	std::memcpy(mArray, inputImage, mWidth * mHeight * sizeof(unsigned char));
+}
+
+//Construct a Tiff from a vector
+TiffU8::TiffU8(const std::vector<unsigned char> &inputImage, const int width, const int height) : mWidth(width), mHeight(height), mBytesPerLine(width * sizeof(unsigned char))
+{
+	mArray = new unsigned char[width * height];
+
+	//Copy inputImage onto mArray
+	std::memcpy(mArray, &inputImage[0], mWidth * mHeight * sizeof(unsigned char));
+}
+
+//Construct a Tiff by allocating memory
+TiffU8::TiffU8(const int width, const int height) : mWidth(width), mHeight(height), mBytesPerLine(width * sizeof(unsigned char))
+{
+	mArray = new unsigned char[width * height];
 }
 
 TiffU8::~TiffU8()
 {
-	delete[] mImage;
+	delete[] mArray;
 }
 
-//Split mImage into sub-images (or "frames")
+//Split mArray into sub-images (or "frames")
 //Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image, which has to be re-structured into sub-images
 void TiffU8::saveTiff(std::string filename, const int nFrames) const
 {
@@ -198,7 +214,7 @@ void TiffU8::saveTiff(std::string filename, const int nFrames) const
 		//Write the sub-image to the file one strip at a time
 		for (int rowIndex = 0; rowIndex < heightSingle_pix; rowIndex++)
 		{
-			std::memcpy(buffer, &mImage[(frame * heightSingle_pix + heightSingle_pix - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
+			std::memcpy(buffer, &mArray[(frame * heightSingle_pix + heightSingle_pix - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
 			if (TIFFWriteScanline(tiffHandle, buffer, rowIndex, 0) < 0)
 				break;
 		}
@@ -213,8 +229,8 @@ void TiffU8::saveTiff(std::string filename, const int nFrames) const
 }
 
 //The galvo (vectical axis of the image) performs bi-directional scanning
-//Divide the vertically long image in nFrames and vertically flip the odd frames
-void TiffU8::verticalFlip(const int nFrames)
+//Divide the long image (vertical stripe) in nFrames and vertically mirror the odd frames
+void TiffU8::mirrorVertical(const int nFrames)
 {
 	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);		//Buffer used to store the row of pixel information for writing to file
 
@@ -230,15 +246,15 @@ void TiffU8::verticalFlip(const int nFrames)
 		{
 			int eneTene = frame * heightSingle_pix + rowIndex;			//Swap this row
 			int moneMei = (frame + 1) * heightSingle_pix - rowIndex - 1;	//With this one
-			std::memcpy(buffer, &mImage[eneTene*mBytesPerLine], mBytesPerLine);
-			std::memcpy(&mImage[eneTene*mBytesPerLine], &mImage[moneMei*mBytesPerLine], mBytesPerLine);
-			std::memcpy(&mImage[moneMei*mBytesPerLine], buffer, mBytesPerLine);
+			std::memcpy(buffer, &mArray[eneTene*mBytesPerLine], mBytesPerLine);
+			std::memcpy(&mArray[eneTene*mBytesPerLine], &mArray[moneMei*mBytesPerLine], mBytesPerLine);
+			std::memcpy(&mArray[moneMei*mBytesPerLine], buffer, mBytesPerLine);
 		}
 	}
 	_TIFFfree(buffer);//Release the memory
 }
 
-void TiffU8::averageEvenOddSeparately(const int nFrames)
+void TiffU8::averageSeparately(const int nFrames)
 {
 	const int height_pix = mHeight / nFrames; //Divide the total height
 	const int nPixSingleFrame = mWidth * height_pix;
@@ -250,24 +266,22 @@ void TiffU8::averageEvenOddSeparately(const int nFrames)
 		for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
 		{
 			if ( frame%2)
-				avg[pixIndex] += mImage[frame * nPixSingleFrame + pixIndex];		//ODD FRAMES
+				avg[pixIndex] += mArray[frame * nPixSingleFrame + pixIndex];		//ODD FRAMES
 			else
-				avg[nPixSingleFrame + pixIndex] += mImage[frame * nPixSingleFrame + pixIndex];	//EVEN FRAMES
-		}
-			
+				avg[nPixSingleFrame + pixIndex] += mArray[frame * nPixSingleFrame + pixIndex];	//EVEN FRAMES
+		}	
 
 	//Cast the average
-
 	int	nFramesHalf = nFrames / 2;
 	for (int pixIndex = 0; pixIndex < 2 * nPixSingleFrame; pixIndex++)
 	{
 		if (nFrames % 2)	//Odd number of frames
-			mImage[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / (nFramesHalf + 1));
+			mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / (nFramesHalf + 1));
 		else				//Even number of frames
-			mImage[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / nFramesHalf);
+			mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / nFramesHalf);
 	}
 
-	//Put 'evenImage' and 'oddImage' back into mImage. Concatenate 'oddImage' after 'evenImage'. Ignore the rest of the data in mImage
+	//Put 'evenImage' and 'oddImage' back into mArray. Concatenate 'oddImage' after 'evenImage'. Ignore the rest of the data in mArray
 	mHeight = 2* height_pix;
 
 	delete[] avg;
@@ -282,11 +296,38 @@ void TiffU8::average(const int nFrames)
 	unsigned int* avg = new unsigned int[nPixSingleFrame]();
 	for (int frame = 0; frame < nFrames; frame++)
 		for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
-			avg[pixIndex] += mImage[frame * nPixSingleFrame + pixIndex];
+			avg[pixIndex] += mArray[frame * nPixSingleFrame + pixIndex];
 
 	for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
-		mImage[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / nFrames);
+		mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / nFrames);
 
 	delete[] avg;
 }
 
+void TiffU8::analyze() const
+{
+	double totalCount = 0;
+	for (int index = 0; index < mWidth * mHeight; index++)
+		totalCount += mArray[index];
+
+	//std::cout << "Total count = " << totalCount << std::endl;
+}
+
+
+void TiffU8::saveTxt(const std::string filename) const
+{
+	std::ofstream fileHandle;									//Create output file
+	fileHandle.open(folderPath + filename + ".txt");			//Open the file
+
+	for (int pixIndex = 0; pixIndex < mWidth * mHeight; pixIndex++)
+		fileHandle << mArray[pixIndex] << std::endl;					//Write each element
+
+	fileHandle.close();											//Close the txt file
+}
+
+void TiffU8::push(const unsigned char* inputArray, const int frame, const int height_pix) const
+{
+	std::memcpy(&mArray[frame * height_pix * mBytesPerLine], inputArray, height_pix * mBytesPerLine);
+}
+
+#pragma endregion "TiffU8"

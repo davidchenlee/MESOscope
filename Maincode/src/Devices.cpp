@@ -181,7 +181,7 @@ void Image::demultiplex_()
 			upscaled = _UI8_MAX;
 
 		//Transfer the result to Tiff
-		mTiff.mArray[pixIndex] = upscaled;
+		(mTiff.accessTiffArray())[pixIndex] = upscaled;
 	}
 }
 
@@ -208,17 +208,19 @@ void Image::acquire()
 }
 
 //The galvo (vectical axis of the image) performs bi-directional scanning
-//Divide the long image (vertical stripe) in nFrames and vertically mirror the odd frames
+//Divide the long vertical image in nFrames and vertically mirror the odd frames
 void Image::mirrorVertical()
 {
 	mTiff.mirrorVertical(mRTsequence.mNframes);
 }
 
-//Split the long image (vertical stripe) into nFrames and calculate the average
+//Split the long vertical image into nFrames and calculate the average
 void Image::average()
 {
-	mRTsequence.mHeightAllFrames_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes;		//Update the mHeightAllFrames_pix to that of a single frame
 	mTiff.average(mRTsequence.mNframes);
+
+	//Update the mHeightAllFrames_pix and mNframes to a single frame
+	mRTsequence.mHeightAllFrames_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes;
 	mRTsequence.mNframes = 1;
 }
 
@@ -229,9 +231,10 @@ void Image::saveTiff(std::string filename, const bool overrideFile) const
 	mTiff.saveTiff(filename, mRTsequence.mNframes);
 }
 
-unsigned char* Image::getTiffArray()
+
+unsigned char* const Image::accessTiff() const
 {
-	return mTiff.mArray;
+	return mTiff.accessTiffArray();
 }
 
 

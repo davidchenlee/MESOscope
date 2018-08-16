@@ -170,12 +170,17 @@ TiffU8::TiffU8(const std::vector<unsigned char> &inputImage, const int width, co
 //Construct a Tiff by allocating memory
 TiffU8::TiffU8(const int width, const int height) : mWidth(width), mHeight(height), mBytesPerLine(width * sizeof(unsigned char))
 {
-	mArray = new unsigned char[width * height];
+	mArray = new unsigned char[width * height]();
 }
 
 TiffU8::~TiffU8()
 {
 	delete[] mArray;
+}
+
+unsigned char* const TiffU8::accessTiffArray() const
+{
+	return mArray;
 }
 
 //Split mArray into sub-images (or "frames")
@@ -189,6 +194,12 @@ void TiffU8::saveTiff(std::string filename, const int nFrames) const
 
 	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);	//Buffer used to store the row of pixel information for writing to file
 
+		if (buffer == NULL) //Check that the buffer memory was allocated
+		{
+			TIFFClose(tiffHandle);
+			std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory for raster of TIFF image");
+		}
+
 	const int heightSingle_pix = mHeight / nFrames; //Divide the total height
 
 	for (int frame = 0; frame < nFrames; frame++)
@@ -196,20 +207,17 @@ void TiffU8::saveTiff(std::string filename, const int nFrames) const
 		//TAGS
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, mWidth);											//Set the width of the image
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, heightSingle_pix);								//Set the height of the image
+		//TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);							//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
 		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);											//Set number of channels per pixel
 		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);												//Set the size of the channels
 		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);								//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
-		//TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);							//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
 		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);							//Single channel with min as black				
-		//TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, mWidth));		//Set the strip size of the file to be size of one row of pixels
-		//TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, 3);												//Specify that it's a frame within the multipage file
+		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, mWidth));		//Set the strip size of the file to be size of one row of pixels
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION,
+			"ImageJ=1.52e\nimages=4\nchannels=2\nslices=2\nhyperstack=true\nmode=grayscale\nunit=\\u00B5m\nloop=false ");	//ImageJ tag hyperstack
+		//TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);									//Specify that it's a frame within the multipage file
 		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, frame, nFrames);									//Specify the frame number
 
-		if (buffer == NULL) //Check that the buffer memory was allocated
-		{
-			TIFFClose(tiffHandle);
-			std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory for raster of TIFF image");
-		}
 
 		//Write the sub-image to the file one strip at a time
 		for (int rowIndex = 0; rowIndex < heightSingle_pix; rowIndex++)
@@ -218,7 +226,6 @@ void TiffU8::saveTiff(std::string filename, const int nFrames) const
 			if (TIFFWriteScanline(tiffHandle, buffer, rowIndex, 0) < 0)
 				break;
 		}
-
 		TIFFWriteDirectory(tiffHandle); //Create a page structure
 	}
 
@@ -325,8 +332,9 @@ void TiffU8::saveTxt(const std::string filename) const
 	fileHandle.close();											//Close the txt file
 }
 
-void TiffU8::push(const unsigned char* inputArray, const int frame, const int height_pix) const
+void TiffU8::pushImage(const int frame, const int nFrames, const unsigned char* inputArray) const
 {
+	const int height_pix = mHeight / nFrames;
 	std::memcpy(&mArray[frame * height_pix * mBytesPerLine], inputArray, height_pix * mBytesPerLine);
 }
 

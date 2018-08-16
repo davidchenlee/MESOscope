@@ -6,7 +6,6 @@ There are basically 2 imaging modes :
 2. Continuous: A single long RT sequence contains all the frames. Such sequence is loaded onto the fpga and run once. A stream of images is acquired. The z stage moves continuously
 */
 
-
 void seq_main(const FPGAns::FPGA &fpga)
 {
 	const int runmode = 4;
@@ -21,7 +20,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.120, 19.808, 18.501 };	//Initial position
+	double3 position_mm = { 35.120, 19.808, 18.507 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -51,38 +50,38 @@ void seq_main(const FPGAns::FPGA &fpga)
 	Filterwheel fw(FW1);
 	fw.setColor(wavelength_nm);
 
-	//ACQUISITION MODE SETTING
+	//ACQUISITION SETTINGS
 	const int nFrames = 10;
-	const int width_pix = 300;
-	const int height_pix = 400;
-	int nFramesDiffZ;
-	int nFramesSameZ;
+	const int widthSingleFrame_pix = 300;
+	const int heightSingleFrame_pix = 400;
+	int nDiffZ;
+	int nSameZ;
 	bool overrideFlag;
 	switch (runMode)
 	{
 	case single:
-		nFramesSameZ = 1;
-		nFramesDiffZ = 1; //Do not change this
+		nSameZ = 1;
+		nDiffZ = 1; //Do not change this
 		overrideFlag = FALSE;
 		break;
 	case continuous:
-		nFramesSameZ = 500;
-		nFramesDiffZ = 1; //Do not change this
+		nSameZ = 500;
+		nDiffZ = 1; //Do not change this
 		overrideFlag = TRUE;
 		break;
 	case average:
-		nFramesSameZ = 10;
-		nFramesDiffZ = 1; //Do not change this
+		nSameZ = 10;
+		nDiffZ = 1; //Do not change this
 		overrideFlag = FALSE;
 		break;
 	case stack:
-		nFramesSameZ = 1;
-		nFramesDiffZ = (int)(zDelta_um / stepSize_um);
+		nSameZ = 1;
+		nDiffZ = (int)(zDelta_um / stepSize_um);
 		overrideFlag = FALSE;
 		break;
 	case stack_centered:
-		nFramesSameZ = 1;
-		nFramesDiffZ = (int)(zDelta_um / stepSize_um);
+		nSameZ = 1;
+		nDiffZ = (int)(zDelta_um / stepSize_um);
 		position_mm.at(zz) -= 0.5 * zDelta_um / 1000; //Shift the stage to the middle of the interval
 		overrideFlag = FALSE;
 		break;
@@ -100,23 +99,22 @@ void seq_main(const FPGAns::FPGA &fpga)
 	shutter1.open();
 	Sleep(50);
 
-	//Create a stack vector for dynamically pushing the averages
-	//std::vector<unsigned char> stackOfAverages;
-	TiffU8 stackOfAverages(width_pix, height_pix * nFramesDiffZ);
+	//Store the average associated with each z plane
+	TiffU8 stackOfAverages(widthSingleFrame_pix, heightSingleFrame_pix * nDiffZ);
 
 	//Frames at different Z
-	for (int frameDiffZ = 0; frameDiffZ < nFramesDiffZ; frameDiffZ++)
+	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 	{
 		stage.printPosition3();		//Print the stage position
 
 		//Frames at the same Z
-		for (int frameSameZ = 0; frameSameZ < nFramesSameZ; frameSameZ++)
+		for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
 		{
-			std::cout << "Frame # (diff-Z): " << (frameDiffZ + 1) << "/" << nFramesDiffZ << "\tFrame # (same-Z): " << (frameSameZ + 1) << "/" << nFramesSameZ <<
-				"\tTotal frame: " << frameDiffZ * nFramesSameZ + (frameSameZ + 1) << "/" << nFramesDiffZ * nFramesSameZ << std::endl;
+			std::cout << "Frame # (diff-Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same-Z): " << (iterSameZ + 1) << "/" << nSameZ <<
+				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << std::endl;
 
 			//CREATE THE REAL-TIME SEQUENCE
-			FPGAns::RTsequence RTsequence(fpga, RS, nFrames, width_pix, height_pix);
+			FPGAns::RTsequence RTsequence(fpga, RS, nFrames, widthSingleFrame_pix, heightSingleFrame_pix);
 
 			//GALVO FOR RT
 			Galvo galvo(RTsequence, GALVO1);
@@ -140,13 +138,11 @@ void seq_main(const FPGAns::FPGA &fpga)
 			image.acquire(); //Execute the RT sequence and acquire the image
 			image.mirrorVertical();
 			image.average();
-
-			stackOfAverages.push(image.getTiffArray(), frameDiffZ, height_pix);
-
 			//image.saveTiff(filename, overrideFlag);
 			//image.saveTxt(filename);
-
-			if (frameDiffZ == 0 && frameSameZ == 0)
+			stackOfAverages.pushImage(iterDiffZ, nDiffZ, image.accessTiff());
+			
+			if (iterDiffZ == 0 && iterSameZ == 0)
 			{
 				//DATALOG
 				Logger datalog("datalog_" + sampleName);
@@ -177,7 +173,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		}
 		std::cout << std::endl;
 
-		//Move to the new position z
+		//Move the z stage to the new position
 		if (runMode == stack || runMode == stack_centered)
 		{
 			position_mm.at(zz) += stepSize_um / 1000;
@@ -189,7 +185,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	}
 	shutter1.close();
 
-	stackOfAverages.saveTiff("Untitled", nFramesDiffZ);
+	//Save the stack to file
+	stackOfAverages.saveTiff("StackOfAverages", nDiffZ);
 }
 
 
@@ -508,15 +505,18 @@ void seq_testTiff()
 	std::string outputFilename = "test";
 
 	const int nFrames = 10;
-	TiffU8 image(inputFilename);
+	//TiffU8 image(inputFilename);
 	
-	image.mirrorVertical(nFrames);
-	image.averageSeparately(nFrames);
-	image.saveTiff(outputFilename, 2);
+	//image.mirrorVertical(nFrames);
+	//image.averageSeparately(nFrames);
+	//image.saveTiff(outputFilename, 2);
 
 	//image.mirrorVertical(nFrames);
 	//image.averageSeparately(nFrames);
 	//image.saveTiff(outputFilename, 2);//The second argument specifies the number of Frames
+
+	TiffU8 aa(300, 4*300);
+	aa.saveTiff("test", 4);
 
 
 }

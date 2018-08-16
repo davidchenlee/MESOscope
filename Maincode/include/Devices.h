@@ -11,7 +11,7 @@ class Image
 	FPGAns::RTsequence &mRTsequence;		//Const because the variables referenced by mRTsequence are not changed by the methods in this class
 	U32* mBufArrayA;						//Vector to read FIFOOUTpc A
 	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
-	TiffU8 mTiff;						//Image that will combine mBufArrayA and mBufArrayB after demultiplexing
+	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB after demultiplexing
 
 	void startFIFOOUTpc_() const;
 	void configureFIFOOUTpc_(const U32 depth) const;	//Currently I don't use this function
@@ -29,7 +29,7 @@ public:
 	void mirrorVertical();
 	void average();
 	void saveTiff(std::string filename, const bool overrideFile = FALSE) const;
-	unsigned char* getTiffArray();
+	unsigned char* const accessTiff() const;
 };
 
 class Vibratome

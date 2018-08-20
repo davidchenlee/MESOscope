@@ -791,7 +791,7 @@ std::string Filterwheel::convertToString_(const Filtercolor color) const
 //Download the current filter position
 void Filterwheel::downloadColor_()
 {
-	const std::string TxBuffer = "pos?\r";	//Command to the filterwheel
+	const std::string TxBuffer("pos?\r");	//Command to the filterwheel
 	std::string RxBuffer;					//Reply from the filterwheel
 
 	try
@@ -823,7 +823,7 @@ void Filterwheel::setColor(const Filtercolor color)
 {
 	if (color != mColor)
 	{
-		std::string TxBuffer = "pos=" + std::to_string(color) + "\r";
+		std::string TxBuffer("pos=" + std::to_string(color) + "\r");
 		std::string RxBuffer;
 
 		try
@@ -889,7 +889,7 @@ Laser::~Laser() {};
 
 void Laser::downloadWavelength_()
 {
-	const std::string TxBuffer = "?VW";		//Command to the laser
+	const std::string TxBuffer("?VW");		//Command to the laser
 	std::string RxBuffer;					//Reply from the laser
 
 	try
@@ -898,7 +898,7 @@ void Laser::downloadWavelength_()
 		mSerial->read(RxBuffer, mRxBufSize);
 
 		//Delete echoed command. Echoing could be disabled on the laser but deleting it is safer and more general
-		std::string keyword = "?VW ";
+		std::string keyword("?VW ");
 		std::string::size_type i = RxBuffer.find(keyword);
 		if (i != std::string::npos)
 			RxBuffer.erase(i, keyword.length());
@@ -933,7 +933,7 @@ void Laser::setWavelength(const int wavelength_nm)
 
 	if (wavelength_nm != mWavelength_nm)
 	{
-		const std::string TxBuffer = "VW=" + std::to_string(wavelength_nm);		//Command to the laser
+		const std::string TxBuffer("VW=" + std::to_string(wavelength_nm));		//Command to the laser
 		std::string RxBuffer;													//Reply from the laser
 
 		try
@@ -962,7 +962,7 @@ void Laser::setWavelength(const int wavelength_nm)
 //Open or close the shutter of Vision
 void Laser::setShutter(const bool state) const
 {
-	const std::string TxBuffer = "S=" + std::to_string(state);		//Command to the laser
+	const std::string TxBuffer("S=" + std::to_string(state));		//Command to the laser
 	std::string RxBuffer;											//Reply from the laser
 
 	try

@@ -43,7 +43,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	RScanner.setFFOV(FFOVrs_um);
 
 	//SAMPLE
-	const std::string sampleName = "Beads_4um";
+	const std::string sampleName("Beads_4um");
 	const double collar = 1.47;
 
 	//FILTERWHEEL
@@ -59,27 +59,27 @@ void seq_main(const FPGAns::FPGA &fpga)
 	bool overrideFlag;
 	switch (runMode)
 	{
-	case single:
+	case singleRM:
 		nSameZ = 1;
 		nDiffZ = 1; //Do not change this
 		overrideFlag = false;
 		break;
-	case continuous:
+	case contRM:
 		nSameZ = 500;
 		nDiffZ = 1; //Do not change this
 		overrideFlag = true;
 		break;
-	case average:
+	case averageRM:
 		nSameZ = 10;
 		nDiffZ = 1; //Do not change this
 		overrideFlag = false;
 		break;
-	case stack:
+	case stackRM:
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
 		overrideFlag = false;
 		break;
-	case stack_centered:
+	case stackCenterRM:
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
 		position_mm.at(zz) -= 0.5 * zDelta_um / 1000; //Shift the stage to the middle of the interval
@@ -100,7 +100,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	Sleep(50);
 
 	//Store the average associated with each z plane
-	TiffU8 stackOfAverages(widthSingleFrame_pix, heightSingleFrame_pix * nDiffZ);
+	TiffU8 stack(widthSingleFrame_pix, heightSingleFrame_pix * nDiffZ);
 
 	//Frames at different Z
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
@@ -131,16 +131,16 @@ void seq_main(const FPGAns::FPGA &fpga)
 			//pockels.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
 
 			//EXECUTE THE RT SEQUENCE
-			std::string filename = sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
-				"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4);
+			std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
+				"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4));
 
 			Image image(RTsequence);
 			image.acquire(); //Execute the RT sequence and acquire the image
 			image.mirrorVertical();
 			image.average();
-			//image.saveTiff(filename, overrideFlag);
-			//image.saveTxt(filename);
-			stackOfAverages.pushImage(iterDiffZ, nDiffZ, image.accessTiff());
+			//image.saveTiff(singleFilename, overrideFlag);
+			//image.saveTxt(singleFilename);
+			stack.pushImage(iterDiffZ, nDiffZ, image.accessTiff());
 			
 			if (iterDiffZ == 0 && iterSameZ == 0)
 			{
@@ -174,7 +174,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		std::cout << std::endl;
 
 		//Move the z stage to the new position
-		if (runMode == stack || runMode == stack_centered)
+		if (runMode == stackRM || runMode == stackCenterRM)
 		{
 			position_mm.at(zz) += stepSize_um / 1000;
 			stage.moveStage(zz, position_mm.at(zz));
@@ -186,7 +186,9 @@ void seq_main(const FPGAns::FPGA &fpga)
 	shutter1.close();
 
 	//Save the stack to file
-	stackOfAverages.saveTiff("StackOfAverages", nDiffZ);
+	std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
+		"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4));
+	stack.saveTiff(stackFilename, nDiffZ);
 }
 
 
@@ -502,8 +504,8 @@ void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 
 void seq_testTiff()
 {
-	std::string inputFilename = "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610";
-	std::string outputFilename = "test";
+	std::string inputFilename("Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610");
+	std::string outputFilename("test");
 
 	const int nFrames = 10;
 	//TiffU8 image(inputFilename);

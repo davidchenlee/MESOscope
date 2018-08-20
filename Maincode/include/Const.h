@@ -27,7 +27,7 @@ namespace Constants
 	enum FilterwheelID { FW1 = 1, FW2 };
 	enum Filtercolor { BLUE = 1, GREEN, RED };
 	enum Axis { xx, yy, zz };
-	enum RunMode { single, continuous, average, stack, stack_centered };
+	enum RunMode { singleRM, contRM, averageRM, stackRM, stackCenterRM };
 
 	enum ComID { VISIONcom, FW1com , FW2com, mPMTcom, ZSTAGEcom };
 	extern const std::vector<std::string> assignCOM;

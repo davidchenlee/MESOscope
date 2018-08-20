@@ -19,7 +19,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const RunMode runMode = static_cast<RunMode>(runmode);
 
 	//STAGE
-	double3 position_mm = { 35.120, 19.808, 18.535 };	//Initial position
+	const double3 stagePosition0_mm = { 35.120, 19.808, 18.5325 };	//Stage initial position
+	std::vector<double3> stagePosition_mm;
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -62,48 +63,64 @@ void seq_main(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = 1; //Do not change this
 		overrideFlag = false;
+		stagePosition_mm.push_back(stagePosition0_mm);
 		break;
 	case contRM:
 		nSameZ = 500;
 		nDiffZ = 1; //Do not change this
 		overrideFlag = true;
+		stagePosition_mm.push_back(stagePosition0_mm);
 		break;
 	case averageRM:
 		nSameZ = 10;
 		nDiffZ = 1; //Do not change this
 		overrideFlag = false;
+		stagePosition_mm.push_back(stagePosition0_mm);
 		break;
 	case stackRM:
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
 		overrideFlag = false;
+
+		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) + iterDiffZ * stepSize_um / 1000 });
+
 		break;
 	case stackCenterRM:
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
-		position_mm.at(zz) -= 0.5 * zDelta_um / 1000; //Shift the stage to the middle of the interval
 		overrideFlag = false;
+
+		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
+
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 	}
 
-	//PRESET THE STAGES
+	//STAGES
 	Stage stage;
-	stage.moveStage3(position_mm);
-	stage.waitForMovementToStop3();
+
+	//Create a stack
+	TiffU8 stack(widthSingleFrame_pix, heightSingleFrame_pix * nDiffZ);
 
 	//OPEN THE SHUTTER
 	Shutter shutter1(fpga, Shutter1);
 	shutter1.open();
 	Sleep(50);
 
-	//Create a stack
-	TiffU8 stack(widthSingleFrame_pix, heightSingleFrame_pix * nDiffZ);
-
 	//Frames at different Z
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 	{
+		//Move the z stage to the new position
+		if (runMode == stackRM || runMode == stackCenterRM)
+		{
+			stage.moveStage(zz, stagePosition_mm.at(iterDiffZ).at(zz));
+			stage.waitForMovementToStop3();
+			//Sleep(300);
+			//laserPower_mW += 0.5; //Increase the laser power by this much
+		}
 		stage.printPosition3();		//Print the stage position
 
 		//Frames at the same Z
@@ -131,7 +148,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 			//EXECUTE THE RT SEQUENCE
 			std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
-				"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4));
+				"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(xx), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(yy), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(zz), 4));
 
 			Image image(RTsequence);
 			image.acquire(); //Execute the RT sequence and acquire the image
@@ -171,25 +188,15 @@ void seq_main(const FPGAns::FPGA &fpga)
 			}
 		}
 		std::cout << std::endl;
-
-		//Move the z stage to the new position
-		if (runMode == stackRM || runMode == stackCenterRM)
-		{
-			position_mm.at(zz) += stepSize_um / 1000;
-			stage.moveStage(zz, position_mm.at(zz));
-			stage.waitForMovementToStop3();
-			//Sleep(300);
-			//laserPower_mW += 0.5; //Increase the laser power by this much
-		}
 	}
 	shutter1.close();
 
 	//Save the stack to file
 	std::string stackFilename("Stack_" + sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
-		"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4));
+		"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
+		"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um/1000, 4));
 	stack.saveTiff(stackFilename, nDiffZ, overrideFlag);
 }
-
 
 //For live optimization of the objective's correction collar
 void seq_contAcquisition(const FPGAns::FPGA &fpga)

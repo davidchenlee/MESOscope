@@ -28,7 +28,7 @@ public:
 	void acquire();
 	void mirrorVertical();
 	void average();
-	void saveTiff(std::string filename, const bool overrideFile = FALSE) const;
+	void saveTiff(std::string filename, const bool overrideFile = false) const;
 	unsigned char* const accessTiff() const;
 };
 

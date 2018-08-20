@@ -39,7 +39,7 @@ void Image::FIFOOUTpcGarbageCollector_() const
 	U32* garbage = new U32[bufSize];
 	U32 nElemToReadA, nElemToReadB;					//Elements to read from FIFOOUTpc A and B
 	int nElemTotalA = 0, nElemTotalB = 0; 			//Total number of elements read from FIFOOUTpc A and B
-	while (TRUE)
+	while (true)
 	{
 		//Check if there are elements in FIFOOUTpc
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nElemToReadA));
@@ -228,7 +228,7 @@ void Image::average()
 //Save each frame in mTiff in a different Tiff page
 void Image::saveTiff(std::string filename, const bool overrideFile) const
 {
-	mTiff.saveTiff(filename, mRTsequence.mNframes);
+	mTiff.saveTiff(filename, mRTsequence.mNframes, overrideFile);
 }
 
 
@@ -236,9 +236,6 @@ unsigned char* const Image::accessTiff() const
 {
 	return mTiff.accessTiffArray();
 }
-
-
-
 
 
 #pragma endregion "Image"
@@ -1072,7 +1069,7 @@ void Stage::moveStage3(const double3 positionXYZ_mm)
 
 bool Stage::isMoving(const Axis axis) const
 {
-	BOOL isMoving = FALSE;
+	BOOL isMoving;
 
 	if (!PI_IsMoving(mID[axis], mNstagesPerController, &isMoving))	//~55 ms to execute this function
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage " + std::to_string(axis));

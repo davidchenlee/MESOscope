@@ -20,7 +20,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//STAGE
 	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
-	double3 position_mm = { 35.120, 19.808, 18.507 };	//Initial position
+	double3 position_mm = { 35.120, 19.808, 18.535 };	//Initial position
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -28,7 +28,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 750;
-	double laserPower_mW = 40 * mW;
+	double laserPower_mW = 50 * mW;
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
 
@@ -51,7 +51,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	fw.setColor(wavelength_nm);
 
 	//ACQUISITION SETTINGS
-	const int nFrames = 10;
+	const int nFrames = 1;
 	const int widthSingleFrame_pix = 300;
 	const int heightSingleFrame_pix = 400;
 	int nDiffZ;
@@ -62,28 +62,28 @@ void seq_main(const FPGAns::FPGA &fpga)
 	case single:
 		nSameZ = 1;
 		nDiffZ = 1; //Do not change this
-		overrideFlag = FALSE;
+		overrideFlag = false;
 		break;
 	case continuous:
 		nSameZ = 500;
 		nDiffZ = 1; //Do not change this
-		overrideFlag = TRUE;
+		overrideFlag = true;
 		break;
 	case average:
 		nSameZ = 10;
 		nDiffZ = 1; //Do not change this
-		overrideFlag = FALSE;
+		overrideFlag = false;
 		break;
 	case stack:
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
-		overrideFlag = FALSE;
+		overrideFlag = false;
 		break;
 	case stack_centered:
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
 		position_mm.at(zz) -= 0.5 * zDelta_um / 1000; //Shift the stage to the middle of the interval
-		overrideFlag = FALSE;
+		overrideFlag = false;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
@@ -237,7 +237,7 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 		//Execute the realtime sequence and acquire the image
 		Image image(RTsequence);
 		image.acquire(); //Execute the RT sequence and acquire the image
-		image.saveTiff("Untitled", TRUE);
+		image.saveTiff("Untitled", true);
 	}
 	shutter1.close();
 }
@@ -248,6 +248,7 @@ void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 	const int width_pix = 300;
 	const int height_pix = 400;
 	const int nFrames = 2;
+	const int nFrames_cont = 1;
 
 	//GALVO
 	const double FFOVgalvo_um = 300 * um;				//Full FOV in the slow axis
@@ -259,7 +260,7 @@ void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 		std::cout << "Iteration: " << jj + 1 << std::endl;
 
 		//CREATE A REAL-TIME SEQUENCE
-		FPGAns::RTsequence RTsequence(fpga, FG, nFrames, width_pix, height_pix);
+		FPGAns::RTsequence RTsequence(fpga, FG, nFrames_cont, width_pix, height_pix);
 
 		//GALVO FOR RT
 		Galvo galvo(RTsequence, GALVO1);
@@ -271,7 +272,7 @@ void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 		//Execute the realtime sequence and acquire the image
 		Image image(RTsequence);
 		image.acquire(); //Execute the RT sequence and acquire the image
-		image.saveTiff("Untitled", TRUE);
+		image.saveTiff("Untitled", true);
 	}
 }
 

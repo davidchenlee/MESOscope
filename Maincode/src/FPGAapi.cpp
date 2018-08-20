@@ -412,7 +412,7 @@ namespace FPGAns
 			const int sizeChannel = static_cast<int>(mVectorOfQueues.at(chan).size());
 			if (sizeChannel != 0)
 			{
-				if (TRUE) //Do a jump
+				if (true) //Do a jump
 				{
 					vectorOfQueues.at(chan).push_back(mVectorOfQueues.at(chan).front());	//Push the first element in VectorOfQueues[i]
 				}

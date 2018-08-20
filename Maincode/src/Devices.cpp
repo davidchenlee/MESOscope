@@ -231,7 +231,7 @@ void Image::saveTiff(std::string filename, const bool overrideFile) const
 	mTiff.saveTiff(filename, mRTsequence.mNframes, overrideFile);
 }
 
-
+//Access the Tiff data in the Image object
 unsigned char* const Image::accessTiff() const
 {
 	return mTiff.accessTiffArray();

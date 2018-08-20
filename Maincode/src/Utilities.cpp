@@ -178,6 +178,7 @@ TiffU8::~TiffU8()
 	delete[] mArray;
 }
 
+//Access the Tiff data in the TiffU8 object
 unsigned char* const TiffU8::accessTiffArray() const
 {
 	return mArray;
@@ -242,76 +243,84 @@ void TiffU8::saveTiff(std::string filename, const int nFrames, const bool overri
 //Divide the long image (vertical stripe) in nFrames and vertically mirror the odd frames
 void TiffU8::mirrorVertical(const int nFrames)
 {
-	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);		//Buffer used to store the row of pixel information for writing to file
-
-	if (buffer == NULL) //Check that the buffer memory was allocated
-		std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory");
-
-	const int heightSingle_pix = mHeight / nFrames; //Divide the total height
-
-	for (int frame = 1; frame < nFrames; frame+=2)
+	if (nFrames > 1)
 	{
-		//Swap the first and last rows of the sub-image, then do to the second first and second last rows, etc
-		for (int rowIndex = 0; rowIndex < heightSingle_pix / 2; rowIndex++)
+		unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);		//Buffer used to store the row of pixel information for writing to file
+
+		if (buffer == NULL) //Check that the buffer memory was allocated
+			std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory");
+
+		const int heightSingle_pix = mHeight / nFrames; //Divide the total height
+
+		for (int frame = 1; frame < nFrames; frame += 2)
 		{
-			int eneTene = frame * heightSingle_pix + rowIndex;			//Swap this row
-			int moneMei = (frame + 1) * heightSingle_pix - rowIndex - 1;	//With this one
-			std::memcpy(buffer, &mArray[eneTene*mBytesPerLine], mBytesPerLine);
-			std::memcpy(&mArray[eneTene*mBytesPerLine], &mArray[moneMei*mBytesPerLine], mBytesPerLine);
-			std::memcpy(&mArray[moneMei*mBytesPerLine], buffer, mBytesPerLine);
+			//Swap the first and last rows of the sub-image, then do to the second first and second last rows, etc
+			for (int rowIndex = 0; rowIndex < heightSingle_pix / 2; rowIndex++)
+			{
+				int eneTene = frame * heightSingle_pix + rowIndex;				//Swap this row
+				int moneMei = (frame + 1) * heightSingle_pix - rowIndex - 1;	//With this one
+				std::memcpy(buffer, &mArray[eneTene*mBytesPerLine], mBytesPerLine);
+				std::memcpy(&mArray[eneTene*mBytesPerLine], &mArray[moneMei*mBytesPerLine], mBytesPerLine);
+				std::memcpy(&mArray[moneMei*mBytesPerLine], buffer, mBytesPerLine);
+			}
 		}
+		_TIFFfree(buffer);//Release the memory
 	}
-	_TIFFfree(buffer);//Release the memory
+
 }
 
 void TiffU8::averageSeparately(const int nFrames)
 {
-	const int height_pix = mHeight / nFrames; //Divide the total height
-	const int nPixSingleFrame = mWidth * height_pix;
-
-
-	//Calculate the average
-	unsigned int* avg = new unsigned int[2 * nPixSingleFrame]();
-	for (int frame = 0; frame < nFrames; frame ++)
-		for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
-		{
-			if ( frame%2)
-				avg[pixIndex] += mArray[frame * nPixSingleFrame + pixIndex];		//ODD FRAMES
-			else
-				avg[nPixSingleFrame + pixIndex] += mArray[frame * nPixSingleFrame + pixIndex];	//EVEN FRAMES
-		}	
-
-	//Cast the average
-	int	nFramesHalf = nFrames / 2;
-	for (int pixIndex = 0; pixIndex < 2 * nPixSingleFrame; pixIndex++)
+	if (nFrames > 2)
 	{
-		if (nFrames % 2)	//Odd number of frames
-			mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / (nFramesHalf + 1));
-		else				//Even number of frames
-			mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / nFramesHalf);
+		const int heightSingle_pix = mHeight / nFrames; //Divide the total height
+		const int nPixSingleFrame = mWidth * heightSingle_pix;
+
+		//Calculate the average of the even and odd frames separately
+		unsigned int* avg = new unsigned int[2 * nPixSingleFrame]();
+		for (int frame = 0; frame < nFrames; frame++)
+			for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
+			{
+				if (frame % 2)
+					avg[pixIndex] += mArray[frame * nPixSingleFrame + pixIndex];					//Odd frames
+				else
+					avg[nPixSingleFrame + pixIndex] += mArray[frame * nPixSingleFrame + pixIndex];	//Even frames
+			}
+
+		//Put 'evenImage' and 'oddImage' back into mArray. Concatenate 'oddImage' after 'evenImage'. Ignore the rest of the data in mArray
+		int	nFramesHalf = nFrames / 2;
+		for (int pixIndex = 0; pixIndex < 2 * nPixSingleFrame; pixIndex++)
+		{
+			if (nFrames % 2)	//Odd number of frames: 1, 3, 5, etc
+				mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / (nFramesHalf + 1));
+			else				//Even number of frames: 0, 2, 4, etc
+				mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / nFramesHalf);
+		}
+
+		mHeight = 2 * heightSingle_pix;
+		delete[] avg;
 	}
 
-	//Put 'evenImage' and 'oddImage' back into mArray. Concatenate 'oddImage' after 'evenImage'. Ignore the rest of the data in mArray
-	mHeight = 2* height_pix;
-
-	delete[] avg;
 }
 
 //Split the vertically long image into nFrames and calculate the average
 void TiffU8::average(const int nFrames)
 {
-	mHeight = mHeight / nFrames; //Update the total height to that of a single frame
-	const int nPixSingleFrame = mWidth * mHeight;
+	if (nFrames > 1)
+	{
+		mHeight = mHeight / nFrames; //Update the total height to that of a single frame
+		const int nPixSingleFrame = mWidth * mHeight;
 
-	unsigned int* avg = new unsigned int[nPixSingleFrame]();
-	for (int frame = 0; frame < nFrames; frame++)
+		unsigned int* avg = new unsigned int[nPixSingleFrame]();
+		for (int frame = 0; frame < nFrames; frame++)
+			for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
+				avg[pixIndex] += mArray[frame * nPixSingleFrame + pixIndex];
+
 		for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
-			avg[pixIndex] += mArray[frame * nPixSingleFrame + pixIndex];
+			mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / nFrames);
 
-	for (int pixIndex = 0; pixIndex < nPixSingleFrame; pixIndex++)
-		mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / nFrames);
-
-	delete[] avg;
+		delete[] avg;
+	}
 }
 
 void TiffU8::analyze() const

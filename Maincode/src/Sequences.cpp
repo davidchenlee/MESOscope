@@ -19,7 +19,6 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const RunMode runMode = static_cast<RunMode>(runmode);
 
 	//STAGE
-	//double3 position_mm = { 37.950, 29.150, 16.950 };	//Initial position
 	double3 position_mm = { 35.120, 19.808, 18.535 };	//Initial position
 
 	//STACK
@@ -43,7 +42,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	RScanner.setFFOV(FFOVrs_um);
 
 	//SAMPLE
-	const std::string sampleName("Beads_4um");
+	const std::string sampleName("beads_4um");
 	const double collar = 1.47;
 
 	//FILTERWHEEL
@@ -51,11 +50,11 @@ void seq_main(const FPGAns::FPGA &fpga)
 	fw.setColor(wavelength_nm);
 
 	//ACQUISITION SETTINGS
-	const int nFrames = 1;
 	const int widthSingleFrame_pix = 300;
 	const int heightSingleFrame_pix = 400;
-	int nDiffZ;
-	int nSameZ;
+	const int nFrames = 1;	//Number of frames under continuous acquisition
+	int nDiffZ;				//Number of frames at different Z, under discontinuous acquisition
+	int nSameZ;				//Number of frames at same Z, under discontinuous acquisition
 	bool overrideFlag;
 	switch (runMode)
 	{
@@ -99,7 +98,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	shutter1.open();
 	Sleep(50);
 
-	//Store the average associated with each z plane
+	//Create a stack
 	TiffU8 stack(widthSingleFrame_pix, heightSingleFrame_pix * nDiffZ);
 
 	//Frames at different Z
@@ -186,9 +185,9 @@ void seq_main(const FPGAns::FPGA &fpga)
 	shutter1.close();
 
 	//Save the stack to file
-	std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
+	std::string stackFilename("Stack_" + sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 		"_x=" + toString(position_mm.at(xx), 3) + "_y=" + toString(position_mm.at(yy), 3) + "_z=" + toString(position_mm.at(zz), 4));
-	stack.saveTiff(stackFilename, nDiffZ);
+	stack.saveTiff(stackFilename, nDiffZ, overrideFlag);
 }
 
 

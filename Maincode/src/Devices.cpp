@@ -986,11 +986,15 @@ void Laser::setShutter(const bool state) const
 #pragma region "Stages"
 Stage::Stage()
 {
+	const std::string stageIDx = "116049107";	//X-stage (V-551.4B)
+	const std::string stageIDy = "116049105";	//Y-stage (V-551.2B)
+	const std::string stageIDz = "0165500631";	//Z-stage (ES-100)
+
 	//Open the connections to the stage controllers and assign the IDs
-	mID[xx] = PI_ConnectUSB(mStageName_x.c_str());
-	mID[yy] = PI_ConnectUSB(mStageName_y.c_str());
+	mID[xx] = PI_ConnectUSB(stageIDx.c_str());
+	mID[yy] = PI_ConnectUSB(stageIDy.c_str());
 	mID[zz] = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
-	//mID[zz] = PI_ConnectUSB(mStageName_z.c_str());
+	//mID[zz] = PI_ConnectUSB(stageIDz.c_str());
 
 	if (mID[xx] < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
@@ -1118,6 +1122,52 @@ void Stage::stopALL() const
 	PI_StopAll(mID[zz]);
 }
 
+//Request the configuration of the output trigger
+void Stage::qCTO(const Axis axis, const int triggerChan, const int triggerParam) const
+{
+	if (triggerChan < 1 || triggerChan > 4)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested channel must be in the range 1-4" + std::to_string(axis));
+
+	double pdValueArray;
+	if (!PI_qCTO(mID[axis], &triggerChan, &triggerParam, &pdValueArray, 1))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query CTO for the stage" + std::to_string(axis));
+
+	std::cout << pdValueArray << std::endl;
+
+}
+
+//Request the enable/disable status of the output trigger
+void Stage::qTRO(const Axis axis, const int triggerChan) const
+{
+	if (triggerChan < 1 || triggerChan > 4)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested channel must be in the range 1-4" + std::to_string(axis));
+
+	BOOL triggerState;
+	if (!PI_qTRO(mID[axis], &triggerChan, &triggerState, 1))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query TRO for the stage" + std::to_string(axis));
+
+	std::cout << triggerState << std::endl;
+}
+
+//Set the enable/disable status of the output trigger
+void Stage::TRO(const Axis axis, const int triggerChan, const BOOL triggerState) const
+{
+	if (triggerChan < 1 || triggerChan > 4)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested channel must be in the range 1-4" + std::to_string(axis));
+
+	if (!PI_TRO(mID[axis], &triggerChan, &triggerState, 1))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set TRO for the stage" + std::to_string(axis));
+}
+
+
+void Stage::qVEL(const Axis axis) const
+{
+	double vel_mmPerS;
+	if(!PI_qVEL(mID[axis], mNstagesPerController, &vel_mmPerS))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage" + std::to_string(axis));
+
+	std::cout << vel_mmPerS << std::endl;
+}
 
 //Convert from absolute tile number ---> (slice number, plane number, tile number)
 // this function does NOT consider the overlaps

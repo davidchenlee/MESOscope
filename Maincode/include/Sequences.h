@@ -21,3 +21,4 @@ void seq_testRS(const FPGAns::FPGA &fpga);
 void seq_testConvertI16toVolt();
 void seq_testGalvoSync(const FPGAns::FPGA &fpga);
 void seq_testTiff();
+void seq_testStage();

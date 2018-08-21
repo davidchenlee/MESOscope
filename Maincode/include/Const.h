@@ -16,7 +16,7 @@ namespace Constants
 	typedef uint64_t	U64;
 	typedef std::deque<U32> QU32;				//Queue of unsigned integers
 	typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
-	typedef std::array<double, 3> double3;		//array of 3 doubles
+	typedef std::array<double, 3> double3;		//array of 3 doubles. Arrays allow to allocate memory. Vectors don't
 	typedef std::array<int, 3> int3;			//array of 3 ints
 
 	enum PhotonCounterInputSelector { ext, sim };

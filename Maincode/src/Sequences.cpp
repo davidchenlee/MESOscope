@@ -516,6 +516,21 @@ void seq_testTiff()
 
 	TiffU8 aa(300, 4*300);
 	aa.saveTiff("test", 4);
+}
 
+void seq_testStage()
+{
+	Stage stage;
+
+	//std::cout << "Stages initial position:" << std::endl;
+	//stage.printPosition3();
+	//stage.qTRO(xx, 1);
+	//stage.qCTO(xx, 1, 1);
+	//stage.qTRO(zz, 1);
+	//stage.TRO(zz, 1, 1);
+	//stage.qTRO(zz, 1);
+	stage.qVEL(xx);
+	stage.qVEL(yy);
+	stage.qVEL(zz);
 
 }

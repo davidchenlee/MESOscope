@@ -195,9 +195,6 @@ public:
 
 class Stage
 {
-	const std::string mStageName_x = "116049107";	//X-stage (V-551.4B)
-	const std::string mStageName_y = "116049105";	//Y-stage (V-551.2B)
-	const std::string mStageName_z = "0165500631";	//Z-stage (ES-100)
 	const int mPort_z = 4;							//COM port
 	const int mBaud_z = 38400;
 	int3 mID;										//Controller IDs
@@ -219,6 +216,12 @@ public:
 	void waitForMovementToStop(const Axis axis) const;
 	void waitForMovementToStop3() const;
 	void stopALL() const;
+	void qCTO(const Axis axis, const int triggerChan, const int triggerParam) const;
+	void qTRO(const Axis axis, const int triggerChan) const;
+	void TRO(const Axis axis, const int triggerChan, const BOOL triggerState) const;
+	void qVEL(const Axis axis) const;
+
 	void scanningStrategy(const int nTileAbsolute) const;
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
+
 };

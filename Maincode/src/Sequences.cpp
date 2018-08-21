@@ -1,14 +1,8 @@
 #include "Sequences.h"
 
-/*
-There are basically 2 imaging modes :
-1. Frame by frame: For each frame, a RT sequence is created, loaded onto the fpga, and a corresponding image is acquired. The z stage is moved after each image is acquired.
-2. Continuous: A single long RT sequence contains all the frames. Such sequence is loaded onto the fpga and run once. A stream of images is acquired. The z stage moves continuously
-*/
-
 void seq_main(const FPGAns::FPGA &fpga)
 {
-	const int runmode = 4;
+	const int runmode = 0;
 	/*
 	0 - Single shot
 	1 - Continuous: image the same plane many times
@@ -18,8 +12,13 @@ void seq_main(const FPGAns::FPGA &fpga)
 	*/
 	const RunMode runMode = static_cast<RunMode>(runmode);
 
+	//ACQUISITION SETTINGS
+	const int widthSingleFrame_pix = 300;
+	const int heightSingleFrame_pix = 400;
+	const int nFrames = 10;	//Number of frames with continuous acquisition
+
 	//STAGE
-	const double3 stagePosition0_mm = { 35.120, 19.808, 18.5325 };	//Stage initial position
+	const double3 stagePosition0_mm = { 35.020, 19.808 - 0.065, 18.5325 };	//Stage initial position
 	std::vector<double3> stagePosition_mm;
 
 	//STACK
@@ -50,12 +49,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	Filterwheel fw(FW1);
 	fw.setColor(wavelength_nm);
 
-	//ACQUISITION SETTINGS
-	const int widthSingleFrame_pix = 300;
-	const int heightSingleFrame_pix = 400;
-	const int nFrames = 1;	//Number of frames under continuous acquisition
-	int nDiffZ;				//Number of frames at different Z, under discontinuous acquisition
-	int nSameZ;				//Number of frames at same Z, under discontinuous acquisition
+	int nDiffZ;				//Number of frames at different Z with discontinuous acquisition
+	int nSameZ;				//Number of frames at same Z with discontinuous acquisition
 	bool overrideFlag;
 	switch (runMode)
 	{
@@ -106,22 +101,17 @@ void seq_main(const FPGAns::FPGA &fpga)
 	TiffU8 stack(widthSingleFrame_pix, heightSingleFrame_pix * nDiffZ);
 
 	//OPEN THE SHUTTER
-	Shutter shutter1(fpga, Shutter1);
-	shutter1.open();
+	Shutter shutterVision(fpga, Shutter1);
+	shutterVision.open();
 	Sleep(50);
 
 	//Frames at different Z
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 	{
-		//Move the z stage to the new position
-		if (runMode == stackRM || runMode == stackCenterRM)
-		{
-			stage.moveStage(zz, stagePosition_mm.at(iterDiffZ).at(zz));
-			stage.waitForMovementToStop3();
-			//Sleep(300);
-			//laserPower_mW += 0.5; //Increase the laser power by this much
-		}
+		stage.moveStage3(stagePosition_mm.front());
+		stage.waitForMovementToStop3();
 		stage.printPosition3();		//Print the stage position
+		//laserPower_mW += 0.5;		//Increase the laser power by this much
 
 		//Frames at the same Z
 		for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
@@ -147,20 +137,21 @@ void seq_main(const FPGAns::FPGA &fpga)
 			//pockels.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
 
 			//EXECUTE THE RT SEQUENCE
-			std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
-				"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(xx), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(yy), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(zz), 4));
-
 			Image image(RTsequence);
 			image.acquire(); //Execute the RT sequence and acquire the image
-			image.mirrorVertical();
+			image.flipVertical();
 			image.average();
-			//image.saveTiff(singleFilename, overrideFlag);
-			//image.saveTxt(singleFilename);
 			stack.pushImage(iterDiffZ, nDiffZ, image.accessTiff());
+
 			
+			std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
+				"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(xx), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(yy), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(zz), 4));
+			image.saveTiff(singleFilename, overrideFlag);
+			//image.saveTxt(singleFilename);
+			
+			//DATALOG
 			if (iterDiffZ == 0 && iterSameZ == 0)
 			{
-				//DATALOG
 				Logger datalog("datalog_" + sampleName);
 				datalog.record("SAMPLE-------------------------------------------------------");
 				datalog.record("Sample = ", sampleName);
@@ -186,16 +177,17 @@ void seq_main(const FPGAns::FPGA &fpga)
 				datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes_umPerPix);
 				datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um / RTsequence.mHeightPerFrame_pix);
 			}
+
 		}
 		std::cout << std::endl;
 	}
-	shutter1.close();
+	shutterVision.close();
 
-	//Save the stack to file
+	//Save the stack to a file
 	std::string stackFilename("Stack_" + sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 		"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
 		"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um/1000, 4));
-	stack.saveTiff(stackFilename, nDiffZ, overrideFlag);
+	//stack.saveTiff(stackFilename, nDiffZ, overrideFlag);
 }
 
 //For live optimization of the objective's correction collar
@@ -220,8 +212,6 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 
 	//SHUTTER
 	Shutter shutter1(fpga, Shutter1);
-
-	//SEQUENCE
 	shutter1.open();
 	Sleep(50);
 
@@ -450,8 +440,8 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 	FPGAns::RTsequence RTsequence(fpga);
 
 	//Open the Uniblitz shutter
-	//Shutter shutter1(fpga, Shutter1);
-	//shutter1.open();
+	//Shutter shutterVision(fpga, Shutter1);
+	//shutterVision.open();
 
 	//Turn on the pockels cell
 	PockelsCell pockels(RTsequence, POCKELS1, 750);
@@ -516,12 +506,12 @@ void seq_testTiff()
 	const int nFrames = 10;
 	//TiffU8 image(inputFilename);
 	
-	//image.mirrorVertical(nFrames);
-	//image.averageSeparately(nFrames);
+	//image.flipVertical(nFrames);
+	//image.averageEvenOdd(nFrames);
 	//image.saveTiff(outputFilename, 2);
 
-	//image.mirrorVertical(nFrames);
-	//image.averageSeparately(nFrames);
+	//image.flipVertical(nFrames);
+	//image.averageEvenOdd(nFrames);
 	//image.saveTiff(outputFilename, 2);//The second argument specifies the number of Frames
 
 	TiffU8 aa(300, 4*300);

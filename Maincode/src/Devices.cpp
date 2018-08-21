@@ -209,9 +209,9 @@ void Image::acquire()
 
 //The galvo (vectical axis of the image) performs bi-directional scanning
 //Divide the long vertical image in nFrames and vertically mirror the odd frames
-void Image::mirrorVertical()
+void Image::flipVertical()
 {
-	mTiff.mirrorVertical(mRTsequence.mNframes);
+	mTiff.flipVertical(mRTsequence.mNframes);
 }
 
 //Split the long vertical image into nFrames and calculate the average

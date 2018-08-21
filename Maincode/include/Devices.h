@@ -26,7 +26,7 @@ public:
 	~Image();
 	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
 	void acquire();
-	void mirrorVertical();
+	void flipVertical();
 	void average();
 	void saveTiff(std::string filename, const bool overrideFile = false) const;
 	unsigned char* const accessTiff() const;
@@ -217,8 +217,8 @@ public:
 	double downloadPosition_mm(const Axis axis);
 	bool isMoving(const Axis axis) const;
 	void waitForMovementToStop(const Axis axis) const;
-	void Stage::waitForMovementToStop3() const;
-	void Stage::stopALL() const;
+	void waitForMovementToStop3() const;
+	void stopALL() const;
 	void scanningStrategy(const int nTileAbsolute) const;
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
 };

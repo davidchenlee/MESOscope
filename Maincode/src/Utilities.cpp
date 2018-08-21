@@ -241,7 +241,7 @@ void TiffU8::saveTiff(std::string filename, const int nFrames, const bool overri
 
 //The galvo (vectical axis of the image) performs bi-directional scanning
 //Divide the long image (vertical stripe) in nFrames and vertically mirror the odd frames
-void TiffU8::mirrorVertical(const int nFrames)
+void TiffU8::flipVertical(const int nFrames)
 {
 	if (nFrames > 1)
 	{
@@ -269,7 +269,7 @@ void TiffU8::mirrorVertical(const int nFrames)
 
 }
 
-void TiffU8::averageSeparately(const int nFrames)
+void TiffU8::averageEvenOdd(const int nFrames)
 {
 	if (nFrames > 2)
 	{

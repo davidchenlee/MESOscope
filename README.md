@@ -7,7 +7,6 @@ Code in C++ for controlling the NI USB-7852R card
 - Maybe install VTK to display tiff images
 
 ### LabView
-- Pre-set the output of a sequence so that there are no big jumps
 - Create a ramp generator. This is only necessary if I want to increase the memory of FIFOOUT at the expense of the input buffers
 - Maybe decrease the clock of the photon-counter from 160 MHz to 80 MHz for a faster/easier compilation
 - Check the delay of the internal FIFOs implemented in memory blocks

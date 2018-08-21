@@ -2,7 +2,7 @@
 
 void seq_main(const FPGAns::FPGA &fpga)
 {
-	const int runmode = 0;
+	const int runmode = 4;
 	/*
 	0 - Single shot
 	1 - Continuous: image the same plane many times
@@ -15,15 +15,15 @@ void seq_main(const FPGAns::FPGA &fpga)
 	//ACQUISITION SETTINGS
 	const int widthSingleFrame_pix = 300;
 	const int heightSingleFrame_pix = 400;
-	const int nFrames = 10;	//Number of frames with continuous acquisition
+	const int nFrames = 1;	//Number of frames with continuous acquisition
 
 	//STAGE
-	const double3 stagePosition0_mm = { 35.020, 19.808 - 0.065, 18.5325 };	//Stage initial position
+	const double3 stagePosition0_mm = { 35.020, 19.808 + 0.150 - 0.015, 18.542 };	//Stage initial position
 	std::vector<double3> stagePosition_mm;
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
-	double zDelta_um = 5 * um;				//Acquire a stack within this interval
+	double zDelta_um = 50 * um;				//Acquire a stack within this interval
 
 	//LASER
 	const int wavelength_nm = 750;
@@ -108,7 +108,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	//Frames at different Z
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 	{
-		stage.moveStage3(stagePosition_mm.front());
+		stage.moveStage3(stagePosition_mm.at(iterDiffZ));
 		stage.waitForMovementToStop3();
 		stage.printPosition3();		//Print the stage position
 		//laserPower_mW += 0.5;		//Increase the laser power by this much
@@ -143,12 +143,13 @@ void seq_main(const FPGAns::FPGA &fpga)
 			image.average();
 			stack.pushImage(iterDiffZ, nDiffZ, image.accessTiff());
 
-			
+			/*
 			std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 				"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(xx), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(yy), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(zz), 4));
 			image.saveTiff(singleFilename, overrideFlag);
 			//image.saveTxt(singleFilename);
-			
+			*/
+
 			//DATALOG
 			if (iterDiffZ == 0 && iterSameZ == 0)
 			{
@@ -187,7 +188,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	std::string stackFilename("Stack_" + sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 		"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
 		"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um/1000, 4));
-	//stack.saveTiff(stackFilename, nDiffZ, overrideFlag);
+	stack.saveTiff(stackFilename, nDiffZ, overrideFlag);
 }
 
 //For live optimization of the objective's correction collar

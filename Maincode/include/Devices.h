@@ -220,6 +220,7 @@ public:
 	void qTRO(const Axis axis, const int triggerChan) const;
 	void TRO(const Axis axis, const int triggerChan, const BOOL triggerState) const;
 	void qVEL(const Axis axis) const;
+	void VEL(const Axis axis, const double vel_mmPerS) const;
 
 	void scanningStrategy(const int nTileAbsolute) const;
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;

@@ -1169,6 +1169,13 @@ void Stage::qVEL(const Axis axis) const
 	std::cout << vel_mmPerS << std::endl;
 }
 
+void Stage::VEL(const Axis axis, const double vel_mmPerS) const
+{
+	if(!PI_VEL(mID[axis], mNstagesPerController, &vel_mmPerS))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage" + std::to_string(axis));
+}
+
+
 //Convert from absolute tile number ---> (slice number, plane number, tile number)
 // this function does NOT consider the overlaps
 void Stage::scanningStrategy(const int nTileAbsolute) const//Absolute tile number = 0, 1, 2, ..., total number of tiles

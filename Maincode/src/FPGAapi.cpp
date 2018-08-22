@@ -204,7 +204,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, 0));												//Memory-flush trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncDOtoAOtick, (U16)syncDOtoAO_tick));								//DO and AO relative sync
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, (U16)syncAODOtoLinegate_tick));			//DO and AO sync to linegate
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 0));											//Trigger the FPGA outputs (non-RT trigger)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, 0));											//Trigger the FPGA outputs (non-RT trigger)
 
 		if (linegateTimeout_us <= 2 * halfPeriodLineclock_us)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
@@ -220,7 +220,7 @@ namespace FPGAns
 
 		//STAGES
 		const bool scanDirection = 0;
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(getFpgaHandle(), NiFpga_FPGAvi_ControlU32_StageTriggerPulse_tick, (U32)stageTriggerPulse_ms * tickPerUs));	//Trigger pulse width
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(getFpgaHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, (U32)stageTriggerPulse_ms * tickPerUs));	//Trigger pulse width
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ScanDirection, scanDirection));									//Z-stage scan direction (1 for up, 0 for down)
 
 		/*
@@ -353,8 +353,8 @@ namespace FPGAns
 	//Trigger the FPGA outputs in a non-realtime way (see the LV implementation)
 	void RTsequence::triggerNRT_() const
 	{	
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 1));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerOuputPreset, 0));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, 1));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, 0));
 	}
 
 	//Push all the elements in 'tailQ' into 'headQ'

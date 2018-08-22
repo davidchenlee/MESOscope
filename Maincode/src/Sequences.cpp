@@ -18,12 +18,12 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const int nFrames = 1;	//Number of frames with continuous acquisition
 
 	//STAGE
-	const double3 stagePosition0_mm = { 35.020, 19.808, 18.542 };	//Stage initial position
+	const double3 stagePosition0_mm = { 35.020, 19.808, 18.547 };	//Stage initial position
 	std::vector<double3> stagePosition_mm;
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
-	double zDelta_um = 50 * um;				//Acquire a stack within this interval
+	double zDelta_um = 5 * um;				//Acquire a stack within this interval
 
 	//LASER
 	const int wavelength_nm = 750;
@@ -379,7 +379,7 @@ void seq_testFilterwheel()
 		FW.setColor(940);
 }
 
-void seq_testSetStagePosition()
+void seq_testStagePosition()
 {
 	double duration;
 	const double3 stagePosition0_mm = { 35.020, 19.808, 18.542 };	//Stage initial position
@@ -391,11 +391,12 @@ void seq_testSetStagePosition()
 	auto t_start = std::chrono::high_resolution_clock::now();
 
 	stage.moveStage3(stagePosition0_mm);
-	stage.waitForMovementToStop(zz);
 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
+
+	stage.waitForMovementToStop(zz);
 
 	std::cout << "Stages final position:" << std::endl;
 	stage.printPosition3();
@@ -541,15 +542,18 @@ void seq_testEthernetSpeed()
 	//The goal is to stream a stack composed of 200 z-planes (100 um in 0.5 um-steps), where each frame has 400x400 pixels. Therefore, the stack has 400x400x200 = 32 Mega pixels
 	//The stack size is 8 bits x 32M = 32 MB
 	const int width = 400;
-	const int height = 400 * 200;
+	const int height = 400;
+	const int nFrames = 200;
 
-	TiffU8 image(width, height);
+	TiffU8 image(width, height * nFrames);
 
 	//Declare and start a stopwatch
 	double duration;
 	auto t_start = std::chrono::high_resolution_clock::now();
 
-	image.saveToFile(filename, 1, 1);
+	//overriding the file saving has some overhead
+	//Splitting the stack into a page structure (by assigning nFrames = 200 in saveToFile) gives a large overhead
+	image.saveToFile(filename, 1, true); 
 	   	 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();

@@ -12,7 +12,7 @@ void seq_checkDigitalTiming(const FPGAns::FPGA &fpga);
 void seq_calibDigitalLatency(const FPGAns::FPGA &fpga);
 void seq_calibAnalogLatency(const FPGAns::FPGA &fpga);
 void seq_testFilterwheel();
-void seq_testSetStagePosition();
+void seq_testStagePosition();
 void seq_testmPMT();
 void seq_testPockels(const FPGAns::FPGA &fpga);
 void seq_testLaserComm(const FPGAns::FPGA &fpga);

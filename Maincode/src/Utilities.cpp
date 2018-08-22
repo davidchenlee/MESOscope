@@ -206,9 +206,6 @@ void TiffU8::saveToFile(std::string filename, const int nFrames, const bool over
 
 	const int heightSingle_pix = mHeight / nFrames; //Divide the total height
 
-
-
-
 	for (int frame = 0; frame < nFrames; frame++)
 	{
 		//TAGS
@@ -223,18 +220,18 @@ void TiffU8::saveToFile(std::string filename, const int nFrames, const bool over
 		//TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);									//Specify that it's a frame within the multipage file
 		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, frame, nFrames);									//Specify the frame number
 
-		//IMAGEJ TAG for hyperstacks
+		//IMAGEJ TAG FOR USING HYPERSTACKS
 		std::string TIFFTAG_ImageJ = "ImageJ=1.52e\nimages=" + std::to_string(nFrames) + "\nchannels=1\nslices=" + std::to_string(nFrames) + "\nhyperstack=true\nmode=grayscale\nunit=\\u00B5m\nloop=false ";
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, TIFFTAG_ImageJ);								
 
 		//Write the sub-image to the file one strip at a time
 		for (int rowIndex = 0; rowIndex < heightSingle_pix; rowIndex++)
-		{
+		{	
 			std::memcpy(buffer, &mArray[(frame * heightSingle_pix + heightSingle_pix - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
 			if (TIFFWriteScanline(tiffHandle, buffer, rowIndex, 0) < 0)
 				break;
 		}
-		TIFFWriteDirectory(tiffHandle); //Create a page structure
+		TIFFWriteDirectory(tiffHandle); //Create a page structure. This gives a large overhead
 	}
 
 	_TIFFfree(buffer);		//Destroy the buffer

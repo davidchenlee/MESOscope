@@ -186,10 +186,10 @@ unsigned char* const TiffU8::accessTiffArray() const
 
 //Split mArray into sub-images (or "frames")
 //Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image which has to be resized into sub-images
-void TiffU8::saveTiff(std::string filename, const int nFrames, const bool overrideFile) const
+void TiffU8::saveToFile(std::string filename, const int nFrames, const bool overrideFile) const
 {
 	if (!overrideFile)
-		filename = file_exists(filename);
+		filename = file_exists(filename);	//Check if the file exits. This gives some overhead
 
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
 
@@ -206,7 +206,8 @@ void TiffU8::saveTiff(std::string filename, const int nFrames, const bool overri
 
 	const int heightSingle_pix = mHeight / nFrames; //Divide the total height
 
-	std::string TIFFTAG_ImageJ = "ImageJ=1.52e\nimages=" + std::to_string(nFrames) + "\nchannels=1\nslices=" + std::to_string(nFrames) + "\nhyperstack=true\nmode=grayscale\nunit=\\u00B5m\nloop=false ";
+
+
 
 	for (int frame = 0; frame < nFrames; frame++)
 	{
@@ -219,9 +220,12 @@ void TiffU8::saveTiff(std::string filename, const int nFrames, const bool overri
 		TIFFSetField(tiffHandle, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);								//Set the origin of the image. Many readers ignore this tag (ImageJ, Windows preview, etc...)
 		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);							//Single channel with min as black				
 		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, mWidth));		//Set the strip size of the file to be size of one row of pixels
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, TIFFTAG_ImageJ);								//ImageJ tag hyperstack
 		//TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);									//Specify that it's a frame within the multipage file
 		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, frame, nFrames);									//Specify the frame number
+
+		//IMAGEJ TAG for hyperstacks
+		std::string TIFFTAG_ImageJ = "ImageJ=1.52e\nimages=" + std::to_string(nFrames) + "\nchannels=1\nslices=" + std::to_string(nFrames) + "\nhyperstack=true\nmode=grayscale\nunit=\\u00B5m\nloop=false ";
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, TIFFTAG_ImageJ);								
 
 		//Write the sub-image to the file one strip at a time
 		for (int rowIndex = 0; rowIndex < heightSingle_pix; rowIndex++)

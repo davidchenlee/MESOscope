@@ -18,7 +18,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const int nFrames = 1;	//Number of frames with continuous acquisition
 
 	//STAGE
-	const double3 stagePosition0_mm = { 35.020, 19.808 + 0.150 - 0.015, 18.542 };	//Stage initial position
+	const double3 stagePosition0_mm = { 35.020, 19.808, 18.542 };	//Stage initial position
 	std::vector<double3> stagePosition_mm;
 
 	//STACK
@@ -188,7 +188,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	std::string stackFilename("Stack_" + sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 		"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
 		"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um/1000, 4));
-	stack.saveTiff(stackFilename, nDiffZ, overrideFlag);
+	stack.saveToFile(stackFilename, nDiffZ, overrideFlag);
 }
 
 //For live optimization of the objective's correction collar
@@ -379,10 +379,10 @@ void seq_testFilterwheel()
 		FW.setColor(940);
 }
 
-void seq_testStageSetPosition()
+void seq_testSetStagePosition()
 {
 	double duration;
-	const double newPosition_mm = 5;
+	const double3 stagePosition0_mm = { 35.020, 19.808, 18.542 };	//Stage initial position
 	Stage stage;
 
 	std::cout << "Stages initial position:" << std::endl;
@@ -390,8 +390,8 @@ void seq_testStageSetPosition()
 
 	auto t_start = std::chrono::high_resolution_clock::now();
 
-	stage.moveStage(zz, newPosition_mm);
-	//stage.waitForMovementToStop(zz);
+	stage.moveStage3(stagePosition0_mm);
+	stage.waitForMovementToStop(zz);
 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
@@ -413,12 +413,6 @@ void seq_testStageSetPosition()
 		//input = 0;
 	}
 	*/
-}
-
-void seq_testStageTriggerConfig()
-{
-	Stage stages;
-	stages.printPosition3();
 }
 
 void seq_testmPMT()
@@ -499,7 +493,8 @@ void seq_testGalvoSync(const FPGAns::FPGA &fpga)
 	image.acquire(); //Execute the RT sequence and acquire the image
 }
 
-void seq_testTiff()
+
+void seq_testTiffU8()
 {
 	std::string inputFilename("Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610");
 	std::string outputFilename("test");
@@ -509,17 +504,18 @@ void seq_testTiff()
 	
 	//image.flipVertical(nFrames);
 	//image.averageEvenOdd(nFrames);
-	//image.saveTiff(outputFilename, 2);
+	//image.saveToFile(outputFilename, 2);
 
 	//image.flipVertical(nFrames);
 	//image.averageEvenOdd(nFrames);
-	//image.saveTiff(outputFilename, 2);//The second argument specifies the number of Frames
+	//image.saveToFile(outputFilename, 2);//The second argument specifies the number of Frames
 
 	TiffU8 aa(300, 4*300);
-	aa.saveTiff("test", 4);
+	aa.saveToFile("test", 4);
 }
 
-void seq_testStage()
+//Test configuring TRO and CTO for the stages
+void seq_testStageConfig()
 {
 	Stage stage;
 
@@ -533,5 +529,30 @@ void seq_testStage()
 	stage.qVEL(xx);
 	stage.qVEL(yy);
 	stage.qVEL(zz);
+
+}
+
+//To measure the saving speed of a Tiff file, either locally or remotely
+//Select a local or remote folder accordingly
+void seq_testEthernetSpeed()
+{
+	std::string filename = "testEthernetSpeed";
+
+	//The goal is to stream a stack composed of 200 z-planes (100 um in 0.5 um-steps), where each frame has 400x400 pixels. Therefore, the stack has 400x400x200 = 32 Mega pixels
+	//The stack size is 8 bits x 32M = 32 MB
+	const int width = 400;
+	const int height = 400 * 200;
+
+	TiffU8 image(width, height);
+
+	//Declare and start a stopwatch
+	double duration;
+	auto t_start = std::chrono::high_resolution_clock::now();
+
+	image.saveToFile(filename, 1, 1);
+	   	 
+	//Stop the stopwatch
+	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
 
 }

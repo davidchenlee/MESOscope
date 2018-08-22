@@ -228,7 +228,7 @@ void Image::average()
 //Save each frame in mTiff in a different Tiff page
 void Image::saveTiff(std::string filename, const bool overrideFile) const
 {
-	mTiff.saveTiff(filename, mRTsequence.mNframes, overrideFile);
+	mTiff.saveToFile(filename, mRTsequence.mNframes, overrideFile);
 }
 
 //Access the Tiff data in the Image object

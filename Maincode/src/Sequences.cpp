@@ -15,7 +15,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	//ACQUISITION SETTINGS
 	const int widthSingleFrame_pix = 300;
 	const int heightSingleFrame_pix = 400;
-	const int nFrames = 1;	//Number of frames with continuous acquisition
+	const int nFramesCont = 1;	//Number of frames with continuous acquisition
 
 	//STAGE
 	const double3 stagePosition0_mm = { 35.020, 19.808, 18.547 };	//Stage initial position
@@ -120,7 +120,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << std::endl;
 
 			//CREATE THE REAL-TIME SEQUENCE
-			FPGAns::RTsequence RTsequence(fpga, RS, nFrames, widthSingleFrame_pix, heightSingleFrame_pix);
+			FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthSingleFrame_pix, heightSingleFrame_pix);
 
 			//GALVO FOR RT
 			Galvo galvo(RTsequence, GALVO1);
@@ -246,11 +246,11 @@ void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 {
 	const int width_pix = 300;
 	const int height_pix = 400;
-	const int nFrames = 2;
-	const int nFrames_cont = 1;
+	const int nFrames = 1;
+	const int nFramesCont = 1;
 
 	//GALVO
-	const double FFOVgalvo_um = 300 * um;				//Full FOV in the slow axis
+	const double FFOVgalvo_um = 200 * um;				//Full FOV in the slow axis
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
 
@@ -259,7 +259,7 @@ void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 		std::cout << "Iteration: " << jj + 1 << std::endl;
 
 		//CREATE A REAL-TIME SEQUENCE
-		FPGAns::RTsequence RTsequence(fpga, FG, nFrames_cont, width_pix, height_pix);
+		FPGAns::RTsequence RTsequence(fpga, FG, nFramesCont, width_pix, height_pix);
 
 		//GALVO FOR RT
 		Galvo galvo(RTsequence, GALVO1);
@@ -428,7 +428,7 @@ void seq_testmPMT()
 
 //Keep the pockels cell on.
 //1. Manually open the laser and Uniblitz shutters
-//2. Set pockels1_enableAutoOff = 0
+//2. Set pockels1EnableAutoOff = 0
 //3. Set lineclockInput = FG
 void seq_testPockels(const FPGAns::FPGA &fpga)
 {
@@ -500,15 +500,15 @@ void seq_testTiffU8()
 	std::string inputFilename("Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610");
 	std::string outputFilename("test");
 
-	const int nFrames = 10;
+	const int nFramesCont = 10;
 	//TiffU8 image(inputFilename);
 	
-	//image.flipVertical(nFrames);
-	//image.averageEvenOdd(nFrames);
+	//image.flipVertical(nFramesCont);
+	//image.averageEvenOdd(nFramesCont);
 	//image.saveToFile(outputFilename, 2);
 
-	//image.flipVertical(nFrames);
-	//image.averageEvenOdd(nFrames);
+	//image.flipVertical(nFramesCont);
+	//image.averageEvenOdd(nFramesCont);
 	//image.saveToFile(outputFilename, 2);//The second argument specifies the number of Frames
 
 	TiffU8 aa(300, 4*300);
@@ -543,20 +543,63 @@ void seq_testEthernetSpeed()
 	//The stack size is 8 bits x 32M = 32 MB
 	const int width = 400;
 	const int height = 400;
-	const int nFrames = 200;
+	const int nFramesCont = 200;
 
-	TiffU8 image(width, height * nFrames);
+	TiffU8 image(width, height * nFramesCont);
 
 	//Declare and start a stopwatch
 	double duration;
 	auto t_start = std::chrono::high_resolution_clock::now();
 
 	//overriding the file saving has some overhead
-	//Splitting the stack into a page structure (by assigning nFrames = 200 in saveToFile) gives a large overhead
+	//Splitting the stack into a page structure (by assigning nFramesCont = 200 in saveToFile) gives a large overhead
 	image.saveToFile(filename, 1, true); 
 	   	 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
+
+}
+
+//Make the z stage trigger the image acquisition
+void seq_testZstageAsTrigger(const FPGAns::FPGA &fpga)
+{
+	//ACQUISITION SETTINGS
+	const int width = 300;
+	const int height = 400;
+	const int nFramesCont = 2;	//Number of frames with continuous acquisition
+
+	//STAGE
+	const double3 stagePosition0_mm = { 35.020, 19.808, 18.547 };	//Stage initial position
+	std::vector<double3> stagePosition_mm;
+	stagePosition_mm.push_back(stagePosition0_mm);
+
+	//GALVO
+	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
+	const double galvoTimeStep = 8 * us;
+	const double posMax_um = FFOVgalvo_um / 2;
+
+	Stage stage;
+	stage.moveStage3(stagePosition_mm.front());
+	stage.waitForMovementToStop3();
+	stage.printPosition3();		//Print the stage position
+
+	//CREATE THE REAL-TIME SEQUENCE
+	FPGAns::RTsequence RTsequence(fpga, FG, nFramesCont, width, height);
+
+	//GALVO FOR RT
+	Galvo galvo(RTsequence, GALVO1);
+	const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
+	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
+	if (RTsequence.mNframes == 1)
+		galvo.positionLinearRamp(galvoTimeStep, 1 * ms, -posMax_um, posMax_um);		//set the output back to the initial value
+
+	//EXECUTE THE RT SEQUENCE
+	Image image(RTsequence);
+	image.acquire(); //Execute the RT sequence and acquire the image
+
+	stage.moveStage(zz, stagePosition_mm.front().at(zz) + 0.1);
+	stage.waitForMovementToStop3();
+	stage.printPosition3();		//Print the stage position
 
 }

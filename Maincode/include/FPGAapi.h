@@ -29,7 +29,7 @@ namespace FPGAns
 	public:
 		FPGA();
 		~FPGA();
-		void close(const bool reset) const;
+		void close(const bool reset = false) const;
 		NiFpga_Session getFpgaHandle() const;								//Access the handle indirectly to avoid modifying it by mistake
 
 	};
@@ -60,7 +60,7 @@ namespace FPGAns
 		void triggerNRT_() const;
 	public:
 		const FPGAns::FPGA &mFpga;
-		LineclockInputSelector mLineclockInput;														//Resonant scanner (RS) or Function generator (FG)
+		LineclockSelector mLineclockInput;														//Resonant scanner (RS) or Function generator (FG)
 		const double mDwell_us = 0.1625 * us;														//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
 																									//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 		const double mPulsesPerPixel = mDwell_us / VISIONpulsePeriod;								//Max number of laser pulses per pixel
@@ -72,7 +72,7 @@ namespace FPGAns
 		int mHeightAllFrames_pix;																	//Total number of lines in all the frames without including the skipped lines
 		int mNpixAllFrames;																			//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
-		RTsequence(const FPGAns::FPGA &fpga, const LineclockInputSelector lineclockInput = FG, const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix = 400);
+		RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput = FG, const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix = 400);
 		RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
 		RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
 		~RTsequence();

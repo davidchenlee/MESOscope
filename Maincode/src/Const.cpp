@@ -8,10 +8,10 @@ namespace Constants
 
 	extern const std::string bitfilePath("D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\");	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
 
-	extern const PhotonCounterInputSelector photoncounterInput = ext;		//Real PMT (ext) or simulated PMT (sim)
+	extern const PhotonCounterSelector photoncounterInput = ext;			//Real PMT (ext) or simulated PMT (sim)
 	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
-	extern const bool FIFOOUTfpgaEnable = 1;								//For debugging purposes. Enable pushing data to FIFOOUTfpga
-	extern const bool pockels1_enableAutoOff = 1;							//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
+	extern const bool FIFOOUTfpgaEnable = 0;								//For debugging purposes. Enable pushing data to FIFOOUTfpga
+	extern const bool pockels1EnableAutoOff = 1;							//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
 
 	//GENERAL CONSTANTS
 	extern const double PI = 3.1415926535897;

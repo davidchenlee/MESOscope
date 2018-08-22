@@ -2017,6 +2017,7 @@
 			</Item>
 			<Item Name="src" Type="Folder" URL="../src">
 				<Property Name="NI.DISK" Type="Bool">true</Property>
+				<Property Name="NI.SortType" Type="Int">0</Property>
 			</Item>
 			<Item Name="probes" Type="Folder" URL="../probes">
 				<Property Name="NI.DISK" Type="Bool">true</Property>

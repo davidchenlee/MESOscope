@@ -567,7 +567,7 @@ void seq_testZstageAsTrigger(const FPGAns::FPGA &fpga)
 	//ACQUISITION SETTINGS
 	const int width = 300;
 	const int height = 400;
-	const int nFramesCont = 2;	//Number of frames with continuous acquisition
+	const int nFramesCont = 10;	//Number of frames with continuous acquisition
 
 	//STAGE
 	const double3 stagePosition0_mm = { 35.020, 19.808, 18.547 };	//Stage initial position

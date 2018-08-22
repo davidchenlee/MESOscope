@@ -190,7 +190,7 @@ namespace FPGAns
 		//INPUT SELECTORS
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(getFpgaHandle(), NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));									//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getFpgaHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));								//For debugging the photoncounters
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_MasterTriggerSelector, 1));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageAsTriggerDisable, 1));
 
 
 		//FIFOIN

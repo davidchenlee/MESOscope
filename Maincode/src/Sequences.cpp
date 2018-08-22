@@ -22,8 +22,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	std::vector<double3> stagePosition_mm;
 
 	//STACK
-	const double stepSize_um = 0.5 * um;
-	double zDelta_um = 5 * um;				//Acquire a stack within this interval
+	const double stepSize_um = 1.0 * um;
+	double zDelta_um = 10 * um;				//Acquire a stack within this interval
 
 	//LASER
 	const int wavelength_nm = 750;

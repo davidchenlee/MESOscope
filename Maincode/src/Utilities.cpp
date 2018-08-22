@@ -39,8 +39,8 @@ U16 convertDoubleToFx2p14(double n)
 	const int FIXED_BIT = 14; //Number of decimal digits. It MUST match the LV implementation: currently fx2.14 (U16 is split into 2 integer digits + 14 decimal digits)
 	U16 int_part = 0, frac_part = 0;
 	double t;
-	int_part = (U16)floor(n) << FIXED_BIT;
-	n -= (U16)floor(n);
+	int_part = static_cast<U16>(floor(n)) << FIXED_BIT;
+	n -= static_cast<U16>(floor(n));
 
 	t = 0.5;
 	for (int i = 0; i < FIXED_BIT; i++) {

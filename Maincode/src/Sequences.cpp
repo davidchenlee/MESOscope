@@ -17,7 +17,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const int heightSingleFrame_pix = 400;
 	const int nFramesCont = 1;	//Number of frames with continuous acquisition
 
-	//STAGE
+	//STAGES
+	Stage stage;
 	const double3 stagePosition0_mm = { 35.020, 19.808, 18.549 };	//Stage initial position
 	std::vector<double3> stagePosition_mm;
 
@@ -88,9 +89,6 @@ void seq_main(const FPGAns::FPGA &fpga)
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 	}
-
-	//STAGES
-	Stage stage;
 
 	//Create a stack
 	TiffU8 stack(widthSingleFrame_pix, heightSingleFrame_pix * nDiffZ);
@@ -239,8 +237,8 @@ void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 {
 	const int width_pix = 300;
 	const int height_pix = 400;
-	const int nFrames = 1;
-	const int nFramesCont = 1;
+	const int nFramesDiscont = 1;
+	const int nFramesCont = 2;
 
 	//GALVO
 	const double FFOVgalvo_um = 200 * um;				//Full FOV in the slow axis
@@ -255,9 +253,9 @@ void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 	const double duration = halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);			//Linear ramp for the galvo
 
-	for (int jj = 0; jj < nFrames; jj++)
+	for (int iter = 0; iter < nFramesDiscont; iter++)
 	{
-		std::cout << "Iteration: " << jj + 1 << std::endl;
+		std::cout << "Iteration: " << iter + 1 << std::endl;
 
 		//Execute the realtime sequence and acquire the image
 		Image image(RTsequence);
@@ -551,7 +549,7 @@ void seq_testEthernetSpeed()
 }
 
 //Make the z stage trigger the image acquisition
-void seq_testZstageAsTrigger(const FPGAns::FPGA &fpga)
+void seq_testStageTrigAcqRSoff(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS
 	const int width = 300;
@@ -562,7 +560,6 @@ void seq_testZstageAsTrigger(const FPGAns::FPGA &fpga)
 	const double3 stagePosition0_mm = { 35.020, 19.808, 18.547 };	//Stage initial position
 	std::vector<double3> stagePosition_mm;
 	stagePosition_mm.push_back(stagePosition0_mm);
-
 	Stage stage;
 	stage.moveStage3(stagePosition_mm.front());
 	stage.waitForMovementToStop3();
@@ -581,10 +578,79 @@ void seq_testZstageAsTrigger(const FPGAns::FPGA &fpga)
 
 	//EXECUTE THE RT SEQUENCE
 	Image image(RTsequence);
-	image.acquire(); //Execute the RT sequence and acquire the image
+	image.acquireP1(); //Execute the RT sequence and acquire the image
 
-	stage.moveStage(zz, stagePosition_mm.front().at(zz) + 0.1);
+	stage.moveStage(zz, stagePosition_mm.front().at(zz) + 0.020);
+	image.acquireTrigger();
+	image.acquireP2();
+
+
 	stage.waitForMovementToStop3();
 	stage.printPosition3();		//Print the stage position
 
+}
+
+void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
+{
+	//ACQUISITION SETTINGS
+	const int width = 300;
+	const int height = 400;
+	const int nFramesCont = 25;										//Number of frames with continuous acquisition
+
+	//STAGES
+	const double3 stagePosition0_mm = { 35.020, 19.808, 18.552 - 0.007};	//Stage initial position
+	Stage stage;
+	stage.moveStage3(stagePosition0_mm);
+	stage.waitForMovementToStop3();
+
+	//LASER
+	const int wavelength_nm = 750;
+	double laserPower_mW = 70 * mW;
+	Laser vision;
+	vision.setWavelength(wavelength_nm);
+
+	//RS
+	const double FFOVrs_um = 150 * um;
+	ResonantScanner RScanner(fpga);
+	RScanner.setFFOV(FFOVrs_um);
+
+	//FILTERWHEEL
+	Filterwheel fw(FW1);
+	fw.setColor(wavelength_nm);
+		
+	//CREATE THE REAL-TIME SEQUENCE
+	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, width, height, false);
+
+	//GALVO FOR RT
+	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
+	const double galvoTimeStep = 8 * us;
+	const double posMax_um = FFOVgalvo_um / 2;
+	Galvo galvo(RTsequence, GALVO1);
+	const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
+	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
+
+	//POCKELS CELL FOR RT
+	PockelsCell pockels(RTsequence, POCKELS1, wavelength_nm);
+	pockels.pushPowerSinglet(8 * us, laserPower_mW);
+
+	//OPEN THE SHUTTER
+	Shutter shutterVision(fpga, Shutter1);
+	shutterVision.open();
+	Sleep(50);
+
+	//EXECUTE THE RT SEQUENCE
+	Image image(RTsequence);
+	image.acquireP1(); //Execute the RT sequence and acquire the image
+	image.acquireTrigger();
+	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.014);
+	image.acquireP2();
+
+
+	image.flipVertical();
+	image.saveTiff("testTrigger");
+	
+	shutterVision.close();
+
+	stage.waitForMovementToStop3();
+	stage.printPosition3();		//Print the stage position
 }

@@ -207,6 +207,38 @@ void Image::acquire()
 	}
 }
 
+void Image::acquireP1()
+{
+	mRTsequence.presetFPGAoutput();	//Preset the ouput of the FPGA
+	mRTsequence.uploadRT();			//Load the RT sequence in mVectorOfQueues to the FPGA
+	startFIFOOUTpc_();				//Establish the connection between FIFOOUTfpga and FIFOOUTpc and cleans up any residual data from the previous run
+}
+
+
+void Image::acquireTrigger()
+{
+	mRTsequence.triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
+}
+
+void Image::acquireP2()
+{
+	if (FIFOOUTfpgaEnable)
+	{
+		try
+		{
+			readFIFOOUTpc_();		//Read the data received in FIFOOUTpc
+			correctInterleaved_();
+			demultiplex_();				//Move the chuncks of data to the buffer array
+		}
+		catch (const ImageException &e) //Notify the exception and continue with the next iteration
+		{
+			std::cerr << "An ImageException has occurred in: " << e.what() << std::endl;
+		}
+	}
+}
+
+
+
 //The galvo (vectical axis of the image) performs bi-directional scanning
 //Divide the long vertical image in nFrames and vertically mirror the odd frames
 void Image::flipVertical()

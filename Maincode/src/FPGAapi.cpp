@@ -108,8 +108,6 @@ namespace FPGAns
 
 	void linearRamp(QU32 &queue, double timeStep, const double rampLength, const double Vi_V, const double Vf_V)
 	{
-		const bool debug = 0;
-
 		if (timeStep < AO_tMIN_us)
 		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us" << std::endl;
@@ -121,23 +119,18 @@ namespace FPGAns
 		if (nPoints <= 1)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Not enought points to generate a linear ramp");
 
-		if (debug)
-		{
-			std::cout << "nPoints: " << nPoints << std::endl;
-			std::cout << "time \tticks \tv" << std::endl;
-		}
+		//For debugging
+		//std::cout << "nPoints: " << nPoints << std::endl;
+		//std::cout << "time \tticks \tv" << std::endl;
 
 		for (int ii = 0; ii < nPoints; ii++)
 		{
 			const double V = Vi_V + (Vf_V - Vi_V)*ii / (nPoints - 1);
 			queue.push_back(FPGAns::packAnalogSinglet(timeStep, V));
 
-			if (debug)
-				std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * FPGAns::convertUsTotick(timeStep) << "\t" << V << "\t" << std::endl;
+			//std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * FPGAns::convertUsTotick(timeStep) << "\t" << V << "\t" << std::endl;	//For debugging
 		}
-
-		if (debug)
-			getchar();
+		//getchar();	//For debugging
 	}
 
 #pragma region "FPGA"
@@ -190,8 +183,6 @@ namespace FPGAns
 		//INPUT SELECTORS
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(getFpgaHandle(), NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));									//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getFpgaHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));								//For debugging the photoncounters
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageAsTriggerDisable, 1));
-
 
 		//FIFOIN
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(nChan)));											//Number of input channels
@@ -213,7 +204,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_LinegateTimeout_tick, static_cast<U16>(linegateTimeout_us * tickPerUs)));		//Sequence trigger timeout
 
 		//POCKELS CELLS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_Pockels1_EnableAutoOff, pockels1EnableAutoOff));								//Enable gating the pockels by framegate. For debugging purposes
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_Pockels1EnableAutoOff, pockels1EnableAutoOff));								//Enable gating the pockels by framegate. For debugging purposes
 
 		//VIBRATOME
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, 0));
@@ -281,8 +272,8 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix) :
-		mFpga(fpga), mVectorOfQueues(nChan), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix)
+	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, const bool stageAsTriggerEnable) :
+		mFpga(fpga), mVectorOfQueues(nChan), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mStageAsTriggerEnable(stageAsTriggerEnable)
 	{
 		//Set the imaging parameters
 		mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;
@@ -308,8 +299,9 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_NlinesPerFrame, static_cast<U16>(mHeightPerFrame_pix)));							//Number of lines in a frame, without including the skipped lines
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, static_cast<U16>(mHeightPerFrame_pix + mNlinesSkip)));	//Number of lines in a frame including the skipped lines
 	
-		//FG/RS selector
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, mLineclockInput));			//Select the Lineclock: resonant scanner or function generator
+		//Selectors
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, mLineclockInput));										//Lineclock: resonant scanner (RS) or function generator (FG)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageTrigAcqEnable, mStageAsTriggerEnable));								//Trigger the acquisition with the z stage: enable (false), disable (true)
 	}
 
 	//Send every single queue in 'vectorOfQueue' to the FPGA buffer
@@ -411,18 +403,16 @@ namespace FPGAns
 		VQU32 vectorOfQueues(nChan);
 		for (int chan = 1; chan < nChan; chan++)
 		{
-			const int sizeChannel = static_cast<int>(mVectorOfQueues.at(chan).size());
-			if (sizeChannel != 0)
+			if (mVectorOfQueues.at(chan).size() != 0)
 			{
-				if (true) //Do a jump
-				{
-					vectorOfQueues.at(chan).push_back(mVectorOfQueues.at(chan).front());	//Push the first element in VectorOfQueues[i]
-				}
-				else //Do a linear ramp
+				//If mNframes is odd, the sequence starts and ends with a different values
+				//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
+				//The correct way to do this is to sample the current output, and ramp it to the start of the sequence
+				if (mNframes % 2)
 				{
 					const double Vi_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).back());
 					const double Vf_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).front());
-					linearRamp(vectorOfQueues.at(chan), 80 * us, 20 * ms, Vi_V, Vf_V);
+					linearRamp(vectorOfQueues.at(chan), 10 * us, 5 * ms, Vi_V, Vf_V);
 				}
 			}
 		}

@@ -8,10 +8,10 @@ namespace Constants
 
 	extern const std::string bitfilePath("D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\");	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
 
-	extern const PhotonCounterSelector photoncounterInput = ext;			//Real PMT (ext) or simulated PMT (sim)
-	extern const PixelclockSelector pixelclockType = uniform;				//uniform or nonuniform dwell times
-	extern const bool FIFOOUTfpgaEnable = 1;								//For debugging purposes. Enable pushing data to FIFOOUTfpga
-	extern const bool pockels1EnableAutoOff = 1;							//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
+	extern const PhotonCounterSelector photoncounterInput = EXT;		//Real PMT (EXT) or simulated PMT (SIM)
+	extern const PixelclockSelector pixelclockType = UNIFORM;			//UNIFORM or NONUNIFORM dwell times
+	extern const Selector FIFOOUTfpgaEnable = ENABLE;					//For debugging purposes. Enable pushing data to FIFOOUTfpga
+	extern const Selector pockels1AutoOffEnable = ENABLE;				//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
 
 	//GENERAL CONSTANTS
 	extern const double PI = 3.1415926535897;
@@ -48,7 +48,7 @@ namespace Constants
 	extern const double linegateTimeout_us = 1.5 * (2 * halfPeriodLineclock_us);	//In LV, timeout the start of the data acquisition. Otherwise, when Lineclock fails triggering (e.g.the RS is off),
 																					//pixelclock false-triggers after Lineclock is back up
 
-	extern const int FIFOINtimeout_tick = 100;				//in ticks. Timeout of the host-to-target and target-to-host FIFOINs
+	extern const int FIFOINtimeout_tick = 100;			//in ticks. Timeout of the host-to-target and target-to-host FIFOINs
 	extern const int FIFOINmax = 32773;					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 

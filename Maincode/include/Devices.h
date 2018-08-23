@@ -26,12 +26,12 @@ public:
 	~Image();
 	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
 	void acquire();
-	void acquireP1();
-	void acquireTrigger();
-	void acquireP2();
+	void initialize();
+	void triggerRT();
+	void download();
 	void flipVertical();
 	void average();
-	void saveTiff(std::string filename, const bool overrideFile = false) const;
+	void saveTiff(std::string filename, const Selector overrideFile = DISABLE) const;
 	unsigned char* const accessTiff() const;
 };
 

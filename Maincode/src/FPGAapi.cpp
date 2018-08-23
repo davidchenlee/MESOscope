@@ -152,7 +152,7 @@ namespace FPGAns
 	};
 
 	//The object has to be closed explicitly because of the exception catching
-	void FPGA::close(const bool reset) const
+	void FPGA::close(const Selector resetEnable) const
 	{
 		//Flush the RAM buffers on the FPGA as precaution. Make sure that the sequence has already finished
 		Sleep(100);	//Do not flush too soon, otherwise the output sequence will be cut off
@@ -163,7 +163,7 @@ namespace FPGAns
 		//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 		//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 		//0 resets, 1 does not reset
-		checkStatus(__FUNCTION__, NiFpga_Close(mFpgaHandle, !reset));
+		checkStatus(__FUNCTION__, NiFpga_Close(mFpgaHandle, !resetEnable));
 
 		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 		checkStatus(__FUNCTION__, NiFpga_Finalize());
@@ -204,7 +204,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_LinegateTimeout_tick, static_cast<U16>(linegateTimeout_us * tickPerUs)));		//Sequence trigger timeout
 
 		//POCKELS CELLS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_Pockels1EnableAutoOff, pockels1EnableAutoOff));								//Enable gating the pockels by framegate. For debugging purposes
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_Pockels1AutoOffEnable, pockels1AutoOffEnable));								//Enable gating the pockels by framegate. For debugging purposes
 
 		//VIBRATOME
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, 0));
@@ -234,7 +234,7 @@ namespace FPGAns
 	{
 		switch (pixelclockType)
 		{
-		case uniform: pushUniformDwellTimes(-32);
+		case UNIFORM: pushUniformDwellTimes(-32);
 			break;
 		//case nonuniform: pushCorrectedDwellTimes();
 			//break;
@@ -272,7 +272,7 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, const bool stageAsTriggerEnable) :
+	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, const Selector stageAsTriggerEnable) :
 		mFpga(fpga), mVectorOfQueues(nChan), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mStageAsTriggerEnable(stageAsTriggerEnable)
 	{
 		//Set the imaging parameters
@@ -299,9 +299,9 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_NlinesPerFrame, static_cast<U16>(mHeightPerFrame_pix)));							//Number of lines in a frame, without including the skipped lines
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, static_cast<U16>(mHeightPerFrame_pix + mNlinesSkip)));	//Number of lines in a frame including the skipped lines
 	
-		//Selectors
+		//SELECTORS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, mLineclockInput));										//Lineclock: resonant scanner (RS) or function generator (FG)
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageTrigAcqEnable, mStageAsTriggerEnable));								//Trigger the acquisition with the z stage: enable (false), disable (true)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageTrigAcqEnable, mStageAsTriggerEnable));									//Trigger the acquisition with the z stage: DISABLE OR ENABLE
 	}
 
 	//Send every single queue in 'vectorOfQueue' to the FPGA buffer

@@ -22,5 +22,4 @@ void seq_testGalvoSync(const FPGAns::FPGA &fpga);
 void seq_testTiffU8();
 void seq_testStageConfig();
 void seq_testEthernetSpeed();
-void seq_testStageTrigAcqRSoff(const FPGAns::FPGA &fpga);
 void seq_testStageTrigAcq(const FPGAns::FPGA &fpga);

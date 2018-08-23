@@ -19,11 +19,12 @@ namespace Constants
 	typedef std::array<double, 3> double3;		//array of 3 doubles. Arrays allow to allocate memory. Vectors don't
 	typedef std::array<int, 3> int3;			//array of 3 ints
 
-	enum PhotonCounterSelector { ext, sim };
+	enum PhotonCounterSelector { EXT, SIM };
 	enum LineclockSelector { RS = false, FG = true };
-	enum PixelclockSelector { uniform, nonuniform };
+	enum Selector { DISABLE = false, ENABLE = true};
+	enum PixelclockSelector { UNIFORM, NONUNIFORM };
 	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan };		//nChan = number of RT channels available, including the pixel clock channel
-	enum ShutterID { Shutter1 = 1, Shutter2 };
+	enum ShutterID { SHUTTER1 = 1, SHUTTER2 };
 	enum FilterwheelID { FW1 = 1, FW2 };
 	enum Filtercolor { BLUE = 1, GREEN, RED };
 	enum Axis { xx, yy, zz };
@@ -37,8 +38,8 @@ namespace Constants
 
 	extern const PhotonCounterSelector photoncounterInput;
 	extern const PixelclockSelector pixelclockType;
-	extern const bool FIFOOUTfpgaEnable;
-	extern const bool pockels1EnableAutoOff;
+	extern const Selector FIFOOUTfpgaEnable;
+	extern const Selector pockels1AutoOffEnable;
 
 	extern const double PI;
 	extern const int us;

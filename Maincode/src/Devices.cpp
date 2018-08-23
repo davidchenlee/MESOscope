@@ -196,7 +196,7 @@ void Image::acquire()
 	{
 		try
 		{
-			readFIFOOUTpc_();		//Read the data received in FIFOOUTpc
+			readFIFOOUTpc_();			//Read the data received in FIFOOUTpc
 			correctInterleaved_();
 			demultiplex_();				//Move the chuncks of data to the buffer array
 		}
@@ -207,7 +207,7 @@ void Image::acquire()
 	}
 }
 
-void Image::acquireP1()
+void Image::initialize()
 {
 	mRTsequence.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTsequence.uploadRT();			//Load the RT sequence in mVectorOfQueues to the FPGA
@@ -215,18 +215,18 @@ void Image::acquireP1()
 }
 
 
-void Image::acquireTrigger()
+void Image::triggerRT()
 {
 	mRTsequence.triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
 }
 
-void Image::acquireP2()
+void Image::download()
 {
 	if (FIFOOUTfpgaEnable)
 	{
 		try
 		{
-			readFIFOOUTpc_();		//Read the data received in FIFOOUTpc
+			readFIFOOUTpc_();			//Read the data received in FIFOOUTpc
 			correctInterleaved_();
 			demultiplex_();				//Move the chuncks of data to the buffer array
 		}
@@ -258,7 +258,7 @@ void Image::average()
 
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiff(std::string filename, const bool overrideFile) const
+void Image::saveTiff(std::string filename, const Selector overrideFile) const
 {
 	mTiff.saveToFile(filename, mRTsequence.mNframes, overrideFile);
 }
@@ -428,7 +428,7 @@ Shutter::Shutter(const FPGAns::FPGA &fpga, ShutterID ID) : mFpga(fpga)
 {
 	switch (ID)
 	{
-	case Shutter1:
+	case SHUTTER1:
 		mID = NiFpga_FPGAvi_ControlBool_Shutter1;
 		break;
 	default:

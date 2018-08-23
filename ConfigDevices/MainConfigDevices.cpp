@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			ResonantScanner RS(fpga);
-			//Shutter shutter1(fpga, Shutter1);
+			//Shutter shutter1(fpga, SHUTTER1);
 			Laser vision;
 
 			//Set the FOV
@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 			std::cout << "An unknown error has occurred" << std::endl;
 		}
 
-		fpga.close(0);		//Close the FPGA connection
+		fpga.close();		//Close the FPGA connection
 	}
 
 	catch (const FPGAns::FPGAexception &e)

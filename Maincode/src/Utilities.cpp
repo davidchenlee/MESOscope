@@ -186,7 +186,7 @@ unsigned char* const TiffU8::accessTiffArray() const
 
 //Split mArray into sub-images (or "frames")
 //Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image which has to be resized into sub-images
-void TiffU8::saveToFile(std::string filename, const int nFrames, const bool overrideFile) const
+void TiffU8::saveToFile(std::string filename, const int nFrames, const Selector overrideFile) const
 {
 	if (!overrideFile)
 		filename = file_exists(filename);	//Check if the file exits. This gives some overhead

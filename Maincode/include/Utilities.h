@@ -46,7 +46,7 @@ public:
 	TiffU8(const int width, const int height);
 	~TiffU8();
 	unsigned char* const accessTiffArray() const;
-	void saveToFile(std::string filename, const int nFrames = 1, const bool overrideFile = false) const;
+	void saveToFile(std::string filename, const int nFrames = 1, const Selector overrideFile = DISABLE) const;
 	void flipVertical(const int nFrames);
 	void averageEvenOdd(const int nFrames);
 	void average(const int nFrames);

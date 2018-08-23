@@ -19,7 +19,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//STAGES
 	Stage stage;
-	const double3 stagePosition0_mm = { 35.020, 19.808, 18.549 };	//Stage initial position
+	const double3 stagePosition0_mm = { 35.020, 19.808, 18.552 };	//Stage initial position
 	std::vector<double3> stagePosition_mm;
 
 	//STACK
@@ -47,31 +47,31 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	int nDiffZ;				//Number of frames at different Z with discontinuous acquisition
 	int nSameZ;				//Number of frames at same Z with discontinuous acquisition
-	bool overrideFlag;
+	Selector overrideFlag;
 	switch (runMode)
 	{
 	case singleRM:
 		nSameZ = 1;
 		nDiffZ = 1; //Do not change this
-		overrideFlag = false;
+		overrideFlag = DISABLE;
 		stagePosition_mm.push_back(stagePosition0_mm);
 		break;
 	case contRM:
 		nSameZ = 500;
 		nDiffZ = 1; //Do not change this
-		overrideFlag = true;
+		overrideFlag = ENABLE;
 		stagePosition_mm.push_back(stagePosition0_mm);
 		break;
 	case averageRM:
 		nSameZ = 10;
 		nDiffZ = 1; //Do not change this
-		overrideFlag = false;
+		overrideFlag = DISABLE;
 		stagePosition_mm.push_back(stagePosition0_mm);
 		break;
 	case stackRM:
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
-		overrideFlag = false;
+		overrideFlag = DISABLE;
 
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) + iterDiffZ * stepSize_um / 1000 });
@@ -80,7 +80,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	case stackCenterRM:
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
-		overrideFlag = false;
+		overrideFlag = DISABLE;
 
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
@@ -140,7 +140,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	}
 
 	//OPEN THE SHUTTER
-	Shutter shutterVision(fpga, Shutter1);
+	Shutter shutterVision(fpga, SHUTTER1);
 	shutterVision.open();
 	Sleep(50);
 
@@ -216,7 +216,7 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 	pockels.pushPowerSinglet(8 * us, laserPower_mW);
 
 	//SHUTTER
-	Shutter shutter1(fpga, Shutter1);
+	Shutter shutter1(fpga, SHUTTER1);
 	shutter1.open();
 	Sleep(50);
 
@@ -227,7 +227,7 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 		//Execute the realtime sequence and acquire the image
 		Image image(RTsequence);
 		image.acquire(); //Execute the RT sequence and acquire the image
-		image.saveTiff("Untitled", true);
+		image.saveTiff("Untitled", ENABLE);
 	}
 	shutter1.close();
 }
@@ -260,7 +260,7 @@ void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 		//Execute the realtime sequence and acquire the image
 		Image image(RTsequence);
 		image.acquire(); //Execute the RT sequence and acquire the image
-		image.saveTiff("Untitled", true);
+		image.saveTiff("Untitled", ENABLE);
 	}
 }
 
@@ -417,7 +417,7 @@ void seq_testmPMT()
 
 //Keep the pockels cell on.
 //1. Manually open the laser and Uniblitz shutters
-//2. Set pockels1EnableAutoOff = 0
+//2. Set pockels1AutoOffEnable = 0
 //3. Set lineclockInput = FG
 void seq_testPockels(const FPGAns::FPGA &fpga)
 {
@@ -425,7 +425,7 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 	FPGAns::RTsequence RTsequence(fpga);
 
 	//Open the Uniblitz shutter
-	//Shutter shutterVision(fpga, Shutter1);
+	//Shutter shutterVision(fpga, SHUTTER1);
 	//shutterVision.open();
 
 	//Turn on the pockels cell
@@ -540,7 +540,7 @@ void seq_testEthernetSpeed()
 
 	//overriding the file saving has some overhead
 	//Splitting the stack into a page structure (by assigning nFramesCont = 200 in saveToFile) gives a large overhead
-	image.saveToFile(filename, 1, true); 
+	image.saveToFile(filename, 1, ENABLE); 
 	   	 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
@@ -548,54 +548,13 @@ void seq_testEthernetSpeed()
 
 }
 
-//Make the z stage trigger the image acquisition
-void seq_testStageTrigAcqRSoff(const FPGAns::FPGA &fpga)
-{
-	//ACQUISITION SETTINGS
-	const int width = 300;
-	const int height = 400;
-	const int nFramesCont = 10;	//Number of frames with continuous acquisition
-
-	//STAGE
-	const double3 stagePosition0_mm = { 35.020, 19.808, 18.547 };	//Stage initial position
-	std::vector<double3> stagePosition_mm;
-	stagePosition_mm.push_back(stagePosition0_mm);
-	Stage stage;
-	stage.moveStage3(stagePosition_mm.front());
-	stage.waitForMovementToStop3();
-	stage.printPosition3();		//Print the stage position
-
-	//CREATE THE REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, FG, nFramesCont, width, height);
-
-	//GALVO FOR RT
-	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
-	const double galvoTimeStep = 8 * us;
-	const double posMax_um = FFOVgalvo_um / 2;
-	Galvo galvo(RTsequence, GALVO1);
-	const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
-	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-
-	//EXECUTE THE RT SEQUENCE
-	Image image(RTsequence);
-	image.acquireP1(); //Execute the RT sequence and acquire the image
-
-	stage.moveStage(zz, stagePosition_mm.front().at(zz) + 0.020);
-	image.acquireTrigger();
-	image.acquireP2();
-
-
-	stage.waitForMovementToStop3();
-	stage.printPosition3();		//Print the stage position
-
-}
-
+//This works when the acq is triggered by the master trigger, and not by the stage
 void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS
 	const int width = 300;
 	const int height = 400;
-	const int nFramesCont = 25;										//Number of frames with continuous acquisition
+	const int nFramesCont = 25;		//Number of frames with continuous acquisition
 
 	//STAGES
 	const double3 stagePosition0_mm = { 35.020, 19.808, 18.552 - 0.007};	//Stage initial position
@@ -619,7 +578,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	fw.setColor(wavelength_nm);
 		
 	//CREATE THE REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, width, height, false);
+	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, width, height, DISABLE);
 
 	//GALVO FOR RT
 	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
@@ -634,17 +593,16 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	pockels.pushPowerSinglet(8 * us, laserPower_mW);
 
 	//OPEN THE SHUTTER
-	Shutter shutterVision(fpga, Shutter1);
+	Shutter shutterVision(fpga, SHUTTER1);
 	shutterVision.open();
 	Sleep(50);
 
 	//EXECUTE THE RT SEQUENCE
 	Image image(RTsequence);
-	image.acquireP1(); //Execute the RT sequence and acquire the image
-	image.acquireTrigger();
+	image.initialize(); //Execute the RT sequence and acquire the image
+	image.triggerRT();
 	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.014);
-	image.acquireP2();
-
+	image.download();
 
 	image.flipVertical();
 	image.saveTiff("testTrigger");

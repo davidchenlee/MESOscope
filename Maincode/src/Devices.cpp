@@ -99,7 +99,7 @@ void Image::readFIFOOUTpc_()
 	
 	const int readFifoWaitingTime_ms = 5;			//Waiting time between each iteration
 	const U32 timeout_ms = 100;						//FIFOOUTpc timeout
-	int timeout_iter = 100;							//Timeout the while-loop if FIFOOUT data transfer fails	
+	int timeout_iter = 100;							//Timeout the whileloop if the data download fails	
 
 	//FIFOOUT
 	int nElemTotalA = 0; 					//Total number of elements read from FIFOOUTpc A
@@ -1154,57 +1154,83 @@ void Stage::stopALL() const
 	PI_StopAll(mID[zz]);
 }
 
-//Request the configuration of the output trigger
-void Stage::qCTO(const Axis axis, const int triggerChan, const int triggerParam) const
+//Request the configuration of the digital output
+double Stage::qCTO_(const Axis axis, const int chan, const int triggerParam) const
 {
-	if (triggerChan < 1 || triggerChan > 4)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested channel must be in the range 1-4" + std::to_string(axis));
-
-	double pdValueArray;
-	if (!PI_qCTO(mID[axis], &triggerChan, &triggerParam, &pdValueArray, 1))
+	double value;
+	if (!PI_qCTO(mID[axis], &chan, &triggerParam, &value, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query CTO for the stage" + std::to_string(axis));
 
-	std::cout << pdValueArray << std::endl;
+	//std::cout << value << std::endl;
+	return value;
 
 }
 
-//Request the enable/disable status of the output trigger
-void Stage::qTRO(const Axis axis, const int triggerChan) const
+//Request the enable/disable status of the digital output
+bool Stage::qTRO_(const Axis axis, const int chan) const
 {
-	if (triggerChan < 1 || triggerChan > 4)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested channel must be in the range 1-4" + std::to_string(axis));
-
 	BOOL triggerState;
-	if (!PI_qTRO(mID[axis], &triggerChan, &triggerState, 1))
+	if (!PI_qTRO(mID[axis], &chan, &triggerState, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query TRO for the stage" + std::to_string(axis));
 
-	std::cout << triggerState << std::endl;
+	//std::cout << triggerState << std::endl;
+	return triggerState;
 }
 
-//Set the enable/disable status of the output trigger
-void Stage::TRO(const Axis axis, const int triggerChan, const BOOL triggerState) const
+//Set the enable/disable status of the digital output
+void Stage::TRO_(const Axis axis, const int chan, const BOOL triggerState) const
 {
-	if (triggerChan < 1 || triggerChan > 4)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested channel must be in the range 1-4" + std::to_string(axis));
-
-	if (!PI_TRO(mID[axis], &triggerChan, &triggerState, 1))
+	if (!PI_TRO(mID[axis], &chan, &triggerState, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set TRO for the stage" + std::to_string(axis));
 }
 
 
-void Stage::qVEL(const Axis axis) const
+double Stage::qVEL_(const Axis axis) const
 {
 	double vel_mmPerS;
 	if(!PI_qVEL(mID[axis], mNstagesPerController, &vel_mmPerS))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage" + std::to_string(axis));
 
-	std::cout << vel_mmPerS << std::endl;
+	//std::cout << vel_mmPerS << std::endl;
+	return vel_mmPerS;
 }
 
-void Stage::VEL(const Axis axis, const double vel_mmPerS) const
+void Stage::VEL_(const Axis axis, const double vel_mmPerS) const
 {
 	if(!PI_VEL(mID[axis], mNstagesPerController, &vel_mmPerS))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage" + std::to_string(axis));
+}
+
+
+void Stage::downloadConfiguration(const Axis axis, const int chan) const
+{
+	if (chan < 1 || chan > 2)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested channel must be in the range 1-4" + std::to_string(axis));
+
+	//1: trigger step
+	//2: axis
+	//3: trigger mode (0: position distance, 2: on target, 6: in motion)
+	//7: polarity
+	//8: start threshold
+	//9: stop threshold
+	//10: trigger position
+	double triggerStep = qCTO_(axis, chan, 1);
+	double triggerMode = qCTO_(axis, chan, 3);
+	double polarity = qCTO_(axis, chan, 7);
+	double startThreshold = qCTO_(axis, chan, 8);
+	double stopThreshold = qCTO_(axis, chan, 9);
+	double triggerPosition = qCTO_(axis, chan, 10);
+	bool triggerState = qTRO_(axis, chan);
+	double vel_mmPerS = qVEL_(axis);
+
+	std::cout << "triggerStep: " << triggerStep << std::endl;
+	std::cout << "triggerMode: " << triggerMode << std::endl;
+	std::cout << "polarity: " << polarity << std::endl;
+	std::cout << "startThreshold: " << startThreshold << std::endl;
+	std::cout << "stopThreshold: " << stopThreshold << std::endl;
+	std::cout << "triggerPosition: " << triggerPosition << std::endl;
+	std::cout << "triggerState: " << triggerState << std::endl;
+	std::cout << "vel_mmPerS: " << vel_mmPerS << std::endl;
 }
 
 

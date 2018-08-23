@@ -502,21 +502,22 @@ void seq_testTiffU8()
 	aa.saveToFile("test", 4);
 }
 
-//Test configuring TRO and CTO for the stages
+//Test configuring TRO_ and CTO for the stages
 void seq_testStageConfig()
 {
 	Stage stage;
 
 	//std::cout << "Stages initial position:" << std::endl;
 	//stage.printPosition3();
-	//stage.qTRO(xx, 1);
-	//stage.qCTO(xx, 1, 1);
-	//stage.qTRO(zz, 1);
-	//stage.TRO(zz, 1, 1);
-	//stage.qTRO(zz, 1);
-	stage.qVEL(xx);
-	stage.qVEL(yy);
-	stage.qVEL(zz);
+	//stage.qTRO_(xx, 1);
+	//stage.qTRO_(zz, 1);
+	//stage.TRO_(zz, 1, 1);
+	//stage.qCTO_(zz, 1, 1);
+	//stage.qVEL_(xx);
+	//stage.qVEL_(yy);
+	//stage.qVEL_(zz);
+	stage.downloadConfiguration(zz, 1);
+	stage.downloadConfiguration(zz, 2);
 
 }
 

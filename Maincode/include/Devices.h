@@ -207,6 +207,12 @@ class Stage
 	const double3 mPosMax3_mm{ 45, 30, 25 };
 	int3 mNtile;									//Tile number in x, y, z
 	int3 mNtileOverlap_pix;							//in pixels. Tile overlap in x, y, z
+
+	double qCTO_(const Axis axis, const int chan, const int triggerParam) const;
+	bool qTRO_(const Axis axis, const int chan) const;
+	void TRO_(const Axis axis, const int chan, const BOOL triggerState) const;
+	double qVEL_(const Axis axis) const;
+	void VEL_(const Axis axis, const double vel_mmPerS) const;
 public:
 	Stage();
 	~Stage();
@@ -219,11 +225,7 @@ public:
 	void waitForMovementToStop(const Axis axis) const;
 	void waitForMovementToStop3() const;
 	void stopALL() const;
-	void qCTO(const Axis axis, const int triggerChan, const int triggerParam) const;
-	void qTRO(const Axis axis, const int triggerChan) const;
-	void TRO(const Axis axis, const int triggerChan, const BOOL triggerState) const;
-	void qVEL(const Axis axis) const;
-	void VEL(const Axis axis, const double vel_mmPerS) const;
+	void downloadConfiguration(const Axis axis, const int chan) const;
 
 	void scanningStrategy(const int nTileAbsolute) const;
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;

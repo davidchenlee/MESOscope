@@ -513,9 +513,9 @@ void seq_testStageConfig()
 	//stage.qTRO_(zz, 1);
 	//stage.TRO_(zz, 1, 1);
 	//stage.qCTO_(zz, 1, 1);
-	//stage.qVEL_(xx);
-	//stage.qVEL_(yy);
-	//stage.qVEL_(zz);
+	//stage.qVEL(xx);
+	//stage.qVEL(yy);
+	//stage.qVEL(zz);
 	stage.downloadConfiguration(zz, 1);
 	stage.downloadConfiguration(zz, 2);
 

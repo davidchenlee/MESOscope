@@ -211,8 +211,7 @@ class Stage
 	double qCTO_(const Axis axis, const int chan, const int triggerParam) const;
 	bool qTRO_(const Axis axis, const int chan) const;
 	void TRO_(const Axis axis, const int chan, const BOOL triggerState) const;
-	double qVEL_(const Axis axis) const;
-	void VEL_(const Axis axis, const double vel_mmPerS) const;
+
 public:
 	Stage();
 	~Stage();
@@ -226,6 +225,8 @@ public:
 	void waitForMovementToStop3() const;
 	void stopALL() const;
 	void downloadConfiguration(const Axis axis, const int chan) const;
+	double qVEL(const Axis axis) const;
+	void VEL(const Axis axis, const double vel_mmPerS) const;
 
 	void scanningStrategy(const int nTileAbsolute) const;
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;

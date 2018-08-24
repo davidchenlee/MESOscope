@@ -1185,7 +1185,7 @@ void Stage::TRO_(const Axis axis, const int chan, const BOOL triggerState) const
 }
 
 
-double Stage::qVEL_(const Axis axis) const
+double Stage::qVEL(const Axis axis) const
 {
 	double vel_mmPerS;
 	if(!PI_qVEL(mID[axis], mNstagesPerController, &vel_mmPerS))
@@ -1195,7 +1195,7 @@ double Stage::qVEL_(const Axis axis) const
 	return vel_mmPerS;
 }
 
-void Stage::VEL_(const Axis axis, const double vel_mmPerS) const
+void Stage::VEL(const Axis axis, const double vel_mmPerS) const
 {
 	if(!PI_VEL(mID[axis], mNstagesPerController, &vel_mmPerS))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage" + std::to_string(axis));
@@ -1221,7 +1221,7 @@ void Stage::downloadConfiguration(const Axis axis, const int chan) const
 	double stopThreshold = qCTO_(axis, chan, 9);
 	double triggerPosition = qCTO_(axis, chan, 10);
 	bool triggerState = qTRO_(axis, chan);
-	double vel_mmPerS = qVEL_(axis);
+	double vel_mmPerS = qVEL(axis);
 
 	std::cout << "triggerStep: " << triggerStep << std::endl;
 	std::cout << "triggerMode: " << triggerMode << std::endl;

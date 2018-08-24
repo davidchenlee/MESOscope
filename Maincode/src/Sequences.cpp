@@ -19,7 +19,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//STAGES
 	Stage stage;
-	const double3 stagePosition0_mm = { 35.020, 19.808, 18.552 };	//Stage initial position
+	const double3 stagePosition0_mm = { 35.020, 19.808, 18.557 };	//Stage initial position
 	std::vector<double3> stagePosition_mm;
 
 	//STACK

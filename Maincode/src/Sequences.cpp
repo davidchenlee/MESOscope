@@ -47,31 +47,31 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	int nDiffZ;				//Number of frames at different Z via discontinuous acquisition
 	int nSameZ;				//Number of frames at same Z via discontinuous acquisition
-	Selector overrideFlag;
+	OverrideFile overrideFlag;
 	switch (runMode)
 	{
 	case singleRM:
 		nSameZ = 1;
 		nDiffZ = 1; //Do not change this
-		overrideFlag = DISABLE;
+		overrideFlag = NOOVERRIDE;
 		stagePosition_mm.push_back(stagePosition0_mm);
 		break;
 	case contRM:
 		nSameZ = 500;
 		nDiffZ = 1; //Do not change this
-		overrideFlag = ENABLE;
+		overrideFlag = OVERRIDE;
 		stagePosition_mm.push_back(stagePosition0_mm);
 		break;
 	case averageRM:
 		nSameZ = 10;
 		nDiffZ = 1; //Do not change this
-		overrideFlag = DISABLE;
+		overrideFlag = NOOVERRIDE;
 		stagePosition_mm.push_back(stagePosition0_mm);
 		break;
 	case stackRM:
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
-		overrideFlag = DISABLE;
+		overrideFlag = NOOVERRIDE;
 
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) + iterDiffZ * stepSize_um / 1000 });
@@ -80,7 +80,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	case stackCenterRM:
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
-		overrideFlag = DISABLE;
+		overrideFlag = NOOVERRIDE;
 
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
@@ -184,7 +184,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
 		"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um/1000, 4));
 
-	stackDiffZ.saveToFile(stackFilename, true, overrideFlag);
+	stackDiffZ.saveToFile(stackFilename, MULTIPAGE, overrideFlag);
 }
 
 //For live optimization of the objective's correction collar
@@ -230,7 +230,7 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 		//Execute the realtime sequence and acquire the image
 		Image image(RTsequence);
 		image.acquire(); //Execute the RT sequence and acquire the image
-		image.saveTiffSinglePage("Untitled", true);
+		image.saveTiffSinglePage("Untitled", OVERRIDE);
 	}
 	shutter1.close();
 }
@@ -263,7 +263,7 @@ void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 		//Execute the realtime sequence and acquire the image
 		Image image(RTsequence);
 		image.acquire(); //Execute the RT sequence and acquire the image
-		image.saveTiffSinglePage("Untitled", true);
+		image.saveTiffSinglePage("Untitled", OVERRIDE);
 	}
 }
 
@@ -496,7 +496,7 @@ void seq_testTiffU8()
 	image.mirrorOddFrames();
 	//image.average();
 	image.averageEvenOdd();
-	image.saveToFile(outputFilename, true, true);
+	image.saveToFile(outputFilename, MULTIPAGE, OVERRIDE);
 
 
 	//image.saveToFile(outputFilename, 2);
@@ -545,7 +545,7 @@ void seq_testEthernetSpeed()
 
 	//overriding the file saving has some overhead
 	//Splitting the stackDiffZ into a page structure (by assigning nFramesCont = 200 in saveToFile) gives a large overhead
-	image.saveToFile(filename, true, true);
+	image.saveToFile(filename, MULTIPAGE, OVERRIDE);
 	   	 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
@@ -610,7 +610,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	image.download();
 
 	image.mirrorOddFrames();
-	image.saveTiffSinglePage("testTrigger", true);
+	image.saveTiffSinglePage("testTrigger", OVERRIDE);
 	
 	shutterVision.close();
 

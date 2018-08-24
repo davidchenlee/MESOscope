@@ -21,7 +21,9 @@ namespace Constants
 
 	enum PhotonCounterSelector { EXT, SIM };
 	enum LineclockSelector { RS = false, FG = true };
-	enum Selector { DISABLE = false, ENABLE = true};
+	enum ToggleSwitch { DISABLE = false, ENABLE = true};
+	enum TiffPageStruct { SINGLEPAGE = false, MULTIPAGE = true};
+	enum OverrideFile { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
 	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan };		//nChan = number of RT channels available, including the pixel clock channel
 	enum ShutterID { SHUTTER1 = 1, SHUTTER2 };
@@ -38,8 +40,8 @@ namespace Constants
 
 	extern const PhotonCounterSelector photoncounterInput;
 	extern const PixelclockSelector pixelclockType;
-	extern const Selector FIFOOUTfpgaEnable;
-	extern const Selector pockels1AutoOffEnable;
+	extern const ToggleSwitch FIFOOUTfpgaEnable;
+	extern const ToggleSwitch pockels1AutoOffEnable;
 
 	extern const double PI;
 	extern const int us;

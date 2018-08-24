@@ -253,15 +253,15 @@ void Image::average()
 }
 
 //Save each frame in mTiff in a single Tiff page
-void Image::saveTiffSinglePage(std::string filename, const bool overrideFile) const
+void Image::saveTiffSinglePage(std::string filename, const OverrideFile overrideFlag) const
 {
-	mTiff.saveToFile(filename, false, overrideFile);
+	mTiff.saveToFile(filename, SINGLEPAGE, overrideFlag);
 }
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiffMultiPage(std::string filename, const bool overrideFile) const
+void Image::saveTiffMultiPage(std::string filename, const OverrideFile overrideFlag) const
 {
-	mTiff.saveToFile(filename, true, overrideFile);
+	mTiff.saveToFile(filename, MULTIPAGE, overrideFlag);
 }
 
 //Access the Tiff data in the Image object

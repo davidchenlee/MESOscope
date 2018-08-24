@@ -195,10 +195,10 @@ unsigned char* const TiffU8::accessTiff() const
 
 //Split mArray into sub-images (or "frames")
 //Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image which has to be resized into sub-images
-void TiffU8::saveToFile(std::string filename, const bool multiPage, const bool overrideFile) const
+void TiffU8::saveToFile(std::string filename, const TiffPageStruct pageStruct, const OverrideFile overrideFlag) const
 {
 	int width, height, nFrames;
-	if (multiPage)		//Multi page structure
+	if (pageStruct)		//Multi page structure
 	{
 		nFrames = mNframes;
 		width = mWidthPerFrame;
@@ -217,7 +217,7 @@ void TiffU8::saveToFile(std::string filename, const bool multiPage, const bool o
 	std::cout << height << std::endl;
 	*/
 
-	if (!overrideFile)
+	if (!overrideFlag)
 		filename = file_exists(filename);	//Check if the file exits. This gives some overhead
 
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");

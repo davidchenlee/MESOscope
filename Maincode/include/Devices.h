@@ -31,8 +31,8 @@ public:
 	void download();
 	void mirrorOddFrames();
 	void average();
-	void saveTiffSinglePage(std::string filename, const bool overrideFile) const;
-	void saveTiffMultiPage(std::string filename, const bool overrideFile = false) const;
+	void saveTiffSinglePage(std::string filename, const OverrideFile overrideFlag) const;
+	void saveTiffMultiPage(std::string filename, const OverrideFile overrideFlag = NOOVERRIDE) const;
 	unsigned char* const accessTiff() const;
 };
 

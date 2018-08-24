@@ -152,7 +152,7 @@ namespace FPGAns
 	};
 
 	//The object has to be closed explicitly because of the exception catching
-	void FPGA::close(const Selector resetEnable) const
+	void FPGA::close(const ToggleSwitch resetFlag) const
 	{
 		//Flush the RAM buffers on the FPGA as precaution. Make sure that the sequence has already finished
 		Sleep(100);	//Do not flush too soon, otherwise the output sequence will be cut off
@@ -163,7 +163,7 @@ namespace FPGAns
 		//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 		//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 		//0 resets, 1 does not reset
-		checkStatus(__FUNCTION__, NiFpga_Close(mFpgaHandle, !resetEnable));
+		checkStatus(__FUNCTION__, NiFpga_Close(mFpgaHandle, !resetFlag));
 
 		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 		checkStatus(__FUNCTION__, NiFpga_Finalize());
@@ -272,8 +272,8 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, const Selector stageAsTriggerEnable) :
-		mFpga(fpga), mVectorOfQueues(nChan), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mStageAsTriggerEnable(stageAsTriggerEnable)
+	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, const ToggleSwitch stageAsTrigger) :
+		mFpga(fpga), mVectorOfQueues(nChan), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mStageAsTrigger(stageAsTrigger)
 	{
 		//Set the imaging parameters
 		mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;
@@ -301,7 +301,7 @@ namespace FPGAns
 	
 		//SELECTORS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, mLineclockInput));										//Lineclock: resonant scanner (RS) or function generator (FG)
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageTrigAcqEnable, mStageAsTriggerEnable));									//Trigger the acquisition with the z stage: DISABLE OR ENABLE
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageTrigAcqEnable, mStageAsTrigger));									//Trigger the acquisition with the z stage: DISABLE OR ENABLE
 	}
 
 	//Send every single queue in 'vectorOfQueue' to the FPGA buffer

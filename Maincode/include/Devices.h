@@ -31,7 +31,7 @@ public:
 	void download();
 	void flipVertical();
 	void average();
-	void saveTiff(std::string filename, const Selector overrideFile = DISABLE) const;
+	void saveTiff(std::string filename, const bool pageStructure, const bool overrideFile = false) const;
 	unsigned char* const accessTiff() const;
 };
 

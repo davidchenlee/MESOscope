@@ -61,7 +61,7 @@ namespace FPGAns
 	public:
 		const FPGAns::FPGA &mFpga;
 		LineclockSelector mLineclockInput;															//Resonant scanner (RS) or Function generator (FG)
-		Selector mStageAsTriggerEnable;																//Trigger the acquisition with the z stage: enable (0), disable (1)
+		Selector mStageAsTriggerEnable;																	//Trigger the acquisition with the z stage: enable (0), disable (1)
 		const double mDwell_us = 0.1625 * us;														//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
 																									//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 		const double mPulsesPerPixel = mDwell_us / VISIONpulsePeriod;								//Max number of laser pulses per pixel

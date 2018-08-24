@@ -2,7 +2,7 @@
 
 #pragma region "Image"
 
-Image::Image(FPGAns::RTsequence &RTsequence) : mRTsequence(RTsequence), mTiff(mRTsequence.mWidthPerFrame_pix, mRTsequence.mHeightAllFrames_pix)
+Image::Image(FPGAns::RTsequence &RTsequence) : mRTsequence(RTsequence), mTiff(mRTsequence.mWidthPerFrame_pix, mRTsequence.mHeightPerFrame_pix, mRTsequence.mNframes)
 {
 	mBufArrayA = new U32[mRTsequence.mNpixAllFrames];
 	mBufArrayB = new U32[mRTsequence.mNpixAllFrames];
@@ -243,24 +243,20 @@ void Image::download()
 //Divide the long vertical image in nFrames and vertically mirror the odd frames
 void Image::flipVertical()
 {
-	mTiff.flipVertical(mRTsequence.mNframes);
+	mTiff.flipVertical();
 }
 
 //Split the long vertical image into nFrames and calculate the average
 void Image::average()
 {
-	mTiff.average(mRTsequence.mNframes);
-
-	//Update the mHeightAllFrames_pix and mNframes to a single frame
-	mRTsequence.mHeightAllFrames_pix = mRTsequence.mHeightAllFrames_pix / mRTsequence.mNframes;
-	mRTsequence.mNframes = 1;
+	mTiff.average();
 }
 
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiff(std::string filename, const Selector overrideFile) const
+void Image::saveTiff(std::string filename, const bool pageStructure, const bool overrideFile) const
 {
-	mTiff.saveToFile(filename, mRTsequence.mNframes, overrideFile);
+	mTiff.saveToFile(filename, pageStructure, overrideFile);
 }
 
 //Access the Tiff data in the Image object

@@ -34,23 +34,23 @@ public:
 class TiffU8
 {
 	unsigned char* mArray;
-	int mWidth;
-	int mHeight;
+	int mWidthPerFrame;
+	int mHeightPerFrame;
+	int mNframes;
 	int mBytesPerLine; 
 	//int mStripSize;	//I think this is originally implemented to allow different channels (e.g., RGB) at each pixel
 public:
-
-	TiffU8(const std::string filename);
-	TiffU8(const unsigned char* inputImage, const int width, const int height);
-	TiffU8(const std::vector<unsigned char> &inputImage, const int width, const int height);
-	TiffU8(const int width, const int height);
+	TiffU8(const std::string filename, const int nframes);
+	TiffU8(const unsigned char* inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes);
+	TiffU8(const std::vector<unsigned char> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes);
+	TiffU8(const int width, const int height, const int nframes);
 	~TiffU8();
 	unsigned char* const accessTiffArray() const;
-	void saveToFile(std::string filename, const int nFrames = 1, const Selector overrideFile = DISABLE) const;
-	void flipVertical(const int nFrames);
-	void averageEvenOdd(const int nFrames);
-	void average(const int nFrames);
+	void saveToFile(std::string filename, const bool pageStructure, const bool overrideFile = false) const;
+	void flipVertical();
+	void averageEvenOdd();
+	void average();
 	void analyze() const;
 	void saveTxt(const std::string fileName) const;
-	void pushImage(const int frame, const int nFrames, const unsigned char* inputArray) const;
+	void pushImage(const int frame, const unsigned char* inputArray) const;
 };

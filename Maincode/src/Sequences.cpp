@@ -13,9 +13,9 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const RunMode runMode = static_cast<RunMode>(runmode);
 
 	//ACQUISITION SETTINGS
-	const int widthSingleFrame_pix = 300;
-	const int heightSingleFrame_pix = 400;
-	const int nFramesCont = 1;	//Number of frames with continuous acquisition
+	const int widthPerFrame_pix = 300;
+	const int heightPerFrame_pix = 400;
+	const int nFramesCont = 4;	//Number of frames with continuous acquisition
 
 	//STAGES
 	Stage stage;
@@ -28,7 +28,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 750;
-	double laserPower_mW = 50 * mW;
+	double laserPower_mW = 70 * mW;
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
 
@@ -91,10 +91,10 @@ void seq_main(const FPGAns::FPGA &fpga)
 	}
 
 	//Create a stack
-	TiffU8 stack(widthSingleFrame_pix, heightSingleFrame_pix * nDiffZ);
+	TiffU8 stack(widthPerFrame_pix, heightPerFrame_pix, nDiffZ);
 
 	//CREATE THE REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthSingleFrame_pix, heightSingleFrame_pix);
+	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
 
 	//GALVO FOR RT
 	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
@@ -163,13 +163,12 @@ void seq_main(const FPGAns::FPGA &fpga)
 			image.acquire(); //Execute the RT sequence and acquire the image
 			image.flipVertical();
 			image.average();
-			stack.pushImage(iterDiffZ, nDiffZ, image.accessTiff());
+			stack.pushImage(iterDiffZ, image.accessTiff());
 
 			/*
 			std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 				"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(xx), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(yy), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(zz), 4));
-			image.saveTiff(singleFilename, overrideFlag);
-			//image.saveTxt(singleFilename);
+			image.saveTiff(singleFilename, true, overrideFlag);
 			*/
 
 		}
@@ -181,7 +180,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	std::string stackFilename("Stack_" + sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 		"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
 		"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um/1000, 4));
-	stack.saveToFile(stackFilename, nDiffZ, overrideFlag);
+	stack.saveToFile(stackFilename, true, overrideFlag);
 }
 
 //For live optimization of the objective's correction collar
@@ -488,18 +487,19 @@ void seq_testTiffU8()
 	std::string outputFilename("test");
 
 	const int nFramesCont = 10;
-	//TiffU8 image(inputFilename);
+	TiffU8 image(inputFilename, nFramesCont);
 	
-	//image.flipVertical(nFramesCont);
-	//image.averageEvenOdd(nFramesCont);
+	image.flipVertical();
+	//image.average();
+	image.averageEvenOdd();
+	image.saveToFile(outputFilename, true, true);
+
+
 	//image.saveToFile(outputFilename, 2);
 
 	//image.flipVertical(nFramesCont);
 	//image.averageEvenOdd(nFramesCont);
-	//image.saveToFile(outputFilename, 2);//The second argument specifies the number of Frames
-
-	TiffU8 aa(300, 4*300);
-	aa.saveToFile("test", 4);
+	
 }
 
 //Test configuring TRO_ and CTO for the stages
@@ -533,7 +533,7 @@ void seq_testEthernetSpeed()
 	const int height = 400;
 	const int nFramesCont = 200;
 
-	TiffU8 image(width, height * nFramesCont);
+	TiffU8 image(width, height, nFramesCont);
 
 	//Declare and start a stopwatch
 	double duration;
@@ -541,7 +541,7 @@ void seq_testEthernetSpeed()
 
 	//overriding the file saving has some overhead
 	//Splitting the stack into a page structure (by assigning nFramesCont = 200 in saveToFile) gives a large overhead
-	image.saveToFile(filename, 1, ENABLE); 
+	image.saveToFile(filename, true, true);
 	   	 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
@@ -606,7 +606,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	image.download();
 
 	image.flipVertical();
-	image.saveTiff("testTrigger");
+	image.saveTiff("testTrigger", false);
 	
 	shutterVision.close();
 

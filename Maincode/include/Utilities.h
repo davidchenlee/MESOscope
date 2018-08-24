@@ -45,9 +45,9 @@ public:
 	TiffU8(const std::vector<unsigned char> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes);
 	TiffU8(const int width, const int height, const int nframes);
 	~TiffU8();
-	unsigned char* const accessTiffArray() const;
-	void saveToFile(std::string filename, const bool pageStructure, const bool overrideFile = false) const;
-	void flipVertical();
+	unsigned char* const accessTiff() const;
+	void saveToFile(std::string filename, const bool multiPage, const bool overrideFile = false) const;
+	void mirrorOddFrames();
 	void averageEvenOdd();
 	void average();
 	void analyze() const;

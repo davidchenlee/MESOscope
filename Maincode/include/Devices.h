@@ -29,9 +29,10 @@ public:
 	void initialize();
 	void triggerRT();
 	void download();
-	void flipVertical();
+	void mirrorOddFrames();
 	void average();
-	void saveTiff(std::string filename, const bool pageStructure, const bool overrideFile = false) const;
+	void saveTiffSinglePage(std::string filename, const bool overrideFile) const;
+	void saveTiffMultiPage(std::string filename, const bool overrideFile = false) const;
 	unsigned char* const accessTiff() const;
 };
 

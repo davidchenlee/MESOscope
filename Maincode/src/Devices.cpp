@@ -181,7 +181,7 @@ void Image::demultiplex_()
 			upscaled = _UI8_MAX;
 
 		//Transfer the result to Tiff
-		(mTiff.accessTiffArray())[pixIndex] = upscaled;
+		(mTiff.accessTiff())[pixIndex] = upscaled;
 	}
 }
 
@@ -241,9 +241,9 @@ void Image::download()
 
 //The galvo (vectical axis of the image) performs bi-directional scanning
 //Divide the long vertical image in nFrames and vertically mirror the odd frames
-void Image::flipVertical()
+void Image::mirrorOddFrames()
 {
-	mTiff.flipVertical();
+	mTiff.mirrorOddFrames();
 }
 
 //Split the long vertical image into nFrames and calculate the average
@@ -252,17 +252,22 @@ void Image::average()
 	mTiff.average();
 }
 
+//Save each frame in mTiff in a single Tiff page
+void Image::saveTiffSinglePage(std::string filename, const bool overrideFile) const
+{
+	mTiff.saveToFile(filename, false, overrideFile);
+}
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiff(std::string filename, const bool pageStructure, const bool overrideFile) const
+void Image::saveTiffMultiPage(std::string filename, const bool overrideFile) const
 {
-	mTiff.saveToFile(filename, pageStructure, overrideFile);
+	mTiff.saveToFile(filename, true, overrideFile);
 }
 
 //Access the Tiff data in the Image object
 unsigned char* const Image::accessTiff() const
 {
-	return mTiff.accessTiffArray();
+	return mTiff.accessTiff();
 }
 
 

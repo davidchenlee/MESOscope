@@ -188,33 +188,34 @@ TiffU8::~TiffU8()
 }
 
 //Access the Tiff data in the TiffU8 object
-unsigned char* const TiffU8::accessTiffArray() const
+unsigned char* const TiffU8::accessTiff() const
 {
 	return mArray;
 }
 
 //Split mArray into sub-images (or "frames")
 //Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image which has to be resized into sub-images
-void TiffU8::saveToFile(std::string filename, const bool pageStructure, const bool overrideFile) const
+void TiffU8::saveToFile(std::string filename, const bool multiPage, const bool overrideFile) const
 {
 	int width, height, nFrames;
-	if (pageStructure)
+	if (multiPage)		//Multi page structure
 	{
 		nFrames = mNframes;
 		width = mWidthPerFrame;
 		height = mHeightPerFrame;
 	}
-	else
+	else				//Single page
 	{
 		nFrames = 1;
 		width = mWidthPerFrame;
 		height = mHeightPerFrame * mNframes;
 	}
 	   	  
+	/*For debugging
 	std::cout << nFrames << std::endl;
 	std::cout << width << std::endl;
 	std::cout << height << std::endl;
-
+	*/
 
 	if (!overrideFile)
 		filename = file_exists(filename);	//Check if the file exits. This gives some overhead
@@ -268,7 +269,7 @@ void TiffU8::saveToFile(std::string filename, const bool pageStructure, const bo
 
 //The galvo (vectical axis of the image) performs bi-directional scanning
 //Divide the long image (vertical stripe) in nFrames and vertically mirror the odd frames
-void TiffU8::flipVertical()
+void TiffU8::mirrorOddFrames()
 {
 	if (mNframes > 1)
 	{

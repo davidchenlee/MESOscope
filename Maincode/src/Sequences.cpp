@@ -2,7 +2,7 @@
 
 void seq_main(const FPGAns::FPGA &fpga)
 {
-	const int runmode = 4;
+	const int runmode = 0;
 	/*
 	0 - Single shot
 	1 - Continuous: image the same plane many times
@@ -15,7 +15,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
-	const int nFramesCont = 4;	//Number of frames with continuous acquisition
+	const int nFramesCont = 10;	//Number of frames via continuous acquisition
 
 	//STAGES
 	Stage stage;
@@ -24,7 +24,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//STACK
 	const double stepSize_um = 1.0 * um;
-	double zDelta_um = 10 * um;				//Acquire a stack within this interval
+	double zDelta_um = 10 * um;				//Acquire a stackDiffZ within this interval
 
 	//LASER
 	const int wavelength_nm = 750;
@@ -45,8 +45,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	Filterwheel fw(FW1);
 	fw.setColor(wavelength_nm);
 
-	int nDiffZ;				//Number of frames at different Z with discontinuous acquisition
-	int nSameZ;				//Number of frames at same Z with discontinuous acquisition
+	int nDiffZ;				//Number of frames at different Z via discontinuous acquisition
+	int nSameZ;				//Number of frames at same Z via discontinuous acquisition
 	Selector overrideFlag;
 	switch (runMode)
 	{
@@ -90,8 +90,9 @@ void seq_main(const FPGAns::FPGA &fpga)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 	}
 
-	//Create a stack
-	TiffU8 stack(widthPerFrame_pix, heightPerFrame_pix, nDiffZ);
+	//Create stack containers for storing the Tiff images
+	TiffU8 stackDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ);
+	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
 
 	//CREATE THE REAL-TIME SEQUENCE
 	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
@@ -144,7 +145,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	shutterVision.open();
 	Sleep(50);
 
-	//Frames at different Z
+	//Acquire frames at different Z
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 	{
 		stage.moveStage3(stagePosition_mm.at(iterDiffZ));
@@ -152,7 +153,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		stage.printPosition3();		//Print the stage position
 		//laserPower_mW += 0.5;		//Increase the laser power by this much
 
-		//Frames at the same Z
+		//Acquire many frames at the same Z via discontinuous acquisition
 		for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
 		{
 			std::cout << "Frame # (diff-Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same-Z): " << (iterSameZ + 1) << "/" << nSameZ <<
@@ -161,26 +162,29 @@ void seq_main(const FPGAns::FPGA &fpga)
 			//EXECUTE THE RT SEQUENCE
 			Image image(RTsequence);
 			image.acquire(); //Execute the RT sequence and acquire the image
-			image.flipVertical();
-			image.average();
-			stack.pushImage(iterDiffZ, image.accessTiff());
-
+			image.mirrorOddFrames();
+			image.average();		//Average the frames acquired via continuous acquisition
+			stackSameZ.pushImage(iterSameZ, image.accessTiff());
 			/*
+			//Save individual files
 			std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 				"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(xx), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(yy), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(zz), 4));
 			image.saveTiff(singleFilename, true, overrideFlag);
 			*/
-
 		}
+		stackSameZ.average();	//Average the frames acquired via discontinuous acquisition
+		stackDiffZ.pushImage(iterDiffZ, stackSameZ.accessTiff());
+
 		std::cout << std::endl;
 	}
 	shutterVision.close();
 
-	//Save the stack to a file
+	//Save the stackDiffZ to a file
 	std::string stackFilename("Stack_" + sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
 		"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
 		"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um/1000, 4));
-	stack.saveToFile(stackFilename, true, overrideFlag);
+
+	stackDiffZ.saveToFile(stackFilename, true, overrideFlag);
 }
 
 //For live optimization of the objective's correction collar
@@ -226,7 +230,7 @@ void seq_contAcquisition(const FPGAns::FPGA &fpga)
 		//Execute the realtime sequence and acquire the image
 		Image image(RTsequence);
 		image.acquire(); //Execute the RT sequence and acquire the image
-		image.saveTiff("Untitled", ENABLE);
+		image.saveTiffSinglePage("Untitled", true);
 	}
 	shutter1.close();
 }
@@ -259,7 +263,7 @@ void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
 		//Execute the realtime sequence and acquire the image
 		Image image(RTsequence);
 		image.acquire(); //Execute the RT sequence and acquire the image
-		image.saveTiff("Untitled", ENABLE);
+		image.saveTiffSinglePage("Untitled", true);
 	}
 }
 
@@ -489,7 +493,7 @@ void seq_testTiffU8()
 	const int nFramesCont = 10;
 	TiffU8 image(inputFilename, nFramesCont);
 	
-	image.flipVertical();
+	image.mirrorOddFrames();
 	//image.average();
 	image.averageEvenOdd();
 	image.saveToFile(outputFilename, true, true);
@@ -497,7 +501,7 @@ void seq_testTiffU8()
 
 	//image.saveToFile(outputFilename, 2);
 
-	//image.flipVertical(nFramesCont);
+	//image.mirrorOddFrames(nFramesCont);
 	//image.averageEvenOdd(nFramesCont);
 	
 }
@@ -527,8 +531,8 @@ void seq_testEthernetSpeed()
 {
 	std::string filename = "testEthernetSpeed";
 
-	//The goal is to stream a stack composed of 200 z-planes (100 um in 0.5 um-steps), where each frame has 400x400 pixels. Therefore, the stack has 400x400x200 = 32 Mega pixels
-	//The stack size is 8 bits x 32M = 32 MB
+	//The goal is to stream a stackDiffZ composed of 200 z-planes (100 um in 0.5 um-steps), where each frame has 400x400 pixels. Therefore, the stackDiffZ has 400x400x200 = 32 Mega pixels
+	//The stackDiffZ size is 8 bits x 32M = 32 MB
 	const int width = 400;
 	const int height = 400;
 	const int nFramesCont = 200;
@@ -540,7 +544,7 @@ void seq_testEthernetSpeed()
 	auto t_start = std::chrono::high_resolution_clock::now();
 
 	//overriding the file saving has some overhead
-	//Splitting the stack into a page structure (by assigning nFramesCont = 200 in saveToFile) gives a large overhead
+	//Splitting the stackDiffZ into a page structure (by assigning nFramesCont = 200 in saveToFile) gives a large overhead
 	image.saveToFile(filename, true, true);
 	   	 
 	//Stop the stopwatch
@@ -605,8 +609,8 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.014);
 	image.download();
 
-	image.flipVertical();
-	image.saveTiff("testTrigger", false);
+	image.mirrorOddFrames();
+	image.saveTiffSinglePage("testTrigger", true);
 	
 	shutterVision.close();
 

@@ -192,7 +192,7 @@ void Image::acquire()
 	startFIFOOUTpc_();				//Establish the connection between FIFOOUTfpga and FIFOOUTpc and cleans up any residual data from the previous run
 	mRTsequence.triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
 
-	if (FIFOOUTfpgaEnable)
+	if (FIFOOUTfpga)
 	{
 		try
 		{
@@ -222,7 +222,7 @@ void Image::triggerRT()
 
 void Image::download()
 {
-	if (FIFOOUTfpgaEnable)
+	if (FIFOOUTfpga)
 	{
 		try
 		{

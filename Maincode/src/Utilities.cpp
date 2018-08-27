@@ -195,16 +195,19 @@ unsigned char* const TiffU8::accessTiff() const
 
 //Split mArray into sub-images (or "frames")
 //Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image which has to be resized into sub-images
-void TiffU8::saveToFile(std::string filename, const TiffPageStruct pageStruct, const OverrideFile overrideFlag) const
+void TiffU8::saveToFile(std::string filename, const TiffPageStruct pageStructFlag, const OverrideFile overrideFlag) const
 {
 	int width, height, nFrames;
-	if (pageStruct)		//Multi page structure
+
+	//Multi page structure
+	if (pageStructFlag)		
 	{
 		nFrames = mNframes;
 		width = mWidthPerFrame;
 		height = mHeightPerFrame;
 	}
-	else				//Single page
+	//Single page
+	else
 	{
 		nFrames = 1;
 		width = mWidthPerFrame;

@@ -205,7 +205,7 @@ class Stage
 	const char mNstagesPerController[2] = "1";		//Number of stages per controller (currently 1)
 	double3 mPosition3_mm;							//Absolute position of the stages (x, y, z)
 	const double3 mPosMin3_mm{ -60, 0, 1 };			//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
-	const double3 mPosMax3_mm{ 45, 30, 25 };
+	const double3 mPosMax3_mm{ 50, 30, 25 };
 	int3 mNtile;									//Tile number in x, y, z
 	int3 mNtileOverlap_pix;							//in pixels. Tile overlap in x, y, z
 

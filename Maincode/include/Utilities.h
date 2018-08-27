@@ -46,7 +46,7 @@ public:
 	TiffU8(const int width, const int height, const int nframes);
 	~TiffU8();
 	unsigned char* const accessTiff() const;
-	void saveToFile(std::string filename, const TiffPageStruct pageStruct, const OverrideFile overrideFlag = NOOVERRIDE) const;
+	void saveToFile(std::string filename, const TiffPageStruct pageStructFlag, const OverrideFile overrideFlag = NOOVERRIDE) const;
 	void mirrorOddFrames();
 	void averageEvenOdd();
 	void average();

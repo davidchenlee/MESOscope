@@ -10,8 +10,8 @@ namespace Constants
 
 	extern const PhotonCounterSelector photoncounterInput = EXT;		//Real PMT (EXT) or simulated PMT (SIM)
 	extern const PixelclockSelector pixelclockType = UNIFORM;			//UNIFORM or NONUNIFORM dwell times
-	extern const ToggleSwitch FIFOOUTfpgaEnable = ENABLE;				//For debugging purposes. Enable pushing data to FIFOOUTfpga
-	extern const ToggleSwitch pockels1AutoOffEnable = ENABLE;			//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
+	extern const ToggleSwitch FIFOOUTfpga = ENABLE;				//For debugging purposes. Enable pushing data to FIFOOUTfpga
+	extern const ToggleSwitch pockels1AutoOff = ENABLE;			//For debugging purposes. Framegate turns the pockels cell on and off. Enable to manual control
 
 	//GENERAL CONSTANTS
 	extern const double PI = 3.1415926535897;

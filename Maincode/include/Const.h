@@ -30,7 +30,7 @@ namespace Constants
 	enum FilterwheelID { FW1 = 1, FW2 };
 	enum Filtercolor { BLUE = 1, GREEN, RED };
 	enum Axis { xx, yy, zz };
-	enum RunMode { singleRM, contRM, averageRM, stackRM, stackCenterRM };
+	enum RunMode { SINGLEMODE, CONTMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
 
 	enum ComID { VISIONcom, FW1com , FW2com, mPMTcom, ZSTAGEcom };
 	extern const std::vector<std::string> assignCOM;
@@ -40,8 +40,8 @@ namespace Constants
 
 	extern const PhotonCounterSelector photoncounterInput;
 	extern const PixelclockSelector pixelclockType;
-	extern const ToggleSwitch FIFOOUTfpgaEnable;
-	extern const ToggleSwitch pockels1AutoOffEnable;
+	extern const ToggleSwitch FIFOOUTfpga;
+	extern const ToggleSwitch pockels1AutoOff;
 
 	extern const double PI;
 	extern const int us;

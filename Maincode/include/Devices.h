@@ -73,6 +73,7 @@ public:
 	void turnOn_V(const double Vcontrol_V);
 	void turnOff();
 	double downloadControl_V();
+	bool downloadEnableState();
 	double getSamplingResolution_um();
 };
 
@@ -122,9 +123,6 @@ class Galvo
 	FPGAns::RTsequence &mRTsequence;					//Non-const because some of methods in this class change the variables referenced by mRTsequence	
 	RTchannel mGalvoChannel;
 	const double voltPerUm = 0.02417210 * V / um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
-
-	double convert_umToVolt_(const double position_um) const;
-
 public:
 	Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel);
 	~Galvo();

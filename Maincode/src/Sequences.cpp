@@ -9,22 +9,34 @@ void seq_main(const FPGAns::FPGA &fpga)
 	3 - Stack volume from the initial z position
 	4 - Stack volume around the initial z position*/
 
-	//const RunMode runMode = SINGLEMODE;
-	//const RunMode runMode = CONTMODE;
-	//const RunMode runMode = AVGMODE;
-	const RunMode runMode = STACKMODE;
-	//const RunMode runMode = STACKCENTEREDMODE;
+	const RunMode acqMode = SINGLEMODE;
+	//const RunMode acqMode = CONTMODE;
+	//const RunMode acqMode = AVGMODE;
+	//const RunMode acqMode = STACKMODE;
+	//const RunMode acqMode = STACKCENTEREDMODE;
 
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
-	const int nFramesCont = 1;				//Number of frames for continuous acquisition
+	const int nFramesCont = 1;									//Number of frames for continuous acquisition
+	const double3 stagePosition0_mm = { 46.4, 15.5, 18.130 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
-	//STAGES
-	Stage stage;
-	//X=+-0.190, y=+-0.142
-	const double3 stagePosition0_mm = { 46.4 + 0.190, 15.5 + 0.142, 18.140 };	//Stage initial position
-	std::vector<double3> stagePosition_mm;
+	//RS
+	const double FFOVrs_um = 150 * um;
+	ResonantScanner RScanner(fpga);
+	RScanner.setFFOV(FFOVrs_um);
+
+
+	//Check status of the RS
+	char num;
+	while (!RScanner.downloadEnableState())
+	{
+		std::cout << "RS seems to be off. Input 0 to exit or any other key to try again ";
+		std::cin >> num;
+
+		if (num == '0')
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Sequence terminated");
+	}
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -32,16 +44,11 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 750;
-	const double laserPowerStart_mW = 10 * mW;
+	const double laserPowerStart_mW = 15 * mW;
 	const double laserPowerEnd_mW = 25 * mW;
 	double laserPower_mW = laserPowerStart_mW;
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
-
-	//RS
-	const double FFOVrs_um = 150 * um;
-	ResonantScanner RScanner(fpga);
-	RScanner.setFFOV(FFOVrs_um);
 
 	//SAMPLE
 	const std::string sampleName("Liver6518");
@@ -51,10 +58,14 @@ void seq_main(const FPGAns::FPGA &fpga)
 	Filterwheel fw(FW1);
 	fw.setColor(wavelength_nm);
 
+	//Stages
+	Stage stage;
+	std::vector<double3> stagePosition_mm;
+
 	int nDiffZ;				//Number of frames at different Z for discontinuous acquisition
 	int nSameZ;				//Number of frames at same Z for discontinuous acquisition
 	OverrideFile overrideFlag;
-	switch (runMode)
+	switch (acqMode)
 	{
 	case SINGLEMODE:
 		nSameZ = 1;
@@ -96,6 +107,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 	}
 
+
 	//Create stack containers for storing the Tiff images
 	TiffU8 stackDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ);
 	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
@@ -120,7 +132,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << std::endl;
 
 
-			//I moved this inside the loop to be able to change the laser power in each iteration
+			//I moved this inside the loop to be able to change the laser power at each iteration
 			//CREATE THE REAL-TIME SEQUENCE
 			FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
 
@@ -146,7 +158,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 			image.average();			//Average the frames acquired via continuous acquisition
 			stackSameZ.pushImage(iterSameZ, image.accessTiff());
 
-			if (runMode == CONTMODE)
+			if (acqMode == CONTMODE)
 			{
 				//Save individual files
 				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +

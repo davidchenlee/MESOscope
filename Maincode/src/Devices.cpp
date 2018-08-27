@@ -284,11 +284,11 @@ void Vibratome::startStop() const
 {
 	const int SleepTime = 20; //in ms. It has to be ~ 12 ms or longer to 
 	
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, true));
 
 	Sleep(SleepTime);
 
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
 }
 
 //Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
@@ -311,7 +311,7 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected vibratome channel unavailable");
 	}
 
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, true));
 
 	if (dt_ms >= minPulseDuration)
 		Sleep(dt_ms - delay);
@@ -320,7 +320,7 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 		Sleep(minPulseDuration - delay);
 		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << minPulseDuration << "ms" << std::endl;
 	}
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, false));
 }
 #pragma endregion "Vibratome"
 
@@ -383,7 +383,7 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 {
 	setFFOV(FFOV_um);
 	Sleep(mDelay_ms);
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, true));
 	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um" << std::endl;
 }
 
@@ -392,14 +392,14 @@ void ResonantScanner::turnOn_V(const double control_V)
 {
 	setVoltage_(control_V);
 	Sleep(mDelay_ms);
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, true));
 	std::cout << "RS control voltage successfully set to: " << control_V << " V" << std::endl;
 }
 
 //First set RSenable off, then set the control voltage to 0
 void ResonantScanner::turnOff()
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, false));
 	Sleep(mDelay_ms);
 	setVoltage_(0);
 	std::cout << "RS successfully turned off" << std::endl;
@@ -413,6 +413,17 @@ double ResonantScanner::downloadControl_V()
 
 	return FPGAns::convertI16toVolt(control_I16);
 }
+
+//Download the current control voltage of the RS from the FPGA
+bool ResonantScanner::downloadEnableState()
+{
+	NiFpga_Bool enableState;
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorBool_RSenableMon, &enableState));
+
+	return static_cast<bool>(enableState);
+}
+
+
 
 //Spatial sampling resolution (um per pixel)
 double ResonantScanner::getSamplingResolution_um()
@@ -440,26 +451,26 @@ Shutter::Shutter(const FPGAns::FPGA &fpga, ShutterID ID) : mFpga(fpga)
 
 Shutter::~Shutter()
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, false));
 }
 
 void Shutter::open() const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, true));
 }
 
 void Shutter::close() const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, false));
 }
 
 void Shutter::pulseHigh() const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, 1));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, true));
 
 	Sleep(mDelay_ms);
 
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, 0));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, false));
 }
 #pragma endregion "Shutters"
 
@@ -582,10 +593,6 @@ Galvo::Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel): mRTs
 
 Galvo::~Galvo() {}
 
-double Galvo::convert_umToVolt_(const double position_um) const
-{
-	return position_um * voltPerUm;
-}
 
 void Galvo::pushVoltageSinglet_(const double timeStep, const double AO_V) const
 {
@@ -599,7 +606,7 @@ void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, co
 
 void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const
 {
-	mRTsequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, convert_umToVolt_(xi_V), convert_umToVolt_(xf_V));
+	mRTsequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, voltPerUm * xi_V, voltPerUm * xf_V);
 }
 
 void Galvo::voltageToZero() const

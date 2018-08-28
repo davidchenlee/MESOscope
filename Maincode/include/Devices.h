@@ -31,8 +31,8 @@ public:
 	void download();
 	void mirrorOddFrames();
 	void average();
-	void saveTiffSinglePage(std::string filename, const OverrideFile overrideFlag) const;
-	void saveTiffMultiPage(std::string filename, const OverrideFile overrideFlag = NOOVERRIDE) const;
+	void saveTiffSinglePage(std::string filename, const Override overrideFlag) const;
+	void saveTiffMultiPage(std::string filename, const Override overrideFlag = NOOVERRIDE) const;
 	unsigned char* const accessTiff() const;
 };
 
@@ -111,7 +111,7 @@ public:
 	~PockelsCell();
 	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
 	void pushVoltageSinglet_(const double timeStep, const double AO_V) const;
-	void pushPowerSinglet(const double timeStep, const double P_mW) const;
+	void pushPowerSinglet(const double timeStep, const double P_mW, const Override overrideFlag = NOOVERRIDE) const;
 	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const;
 	void powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const;
 	void voltageToZero() const;

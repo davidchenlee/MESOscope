@@ -253,13 +253,13 @@ void Image::average()
 }
 
 //Save each frame in mTiff in a single Tiff page
-void Image::saveTiffSinglePage(std::string filename, const OverrideFile overrideFlag) const
+void Image::saveTiffSinglePage(std::string filename, const Override overrideFlag) const
 {
 	mTiff.saveToFile(filename, SINGLEPAGE, overrideFlag);
 }
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiffMultiPage(std::string filename, const OverrideFile overrideFlag) const
+void Image::saveTiffMultiPage(std::string filename, const Override overrideFlag) const
 {
 	mTiff.saveToFile(filename, MULTIPAGE, overrideFlag);
 }
@@ -505,12 +505,12 @@ void PockelsCell::pushVoltageSinglet_(const double timeStep, const double AO_V) 
 	mRTsequence.pushAnalogSinglet(mPockelsChannel, timeStep, AO_V);
 }
 
-void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW) const
+void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW, const Override overrideFlag) const
 {
 	if (P_mW < 0 || P_mW > maxPower_mW)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(P_mW));
 
-	mRTsequence.pushAnalogSinglet(mPockelsChannel, timeStep, convert_mWToVolt_(P_mW));
+	mRTsequence.pushAnalogSinglet(mPockelsChannel, timeStep, convert_mWToVolt_(P_mW), overrideFlag);
 }
 
 //Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
@@ -536,7 +536,7 @@ void PockelsCell::voltageToZero() const
 	mRTsequence.pushAnalogSinglet(mPockelsChannel, AO_tMIN_us, 0 * V);
 }
 
-//Scale the pockels modulation across all the frames following a linear ramp
+//Linearly scale the pockels output across all the frames
 void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 {
 	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4)

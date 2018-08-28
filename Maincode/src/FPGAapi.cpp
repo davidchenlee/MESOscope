@@ -376,16 +376,22 @@ namespace FPGAns
 		mVectorOfQueues.at(chan).push_back(FPGAns::packDigitalSinglet(timeStep, DO));
 	}
 
-	void RTsequence::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V)
+	void RTsequence::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V, const Override overrideFlag)
 	{
 		if (timeStep < AO_tMIN_us)
 		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us" << std::endl;
 			timeStep = AO_tMIN_us;
 		}
+
+		//Clear the current content
+		if (overrideFlag)
+			mVectorOfQueues.at(chan).clear();
+
 		mVectorOfQueues.at(chan).push_back(FPGAns::packAnalogSinglet(timeStep, AO_V));
 	}
 
+	//Push a fixed-point number. For scaling the pockels cell output
 	void RTsequence::pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor)
 	{
 		mVectorOfQueues.at(chan).push_back(static_cast<U32>(convertDoubleToFx2p14(scalingFactor)));

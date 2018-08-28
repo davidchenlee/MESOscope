@@ -23,7 +23,7 @@ namespace Constants
 	enum LineclockSelector { RS = false, FG = true };
 	enum ToggleSwitch { DISABLE = false, ENABLE = true};
 	enum TiffPageStruct { SINGLEPAGE = false, MULTIPAGE = true};
-	enum OverrideFile { NOOVERRIDE = false, OVERRIDE = true};
+	enum Override { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
 	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan };		//nChan = number of RT channels available, including the pixel clock channel
 	enum ShutterID { SHUTTER1 = 1, SHUTTER2 };

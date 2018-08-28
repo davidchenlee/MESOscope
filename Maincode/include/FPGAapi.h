@@ -81,7 +81,7 @@ namespace FPGAns
 		void pushQueue(const RTchannel chan, QU32& queue);
 		void clearQueue(const RTchannel chan);
 		void pushDigitalSinglet(const RTchannel chan, double timeStep, const bool DO);
-		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V);
+		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V, const Override overrideFlag = NOOVERRIDE);
 		void pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor);
 		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V);
 		void presetFPGAoutput() const;

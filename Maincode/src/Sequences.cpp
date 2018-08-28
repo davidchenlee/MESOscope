@@ -2,24 +2,17 @@
 
 void seq_main(const FPGAns::FPGA &fpga)
 {
-	/*
-	0 - Single shot
-	1 - Continuous: image the same plane many times
-	2 - Average: Image many times the same plane for averaging
-	3 - Stack volume from the initial z position
-	4 - Stack volume around the initial z position*/
-
-	//const RunMode acqMode = SINGLEMODE;
-	//const RunMode acqMode = CONTMODE;
-	//const RunMode acqMode = AVGMODE;
-	const RunMode acqMode = STACKMODE;
-	//const RunMode acqMode = STACKCENTEREDMODE;
+	const RunMode acqMode = SINGLEMODE;			//Single shot
+	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
+	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times for averaging
+	//const RunMode acqMode = STACKMODE;				//Stack volume from the initial z position
+	//const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
 
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 46.6, 18, 18.110};	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 46.6, 18, 18.110 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -27,7 +20,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	RScanner.setFFOV(FFOVrs_um);
 
 
-	//Check if the RS is running
+	//Check that the RS is running
 	char num;
 	while (!RScanner.downloadEnableState())
 	{
@@ -44,9 +37,9 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 1040;
-	const double Pi_mW = 70 * mW;
-	const double Pf_mW = 200 * mW;
-	double P_mW = Pi_mW;
+	//const std::vector<double> Pif_mW = { 10 , 60 };		//750 nm
+	const std::vector<double> Pif_mW = { 70 , 200 };	//1040 nm
+	double P_mW = Pif_mW.front();
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
 
@@ -135,8 +128,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 		datalog.record("FPGA clock (MHz) = ", tickPerUs);
 		datalog.record("LASER--------------------------------------------------------");
 		datalog.record("Laser wavelength (nm) = ", wavelength_nm);
-		datalog.record("Laser power first frame (mW) = ", Pi_mW);
-		datalog.record("Laser power last frame (mW) = ", Pf_mW);
+		datalog.record("Laser power first frame (mW) = ", Pif_mW.front());
+		datalog.record("Laser power last frame (mW) = ", Pif_mW.back());
 		datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod);
 		datalog.record("SCAN---------------------------------------------------------");
 		datalog.record("RS FFOV (um) = ", RScanner.mFFOV_um);
@@ -177,7 +170,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 			std::cout << "Frame # (diff-Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same-Z): " << (iterSameZ + 1) << "/" << nSameZ <<
 				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << std::endl;
 
-			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Set the laser power
+			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Override the previous laser power
 
 			//EXECUTE THE RT SEQUENCE
 			Image image(RTsequence);
@@ -186,7 +179,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 			image.average();			//Average the frames acquired via continuous acquisition
 			stackSameZ.pushImage(iterSameZ, image.accessTiff());
 
-			if (acqMode == CONTMODE)
+			if (acqMode == SINGLEMODE || acqMode == CONTMODE)
 			{
 				//Save individual files
 				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P_mW, 0) + "mW" +
@@ -199,16 +192,20 @@ void seq_main(const FPGAns::FPGA &fpga)
 		stackDiffZ.pushImage(iterDiffZ, stackSameZ.accessTiff());
 
 		std::cout << std::endl;
-		P_mW += (Pf_mW - Pi_mW) / nDiffZ;
+		P_mW += (Pif_mW.back() - Pif_mW.front()) / nDiffZ;
 	}
 	shutterVision.close();
 
-	//Save the stackDiffZ to a file
-	std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(Pi_mW, 0) + "mW" + toString(Pf_mW, 0) + "mW" +
-		"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
-		"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um/1000, 4));
+	if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
+	{
+		//Save the stackDiffZ to a file
+		std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(Pif_mW.front(), 0) + "mW_" + toString(Pif_mW.back(), 0) + "mW" +
+			"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
+			"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um / 1000, 4));
 
-	stackDiffZ.saveToFile(stackFilename, MULTIPAGE, overrideFlag);
+		stackDiffZ.saveToFile(stackFilename, MULTIPAGE, overrideFlag);
+	}
+
 }
 
 void seq_testInterframeTiming(const FPGAns::FPGA &fpga)

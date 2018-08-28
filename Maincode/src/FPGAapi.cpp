@@ -212,9 +212,8 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTforward, false));
 
 		//STAGES
-		const bool scanDirection = 0;
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getFpgaHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stageTriggerPulse_ms * tickPerUs)));	//Trigger pulse width
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ScanDirection, scanDirection));												//Z-stage scan direction (1 for up, 0 for down)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ScanDirection, false));												//Z-stage scan direction (1 for up, 0 for down)
 
 		/*
 		//SHUTTERS. Commented out to allow keeping the shutter on
@@ -405,10 +404,14 @@ namespace FPGAns
 	//Preset the FPGA output to the first value of the RT sequence to avoid jumps at the start of the sequence,
 	void RTsequence::presetFPGAoutput() const
 	{
-		//Directly read from the FPGA the last voltage in the galvo AO. See the LV implementation
-		I16 galvo1LastVoltage_I16, galvo2LastVoltage_I16;
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo1Mon, &galvo1LastVoltage_I16));
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo2Mon, &galvo2LastVoltage_I16));
+		//Read from the FPGA the last voltage in the galvo AO. See the LV implementation
+		std::vector<I16> AOlastVoltage_I16(nChan, 0);
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo1Mon, &AOlastVoltage_I16.at(GALVO1)));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo2Mon, &AOlastVoltage_I16.at(GALVO2)));
+	
+		//For debugging
+		//std::cout << convertI16toVolt(AOlastVoltage_I16.at(GALVO1)) << std::endl;
+		//std::cout << convertI16toVolt((I16)mVectorOfQueues.at(GALVO1).front()) << std::endl;
 
 		//Create a vector of queues
 		VQU32 vectorOfQueuesForRamp(nChan);
@@ -417,15 +420,14 @@ namespace FPGAns
 			if (mVectorOfQueues.at(chan).size() != 0)
 			{
 				//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
-				if (chan == GALVO1 || chan == GALVO2 )	//Only do GALVO1 and GALVO2 for now
+				if ((chan == GALVO1 || chan == GALVO2) )	//Only do GALVO1 and GALVO2 for now
 				{
-					const double Vi_V = convertI16toVolt(galvo1LastVoltage_I16);					//Last element of the last RT sequence
+					const double Vi_V = convertI16toVolt(AOlastVoltage_I16.at(chan));				//Last element of the last RT sequence
 					const double Vf_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT sequence
 					linearRamp(vectorOfQueuesForRamp.at(chan), 10 * us, 5 * ms, Vi_V, Vf_V);
 				}
 			}
 		}
-			
 		uploadFIFOIN_(vectorOfQueuesForRamp);		//Load the sequence on the FPGA
 		triggerNRT_();								//Trigger the FPGA outputs (non-RT trigger)
 	}

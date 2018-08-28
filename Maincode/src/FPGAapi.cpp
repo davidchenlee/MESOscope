@@ -400,8 +400,9 @@ namespace FPGAns
 	void RTsequence::presetFPGAoutput() const
 	{
 		//Directly read from the FPGA the last voltage in the galvo AO. See the LV implementation
-		I16 galvo1LastVoltage_I16;
+		I16 galvo1LastVoltage_I16, galvo2LastVoltage_I16;
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo1Mon, &galvo1LastVoltage_I16));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo2Mon, &galvo2LastVoltage_I16));
 
 		//Create a vector of queues
 		VQU32 vectorOfQueuesForRamp(nChan);
@@ -410,7 +411,7 @@ namespace FPGAns
 			if (mVectorOfQueues.at(chan).size() != 0)
 			{
 				//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
-				if (chan == GALVO1 )	//Only do GALVO1 for now
+				if (chan == GALVO1 || chan == GALVO2 )	//Only do GALVO1 and GALVO2 for now
 				{
 					const double Vi_V = convertI16toVolt(galvo1LastVoltage_I16);					//Last element of the last RT sequence
 					const double Vf_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT sequence

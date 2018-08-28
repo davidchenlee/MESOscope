@@ -9,17 +9,17 @@ void seq_main(const FPGAns::FPGA &fpga)
 	3 - Stack volume from the initial z position
 	4 - Stack volume around the initial z position*/
 
-	const RunMode acqMode = SINGLEMODE;
+	//const RunMode acqMode = SINGLEMODE;
 	//const RunMode acqMode = CONTMODE;
 	//const RunMode acqMode = AVGMODE;
-	//const RunMode acqMode = STACKMODE;
+	const RunMode acqMode = STACKMODE;
 	//const RunMode acqMode = STACKCENTEREDMODE;
 
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 46.4, 15.5, 18.130 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 46.6, 18, 18.110};	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -39,20 +39,21 @@ void seq_main(const FPGAns::FPGA &fpga)
 	}
 
 	//STACK
-	const double stepSize_um = 0.5 * um;
-	double zDelta_um = 100 * um;				//Acquire a stackDiffZ within this interval
+	const double stepSize_um = 1.0 * um;
+	double zDelta_um = 250 * um;				//Acquire a stackDiffZ within this interval
 
 	//LASER
-	const int wavelength_nm = 750;
-	const double laserPowerStart_mW = 15 * mW;
-	const double laserPowerEnd_mW = 25 * mW;
-	double laserPower_mW = laserPowerStart_mW;
+	const int wavelength_nm = 1040;
+	const double Pi_mW = 70 * mW;
+	const double Pf_mW = 70 * mW;
+	double P_mW = Pi_mW;
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
 
 	//SAMPLE
 	const std::string sampleName("Liver6518");
-	const double collar = 1.488;
+	const std::string immersionMedium("TDE 80% with water");
+	const double collar = 1.50;
 
 	//FILTERWHEEL
 	Filterwheel fw(FW1);
@@ -89,7 +90,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
 		overrideFlag = NOOVERRIDE;
-
+		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) + iterDiffZ * stepSize_um / 1000 });
 
@@ -98,7 +99,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = (int)(zDelta_um / stepSize_um);
 		overrideFlag = NOOVERRIDE;
-
+		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
 
@@ -123,7 +124,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		stage.moveStage3(stagePosition_mm.at(iterDiffZ));
 		stage.waitForMovementToStop3();
 		stage.printPosition3();		//Print the stage position
-		//laserPower_mW += 0.5;		//Increase the laser power by this much
+		//P_mW += 0.5;		//Increase the laser power by this much
 
 		//Acquire many frames at the same Z via discontinuous acquisition
 		for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
@@ -146,7 +147,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 			//POCKELS CELL FOR RT
 			PockelsCell pockels(RTsequence, POCKELS1, wavelength_nm);
-			pockels.pushPowerSinglet(8 * us, laserPower_mW);
+			pockels.pushPowerSinglet(8 * us, P_mW);
 			//pockels.voltageLinearRamp(4*us, 40*us, 0, 1*V);
 			//pockels.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
 			//pockels.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
@@ -161,7 +162,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 			if (acqMode == CONTMODE)
 			{
 				//Save individual files
-				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
+				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P_mW, 0) + "mW" +
 					"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(xx), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(yy), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(zz), 4));
 				image.saveTiffSinglePage(singleFilename, overrideFlag);
 				Sleep(500);
@@ -172,12 +173,13 @@ void seq_main(const FPGAns::FPGA &fpga)
 				Logger datalog("datalog_" + sampleName);
 				datalog.record("SAMPLE-------------------------------------------------------");
 				datalog.record("Sample = ", sampleName);
+				datalog.record("Immersion medium = ", immersionMedium);
 				datalog.record("Correction collar = ", collar);
 				datalog.record("FPGA---------------------------------------------------------");
 				datalog.record("FPGA clock (MHz) = ", tickPerUs);
 				datalog.record("LASER--------------------------------------------------------");
 				datalog.record("Laser wavelength (nm) = ", wavelength_nm);
-				datalog.record("Laser power (mW) = ", laserPower_mW);
+				datalog.record("Laser power (mW) = ", P_mW);
 				datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod);
 				datalog.record("SCAN---------------------------------------------------------");
 				datalog.record("RS FFOV (um) = ", RScanner.mFFOV_um);
@@ -199,12 +201,12 @@ void seq_main(const FPGAns::FPGA &fpga)
 		stackDiffZ.pushImage(iterDiffZ, stackSameZ.accessTiff());
 
 		std::cout << std::endl;
-		laserPower_mW += (laserPowerEnd_mW - laserPowerStart_mW) / nDiffZ;
+		P_mW += (Pf_mW - Pi_mW) / nDiffZ;
 	}
 	shutterVision.close();
 
 	//Save the stackDiffZ to a file
-	std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower_mW, 0) + "mW" +
+	std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P_mW, 0) + "mW" +
 		"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
 		"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um/1000, 4));
 

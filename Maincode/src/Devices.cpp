@@ -414,23 +414,28 @@ double ResonantScanner::downloadControl_V()
 	return FPGAns::convertI16toVolt(control_I16);
 }
 
-//Download the current control voltage of the RS from the FPGA
-bool ResonantScanner::downloadEnableState()
-{
-	NiFpga_Bool enableState;
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorBool_RSenableMon, &enableState));
-
-	return static_cast<bool>(enableState);
-}
-
-
-
 //Spatial sampling resolution (um per pixel)
 double ResonantScanner::getSamplingResolution_um()
 {
 	return mSampRes_umPerPix;
 }
 
+//Check that the RS is running
+void ResonantScanner::isRunning()
+{
+	NiFpga_Bool enableState;
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorBool_RSenableMon, &enableState));
+
+	char input_char;
+	while (!enableState)
+	{
+		std::cout << "RS seems to be off. Input 0 to exit or any other key to try again ";
+		std::cin >> input_char;
+
+		if (input_char == '0')
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Sequence terminated");
+	}
+}
 
 #pragma endregion "Resonant scanner"
 

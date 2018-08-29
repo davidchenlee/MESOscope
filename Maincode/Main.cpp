@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 		{
 			seq_main(fpga);		
 			//seq_contAcquisition(fpga);
-			//seq_testInterframeTiming(fpga);
+			//seq_testGalvo(fpga);
 			//seq_testPixelclock(fpga);
 			//seq_testStagePosition();
 			//seq_testAODO(fpga);

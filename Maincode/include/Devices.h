@@ -73,8 +73,8 @@ public:
 	void turnOn_V(const double Vcontrol_V);
 	void turnOff();
 	double downloadControl_V();
-	bool downloadEnableState();
 	double getSamplingResolution_um();
+	void isRunning();
 };
 
 class Shutter

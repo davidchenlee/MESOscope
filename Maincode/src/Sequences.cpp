@@ -2,43 +2,33 @@
 
 void seq_main(const FPGAns::FPGA &fpga)
 {
-	const RunMode acqMode = SINGLEMODE;			//Single shot
+	//const RunMode acqMode = SINGLEMODE;			//Single shot
 	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
 	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times for averaging
-	//const RunMode acqMode = STACKMODE;				//Stack volume from the initial z position
+	const RunMode acqMode = STACKMODE;				//Stack volume from the initial z position
 	//const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
 
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
-	const int nFramesCont = 20;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 46.6, 18, 18.110 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const int nFramesCont = 1;									//Number of frames for continuous acquisition
+	const int tmp = 2;
+	const double3 stagePosition0_mm = { 46.5-0.190*0, 17.9, 18.100+0.060*tmp };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
 	ResonantScanner RScanner(fpga);
 	RScanner.setFFOV(FFOVrs_um);
-
-
-	//Check that the RS is running
-	char num;
-	while (!RScanner.downloadEnableState())
-	{
-		std::cout << "RS seems to be off. Input 0 to exit or any other key to try again ";
-		std::cin >> num;
-
-		if (num == '0')
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Sequence terminated");
-	}
+	RScanner.isRunning();
 
 	//STACK
 	const double stepSize_um = 1.0 * um;
-	double zDelta_um = 100 * um;				//Acquire a stack covering this interval
+	double zDelta_um = 70 * um;				//Acquire a stack covering this interval
 
 	//LASER
-	const int wavelength_nm = 1040;
-	//const std::vector<double> Pif_mW = { 10 , 60 };		//750 nm
-	const std::vector<double> Pif_mW = { 70 , 100 };	//1040 nm
+	const int wavelength_nm = 750;
+	const std::vector<double> Pif_mW = { 10 + tmp *60*0.25 , 10+(tmp *60+70)*0.25};		//750 nm
+	//const std::vector<double> Pif_mW = { 70 , 100 };	//1040 nm
 	double P_mW = Pif_mW.front();
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
@@ -46,7 +36,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	//SAMPLE
 	const std::string sampleName("Liver6518");
 	const std::string immersionMedium("TDE 80% with water");
-	const double collar = 1.50;
+	const double collar = 1.508;
 
 	//FILTERWHEEL
 	Filterwheel fw(FW1);
@@ -199,7 +189,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
 	{
 		//Save the stackDiffZ to a file
-		std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(Pif_mW.front(), 0) + "mW_" + toString(Pif_mW.back(), 0) + "mW" +
+		std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(Pif_mW.front(), 1) + "mW_Pf=" + toString(Pif_mW.back(), 1) + "mW" +
 			"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
 			"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um / 1000, 4));
 
@@ -208,7 +198,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 }
 
-void seq_testInterframeTiming(const FPGAns::FPGA &fpga)
+void seq_testGalvo(const FPGAns::FPGA &fpga)
 {
 	const int width_pix = 300;
 	const int height_pix = 400;
@@ -432,28 +422,6 @@ void seq_testConvertI16toVolt()
 	std::cout << "I16 to colt: " << FPGAns::convertI16toVolt(32767) << std::endl;
 	std::cout << "volt to I16 to volt: " << FPGAns::convertI16toVolt(FPGAns::convertVoltToI16(0)) << std::endl;
 }
-
-void seq_testGalvoSync(const FPGAns::FPGA &fpga)
-{
-	//GALVO
-	const double FFOVgalvo_um = 200 * um;		//Full FOV in the slow axis
-	const double galvoTimeStep = 8 * us;
-	const double posMax_um = FFOVgalvo_um / 2;
-
-	//CREATE A REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, FG, 3);
-
-	//GALVO FOR RT
-	Galvo galvo(RTsequence, GALVO1);
-	const double duration = halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
-	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);			//Linear ramp for the galvo
-	//galvo.pushVoltageSinglet_(2 * us, 1);												//Mark the end of the galvo ramp
-																						
-	//Execute the realtime sequence and acquire the image
-	Image image(RTsequence);
-	image.acquire(); //Execute the RT sequence and acquire the image
-}
-
 
 void seq_testTiffU8()
 {

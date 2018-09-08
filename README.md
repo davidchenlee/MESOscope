@@ -15,4 +15,3 @@ Code in C++ for controlling the NI USB-7852R card
   - Try to increase FIFOout depth (I tried already. 131071 elements is the max for USB-7856R)
   - Cascade FIFOs. I could compile an additional internal FIFO with 65545 elements, 64 bits
 - I detected that, when the FPGA resets at the end of the code, the shutter #2 is triggered. I see a small voltage on the scope, like ~50mV that seems to be enough to trigger the shutter
-- The 'FIFO OUT' subvi has a feedback node that I could possibly get rid of because in the 'photon count' subvi the reset is placed after the counter. Try placing it BEFORE the counter.

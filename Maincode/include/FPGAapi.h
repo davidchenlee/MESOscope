@@ -29,7 +29,7 @@ namespace FPGAns
 	public:
 		FPGA();
 		~FPGA();
-		void close(const ToggleSwitch resetFlag = DISABLE) const;
+		void close(const FPGAresetSelector resetFlag = NORESET) const;
 		NiFpga_Session getFpgaHandle() const;								//Access the handle indirectly to avoid modifying it by mistake
 
 	};
@@ -61,7 +61,7 @@ namespace FPGAns
 	public:
 		const FPGAns::FPGA &mFpga;
 		LineclockSelector mLineclockInput;															//Resonant scanner (RS) or Function generator (FG)
-		ToggleSwitch mStageAsTrigger;																//Trigger the acquisition with the z stage: enable (0), disable (1)
+		AcqTriggerSelector mStageAsTrigger;																//Trigger the acquisition with the z stage: enable (0), disable (1)
 		const double mDwell_us = 0.1625 * us;														//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
 																									//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 		const double mPulsesPerPixel = mDwell_us / VISIONpulsePeriod;								//Max number of laser pulses per pixel
@@ -74,14 +74,14 @@ namespace FPGAns
 		int mNpixAllFrames;																			//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
 		RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput = FG,
-			const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix = 400, const ToggleSwitch mStageAsTrigger = DISABLE);
+			const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix = 400, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
 		RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
 		RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
 		~RTsequence();
 		void pushQueue(const RTchannel chan, QU32& queue);
 		void clearQueue(const RTchannel chan);
 		void pushDigitalSinglet(const RTchannel chan, double timeStep, const bool DO);
-		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V, const Override overrideFlag = NOOVERRIDE);
+		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V, const OverrideFileSelector overrideFlag = NOOVERRIDE);
 		void pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor);
 		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V);
 		void presetFPGAoutput() const;

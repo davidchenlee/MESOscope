@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 		FPGAns::FPGA fpga;		//Create a FPGA session
 		try
 		{
-			seq_main(fpga);		
+			//seq_main(fpga);		
 			//seq_contAcquisition(fpga);
 			//seq_testGalvo(fpga);
 			//seq_testPixelclock(fpga);
@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
 			//seq_testStageConfig();
 			//seq_testEthernetSpeed();
 			//seq_testStageTrigAcq(fpga);
+			seq_testStageTrigAcqLite(fpga);
 		}
 		catch (const std::invalid_argument &e)
 		{
@@ -57,7 +58,7 @@ int main(int argc, char* argv[])
 			getchar();
 		}
 
-		fpga.close();		//Close the FPGA connection
+		fpga.close(NORESET);		//Close the FPGA connection
 
 	}
 	//Catch exceptions thrown by the constructor FPGAns::FPGA

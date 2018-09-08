@@ -19,11 +19,13 @@ namespace Constants
 	typedef std::array<double, 3> double3;		//array of 3 doubles. Arrays allow to allocate memory. Vectors don't
 	typedef std::array<int, 3> int3;			//array of 3 ints
 
-	enum PhotonCounterSelector { EXT, SIM };
+	enum PhotonCounterSelector { EXT = 0, SIM };
 	enum LineclockSelector { RS = false, FG = true };
+	enum AcqTriggerSelector { PCTRIG = false, STAGETRIG = true};
 	enum ToggleSwitch { DISABLE = false, ENABLE = true};
-	enum TiffPageStruct { SINGLEPAGE = false, MULTIPAGE = true};
-	enum Override { NOOVERRIDE = false, OVERRIDE = true};
+	enum FPGAresetSelector { NORESET = false, RESET = true };
+	enum TiffPageStructSelector { SINGLEPAGE = false, MULTIPAGE = true};
+	enum OverrideFileSelector { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
 	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan };		//nChan = number of RT channels available, including the pixel clock channel
 	enum ShutterID { SHUTTER1 = 1, SHUTTER2 };

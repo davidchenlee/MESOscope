@@ -152,13 +152,13 @@ namespace FPGAns
 	};
 
 	//The object has to be closed explicitly because of the exception catching
-	void FPGA::close(const ToggleSwitch resetFlag) const
+	void FPGA::close(const FPGAresetSelector resetFlag) const
 	{
 		//Flush the RAM buffers on the FPGA as precaution. Make sure that the sequence has already finished
-		Sleep(100);	//Do not flush too soon, otherwise the output sequence will be cut off
+		Sleep(100);	//Do not flush too soon, otherwise the sequence will be cut off
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
-		//std::cout << "flushBRAMs called\n";
+		//std::cout << "flushBRAMs called\n";	//For debugging
 
 		//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 		//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
@@ -186,18 +186,18 @@ namespace FPGAns
 
 		//FIFOIN
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(nChan)));											//Number of input channels
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));															//Control-sequence trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));														//Control-sequence trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_FIFOINtimeout_tick, static_cast<U16>(FIFOINtimeout_tick)));						//FIFOIN timeout
 
 		//FIFOOUT
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, FIFOOUTfpga));												//Enable pushing data to FIFOOUTfpga. For debugging purposes
 
 		//TRIGGERS AND DELAYS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_MasterTrigger, false));															//Data-acquisition trigger
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));															//Memory-flush trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_MasterTrigger, false));														//Data-acquisition trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));														//Memory-flush trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncDOtoAO_tick, static_cast<U16>(syncDOtoAO_tick)));							//DO and AO relative sync
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, static_cast<U16>(syncAODOtoLinegate_tick)));			//DO and AO sync to linegate
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));														//Trigger the FPGA outputs (non-RT trigger)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));													//Trigger the FPGA outputs (non-RT trigger)
 
 		if (linegateTimeout_us <= 2 * halfPeriodLineclock_us)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
@@ -213,7 +213,7 @@ namespace FPGAns
 
 		//STAGES
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getFpgaHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stageTriggerPulse_ms * tickPerUs)));	//Trigger pulse width
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ScanDirection, false));												//Z-stage scan direction (1 for up, 0 for down)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ScanDirection, false));														//Z-stage scan direction (1 for up, 0 for down)
 
 		/*
 		//SHUTTERS. Commented out to allow keeping the shutter on
@@ -271,7 +271,7 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, const ToggleSwitch stageAsTrigger) :
+	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, const AcqTriggerSelector stageAsTrigger) :
 		mFpga(fpga), mVectorOfQueues(nChan), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mStageAsTrigger(stageAsTrigger)
 	{
 		//Set the imaging parameters
@@ -300,7 +300,7 @@ namespace FPGAns
 	
 		//SELECTORS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, mLineclockInput));										//Lineclock: resonant scanner (RS) or function generator (FG)
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageTrigAcqEnable, mStageAsTrigger));											//Trigger the acquisition with the z stage: DISABLE OR ENABLE
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageTrigAcqEnable, mStageAsTrigger));											//Trigger the acquisition with the PC or the Z stage
 	}
 
 	//Send every single queue in 'vectorOfQueue' to the FPGA buffer
@@ -375,7 +375,7 @@ namespace FPGAns
 		mVectorOfQueues.at(chan).push_back(FPGAns::packDigitalSinglet(timeStep, DO));
 	}
 
-	void RTsequence::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V, const Override overrideFlag)
+	void RTsequence::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V, const OverrideFileSelector overrideFlag)
 	{
 		if (timeStep < AO_tMIN_us)
 		{

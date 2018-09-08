@@ -47,7 +47,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	int nDiffZ;				//Number of frames at different Z for discontinuous acquisition
 	int nSameZ;				//Number of frames at same Z for discontinuous acquisition
-	Override overrideFlag;
+	OverrideFileSelector overrideFlag;
 	switch (acqMode)
 	{
 	case SINGLEMODE:
@@ -159,7 +159,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 			std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
 				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << std::endl;
 
-			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Override the previous laser power
+			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//OverrideFileSelector the previous laser power
 
 			//EXECUTE THE RT SEQUENCE
 			Image image(RTsequence);
@@ -490,23 +490,23 @@ void seq_testEthernetSpeed()
 
 }
 
-//This works when the acq is triggered by the master trigger and not by the stage
+//This currently works for acquisition triggered by the master trigger and not by the stage
 void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS
 	const int width = 300;
 	const int height = 400;
-	const int nFramesCont = 25;		//Number of frames with continuous acquisition
+	const int nFramesCont = 100;		//Number of frames with continuous acquisition
 
 	//STAGES
-	const double3 stagePosition0_mm = { 35.020, 19.808, 18.552 - 0.007};	//Stage initial position
+	const double3 stagePosition0_mm = { 36.0, 14.2, 18.380 };	//Stage initial position
 	Stage stage;
 	stage.moveStage3(stagePosition0_mm);
 	stage.waitForMovementToStop3();
 
 	//LASER
 	const int wavelength_nm = 750;
-	double laserPower_mW = 70 * mW;
+	double laserPower_mW = 50 * mW;
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
 
@@ -520,7 +520,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	fw.setColor(wavelength_nm);
 		
 	//CREATE THE REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, width, height, DISABLE);
+	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, width, height, STAGETRIG);
 
 	//GALVO FOR RT
 	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
@@ -542,15 +542,53 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	//EXECUTE THE RT SEQUENCE
 	Image image(RTsequence);
 	image.initialize(); //Execute the RT sequence and acquire the image
-	image.triggerRT();
-	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.014);
-	image.download();
 
-	image.mirrorOddFrames();
-	image.saveTiffSinglePage("testTrigger", OVERRIDE);
+	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.1);
+	stage.waitForMovementToStop3();
+	//image.download();
+	//image.mirrorOddFrames();
+	//image.saveTiffMultiPage("testTrigger", NOOVERRIDE);
 	
 	shutterVision.close();
 
+	//Disable the stage trigger so to preset the stage position in the next run
+	NiFpga_WriteBool(fpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageTrigAcqEnable, false);
+}
+
+
+//This currently works for acquisition triggered by the master trigger and not by the stage
+void seq_testStageTrigAcqLite(const FPGAns::FPGA &fpga)
+{
+	//ACQUISITION SETTINGS
+	const int width = 300;
+	const int height = 400;
+	const int nFramesCont = 100;		//Number of frames with continuous acquisition
+
+	//STAGES
+	const double3 stagePosition0_mm = { 36.0, 14.2, 18.405 };	//Stage initial position
+	Stage stage;
+	stage.moveStage3(stagePosition0_mm);
 	stage.waitForMovementToStop3();
-	stage.printPosition3();		//Print the stage position
+
+	//CREATE THE REAL-TIME SEQUENCE
+	FPGAns::RTsequence RTsequence(fpga, FG, nFramesCont, width, height, STAGETRIG);
+
+	//GALVO FOR RT
+	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
+	const double galvoTimeStep = 8 * us;
+	const double posMax_um = FFOVgalvo_um / 2;
+	Galvo galvo(RTsequence, GALVO1);
+	const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
+	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
+
+	//EXECUTE THE RT SEQUENCE
+	Image image(RTsequence);
+	image.initialize();
+
+	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.1); //Move the stage, which will trigger the data acquisition
+	stage.waitForMovementToStop3();
+
+	//Disable the stage trigger so to preset the stage position in the next run
+	NiFpga_WriteBool(fpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageTrigAcqEnable, false);
+
 }

@@ -5,15 +5,14 @@ void seq_main(const FPGAns::FPGA &fpga)
 	//const RunMode acqMode = SINGLEMODE;			//Single shot
 	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
 	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times for averaging
-	const RunMode acqMode = STACKMODE;				//Stack volume from the initial z position
-	//const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
+	//const RunMode acqMode = STACKMODE;				//Stack volume from the initial z position
+	const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
 
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const int tmp = 2;
-	const double3 stagePosition0_mm = { 46.5-0.190*0, 17.9, 18.100+0.060*tmp };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.0, 14.2, 18.405 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -22,21 +21,21 @@ void seq_main(const FPGAns::FPGA &fpga)
 	RScanner.isRunning();
 
 	//STACK
-	const double stepSize_um = 1.0 * um;
-	double zDelta_um = 70 * um;				//Acquire a stack covering this interval
+	const double stepSize_um = 0.5 * um;
+	double zDelta_um = 10 * um;				//Acquire a stack covering this interval
 
 	//LASER
 	const int wavelength_nm = 750;
-	const std::vector<double> Pif_mW = { 10 + tmp *60*0.25 , 10+(tmp *60+70)*0.25};		//750 nm
-	//const std::vector<double> Pif_mW = { 70 , 100 };	//1040 nm
+	const std::vector<double> Pif_mW = { 50, 50};		//For 750 nm over 200 um
+	//const std::vector<double> Pif_mW = { 70 , 100 };	//For 1040 nm over 200 um
 	double P_mW = Pif_mW.front();
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
 
 	//SAMPLE
-	const std::string sampleName("Liver6518");
-	const std::string immersionMedium("TDE 80% with water");
-	const double collar = 1.508;
+	const std::string sampleName("Bead4um");
+	const std::string immersionMedium("Glycerol");
+	const double collar = 1.47;
 
 	//FILTERWHEEL
 	Filterwheel fw(FW1);
@@ -157,7 +156,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		//Acquire many frames at the same Z via discontinuous acquisition
 		for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
 		{
-			std::cout << "Frame # (diff-Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same-Z): " << (iterSameZ + 1) << "/" << nSameZ <<
+			std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
 				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << std::endl;
 
 			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Override the previous laser power
@@ -491,7 +490,7 @@ void seq_testEthernetSpeed()
 
 }
 
-//This works when the acq is triggered by the master trigger, and not by the stage
+//This works when the acq is triggered by the master trigger and not by the stage
 void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS

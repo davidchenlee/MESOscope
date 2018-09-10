@@ -2,11 +2,11 @@
 
 void seq_main(const FPGAns::FPGA &fpga)
 {
-	//const RunMode acqMode = SINGLEMODE;			//Single shot
+	const RunMode acqMode = SINGLEMODE;			//Single shot
 	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
 	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times for averaging
 	//const RunMode acqMode = STACKMODE;				//Stack volume from the initial z position
-	const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
+	//const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
 
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
@@ -556,7 +556,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 }
 
 
-//This currently works for acquisition triggered by the master trigger and not by the stage
+//The pc triggers the z-stage motion. Its position triggers the control sequence and data acquisition
 void seq_testStageTrigAcqLite(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS
@@ -565,7 +565,7 @@ void seq_testStageTrigAcqLite(const FPGAns::FPGA &fpga)
 	const int nFramesCont = 100;		//Number of frames with continuous acquisition
 
 	//STAGES
-	const double3 stagePosition0_mm = { 36.0, 14.2, 18.405 };	//Stage initial position
+	const double3 stagePosition0_mm = { 36.0, 14.2, 18.380 };	//Stage initial position
 	Stage stage;
 	stage.moveStage3(stagePosition0_mm);
 	stage.waitForMovementToStop3();
@@ -585,7 +585,7 @@ void seq_testStageTrigAcqLite(const FPGAns::FPGA &fpga)
 	Image image(RTsequence);
 	image.initialize();
 
-	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.1); //Move the stage, which will trigger the data acquisition
+	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.1); //Move the stage, which will trigger the control sequenceand data acquisition
 	stage.waitForMovementToStop3();
 
 	//Disable the stage trigger so to preset the stage position in the next run

@@ -45,8 +45,8 @@ namespace Constants
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
 	
-	extern const double linegateTimeout_us = 1.5 * (2 * halfPeriodLineclock_us);	//In LV, timeout the start of the data acquisition. Otherwise, when Lineclock fails triggering (e.g.the RS is off),
-																					//pixelclock false-triggers after Lineclock is back up
+	extern const double linegateTimeout_us = 100 * ms;	//In LV, timeout the start of the data acquisition. Otherwise, when Lineclock fails triggering (e.g.the RS is off),
+														//pixelclock false-triggers after Lineclock is back up
 
 	extern const int FIFOINtimeout_tick = 100;			//in ticks. Timeout of the host-to-target and target-to-host FIFOINs
 	extern const int FIFOINmax = 32773;					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!

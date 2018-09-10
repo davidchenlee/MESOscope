@@ -12,7 +12,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.0, 14.2, 18.405 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.0, 14.2, 18.415 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -26,7 +26,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 750;
-	const std::vector<double> Pif_mW = { 50, 50};		//For 750 nm over 200 um
+	const std::vector<double> Pif_mW = { 30, 30};		//For 750 nm over 200 um
 	//const std::vector<double> Pif_mW = { 70 , 100 };	//For 1040 nm over 200 um
 	double P_mW = Pif_mW.front();
 	Laser vision;
@@ -149,7 +149,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 	{
 		stage.moveStage3(stagePosition_mm.at(iterDiffZ));
-		stage.waitForMovementToStop3();
+		stage.waitForMotionToStop3();
 		stage.printPosition3();		//Print the stage position
 		//P_mW += 0.5;				//Increase the laser power by this much
 
@@ -349,7 +349,7 @@ void seq_testStagePosition()
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
 
-	stage.waitForMovementToStop(zz);
+	stage.waitForMotionToStop(zz);
 
 	std::cout << "Stages final position:" << std::endl;
 	stage.printPosition3();
@@ -490,23 +490,23 @@ void seq_testEthernetSpeed()
 
 }
 
-//This currently works for acquisition triggered by the master trigger and not by the stage
+//The pc triggers the z-stage motion. Its position triggers the control sequence and data acquisition
 void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS
 	const int width = 300;
 	const int height = 400;
-	const int nFramesCont = 100;		//Number of frames with continuous acquisition
+	const int nFramesCont = 100;		//Number of frames for continuous acquisition
 
 	//STAGES
-	const double3 stagePosition0_mm = { 36.0, 14.2, 18.380 };	//Stage initial position
+	const double3 stagePosition0_mm = { 36.0, 14.2, 18.415 - 0.020 };	//Stage initial position
 	Stage stage;
 	stage.moveStage3(stagePosition0_mm);
-	stage.waitForMovementToStop3();
+	stage.waitForMotionToStop3();
 
 	//LASER
 	const int wavelength_nm = 750;
-	double laserPower_mW = 50 * mW;
+	double laserPower_mW = 40 * mW;
 	Laser vision;
 	vision.setWavelength(wavelength_nm);
 
@@ -518,7 +518,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	//FILTERWHEEL
 	Filterwheel fw(FW1);
 	fw.setColor(wavelength_nm);
-		
+
 	//CREATE THE REAL-TIME SEQUENCE
 	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, width, height, STAGETRIG);
 
@@ -541,54 +541,19 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 
 	//EXECUTE THE RT SEQUENCE
 	Image image(RTsequence);
-	image.initialize(); //Execute the RT sequence and acquire the image
-
-	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.1);
-	stage.waitForMovementToStop3();
-	//image.download();
-	//image.mirrorOddFrames();
-	//image.saveTiffMultiPage("testTrigger", NOOVERRIDE);
-	
-	shutterVision.close();
-
-	//Disable the stage trigger so to preset the stage position in the next run
-	NiFpga_WriteBool(fpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageTrigAcqEnable, false);
-}
-
-
-//The pc triggers the z-stage motion. Its position triggers the control sequence and data acquisition
-void seq_testStageTrigAcqLite(const FPGAns::FPGA &fpga)
-{
-	//ACQUISITION SETTINGS
-	const int width = 300;
-	const int height = 400;
-	const int nFramesCont = 100;		//Number of frames with continuous acquisition
-
-	//STAGES
-	const double3 stagePosition0_mm = { 36.0, 14.2, 18.380 };	//Stage initial position
-	Stage stage;
-	stage.moveStage3(stagePosition0_mm);
-	stage.waitForMovementToStop3();
-
-	//CREATE THE REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, FG, nFramesCont, width, height, STAGETRIG);
-
-	//GALVO FOR RT
-	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
-	const double galvoTimeStep = 8 * us;
-	const double posMax_um = FFOVgalvo_um / 2;
-	Galvo galvo(RTsequence, GALVO1);
-	const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
-	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
-
-	//EXECUTE THE RT SEQUENCE
-	Image image(RTsequence);
 	image.initialize();
 
-	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.1); //Move the stage, which will trigger the control sequenceand data acquisition
-	stage.waitForMovementToStop3();
+	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.060); //Move the stage, which will trigger the control sequenceand data acquisition
+	
+	image.startFIFOOUTpc();
+	image.download();
+	image.mirrorOddFrames();
+	image.saveTiffMultiPage("Untitled");
 
-	//Disable the stage trigger so to preset the stage position in the next run
-	NiFpga_WriteBool(fpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_StageTrigAcqEnable, false);
+	stage.waitForMotionToStop3();
+	shutterVision.close();
+
+	//Disable ZstageAsTrigger to position the stage in the next run without triggering the sequence
+	NiFpga_WriteBool(fpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false);
 
 }

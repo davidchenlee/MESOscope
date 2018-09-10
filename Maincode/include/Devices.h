@@ -17,7 +17,7 @@ class Image
 	void configureFIFOOUTpc_(const U32 depth) const;	//Currently I don't use this function
 	void stopFIFOOUTpc_() const;
 	void readFIFOOUTpc_();
-	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer);
+	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);
 	void correctInterleaved_();
 	void demultiplex_();
 	void FIFOOUTpcGarbageCollector_() const;
@@ -27,7 +27,7 @@ public:
 	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
 	void acquire();
 	void initialize();
-	void triggerRT();
+	void startFIFOOUTpc();
 	void download();
 	void mirrorOddFrames();
 	void average();
@@ -220,8 +220,8 @@ public:
 	void moveStage3(const double3 positions);
 	double downloadPosition_mm(const Axis axis);
 	bool isMoving(const Axis axis) const;
-	void waitForMovementToStop(const Axis axis) const;
-	void waitForMovementToStop3() const;
+	void waitForMotionToStop(const Axis axis) const;
+	void waitForMotionToStop3() const;
 	void stopALL() const;
 	void downloadConfiguration(const Axis axis, const int chan) const;
 	double qVEL(const Axis axis) const;

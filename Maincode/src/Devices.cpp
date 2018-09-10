@@ -93,13 +93,19 @@ void Image::readFIFOOUTpc_()
 	//pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
 	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
 
+	/*
 	//Declare and start a stopwatch [2]
-	//double duration;
-	//auto t_start = std::chrono::high_resolution_clock::now();
+	double duration;
+	auto t_start = std::chrono::high_resolution_clock::now();
+	*/
 	
 	const int readFifoWaitingTime_ms = 5;			//Waiting time between each iteration
 	const U32 timeout_ms = 100;						//FIFOOUTpc timeout
-	int timeout_iter = 1000;							//Timeout the whileloop if the data download fails	
+	
+	//Null read timeout
+	int timeout_iter = 100;						//Timeout the whileloop if the data download fails
+	int nullReadCounterA = 0;
+	int nullReadCounterB = 0;
 
 	//FIFOOUT
 	int nElemTotalA = 0; 					//Total number of elements read from FIFOOUTpc A
@@ -109,13 +115,14 @@ void Image::readFIFOOUTpc_()
 	{
 		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
 
-		readChunk_(nElemTotalA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArrayA);	//FIFOOUTpc A
-		readChunk_(nElemTotalB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArrayB);	//FIFOOUTpc B
+		readChunk_(nElemTotalA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArrayA, nullReadCounterA);	//FIFOOUTpc A
+		readChunk_(nElemTotalB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArrayB, nullReadCounterB);	//FIFOOUTpc B
 
-		timeout_iter--;
-		//Transfer timeout
-		if (timeout_iter == 0)
+		if (nullReadCounterA > timeout_iter && nullReadCounterB > timeout_iter)
 			throw ImageException((std::string)__FUNCTION__ + ": FIFOOUTpc downloading timeout");
+
+		//std::cout << "FIFO A: " << nElemTotalA << "\tFIFO B: " << nElemTotalB << std::endl;	//For debugging
+		//std::cout << "nullReadCounter A: " << nullReadCounterA << "\tnullReadCounter: " << nullReadCounterB << std::endl;	//For debugging
 	}
 
 	/*
@@ -125,6 +132,7 @@ void Image::readFIFOOUTpc_()
 	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * mRTsequence.mNpixAllFrames / duration / 1000 << " Mbps" << std::endl; //2 FIFOOUTs of 32 bits each
 	std::cout << "Total of elements read: " << nElemTotalA << "\t" << nElemTotalB << std::endl; //Print out the total number of elements read
 	*/
+	
 
 	//If all the expected data is NOT read successfully
 	if (nElemTotalA <mRTsequence.mNpixAllFrames || nElemTotalB < mRTsequence.mNpixAllFrames)
@@ -132,7 +140,7 @@ void Image::readFIFOOUTpc_()
 }
 
 //Read a chunk of data in the FIFOpc
-void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer)
+void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &nullReadCounter)
 {
 	U32 dummy;
 	U32 nElemToRead = 0;				//Elements remaining in FIFOOUTpc
@@ -142,21 +150,25 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	{
 		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), FIFOOUTpc, buffer, 0, timeout_ms, &nElemToRead));
-		//std::cout << "Number of elements remaining in FIFOOUT: " << mNelemToReadFIFOOUTb << std::endl;
+		//std::cout << "Number of elements remaining in FIFOOUT: " << nElemToRead << std::endl;	//For debugging
 
 		//If data available in FIFOOUTpc, retrieve it
 		if (nElemToRead > 0)
 		{
 			//If more data than expected
-			if ( static_cast<int>(nElemRead + nElemToRead) > mRTsequence.mNpixAllFrames)
+			if (static_cast<int>(nElemRead + nElemToRead) > mRTsequence.mNpixAllFrames)
 				throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO buffer overflow");
 
 			//Retrieve the elements in FIFOOUTpc
 			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), FIFOOUTpc, buffer + nElemRead, nElemToRead, timeout_ms, &dummy));
-			
+
 			//Keep track of the total number of elements read
 			nElemRead += nElemToRead;
+
+			nullReadCounter = 0;	//Reset the iteration counter
 		}
+		else
+			nullReadCounter++;		//keep track of the null reads
 	}
 }
 
@@ -211,13 +223,11 @@ void Image::initialize()
 {
 	mRTsequence.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTsequence.uploadRT();			//Load the RT sequence in mVectorOfQueues to the FPGA
-	startFIFOOUTpc_();				//Establish the connection between FIFOOUTfpga and FIFOOUTpc and cleans up any residual data from the previous run
 }
 
-
-void Image::triggerRT()
+void Image::startFIFOOUTpc()
 {
-	mRTsequence.triggerRT();		//Trigger the RT sequence. If triggered too early, FIFOOUTfpga will probably overflow
+	startFIFOOUTpc_();				//Establish the connection between FIFOOUTfpga and FIFOOUTpc and cleans up any residual data from the previous run
 }
 
 void Image::download()
@@ -914,6 +924,7 @@ void Filterwheel::setColor(const int wavelength_nm)
 
 	setColor(color);
 }
+
 #pragma endregion "Filterwheel"
 
 #pragma region "Laser"
@@ -1126,7 +1137,7 @@ bool Stage::isMoving(const Axis axis) const
 	return isMoving;
 }
 
-void Stage::waitForMovementToStop(const Axis axis) const
+void Stage::waitForMotionToStop(const Axis axis) const
 {
 	BOOL isMoving;
 	do {
@@ -1139,7 +1150,7 @@ void Stage::waitForMovementToStop(const Axis axis) const
 	std::cout << "\n";
 }
 
-void Stage::waitForMovementToStop3() const
+void Stage::waitForMotionToStop3() const
 {
 	std::cout << "Updating the stage position: ";
 

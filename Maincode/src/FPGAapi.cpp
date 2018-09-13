@@ -165,6 +165,9 @@ namespace FPGAns
 		//0 resets, 1 does not reset
 		checkStatus(__FUNCTION__, NiFpga_Close(mFpgaHandle, !resetFlag));
 
+		if (resetFlag)
+			std::cout << "The FPGA has been successfully reset" << std::endl;
+
 		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 		checkStatus(__FUNCTION__, NiFpga_Finalize());
 	}

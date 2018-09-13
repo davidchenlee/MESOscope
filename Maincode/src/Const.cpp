@@ -23,7 +23,7 @@ namespace Constants
 	extern const int mW = 1;								//milliwatt
 
 	//SERIAL PORTS. Assign a port to 'enum ComID'
-	extern const std::vector<std::string> assignCOM = { "COM1", "COM6", "", "", "" };
+	extern const std::vector<std::string> assignCOM = { "COM1", "COM5", "", "", "" };
 
 	//VISION LASER
 	extern const double VISIONpulsePeriod = 0.0125 * us;		//The pulse repetition rate of VISION is 80 MHz

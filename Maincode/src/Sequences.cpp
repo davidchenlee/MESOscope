@@ -12,7 +12,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.0, 14.2, 18.415 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.0, 14.2, 18.432 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;

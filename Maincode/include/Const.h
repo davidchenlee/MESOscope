@@ -28,13 +28,13 @@ namespace Constants
 	enum OverrideFileSelector { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
 	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan };		//nChan = number of RT channels available, including the pixel clock channel
-	enum ShutterID { SHUTTER1 = 1, SHUTTER2 };
-	enum FilterwheelID { FW1 = 1, FW2 };
-	enum Filtercolor { BLUE = 1, GREEN, RED };
+	enum ShutterID { SHUTTER1 = 1, SHUTTER2 = 2 };
+	enum FilterwheelID { FWdet = 1, FWexc = 2 };
+	enum Filtercolor { BLUE = 1, GREEN = 2, RED = 3 };
 	enum Axis { xx, yy, zz };
 	enum RunMode { SINGLEMODE, CONTMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
 
-	enum ComID { VISIONcom, FW1com , FW2com, mPMTcom, ZSTAGEcom };
+	enum ComID { VISIONcom, FIDELITYcom, FW1com , FW2com, mPMTcom };
 	extern const std::vector<std::string> assignCOM;
 
 	extern const std::string folderPath;

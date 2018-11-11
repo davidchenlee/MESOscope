@@ -405,7 +405,7 @@ namespace FPGAns
 		linearRamp(mVectorOfQueues.at(chan), timeStep, rampLength, Vi_V, Vf_V);
 	}
 
-	//Preset the FPGA output to the first value of the RT sequence to avoid jumps at the start of the sequence,
+	//Preset the FPGA output with the first value in the RT sequence to avoid discontinuities at the start of the sequence
 	void RTsequence::presetFPGAoutput() const
 	{
 		//Read from the FPGA the last voltage in the galvo AO. See the LV implementation

@@ -24,16 +24,16 @@
 /**
  * The signature of the FPGA bitfile.
  */
-static const char* const NiFpga_FPGAvi_Signature = "C60028F26AD57B1B6DC5E6DD1AE2059E";
+static const char* const NiFpga_FPGAvi_Signature = "0400076D306D11DF4695EB149FD2BE6D";
 
 typedef enum
 {
-   NiFpga_FPGAvi_IndicatorBool_RSenableMon = 0x1A,
+   NiFpga_FPGAvi_IndicatorBool_RSisRunning = 0x1A,
 } NiFpga_FPGAvi_IndicatorBool;
 
 typedef enum
 {
-   NiFpga_FPGAvi_IndicatorI16_RScontrolMon_I16 = 0x3A,
+   NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16 = 0x3A,
 } NiFpga_FPGAvi_IndicatorI16;
 
 typedef enum
@@ -50,7 +50,7 @@ typedef enum
    NiFpga_FPGAvi_ControlBool_LineclockInputSelector = 0x22,
    NiFpga_FPGAvi_ControlBool_PcTrigger = 0x5E,
    NiFpga_FPGAvi_ControlBool_Pockels1AutoOffEnable = 0x46,
-   NiFpga_FPGAvi_ControlBool_RSenable = 0x72,
+   NiFpga_FPGAvi_ControlBool_RSrun = 0x72,
    NiFpga_FPGAvi_ControlBool_ScanDirection = 0x42,
    NiFpga_FPGAvi_ControlBool_Shutter1 = 0x66,
    NiFpga_FPGAvi_ControlBool_Shutter2 = 0x62,
@@ -69,7 +69,7 @@ typedef enum
 
 typedef enum
 {
-   NiFpga_FPGAvi_ControlI16_RScontrol_I16 = 0x6E,
+   NiFpga_FPGAvi_ControlI16_RSvoltage_I16 = 0x6E,
 } NiFpga_FPGAvi_ControlI16;
 
 typedef enum

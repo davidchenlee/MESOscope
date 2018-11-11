@@ -38,8 +38,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const double collar = 1.47;
 
 	//FILTERWHEEL
-	Filterwheel fw(FW1);
-	fw.setColor(wavelength_nm);
+	Filterwheel FWdetection(FWdet);
+	FWdetection.setColor(wavelength_nm);
 
 	//Stages
 	Stage stage;
@@ -141,7 +141,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	TiffU8 stackDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ);
 	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
 
-	//OPEN THE SHUTTER
+	//OPEN THE SHUTTERS
 	Shutter shutterVision(fpga, SHUTTER1);
 	shutterVision.open();
 	Sleep(50);
@@ -324,13 +324,19 @@ void seq_calibAnalogLatency(const FPGAns::FPGA &fpga)
 
 void seq_testFilterwheel()
 {
-	Filterwheel FW(FW1);
-	//FW.setColor(RED);
-	
-	if(1)
-		FW.setColor(1040);
+	Filterwheel FWexcitation(FWexc);
+	Filterwheel FWdetection(FWdet);
+		
+	if (0)
+	{
+		FWdetection.setColor(1040);
+		FWexcitation.setColor(1040);
+	}
 	else
-		FW.setColor(940);
+	{
+		FWdetection.setColor(750);
+		FWexcitation.setColor(750);
+	}
 }
 
 void seq_testStagePosition()
@@ -517,7 +523,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	RScanner.setFFOV(FFOVrs_um);
 
 	//FILTERWHEEL
-	Filterwheel fw(FW1);
+	Filterwheel fw(FWdet);
 	fw.setColor(wavelength_nm);
 
 	//CREATE THE REAL-TIME SEQUENCE

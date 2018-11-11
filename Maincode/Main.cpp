@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 		FPGAns::FPGA fpga;		//Create a FPGA session
 		try
 		{
-			seq_main(fpga);		
+			//seq_main(fpga);		
 			//seq_contAcquisition(fpga);
 			//seq_testGalvo(fpga);
 			//seq_testPixelclock(fpga);
@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 			//seq_testmPMT();
 			//seq_testPockels(fpga);
 			//seq_testLaserComm(fpga);
-			//seq_testFilterwheel();
+			seq_testFilterwheel();
 			//seq_testRS(fpga);
 			//seq_contAcquisitionTest(fpga);
 			//seq_testConvertI16toVoltage();
@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 		getchar();
 	}
 	std::cout << "Press any key to continue..." << std::endl;
-	//getchar();
+	getchar();
 
 	return 0;
 }

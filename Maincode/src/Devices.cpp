@@ -368,7 +368,7 @@ void ResonantScanner::setVoltage_(const double control_V)
 	mSampRes_umPerPix = mFFOV_um / mRTsequence.mWidthPerFrame_pix;		//Spatial sampling resolution
 
 	//Upload the control voltage
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAns::convertVoltToI16(mControl_V)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::convertVoltToI16(mControl_V)));
 }
 
 //Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
@@ -385,7 +385,7 @@ void ResonantScanner::setFFOV(const double FFOV_um)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX_V/mVoltPerUm) + " um");
 
 	//Upload the control voltage
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, FPGAns::convertVoltToI16(mControl_V)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::convertVoltToI16(mControl_V)));
 }
 
 //First set the FFOV, then set RSenable on
@@ -393,7 +393,7 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 {
 	setFFOV(FFOV_um);
 	Sleep(mDelay_ms);
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, true));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
 	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um" << std::endl;
 }
 
@@ -402,14 +402,14 @@ void ResonantScanner::turnOn_V(const double control_V)
 {
 	setVoltage_(control_V);
 	Sleep(mDelay_ms);
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, true));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
 	std::cout << "RS control voltage successfully set to: " << control_V << " V" << std::endl;
 }
 
 //First set RSenable off, then set the control voltage to 0
 void ResonantScanner::turnOff()
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSenable, false));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSrun, false));
 	Sleep(mDelay_ms);
 	setVoltage_(0);
 	std::cout << "RS successfully turned off" << std::endl;
@@ -419,7 +419,7 @@ void ResonantScanner::turnOff()
 double ResonantScanner::downloadControl_V()
 {
 	I16 control_I16;
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorI16_RScontrolMon_I16, &control_I16));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
 
 	return FPGAns::convertI16toVolt(control_I16);
 }
@@ -430,16 +430,17 @@ double ResonantScanner::getSamplingResolution_um()
 	return mSampRes_umPerPix;
 }
 
-//Check that the RS is running
+//Check if the RS is set to run. It does not actually check if the RS is running, for example, by looking at the RSsync signal
 void ResonantScanner::isRunning()
 {
-	NiFpga_Bool enableState;
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorBool_RSenableMon, &enableState));
+	//Retrieve the state of the RS from the FPGA (see the LabView implementation)
+	NiFpga_Bool isRunning;
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorBool_RSisRunning, &isRunning));
 
 	char input_char;
-	while (!enableState)
+	while (!isRunning)
 	{
-		std::cout << "RS seems to be off. Input 0 to exit or any other key to try again ";
+		std::cout << "RS seems OFF. Input 0 to exit or any other key to try again ";
 		std::cin >> input_char;
 
 		if (input_char == '0')
@@ -456,7 +457,7 @@ Shutter::Shutter(const FPGAns::FPGA &fpga, ShutterID ID) : mFpga(fpga)
 	switch (ID)
 	{
 	case SHUTTER1:
-		mID = NiFpga_FPGAvi_ControlBool_Shutter1;
+		mDeviceID = NiFpga_FPGAvi_ControlBool_Shutter1;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter is NOT available");
@@ -466,26 +467,26 @@ Shutter::Shutter(const FPGAns::FPGA &fpga, ShutterID ID) : mFpga(fpga)
 
 Shutter::~Shutter()
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, false));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
 }
 
 void Shutter::open() const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, true));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, true));
 }
 
 void Shutter::close() const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, false));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
 }
 
 void Shutter::pulseHigh() const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, true));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, true));
 
 	Sleep(mDelay_ms);
 
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mID, false));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
 }
 #pragma endregion "Shutters"
 
@@ -792,15 +793,17 @@ void mPMT::readTemp() const
 
 
 #pragma region "Filterwheel"
-Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)
+Filterwheel::Filterwheel(const FilterwheelID ID): mDeviceID(ID)
 {
 	switch (ID)
 	{
-	case FW1:
+	case FWdet:
 		mPort = assignCOM.at(FW1com);
+		mDeviceName = "detection filterwheel";
 		break;
-	case FW2:
+	case FWexc:
 		mPort = assignCOM.at(FW2com);
+		mDeviceName = "excitation filterwheel";
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected filterwheel unavailable");
@@ -813,7 +816,7 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mID(ID)
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with Filterwheel " + std::to_string(FW1));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the " + mDeviceName);
 	}
 }
 
@@ -870,7 +873,7 @@ void Filterwheel::downloadColor_()
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with Filterwheel " + std::to_string(FW1));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the " + mDeviceName);
 	}
 }
 
@@ -891,7 +894,7 @@ void Filterwheel::setColor(const Filtercolor color)
 			const int diffPos = maxPos - minPos;
 			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
 
-			std::cout << "Tuning the Filterwheel " << FW1 << " to " + convertToString_(color) << std::endl;
+			//std::cout << "Tuning the " << mDeviceName << " to " + convertToString_(color) << std::endl;
 			Sleep((int)(1000.0 * minSteps / mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
@@ -899,13 +902,13 @@ void Filterwheel::setColor(const Filtercolor color)
 
 			downloadColor_();
 			if (color == mColor)
-				std::cout << "Filterwheel " << FW1 << " successfully set to " + convertToString_(mColor) << std::endl;
+				std::cout << "The " << mDeviceName << " was successfully set to " + convertToString_(mColor) << std::endl;
 			else
-				std::cout << "WARNING: Filterwheel " << FW1 << " might not be in the correct position " + convertToString_(color) << std::endl;
+				std::cout << "WARNING: The " << mDeviceName << " might not be in the correct position " + convertToString_(color) << std::endl;
 		}
 		catch (const serial::IOException)
 		{
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with Filterwheel " + std::to_string(FW1));
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the " + mDeviceName);
 		}
 	}
 }

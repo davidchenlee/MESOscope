@@ -80,7 +80,7 @@ public:
 class Shutter
 {
 	const FPGAns::FPGA &mFpga;
-	NiFpga_FPGAvi_ControlBool mID;			//Device ID
+	NiFpga_FPGAvi_ControlBool mDeviceID;			//Device ID
 	const int mDelay_ms = 10;
 public:
 	Shutter(const FPGAns::FPGA &fpga, ShutterID ID);
@@ -156,7 +156,8 @@ public:
 
 class Filterwheel
 {
-	FilterwheelID mID;						//Device ID
+	FilterwheelID mDeviceID;				//Device ID = 1, 2, ...
+	std::string mDeviceName;				//Device given name
 	serial::Serial *mSerial;
 	std::string mPort;
 	const int mBaud = 115200;

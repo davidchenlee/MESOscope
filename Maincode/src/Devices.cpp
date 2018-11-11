@@ -351,9 +351,9 @@ ResonantScanner::ResonantScanner(const FPGAns::RTsequence &RTsequence): mRTseque
 	mFullScan_um = mControl_V / mVoltPerUm;								//Full scan FOV = distance from turning point to turning point
 	mFFOV_um = mFullScan_um * mFillFactor;								//FFOV
 	mSampRes_umPerPix = mFFOV_um / mRTsequence.mWidthPerFrame_pix;		//Spatial sampling resolution
-};
+}
 
-ResonantScanner::~ResonantScanner() {};
+ResonantScanner::~ResonantScanner() {}
 
 //Set the control voltage that determines the scanning amplitude
 void ResonantScanner::setVoltage_(const double control_V)
@@ -456,8 +456,11 @@ Shutter::Shutter(const FPGAns::FPGA &fpga, ShutterID ID) : mFpga(fpga)
 {
 	switch (ID)
 	{
-	case SHUTTER1:
-		mDeviceID = NiFpga_FPGAvi_ControlBool_Shutter1;
+	case SHUTTERvision:
+		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterVision;
+		break;
+	case SHUTTERfidelity:
+		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterFidelity;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter is NOT available");
@@ -942,9 +945,9 @@ Laser::Laser()
 	{
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with VISION");
 	}
-};
+}
 
-Laser::~Laser() {};
+Laser::~Laser() {}
 
 void Laser::downloadWavelength_()
 {

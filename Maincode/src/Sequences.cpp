@@ -142,7 +142,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
 
 	//OPEN THE SHUTTERS
-	Shutter shutterVision(fpga, SHUTTER1);
+	Shutter shutterVision(fpga, SHUTTERvision);
 	shutterVision.open();
 	Sleep(50);
 
@@ -337,6 +337,14 @@ void seq_testFilterwheel()
 		FWdetection.setColor(750);
 		FWexcitation.setColor(750);
 	}
+}
+
+void seq_testShutter(const FPGAns::FPGA &fpga)
+{
+	Shutter shutterFidelity(fpga, SHUTTERfidelity);
+	shutterFidelity.open();
+	Sleep(5000);
+	shutterFidelity.close();
 }
 
 void seq_testStagePosition()
@@ -542,7 +550,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	pockels.pushPowerSinglet(8 * us, laserPower_mW);
 
 	//OPEN THE SHUTTER
-	Shutter shutterVision(fpga, SHUTTER1);
+	Shutter shutterVision(fpga, SHUTTERvision);
 	shutterVision.open();
 	Sleep(50);
 

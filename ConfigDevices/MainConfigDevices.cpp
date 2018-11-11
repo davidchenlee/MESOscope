@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			ResonantScanner RS(fpga);
-			//Shutter shutter1(fpga, SHUTTER1);
+			//Shutter shutter1(fpga, SHUTTERvision);
 			Laser vision;
 
 			//Set the FOV

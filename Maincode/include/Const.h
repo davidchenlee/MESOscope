@@ -28,7 +28,7 @@ namespace Constants
 	enum OverrideFileSelector { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
 	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELS1, SCALING1, nChan };		//nChan = number of RT channels available, including the pixel clock channel
-	enum ShutterID { SHUTTER1 = 1, SHUTTER2 = 2 };
+	enum ShutterID { SHUTTERvision = 1, SHUTTERfidelity = 2 };
 	enum FilterwheelID { FWdet = 1, FWexc = 2 };
 	enum Filtercolor { BLUE = 1, GREEN = 2, RED = 3 };
 	enum Axis { xx, yy, zz };

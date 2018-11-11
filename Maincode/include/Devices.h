@@ -110,7 +110,7 @@ public:
 	PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockelsChannel, const int wavelength_nm);
 	~PockelsCell();
 	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
-	void pushVoltageSinglet_(const double timeStep, const double AO_V) const;
+	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
 	void pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const;
 	void powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const;
@@ -130,7 +130,7 @@ public:
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi_V, const double Vf_V) const;
 	void positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const;
 	void voltageToZero() const;
-	void pushVoltageSinglet_(const double timeStep, const double AO_V) const;
+	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
 };
 
 class mPMT

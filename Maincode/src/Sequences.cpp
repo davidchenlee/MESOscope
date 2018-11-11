@@ -25,8 +25,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	double zDelta_um = 10 * um;				//Acquire a stack covering this interval
 
 	//LASER
-	const int wavelength_nm = 940;
-	const std::vector<double> Pif_mW = { 40, 40};		//For 750 nm over 200 um
+	const int wavelength_nm = 750;
+	const std::vector<double> Pif_mW = { 70, 70};		//For 750 nm over 200 um
 	//const std::vector<double> Pif_mW = { 70 , 100 };	//For 1040 nm over 200 um
 	double P_mW = Pif_mW.front();
 	LaserVision vision;
@@ -101,10 +101,10 @@ void seq_main(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELL FOR RT
-	PockelsCell pockels(RTsequence, POCKELS1, wavelength_nm);
-	//pockels.voltageLinearRamp(4*us, 40*us, 0, 1*V);
-	//pockels.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
-	//pockels.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
+	PockelsCell pockels(RTsequence, POCKELSvision, wavelength_nm);
+	//pockelsVision.voltageLinearRamp(4*us, 40*us, 0, 1*V);
+	//pockelsVision.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
+	//pockelsVision.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
 
 	//Datalog
 	{
@@ -395,25 +395,41 @@ void seq_testmPMT()
 }
 
 //Keep the pockels on to check the setpoint of the laser power
-//1. Manually open the laser and Uniblitz shutters
-//2. Set pockels1AutoOff = DISABLE
+//0. Make sure that the function generator feeds the lineclock
+//1. Manually open the Vision shutter and Uniblitz shutter
+//2. Set pockelsAutoOff = DISABLE
 //3. Tune the laser wavelength manually
-void seq_testPockels(const FPGAns::FPGA &fpga)
+void seq_testPockelsVision(const FPGAns::FPGA &fpga)
 {
 	//Create a realtime sequence
 	FPGAns::RTsequence RTsequence(fpga);
 
 	//Turn on the pockels cell
-	PockelsCell pockels(RTsequence, POCKELS1, 750);
-	pockels.pushPowerSinglet(8 * us, 30 * mW);
-	//pockels.pushVoltageSinglet_(8 * us, 2.508 * V);
+	PockelsCell pockelsVision(RTsequence, POCKELSvision, 750);
+	pockelsVision.pushPowerSinglet(8 * us, 30 * mW);
+	//pockelsVision.pushVoltageSinglet_(8 * us, 2.508 * V);
 
-	{
-		//Execute the sequence
-		Image image(RTsequence);
-		image.acquire();
-	}
+	//Execute the sequence to load and run the command
+	Image image(RTsequence);
+	image.acquire();
 }
+
+void seq_testPockelsFidelity(const FPGAns::FPGA &fpga)
+{
+	//Create a realtime sequence
+	FPGAns::RTsequence RTsequence(fpga);
+
+	//Turn on the pockels cell
+	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 1040);
+	pockelsFidelity.pushVoltageSinglet(8 * us, 0.0 * V);
+
+	//Execute the sequence to load and run the command
+	Image image(RTsequence);
+	image.acquire();
+
+}
+
+
 
 void seq_testVision(const FPGAns::FPGA &fpga)
 {
@@ -553,8 +569,8 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELL FOR RT
-	PockelsCell pockels(RTsequence, POCKELS1, wavelength_nm);
-	pockels.pushPowerSinglet(8 * us, laserPower_mW);
+	PockelsCell pockelsVision(RTsequence, POCKELSvision, wavelength_nm);
+	pockelsVision.pushPowerSinglet(8 * us, laserPower_mW);
 
 	//OPEN THE SHUTTER
 	Shutter shutterVision(fpga, SHUTTERvision);

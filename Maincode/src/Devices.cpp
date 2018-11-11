@@ -491,29 +491,34 @@ void Shutter::pulseHigh() const
 #pragma endregion "Shutters"
 
 #pragma region "Pockels cells"
-//Curently the output is hard coded on the FPGA side and triggered by the 'frame gate'
+//Curently, the output is hard coded on the FPGA side and triggered by 'frame gate'
 PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockelsChannel, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsChannel(pockelsChannel), mWavelength_nm(wavelength_nm)
 {
-	if (mPockelsChannel != POCKELS1)
+	if (mPockelsChannel != POCKELSvision && mPockelsChannel != POCKELSfidelity)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
 
 	switch (mPockelsChannel)
 	{
-	case POCKELS1:
-		mScalingChannel = SCALING1;
+	case POCKELSvision:
+		mScalingChannel = SCALINGvision;
 		break;
+	case POCKELSfidelity:
+		mScalingChannel = SCALINGfidelity;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell is NOT available");
 	}
 
-	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT as 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
+	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
 	for (int ii = 0; ii < mRTsequence.mNframes; ii++)
 		mRTsequence.pushAnalogSingletFx2p14(mScalingChannel, 1.0);
 }
 
-//Do not set the output to 0 with the destructor to allow holding on the last value
+//Do not set the output to 0 with the destructor to allow latching the last value
 PockelsCell::~PockelsCell() {}
 
 
-void PockelsCell::pushVoltageSinglet_(const double timeStep, const double AO_V) const
+void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO_V) const
 {
 	if (AO_V < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
@@ -610,7 +615,7 @@ Galvo::Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel): mRTs
 Galvo::~Galvo() {}
 
 
-void Galvo::pushVoltageSinglet_(const double timeStep, const double AO_V) const
+void Galvo::pushVoltageSinglet(const double timeStep, const double AO_V) const
 {
 	mRTsequence.pushAnalogSinglet(mGalvoChannel, timeStep, AO_V);
 }
@@ -899,7 +904,7 @@ void Filterwheel::setColor(const Filtercolor color)
 
 			downloadColor_();
 			if (color == mColor)
-				std::cout << "The " << mDeviceName << " was successfully set to " + convertToString_(mColor) << std::endl;
+				std::cout << "The " << mDeviceName << " successfully set to " + convertToString_(mColor) << std::endl;
 			else
 				std::cout << "WARNING: The " << mDeviceName << " might not be in the correct position " + convertToString_(color) << std::endl;
 		}

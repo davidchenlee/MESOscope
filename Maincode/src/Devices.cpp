@@ -1,7 +1,6 @@
 #include "Devices.h"
 
 #pragma region "Image"
-
 Image::Image(FPGAns::RTsequence &RTsequence) : mRTsequence(RTsequence), mTiff(mRTsequence.mWidthPerFrame_pix, mRTsequence.mHeightPerFrame_pix, mRTsequence.mNframes)
 {
 	mBufArrayA = new U32[mRTsequence.mNpixAllFrames];
@@ -279,8 +278,6 @@ unsigned char* const Image::accessTiff() const
 {
 	return mTiff.accessTiff();
 }
-
-
 #pragma endregion "Image"
 
 
@@ -632,12 +629,10 @@ void Galvo::voltageToZero() const
 {
 	mRTsequence.pushAnalogSinglet(mGalvoChannel, AO_tMIN_us, 0 * V);
 }
-
 #pragma endregion "Galvo"
 
 
 #pragma region "mPMT"
-
 mPMT::mPMT()
 {
 	mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
@@ -791,7 +786,6 @@ void mPMT::readTemp() const
 	std::cout << "mPMT temperature = " << temp_C << " \370C" << std::endl;
 	std::cout << "mPMT alert temperature = " << alertTemp_C <<  " \370C" << std::endl;
 }
-
 #pragma endregion "mPMT"
 
 
@@ -930,11 +924,10 @@ void Filterwheel::setColor(const int wavelength_nm)
 
 	setColor(color);
 }
-
 #pragma endregion "Filterwheel"
 
-#pragma region "Laser"
-Laser::Laser()
+#pragma region "LaserVision"
+LaserVision::LaserVision()
 {
 	try
 	{
@@ -947,9 +940,9 @@ Laser::Laser()
 	}
 }
 
-Laser::~Laser() {}
+LaserVision::~LaserVision() {}
 
-void Laser::downloadWavelength_()
+void LaserVision::downloadWavelength_()
 {
 	const std::string TxBuffer("?VW");		//Command to the laser
 	std::string RxBuffer;					//Reply from the laser
@@ -983,12 +976,12 @@ void Laser::downloadWavelength_()
 	}
 }
 
-void Laser::printWavelength_nm() const
+void LaserVision::printWavelength_nm() const
 {
 	std::cout << "VISION wavelength is " << mWavelength_nm << " nm" << std::endl;
 }
 
-void Laser::setWavelength(const int wavelength_nm)
+void LaserVision::setWavelength(const int wavelength_nm)
 {
 	if (wavelength_nm < 680 || wavelength_nm > 1080)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": VISION wavelength must be in the range 680 - 1080 nm");
@@ -1022,7 +1015,7 @@ void Laser::setWavelength(const int wavelength_nm)
 }
 
 //Open or close the shutter of Vision
-void Laser::setShutter(const bool state) const
+void LaserVision::setShutter(const bool state) const
 {
 	const std::string TxBuffer("S=" + std::to_string(state));		//Command to the laser
 	std::string RxBuffer;											//Reply from the laser
@@ -1042,8 +1035,49 @@ void Laser::setShutter(const bool state) const
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
 	}
 }
+#pragma endregion "LaserVision"
 
-#pragma endregion "Laser"
+
+
+#pragma region "Laser Fidelity"
+LaserFidelity::LaserFidelity()
+{
+	try
+	{
+		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+	}
+	catch (const serial::IOException)
+	{
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with FIDELITY");
+	}
+}
+
+LaserFidelity::~LaserFidelity(){}
+
+void LaserFidelity::setShutter(const bool state) const
+{
+	const std::string TxBuffer("SHUTTER=" + std::to_string(state));		//Command to the laser
+	std::string RxBuffer;												//Reply from the laser
+
+	try
+	{
+		mSerial->write(TxBuffer + "\r");
+		mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work.
+
+		if (state)
+			std::cout << "FIDELITY shutter successfully opened" << std::endl;
+		else
+			std::cout << "FIDELITY shutter successfully closed" << std::endl;
+	}
+	catch (const serial::IOException)
+	{
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with FIDELITY");
+	}
+}
+
+#pragma endregion "Laser Fidelity"
+
+
 
 #pragma region "Stages"
 Stage::Stage()

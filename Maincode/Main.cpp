@@ -15,9 +15,10 @@ int main(int argc, char* argv[])
 			//seq_testAODO(fpga);
 			//seq_testmPMT();
 			//seq_testPockels(fpga);
-			//seq_testLaserComm(fpga);
+			//seq_testLaserVision(fpga);
+			seq_testFidelity(fpga);
 			//seq_testFilterwheel();
-			seq_testShutter(fpga);
+			//seq_testShutter(fpga);
 			//seq_testRS(fpga);
 			//seq_contAcquisitionTest(fpga);
 			//seq_testConvertI16toVoltage();
@@ -69,7 +70,7 @@ int main(int argc, char* argv[])
 		getchar();
 	}
 	std::cout << "Press any key to continue..." << std::endl;
-	//getchar();
+	getchar();
 
 	return 0;
 }

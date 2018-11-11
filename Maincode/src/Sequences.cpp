@@ -29,7 +29,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const std::vector<double> Pif_mW = { 40, 40};		//For 750 nm over 200 um
 	//const std::vector<double> Pif_mW = { 70 , 100 };	//For 1040 nm over 200 um
 	double P_mW = Pif_mW.front();
-	Laser vision;
+	LaserVision vision;
 	vision.setWavelength(wavelength_nm);
 
 	//SAMPLE
@@ -415,11 +415,18 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 	}
 }
 
-void seq_testLaserComm(const FPGAns::FPGA &fpga)
+void seq_testVision(const FPGAns::FPGA &fpga)
 {
-	Laser vision;
+	LaserVision vision;
 	//vision.setShutter(0);
 	vision.setWavelength(940);
+}
+
+void seq_testFidelity(const FPGAns::FPGA &fpga)
+{
+	LaserFidelity fidelity;
+	fidelity.setShutter(0);
+
 }
 
 void seq_testRS(const FPGAns::FPGA &fpga)
@@ -522,7 +529,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	//LASER
 	const int wavelength_nm = 750;
 	double laserPower_mW = 40 * mW;
-	Laser vision;
+	LaserVision vision;
 	vision.setWavelength(wavelength_nm);
 
 	//RS

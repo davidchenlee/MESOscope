@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 		{
 			ResonantScanner RS(fpga);
 			//Shutter shutter1(fpga, SHUTTERvision);
-			Laser vision;
+			LaserVision vision;
 
 			//Set the FOV
 			int FFOV_um(std::stoi(argv[1]));

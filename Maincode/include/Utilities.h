@@ -9,8 +9,6 @@
 #include <tiffio.h>					//Tiff files
 using namespace Constants;
 
-#define mytag 50838
-
 std::string file_exists(const std::string filename);
 std::string toString(const double number, const int nDecimalPlaces);
 void printHex(int input);

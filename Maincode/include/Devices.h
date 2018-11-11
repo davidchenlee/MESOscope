@@ -177,7 +177,7 @@ public:
 	void setColor(const int wavelength_nm);
 };
 
-class Laser
+class LaserVision
 {
 	int mWavelength_nm;
 	serial::Serial *mSerial;
@@ -189,10 +189,24 @@ class Laser
 
 	void downloadWavelength_();
 public:
-	Laser();
-	~Laser();
+	LaserVision();
+	~LaserVision();
 	void printWavelength_nm() const;
 	void setWavelength(const int wavelength_nm);
+	void setShutter(const bool state) const;
+};
+
+class LaserFidelity
+{
+	serial::Serial *mSerial;
+	const std::string mPort = assignCOM.at(FIDELITYcom);
+	const int mBaud = 115200;
+	const int mTimeout_ms = 100;
+	const int mRxBufSize = 256;							//Serial buffer size
+
+public:
+	LaserFidelity();
+	~LaserFidelity();
 	void setShutter(const bool state) const;
 };
 

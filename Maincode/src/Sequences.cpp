@@ -2,17 +2,17 @@
 
 void seq_main(const FPGAns::FPGA &fpga)
 {
-	const RunMode acqMode = SINGLEMODE;			//Single shot
+	//const RunMode acqMode = SINGLEMODE;			//Single shot
 	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
 	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times for averaging
-	//const RunMode acqMode = STACKMODE;				//Stack volume from the initial z position
+	const RunMode acqMode = STACKMODE;			//Stack volume from the initial z position
 	//const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
 
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.0, 14.2, 18.432 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.487 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -25,8 +25,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	double zDelta_um = 10 * um;				//Acquire a stack covering this interval
 
 	//LASER
-	const int wavelength_nm = 750;
-	const std::vector<double> Pif_mW = { 30, 30};		//For 750 nm over 200 um
+	const int wavelength_nm = 940;
+	const std::vector<double> Pif_mW = { 40, 40};		//For 750 nm over 200 um
 	//const std::vector<double> Pif_mW = { 70 , 100 };	//For 1040 nm over 200 um
 	double P_mW = Pif_mW.front();
 	Laser vision;
@@ -134,6 +134,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		datalog.record("Height Y (galvo) (pix) = ", RTsequence.mHeightPerFrame_pix);
 		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes_umPerPix);
 		datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um / RTsequence.mHeightPerFrame_pix);
+		datalog.record("STAGE--------------------------------------------------------");
 	}
 
 	//Create container-stacks for storing the Tiff images

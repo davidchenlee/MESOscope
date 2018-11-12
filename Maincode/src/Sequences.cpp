@@ -384,9 +384,9 @@ void seq_testStagePosition()
 	*/
 }
 
-void seq_testmPMT()
+void seq_testPMT16X()
 {
-	mPMT pmt;
+	PMT16X pmt;
 	pmt.readAllGain();
 	//pmt.setSingleGain(2, 300);
 	//pmt.setAllGain(255);
@@ -396,7 +396,7 @@ void seq_testmPMT()
 
 //Keep the pockels on to check the setpoint of the laser power
 //0. Make sure that the function generator feeds the lineclock
-//1. Manually open the Vision shutter and Uniblitz shutter
+//1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter
 //2. Set pockelsAutoOff = DISABLE
 //3. Tune the laser wavelength manually
 void seq_testPockelsVision(const FPGAns::FPGA &fpga)
@@ -407,7 +407,7 @@ void seq_testPockelsVision(const FPGAns::FPGA &fpga)
 	//Turn on the pockels cell
 	PockelsCell pockelsVision(RTsequence, POCKELSvision, 750);
 	pockelsVision.pushPowerSinglet(8 * us, 30 * mW);
-	//pockelsVision.pushVoltageSinglet_(8 * us, 2.508 * V);
+	//pockelsVision.pushVoltageSinglet(8 * us, 2.508 * V);
 
 	//Execute the sequence to load and run the command
 	Image image(RTsequence);
@@ -418,10 +418,15 @@ void seq_testPockelsFidelity(const FPGAns::FPGA &fpga)
 {
 	//Create a realtime sequence
 	FPGAns::RTsequence RTsequence(fpga);
+	
+	//OPEN THE SHUTTER
+	Shutter shutterFidelity(fpga, SHUTTERfidelity);
+	shutterFidelity.close();
 
 	//Turn on the pockels cell
-	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 1040);
-	pockelsFidelity.pushVoltageSinglet(8 * us, 0.0 * V);
+	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 0);
+	//pockelsFidelity.pushPowerSinglet(8 * us, 5 * mW);
+	pockelsFidelity.pushVoltageSinglet(8 * us, 0 * V);
 
 	//Execute the sequence to load and run the command
 	Image image(RTsequence);

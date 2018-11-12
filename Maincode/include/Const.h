@@ -34,7 +34,7 @@ namespace Constants
 	enum Axis { xx, yy, zz };
 	enum RunMode { SINGLEMODE, CONTMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
 
-	enum ComID { VISIONcom, FIDELITYcom, FW1com , FW2com, mPMTcom };
+	enum ComID { VISIONcom, FIDELITYcom, FW1com , FW2com, PMT16Xcom };
 	extern const std::vector<std::string> assignCOM;
 
 	extern const std::string folderPath;

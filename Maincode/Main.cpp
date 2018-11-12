@@ -7,15 +7,15 @@ int main(int argc, char* argv[])
 		FPGAns::FPGA fpga;		//Create a FPGA session
 		try
 		{
-			seq_main(fpga);		
+			//seq_main(fpga);		
 			//seq_contAcquisition(fpga);
 			//seq_testGalvo(fpga);
 			//seq_testPixelclock(fpga);
 			//seq_testStagePosition();
 			//seq_testAODO(fpga);
-			//seq_testmPMT();
+			//seq_testPMT16X();
 			//seq_testPockelsVision(fpga);
-			//seq_testPockelsFidelity(fpga);
+			seq_testPockelsFidelity(fpga);
 			//seq_testVision(fpga);
 			//seq_testFidelity(fpga);
 			//seq_testFilterwheel();

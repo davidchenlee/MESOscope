@@ -100,8 +100,8 @@ public:
 class PockelsCell
 {
 	FPGAns::RTsequence &mRTsequence;			//Non-const because some methods in this class change the variables referenced by mRTsequence						
-	RTchannel mPockelsChannel;
-	RTchannel mScalingChannel;
+	RTchannel mPockelsRTchannel;
+	RTchannel mScalingRTchannel;
 	int mWavelength_nm;							//Laser wavelength
 	const double maxPower_mW = 250 * mW;		//Soft limit for the laser power
 
@@ -121,7 +121,7 @@ public:
 class Galvo
 {
 	FPGAns::RTsequence &mRTsequence;					//Non-const because some of methods in this class change the variables referenced by mRTsequence	
-	RTchannel mGalvoChannel;
+	RTchannel mGalvoRTchannel;
 	const double voltPerUm = 0.02417210 * V / um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 public:
 	Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel);
@@ -133,10 +133,10 @@ public:
 	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
 };
 
-class mPMT
+class PMT16X
 {
 	serial::Serial *mSerial;
-	std::string mPort = assignCOM.at(mPMTcom);
+	std::string mPort = assignCOM.at(PMT16Xcom);
 	const int mBaud = 9600;
 	const int mTimeout_ms = 300;
 	const int mRxBufferSize = 256;				//Serial buffer size
@@ -144,8 +144,8 @@ class mPMT
 	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index) const;		//The PMT requires a sumcheck. Refer to the manual
 	std::vector<uint8_t> sendCommand_(std::vector<uint8_t> command) const;
 public:
-	mPMT();
-	~mPMT();
+	PMT16X();
+	~PMT16X();
 	void readAllGain() const;
 	void setSingleGain(const int channel, const int gain) const;
 	void setAllGainToZero() const;

@@ -13,7 +13,7 @@ void seq_calibAnalogLatency(const FPGAns::FPGA &fpga);
 void seq_testFilterwheel();
 void seq_testShutter(const FPGAns::FPGA &fpga);
 void seq_testStagePosition();
-void seq_testmPMT();
+void seq_testPMT16X();
 void seq_testPockelsVision(const FPGAns::FPGA &fpga);
 void seq_testPockelsFidelity(const FPGAns::FPGA &fpga);
 void seq_testVision(const FPGAns::FPGA &fpga);

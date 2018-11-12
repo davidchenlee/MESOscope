@@ -467,6 +467,7 @@ Shutter::Shutter(const FPGAns::FPGA &fpga, ShutterID ID) : mFpga(fpga)
 
 Shutter::~Shutter()
 {
+	//This is to prevent keeping the shutter open in case of an exception
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
 }
 
@@ -492,18 +493,18 @@ void Shutter::pulseHigh() const
 
 #pragma region "Pockels cells"
 //Curently, the output is hard coded on the FPGA side and triggered by 'frame gate'
-PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockelsChannel, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsChannel(pockelsChannel), mWavelength_nm(wavelength_nm)
+PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockelsChannel, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsRTchannel(pockelsChannel), mWavelength_nm(wavelength_nm)
 {
-	if (mPockelsChannel != POCKELSvision && mPockelsChannel != POCKELSfidelity)
+	if (mPockelsRTchannel != POCKELSvision && mPockelsRTchannel != POCKELSfidelity)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
 
-	switch (mPockelsChannel)
+	switch (mPockelsRTchannel)
 	{
 	case POCKELSvision:
-		mScalingChannel = SCALINGvision;
+		mScalingRTchannel = SCALINGvision;
 		break;
 	case POCKELSfidelity:
-		mScalingChannel = SCALINGfidelity;
+		mScalingRTchannel = SCALINGfidelity;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell is NOT available");
@@ -511,7 +512,7 @@ PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockels
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
 	for (int ii = 0; ii < mRTsequence.mNframes; ii++)
-		mRTsequence.pushAnalogSingletFx2p14(mScalingChannel, 1.0);
+		mRTsequence.pushAnalogSingletFx2p14(mScalingRTchannel, 1.0);
 }
 
 //Do not set the output to 0 with the destructor to allow latching the last value
@@ -523,7 +524,7 @@ void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO_V) c
 	if (AO_V < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTsequence.pushAnalogSinglet(mPockelsChannel, timeStep, AO_V);
+	mRTsequence.pushAnalogSinglet(mPockelsRTchannel, timeStep, AO_V);
 }
 
 void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag) const
@@ -531,7 +532,7 @@ void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW, con
 	if (P_mW < 0 || P_mW > maxPower_mW)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(P_mW));
 
-	mRTsequence.pushAnalogSinglet(mPockelsChannel, timeStep, convert_mWToVolt_(P_mW), overrideFlag);
+	mRTsequence.pushAnalogSinglet(mPockelsRTchannel, timeStep, convert_mWToVolt_(P_mW), overrideFlag);
 }
 
 //Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
@@ -540,7 +541,7 @@ void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDura
 	if (Vi_V < 0 || Vf_V < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTsequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, Vi_V, Vf_V);
+	mRTsequence.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, Vi_V, Vf_V);
 }
 
 //Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
@@ -549,12 +550,12 @@ void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDurat
 	if (Pi_mW < 0 || Pf_mW < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTsequence.pushLinearRamp(mPockelsChannel, timeStep, rampDuration, convert_mWToVolt_(Pi_mW), convert_mWToVolt_(Pf_mW));
+	mRTsequence.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, convert_mWToVolt_(Pi_mW), convert_mWToVolt_(Pf_mW));
 }
 
 void PockelsCell::voltageToZero() const
 {
-	mRTsequence.pushAnalogSinglet(mPockelsChannel, AO_tMIN_us, 0 * V);
+	mRTsequence.pushAnalogSinglet(mPockelsRTchannel, AO_tMIN_us, 0 * V);
 }
 
 //Linearly scale the pockels output across all the frames
@@ -566,10 +567,10 @@ void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 	if (mRTsequence.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
-	mRTsequence.clearQueue(mScalingChannel);	//Delete the default scaling factors of 1.0s created in the PockelsCell constructor
+	mRTsequence.clearQueue(mScalingRTchannel);	//Delete the default scaling factors of 1.0s created in the PockelsCell constructor
 
 	for (int ii = 0; ii < mRTsequence.mNframes; ii++)
-		mRTsequence.pushAnalogSingletFx2p14(mScalingChannel, Si + (Sf - Si) / (mRTsequence.mNframes -1) * ii);
+		mRTsequence.pushAnalogSingletFx2p14(mScalingRTchannel, Si + (Sf - Si) / (mRTsequence.mNframes -1) * ii);
 }
 
 
@@ -577,23 +578,38 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 {
 	double a, b, c;		//Calibration parameters
 
-	if (mWavelength_nm == 750) {
-		a = 788;
-		b = 0.6152;
-		c = -0.027;
+	//VISION
+	switch (mPockelsRTchannel)
+	{
+	case POCKELSvision:
+		if (mWavelength_nm == 750) {
+			a = 788;
+			b = 0.6152;
+			c = -0.027;
+		}
+		else if (mWavelength_nm == 940) {
+			a = 464;
+			b = 0.488;
+			c = -0.087;
+		}
+		else if (mWavelength_nm == 1040) {
+			a = 200;
+			b = 0.441;
+			c = 0.037;
+		}
+		else
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
+		break;
+
+	//FIDELITY
+	case POCKELSfidelity:
+			a = 101;
+			b = 0.275;
+			c = 5.68;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell is NOT available");
 	}
-	else if (mWavelength_nm == 940) {
-		a = 464;
-		b = 0.488;
-		c = -0.087;
-	}
-	else if (mWavelength_nm == 1040) {
-		a = 200;
-		b = 0.441;
-		c = 0.037;
-	}
-	else
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm currently not calibrated");
 
 	double arg = sqrt(power_mW / a);
 	if (arg > 1)
@@ -606,9 +622,9 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 
 #pragma region "Galvo"
 
-Galvo::Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel): mRTsequence(RTsequence), mGalvoChannel(galvoChannel)
+Galvo::Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel): mRTsequence(RTsequence), mGalvoRTchannel(galvoChannel)
 {
-	if ( mGalvoChannel != GALVO1 )
+	if ( mGalvoRTchannel != GALVO1 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 }
 
@@ -617,38 +633,38 @@ Galvo::~Galvo() {}
 
 void Galvo::pushVoltageSinglet(const double timeStep, const double AO_V) const
 {
-	mRTsequence.pushAnalogSinglet(mGalvoChannel, timeStep, AO_V);
+	mRTsequence.pushAnalogSinglet(mGalvoRTchannel, timeStep, AO_V);
 }
 
 void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, const double Vi_V, const double Vf_V) const
 {
-	mRTsequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, Vi_V, Vf_V);
+	mRTsequence.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, Vi_V, Vf_V);
 }
 
 void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const
 {
-	mRTsequence.pushLinearRamp(mGalvoChannel, timeStep, rampLength, voltPerUm * xi_V, voltPerUm * xf_V);
+	mRTsequence.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, voltPerUm * xi_V, voltPerUm * xf_V);
 }
 
 void Galvo::voltageToZero() const
 {
-	mRTsequence.pushAnalogSinglet(mGalvoChannel, AO_tMIN_us, 0 * V);
+	mRTsequence.pushAnalogSinglet(mGalvoRTchannel, AO_tMIN_us, 0 * V);
 }
 #pragma endregion "Galvo"
 
 
-#pragma region "mPMT"
-mPMT::mPMT()
+#pragma region "PMT16X"
+PMT16X::PMT16X()
 {
 	mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
 }
 
-mPMT::~mPMT()
+PMT16X::~PMT16X()
 {
 
 }
 
-std::vector<uint8_t> mPMT::sendCommand_(std::vector<uint8_t> command_array) const
+std::vector<uint8_t> PMT16X::sendCommand_(std::vector<uint8_t> command_array) const
 {
 	command_array.push_back(sumCheck_(command_array, command_array.size()));	//Append the sumcheck
 
@@ -657,12 +673,12 @@ std::vector<uint8_t> mPMT::sendCommand_(std::vector<uint8_t> command_array) cons
 	//printHex(TxBuffer); //For debugging
 
 	std::vector<uint8_t> RxBuffer;
-	mSerial->write("\r");						//Wake up the mPMT
+	mSerial->write("\r");						//Wake up the PMT16X
 	mSerial->read(RxBuffer, mRxBufferSize);		//Read the state: 0x0D(0d13) for ready, or 0x45(0d69) for error
 
 	//Throw an error if RxBuffer is empty or CR is NOT returned
 	if ( RxBuffer.empty() || RxBuffer.at(0) != 0x0D )
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure waking up the mPMT microcontroller");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure waking up the PMT16X microcontroller");
 	
 	//printHex(RxBuffer); //For debugging
 
@@ -672,7 +688,7 @@ std::vector<uint8_t> mPMT::sendCommand_(std::vector<uint8_t> command_array) cons
 	
 	//Throw an error if RxBuffer is empty
 	if (RxBuffer.empty())
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure reading the mPMT microcontroller");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure reading the PMT16X microcontroller");
 
 	//printHex(RxBuffer); //For debugging
 
@@ -680,7 +696,7 @@ std::vector<uint8_t> mPMT::sendCommand_(std::vector<uint8_t> command_array) cons
 }
 
 //Return the sumcheck of all the elements in the array
-uint8_t mPMT::sumCheck_(const std::vector<uint8_t> charArray, const int nElements) const
+uint8_t PMT16X::sumCheck_(const std::vector<uint8_t> charArray, const int nElements) const
 {
 	uint8_t sum = 0;
 	for (int ii = 0; ii < nElements; ii++)
@@ -689,66 +705,66 @@ uint8_t mPMT::sumCheck_(const std::vector<uint8_t> charArray, const int nElement
 	return sum;
 }
 
-void mPMT::readAllGain() const
+void PMT16X::readAllGain() const
 {
 	std::vector<uint8_t> parameters = sendCommand_({'I'});
 
-	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
+	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) != 'I' || parameters.at(17) != sumCheck_(parameters, parameters.size() - 2))
 		std::cout << "Warning in " + (std::string)__FUNCTION__  + ": CheckSum mismatch" << std::endl;
 	
 	//Print out the gains
-	std::cout << "mPMT gains:" << std::endl;
+	std::cout << "PMT16X gains:" << std::endl;
 	for (int ii = 1; ii <= 16; ii++)
 		std::cout << "Gain #" << ii << " (0-255) = " << (int)parameters.at(ii) << std::endl;		
 }
 
-void mPMT::setSingleGain(const int channel, const int gain) const
+void PMT16X::setSingleGain(const int channel, const int gain) const
 {
 	//Check that the inputVector parameters are within range
 	if (channel < 1 || channel > 16)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": mPMT channel number out of range (1-16)");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X channel number out of range (1-16)");
 
 	if (gain < 0 || gain > 255)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": mPMT gain out of range (0-255)");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain out of range (0-255)");
 
 
 	std::vector<uint8_t> parameters = sendCommand_({'g', (uint8_t)channel, (uint8_t)gain});
 	//printHex(parameters);	//For debugging
 
-	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
+	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) == 'g' && parameters.at(1) == (uint8_t)channel && parameters.at(2) == (uint8_t)gain && parameters.at(3) == sumCheck_(parameters, parameters.size()-2))
-		std::cout << "mPMT channel " << channel << " successfully set to " << gain << std::endl;
+		std::cout << "PMT16X channel " << channel << " successfully set to " << gain << std::endl;
 	else
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
 }
 
-void mPMT::setAllGainToZero() const
+void PMT16X::setAllGainToZero() const
 {
 	std::vector<uint8_t> parameters = sendCommand_({ 'R' }); //The manual says that this sets all the gains to 255, but it really does it to 0
 															//printHex(parameters);	//For debugging
 
-	//Check that the chars returned by the mPMT are correct. The second char returned is the sumcheck
+	//Check that the chars returned by the PMT16X are correct. The second char returned is the sumcheck
 	if (parameters.at(0) == 'R' && parameters.at(1) == 'R')
-		std::cout << "All mPMT gains successfully set to 0" << std::endl;
+		std::cout << "All PMT16X gains successfully set to 0" << std::endl;
 }
 
-void mPMT::setAllGain(const int gain) const
+void PMT16X::setAllGain(const int gain) const
 {
 	if (gain < 0 || gain > 255)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": mPMT gain must be in the range 0-255");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain must be in the range 0-255");
 
 	std::vector<uint8_t> parameters = sendCommand_({ 'S', (uint8_t)gain });
 	//printHex(parameters);	//For debugging
 
-	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
+	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) == 'S' && parameters.at(1) == (uint8_t)gain && parameters.at(2) == sumCheck_(parameters, parameters.size() - 2))
-		std::cout << "All mPMT gains successfully set to " << gain << std::endl;
+		std::cout << "All PMT16X gains successfully set to " << gain << std::endl;
 	else
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
 }
 
-void mPMT::setAllGain(std::vector<uint8_t> gains) const
+void PMT16X::setAllGain(std::vector<uint8_t> gains) const
 {
 	//Check that the inputVector parameters are within range
 	if (gains.size() != 16)
@@ -756,29 +772,29 @@ void mPMT::setAllGain(std::vector<uint8_t> gains) const
 
 	for (int ii = 0; ii < 16; ii++)
 		if (gains.at(ii) < 0 || gains.at(ii) > 255)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ":  mPMT gain #" + std::to_string(ii) + " out of range (0-255)");
+			throw std::invalid_argument((std::string)__FUNCTION__ + ":  PMT16X gain #" + std::to_string(ii) + " out of range (0-255)");
 
 	gains.insert(gains.begin(), 'G');	//Prepend the command
 	std::vector<uint8_t> parameters = sendCommand_({ gains });
 	//printHex(parameters);	//For debugging
 
-	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
+	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) != 'G' || parameters.at(17) != sumCheck_(parameters, parameters.size() - 2))
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
 
 	//Print out the gains
-	std::cout << "mPMT gains successfully set to:" << std::endl;
+	std::cout << "PMT16X gains successfully set to:" << std::endl;
 	for (int ii = 1; ii <= 16; ii++)
 		std::cout << "Gain #" << ii << " (0-255) = " << (int)parameters.at(ii) << std::endl;
 
 }
 
-void mPMT::readTemp() const
+void PMT16X::readTemp() const
 {
 	std::vector<uint8_t> parameters = sendCommand_({ 'T' });
 	//printHex(parameters);	//For debugging
 
-	//Check that the chars returned by the mPMT are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
+	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) != 'T' || parameters.at(4) != sumCheck_(parameters, parameters.size() - 2))
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
 
@@ -788,10 +804,10 @@ void mPMT::readTemp() const
 
 	const int alertTemp_C = (int)(parameters.at(3));
 
-	std::cout << "mPMT temperature = " << temp_C << " \370C" << std::endl;
-	std::cout << "mPMT alert temperature = " << alertTemp_C <<  " \370C" << std::endl;
+	std::cout << "PMT16X temperature = " << temp_C << " \370C" << std::endl;
+	std::cout << "PMT16X alert temperature = " << alertTemp_C <<  " \370C" << std::endl;
 }
-#pragma endregion "mPMT"
+#pragma endregion "PMT16X"
 
 
 #pragma region "Filterwheel"

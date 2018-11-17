@@ -5,14 +5,14 @@ void seq_main(const FPGAns::FPGA &fpga)
 	//const RunMode acqMode = SINGLEMODE;			//Single shot
 	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
 	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times for averaging
-	const RunMode acqMode = STACKMODE;			//Stack volume from the initial z position
-	//const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
+	//const RunMode acqMode = STACKMODE;			//Stack volume from the initial z position
+	const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
 
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.050, 14.150, 18.487 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.478 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -25,8 +25,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	double zDelta_um = 10 * um;				//Acquire a stack covering this interval
 
 	//LASER
-	const int wavelength_nm = 750;
-	const std::vector<double> Pif_mW = { 70, 70};		//For 750 nm over 200 um
+	const int wavelength_nm = 1040;
+	const std::vector<double> Pif_mW = { 15, 15 };		//For 750 nm over 200 um
 	//const std::vector<double> Pif_mW = { 70 , 100 };	//For 1040 nm over 200 um
 	double P_mW = Pif_mW.front();
 	LaserVision vision;
@@ -160,7 +160,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 			std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
 				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << std::endl;
 
-			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//OverrideFileSelector the previous laser power
+			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Override the previous laser power
 
 			//EXECUTE THE RT SEQUENCE
 			Image image(RTsequence);
@@ -172,7 +172,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 			if (acqMode == SINGLEMODE || acqMode == CONTMODE)
 			{
 				//Save individual files
-				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P_mW, 0) + "mW" +
+				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P_mW, 1) + "mW" +
 					"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(xx), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(yy), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(zz), 4));
 				image.saveTiffSinglePage(singleFilename, overrideFlag);
 				Sleep(500);
@@ -185,6 +185,202 @@ void seq_main(const FPGAns::FPGA &fpga)
 		P_mW += (Pif_mW.back() - Pif_mW.front()) / nDiffZ;
 	}
 	shutterVision.close();
+
+	if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
+	{
+		//Save the stackDiffZ to a file
+		std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(Pif_mW.front(), 1) + "mW_Pf=" + toString(Pif_mW.back(), 1) + "mW" +
+			"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
+			"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um / 1000, 4));
+
+		stackDiffZ.saveToFile(stackFilename, MULTIPAGE, overrideFlag);
+	}
+
+}
+
+void seq_mainFidelity(const FPGAns::FPGA &fpga)
+{
+	const RunMode acqMode = SINGLEMODE;			//Single shot
+	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
+	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times for averaging
+	//const RunMode acqMode = STACKMODE;			//Stack volume from the initial z position
+	//const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
+
+	//ACQUISITION SETTINGS
+	const int widthPerFrame_pix = 300;
+	const int heightPerFrame_pix = 400;
+	const int nFramesCont = 1;									//Number of frames for continuous acquisition
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.476 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+
+	//RS
+	const double FFOVrs_um = 150 * um;
+	ResonantScanner RScanner(fpga);
+	RScanner.setFFOV(FFOVrs_um);
+	RScanner.isRunning();
+
+	//STACK
+	const double stepSize_um = 0.5 * um;
+	double zDelta_um = 10 * um;				//Acquire a stack covering this interval
+
+	//LASER
+	const int wavelength_nm = 1040;
+	const std::vector<double> Pif_mW = { 25, 25 };		//For 750 nm over 200 um
+	double P_mW = Pif_mW.front();
+	//LaserFidelity fidelity;
+
+	//SAMPLE
+	const std::string sampleName("Bead4um");
+	const std::string immersionMedium("Glycerol");
+	const double collar = 1.47;
+
+	//FILTERWHEEL
+	Filterwheel FWdetection(FWdet);
+	FWdetection.setColor(wavelength_nm);
+
+	//Stages
+	Stage stage;
+	std::vector<double3> stagePosition_mm;
+
+	int nDiffZ;				//Number of frames at different Z for discontinuous acquisition
+	int nSameZ;				//Number of frames at same Z for discontinuous acquisition
+	OverrideFileSelector overrideFlag;
+	switch (acqMode)
+	{
+	case SINGLEMODE:
+		nSameZ = 1;
+		nDiffZ = 1; //Do not change this
+		overrideFlag = NOOVERRIDE;
+		stagePosition_mm.push_back(stagePosition0_mm);
+		break;
+	case CONTMODE:
+		nSameZ = 500;
+		nDiffZ = 1; //Do not change this
+		overrideFlag = OVERRIDE;
+		stagePosition_mm.push_back(stagePosition0_mm);
+		break;
+	case AVGMODE:
+		nSameZ = 10;
+		nDiffZ = 1; //Do not change this
+		overrideFlag = NOOVERRIDE;
+		stagePosition_mm.push_back(stagePosition0_mm);
+		break;
+	case STACKMODE:
+		nSameZ = 1;
+		nDiffZ = (int)(zDelta_um / stepSize_um);
+		overrideFlag = NOOVERRIDE;
+		//Push the stage sequence
+		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) + iterDiffZ * stepSize_um / 1000 });
+
+		break;
+	case STACKCENTEREDMODE:
+		nSameZ = 1;
+		nDiffZ = (int)(zDelta_um / stepSize_um);
+		overrideFlag = NOOVERRIDE;
+		//Push the stage sequence
+		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
+
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
+	}
+
+	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
+
+	//GALVO FOR RT
+	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
+	const double galvoTimeStep = 8 * us;
+	const double posMax_um = FFOVgalvo_um / 2;
+	Galvo galvo(RTsequence, GALVO1);
+	const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
+	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
+
+	//POCKELS CELL FOR RT
+	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 0);
+	//pockelsVision.voltageLinearRamp(4*us, 40*us, 0, 1*V);
+	//pockelsVision.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
+	//pockelsVision.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
+
+	//Datalog
+	{
+		Logger datalog("datalog_" + sampleName);
+		datalog.record("SAMPLE-------------------------------------------------------");
+		datalog.record("Sample = ", sampleName);
+		datalog.record("Immersion medium = ", immersionMedium);
+		datalog.record("Correction collar = ", collar);
+		datalog.record("FPGA---------------------------------------------------------");
+		datalog.record("FPGA clock (MHz) = ", tickPerUs);
+		datalog.record("LASER--------------------------------------------------------");
+		datalog.record("Laser wavelength (nm) = ", wavelength_nm);
+		datalog.record("Laser power first frame (mW) = ", Pif_mW.front());
+		datalog.record("Laser power last frame (mW) = ", Pif_mW.back());
+		datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod);
+		datalog.record("SCAN---------------------------------------------------------");
+		datalog.record("RS FFOV (um) = ", RScanner.mFFOV_um);
+		datalog.record("RS period (us) = ", 2 * halfPeriodLineclock_us);
+		datalog.record("Pixel dwell time (us) = ", RTsequence.mDwell_us);
+		datalog.record("RS fill factor = ", RScanner.mFillFactor);
+		datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
+		datalog.record("Galvo time step (us) = ", galvoTimeStep);
+		datalog.record("IMAGE--------------------------------------------------------");
+		datalog.record("Max count per pixel = ", RTsequence.mPulsesPerPixel);
+		datalog.record("8-bit upscaling factor = ", RTsequence.mUpscaleU8);
+		datalog.record("Width X (RS) (pix) = ", RTsequence.mWidthPerFrame_pix);
+		datalog.record("Height Y (galvo) (pix) = ", RTsequence.mHeightPerFrame_pix);
+		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes_umPerPix);
+		datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um / RTsequence.mHeightPerFrame_pix);
+		datalog.record("STAGE--------------------------------------------------------");
+	}
+
+	//Create container-stacks for storing the Tiff images
+	TiffU8 stackDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ);
+	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
+
+	//OPEN THE SHUTTERS
+	Shutter shutterFidelity(fpga, SHUTTERfidelity);
+	shutterFidelity.open();
+	
+
+	//Acquire frames at different Z
+	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+	{
+		stage.moveStage3(stagePosition_mm.at(iterDiffZ));
+		stage.waitForMotionToStop3();
+		stage.printPosition3();		//Print the stage position
+		//P_mW += 0.5;				//Increase the laser power by this much
+
+		//Acquire many frames at the same Z via discontinuous acquisition
+		for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
+		{
+			std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
+				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << std::endl;
+
+			pockelsFidelity.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Override the previous laser power
+
+			//EXECUTE THE RT SEQUENCE
+			Image image(RTsequence);
+			image.acquire();			//Execute the RT sequence and acquire the image
+			image.mirrorOddFrames();
+			image.average();			//Average the frames acquired via continuous acquisition
+			stackSameZ.pushImage(iterSameZ, image.accessTiff());
+
+			if (acqMode == SINGLEMODE || acqMode == CONTMODE)
+			{
+				//Save individual files
+				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P_mW, 1) + "mW" +
+					"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(xx), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(yy), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(zz), 4));
+				image.saveTiffSinglePage(singleFilename, overrideFlag);
+				Sleep(500);
+			}
+		}
+		stackSameZ.average();	//Average the frames acquired via discontinuous acquisition
+		stackDiffZ.pushImage(iterDiffZ, stackSameZ.accessTiff());
+
+		std::cout << std::endl;
+		P_mW += (Pif_mW.back() - Pif_mW.front()) / nDiffZ;
+	}
+	shutterFidelity.close();
 
 	if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
 	{
@@ -392,21 +588,22 @@ void seq_testPMT16X()
 	//pmt.setAllGain(255);
 	//pmt.readTemp();
 	//pmt.setAllGain({ 100,255,255,255,255,255,255,255,255,255,255,255,255,255,100,255});
+	getchar();
 }
 
 //Keep the pockels on to check the setpoint of the laser power
 //0. Make sure that the function generator feeds the lineclock
 //1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter
 //2. Set pockelsAutoOff = DISABLE
-//3. Tune the laser wavelength manually
+//3. Tune the wavelength of the laser manually
 void seq_testPockelsVision(const FPGAns::FPGA &fpga)
 {
 	//Create a realtime sequence
 	FPGAns::RTsequence RTsequence(fpga);
 
 	//Turn on the pockels cell
-	PockelsCell pockelsVision(RTsequence, POCKELSvision, 750);
-	pockelsVision.pushPowerSinglet(8 * us, 30 * mW);
+	PockelsCell pockelsVision(RTsequence, POCKELSvision, 1040);
+	pockelsVision.pushPowerSinglet(8 * us, 10.5 * mW);
 	//pockelsVision.pushVoltageSinglet(8 * us, 2.508 * V);
 
 	//Execute the sequence to load and run the command
@@ -419,14 +616,15 @@ void seq_testPockelsFidelity(const FPGAns::FPGA &fpga)
 	//Create a realtime sequence
 	FPGAns::RTsequence RTsequence(fpga);
 	
-	//OPEN THE SHUTTER
+	//OPEN THE SHUTTER. WARNING: The class destructor closes the shutter
 	Shutter shutterFidelity(fpga, SHUTTERfidelity);
-	shutterFidelity.close();
+	shutterFidelity.open();
 
 	//Turn on the pockels cell
 	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 0);
-	//pockelsFidelity.pushPowerSinglet(8 * us, 5 * mW);
-	pockelsFidelity.pushVoltageSinglet(8 * us, 0 * V);
+	pockelsFidelity.pushPowerSinglet(500 * us, 30 * mW);
+	pockelsFidelity.pushPowerSinglet(8 * us, 0 * mW);
+	//pockelsFidelity.pushVoltageSinglet(8 * us, 0.0 * V);
 
 	//Execute the sequence to load and run the command
 	Image image(RTsequence);
@@ -436,14 +634,14 @@ void seq_testPockelsFidelity(const FPGAns::FPGA &fpga)
 
 
 
-void seq_testVision(const FPGAns::FPGA &fpga)
+void seq_testLaserVision(const FPGAns::FPGA &fpga)
 {
 	LaserVision vision;
 	//vision.setShutter(0);
 	vision.setWavelength(940);
 }
 
-void seq_testFidelity(const FPGAns::FPGA &fpga)
+void seq_testLaserFidelity(const FPGAns::FPGA &fpga)
 {
 	LaserFidelity fidelity;
 	fidelity.setShutter(0);

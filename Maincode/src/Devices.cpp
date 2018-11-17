@@ -603,9 +603,9 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 
 	//FIDELITY
 	case POCKELSfidelity:
-			a = 101;
-			b = 0.275;
-			c = 5.68;
+			a = 101.20;
+			b = 0.276;
+			c = -0.049;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell is NOT available");
@@ -615,7 +615,16 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 	if (arg > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Arg of asin is greater than 1");
 
-	return asin(arg)/b + c;
+	switch (mPockelsRTchannel)
+	{
+	case POCKELSvision:
+		return asin(arg) / b + c;
+	case POCKELSfidelity:
+		//return (PI - asin(arg)) / b + c; //different expression from POCKELSvision because currently no HWP in front of the pockels
+		return asin(arg) / b + c;
+	default:
+		return 0;
+	}
 }
 #pragma endregion "Pockels cells"
 

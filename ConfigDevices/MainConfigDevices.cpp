@@ -3,7 +3,7 @@
 //argv[1] = FOV, argv[2] = On/Off
 int main(int argc, char* argv[])
 {
-	if (argc < 3) {
+	if (argc < 4) {
 		std::cout << "ERROR: not enough arguments" << std::endl;
 		return 0;
 	}
@@ -16,10 +16,12 @@ int main(int argc, char* argv[])
 			ResonantScanner RS(fpga);
 			//Shutter shutter1(fpga, SHUTTERvision);
 			LaserVision vision;
+			LaserFidelity fidelity;
 
 			//Set the FOV
-			int FFOV_um(std::stoi(argv[1]));
-			std::string runCommand(argv[2]);
+			int whichLaserShutter(std::stoi(argv[1]));
+			int FFOV_um(std::stoi(argv[2]));
+			std::string runCommand(argv[3]);
 
 			if (FFOV_um < 0 || FFOV_um > 300)
 				throw std::invalid_argument((std::string)__FUNCTION__ + ": RS FFOV must be in the range 0-300 um");
@@ -28,14 +30,27 @@ int main(int argc, char* argv[])
 			if (runCommand == "1")
 			{
 				RS.turnOn_um(FFOV_um);
-				//shutter1.open();
-				vision.setShutter(1);
+
+				switch (whichLaserShutter)
+				{
+				case 0:
+					vision.setShutter(1);
+					break;
+				case 1:
+					fidelity.setShutter(1);
+					break;
+				case 2:
+					vision.setShutter(1);
+					fidelity.setShutter(1);
+				default:
+					std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser shutter is not available");
+				}
 			}
 			else if (runCommand == "0")
 			{
 				RS.turnOff();
-				//shutter1.close();
 				vision.setShutter(0);
+				fidelity.setShutter(0);
 			}
 			else
 				throw std::invalid_argument((std::string)__FUNCTION__  + ": Invalid command");

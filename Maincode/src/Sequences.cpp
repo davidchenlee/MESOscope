@@ -200,17 +200,17 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 void seq_mainFidelity(const FPGAns::FPGA &fpga)
 {
-	const RunMode acqMode = SINGLEMODE;			//Single shot
+	//const RunMode acqMode = SINGLEMODE;			//Single shot
 	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
 	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times for averaging
 	//const RunMode acqMode = STACKMODE;			//Stack volume from the initial z position
-	//const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
+	const RunMode acqMode = STACKCENTEREDMODE;	//Stack volume centered at the initial z position
 
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.050, 14.150, 18.476 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.469 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;

@@ -210,7 +210,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.050, 14.150, 18.469 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.462 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -224,7 +224,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 1040;
-	const std::vector<double> Pif_mW = { 25, 25 };		//For 750 nm over 200 um
+	const std::vector<double> Pif_mW = { 20, 20 };		//For 750 nm over 200 um
 	double P_mW = Pif_mW.front();
 	//LaserFidelity fidelity;
 

@@ -11,14 +11,14 @@ void seq_main(const FPGAns::FPGA &fpga)
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
-	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.050, 14.150, 18.478 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const int nFramesCont = 1;										//Number of frames for continuous acquisition
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.697 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
 	ResonantScanner RScanner(fpga);
 	RScanner.setFFOV(FFOVrs_um);
-	RScanner.isRunning();
+	RScanner.isRunning();					//Make sure that the RS is running
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -26,8 +26,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 1040;
-	const std::vector<double> Pif_mW = { 15, 15 };		//For 750 nm over 200 um
-	//const std::vector<double> Pif_mW = { 70 , 100 };	//For 1040 nm over 200 um
+	const std::vector<double> Pif_mW = { 15, 15 };
 	double P_mW = Pif_mW.front();
 	LaserVision vision;
 	vision.setWavelength(wavelength_nm);
@@ -41,7 +40,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	Filterwheel FWdetection(FWdet);
 	FWdetection.setColor(wavelength_nm);
 
-	//Stages
+	//STAGES
 	Stage stage;
 	std::vector<double3> stagePosition_mm;
 
@@ -106,7 +105,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
 
-	//Datalog
+	//DATALOG
 	{
 		Logger datalog("datalog_" + sampleName);
 		datalog.record("SAMPLE-------------------------------------------------------");
@@ -137,22 +136,22 @@ void seq_main(const FPGAns::FPGA &fpga)
 		datalog.record("STAGE--------------------------------------------------------");
 	}
 
-	//Create container-stacks for storing the Tiff images
+	//CREATE CONTAINERS FOR STORING THE STACK OF TIFFs
 	TiffU8 stackDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ);
 	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
 
-	//OPEN THE SHUTTERS
+	//OPEN THE UNIBLITZ SHUTTERS
 	Shutter shutterVision(fpga, SHUTTERvision);
 	shutterVision.open();
 	Sleep(50);
 
-	//Acquire frames at different Z
+	//ACQUIRE FRAMES AT DIFFERENT Zs
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 	{
 		stage.moveStage3(stagePosition_mm.at(iterDiffZ));
 		stage.waitForMotionToStop3();
 		stage.printPosition3();		//Print the stage position
-		//P_mW += 0.5;				//Increase the laser power by this much
+		//P_mW += 0.5;				//Increase the laser power by this amount
 
 		//Acquire many frames at the same Z via discontinuous acquisition
 		for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
@@ -216,17 +215,17 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const double FFOVrs_um = 150 * um;
 	ResonantScanner RScanner(fpga);
 	RScanner.setFFOV(FFOVrs_um);
-	RScanner.isRunning();
+	RScanner.isRunning();					//Make sure that the RS is running
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
 	double zDelta_um = 10 * um;				//Acquire a stack covering this interval
 
 	//LASER
-	const int wavelength_nm = 1040;
+	const int wavelength_nm = 1040;						//Needed for the filterwheels
 	const std::vector<double> Pif_mW = { 20, 20 };		//For 750 nm over 200 um
 	double P_mW = Pif_mW.front();
-	//LaserFidelity fidelity;
+	//LaserFidelity fidelity;							//This does not do anything
 
 	//SAMPLE
 	const std::string sampleName("Bead4um");
@@ -237,7 +236,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	Filterwheel FWdetection(FWdet);
 	FWdetection.setColor(wavelength_nm);
 
-	//Stages
+	//STAGES
 	Stage stage;
 	std::vector<double3> stagePosition_mm;
 
@@ -297,12 +296,10 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELL FOR RT
-	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 0);
-	//pockelsVision.voltageLinearRamp(4*us, 40*us, 0, 1*V);
-	//pockelsVision.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
-	//pockelsVision.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
+	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 1040);
 
-	//Datalog
+
+	//DATALOG
 	{
 		Logger datalog("datalog_" + sampleName);
 		datalog.record("SAMPLE-------------------------------------------------------");
@@ -333,22 +330,22 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		datalog.record("STAGE--------------------------------------------------------");
 	}
 
-	//Create container-stacks for storing the Tiff images
+	//CREATE CONTAINERS FOR STORING THE STACK OF TIFFs
 	TiffU8 stackDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ);
 	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
 
-	//OPEN THE SHUTTERS
+	//OPEN THE UNIBLITZ SHUTTERS
 	Shutter shutterFidelity(fpga, SHUTTERfidelity);
 	shutterFidelity.open();
 	
 
-	//Acquire frames at different Z
+	//ACQUIRE FRAMES AT DIFFERENT Zs
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 	{
 		stage.moveStage3(stagePosition_mm.at(iterDiffZ));
 		stage.waitForMotionToStop3();
 		stage.printPosition3();		//Print the stage position
-		//P_mW += 0.5;				//Increase the laser power by this much
+		//P_mW += 0.5;				//Increase the laser power by this amount
 
 		//Acquire many frames at the same Z via discontinuous acquisition
 		for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
@@ -591,45 +588,39 @@ void seq_testPMT16X()
 	getchar();
 }
 
-//Keep the pockels on to check the setpoint of the laser power
+//For keeping the pockels on to check the the laser power
 //0. Make sure that the function generator feeds the lineclock
 //1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter
-//2. Set pockelsAutoOff = DISABLE
-//3. Tune the wavelength of the laser manually
-void seq_testPockelsVision(const FPGAns::FPGA &fpga)
+//2. Set pockelsAutoOff = DISABLE for holding the last value
+//3. Tune Vision's wavelength manually
+void seq_testPockels(const FPGAns::FPGA &fpga)
 {
-	//Create a realtime sequence
-	FPGAns::RTsequence RTsequence(fpga);
-
-	//Turn on the pockels cell
-	PockelsCell pockelsVision(RTsequence, POCKELSvision, 1040);
-	pockelsVision.pushPowerSinglet(8 * us, 10.5 * mW);
-	//pockelsVision.pushVoltageSinglet(8 * us, 2.508 * V);
-
-	//Execute the sequence to load and run the command
-	Image image(RTsequence);
-	image.acquire();
-}
-
-void seq_testPockelsFidelity(const FPGAns::FPGA &fpga)
-{
-	//Create a realtime sequence
+	//CREATE A REALTIME SEQUENCE
 	FPGAns::RTsequence RTsequence(fpga);
 	
-	//OPEN THE SHUTTER. WARNING: The class destructor closes the shutter
+	//OPEN THE SHUTTER. WARNING: The class destructor closes the shutter automatically
 	Shutter shutterFidelity(fpga, SHUTTERfidelity);
 	shutterFidelity.open();
 
-	//Turn on the pockels cell
-	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 0);
-	pockelsFidelity.pushPowerSinglet(500 * us, 30 * mW);
-	pockelsFidelity.pushPowerSinglet(8 * us, 0 * mW);
-	//pockelsFidelity.pushVoltageSinglet(8 * us, 0.0 * V);
+	//DEFINE THE POCKELS CELLS
+	PockelsCell pockelsVision(RTsequence, POCKELSvision, 1040);			//Vision
+	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 1040);		//Fidelity
 
-	//Execute the sequence to load and run the command
+	//DEFINE A POCKELS CELL DYNAMICALLY THROUGH THE COPY CONTRUCTOR
+	//PockelsCell pockels(pockelsVision);
+	PockelsCell pockels(pockelsFidelity);
+	pockels.pushPowerSinglet(400 * us, 30 * mW);
+	pockels.pushPowerSinglet(8 * us, 0 * mW);
+	//pockels.pushVoltageSinglet(8 * us, 0.0 * V);
+
+	//LOAD AND EXECUTE THE SEQUENCE ON THE FPGA
 	Image image(RTsequence);
 	image.acquire();
 
+	shutterFidelity.close();
+	
+	std::cout << "Press any key to continue..." << std::endl;
+	getchar();
 }
 
 
@@ -784,7 +775,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	Image image(RTsequence);
 	image.initialize();
 
-	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.060); //Move the stage, which will trigger the control sequenceand data acquisition
+	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.060); //Move the stage, which will trigger the control sequence and data acquisition
 	
 	image.startFIFOOUTpc();
 	image.download();

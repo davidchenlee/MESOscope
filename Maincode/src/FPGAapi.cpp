@@ -180,7 +180,7 @@ namespace FPGAns
 	//Load the imaging parameters onto the FPGA. See 'Const.cpp' for the definition of each variable
 	void FPGA::initializeFpga_() const
 	{
-		if (nChan < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 || linegateTimeout_us < 0 || stageTriggerPulse_ms < 0)
+		if (NCHAN < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 || linegateTimeout_us < 0 || stageTriggerPulse_ms < 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 		//INPUT SELECTORS
@@ -188,7 +188,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getFpgaHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));								//For debugging the photoncounters
 
 		//FIFOIN
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(nChan)));											//Number of input channels
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(NCHAN)));											//Number of input channels
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));														//Control-sequence trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_FIFOINtimeout_tick, static_cast<U16>(FIFOINtimeout_tick)));						//FIFOIN timeout
 
@@ -276,7 +276,7 @@ namespace FPGAns
 	}
 
 	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, const AcqTriggerSelector stageAsTrigger) :
-		mFpga(fpga), mVectorOfQueues(nChan), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mStageAsTrigger(stageAsTrigger)
+		mFpga(fpga), mVectorOfQueues(NCHAN), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mStageAsTrigger(stageAsTrigger)
 	{
 		//Set the imaging parameters
 		mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;
@@ -315,7 +315,7 @@ namespace FPGAns
 	{
 		{
 			QU32 allQueues;		//Create a single long queue
-			for (int chan = 0; chan < nChan; chan++)
+			for (int chan = 0; chan < NCHAN; chan++)
 			{
 				allQueues.push_back(vectorOfQueues.at(chan).size());	//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'			
 				for (int iter = 0; iter < static_cast<int>(vectorOfQueues.at(chan).size()); iter++)
@@ -409,7 +409,7 @@ namespace FPGAns
 	void RTsequence::presetFPGAoutput() const
 	{
 		//Read from the FPGA the last voltage in the galvo AO. See the LV implementation
-		std::vector<I16> AOlastVoltage_I16(nChan, 0);
+		std::vector<I16> AOlastVoltage_I16(NCHAN, 0);
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo1Mon, &AOlastVoltage_I16.at(GALVO1)));
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo2Mon, &AOlastVoltage_I16.at(GALVO2)));
 	
@@ -418,8 +418,8 @@ namespace FPGAns
 		//std::cout << convertI16toVolt((I16)mVectorOfQueues.at(GALVO1).front()) << std::endl;
 
 		//Create a vector of queues
-		VQU32 vectorOfQueuesForRamp(nChan);
-		for (int chan = 1; chan < nChan; chan++) //chan > 0 means that the pixelclock is kept empty
+		VQU32 vectorOfQueuesForRamp(NCHAN);
+		for (int chan = 1; chan < NCHAN; chan++) //chan > 0 means that the pixelclock is kept empty
 		{
 			if (mVectorOfQueues.at(chan).size() != 0)
 			{

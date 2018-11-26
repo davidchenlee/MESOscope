@@ -452,10 +452,10 @@ Shutter::Shutter(const FPGAns::FPGA &fpga, ShutterID ID) : mFpga(fpga)
 {
 	switch (ID)
 	{
-	case SHUTTERvision:
+	case VISION:
 		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterVision;
 		break;
-	case SHUTTERfidelity:
+	case FIDELITY:
 		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterFidelity;
 		break;
 	default:
@@ -493,18 +493,18 @@ void Shutter::pulseHigh() const
 //Curently, the output is hard coded on the FPGA side and triggered by 'frame gate'
 PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockelsChannel, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsRTchannel(pockelsChannel), mWavelength_nm(wavelength_nm)
 {
-	if (mPockelsRTchannel != POCKELSvision && mPockelsRTchannel != POCKELSfidelity)
+	if (mPockelsRTchannel != POCKELSVISION && mPockelsRTchannel != POCKELSFIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
 
 	switch (mPockelsRTchannel)
 	{
-	case POCKELSvision:
-		mShutter = new Shutter(mRTsequence.mFpga, SHUTTERvision);
-		mScalingRTchannel = SCALINGvision;
+	case POCKELSVISION:
+		mShutter = new Shutter(mRTsequence.mFpga, VISION);
+		mScalingRTchannel = SCALINGVISION;
 		break;
-	case POCKELSfidelity:
-		mShutter = new Shutter(mRTsequence.mFpga, SHUTTERfidelity);
-		mScalingRTchannel = SCALINGfidelity;
+	case POCKELSFIDELITY:
+		mShutter = new Shutter(mRTsequence.mFpga, FIDELITY);
+		mScalingRTchannel = SCALINGFIDELITY;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell is NOT available");
@@ -525,7 +525,7 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 	//VISION
 	switch (mPockelsRTchannel)
 	{
-	case POCKELSvision:
+	case POCKELSVISION:
 		if (mWavelength_nm == 750) {
 			a = 788;
 			b = 0.6152;
@@ -546,7 +546,7 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 		break;
 
 		//FIDELITY
-	case POCKELSfidelity:
+	case POCKELSFIDELITY:
 		a = 101.20;
 		b = 0.276;
 		c = -0.049;
@@ -561,10 +561,10 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 
 	switch (mPockelsRTchannel)
 	{
-	case POCKELSvision:
+	case POCKELSVISION:
 		return asin(arg) / b + c;
-	case POCKELSfidelity:
-		//return (PI - asin(arg)) / b + c; //different expression from POCKELSvision because currently no HWP in front of the pockels
+	case POCKELSFIDELITY:
+		//return (PI - asin(arg)) / b + c; //different expression from POCKELSVISION because currently no HWP in front of the pockels
 		return asin(arg) / b + c;
 	default:
 		return 0;
@@ -833,12 +833,12 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mDeviceID(ID)
 {
 	switch (ID)
 	{
-	case FWdet:
-		mPort = assignCOM.at(FW1com);
+	case FWDET:
+		mPort = assignCOM.at(COMFWDET);
 		mDeviceName = "detection filterwheel";
 		break;
-	case FWexc:
-		mPort = assignCOM.at(FW2com);
+	case FWEXC:
+		mPort = assignCOM.at(COMFWEXC);
 		mDeviceName = "excitation filterwheel";
 		break;
 	default:
@@ -1126,34 +1126,34 @@ Stage::Stage()
 	const std::string stageIDz = "0165500631";	//Z-stage (ES-100)
 
 	//Open the connections to the stage controllers and assign the IDs
-	mID[xx] = PI_ConnectUSB(stageIDx.c_str());
-	mID[yy] = PI_ConnectUSB(stageIDy.c_str());
-	mID[zz] = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
-	//mID[zz] = PI_ConnectUSB(stageIDz.c_str());
+	mID[XX] = PI_ConnectUSB(stageIDx.c_str());
+	mID[YY] = PI_ConnectUSB(stageIDy.c_str());
+	mID[ZZ] = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	//mID[ZZ] = PI_ConnectUSB(stageIDz.c_str());
 
-	if (mID[xx] < 0)
+	if (mID[XX] < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
 
-	if (mID[yy] < 0)
+	if (mID[YY] < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
 
-	if (mID[zz] < 0)
+	if (mID[ZZ] < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
 
 	std::cout << "Connection to the stages successfully established\n";
 
 	//Record the current position
-	mPosition3_mm[xx] = downloadPosition_mm(xx);
-	mPosition3_mm[yy] = downloadPosition_mm(yy);
-	mPosition3_mm[zz] = downloadPosition_mm(zz);
+	mPosition3_mm[XX] = downloadPosition_mm(XX);
+	mPosition3_mm[YY] = downloadPosition_mm(YY);
+	mPosition3_mm[ZZ] = downloadPosition_mm(ZZ);
 }
 
 Stage::~Stage()
 {
 	//Close the Connections
-	PI_CloseConnection(mID[xx]);
-	PI_CloseConnection(mID[yy]);
-	PI_CloseConnection(mID[zz]);
+	PI_CloseConnection(mID[XX]);
+	PI_CloseConnection(mID[YY]);
+	PI_CloseConnection(mID[ZZ]);
 	std::cout << "Connection to the stages successfully closed\n";
 }
 
@@ -1165,9 +1165,9 @@ double3 Stage::readPosition3_mm() const
 
 void Stage::printPosition3() const
 {
-	std::cout << "Stage X position = " << mPosition3_mm[xx] << " mm" << std::endl;
-	std::cout << "Stage Y position = " << mPosition3_mm[yy] << " mm" << std::endl;
-	std::cout << "Stage Z position = " << mPosition3_mm[zz] << " mm" << std::endl;
+	std::cout << "Stage X position = " << mPosition3_mm[XX] << " mm" << std::endl;
+	std::cout << "Stage Y position = " << mPosition3_mm[YY] << " mm" << std::endl;
+	std::cout << "Stage Z position = " << mPosition3_mm[ZZ] << " mm" << std::endl;
 }
 
 //Retrieve the stage position from the controller
@@ -1200,9 +1200,9 @@ void Stage::moveStage(const Axis axis, const double position_mm)
 //Move the 3 stages to the requested position
 void Stage::moveStage3(const double3 positionXYZ_mm)
 {
-	moveStage(xx, positionXYZ_mm[xx]);
-	moveStage(yy, positionXYZ_mm[yy]);
-	moveStage(zz, positionXYZ_mm[zz]);
+	moveStage(XX, positionXYZ_mm[XX]);
+	moveStage(YY, positionXYZ_mm[YY]);
+	moveStage(ZZ, positionXYZ_mm[ZZ]);
 }
 
 
@@ -1235,13 +1235,13 @@ void Stage::waitForMotionToStop3() const
 
 	BOOL isMoving_x, isMoving_y, isMoving_z;
 	do {
-		if (!PI_IsMoving(mID[xx], mNstagesPerController, &isMoving_x))
+		if (!PI_IsMoving(mID[XX], mNstagesPerController, &isMoving_x))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage X");
 
-		if (!PI_IsMoving(mID[yy], mNstagesPerController, &isMoving_y))
+		if (!PI_IsMoving(mID[YY], mNstagesPerController, &isMoving_y))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Y");
 
-		if (!PI_IsMoving(mID[zz], mNstagesPerController, &isMoving_z))
+		if (!PI_IsMoving(mID[ZZ], mNstagesPerController, &isMoving_z))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Z");
 
 		std::cout << ".";
@@ -1252,9 +1252,9 @@ void Stage::waitForMotionToStop3() const
 
 void Stage::stopALL() const
 {
-	PI_StopAll(mID[xx]);
-	PI_StopAll(mID[yy]);
-	PI_StopAll(mID[zz]);
+	PI_StopAll(mID[XX]);
+	PI_StopAll(mID[YY]);
+	PI_StopAll(mID[ZZ]);
 }
 
 //Request the configuration of the digital output

@@ -139,7 +139,7 @@ public:
 class PMT16X
 {
 	serial::Serial *mSerial;
-	std::string mPort = assignCOM.at(PMT16Xcom);
+	std::string mPort = assignCOM.at(COMPMT16X);
 	const int mBaud = 9600;
 	const int mTimeout_ms = 300;
 	const int mRxBufferSize = 256;				//Serial buffer size
@@ -184,7 +184,7 @@ class LaserVision
 {
 	int mWavelength_nm;
 	serial::Serial *mSerial;
-	const std::string mPort = assignCOM.at(VISIONcom);
+	const std::string mPort = assignCOM.at(COMVISION);
 	const int mBaud = 19200;
 	const int mTimeout_ms = 100;
 	const double mTuningSpeed_nm_s = 35;				//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
@@ -202,7 +202,7 @@ public:
 class LaserFidelity
 {
 	serial::Serial *mSerial;
-	const std::string mPort = assignCOM.at(FIDELITYcom);
+	const std::string mPort = assignCOM.at(COMFIDELITY);
 	const int mBaud = 115200;
 	const int mTimeout_ms = 100;
 	const int mRxBufSize = 256;							//Serial buffer size

@@ -37,7 +37,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const double collar = 1.47;
 
 	//FILTERWHEEL
-	Filterwheel FWdetection(FWdet);
+	Filterwheel FWdetection(FWDET);
 	FWdetection.setColor(wavelength_nm);
 
 	//STAGES
@@ -73,7 +73,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		overrideFlag = NOOVERRIDE;
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) + iterDiffZ * stepSize_um / 1000 });
+			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) + iterDiffZ * stepSize_um / 1000 });
 		break;
 	case STACKCENTEREDMODE:
 		nSameZ = 1;
@@ -81,7 +81,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		overrideFlag = NOOVERRIDE;
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
+			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
@@ -98,7 +98,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELL FOR RT
-	PockelsCell pockels(RTsequence, POCKELSvision, wavelength_nm);
+	PockelsCell pockels(RTsequence, POCKELSVISION, wavelength_nm);
 	//pockelsVision.voltageLinearRamp(4*us, 40*us, 0, 1*V);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
@@ -139,7 +139,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
 
 	//OPEN THE UNIBLITZ SHUTTERS
-	Shutter shutterVision(fpga, SHUTTERvision);
+	Shutter shutterVision(fpga, VISION);
 	shutterVision.open();
 	Sleep(50);
 
@@ -170,7 +170,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 			{
 				//Save individual files
 				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P_mW, 1) + "mW" +
-					"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(xx), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(yy), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(zz), 4));
+					"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(XX), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(YY), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(ZZ), 4));
 				image.saveTiffSinglePage(singleFilename, overrideFlag);
 				Sleep(500);
 			}
@@ -187,8 +187,8 @@ void seq_main(const FPGAns::FPGA &fpga)
 	{
 		//Save the stackDiffZ to a file
 		std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(Pif_mW.front(), 1) + "mW_Pf=" + toString(Pif_mW.back(), 1) + "mW" +
-			"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
-			"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um / 1000, 4));
+			"_x=" + toString(stagePosition_mm.front().at(XX), 3) + "_y=" + toString(stagePosition_mm.front().at(YY), 3) +
+			"_zi=" + toString(stagePosition_mm.front().at(ZZ), 4) + "_zf=" + toString(stagePosition_mm.back().at(ZZ), 4) + "_Step=" + toString(stepSize_um / 1000, 4));
 
 		stackDiffZ.saveToFile(stackFilename, MULTIPAGE, overrideFlag);
 	}
@@ -231,7 +231,9 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const double collar = 1.47;
 
 	//FILTERWHEEL
-	Filterwheel FWdetection(FWdet);
+	Filterwheel FWexcitation(FWEXC);
+	Filterwheel FWdetection(FWDET);
+	FWexcitation.setColor(wavelength_nm);
 	FWdetection.setColor(wavelength_nm);
 
 	//STAGES
@@ -267,7 +269,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		overrideFlag = NOOVERRIDE;
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) + iterDiffZ * stepSize_um / 1000 });
+			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) + iterDiffZ * stepSize_um / 1000 });
 		break;
 	case STACKCENTEREDMODE:
 		nSameZ = 1;
@@ -275,7 +277,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		overrideFlag = NOOVERRIDE;
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
+			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
@@ -283,7 +285,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 
 	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
 
-	//GALVO FOR RT
+	//GALVO (RT sequence)
 	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
@@ -291,8 +293,11 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const double duration = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
-	//POCKELS CELL FOR RT
-	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 1040);
+	//POCKELS CELLS (RT sequence)
+	PockelsCell pockelsVision(RTsequence, POCKELSVISION, wavelength_nm);
+	PockelsCell pockelsFidelity(RTsequence, POCKELSFIDELITY, 1040);
+	//pockelsVision.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
+	//pockelsVision.scalingLinearRamp(1.0, 2.0);									//Linearly scale the laser intensity across all the frames
 
 	//DATALOG
 	{
@@ -329,9 +334,9 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	TiffU8 stackDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ);
 	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
 
-	//OPEN THE UNIBLITZ SHUTTERS
-	pockelsFidelity.openShutter();
-	
+	//SELECT A POCKELS AND OPEN THE UNIBLITZ SHUTTERS
+	PockelsCell pockels(pockelsFidelity);
+	pockels.openShutter();
 
 	//ACQUIRE FRAMES AT DIFFERENT Zs
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
@@ -347,7 +352,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 			std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
 				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << std::endl;
 
-			pockelsFidelity.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Override the previous laser power
+			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Override the previous laser power
 
 			//EXECUTE THE RT SEQUENCE
 			Image image(RTsequence);
@@ -360,7 +365,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 			{
 				//Save individual files
 				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P_mW, 1) + "mW" +
-					"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(xx), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(yy), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(zz), 4));
+					"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(XX), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(YY), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(ZZ), 4));
 				image.saveTiffSinglePage(singleFilename, overrideFlag);
 				Sleep(500);
 			}
@@ -371,14 +376,14 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		std::cout << std::endl;
 		P_mW += (Pif_mW.back() - Pif_mW.front()) / nDiffZ;
 	}
-	pockelsFidelity.closeShutter();
+	pockels.closeShutter();
 
 	if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
 	{
 		//Save the stackDiffZ to a file
 		std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(Pif_mW.front(), 1) + "mW_Pf=" + toString(Pif_mW.back(), 1) + "mW" +
-			"_x=" + toString(stagePosition_mm.front().at(xx), 3) + "_y=" + toString(stagePosition_mm.front().at(yy), 3) +
-			"_zi=" + toString(stagePosition_mm.front().at(zz), 4) + "_zf=" + toString(stagePosition_mm.back().at(zz), 4) + "_Step=" + toString(stepSize_um / 1000, 4));
+			"_x=" + toString(stagePosition_mm.front().at(XX), 3) + "_y=" + toString(stagePosition_mm.front().at(YY), 3) +
+			"_zi=" + toString(stagePosition_mm.front().at(ZZ), 4) + "_zf=" + toString(stagePosition_mm.back().at(ZZ), 4) + "_Step=" + toString(stepSize_um / 1000, 4));
 
 		stackDiffZ.saveToFile(stackFilename, MULTIPAGE, overrideFlag);
 	}
@@ -435,8 +440,8 @@ void seq_testAODO(const FPGAns::FPGA &fpga)
 	FPGAns::RTsequence RTsequence(fpga);
 
 	//DO
-	RTsequence.pushDigitalSinglet(DOdebug, 4 * us, 1);
-	RTsequence.pushDigitalSinglet(DOdebug, 4 * us, 0);
+	RTsequence.pushDigitalSinglet(DODEBUG, 4 * us, 1);
+	RTsequence.pushDigitalSinglet(DODEBUG, 4 * us, 0);
 
 	//AO
 	RTsequence.pushAnalogSinglet(GALVO1, 8 * us, 4);
@@ -457,8 +462,8 @@ void seq_testAOramp(const FPGAns::FPGA &fpga)
 	RTsequence.pushLinearRamp(GALVO1, step, 2 * ms, Vmax, 0);
 
 	const double pulsewidth = 300 * us;
-	RTsequence.pushDigitalSinglet(DOdebug, pulsewidth, 1);
-	RTsequence.pushDigitalSinglet(DOdebug, 4 * us, 0);
+	RTsequence.pushDigitalSinglet(DODEBUG, pulsewidth, 1);
+	RTsequence.pushDigitalSinglet(DODEBUG, 4 * us, 0);
 }
 
 //Generate a long digital pulse and check the duration with the oscilloscope
@@ -467,8 +472,8 @@ void seq_checkDigitalTiming(const FPGAns::FPGA &fpga)
 	const double step = 400 * us;
 
 	FPGAns::RTsequence RTsequence(fpga);
-	RTsequence.pushDigitalSinglet(DOdebug, step, 1);
-	RTsequence.pushDigitalSinglet(DOdebug, step, 0);
+	RTsequence.pushDigitalSinglet(DODEBUG, step, 1);
+	RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
 }
 
 //Generate many short digital pulses and check the overall duration with the oscilloscope
@@ -478,14 +483,14 @@ void seq_calibDigitalLatency(const FPGAns::FPGA &fpga)
 
 	FPGAns::RTsequence RTsequence(fpga);
 
-	RTsequence.pushDigitalSinglet(DOdebug, step, 1);
+	RTsequence.pushDigitalSinglet(DODEBUG, step, 1);
 
 	//Many short digital pulses to accumulate the error
 	for (U32 ii = 0; ii < 99; ii++)
-		RTsequence.pushDigitalSinglet(DOdebug, step, 0);
+		RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
 
-	RTsequence.pushDigitalSinglet(DOdebug, step, 1);
-	RTsequence.pushDigitalSinglet(DOdebug, step, 0);
+	RTsequence.pushDigitalSinglet(DODEBUG, step, 1);
+	RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
 }
 
 //First calibrate the digital channels, then use it as a time reference
@@ -502,17 +507,17 @@ void seq_calibAnalogLatency(const FPGAns::FPGA &fpga)
 	RTsequence.pushAnalogSinglet(GALVO1, step, 0);						//Final pulse
 
 	//DO0
-	RTsequence.pushDigitalSinglet(DOdebug, step, 1);
-	RTsequence.pushDigitalSinglet(DOdebug, step, 0);
-	RTsequence.pushDigitalSinglet(DOdebug, delay, 0);
-	RTsequence.pushDigitalSinglet(DOdebug, step, 1);
-	RTsequence.pushDigitalSinglet(DOdebug, step, 0);
+	RTsequence.pushDigitalSinglet(DODEBUG, step, 1);
+	RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
+	RTsequence.pushDigitalSinglet(DODEBUG, delay, 0);
+	RTsequence.pushDigitalSinglet(DODEBUG, step, 1);
+	RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
 }
 
 void seq_testFilterwheel()
 {
-	Filterwheel FWexcitation(FWexc);
-	Filterwheel FWdetection(FWdet);
+	Filterwheel FWexcitation(FWEXC);
+	Filterwheel FWdetection(FWDET);
 		
 	if (0)
 	{
@@ -528,7 +533,7 @@ void seq_testFilterwheel()
 
 void seq_testShutter(const FPGAns::FPGA &fpga)
 {
-	Shutter shutterFidelity(fpga, SHUTTERfidelity);
+	Shutter shutterFidelity(fpga, FIDELITY);
 	shutterFidelity.open();
 	Sleep(5000);
 	shutterFidelity.close();
@@ -551,7 +556,7 @@ void seq_testStagePosition()
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
 
-	stage.waitForMotionToStop(zz);
+	stage.waitForMotionToStop(ZZ);
 
 	std::cout << "Stages final position:" << std::endl;
 	stage.printPosition3();
@@ -560,9 +565,9 @@ void seq_testStagePosition()
 	int input = 1;
 	while (input)
 	{
-		std::cout << "Stage X position = " << stage.downloadPosition_mm(xx) << std::endl;
-		std::cout << "Stage Y position = " << stage.downloadPosition_mm(yy) << std::endl;
-		std::cout << "Stage X position = " << stage.downloadPosition_mm(zz) << std::endl;
+		std::cout << "Stage X position = " << stage.downloadPosition_mm(XX) << std::endl;
+		std::cout << "Stage Y position = " << stage.downloadPosition_mm(YY) << std::endl;
+		std::cout << "Stage X position = " << stage.downloadPosition_mm(ZZ) << std::endl;
 
 		std::cout << "Enter command: ";
 		std::cin >> input;
@@ -593,8 +598,8 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 	FPGAns::RTsequence RTsequence(fpga);
 
 	//DEFINE THE POCKELS CELLS
-	PockelsCell pockelsVision(RTsequence, POCKELSvision, 1040);			//Vision
-	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 1040);		//Fidelity
+	PockelsCell pockelsVision(RTsequence, POCKELSVISION, 1040);			//Vision
+	PockelsCell pockelsFidelity(RTsequence, POCKELSFIDELITY, 1040);		//Fidelity
 
 	//DEFINE A POCKELS CELL DYNAMICALLY THROUGH THE COPY CONTRUCTOR
 	//PockelsCell pockels(pockelsVision);
@@ -674,15 +679,15 @@ void seq_testStageConfig()
 
 	//std::cout << "Stages initial position:" << std::endl;
 	//stage.printPosition3();
-	//stage.qTRO_(xx, 1);
-	//stage.qTRO_(zz, 1);
-	//stage.TRO_(zz, 1, 1);
-	//stage.qCTO_(zz, 1, 1);
-	//stage.qVEL(xx);
-	//stage.qVEL(yy);
-	//stage.qVEL(zz);
-	stage.downloadConfiguration(zz, 1);
-	stage.downloadConfiguration(zz, 2);
+	//stage.qTRO_(XX, 1);
+	//stage.qTRO_(ZZ, 1);
+	//stage.TRO_(ZZ, 1, 1);
+	//stage.qCTO_(ZZ, 1, 1);
+	//stage.qVEL(XX);
+	//stage.qVEL(YY);
+	//stage.qVEL(ZZ);
+	stage.downloadConfiguration(ZZ, 1);
+	stage.downloadConfiguration(ZZ, 2);
 
 }
 
@@ -740,7 +745,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	RScanner.setFFOV(FFOVrs_um);
 
 	//FILTERWHEEL
-	Filterwheel fw(FWdet);
+	Filterwheel fw(FWDET);
 	fw.setColor(wavelength_nm);
 
 	//CREATE THE REAL-TIME SEQUENCE
@@ -755,11 +760,11 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELL FOR RT
-	PockelsCell pockelsVision(RTsequence, POCKELSvision, wavelength_nm);
+	PockelsCell pockelsVision(RTsequence, POCKELSVISION, wavelength_nm);
 	pockelsVision.pushPowerSinglet(8 * us, laserPower_mW);
 
 	//OPEN THE SHUTTER
-	Shutter shutterVision(fpga, SHUTTERvision);
+	Shutter shutterVision(fpga, VISION);
 	shutterVision.open();
 	Sleep(50);
 
@@ -767,7 +772,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	Image image(RTsequence);
 	image.initialize();
 
-	stage.moveStage(zz, stagePosition0_mm.at(zz) + 0.060); //Move the stage, which will trigger the control sequence and data acquisition
+	stage.moveStage(ZZ, stagePosition0_mm.at(ZZ) + 0.060); //Move the stage, which will trigger the control sequence and data acquisition
 	
 	image.startFIFOOUTpc();
 	image.download();

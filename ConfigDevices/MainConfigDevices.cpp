@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			ResonantScanner RS(fpga);
-			//Shutter shutter1(fpga, SHUTTERvision);
+			//Shutter shutter1(fpga, VISION);
 			LaserVision vision;
 			LaserFidelity fidelity;
 

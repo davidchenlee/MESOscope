@@ -27,14 +27,14 @@ namespace Constants
 	enum TiffPageStructSelector { SINGLEPAGE = false, MULTIPAGE = true};
 	enum OverrideFileSelector { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
-	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DOdebug, POCKELSvision, SCALINGvision, POCKELSfidelity, SCALINGfidelity, nChan };		//nChan = number of RT channels available, including the pixel clock channel
-	enum ShutterID { SHUTTERvision = 1, SHUTTERfidelity = 2 };
-	enum FilterwheelID { FWdet = 1, FWexc = 2 };
+	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DODEBUG, POCKELSVISION, SCALINGVISION, POCKELSFIDELITY, SCALINGFIDELITY, NCHAN };		//NCHAN = number of RT channels available, including the channel for the pixelclock
+	enum ShutterID { VISION = 1, FIDELITY = 2 };
+	enum FilterwheelID { FWDET = 1, FWEXC = 2 };
 	enum Filtercolor { BLUE = 1, GREEN = 2, RED = 3 };
-	enum Axis { xx, yy, zz };
+	enum Axis { XX, YY, ZZ };
 	enum RunMode { SINGLEMODE, CONTMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
 
-	enum ComID { VISIONcom, FIDELITYcom, FW1com , FW2com, PMT16Xcom };
+	enum ComID { COMVISION, COMFIDELITY, COMFWDET , COMFWEXC, COMPMT16X };
 	extern const std::vector<std::string> assignCOM;
 
 	extern const std::string folderPath;

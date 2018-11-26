@@ -83,7 +83,7 @@ class Shutter
 	NiFpga_FPGAvi_ControlBool mDeviceID;			//Device ID
 	const int mDelay_ms = 10;
 public:
-	Shutter(const FPGAns::FPGA &fpga, ShutterID ID);
+	Shutter(const FPGAns::FPGA &fpga, RTchannel laserName);
 	~Shutter();
 	void open() const;
 	void close() const;

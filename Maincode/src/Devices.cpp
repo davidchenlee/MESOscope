@@ -448,9 +448,9 @@ void ResonantScanner::isRunning()
 #pragma endregion "Resonant scanner"
 
 #pragma region "Shutters"
-Shutter::Shutter(const FPGAns::FPGA &fpga, ShutterID ID) : mFpga(fpga)
+Shutter::Shutter(const FPGAns::FPGA &fpga, RTchannel laserName) : mFpga(fpga)
 {
-	switch (ID)
+	switch (laserName)
 	{
 	case VISION:
 		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterVision;
@@ -491,19 +491,19 @@ void Shutter::pulseHigh() const
 
 #pragma region "Pockels cells"
 //Curently, the output is hard coded on the FPGA side and triggered by 'frame gate'
-PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockelsChannel, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsRTchannel(pockelsChannel), mWavelength_nm(wavelength_nm)
+PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserName, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsRTchannel(laserName), mWavelength_nm(wavelength_nm)
 {
-	if (mPockelsRTchannel != POCKELSVISION && mPockelsRTchannel != POCKELSFIDELITY)
+	if (mPockelsRTchannel != VISION && mPockelsRTchannel != FIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
+
+	mShutter = new Shutter(mRTsequence.mFpga, mPockelsRTchannel);
 
 	switch (mPockelsRTchannel)
 	{
-	case POCKELSVISION:
-		mShutter = new Shutter(mRTsequence.mFpga, VISION);
+	case VISION:
 		mScalingRTchannel = SCALINGVISION;
 		break;
-	case POCKELSFIDELITY:
-		mShutter = new Shutter(mRTsequence.mFpga, FIDELITY);
+	case FIDELITY:
 		mScalingRTchannel = SCALINGFIDELITY;
 		break;
 	default:
@@ -525,7 +525,7 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 	//VISION
 	switch (mPockelsRTchannel)
 	{
-	case POCKELSVISION:
+	case VISION:
 		if (mWavelength_nm == 750) {
 			a = 788;
 			b = 0.6152;
@@ -546,7 +546,7 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 		break;
 
 		//FIDELITY
-	case POCKELSFIDELITY:
+	case FIDELITY:
 		a = 101.20;
 		b = 0.276;
 		c = -0.049;
@@ -561,10 +561,10 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 
 	switch (mPockelsRTchannel)
 	{
-	case POCKELSVISION:
+	case VISION:
 		return asin(arg) / b + c;
-	case POCKELSFIDELITY:
-		//return (PI - asin(arg)) / b + c; //different expression from POCKELSVISION because currently no HWP in front of the pockels
+	case FIDELITY:
+		//return (PI - asin(arg)) / b + c; //different expression from VISION because currently no HWP in front of the pockels
 		return asin(arg) / b + c;
 	default:
 		return 0;

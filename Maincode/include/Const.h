@@ -27,8 +27,7 @@ namespace Constants
 	enum TiffPageStructSelector { SINGLEPAGE = false, MULTIPAGE = true};
 	enum OverrideFileSelector { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
-	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DODEBUG, POCKELSVISION, SCALINGVISION, POCKELSFIDELITY, SCALINGFIDELITY, NCHAN };		//NCHAN = number of RT channels available, including the channel for the pixelclock
-	enum ShutterID { VISION = 1, FIDELITY = 2 };
+	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };		//NCHAN = number of RT channels available, including the channel for the pixelclock
 	enum FilterwheelID { FWDET = 1, FWEXC = 2 };
 	enum Filtercolor { BLUE = 1, GREEN = 2, RED = 3 };
 	enum Axis { XX, YY, ZZ };

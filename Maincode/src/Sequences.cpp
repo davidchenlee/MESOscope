@@ -98,7 +98,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELL FOR RT
-	PockelsCell pockels(RTsequence, POCKELSVISION, wavelength_nm);
+	PockelsCell pockels(RTsequence, VISION, wavelength_nm);
 	//pockelsVision.voltageLinearRamp(4*us, 40*us, 0, 1*V);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
@@ -294,8 +294,8 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELLS (RT sequence)
-	PockelsCell pockelsVision(RTsequence, POCKELSVISION, wavelength_nm);
-	PockelsCell pockelsFidelity(RTsequence, POCKELSFIDELITY, 1040);
+	PockelsCell pockelsVision(RTsequence, VISION, wavelength_nm);
+	PockelsCell pockelsFidelity(RTsequence, FIDELITY, 1040);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, duration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);									//Linearly scale the laser intensity across all the frames
 
@@ -598,8 +598,8 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 	FPGAns::RTsequence RTsequence(fpga);
 
 	//DEFINE THE POCKELS CELLS
-	PockelsCell pockelsVision(RTsequence, POCKELSVISION, 1040);			//Vision
-	PockelsCell pockelsFidelity(RTsequence, POCKELSFIDELITY, 1040);		//Fidelity
+	PockelsCell pockelsVision(RTsequence, VISION, 1040);			//Vision
+	PockelsCell pockelsFidelity(RTsequence, FIDELITY, 1040);		//Fidelity
 
 	//DEFINE A POCKELS CELL DYNAMICALLY THROUGH THE COPY CONTRUCTOR
 	//PockelsCell pockels(pockelsVision);
@@ -760,7 +760,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, duration, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELL FOR RT
-	PockelsCell pockelsVision(RTsequence, POCKELSVISION, wavelength_nm);
+	PockelsCell pockelsVision(RTsequence, VISION, wavelength_nm);
 	pockelsVision.pushPowerSinglet(8 * us, laserPower_mW);
 
 	//OPEN THE SHUTTER

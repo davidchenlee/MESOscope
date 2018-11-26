@@ -19,9 +19,9 @@ int main(int argc, char* argv[])
 			LaserFidelity fidelity;
 
 			//Set the FOV
-			int whichLaserShutter(std::stoi(argv[1]));
-			int FFOV_um(std::stoi(argv[2]));
-			std::string runCommand(argv[3]);
+			char whichLaser(*argv[1]);			//V for Vision, F for Fidelity VF for both
+			int FFOV_um(std::stoi(argv[2]));	//Field of view
+			std::string runCommand(argv[3]);	//1 for run RS, 0 for stop RS
 
 			if (FFOV_um < 0 || FFOV_um > 300)
 				throw std::invalid_argument((std::string)__FUNCTION__ + ": RS FFOV must be in the range 0-300 um");
@@ -29,22 +29,28 @@ int main(int argc, char* argv[])
 			//Turn the RS On/Off
 			if (runCommand == "1")
 			{
-				RS.turnOn_um(FFOV_um);
 
-				switch (whichLaserShutter)
+				std::cout << "mark 1" << std::endl;
+
+				switch (whichLaser)
 				{
-				case 0:
+				case 'V':
+				case 'v':
 					vision.setShutter(1);
 					break;
-				case 1:
+				case 'F':
+				case 'f':
 					fidelity.setShutter(1);
 					break;
-				case 2:
+				case 'VF':
+				case 'vf':
 					vision.setShutter(1);
 					fidelity.setShutter(1);
+					break;
 				default:
-					std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser shutter is not available");
+					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser is not available");
 				}
+				RS.turnOn_um(FFOV_um);
 			}
 			else if (runCommand == "0")
 			{

@@ -104,6 +104,7 @@ class PockelsCell
 	RTchannel mScalingRTchannel;
 	int mWavelength_nm;							//Laser wavelength
 	const double maxPower_mW = 250 * mW;		//Soft limit for the laser power
+	Shutter *mShutter;
 
 	double convert_mWToVolt_(const double power_mW) const;
 public:
@@ -116,6 +117,8 @@ public:
 	void powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const;
 	void voltageToZero() const;
 	void scalingLinearRamp(const double Si, const double Sf) const;
+	void openShutter() const;
+	void closeShutter() const;
 };
 
 class Galvo

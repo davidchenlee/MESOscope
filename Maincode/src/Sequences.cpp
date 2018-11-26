@@ -74,7 +74,6 @@ void seq_main(const FPGAns::FPGA &fpga)
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) + iterDiffZ * stepSize_um / 1000 });
-
 		break;
 	case STACKCENTEREDMODE:
 		nSameZ = 1;
@@ -83,7 +82,6 @@ void seq_main(const FPGAns::FPGA &fpga)
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
-
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
@@ -270,7 +268,6 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) + iterDiffZ * stepSize_um / 1000 });
-
 		break;
 	case STACKCENTEREDMODE:
 		nSameZ = 1;
@@ -279,7 +276,6 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(xx), stagePosition0_mm.at(yy), stagePosition0_mm.at(zz) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
-
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
@@ -297,7 +293,6 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 
 	//POCKELS CELL FOR RT
 	PockelsCell pockelsFidelity(RTsequence, POCKELSfidelity, 1040);
-
 
 	//DATALOG
 	{
@@ -335,8 +330,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
 
 	//OPEN THE UNIBLITZ SHUTTERS
-	Shutter shutterFidelity(fpga, SHUTTERfidelity);
-	shutterFidelity.open();
+	pockelsFidelity.openShutter();
 	
 
 	//ACQUIRE FRAMES AT DIFFERENT Zs
@@ -377,7 +371,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		std::cout << std::endl;
 		P_mW += (Pif_mW.back() - Pif_mW.front()) / nDiffZ;
 	}
-	shutterFidelity.close();
+	pockelsFidelity.closeShutter();
 
 	if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
 	{
@@ -590,17 +584,13 @@ void seq_testPMT16X()
 
 //For keeping the pockels on to check the the laser power
 //0. Make sure that the function generator feeds the lineclock
-//1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter
+//1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter automatically
 //2. Set pockelsAutoOff = DISABLE for holding the last value
 //3. Tune Vision's wavelength manually
 void seq_testPockels(const FPGAns::FPGA &fpga)
 {
 	//CREATE A REALTIME SEQUENCE
 	FPGAns::RTsequence RTsequence(fpga);
-	
-	//OPEN THE SHUTTER. WARNING: The class destructor closes the shutter automatically
-	Shutter shutterFidelity(fpga, SHUTTERfidelity);
-	shutterFidelity.open();
 
 	//DEFINE THE POCKELS CELLS
 	PockelsCell pockelsVision(RTsequence, POCKELSvision, 1040);			//Vision
@@ -613,11 +603,13 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 	pockels.pushPowerSinglet(8 * us, 0 * mW);
 	//pockels.pushVoltageSinglet(8 * us, 0.0 * V);
 
+	pockels.openShutter();
+
 	//LOAD AND EXECUTE THE SEQUENCE ON THE FPGA
 	Image image(RTsequence);
 	image.acquire();
 
-	shutterFidelity.close();
+	pockels.closeShutter();
 	
 	std::cout << "Press any key to continue..." << std::endl;
 	getchar();

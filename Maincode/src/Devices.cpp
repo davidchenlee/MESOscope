@@ -448,7 +448,6 @@ void ResonantScanner::isRunning()
 #pragma endregion "Resonant scanner"
 
 #pragma region "Shutters"
-
 Shutter::Shutter(const FPGAns::FPGA &fpga, ShutterID ID) : mFpga(fpga)
 {
 	switch (ID)
@@ -462,7 +461,6 @@ Shutter::Shutter(const FPGAns::FPGA &fpga, ShutterID ID) : mFpga(fpga)
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter is NOT available");
 	}
-
 }
 
 Shutter::~Shutter()
@@ -501,9 +499,11 @@ PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockels
 	switch (mPockelsRTchannel)
 	{
 	case POCKELSvision:
+		mShutter = new Shutter(mRTsequence.mFpga, SHUTTERvision);
 		mScalingRTchannel = SCALINGvision;
 		break;
 	case POCKELSfidelity:
+		mShutter = new Shutter(mRTsequence.mFpga, SHUTTERfidelity);
 		mScalingRTchannel = SCALINGfidelity;
 		break;
 	default:
@@ -517,6 +517,59 @@ PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockels
 
 //Do not set the output to 0 with the destructor to allow latching the last value
 PockelsCell::~PockelsCell() {}
+
+double PockelsCell::convert_mWToVolt_(const double power_mW) const
+{
+	double a, b, c;		//Calibration parameters
+
+	//VISION
+	switch (mPockelsRTchannel)
+	{
+	case POCKELSvision:
+		if (mWavelength_nm == 750) {
+			a = 788;
+			b = 0.6152;
+			c = -0.027;
+		}
+		else if (mWavelength_nm == 940) {
+			a = 464;
+			b = 0.488;
+			c = -0.087;
+		}
+		else if (mWavelength_nm == 1040) {
+			a = 200;
+			b = 0.441;
+			c = 0.037;
+		}
+		else
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
+		break;
+
+		//FIDELITY
+	case POCKELSfidelity:
+		a = 101.20;
+		b = 0.276;
+		c = -0.049;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell is NOT available");
+	}
+
+	double arg = sqrt(power_mW / a);
+	if (arg > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Arg of asin is greater than 1");
+
+	switch (mPockelsRTchannel)
+	{
+	case POCKELSvision:
+		return asin(arg) / b + c;
+	case POCKELSfidelity:
+		//return (PI - asin(arg)) / b + c; //different expression from POCKELSvision because currently no HWP in front of the pockels
+		return asin(arg) / b + c;
+	default:
+		return 0;
+	}
+}
 
 
 void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO_V) const
@@ -573,58 +626,14 @@ void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 		mRTsequence.pushAnalogSingletFx2p14(mScalingRTchannel, Si + (Sf - Si) / (mRTsequence.mNframes -1) * ii);
 }
 
-
-double PockelsCell::convert_mWToVolt_(const double power_mW) const
+void PockelsCell::openShutter() const
 {
-	double a, b, c;		//Calibration parameters
+	mShutter->open();
+}
 
-	//VISION
-	switch (mPockelsRTchannel)
-	{
-	case POCKELSvision:
-		if (mWavelength_nm == 750) {
-			a = 788;
-			b = 0.6152;
-			c = -0.027;
-		}
-		else if (mWavelength_nm == 940) {
-			a = 464;
-			b = 0.488;
-			c = -0.087;
-		}
-		else if (mWavelength_nm == 1040) {
-			a = 200;
-			b = 0.441;
-			c = 0.037;
-		}
-		else
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
-		break;
-
-	//FIDELITY
-	case POCKELSfidelity:
-			a = 101.20;
-			b = 0.276;
-			c = -0.049;
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell is NOT available");
-	}
-
-	double arg = sqrt(power_mW / a);
-	if (arg > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Arg of asin is greater than 1");
-
-	switch (mPockelsRTchannel)
-	{
-	case POCKELSvision:
-		return asin(arg) / b + c;
-	case POCKELSfidelity:
-		//return (PI - asin(arg)) / b + c; //different expression from POCKELSvision because currently no HWP in front of the pockels
-		return asin(arg) / b + c;
-	default:
-		return 0;
-	}
+void PockelsCell::closeShutter() const
+{
+	mShutter->close();
 }
 #pragma endregion "Pockels cells"
 

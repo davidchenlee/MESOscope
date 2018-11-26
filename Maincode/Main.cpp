@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//seq_main(fpga);
-			//seq_mainFidelity(fpga);
+			seq_mainFidelity(fpga);
 			//seq_contAcquisition(fpga);
 			//seq_testGalvo(fpga);
 			//seq_testPixelclock(fpga);
@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 			//seq_testAODO(fpga);
 			//seq_testPMT16X();
 			//seq_testPockelsVision(fpga);
-			seq_testPockels(fpga);
+			//seq_testPockels(fpga);
 			//seq_testLaserFidelity(fpga);
 			//seq_testFilterwheel();
 			//seq_testShutter(fpga);

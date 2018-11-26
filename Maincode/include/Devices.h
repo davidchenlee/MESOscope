@@ -83,7 +83,7 @@ class Shutter
 	NiFpga_FPGAvi_ControlBool mDeviceID;			//Device ID
 	const int mDelay_ms = 10;
 public:
-	Shutter(const FPGAns::FPGA &fpga, RTchannel laserName);
+	Shutter(const FPGAns::FPGA &fpga, RTchannel laserName);		//I use RTchannel just to reuse the laser names. The shutters are not RT
 	~Shutter();
 	void open() const;
 	void close() const;
@@ -182,34 +182,22 @@ public:
 
 class LaserVision
 {
+	std::string mLaserNameString;
+	RTchannel mLaserName;
 	int mWavelength_nm;
 	serial::Serial *mSerial;
-	const std::string mPort = assignCOM.at(COMVISION);
-	const int mBaud = 19200;
+	std::string mPort;
+	int mBaud;
 	const int mTimeout_ms = 100;
 	const double mTuningSpeed_nm_s = 35;				//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
 	const int mRxBufSize = 256;							//Serial buffer size
 
-	void downloadWavelength_();
+	int downloadWavelength_();
 public:
-	LaserVision();
+	LaserVision(RTchannel laserName);
 	~LaserVision();
 	void printWavelength_nm() const;
 	void setWavelength(const int wavelength_nm);
-	void setShutter(const bool state) const;
-};
-
-class LaserFidelity
-{
-	serial::Serial *mSerial;
-	const std::string mPort = assignCOM.at(COMFIDELITY);
-	const int mBaud = 115200;
-	const int mTimeout_ms = 100;
-	const int mRxBufSize = 256;							//Serial buffer size
-
-public:
-	LaserFidelity();
-	~LaserFidelity();
 	void setShutter(const bool state) const;
 };
 
@@ -247,5 +235,4 @@ public:
 
 	void scanningStrategy(const int nTileAbsolute) const;
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
-
 };

@@ -459,7 +459,7 @@ Shutter::Shutter(const FPGAns::FPGA &fpga, RTchannel laserName) : mFpga(fpga)
 		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterFidelity;
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter is NOT available");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter NOT available");
 	}
 }
 
@@ -507,7 +507,7 @@ PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserNa
 		mScalingRTchannel = SCALINGFIDELITY;
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell is NOT available");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell NOT available");
 	}
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
@@ -552,7 +552,7 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 		c = -0.049;
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell is NOT available");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell NOT available");
 	}
 
 	double arg = sqrt(power_mW / a);
@@ -966,137 +966,147 @@ void Filterwheel::setColor(const int wavelength_nm)
 #pragma endregion "Filterwheel"
 
 #pragma region "LaserVision"
-LaserVision::LaserVision()
+LaserVision::LaserVision(RTchannel laserName): mLaserName(laserName)
 {
+	switch (mLaserName)
+	{
+	case VISION:
+		mLaserNameString = "VISION";
+		mPort = assignCOM.at(COMVISION);
+		mBaud = 19200;
+		break;
+	case FIDELITY:
+		mLaserNameString = "FIDELITY";
+		mPort = assignCOM.at(COMFIDELITY);
+		mBaud = 115200;
+		break;
+	default:
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser NOT available");
+	}
+
 	try
 	{
 		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
-		downloadWavelength_();
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with VISION");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with " + mLaserNameString);
 	}
+
+	mWavelength_nm = downloadWavelength_();
 }
 
 LaserVision::~LaserVision() {}
 
-void LaserVision::downloadWavelength_()
+int LaserVision::downloadWavelength_()
 {
-	const std::string TxBuffer("?VW");		//Command to the laser
-	std::string RxBuffer;					//Reply from the laser
-
-	try
+	switch (mLaserName)
 	{
-		mSerial->write(TxBuffer + "\r");
-		mSerial->read(RxBuffer, mRxBufSize);
-
-		//Delete echoed command. Echoing could be disabled on the laser but deleting it is safer and more general
-		std::string keyword("?VW ");
-		std::string::size_type i = RxBuffer.find(keyword);
-		if (i != std::string::npos)
-			RxBuffer.erase(i, keyword.length());
-
-		//Delete "CHAMELEON>". This frase could be disabled on the laser, but deleting it is safer and more general
-		keyword = "CHAMELEON>";
-		i = RxBuffer.find(keyword);
-		if (i != std::string::npos)
-			RxBuffer.erase(i, keyword.length());
-
-		RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
-		RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
-
-		mWavelength_nm = std::stoi(RxBuffer);	//Convert string to int
-												//std::cout << RxBuffer << std::endl;	//For debugging
-	}
-	catch (const serial::IOException)
-	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
-	}
-}
-
-void LaserVision::printWavelength_nm() const
-{
-	std::cout << "VISION wavelength is " << mWavelength_nm << " nm" << std::endl;
-}
-
-void LaserVision::setWavelength(const int wavelength_nm)
-{
-	if (wavelength_nm < 680 || wavelength_nm > 1080)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": VISION wavelength must be in the range 680 - 1080 nm");
-
-	if (wavelength_nm != mWavelength_nm)
-	{
-		const std::string TxBuffer("VW=" + std::to_string(wavelength_nm));		//Command to the laser
-		std::string RxBuffer;													//Reply from the laser
-
+	case VISION:
 		try
 		{
+			const std::string TxBuffer("?VW");		//Command to the laser
+			std::string RxBuffer;					//Reply from the laser
 			mSerial->write(TxBuffer + "\r");
+			mSerial->read(RxBuffer, mRxBufSize);
 
-			//std::cout << "Sleep time in ms: " << (int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s) << std::endl;	//For debugging
-			std::cout << "Tuning VISION to " << wavelength_nm << " nm" << std::endl;
-			Sleep((int)std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s));	//Wait till the laser finishes tuning
+			//Delete echoed command. Echoing could be disabled on the laser but deleting it is safer and more general
+			std::string keyword("?VW ");
+			std::string::size_type i = RxBuffer.find(keyword);
+			if (i != std::string::npos)
+				RxBuffer.erase(i, keyword.length());
 
-			mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
+			//Delete "CHAMELEON>". This frase could be disabled on the laser, but deleting it is safer and more general
+			keyword = "CHAMELEON>";
+			i = RxBuffer.find(keyword);
+			if (i != std::string::npos)
+				RxBuffer.erase(i, keyword.length());
 
-			downloadWavelength_();
-			if (mWavelength_nm = wavelength_nm)
-				std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
-			else
-				std::cout << "WARNING: VISION wavelength might not be in the correct wavelength " << wavelength_nm << " nm" << std::endl;
+			RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
+			RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
+			//std::cout << RxBuffer << std::endl;	//For debugging
+
+			return std::stoi(RxBuffer);	//Convert string to int
+
 		}
 		catch (const serial::IOException)
 		{
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
 		}
+	case FIDELITY:
+		return 1040;
+	default:
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser NOT available");
+	}	
+}
+
+void LaserVision::printWavelength_nm() const
+{
+	std::cout << mLaserNameString +  " wavelength is " << mWavelength_nm << " nm" << std::endl;
+}
+
+void LaserVision::setWavelength(const int wavelength_nm)
+{
+
+	switch (mLaserName)
+	{
+	case VISION:
+		if (wavelength_nm < 680 || wavelength_nm > 1080)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": VISION wavelength must be in the range 680 - 1080 nm");
+
+		if (wavelength_nm != mWavelength_nm)
+		{
+			const std::string TxBuffer("VW=" + std::to_string(wavelength_nm));		//Command to the laser
+			std::string RxBuffer;													//Reply from the laser
+
+			try
+			{
+				mSerial->write(TxBuffer + "\r");
+
+				//std::cout << "Sleep time in ms: " << (int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s) << std::endl;	//For debugging
+				std::cout << "Tuning VISION to " << wavelength_nm << " nm" << std::endl;
+				Sleep((int)std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s));	//Wait till the laser finishes tuning
+
+				mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
+
+				downloadWavelength_();
+				if (mWavelength_nm = wavelength_nm)
+					std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
+				else
+					std::cout << "WARNING: VISION wavelength might not be in the correct wavelength " << wavelength_nm << " nm" << std::endl;
+			}
+			catch (const serial::IOException)
+			{
+				throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
+			}
+		}
+		break;
+	case FIDELITY:
+		throw std::runtime_error((std::string)__FUNCTION__ + ": FIDELITY does not support the called functionality");
+	default:
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser NOT available");
 	}
+
+
 }
 
 //Open or close the shutter of Vision
 void LaserVision::setShutter(const bool state) const
 {
-	const std::string TxBuffer("S=" + std::to_string(state));		//Command to the laser
-	std::string RxBuffer;											//Reply from the laser
+	std::string TxBuffer;		//Command to the laser
+	std::string RxBuffer;		//Reply from the laser
 
-	try
+	switch (mLaserName)
 	{
-		mSerial->write(TxBuffer + "\r");
-		mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work.
-
-		if ( state )
-			std::cout << "VISION shutter successfully opened" << std::endl;
-		else
-			std::cout << "VISION shutter successfully closed" << std::endl;
+	case VISION:
+		TxBuffer = "S=" + std::to_string(state);
+		break;
+	case FIDELITY:
+		TxBuffer = "SHUTTER=" + std::to_string(state);		//Command to the laser
+		break;
+	default:
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser NOT available");
 	}
-	catch (const serial::IOException)
-	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
-	}
-}
-#pragma endregion "LaserVision"
-
-
-
-#pragma region "Laser Fidelity"
-LaserFidelity::LaserFidelity()
-{
-	try
-	{
-		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
-	}
-	catch (const serial::IOException)
-	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with FIDELITY");
-	}
-}
-
-LaserFidelity::~LaserFidelity(){}
-
-void LaserFidelity::setShutter(const bool state) const
-{
-	const std::string TxBuffer("SHUTTER=" + std::to_string(state));		//Command to the laser
-	std::string RxBuffer;												//Reply from the laser
 
 	try
 	{
@@ -1104,19 +1114,16 @@ void LaserFidelity::setShutter(const bool state) const
 		mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work.
 
 		if (state)
-			std::cout << "FIDELITY shutter successfully opened" << std::endl;
+			std::cout << mLaserNameString + " shutter successfully opened" << std::endl;
 		else
-			std::cout << "FIDELITY shutter successfully closed" << std::endl;
+			std::cout << mLaserNameString + " shutter successfully closed" << std::endl;
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with FIDELITY");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with " + mLaserNameString);
 	}
 }
-
-#pragma endregion "Laser Fidelity"
-
-
+#pragma endregion "LaserVision"
 
 #pragma region "Stages"
 Stage::Stage()
@@ -1287,7 +1294,7 @@ void Stage::TRO_(const Axis axis, const int chan, const BOOL triggerState) const
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set TRO for the stage" + std::to_string(axis));
 }
 
-
+//Request the velocity of the stage in mm/s
 double Stage::qVEL(const Axis axis) const
 {
 	double vel_mmPerS;
@@ -1298,13 +1305,14 @@ double Stage::qVEL(const Axis axis) const
 	return vel_mmPerS;
 }
 
+//Set the velocity of the stage in mm/s
 void Stage::VEL(const Axis axis, const double vel_mmPerS) const
 {
 	if(!PI_VEL(mID[axis], mNstagesPerController, &vel_mmPerS))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage" + std::to_string(axis));
 }
 
-
+//Request the CTO (trigger) configuration of the stage
 void Stage::downloadConfiguration(const Axis axis, const int chan) const
 {
 	if (chan < 1 || chan > 2)

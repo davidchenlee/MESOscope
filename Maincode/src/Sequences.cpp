@@ -28,7 +28,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const int wavelength_nm = 1040;
 	const std::vector<double> Pif_mW = { 15, 15 };
 	double P_mW = Pif_mW.front();
-	LaserVision vision;
+	LaserVision vision(VISION);
 	vision.setWavelength(wavelength_nm);
 
 	//SAMPLE
@@ -576,6 +576,27 @@ void seq_testStagePosition()
 	*/
 }
 
+//Test configuring TRO_ and CTO for the stages
+void seq_testStageConfig()
+{
+	Stage stage;
+
+	//std::cout << "Stages initial position:" << std::endl;
+	//stage.printPosition3();
+	//stage.qTRO_(XX, 1);
+	//stage.qTRO_(ZZ, 1);
+	//stage.TRO_(ZZ, 1, 1);
+	//stage.qCTO_(ZZ, 1, 1);
+	std::cout << "x stage vel: " << stage.qVEL(XX) << " mm/s" << std::endl;
+	std::cout << "y stage vel: " << stage.qVEL(YY) << " mm/s" << std::endl;
+	std::cout << "z stage vel: " << stage.qVEL(ZZ) << " mm/s" << std::endl;
+	//stage.downloadConfiguration(ZZ, 1);
+	//stage.downloadConfiguration(ZZ, 2);
+
+	std::cout << "Press any key to continue..." << std::endl;
+	getchar();
+}
+
 void seq_testPMT16X()
 {
 	PMT16X pmt;
@@ -584,6 +605,8 @@ void seq_testPMT16X()
 	//pmt.setAllGain(255);
 	//pmt.readTemp();
 	//pmt.setAllGain({ 100,255,255,255,255,255,255,255,255,255,255,255,255,255,100,255});
+
+	std::cout << "Press any key to continue..." << std::endl;
 	getchar();
 }
 
@@ -621,19 +644,16 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 }
 
 
-
-void seq_testLaserVision(const FPGAns::FPGA &fpga)
+void seq_testLaser(const FPGAns::FPGA &fpga)
 {
-	LaserVision vision;
-	//vision.setShutter(0);
-	vision.setWavelength(940);
-}
+	LaserVision laser(VISION);
+	//LaserVision laser(FIDELITY);
+	laser.setShutter(0);
+	//laser.setWavelength(940);
+	//laser.printWavelength_nm();
 
-void seq_testLaserFidelity(const FPGAns::FPGA &fpga)
-{
-	LaserFidelity fidelity;
-	fidelity.setShutter(0);
-
+	std::cout << "Press any key to continue..." << std::endl;
+	getchar();
 }
 
 void seq_testRS(const FPGAns::FPGA &fpga)
@@ -670,25 +690,6 @@ void seq_testTiffU8()
 	//image.mirrorOddFrames(nFramesCont);
 	//image.averageEvenOdd(nFramesCont);
 	
-}
-
-//Test configuring TRO_ and CTO for the stages
-void seq_testStageConfig()
-{
-	Stage stage;
-
-	//std::cout << "Stages initial position:" << std::endl;
-	//stage.printPosition3();
-	//stage.qTRO_(XX, 1);
-	//stage.qTRO_(ZZ, 1);
-	//stage.TRO_(ZZ, 1, 1);
-	//stage.qCTO_(ZZ, 1, 1);
-	//stage.qVEL(XX);
-	//stage.qVEL(YY);
-	//stage.qVEL(ZZ);
-	stage.downloadConfiguration(ZZ, 1);
-	stage.downloadConfiguration(ZZ, 2);
-
 }
 
 //To measure the saving speed of a Tiff file, either locally or remotely
@@ -736,7 +737,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	//LASER
 	const int wavelength_nm = 750;
 	double laserPower_mW = 40 * mW;
-	LaserVision vision;
+	LaserVision vision(VISION);
 	vision.setWavelength(wavelength_nm);
 
 	//RS

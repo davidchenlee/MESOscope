@@ -8,16 +8,16 @@ int main(int argc, char* argv[])
 		try
 		{
 			//seq_main(fpga);
-			seq_mainFidelity(fpga);
+			//seq_mainFidelity(fpga);
 			//seq_contAcquisition(fpga);
 			//seq_testGalvo(fpga);
 			//seq_testPixelclock(fpga);
 			//seq_testStagePosition();
+			//seq_testStageConfig();
 			//seq_testAODO(fpga);
 			//seq_testPMT16X();
-			//seq_testPockelsVision(fpga);
+			seq_testLaser(fpga);
 			//seq_testPockels(fpga);
-			//seq_testLaserFidelity(fpga);
 			//seq_testFilterwheel();
 			//seq_testShutter(fpga);
 			//seq_testRS(fpga);
@@ -25,7 +25,6 @@ int main(int argc, char* argv[])
 			//seq_testConvertI16toVoltage();
 			//seq_testGalvoSync(fpga);
 			//seq_testTiffU8();
-			//seq_testStageConfig();
 			//seq_testEthernetSpeed();
 			//seq_testStageTrigAcq(fpga);
 		}
@@ -70,7 +69,7 @@ int main(int argc, char* argv[])
 		std::cout << "Press any key to continue..." << std::endl;
 		getchar();
 	}
-	std::cout << "Press any key to continue..." << std::endl;
+	//std::cout << "Press any key to continue..." << std::endl;
 	//getchar();
 
 	return 0;

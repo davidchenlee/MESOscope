@@ -15,8 +15,8 @@ int main(int argc, char* argv[])
 		{
 			ResonantScanner RS(fpga);
 			//Shutter shutter1(fpga, VISION);
-			LaserVision vision;
-			LaserFidelity fidelity;
+			LaserVision vision(VISION);
+			LaserVision fidelity(FIDELITY);
 
 			//Set the FOV
 			char whichLaser(*argv[1]);			//V for Vision, F for Fidelity VF for both

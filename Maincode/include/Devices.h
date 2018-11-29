@@ -205,13 +205,14 @@ public:
 
 class VirtualLaser
 {
-	int mWavelength_nm;
-	Filterwheel mFWexcitation;
-	Filterwheel mFWdetection;
+	RTchannel mLaserID;		//Keep track of the current laser being used
+	int mWavelength_nm;		//Keep track of the current wavelength being used
 	Laser mVision;
 	Laser mFidelity;
 	PockelsCell mPockelsVision;
 	PockelsCell mPockelsFidelity;
+	Filterwheel mFWexcitation;
+	Filterwheel mFWdetection;
 public:
 	VirtualLaser(FPGAns::RTsequence &RTsequence, const int wavelength_nm, const double power_mW);
 	~VirtualLaser();

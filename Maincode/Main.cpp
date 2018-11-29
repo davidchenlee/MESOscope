@@ -17,9 +17,10 @@ int main(int argc, char* argv[])
 			//seq_testAODO(fpga);
 			//seq_testPMT16X();
 			//seq_testLaser(fpga);
+			seq_testVirtualLaser(fpga);
 			//seq_testPockels(fpga);
 			//seq_testFilterwheel();
-			seq_testShutter(fpga);
+			//seq_testShutter(fpga);
 			//seq_testRS(fpga);
 			//seq_contAcquisitionTest(fpga);
 			//seq_testConvertI16toVoltage();

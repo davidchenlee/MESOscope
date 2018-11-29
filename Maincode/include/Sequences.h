@@ -17,6 +17,7 @@ void seq_testStagePosition();
 void seq_testStageConfig();
 void seq_testPMT16X();
 void seq_testLaser(const FPGAns::FPGA &fpga);
+void seq_testVirtualLaser(const FPGAns::FPGA &fpga);
 void seq_testPockels(const FPGAns::FPGA &fpga);
 void seq_testRS(const FPGAns::FPGA &fpga);
 void seq_testConvertI16toVolt();

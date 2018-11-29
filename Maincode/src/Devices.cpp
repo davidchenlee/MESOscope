@@ -1139,12 +1139,11 @@ void PockelsCell::setShutter(const bool state) const
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
 VirtualLaser::VirtualLaser(FPGAns::RTsequence &RTsequence, const int wavelength_nm, const double power_mW): mWavelength_nm(wavelength_nm),
-																											mFWexcitation(FWEXC), mFWdetection(FWDET),
-																											mVision(VISION), mFidelity(FIDELITY), 
-																											mPockelsVision(RTsequence, VISION, wavelength_nm), mPockelsFidelity(RTsequence, FIDELITY, 1040)
+																											mVision(VISION), mFidelity(FIDELITY),
+																											mPockelsVision(RTsequence, VISION, wavelength_nm), mPockelsFidelity(RTsequence, FIDELITY, 1040),
+																											mFWexcitation(FWEXC), mFWdetection(FWDET)
 {
-	mFWexcitation.setColor(mWavelength_nm);
-	mFWdetection.setColor(mWavelength_nm);
+	setWavelength(mWavelength_nm);
 }
 
 VirtualLaser::~VirtualLaser()
@@ -1154,52 +1153,51 @@ VirtualLaser::~VirtualLaser()
 
 void VirtualLaser::setWavelength(const int wavelength_nm)
 {
-	mFWexcitation.setColor(wavelength_nm);
-	mFWdetection.setColor(wavelength_nm);
-
 	//Use VISION for everything below 1040 nm
 	if (wavelength_nm < 1040)
 	{
+		mLaserID = VISION;
 		mVision.setWavelength(wavelength_nm);
 	}
-	//Use FIDELITY
+	//Use FIDELITY for 1040 nm
 	else if (wavelength_nm == 1040)
 	{
-		//Do nothing
+		mLaserID = FIDELITY;
 	}
 	else
 	{
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm not implemented");
 	}
 
+	mFWexcitation.setColor(wavelength_nm);
+	mFWdetection.setColor(wavelength_nm);
+
 	mWavelength_nm = wavelength_nm;
 }
 
 void VirtualLaser::pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag) const
 {
-	//Use VISION for everything below 1040 nm
-	if (mWavelength_nm < 1040)
+	switch (mLaserID)
 	{
-
-	}
-	//Use FIDELITY
-	else if (mWavelength_nm == 1040)
-	{
-
+	case VISION:
+		mPockelsVision.pushPowerSinglet(timeStep, P_mW, overrideFlag);
+		break;
+	case FIDELITY:
+		mPockelsFidelity.pushPowerSinglet(timeStep, P_mW, overrideFlag);
+		break;
 	}
 }
 
 void VirtualLaser::setShutter(const bool state) const
 {
-	//Use VISION for everything below 1040 nm
-	if (mWavelength_nm < 1040)
+	switch (mLaserID)
 	{
+	case VISION:
 		mPockelsVision.setShutter(state);
-	}
-	//Use FIDELITY
-	else if (mWavelength_nm == 1040)
-	{
+		break;
+	case FIDELITY:
 		mPockelsFidelity.setShutter(state);
+		break;
 	}
 }
 

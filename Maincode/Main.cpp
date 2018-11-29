@@ -26,6 +26,7 @@ int main(int argc, char* argv[])
 			//seq_testGalvoSync(fpga);
 			//seq_testTiffU8();
 			//seq_testEthernetSpeed();
+			//seq_testVibratome(fpga);
 			//seq_testStageTrigAcq(fpga);
 		}
 		catch (const std::invalid_argument &e)

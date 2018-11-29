@@ -36,19 +36,30 @@ public:
 	unsigned char* const accessTiff() const;
 };
 
+class ImageException : public std::runtime_error
+{
+public:
+	ImageException(const std::string& message) : std::runtime_error(message.c_str()) {}
+};
+
 class Vibratome
 {
 	const FPGAns::FPGA &mFpga;
-	const enum VibratomeChannel {VibratomeStart, VibratomeBack, VibratomeForward};		//Vibratome channels
-	int mNslide;					//Slide number
-	double mSectionThickness;		//Thickness of the section
-	double mSpeed;					//Speed of the vibratome (manual setting)
-	double mAmplitude;				//Amplitude of the vibratome (manual setting)
+	int mNslice;						//Slice number
+	double mSectionThickness;			//Thickness of the section
+	double mCuttingSpeed_mmps = 0.5;	//in mm/s. Speed of the vibratome for cutting (manual setting)
+	double mAmplitude_mm = 1.0;			//in mm. Amplitude of the vibratome for cutting (manual setting)
+	double mTravelRange_mm = 52.4;		//in mm. (horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
+	double mHeight_mm = 0;				//in mm. vertical distance between the razor blade and the objective's focal plane
+	double mMovingSpeed_mmps = 2.495;	//in mm/s. Forward and backward moving speed of the head. 52.4 mm in 21 seconds = 2.495 mm/s
+
+	void moveHead_(const int duration_ms, const VibratomeChannel channel) const;
+	void startStop_() const;
 public:
 	Vibratome(const FPGAns::FPGA &fpga);
 	~Vibratome();
-	void startStop() const;
-	void sendCommand(const double dt, const VibratomeChannel channel) const;
+	void cutAndRetract(const int distance_mm) const;
+	void reset(const int distance_mm) const;
 };
 
 class ResonantScanner
@@ -228,10 +239,4 @@ public:
 
 	void scanningStrategy(const int nTileAbsolute) const;
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
-};
-
-class ImageException : public std::runtime_error
-{
-public:
-	ImageException(const std::string& message) : std::runtime_error(message.c_str()) {}
 };

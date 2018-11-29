@@ -287,7 +287,7 @@ Vibratome::Vibratome(const FPGAns::FPGA &fpga): mFpga(fpga){}
 Vibratome::~Vibratome() {}
 
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
-void Vibratome::startStop() const
+void Vibratome::startStop_() const
 {
 	const int SleepTime = 20; //in ms. It has to be ~ 12 ms or longer to 
 	
@@ -298,20 +298,19 @@ void Vibratome::startStop() const
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
 }
 
-//Simulate the act of pushing a button on the vibratome control pad. The timing fluctuates approx in 1ms
-void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel channel) const
+//Move the head of the vibratome forward or backward for the duration 'duration_ms'. The timing varies in approx 1 ms
+void Vibratome::moveHead_(const int duration_ms, const VibratomeChannel channel) const
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
-	const int minPulseDuration = 10;	//in ms
-	const int delay = 1;				//Used to roughly calibrate the pulse length
-	const int dt_ms = (int)pulseDuration / ms;
+	const int minDuration_ms = 10;		//in ms
+	const int delay_ms = 1;				//Used to roughly calibrate the pulse length
 
 	switch (channel)
 	{
-	case VibratomeBack:
+	case BACKWARD:
 		selectedChannel = NiFpga_FPGAvi_ControlBool_VTback;
 		break;
-	case VibratomeForward:
+	case FORWARD:
 		selectedChannel = NiFpga_FPGAvi_ControlBool_VTforward;
 		break;
 	default:
@@ -320,15 +319,37 @@ void Vibratome::sendCommand(const double pulseDuration, const VibratomeChannel c
 
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, true));
 
-	if (dt_ms >= minPulseDuration)
-		Sleep(dt_ms - delay);
+	if (duration_ms >= minDuration_ms)
+		Sleep(duration_ms - delay_ms);
 	else
 	{
-		Sleep(minPulseDuration - delay);
-		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << minPulseDuration << "ms" << std::endl;
+		Sleep(minDuration_ms - delay_ms);
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << minDuration_ms << "ms" << std::endl;
 	}
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, false));
 }
+
+void Vibratome::cutAndRetract(const int distance_mm) const
+{
+	const int cuttingTime_ms = static_cast<int>(1000.0 * distance_mm / mCuttingSpeed_mmps);
+	const int retractingTime_ms = static_cast<int>(1000 * distance_mm / mMovingSpeed_mmps);
+
+	startStop_();
+	std::cout << "The vibratome is cutting for " << cuttingTime_ms/1000.0 << " seconds" << std::endl;
+	Sleep(cuttingTime_ms);
+	Sleep(2000);
+	std::cout << "The vibratome is retracting for " << retractingTime_ms/1000.0 << " seconds" << std::endl;
+	moveHead_(retractingTime_ms, BACKWARD);
+}
+
+void Vibratome::reset(const int distance_mm) const
+{
+	const int retractingTime_ms = static_cast<int>(1000 * distance_mm / mMovingSpeed_mmps);
+	std::cout << "The vibratome is retracting for " << retractingTime_ms / 1000.0 << " seconds" << std::endl;
+	moveHead_(retractingTime_ms, BACKWARD);
+}
+
+
 #pragma endregion "Vibratome"
 
 #pragma region "Resonant scanner"

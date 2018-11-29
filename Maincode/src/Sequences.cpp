@@ -206,7 +206,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.050, 14.150, 18.682 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.685 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -725,7 +725,17 @@ void seq_testEthernetSpeed()
 
 }
 
-//The pc triggers the z-stage motion. Its position triggers the control sequence and data acquisition
+void seq_testVibratome(const FPGAns::FPGA &fpga)
+{
+	Vibratome vibratome(fpga);
+	//vibratome.reset(20);
+	vibratome.cutAndRetract(20);
+
+	std::cout << "Press any key to continue..." << std::endl;
+	getchar();
+}
+
+//The pc triggers the z-stage motion, then the position of the stage triggers the control sequence and data acquisition
 void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS

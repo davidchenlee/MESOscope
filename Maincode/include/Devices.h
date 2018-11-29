@@ -88,43 +88,6 @@ public:
 	void isRunning();
 };
 
-class Shutter
-{
-	const FPGAns::FPGA &mFpga;
-	NiFpga_FPGAvi_ControlBool mDeviceID;						//Device ID
-	const int mDelay_ms = 10;
-public:
-	Shutter(const FPGAns::FPGA &fpga, RTchannel laserID);		//I use RTchannel to re-use the laserID. The shutters are not RT
-	~Shutter();
-	void open() const;
-	void close() const;
-	void pulseHigh() const;
-};
-
-class PockelsCell
-{
-	FPGAns::RTsequence &mRTsequence;			//Non-const because some methods in this class change the variables referenced by mRTsequence						
-	RTchannel mPockelsRTchannel;
-	RTchannel mScalingRTchannel;
-	int mWavelength_nm;							//Laser wavelength
-	const double maxPower_mW = 250 * mW;		//Soft limit for the laser power
-	Shutter *mShutter;
-
-	double convert_mWToVolt_(const double power_mW) const;
-public:
-	PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserID, const int wavelength_nm);
-	~PockelsCell();
-	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
-	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
-	void pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
-	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const;
-	void powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const;
-	void voltageToZero() const;
-	void scalingLinearRamp(const double Si, const double Sf) const;
-	void openShutter() const;
-	void closeShutter() const;
-};
-
 class Galvo
 {
 	FPGAns::RTsequence &mRTsequence;					//Non-const because some of methods in this class change the variables referenced by mRTsequence	
@@ -202,6 +165,58 @@ public:
 	~Laser();
 	void printWavelength_nm() const;
 	void setWavelength(const int wavelength_nm);
+	void setShutter(const bool state) const;
+};
+
+class Shutter
+{
+	const FPGAns::FPGA &mFpga;
+	NiFpga_FPGAvi_ControlBool mDeviceID;						//Device ID
+	const int mDelay_ms = 10;
+public:
+	Shutter(const FPGAns::FPGA &fpga, RTchannel laserID);		//I use RTchannel to re-use the laserID. The shutters are not RT
+	~Shutter();
+	void openClose(const bool state) const;
+	void pulseHigh() const;
+};
+
+class PockelsCell
+{
+	FPGAns::RTsequence &mRTsequence;			//Non-const because some methods in this class change the variables referenced by mRTsequence						
+	RTchannel mPockelsRTchannel;
+	RTchannel mScalingRTchannel;
+	int mWavelength_nm;							//Laser wavelength
+	const double maxPower_mW = 250 * mW;		//Soft limit for the laser power
+	Shutter mShutter;
+
+	double convert_mWToVolt_(const double power_mW) const;
+public:
+	PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserID, const int wavelength_nm);
+	~PockelsCell();
+	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
+	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
+	void pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
+	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const;
+	void powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const;
+	void voltageToZero() const;
+	void scalingLinearRamp(const double Si, const double Sf) const;
+	void setShutter(const bool state) const;
+};
+
+class VirtualLaser
+{
+	int mWavelength_nm;
+	Filterwheel mFWexcitation;
+	Filterwheel mFWdetection;
+	Laser mVision;
+	Laser mFidelity;
+	PockelsCell mPockelsVision;
+	PockelsCell mPockelsFidelity;
+public:
+	VirtualLaser(FPGAns::RTsequence &RTsequence, const int wavelength_nm, const double power_mW);
+	~VirtualLaser();
+	void setWavelength(const int wavelength_nm);
+	void pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void setShutter(const bool state) const;
 };
 

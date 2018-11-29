@@ -468,197 +468,6 @@ void ResonantScanner::isRunning()
 
 #pragma endregion "Resonant scanner"
 
-#pragma region "Shutters"
-Shutter::Shutter(const FPGAns::FPGA &fpga, RTchannel laserID) : mFpga(fpga)
-{
-	switch (laserID)
-	{
-	case VISION:
-		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterVision;
-		break;
-	case FIDELITY:
-		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterFidelity;
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter unavailable");
-	}
-}
-
-Shutter::~Shutter()
-{
-	//This is to prevent keeping the shutter open in case of an exception
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
-}
-
-void Shutter::open() const
-{
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, true));
-}
-
-void Shutter::close() const
-{
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
-}
-
-void Shutter::pulseHigh() const
-{
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, true));
-
-	Sleep(mDelay_ms);
-
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
-}
-#pragma endregion "Shutters"
-
-#pragma region "Pockels cells"
-//Curently, output of the pockels cell is hardcoded on the FPGA side.  The pockels' output is HIGH when 'framegate' is HIGH
-PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserID, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsRTchannel(laserID), mWavelength_nm(wavelength_nm)
-{
-	if (mPockelsRTchannel != VISION && mPockelsRTchannel != FIDELITY)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
-
-	//Each Uniblitz shutter is associated to a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
-	mShutter = new Shutter(mRTsequence.mFpga, mPockelsRTchannel);
-
-	switch (mPockelsRTchannel)
-	{
-	case VISION:
-		mScalingRTchannel = SCALINGVISION;
-		break;
-	case FIDELITY:
-		mScalingRTchannel = SCALINGFIDELITY;
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
-	}
-
-	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
-	for (int ii = 0; ii < mRTsequence.mNframes; ii++)
-		mRTsequence.pushAnalogSingletFx2p14(mScalingRTchannel, 1.0);
-}
-
-//Do not set the output to 0 with the destructor to allow latching the last value
-PockelsCell::~PockelsCell() {}
-
-double PockelsCell::convert_mWToVolt_(const double power_mW) const
-{
-	double a, b, c;		//Calibration parameters
-
-	//VISION
-	switch (mPockelsRTchannel)
-	{
-	case VISION:
-		if (mWavelength_nm == 750) {
-			a = 788;
-			b = 0.6152;
-			c = -0.027;
-		}
-		else if (mWavelength_nm == 940) {
-			a = 464;
-			b = 0.488;
-			c = -0.087;
-		}
-		else if (mWavelength_nm == 1040) {
-			a = 200;
-			b = 0.441;
-			c = 0.037;
-		}
-		else
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
-		break;
-
-		//FIDELITY
-	case FIDELITY:
-		a = 101.20;
-		b = 0.276;
-		c = -0.049;
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
-	}
-
-	double arg = sqrt(power_mW / a);
-	if (arg > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Arg of asin is greater than 1");
-
-	switch (mPockelsRTchannel)
-	{
-	case VISION:
-		return asin(arg) / b + c;
-	case FIDELITY:
-		//return (PI - asin(arg)) / b + c; //different expression from VISION because currently no HWP in front of the pockels
-		return asin(arg) / b + c;
-	default:
-		return 0;
-	}
-}
-
-
-void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO_V) const
-{
-	if (AO_V < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
-
-	mRTsequence.pushAnalogSinglet(mPockelsRTchannel, timeStep, AO_V);
-}
-
-void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag) const
-{
-	if (P_mW < 0 || P_mW > maxPower_mW)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(P_mW));
-
-	mRTsequence.pushAnalogSinglet(mPockelsRTchannel, timeStep, convert_mWToVolt_(P_mW), overrideFlag);
-}
-
-//Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
-void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const
-{
-	if (Vi_V < 0 || Vf_V < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
-
-	mRTsequence.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, Vi_V, Vf_V);
-}
-
-//Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
-void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const
-{
-	if (Pi_mW < 0 || Pf_mW < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
-
-	mRTsequence.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, convert_mWToVolt_(Pi_mW), convert_mWToVolt_(Pf_mW));
-}
-
-void PockelsCell::voltageToZero() const
-{
-	mRTsequence.pushAnalogSinglet(mPockelsRTchannel, AO_tMIN_us, 0 * V);
-}
-
-//Linearly scale the pockels output across all the frames
-void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
-{
-	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor must be in the range 0-4");
-	
-	if (mRTsequence.mNframes < 2)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
-
-	mRTsequence.clearQueue(mScalingRTchannel);	//Delete the default scaling factors of 1.0s created in the PockelsCell constructor
-
-	for (int ii = 0; ii < mRTsequence.mNframes; ii++)
-		mRTsequence.pushAnalogSingletFx2p14(mScalingRTchannel, Si + (Sf - Si) / (mRTsequence.mNframes -1) * ii);
-}
-
-void PockelsCell::openShutter() const
-{
-	mShutter->open();
-}
-
-void PockelsCell::closeShutter() const
-{
-	mShutter->close();
-}
-#pragma endregion "Pockels cells"
-
 
 #pragma region "Galvo"
 
@@ -1094,7 +903,7 @@ void Laser::setWavelength(const int wavelength_nm)
 				if (mWavelength_nm = wavelength_nm)
 					std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
 				else
-					std::cout << "WARNING: VISION wavelength might not be in the correct wavelength " << wavelength_nm << " nm" << std::endl;
+					std::cout << "WARNING: VISION might not be in the correct wavelength " << wavelength_nm << " nm" << std::endl;
 			}
 			catch (const serial::IOException)
 			{
@@ -1103,7 +912,7 @@ void Laser::setWavelength(const int wavelength_nm)
 		}
 		break;
 	case FIDELITY:
-		throw std::runtime_error((std::string)__FUNCTION__ + ": FIDELITY does not support such functionality");
+		std::cout << "WARNING: FIDELITY wavelength only supports 1040 nm" << std::endl;
 	default:
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}
@@ -1143,6 +952,258 @@ void Laser::setShutter(const bool state) const
 	}
 }
 #pragma endregion "Laser"
+
+
+#pragma region "Shutters"
+Shutter::Shutter(const FPGAns::FPGA &fpga, RTchannel laserID) : mFpga(fpga)
+{
+	switch (laserID)
+	{
+	case VISION:
+		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterVision;
+		break;
+	case FIDELITY:
+		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterFidelity;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter unavailable");
+	}
+}
+
+Shutter::~Shutter()
+{
+	//This is to prevent keeping the shutter open in case of an exception
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
+}
+
+void Shutter::openClose(const bool state) const
+{
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, state));
+}
+
+
+void Shutter::pulseHigh() const
+{
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, true));
+
+	Sleep(mDelay_ms);
+
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
+}
+#pragma endregion "Shutters"
+
+#pragma region "Pockels cells"
+//Curently, output of the pockels cell is hardcoded on the FPGA side.  The pockels' output is HIGH when 'framegate' is HIGH
+//Each Uniblitz shutter goes with a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
+PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserID, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsRTchannel(laserID), mWavelength_nm(wavelength_nm), mShutter(mRTsequence.mFpga, mPockelsRTchannel)
+{
+	if (mPockelsRTchannel != VISION && mPockelsRTchannel != FIDELITY)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
+
+	switch (mPockelsRTchannel)
+	{
+	case VISION:
+		mScalingRTchannel = SCALINGVISION;
+		break;
+	case FIDELITY:
+		mScalingRTchannel = SCALINGFIDELITY;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
+	}
+
+	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
+	for (int ii = 0; ii < mRTsequence.mNframes; ii++)
+		mRTsequence.pushAnalogSingletFx2p14(mScalingRTchannel, 1.0);
+}
+
+//Do not set the output to 0 with the destructor to allow latching the last value
+PockelsCell::~PockelsCell() {}
+
+double PockelsCell::convert_mWToVolt_(const double power_mW) const
+{
+	double a, b, c;		//Calibration parameters
+
+	//VISION
+	switch (mPockelsRTchannel)
+	{
+	case VISION:
+		if (mWavelength_nm == 750) {
+			a = 788;
+			b = 0.6152;
+			c = -0.027;
+		}
+		else if (mWavelength_nm == 940) {
+			a = 464;
+			b = 0.488;
+			c = -0.087;
+		}
+		else if (mWavelength_nm == 1040) {
+			a = 200;
+			b = 0.441;
+			c = 0.037;
+		}
+		else
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
+		break;
+
+		//FIDELITY
+	case FIDELITY:
+		a = 101.20;
+		b = 0.276;
+		c = -0.049;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
+	}
+
+	double arg = sqrt(power_mW / a);
+	if (arg > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Arg of asin is greater than 1");
+
+	switch (mPockelsRTchannel)
+	{
+	case VISION:
+		return asin(arg) / b + c;
+	case FIDELITY:
+		//return (PI - asin(arg)) / b + c; //different expression from VISION because currently no HWP in front of the pockels
+		return asin(arg) / b + c;
+	default:
+		return 0;
+	}
+}
+
+
+void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO_V) const
+{
+	if (AO_V < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
+
+	mRTsequence.pushAnalogSinglet(mPockelsRTchannel, timeStep, AO_V);
+}
+
+void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag) const
+{
+	if (P_mW < 0 || P_mW > maxPower_mW)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(P_mW));
+
+	mRTsequence.pushAnalogSinglet(mPockelsRTchannel, timeStep, convert_mWToVolt_(P_mW), overrideFlag);
+}
+
+//Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
+void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const
+{
+	if (Vi_V < 0 || Vf_V < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
+
+	mRTsequence.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, Vi_V, Vf_V);
+}
+
+//Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
+void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const
+{
+	if (Pi_mW < 0 || Pf_mW < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
+
+	mRTsequence.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, convert_mWToVolt_(Pi_mW), convert_mWToVolt_(Pf_mW));
+}
+
+void PockelsCell::voltageToZero() const
+{
+	mRTsequence.pushAnalogSinglet(mPockelsRTchannel, AO_tMIN_us, 0 * V);
+}
+
+//Linearly scale the pockels output across all the frames
+void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
+{
+	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor must be in the range 0-4");
+
+	if (mRTsequence.mNframes < 2)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
+
+	mRTsequence.clearQueue(mScalingRTchannel);	//Delete the default scaling factors of 1.0s created in the PockelsCell constructor
+
+	for (int ii = 0; ii < mRTsequence.mNframes; ii++)
+		mRTsequence.pushAnalogSingletFx2p14(mScalingRTchannel, Si + (Sf - Si) / (mRTsequence.mNframes - 1) * ii);
+}
+
+void PockelsCell::setShutter(const bool state) const
+{
+	mShutter.openClose(state);
+}
+
+#pragma endregion "Pockels cells"
+
+
+//Integrate the lasers, pockels cells, and filterwheels in a single class
+#pragma region "VirtualLaser"
+VirtualLaser::VirtualLaser(FPGAns::RTsequence &RTsequence, const int wavelength_nm, const double power_mW): mWavelength_nm(wavelength_nm),
+																											mFWexcitation(FWEXC), mFWdetection(FWDET),
+																											mVision(VISION), mFidelity(FIDELITY), 
+																											mPockelsVision(RTsequence, VISION, wavelength_nm), mPockelsFidelity(RTsequence, FIDELITY, 1040)
+{
+	mFWexcitation.setColor(mWavelength_nm);
+	mFWdetection.setColor(mWavelength_nm);
+}
+
+VirtualLaser::~VirtualLaser()
+{
+
+}
+
+void VirtualLaser::setWavelength(const int wavelength_nm)
+{
+	mFWexcitation.setColor(wavelength_nm);
+	mFWdetection.setColor(wavelength_nm);
+
+	//Use VISION for everything below 1040 nm
+	if (wavelength_nm < 1040)
+	{
+		mVision.setWavelength(wavelength_nm);
+	}
+	//Use FIDELITY
+	else if (wavelength_nm == 1040)
+	{
+		//Do nothing
+	}
+	else
+	{
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm not implemented");
+	}
+
+	mWavelength_nm = wavelength_nm;
+}
+
+void VirtualLaser::pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag) const
+{
+	//Use VISION for everything below 1040 nm
+	if (mWavelength_nm < 1040)
+	{
+
+	}
+	//Use FIDELITY
+	else if (mWavelength_nm == 1040)
+	{
+
+	}
+}
+
+void VirtualLaser::setShutter(const bool state) const
+{
+	//Use VISION for everything below 1040 nm
+	if (mWavelength_nm < 1040)
+	{
+		mPockelsVision.setShutter(state);
+	}
+	//Use FIDELITY
+	else if (mWavelength_nm == 1040)
+	{
+		mPockelsFidelity.setShutter(state);
+	}
+}
+
+#pragma endregion "VirtualLaser"
 
 #pragma region "Stages"
 Stage::Stage()

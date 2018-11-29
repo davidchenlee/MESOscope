@@ -139,7 +139,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
 
 	//OPEN THE UNIBLITZ SHUTTERS
-	pockels.openShutter();
+	pockels.setShutter(true);
 	Sleep(50);
 
 	//ACQUIRE FRAMES AT DIFFERENT Zs
@@ -180,7 +180,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		std::cout << std::endl;
 		P_mW += (Pif_mW.back() - Pif_mW.front()) / nDiffZ;
 	}
-	pockels.closeShutter();
+	pockels.setShutter(false);
 
 	if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
 	{
@@ -335,7 +335,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 
 	//SELECT A POCKELS AND OPEN THE UNIBLITZ SHUTTERS
 	PockelsCell pockels(pockelsFidelity);
-	pockels.openShutter();
+	pockels.setShutter(true);
 
 	//ACQUIRE FRAMES AT DIFFERENT Zs
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
@@ -375,7 +375,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		std::cout << std::endl;
 		P_mW += (Pif_mW.back() - Pif_mW.front()) / nDiffZ;
 	}
-	pockels.closeShutter();
+	pockels.setShutter(false);
 
 	if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
 	{
@@ -536,9 +536,9 @@ void seq_testShutter(const FPGAns::FPGA &fpga)
 	FPGAns::RTsequence RTsequence(fpga);
 
 	PockelsCell fidelity(RTsequence, FIDELITY, 1040);
-	fidelity.openShutter();
+	fidelity.setShutter(true);
 	Sleep(5000);
-	fidelity.closeShutter();
+	fidelity.setShutter(false);
 
 	//Shutter shutterFidelity(fpga, FIDELITY);
 	//shutterFidelity.open();
@@ -639,10 +639,10 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 	//pockels.pushVoltageSinglet(8 * us, 0.0 * V);
 
 	//LOAD AND EXECUTE THE SEQUENCE ON THE FPGA
-	pockels.openShutter();
+	pockels.setShutter(true);
 	Image image(RTsequence);
 	image.acquire();
-	pockels.closeShutter();
+	pockels.setShutter(false);
 	
 	std::cout << "Press any key to continue..." << std::endl;
 	getchar();
@@ -653,7 +653,7 @@ void seq_testLaser(const FPGAns::FPGA &fpga)
 {
 	Laser laser(VISION);
 	//Laser laser(FIDELITY);
-	laser.setShutter(0);
+	laser.setShutter(false);
 	//laser.setWavelength(940);
 	//laser.printWavelength_nm();
 
@@ -780,7 +780,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	pockelsVision.pushPowerSinglet(8 * us, laserPower_mW);
 
 	//OPEN THE SHUTTER
-	pockelsVision.openShutter();
+	pockelsVision.setShutter(true);
 	Sleep(50);
 
 	//EXECUTE THE RT SEQUENCE
@@ -795,7 +795,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	image.saveTiffMultiPage("Untitled");
 
 	stage.waitForMotionToStop3();
-	pockelsVision.closeShutter();
+	pockelsVision.setShutter(false);
 
 	//Disable ZstageAsTrigger to position the stage in the next run without triggering the sequence
 	NiFpga_WriteBool(fpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false);

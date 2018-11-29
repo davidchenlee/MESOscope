@@ -15,8 +15,8 @@ int main(int argc, char* argv[])
 		{
 			ResonantScanner RS(fpga);
 			//Shutter shutter1(fpga, VISION);
-			LaserVision vision(VISION);
-			LaserVision fidelity(FIDELITY);
+			Laser vision(VISION);
+			Laser fidelity(FIDELITY);
 
 			//Set the FOV
 			char whichLaser(*argv[1]);			//V for Vision, F for Fidelity VF for both
@@ -29,9 +29,6 @@ int main(int argc, char* argv[])
 			//Turn the RS On/Off
 			if (runCommand == "1")
 			{
-
-				std::cout << "mark 1" << std::endl;
-
 				switch (whichLaser)
 				{
 				case 'V':

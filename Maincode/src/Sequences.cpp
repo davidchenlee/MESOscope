@@ -28,7 +28,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const int wavelength_nm = 1040;
 	const std::vector<double> Pif_mW = { 15, 15 };
 	double P_mW = Pif_mW.front();
-	LaserVision vision(VISION);
+	Laser vision(VISION);
 	vision.setWavelength(wavelength_nm);
 
 	//SAMPLE
@@ -139,8 +139,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
 
 	//OPEN THE UNIBLITZ SHUTTERS
-	Shutter shutterVision(fpga, VISION);
-	shutterVision.open();
+	pockels.openShutter();
 	Sleep(50);
 
 	//ACQUIRE FRAMES AT DIFFERENT Zs
@@ -181,7 +180,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		std::cout << std::endl;
 		P_mW += (Pif_mW.back() - Pif_mW.front()) / nDiffZ;
 	}
-	shutterVision.close();
+	pockels.closeShutter();
 
 	if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
 	{
@@ -207,7 +206,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.050, 14.150, 18.697 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.682 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -223,7 +222,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const int wavelength_nm = 1040;						//Needed for the filterwheels
 	const std::vector<double> Pif_mW = { 20, 20 };		//For 750 nm over 200 um
 	double P_mW = Pif_mW.front();
-	//LaserFidelity fidelity;							//This does not do anything
+	//Laser fidelity(FIDELITY);							//This does not do anything
 
 	//SAMPLE
 	const std::string sampleName("Bead4um");
@@ -533,10 +532,18 @@ void seq_testFilterwheel()
 
 void seq_testShutter(const FPGAns::FPGA &fpga)
 {
-	Shutter shutterFidelity(fpga, FIDELITY);
-	shutterFidelity.open();
+	//CREATE A REALTIME SEQUENCE
+	FPGAns::RTsequence RTsequence(fpga);
+
+	PockelsCell fidelity(RTsequence, FIDELITY, 1040);
+	fidelity.openShutter();
 	Sleep(5000);
-	shutterFidelity.close();
+	fidelity.closeShutter();
+
+	//Shutter shutterFidelity(fpga, FIDELITY);
+	//shutterFidelity.open();
+	//Sleep(5000);
+	//shutterFidelity.close();
 }
 
 void seq_testStagePosition()
@@ -631,12 +638,10 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 	pockels.pushPowerSinglet(8 * us, 0 * mW);
 	//pockels.pushVoltageSinglet(8 * us, 0.0 * V);
 
-	pockels.openShutter();
-
 	//LOAD AND EXECUTE THE SEQUENCE ON THE FPGA
+	pockels.openShutter();
 	Image image(RTsequence);
 	image.acquire();
-
 	pockels.closeShutter();
 	
 	std::cout << "Press any key to continue..." << std::endl;
@@ -646,8 +651,8 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 
 void seq_testLaser(const FPGAns::FPGA &fpga)
 {
-	LaserVision laser(VISION);
-	//LaserVision laser(FIDELITY);
+	Laser laser(VISION);
+	//Laser laser(FIDELITY);
 	laser.setShutter(0);
 	//laser.setWavelength(940);
 	//laser.printWavelength_nm();
@@ -737,7 +742,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	//LASER
 	const int wavelength_nm = 750;
 	double laserPower_mW = 40 * mW;
-	LaserVision vision(VISION);
+	Laser vision(VISION);
 	vision.setWavelength(wavelength_nm);
 
 	//RS
@@ -765,8 +770,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	pockelsVision.pushPowerSinglet(8 * us, laserPower_mW);
 
 	//OPEN THE SHUTTER
-	Shutter shutterVision(fpga, VISION);
-	shutterVision.open();
+	pockelsVision.openShutter();
 	Sleep(50);
 
 	//EXECUTE THE RT SEQUENCE
@@ -781,7 +785,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	image.saveTiffMultiPage("Untitled");
 
 	stage.waitForMotionToStop3();
-	shutterVision.close();
+	pockelsVision.closeShutter();
 
 	//Disable ZstageAsTrigger to position the stage in the next run without triggering the sequence
 	NiFpga_WriteBool(fpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false);

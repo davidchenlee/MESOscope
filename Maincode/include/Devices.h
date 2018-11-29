@@ -80,22 +80,15 @@ public:
 class Shutter
 {
 	const FPGAns::FPGA &mFpga;
-	NiFpga_FPGAvi_ControlBool mDeviceID;			//Device ID
+	NiFpga_FPGAvi_ControlBool mDeviceID;						//Device ID
 	const int mDelay_ms = 10;
 public:
-	Shutter(const FPGAns::FPGA &fpga, RTchannel laserName);		//I use RTchannel just to reuse the laser names. The shutters are not RT
+	Shutter(const FPGAns::FPGA &fpga, RTchannel laserID);		//I use RTchannel to re-use the laserID. The shutters are not RT
 	~Shutter();
 	void open() const;
 	void close() const;
 	void pulseHigh() const;
 };
-
-class ImageException : public std::runtime_error
-{
-public:
-	ImageException(const std::string& message) : std::runtime_error(message.c_str()) {}
-};
-
 
 class PockelsCell
 {
@@ -108,7 +101,7 @@ class PockelsCell
 
 	double convert_mWToVolt_(const double power_mW) const;
 public:
-	PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel pockelsChannel, const int wavelength_nm);
+	PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserID, const int wavelength_nm);
 	~PockelsCell();
 	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
 	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
@@ -180,10 +173,10 @@ public:
 	void setColor(const int wavelength_nm);
 };
 
-class LaserVision
+class Laser
 {
 	std::string mLaserNameString;
-	RTchannel mLaserName;
+	RTchannel mLaserID;
 	int mWavelength_nm;
 	serial::Serial *mSerial;
 	std::string mPort;
@@ -194,8 +187,8 @@ class LaserVision
 
 	int downloadWavelength_();
 public:
-	LaserVision(RTchannel laserName);
-	~LaserVision();
+	Laser(RTchannel laserID);
+	~Laser();
 	void printWavelength_nm() const;
 	void setWavelength(const int wavelength_nm);
 	void setShutter(const bool state) const;
@@ -235,4 +228,10 @@ public:
 
 	void scanningStrategy(const int nTileAbsolute) const;
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
+};
+
+class ImageException : public std::runtime_error
+{
+public:
+	ImageException(const std::string& message) : std::runtime_error(message.c_str()) {}
 };

@@ -52,3 +52,12 @@ public:
 	void saveTxt(const std::string fileName) const;
 	void pushImage(const int frame, const unsigned char* inputArray) const;
 };
+
+struct Sequence{
+	int laserID;
+	int wavelength;
+	double Pi;
+	double Pf;
+	double zi;
+	double zf;
+};

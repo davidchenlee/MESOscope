@@ -448,9 +448,9 @@ void ResonantScanner::isRunning()
 #pragma endregion "Resonant scanner"
 
 #pragma region "Shutters"
-Shutter::Shutter(const FPGAns::FPGA &fpga, RTchannel laserName) : mFpga(fpga)
+Shutter::Shutter(const FPGAns::FPGA &fpga, RTchannel laserID) : mFpga(fpga)
 {
-	switch (laserName)
+	switch (laserID)
 	{
 	case VISION:
 		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterVision;
@@ -459,7 +459,7 @@ Shutter::Shutter(const FPGAns::FPGA &fpga, RTchannel laserName) : mFpga(fpga)
 		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterFidelity;
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter NOT available");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter unavailable");
 	}
 }
 
@@ -490,12 +490,13 @@ void Shutter::pulseHigh() const
 #pragma endregion "Shutters"
 
 #pragma region "Pockels cells"
-//Curently, the output is hard coded on the FPGA side and triggered by 'frame gate'
-PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserName, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsRTchannel(laserName), mWavelength_nm(wavelength_nm)
+//Curently, output of the pockels cell is hardcoded on the FPGA side.  The pockels' output is HIGH when 'framegate' is HIGH
+PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserID, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsRTchannel(laserID), mWavelength_nm(wavelength_nm)
 {
 	if (mPockelsRTchannel != VISION && mPockelsRTchannel != FIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
 
+	//Each Uniblitz shutter is associated to a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
 	mShutter = new Shutter(mRTsequence.mFpga, mPockelsRTchannel);
 
 	switch (mPockelsRTchannel)
@@ -507,7 +508,7 @@ PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserNa
 		mScalingRTchannel = SCALINGFIDELITY;
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell NOT available");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
 	}
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
@@ -552,7 +553,7 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 		c = -0.049;
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell NOT available");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
 	}
 
 	double arg = sqrt(power_mW / a);
@@ -965,10 +966,10 @@ void Filterwheel::setColor(const int wavelength_nm)
 }
 #pragma endregion "Filterwheel"
 
-#pragma region "LaserVision"
-LaserVision::LaserVision(RTchannel laserName): mLaserName(laserName)
+#pragma region "Laser"
+Laser::Laser(RTchannel laserID): mLaserID(laserID)
 {
-	switch (mLaserName)
+	switch (mLaserID)
 	{
 	case VISION:
 		mLaserNameString = "VISION";
@@ -981,7 +982,7 @@ LaserVision::LaserVision(RTchannel laserName): mLaserName(laserName)
 		mBaud = 115200;
 		break;
 	default:
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser NOT available");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}
 
 	try
@@ -996,11 +997,11 @@ LaserVision::LaserVision(RTchannel laserName): mLaserName(laserName)
 	mWavelength_nm = downloadWavelength_();
 }
 
-LaserVision::~LaserVision() {}
+Laser::~Laser() {}
 
-int LaserVision::downloadWavelength_()
+int Laser::downloadWavelength_()
 {
-	switch (mLaserName)
+	switch (mLaserID)
 	{
 	case VISION:
 		try
@@ -1036,19 +1037,18 @@ int LaserVision::downloadWavelength_()
 	case FIDELITY:
 		return 1040;
 	default:
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser NOT available");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}	
 }
 
-void LaserVision::printWavelength_nm() const
+void Laser::printWavelength_nm() const
 {
 	std::cout << mLaserNameString +  " wavelength is " << mWavelength_nm << " nm" << std::endl;
 }
 
-void LaserVision::setWavelength(const int wavelength_nm)
+void Laser::setWavelength(const int wavelength_nm)
 {
-
-	switch (mLaserName)
+	switch (mLaserID)
 	{
 	case VISION:
 		if (wavelength_nm < 680 || wavelength_nm > 1080)
@@ -1082,21 +1082,19 @@ void LaserVision::setWavelength(const int wavelength_nm)
 		}
 		break;
 	case FIDELITY:
-		throw std::runtime_error((std::string)__FUNCTION__ + ": FIDELITY does not support the called functionality");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": FIDELITY does not support such functionality");
 	default:
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser NOT available");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}
-
-
 }
 
-//Open or close the shutter of Vision
-void LaserVision::setShutter(const bool state) const
+//Open or close the internal shutter of the laser
+void Laser::setShutter(const bool state) const
 {
 	std::string TxBuffer;		//Command to the laser
 	std::string RxBuffer;		//Reply from the laser
 
-	switch (mLaserName)
+	switch (mLaserID)
 	{
 	case VISION:
 		TxBuffer = "S=" + std::to_string(state);
@@ -1105,7 +1103,7 @@ void LaserVision::setShutter(const bool state) const
 		TxBuffer = "SHUTTER=" + std::to_string(state);		//Command to the laser
 		break;
 	default:
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser NOT available");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}
 
 	try
@@ -1123,7 +1121,7 @@ void LaserVision::setShutter(const bool state) const
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with " + mLaserNameString);
 	}
 }
-#pragma endregion "LaserVision"
+#pragma endregion "Laser"
 
 #pragma region "Stages"
 Stage::Stage()

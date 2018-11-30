@@ -25,3 +25,4 @@ void seq_testTiffU8();
 void seq_testEthernetSpeed();
 void seq_testVibratome(const FPGAns::FPGA &fpga);
 void seq_testStageTrigAcq(const FPGAns::FPGA &fpga);
+void seq_testCommandLine();

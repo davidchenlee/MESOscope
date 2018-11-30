@@ -1146,10 +1146,7 @@ VirtualLaser::VirtualLaser(FPGAns::RTsequence &RTsequence, const int wavelength_
 	setWavelength(mWavelength_nm);
 }
 
-VirtualLaser::~VirtualLaser()
-{
-
-}
+VirtualLaser::~VirtualLaser() {}
 
 void VirtualLaser::setWavelength(const int wavelength_nm)
 {
@@ -1422,16 +1419,42 @@ void Stage::downloadConfiguration(const Axis axis, const int chan) const
 	std::cout << "vel_mmPerS: " << vel_mmPerS << std::endl;
 }
 
+//convert from (slice number, plane number, tile number) ---> absolute position (x,y,z)
+//this function considers the overlaps in x, y, and z
+double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, const int3 nTileXY) const
+{
+	const double mm = 1;
+	const double um = 0.001;
+
+	double3 absPosition_mm {};
+	double3 initialPosition_mm { 31.9*mm, 9.5*mm, 18.546*mm };
+	double3 overlap_um { 20.*um, 20.*um, 30.*um };
+	double3 FFOVxy_um { 200.*um, 200.*um };						//Full FOV
+
+	double sliceThickness_um = 100 * um;
+	double stepZ_um = 1;
+
+	absPosition_mm.at(0) = initialPosition_mm.at(0) + nTileXY.at(0) * (FFOVxy_um.at(0) - overlap_um.at(0));
+	absPosition_mm.at(1) = initialPosition_mm.at(1) + nTileXY.at(1) * (FFOVxy_um.at(1) - overlap_um.at(1));
+	absPosition_mm.at(2) = initialPosition_mm.at(2) - nSlice * (sliceThickness_um - overlap_um.at(2)) - nPlane * stepZ_um;
+
+	return absPosition_mm;
+}
+#pragma endregion "Stages"
+
+
+#pragma region "Sequencer"
+Sequencer::Sequencer()
+{
+
+}
+Sequencer::~Sequencer() {}
 
 //Convert from absolute tile number ---> (slice number, plane number, tile number)
 // this function does NOT consider the overlaps
-void Stage::scanningStrategy(const int nTileAbsolute) const//Absolute tile number = 0, 1, 2, ..., total number of tiles
+void Sequencer::scanningStrategy(const int nTileAbsolute) const//Absolute tile number = 0, 1, 2, ..., total number of tiles
 {
-	int nTiles_x = 50;	//Number of tiles in x
-	int nTiles_y = 50;	//Number of tiles in y
-	int nTilesPerPlane = nTiles_x * nTiles_y; //Number of tiles in each plane
-	int nPlanesPerSlice = 100;	//Number of planes in each slice
-	int nSlice = 20; //Number of slices in the entire sample
+
 
 	//	int nPlane;
 	//std::vector<int> nTileXY;
@@ -1439,6 +1462,19 @@ void Stage::scanningStrategy(const int nTileAbsolute) const//Absolute tile numbe
 	//total number of tiles = nSlice * nPlanesPerSlice * nTilesPerPlane
 
 }
+
+void Sequencer::pushCommandline(const Commandline commandline)
+{
+	queueOfCommandlines.push_front(commandline);
+}
+
+void Sequencer::printAllCommandlines()
+{
+	std::cout << "Action \t\tLambda (nm) \tScan direction \tStack center (mm) \tzi/zf (um) \tPi/Pf (mW) \tSleep (ms)" << std::endl;
+
+	queueOfCommandlines.front().printCommandline();
+}
+
 
 
 /*Pseudo code
@@ -1485,30 +1521,7 @@ next slice();
 else
 stop;
 */
-
-
-//convert from (slice number, plane number, tile number) ---> absolute position (x,y,z)
-//this function considers the overlaps in x, y, and z
-double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, const int3 nTileXY) const
-{
-	const double mm = 1;
-	const double um = 0.001;
-
-	double3 absPosition_mm {};
-	double3 initialPosition_mm { 31.9*mm, 9.5*mm, 18.546*mm };
-	double3 overlap_um { 20.*um, 20.*um, 30.*um };
-	double3 FFOVxy_um { 200.*um, 200.*um };						//Full FOV
-
-	double sliceThickness_um = 100 * um;
-	double stepZ_um = 1;
-
-	absPosition_mm.at(0) = initialPosition_mm.at(0) + nTileXY.at(0) * (FFOVxy_um.at(0) - overlap_um.at(0));
-	absPosition_mm.at(1) = initialPosition_mm.at(1) + nTileXY.at(1) * (FFOVxy_um.at(1) - overlap_um.at(1));
-	absPosition_mm.at(2) = initialPosition_mm.at(2) - nSlice * (sliceThickness_um - overlap_um.at(2)) - nPlane * stepZ_um;
-
-	return absPosition_mm;
-}
-#pragma endregion "Stages"
+#pragma endregion "sequencer"
 
 
 /*

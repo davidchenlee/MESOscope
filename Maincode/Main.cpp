@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
 			//seq_testAODO(fpga);
 			//seq_testPMT16X();
 			//seq_testLaser(fpga);
-			seq_testVirtualLaser(fpga);
+			//seq_testVirtualLaser(fpga);
 			//seq_testPockels(fpga);
 			//seq_testFilterwheel();
 			//seq_testShutter(fpga);
@@ -29,6 +29,7 @@ int main(int argc, char* argv[])
 			//seq_testEthernetSpeed();
 			//seq_testVibratome(fpga);
 			//seq_testStageTrigAcq(fpga);
+			seq_testCommandLine();
 		}
 		catch (const std::invalid_argument &e)
 		{

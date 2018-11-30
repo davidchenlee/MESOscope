@@ -617,7 +617,31 @@ void seq_testPMT16X()
 	getchar();
 }
 
+void seq_testLaser(const FPGAns::FPGA &fpga)
+{
+	Laser laser(VISION);
+	//Laser laser(FIDELITY);
+	laser.setShutter(false);
+	//laser.setWavelength(940);
+	//laser.printWavelength_nm();
 
+	std::cout << "Press any key to continue..." << std::endl;
+	getchar();
+}
+
+void seq_testVirtualLaser(const FPGAns::FPGA &fpga)
+{
+	//CREATE A REALTIME SEQUENCE
+	FPGAns::RTsequence RTsequence(fpga);
+
+	VirtualLaser laser(RTsequence, 1030, 10 * mW);
+	laser.setShutter(true);
+	Sleep(3000);
+	laser.setShutter(false);
+
+	std::cout << "Press any key to continue..." << std::endl;
+	getchar();
+}
 
 //For keeping the pockels on to check the the laser power
 //0. Make sure that the function generator feeds the lineclock
@@ -645,33 +669,6 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 	Image image(RTsequence);
 	image.acquire();
 	pockels.setShutter(false);
-	
-	std::cout << "Press any key to continue..." << std::endl;
-	getchar();
-}
-
-
-void seq_testLaser(const FPGAns::FPGA &fpga)
-{
-	Laser laser(VISION);
-	//Laser laser(FIDELITY);
-	laser.setShutter(false);
-	//laser.setWavelength(940);
-	//laser.printWavelength_nm();
-
-	std::cout << "Press any key to continue..." << std::endl;
-	getchar();
-}
-
-void seq_testVirtualLaser(const FPGAns::FPGA &fpga)
-{
-	//CREATE A REALTIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga);
-
-	VirtualLaser laser(RTsequence, 1030, 10 * mW);
-	laser.setShutter(true);
-	Sleep(3000);
-	laser.setShutter(false);
 
 	std::cout << "Press any key to continue..." << std::endl;
 	getchar();
@@ -816,4 +813,18 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	//Disable ZstageAsTrigger to position the stage in the next run without triggering the sequence
 	NiFpga_WriteBool(fpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false);
 
+}
+
+
+void seq_testCommandLine()
+{
+	Commandline commandline("MOVESTAGE", 750, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
+
+	Sequencer sequence;
+
+	sequence.pushCommandline(commandline);
+	sequence.printAllCommandlines();
+
+	std::cout << "Press any key to continue..." << std::endl;
+	getchar();
 }

@@ -206,7 +206,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.050, 14.150, 18.685 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.678 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -816,14 +816,20 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 }
 
 
-void seq_testCommandLine()
+void seq_testCommandList()
 {
-	Commandline commandline("MOVESTAGE", 750, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
+	Command commandline1("MOVESTAGE", 750, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
+	Command commandline2("MOVESTAGE", 940, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
 
-	Sequencer sequence;
+	ROI roi_mm = { 0, 10, 10, 0 };
+	Sequencer sequence(roi_mm);
 
-	sequence.pushCommandline(commandline);
-	sequence.printAllCommandlines();
+	sequence.pushCommand(commandline1);
+	sequence.pushCommand(commandline2);
+
+
+	//sequence.printCommandList();
+	sequence.snakeScanning();
 
 	std::cout << "Press any key to continue..." << std::endl;
 	getchar();

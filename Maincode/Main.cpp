@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 			//seq_testEthernetSpeed();
 			//seq_testVibratome(fpga);
 			//seq_testStageTrigAcq(fpga);
-			seq_testCommandLine();
+			seq_testCommandList();
 		}
 		catch (const std::invalid_argument &e)
 		{

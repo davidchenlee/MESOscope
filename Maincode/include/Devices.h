@@ -258,43 +258,52 @@ public:
 };
 
 
-struct Commandline {
+struct Command {
 	std::string mAction;		//Image, move stage, cut, etc...
 	int mWavelength_nm;
 	int3 mStageScanDirection;	//+1 for positive, -1 for negative
 	double2 mStackCenter_mm;
-	double2 mZiZf_um;
-	double2 mPiPf_mW;
+	double2 mZiZf_um;			//Initial and final z position
+	double2 mPiPf_mW;			//Initial and final laser power
 	int mSleep_ms;
 public:
-	Commandline(const std::string action, const int wavelength_nm, const int3 stageScanDirection, const double2 stackCenter_mm, const double2 ZiZf_um, const double2 PiPf_mW, const int sleep_ms) :
-		mAction(action), mWavelength_nm(wavelength_nm), mStageScanDirection(stageScanDirection), mStackCenter_mm(stackCenter_mm), mZiZf_um(ZiZf_um), mPiPf_mW(PiPf_mW), mSleep_ms(sleep_ms)
-	{};
-	~Commandline() {};
-	void printCommandline()
+	Command(const std::string action, const int wavelength_nm, const int3 stageScanDirection, const double2 stackCenter_mm, const double2 ZiZf_um, const double2 PiPf_mW, const int sleep_ms) :
+		mAction(action), mWavelength_nm(wavelength_nm), mStageScanDirection(stageScanDirection), mStackCenter_mm(stackCenter_mm), mZiZf_um(ZiZf_um), mPiPf_mW(PiPf_mW), mSleep_ms(sleep_ms) {};
+	
+	~Command() {};
+	
+	void printHeader()
 	{
-		//std::cout << "Action \t\tLambda (nm) \tScan direction \tStack center (mm) \tzi/zf (um) \tPi/Pf (mW) \tSleep (ms)" << std::endl;
+		std::cout << "Action\t\tLambda (nm) \tScan direction\tStack center (mm)\tzi->zf (um)\tPi->Pf (mW)\tSleep (ms)" << std::endl;
+	}
 
+	void printCommand()
+	{
 		std::cout << mAction << "\t" << mWavelength_nm << "\t\t(" << mStageScanDirection.at(XX) << "," << mStageScanDirection.at(YY) << "," << mStageScanDirection.at(ZZ) << ")\t(";
-		std::cout << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")\t\t\t" << mZiZf_um.at(0) << "/" << mZiZf_um.at(1) << "\t\t";
-		std::cout << mPiPf_mW.at(0) << "/" << mPiPf_mW.at(1) << "\t\t" << mSleep_ms << std::endl;
+		std::cout << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")\t\t\t" << mZiZf_um.at(0) << "->" << mZiZf_um.at(1) << "\t\t";
+		std::cout << mPiPf_mW.at(0) << "->" << mPiPf_mW.at(1) << "\t\t" << mSleep_ms << std::endl;
 	}
 };
 
 class Sequencer
 {
-	int nTiles_x = 50;							//Number of tiles in x
-	int nTiles_y = 50;							//Number of tiles in y
-	int nTilesPerPlane = nTiles_x * nTiles_y;	//Number of tiles in each plane
+	ROI mROI_mm;		//Region of interest
+
+	double2 mSampleSize_um;					//Sample size in x and y
+	double2 mFOV_um = {150, 200};			//Field of view in x and y
+	int2 mNtiles;							//Number of tiles in x and y
+	double2 mTileOverlap_um;				//Tile overlap in x and y
+
 	int nPlanesPerSlice = 100;					//Number of planes in each slice
 	int nSlice = 20;							//Number of slices in the entire sample
 	double3 vibratomeHome;
 	double3 microscopeHome;
-	std::deque <Commandline> queueOfCommandlines;
+
+	std::vector <Command> mCommandList;
 public:
-	Sequencer();
+	Sequencer(const ROI roi_mm);
 	~Sequencer();
-	void scanningStrategy(const int nTileAbsolute) const;
-	void pushCommandline(const Commandline commandline);
-	void printAllCommandlines();
+	void snakeScanning();
+	void pushCommand(const Command command);
+	void printCommandList();
 };

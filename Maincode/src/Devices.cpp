@@ -1444,35 +1444,55 @@ double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, cons
 
 
 #pragma region "Sequencer"
-Sequencer::Sequencer()
+Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
 {
+	//Convert the ROI = (xmin, ymax, xmax, ymin) to the sample size
+	mSampleSize_um.at(XX) = 1000 * (mROI_mm.at(2) - mROI_mm.at(0));
+	mSampleSize_um.at(YY) = 1000 * (mROI_mm.at(1) - mROI_mm.at(3));
 
+	if (mSampleSize_um.at(XX) < 0 || mSampleSize_um.at(YY) < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
+
+	//Calculate the number of tiles
+	mNtiles.at(XX) = static_cast<int>(std::ceil(mSampleSize_um.at(XX) / mFOV_um.at(XX)));							//Number of tiles in x
+	mNtiles.at(YY) = static_cast<int>(std::ceil(mSampleSize_um.at(YY) / mFOV_um.at(YY)));							//Number of tiles in y
+
+	std::cout << "Ntiles x = " << mNtiles.at(XX) << "\tNtiles y = " << mNtiles.at(YY) << std::endl;
 }
+
 Sequencer::~Sequencer() {}
 
-//Convert from absolute tile number ---> (slice number, plane number, tile number)
-// this function does NOT consider the overlaps
-void Sequencer::scanningStrategy(const int nTileAbsolute) const//Absolute tile number = 0, 1, 2, ..., total number of tiles
+void Sequencer::snakeScanning()
 {
-
-
-	//	int nPlane;
-	//std::vector<int> nTileXY;
-
-	//total number of tiles = nSlice * nPlanesPerSlice * nTilesPerPlane
+	//idea: generate a matrix with the x and y coordinates of the tile centers, then apply a transformation to obtain the
+	//scanning sequence
+	for (int iter = 0; iter < mNtiles.at(YY); iter++)
+	{
+		std::cout << mFOV_um.at(YY) * (iter + 0.5) << std::endl;
+	}
 
 }
 
-void Sequencer::pushCommandline(const Commandline commandline)
+void Sequencer::pushCommand(const Command commandline)
 {
-	queueOfCommandlines.push_front(commandline);
+	mCommandList.push_back(commandline);
 }
 
-void Sequencer::printAllCommandlines()
+void Sequencer::printCommandList()
 {
-	std::cout << "Action \t\tLambda (nm) \tScan direction \tStack center (mm) \tzi/zf (um) \tPi/Pf (mW) \tSleep (ms)" << std::endl;
+	//Print out the commandline labels
+	if (!mCommandList.empty())
+	{
+		std::cout << "#\t";
+		mCommandList.at(0).printHeader();
+	}
 
-	queueOfCommandlines.front().printCommandline();
+	for (int iter = 0; iter < static_cast<int>(mCommandList.size()); iter++)
+	{
+		std::cout << iter << "\t";
+		mCommandList.at(iter).printCommand();
+	}
+
 }
 
 

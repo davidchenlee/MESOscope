@@ -1470,51 +1470,46 @@ Sequencer::~Sequencer()
 
 //The idea is to input the iteration number iter = 0, 1, ..., mNtilesTotal and output the corresponding tile index in the 2D matrix of mNtiles.at(XX)
 //by mNtiles.at(YY). The tile assignement depends on the scanning strategy.
-int2 Sequencer::snakeIndices(const int iter, const InitialStagePosition initialStagePosition, const MotionDir motionDir) const
+int2 Sequencer::snakeIndices(const int iter, const InitialStagePosition initialStagePosition) const
 {
 	if (iter < 0 || iter >= mNtilesTotal)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": index out of bound");
 
 	int2 sequencedIndex;
-	sequencedIndex.at(XX) = iter % (mNtiles.at(XX));										//Tile index in x
-	sequencedIndex.at(YY) = static_cast<int>(std::floor(1.* iter / (mNtiles.at(XX))) );		//Tile index in y
-
-	//std::cout << "index x  = " << sequencedIndex.at(XX) << "\tindex y = " << sequencedIndex.at(YY) << std::endl;
+	sequencedIndex.at(XX) = iter % (mNtiles.at(XX));										//x index
+	sequencedIndex.at(YY) = static_cast<int>(std::floor(1.* iter / (mNtiles.at(XX))) );		//y index
 
 	int stageMotionDirX, stageMotionDirY;
 
-	//The initial stage position or "corner" determines in what direction the stage moves across the sample.
-	//The y-stage is the slowest to react to changes because it sits under of the x and z stages.
-	//Therefore, for a snake pattern, alternate the direction of motion in x but keep the motion in y unchanged throughout the scanning sequence.
+	//The initial position of the stage in the sample plane determines the scanning direction
+	//The y-stage is the slowest to react because it sits under of the x and z stages.
+	//Therefore, for a snake pattern, alternate the motion in x but keep the motion in y unchanged.
 	switch (initialStagePosition)
 	{
-	case BL:
+	case BOTTOMLEFT:
 		stageMotionDirX = 1 - 2 * (sequencedIndex.at(YY) % 2); //1 for even y tile, -1 for odd y tile
 		stageMotionDirY = 1;
 		break;
-	case TL:
+	case TOPLEFT:
 		stageMotionDirX = 1 - 2 * (sequencedIndex.at(YY) % 2); //1 for even y tile, -1 for odd y tile
 		stageMotionDirY = -1;
 		break;
-	case TR:
+	case TOPRIGHT:
 		stageMotionDirX = -1 + 2 * (sequencedIndex.at(YY) % 2); //-1 for even y tile, 1 for odd y tile
 		stageMotionDirY = -1;
 		break;
-	case BR:
+	case BOTTOMRIGHT:
 		stageMotionDirX = -1 + 2 * (sequencedIndex.at(YY) % 2); //-1 for even y tile, 1 for odd y tile
 		stageMotionDirY = 1;
 		break;
-	}
-
-	//Reverse the direction of motion
-	if (motionDir == BACKWARD)
-	{
-		stageMotionDirX *= -1;
-		stageMotionDirY *= -1;
 	}
 
 	//Reverse the indexing order if the scanning direction is negative
-	if (stageMotionDirX > 0 && stageMotionDirY < 0)
+	if (stageMotionDirX > 0 && stageMotionDirY > 0)
+	{
+		//No change
+	}
+	else if (stageMotionDirX > 0 && stageMotionDirY < 0)
 	{
 		sequencedIndex.at(YY) = mNtiles.at(YY) - 1 - sequencedIndex.at(YY);
 	}
@@ -1533,12 +1528,11 @@ int2 Sequencer::snakeIndices(const int iter, const InitialStagePosition initialS
 	return sequencedIndex;
 }
 
-double2 Sequencer::convertIndexToPosition(const double2 tileIndex) const
+double2 Sequencer::convertIndexToPosition_mm(const int2 tileIndices) const
 {
-	//for (int iter = 0; iter < mNtiles.at(XX); iter++)
 	double2 stagePosition_mm;
-	stagePosition_mm.at(XX) = mFOV_um.at(XX) * (tileIndex.at(XX) + 0.5);
-	stagePosition_mm.at(YY) = mFOV_um.at(YY) * (tileIndex.at(YY) + 0.5);
+	stagePosition_mm.at(XX) = mFOV_um.at(XX)/1000 * (tileIndices.at(XX) + 0.5);	// (tileIndices + 0.5) ranges from 0.5 to (mNtiles - 0.5)
+	stagePosition_mm.at(YY) = mFOV_um.at(YY)/1000 * (tileIndices.at(YY) + 0.5);	// (tileIndices + 0.5) ranges from 0.5 to (mNtiles - 0.5)
 
 	return stagePosition_mm;
 }
@@ -1565,52 +1559,53 @@ void Sequencer::printCommandList()
 
 }
 
+void Sequencer::generateCommandList()
+{
+	std::vector<int> wavelengthList_nm = { 750, 940, 1040 };
 
 
-/*Pseudo code
-SDx = +;
-SDy = +;
-SDz = -		//- is down, + is up
+	ROI roi_mm = { 0, 10, 10, 0 };
+	Sequencer sequence(roi_mm);
 
-while{
+	for (int nSection = 0; nSection < mNslices; nSection++)
+	{
+		for (int iterWL = 0; iterWL < static_cast<int>(wavelengthList_nm.size()); iterWL++)
+		{
+			for (int iterTiles = 0; iterTiles < mNtilesTotal; iterTiles++)
+			{
+				Command commandline1("MOVESTAGE", wavelengthList_nm.at(iterWL), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
+				sequence.pushCommand(commandline1);
+				Command commandline2("IMAGE", wavelengthList_nm.at(iterWL), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
+				sequence.pushCommand(commandline2);
+			}
 
-if (reached zmax) //reached bottom of the slice
-snakeXY();
-SDz = +;
+		}
+		Command commandline3("CUT", wavelengthList_nm.at(0), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
+		sequence.pushCommand(commandline3);
+	}
 
-if (reached zmin)	//reached top of the slice
-snakeXY();
-SDz = -;
+	/*
+
+//To optimize the stage scanning, scan for 750 nm then scan back for 940 nm, etc
+int2 stageScanningDir(wavelength_nm)
+{
+	switch(wavelength_nm)
+	{
+	case 750:
+		return BOTTOMLEFT;			//start scanning from the bottom-left
+	case 940:
+		if (mNtiles.at(YY) ) is even)
+			return TOPLEFT;		//start scanning from the top-left
+		else
+			return TOPRIGHT;	//start scanning from the top-right
+	case 1040:
+		return BOTTOMLEFT;			//start scanning from the bottom-left
+	}
+
+
 }
-
-
-snakeXY:
-if (SD = +)
-if (!reached xmax)
-x++;
-else if (!reached ymax)
-y++;
-SDx = -; //change the scanning direction
-else //reached xmax & ymax
-nextSlice();
-
-else //SDx = -
-if (!reached xmin)
-x--;
-else if (!reach ymax)
-y++;
-SDx = +; //change the scanning direction
-else	//reached xmin & ymax
-nextSlice();
-
-
-nextSlice:
-if (!reached nMaxSlice)
-runVibratome();
-next slice();
-else
-stop;
 */
+}
 #pragma endregion "sequencer"
 
 

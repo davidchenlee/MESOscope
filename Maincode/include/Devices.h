@@ -44,6 +44,7 @@ public:
 
 class Vibratome
 {
+	enum MotionDir { BACKWARD, FORWARD };
 	const FPGAns::FPGA &mFpga;
 	int mNslice;						//Slice number
 	double mSectionThickness;			//Thickness of the section
@@ -295,8 +296,8 @@ class Sequencer
 	int mNtilesTotal;
 	double2 mTileOverlap_um;				//Tile overlap in x and y
 
-	int nPlanesPerSlice = 100;				//Number of planes in each slice
-	int nSlice = 20;						//Number of slices in the entire sample
+	int mNplanesPerSlice = 100;				//Number of planes in each slice
+	int mNslices = 20;						//Number of slices in the entire sample
 	double3 vibratomeHome;
 	double3 microscopeHome;
 
@@ -305,8 +306,9 @@ class Sequencer
 public:
 	Sequencer(const ROI roi_mm);
 	~Sequencer();
-	int2 snakeIndices(const int iter, const InitialStagePosition initialStagePosition, const MotionDir motionDir) const;
-	double2 convertIndexToPosition(const double2 tileIndex) const;
+	int2 snakeIndices(const int iter, const InitialStagePosition initialStagePosition) const;
+	double2 convertIndexToPosition_mm(const int2 tileIndices) const;
 	void pushCommand(const Command command);
 	void printCommandList();
+	void generateCommandList();
 };

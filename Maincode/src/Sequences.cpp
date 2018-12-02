@@ -818,6 +818,44 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 
 void seq_testCommandList()
 {
+	/*
+	std::vector<int> wavelength_nm = {750, 940, 1040};
+
+	for ( int nSection = 0; nSection < Ntotal; nSection++)
+	{
+		for (int iterWL = wavelength_nm.first; ii = wavelength_nm.last,  )
+		{
+			for( int iterTile = 0; iter <  mNtiles.at(XX) *  mNtiles.at(YY); iter++)
+			{
+			sequence.pushCommand("MOVESTAGETO", position(iterTile, stageScanningDir(wavelength_nm.at(iterWL))) );
+			sequence.pushCommand("IMAGE", z-stage direction));
+			}
+		}
+		sequence.pushCommand("CUTSECTION");
+	}
+
+	//To optimize the stage scanning, snake-scan in one way for 750 nm, then in the opposite direction for 940 nm, etc
+	int2 stageScanningDir(wavelength_nm)
+	{
+		switch(wavelength_nm)
+		{
+		case 750:
+			return (1,1);			//start scanning from the bottom-left
+		case 940:
+			if (mNtiles.at(YY) ) is even)
+				return (1,-1);		//start scanning from the top-left
+			else
+				return (-1, -1);	//start scanning from the top-right
+		case 1040:
+			return (1,1);			//start scanning from the bottom-left
+		}
+
+		
+	}
+
+	*/
+
+
 	Command commandline1("MOVESTAGE", 750, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
 	Command commandline2("MOVESTAGE", 940, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
 
@@ -829,7 +867,11 @@ void seq_testCommandList()
 
 
 	//sequence.printCommandList();
-	sequence.snakeScanning();
+	//sequence.snakeScanning();
+	int iter = 2 * 67 - 1;
+	int2 indices = sequence.snakeIndices(iter, BL, FORWARD);
+	std::cout << "iter = " << iter << std::endl;
+	std::cout << "sequenced index ii = " << indices.at(XX)<< "\tsequenced index jj = " << indices.at(YY) << std::endl;
 
 	std::cout << "Press any key to continue..." << std::endl;
 	getchar();

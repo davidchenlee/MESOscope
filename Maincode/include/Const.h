@@ -16,7 +16,7 @@ namespace Constants
 	typedef uint64_t	U64;
 	typedef std::deque<U32> QU32;				//Queue of unsigned integers
 	typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
-	typedef std::array<double, 3> double3;		//array of 3 doubles. Arrays allow to allocate memory. Vectors don't
+	typedef std::array<double, 3> double3;		//array of 3 doubles. Arrays allow pre-defining their size. Vectors do not
 	typedef std::array<int, 3> int3;			//array of 3 ints
 	typedef std::array<int, 2> int2;			//array of 3 ints
 	typedef std::array<double, 2> double2;		//array of 2 doubles
@@ -35,7 +35,8 @@ namespace Constants
 	enum Filtercolor { BLUE = 1, GREEN = 2, RED = 3 };
 	enum Axis { XX, YY, ZZ };
 	enum RunMode { SINGLEMODE, CONTMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
-	enum VibratomeChannel { BACKWARD, FORWARD };		//Vibratome channels
+	enum MotionDir { BACKWARD, FORWARD };
+	enum InitialStagePosition { BL, TL, BR, TR };			//Bottom-left, top-left, bottom-right, top-right
 
 	enum ComID { COMVISION, COMFIDELITY, COMFWDET , COMFWEXC, COMPMT16X };
 	extern const std::vector<std::string> assignCOM;

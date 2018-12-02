@@ -53,7 +53,7 @@ class Vibratome
 	double mHeight_mm = 0;				//in mm. vertical distance between the razor blade and the objective's focal plane
 	double mMovingSpeed_mmps = 2.495;	//in mm/s. Forward and backward moving speed of the head. 52.4 mm in 21 seconds = 2.495 mm/s
 
-	void moveHead_(const int duration_ms, const VibratomeChannel channel) const;
+	void moveHead_(const int duration_ms, const MotionDir motionDir) const;
 	void startStop_() const;
 public:
 	Vibratome(const FPGAns::FPGA &fpga);
@@ -292,18 +292,21 @@ class Sequencer
 	double2 mSampleSize_um;					//Sample size in x and y
 	double2 mFOV_um = {150, 200};			//Field of view in x and y
 	int2 mNtiles;							//Number of tiles in x and y
+	int mNtilesTotal;
 	double2 mTileOverlap_um;				//Tile overlap in x and y
 
-	int nPlanesPerSlice = 100;					//Number of planes in each slice
-	int nSlice = 20;							//Number of slices in the entire sample
+	int nPlanesPerSlice = 100;				//Number of planes in each slice
+	int nSlice = 20;						//Number of slices in the entire sample
 	double3 vibratomeHome;
 	double3 microscopeHome;
 
+	double2 *mTileCenterPosition_mm;		//Matrix with the (x,y) position of the tile centers
 	std::vector <Command> mCommandList;
 public:
 	Sequencer(const ROI roi_mm);
 	~Sequencer();
-	void snakeScanning();
+	int2 snakeIndices(const int iter, const InitialStagePosition initialStagePosition, const MotionDir motionDir) const;
+	double2 convertIndexToPosition(const double2 tileIndex) const;
 	void pushCommand(const Command command);
 	void printCommandList();
 };

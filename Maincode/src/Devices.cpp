@@ -299,7 +299,7 @@ void Vibratome::startStop_() const
 }
 
 //Move the head of the vibratome forward or backward for the duration 'duration_ms'. The timing varies in approx 1 ms
-void Vibratome::moveHead_(const int duration_ms, const VibratomeChannel channel) const
+void Vibratome::moveHead_(const int duration_ms, const MotionDir channel) const
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
 	const int minDuration_ms = 10;		//in ms
@@ -1446,7 +1446,7 @@ double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, cons
 #pragma region "Sequencer"
 Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
 {
-	//Convert the ROI = (xmin, ymax, xmax, ymin) to the sample size
+	//Convert the ROI = (xmin, ymax, xmax, ymin) to the equivalent sample size
 	mSampleSize_um.at(XX) = 1000 * (mROI_mm.at(2) - mROI_mm.at(0));
 	mSampleSize_um.at(YY) = 1000 * (mROI_mm.at(1) - mROI_mm.at(3));
 
@@ -1454,23 +1454,93 @@ Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
 
 	//Calculate the number of tiles
-	mNtiles.at(XX) = static_cast<int>(std::ceil(mSampleSize_um.at(XX) / mFOV_um.at(XX)));							//Number of tiles in x
-	mNtiles.at(YY) = static_cast<int>(std::ceil(mSampleSize_um.at(YY) / mFOV_um.at(YY)));							//Number of tiles in y
+	mNtiles.at(XX) = static_cast<int>(std::ceil(mSampleSize_um.at(XX) / mFOV_um.at(XX)));		//Number of tiles in x
+	mNtiles.at(YY) = static_cast<int>(std::ceil(mSampleSize_um.at(YY) / mFOV_um.at(YY)));		//Number of tiles in y
+	mNtilesTotal = mNtiles.at(XX) * mNtiles.at(YY);												//Total number of tiles
 
 	std::cout << "Ntiles x = " << mNtiles.at(XX) << "\tNtiles y = " << mNtiles.at(YY) << std::endl;
+
+	mTileCenterPosition_mm = new double2[mNtilesTotal];
 }
 
-Sequencer::~Sequencer() {}
-
-void Sequencer::snakeScanning()
+Sequencer::~Sequencer()
 {
-	//idea: generate a matrix with the x and y coordinates of the tile centers, then apply a transformation to obtain the
-	//scanning sequence
-	for (int iter = 0; iter < mNtiles.at(YY); iter++)
+	delete[] mTileCenterPosition_mm;
+}
+
+//The idea is to input the iteration number iter = 0, 1, ..., mNtilesTotal and output the corresponding tile index in the 2D matrix of mNtiles.at(XX)
+//by mNtiles.at(YY). The tile assignement depends on the scanning strategy.
+int2 Sequencer::snakeIndices(const int iter, const InitialStagePosition initialStagePosition, const MotionDir motionDir) const
+{
+	if (iter < 0 || iter >= mNtilesTotal)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": index out of bound");
+
+	int2 sequencedIndex;
+	sequencedIndex.at(XX) = iter % (mNtiles.at(XX));										//Tile index in x
+	sequencedIndex.at(YY) = static_cast<int>(std::floor(1.* iter / (mNtiles.at(XX))) );		//Tile index in y
+
+	//std::cout << "index x  = " << sequencedIndex.at(XX) << "\tindex y = " << sequencedIndex.at(YY) << std::endl;
+
+	int stageMotionDirX, stageMotionDirY;
+
+	//The initial stage position or "corner" determines in what direction the stage moves across the sample.
+	//The y-stage is the slowest to react to changes because it sits under of the x and z stages.
+	//Therefore, for a snake pattern, alternate the direction of motion in x but keep the motion in y unchanged throughout the scanning sequence.
+	switch (initialStagePosition)
 	{
-		std::cout << mFOV_um.at(YY) * (iter + 0.5) << std::endl;
+	case BL:
+		stageMotionDirX = 1 - 2 * (sequencedIndex.at(YY) % 2); //1 for even y tile, -1 for odd y tile
+		stageMotionDirY = 1;
+		break;
+	case TL:
+		stageMotionDirX = 1 - 2 * (sequencedIndex.at(YY) % 2); //1 for even y tile, -1 for odd y tile
+		stageMotionDirY = -1;
+		break;
+	case TR:
+		stageMotionDirX = -1 + 2 * (sequencedIndex.at(YY) % 2); //-1 for even y tile, 1 for odd y tile
+		stageMotionDirY = -1;
+		break;
+	case BR:
+		stageMotionDirX = -1 + 2 * (sequencedIndex.at(YY) % 2); //-1 for even y tile, 1 for odd y tile
+		stageMotionDirY = 1;
+		break;
 	}
 
+	//Reverse the direction of motion
+	if (motionDir == BACKWARD)
+	{
+		stageMotionDirX *= -1;
+		stageMotionDirY *= -1;
+	}
+
+	//Reverse the indexing order if the scanning direction is negative
+	if (stageMotionDirX > 0 && stageMotionDirY < 0)
+	{
+		sequencedIndex.at(YY) = mNtiles.at(YY) - 1 - sequencedIndex.at(YY);
+	}
+	else if (stageMotionDirX < 0 && stageMotionDirY > 0)
+	{
+		sequencedIndex.at(XX) = mNtiles.at(XX) - 1 - sequencedIndex.at(XX);
+	}
+	else if (stageMotionDirX < 0 && stageMotionDirY < 0)
+	{
+		sequencedIndex.at(XX) = mNtiles.at(XX) - 1 - sequencedIndex.at(XX);
+		sequencedIndex.at(YY) = mNtiles.at(YY) - 1 - sequencedIndex.at(YY);
+	}
+	else
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid direction of motion for the stage");
+
+	return sequencedIndex;
+}
+
+double2 Sequencer::convertIndexToPosition(const double2 tileIndex) const
+{
+	//for (int iter = 0; iter < mNtiles.at(XX); iter++)
+	double2 stagePosition_mm;
+	stagePosition_mm.at(XX) = mFOV_um.at(XX) * (tileIndex.at(XX) + 0.5);
+	stagePosition_mm.at(YY) = mFOV_um.at(YY) * (tileIndex.at(YY) + 0.5);
+
+	return stagePosition_mm;
 }
 
 void Sequencer::pushCommand(const Command commandline)

@@ -26,4 +26,4 @@ void seq_testEthernetSpeed();
 void seq_testVibratome(const FPGAns::FPGA &fpga);
 void seq_testStageTrigAcq(const FPGAns::FPGA &fpga);
 void seq_testCommandList();
-void generateSnakeScanning();
+void seq_generateSnakeScanning();

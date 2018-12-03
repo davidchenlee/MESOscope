@@ -1452,10 +1452,6 @@ Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
 	std::cout << "Ntiles x = " << mNtiles.at(XX) << "\tNtiles y = " << mNtiles.at(YY) << std::endl;
 }
 
-Sequencer::~Sequencer()
-{
-}
-
 void Sequencer::pushCommand(const Command commandline)
 {
 	mCommandList.push_back(commandline);
@@ -1570,6 +1566,7 @@ InitialStagePosition Sequencer::stageScanningDir(const int wavelength_nm)
 
 }
 #pragma endregion "sequencer"
+
 
 
 /*

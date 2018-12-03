@@ -821,13 +821,8 @@ void seq_testCommandList()
 	ROI roi_mm = { 0, 10, 10, 0 };
 	Sequencer sequence(roi_mm);
 
-	Sequencer::Command commandline1("MOVESTAGE", 750, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
-	Sequencer::Command commandline2("MOVESTAGE", 940, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
-	//Command commandline3("CUT");
-
-	sequence.pushCommand(commandline1);
-	sequence.pushCommand(commandline2);
-	//sequence.pushCommand(commandline3);
+	sequence.pushCommand(Command("MOVESTAGE", 0, { 0, 0 }, 750));
+	sequence.pushCommand(Command("MOVESTAGE", 0, { 0, 0 }, 940));
 	sequence.printCommandList();
 
 	int iter = 2 * 67 - 1;
@@ -842,9 +837,10 @@ void seq_testCommandList()
 	getchar();
 }
 
-void generateSnakeScanning()
+void seq_generateSnakeScanning()
 {
 	std::vector<int> wavelengthList_nm = { 750, 940, 1040 };
+	//std::vector<int> wavelengthList_nm = { 750 };
 	ROI roi_mm = { 0, 10, 10, 0 };
 	Sequencer sequence(roi_mm);
 
@@ -854,15 +850,14 @@ void generateSnakeScanning()
 		{
 			for (int iterTiles = 0; iterTiles < sequence.mNtilesTotal; iterTiles++)
 			{
-				Sequencer::Command commandline1("MOVESTAGE", wavelengthList_nm.at(iterWL), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
-				sequence.pushCommand(commandline1);
-				Sequencer::Command commandline2("IMAGE", wavelengthList_nm.at(iterWL), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
-				sequence.pushCommand(commandline2);
+				sequence.pushCommand(Command("MOVESTAGE", 0, { 0, 0 }, wavelengthList_nm.at(iterWL)));
+				sequence.pushCommand(Command("IMAGE", 0, { 0, 0 }, wavelengthList_nm.at(iterWL), 1, 0, 10));
 			}
-
 		}
-		Sequencer::Command commandline3("CUT", wavelengthList_nm.at(0), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
-		sequence.pushCommand(commandline3);
+		sequence.pushCommand(Command("CUT"));
 	}
+	//sequence.printCommandList();
 
+	std::cout << "Press any key to continue..." << std::endl;
+	getchar();
 }

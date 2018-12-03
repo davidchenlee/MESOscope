@@ -280,50 +280,74 @@ public:
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
 };
 
+//THE CLASS IS DEFINED HERE!!
+class Command {
+protected:
+	std::string mAction;		//Image, move stage, cut, etc...
+	short mSleep_ms;
+	short mWavelength_nm;
+	short mScanDirZ;				//+1 for positive, -1 for negative
+	std::array<float,2> mStackCenter_mm;
+	float mZ_um;				//Initial and final z position
+	float mP_mW;				//Initial and final laser power
+
+public:
+	Command(const std::string action, const short sleep_ms = -1, const std::array<float, 2> stackCenter_mm = { 0, 0 }, const short wavelength_nm = -1, const short scanDirZ = 0, const float Z_um = -1, const float P_mW = -1) :
+		mAction(action), mSleep_ms(sleep_ms), mStackCenter_mm(stackCenter_mm), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW) {};
+
+	virtual ~Command() {}
+
+	void printHeader()
+	{
+		std::cout << "Action\t\tSleep_ms\tStackCenter_mm\tLambda_nm\tScanDirZ\tz_um\tP_mW" << std::endl;
+	}
+
+	void printCommand()
+	{
+		std::cout << mAction << "\t" << mSleep_ms << "\t\t(" << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")\t\t" << mWavelength_nm << "\t\t" << mScanDirZ << "\t\t" << mZ_um << "\t" << mP_mW << "\t" << std::endl;
+	}
+};
+
+
+class Cutting : public Command
+{
+	const double3 mVibratomeHome = {};
+	const double3 mMicroscopeHome = {};
+	const int mNplanesPerSlice = 100;		//Number of planes in each slice
+	const int mNslices = 20;				//Number of slices in the entire sample
+public:
+	Cutting(const int sleep_ms): Command("CUT", sleep_ms) {};
+};
+
+class Moving : public Command
+{
+public:
+	Moving(const int sleep_ms, const double2 stackCenter_mm) : Command("Moving", sleep_ms, stackCenter_mm){};
+};
+
+
+class Imaging : public Command
+{
+public:
+	Imaging(const int sleep_ms, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double Z_um, const double P_mW) : Command("IMAGE", sleep_ms, stackCenter_mm, wavelength_nm, scanDirZ, Z_um, P_mW){}
+};
+
+
+
 class Sequencer
 {
 public:
-	class Command {
-		std::string mAction;		//Image, move stage, cut, etc...
-		int mWavelength_nm;
-		int3 mStageScanDirection;	//+1 for positive, -1 for negative
-		double2 mStackCenter_mm;
-		double2 mZiZf_um;			//Initial and final z position
-		double2 mPiPf_mW;			//Initial and final laser power
-		int mSleep_ms;
-	public:
-		Command(const std::string action, const int wavelength_nm, const int3 stageScanDirection, const double2 stackCenter_mm, const double2 ZiZf_um = { -1,-1 }, const double2 PiPf_mW = { -1,-1 }, const int sleep_ms = -1) :
-			mAction(action), mWavelength_nm(wavelength_nm), mStageScanDirection(stageScanDirection), mStackCenter_mm(stackCenter_mm), mZiZf_um(ZiZf_um), mPiPf_mW(PiPf_mW), mSleep_ms(sleep_ms) {};
-
-		void printHeader()
-		{
-			std::cout << "Action\t\tLambda (nm) \tScan direction\tStack center (mm)\tzi->zf (um)\tPi->Pf (mW)\tSleep (ms)" << std::endl;
-		}
-
-		void printCommand()
-		{
-			std::cout << mAction << "\t" << mWavelength_nm << "\t\t(" << mStageScanDirection.at(XX) << "," << mStageScanDirection.at(YY) << "," << mStageScanDirection.at(ZZ) << ")\t(";
-			std::cout << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")\t\t\t" << mZiZf_um.at(0) << "->" << mZiZf_um.at(1) << "\t\t";
-			std::cout << mPiPf_mW.at(0) << "->" << mPiPf_mW.at(1) << "\t\t" << mSleep_ms << std::endl;
-		}
-	};
-
-	std::vector <Command> mCommandList;
-
 	ROI mROI_mm;							//Region of interest
 	double2 mSampleSize_um;					//Sample size in x and y
 	double2 mFOV_um = {150, 200};			//Field of view in x and y
 	int2 mNtiles;							//Number of tiles in x and y
 	int mNtilesTotal;						//Total number of tiles
 	double2 mTileOverlap_um;				//Tile overlap in x and y
-
 	const int mNplanesPerSlice = 100;		//Number of planes in each slice
-	const int mNslices = 20;				//Number of slices in the entire sample
-	double3 vibratomeHome;
-	double3 microscopeHome;
+	const int mNslices = 100;				//Number of slices in the entire sample
+	std::vector <Command> mCommandList;
 
 	Sequencer(const ROI roi_mm);
-	~Sequencer();
 	void pushCommand(const Command command);
 	void printCommandList();
 	int2 snakeIndices(const int iter, const InitialStagePosition initialStagePosition) const;

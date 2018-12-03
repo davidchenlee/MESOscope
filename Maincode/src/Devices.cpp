@@ -1459,13 +1459,32 @@ Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
 	mNtilesTotal = mNtiles.at(XX) * mNtiles.at(YY);												//Total number of tiles
 
 	std::cout << "Ntiles x = " << mNtiles.at(XX) << "\tNtiles y = " << mNtiles.at(YY) << std::endl;
-
-	mTileCenterPosition_mm = new double2[mNtilesTotal];
 }
 
 Sequencer::~Sequencer()
 {
-	delete[] mTileCenterPosition_mm;
+}
+
+void Sequencer::pushCommand(const Command commandline)
+{
+	mCommandList.push_back(commandline);
+}
+
+void Sequencer::printCommandList()
+{
+	//Print out the commandline labels
+	if (!mCommandList.empty())
+	{
+		std::cout << "#\t";
+		mCommandList.at(0).printHeader();
+	}
+
+	for (int iter = 0; iter < static_cast<int>(mCommandList.size()); iter++)
+	{
+		std::cout << iter << "\t";
+		mCommandList.at(iter).printCommand();
+	}
+
 }
 
 //The idea is to input the iteration number iter = 0, 1, ..., mNtilesTotal and output the corresponding tile index in the 2D matrix of mNtiles.at(XX)
@@ -1537,74 +1556,27 @@ double2 Sequencer::convertIndexToPosition_mm(const int2 tileIndices) const
 	return stagePosition_mm;
 }
 
-void Sequencer::pushCommand(const Command commandline)
-{
-	mCommandList.push_back(commandline);
-}
 
-void Sequencer::printCommandList()
-{
-	//Print out the commandline labels
-	if (!mCommandList.empty())
-	{
-		std::cout << "#\t";
-		mCommandList.at(0).printHeader();
-	}
-
-	for (int iter = 0; iter < static_cast<int>(mCommandList.size()); iter++)
-	{
-		std::cout << iter << "\t";
-		mCommandList.at(iter).printCommand();
-	}
-
-}
-
-void Sequencer::generateCommandList()
-{
-	std::vector<int> wavelengthList_nm = { 750, 940, 1040 };
-
-
-	ROI roi_mm = { 0, 10, 10, 0 };
-	Sequencer sequence(roi_mm);
-
-	for (int nSection = 0; nSection < mNslices; nSection++)
-	{
-		for (int iterWL = 0; iterWL < static_cast<int>(wavelengthList_nm.size()); iterWL++)
-		{
-			for (int iterTiles = 0; iterTiles < mNtilesTotal; iterTiles++)
-			{
-				Command commandline1("MOVESTAGE", wavelengthList_nm.at(iterWL), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
-				sequence.pushCommand(commandline1);
-				Command commandline2("IMAGE", wavelengthList_nm.at(iterWL), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
-				sequence.pushCommand(commandline2);
-			}
-
-		}
-		Command commandline3("CUT", wavelengthList_nm.at(0), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
-		sequence.pushCommand(commandline3);
-	}
-
-	/*
 
 //To optimize the stage scanning, scan for 750 nm then scan back for 940 nm, etc
-int2 stageScanningDir(wavelength_nm)
+InitialStagePosition Sequencer::stageScanningDir(const int wavelength_nm)
 {
-	switch(wavelength_nm)
+	switch (wavelength_nm)
 	{
 	case 750:
 		return BOTTOMLEFT;			//start scanning from the bottom-left
 	case 940:
-		if (mNtiles.at(YY) ) is even)
+		if (mNtiles.at(YY) % 2)
 			return TOPLEFT;		//start scanning from the top-left
 		else
 			return TOPRIGHT;	//start scanning from the top-right
 	case 1040:
 		return BOTTOMLEFT;			//start scanning from the bottom-left
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": ");
 	}
 
 
-}
-*/
 }
 #pragma endregion "sequencer"
 

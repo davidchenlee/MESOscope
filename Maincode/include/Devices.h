@@ -258,57 +258,55 @@ public:
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
 };
 
-
-struct Command {
-	std::string mAction;		//Image, move stage, cut, etc...
-	int mWavelength_nm;
-	int3 mStageScanDirection;	//+1 for positive, -1 for negative
-	double2 mStackCenter_mm;
-	double2 mZiZf_um;			//Initial and final z position
-	double2 mPiPf_mW;			//Initial and final laser power
-	int mSleep_ms;
-public:
-	Command(const std::string action, const int wavelength_nm, const int3 stageScanDirection, const double2 stackCenter_mm, const double2 ZiZf_um, const double2 PiPf_mW, const int sleep_ms) :
-		mAction(action), mWavelength_nm(wavelength_nm), mStageScanDirection(stageScanDirection), mStackCenter_mm(stackCenter_mm), mZiZf_um(ZiZf_um), mPiPf_mW(PiPf_mW), mSleep_ms(sleep_ms) {};
-	
-	~Command() {};
-	
-	void printHeader()
-	{
-		std::cout << "Action\t\tLambda (nm) \tScan direction\tStack center (mm)\tzi->zf (um)\tPi->Pf (mW)\tSleep (ms)" << std::endl;
-	}
-
-	void printCommand()
-	{
-		std::cout << mAction << "\t" << mWavelength_nm << "\t\t(" << mStageScanDirection.at(XX) << "," << mStageScanDirection.at(YY) << "," << mStageScanDirection.at(ZZ) << ")\t(";
-		std::cout << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")\t\t\t" << mZiZf_um.at(0) << "->" << mZiZf_um.at(1) << "\t\t";
-		std::cout << mPiPf_mW.at(0) << "->" << mPiPf_mW.at(1) << "\t\t" << mSleep_ms << std::endl;
-	}
-};
-
 class Sequencer
 {
-	ROI mROI_mm;		//Region of interest
+public:
+	class Command {
+		std::string mAction;		//Image, move stage, cut, etc...
+		int mWavelength_nm;
+		int3 mStageScanDirection;	//+1 for positive, -1 for negative
+		double2 mStackCenter_mm;
+		double2 mZiZf_um;			//Initial and final z position
+		double2 mPiPf_mW;			//Initial and final laser power
+		int mSleep_ms;
+	public:
+		Command(const std::string action, const int wavelength_nm, const int3 stageScanDirection, const double2 stackCenter_mm, const double2 ZiZf_um = { -1,-1 }, const double2 PiPf_mW = { -1,-1 }, const int sleep_ms = -1) :
+			mAction(action), mWavelength_nm(wavelength_nm), mStageScanDirection(stageScanDirection), mStackCenter_mm(stackCenter_mm), mZiZf_um(ZiZf_um), mPiPf_mW(PiPf_mW), mSleep_ms(sleep_ms) {};
 
+		~Command() {};
+
+		void printHeader()
+		{
+			std::cout << "Action\t\tLambda (nm) \tScan direction\tStack center (mm)\tzi->zf (um)\tPi->Pf (mW)\tSleep (ms)" << std::endl;
+		}
+
+		void printCommand()
+		{
+			std::cout << mAction << "\t" << mWavelength_nm << "\t\t(" << mStageScanDirection.at(XX) << "," << mStageScanDirection.at(YY) << "," << mStageScanDirection.at(ZZ) << ")\t(";
+			std::cout << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")\t\t\t" << mZiZf_um.at(0) << "->" << mZiZf_um.at(1) << "\t\t";
+			std::cout << mPiPf_mW.at(0) << "->" << mPiPf_mW.at(1) << "\t\t" << mSleep_ms << std::endl;
+		}
+	};
+
+	std::vector <Command> mCommandList;
+
+	ROI mROI_mm;							//Region of interest
 	double2 mSampleSize_um;					//Sample size in x and y
 	double2 mFOV_um = {150, 200};			//Field of view in x and y
 	int2 mNtiles;							//Number of tiles in x and y
-	int mNtilesTotal;
+	int mNtilesTotal;						//Total number of tiles
 	double2 mTileOverlap_um;				//Tile overlap in x and y
 
-	int mNplanesPerSlice = 100;				//Number of planes in each slice
-	int mNslices = 20;						//Number of slices in the entire sample
+	const int mNplanesPerSlice = 100;		//Number of planes in each slice
+	const int mNslices = 20;				//Number of slices in the entire sample
 	double3 vibratomeHome;
 	double3 microscopeHome;
 
-	double2 *mTileCenterPosition_mm;		//Matrix with the (x,y) position of the tile centers
-	std::vector <Command> mCommandList;
-public:
 	Sequencer(const ROI roi_mm);
 	~Sequencer();
-	int2 snakeIndices(const int iter, const InitialStagePosition initialStagePosition) const;
-	double2 convertIndexToPosition_mm(const int2 tileIndices) const;
 	void pushCommand(const Command command);
 	void printCommandList();
-	void generateCommandList();
+	int2 snakeIndices(const int iter, const InitialStagePosition initialStagePosition) const;
+	double2 convertIndexToPosition_mm(const int2 tileIndices) const;
+	InitialStagePosition stageScanningDir(const int wavelength_nm);
 };

@@ -818,26 +818,51 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 
 void seq_testCommandList()
 {
-	Command commandline1("MOVESTAGE", 750, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
-	Command commandline2("MOVESTAGE", 940, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
-
 	ROI roi_mm = { 0, 10, 10, 0 };
 	Sequencer sequence(roi_mm);
 
+	Sequencer::Command commandline1("MOVESTAGE", 750, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
+	Sequencer::Command commandline2("MOVESTAGE", 940, { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
+	//Command commandline3("CUT");
+
 	sequence.pushCommand(commandline1);
 	sequence.pushCommand(commandline2);
-
-
-	//sequence.printCommandList();
+	//sequence.pushCommand(commandline3);
+	sequence.printCommandList();
 
 	int iter = 2 * 67 - 1;
 	int2 indices = sequence.snakeIndices(iter, TOPRIGHT);
 	std::cout << "iter = " << iter << std::endl;
 	std::cout << "sequenced index ii = " << indices.at(XX)<< "\tsequenced index jj = " << indices.at(YY) << std::endl;
 
-	std::cout << "x (mm) = " << sequence.convertIndexToPosition_mm(indices).at(XX) << "\ty (mm)" <<
+	std::cout << "x (mm) = " << sequence.convertIndexToPosition_mm(indices).at(XX) << "\ty (mm) = " <<
 		sequence.convertIndexToPosition_mm(indices).at(YY) << std::endl;
 
 	std::cout << "Press any key to continue..." << std::endl;
 	getchar();
+}
+
+void generateSnakeScanning()
+{
+	std::vector<int> wavelengthList_nm = { 750, 940, 1040 };
+	ROI roi_mm = { 0, 10, 10, 0 };
+	Sequencer sequence(roi_mm);
+
+	for (int nSection = 0; nSection < sequence.mNslices; nSection++)
+	{
+		for (int iterWL = 0; iterWL < static_cast<int>(wavelengthList_nm.size()); iterWL++)
+		{
+			for (int iterTiles = 0; iterTiles < sequence.mNtilesTotal; iterTiles++)
+			{
+				Sequencer::Command commandline1("MOVESTAGE", wavelengthList_nm.at(iterWL), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
+				sequence.pushCommand(commandline1);
+				Sequencer::Command commandline2("IMAGE", wavelengthList_nm.at(iterWL), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
+				sequence.pushCommand(commandline2);
+			}
+
+		}
+		Sequencer::Command commandline3("CUT", wavelengthList_nm.at(0), { 1, 1, -1 }, { 0, 0 }, { 0, 100 }, { 10, 10 }, 0);
+		sequence.pushCommand(commandline3);
+	}
+
 }

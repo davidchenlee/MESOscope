@@ -283,64 +283,77 @@ public:
 //THE CLASS IS DEFINED HERE!!
 class Command {
 protected:
-	Action mAction;		//ACQSTACK, MOVESTAGE, CUTSLICE. Do not use strings. A vector of strings gets really big (>300MB)
+	Action mAction;		//ACQSTACK, MOVSTAGE, CUTSLICE. Do not use strings. A vector of strings gets really big (>300MB)
 	int mSleep_ms;
 public:
 	Command(Action action, const int sleep_ms = -1) : mAction(action), mSleep_ms(sleep_ms) {}
 
 	virtual ~Command() {}
 
-	virtual void printCommand()
-	{
-		std::cout << "parent print" << std::endl;
-	}
+	virtual void printCommand() {}
 
 	void printHeader()
 	{
-		std::cout << "Action\tSleep_ms\tStackCenter_mm\tLambda_nm\tScanDirZ\tz_um\tP_mW" << std::endl;
+		std::cout << "Action\t\tSleep_ms\tStackCtr_mm\tWavelen_nm\tScanDirZ\tz_um\tP_mW" << std::endl;
+	}
+
+	std::string actionString(Action action)
+	{
+		switch (action)
+		{
+		case CUTSLICE:
+			return "CUTSLICE";
+		case MOVSTAGE:
+			return "MOVSTAGE";
+		case ACQSTACK:
+			return "ACQSTACK";
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action unavailable");
+		}
+
 	}
 };
 
-class Cutting : public Command
+class CutSection : public Command
 {
 	const double mVibratomeHome = {};
 	const double mMicroscopeHome = {};
 	const int mNplanesPerSlice = 100;		//Number of planes in each slice
 	const int mNslices = 20;				//Number of slices in the entire sample
 public:
-	Cutting(const int sleep_ms): Command(CUTSLICE, sleep_ms) {}
+	CutSection(const int sleep_ms): Command(CUTSLICE, sleep_ms) {}
 	
 	void printCommand()
 	{
-		std::cout << mAction << "\t" << mSleep_ms << std::endl;
+		std::cout << actionString(mAction) << "\t" << mSleep_ms << std::endl;
 	}
 };
 
-class Moving : public Command
+class MoveStage : public Command
 {
 	double2 mStackCenter_mm;
 public:
-	Moving(const int sleep_ms, double2 stackCenter_mm) : Command(MOVESTAGE, sleep_ms), mStackCenter_mm(stackCenter_mm){}
+	MoveStage(const int sleep_ms, double2 stackCenter_mm) : Command(MOVSTAGE, sleep_ms), mStackCenter_mm(stackCenter_mm){}
 
 	void printCommand()
 	{
-		std::cout << mAction << "\t" << mSleep_ms << "\t\t(" << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")" << std::endl;
+		std::cout << actionString(mAction) << "\t" << mSleep_ms << "\t\t(" << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")" << std::endl;
 	}
 };
 
 
-class Imaging : public Command
+class AcqStack : public Command
 {
 	int mWavelength_nm;
 	int mScanDirZ;				//+1 for positive, -1 for negative
 	double mZ_um;				//Initial and final z position
 	double mP_mW;				//Initial and final laser power
 public:
-	Imaging(const int sleep_ms, const int wavelength_nm, const int scanDirZ, const double Z_um, const double P_mW) : Command(ACQSTACK, sleep_ms), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW){}
+	AcqStack(const int sleep_ms, const int wavelength_nm, const int scanDirZ, const double Z_um, const double P_mW) : Command(ACQSTACK, sleep_ms), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW){}
 
 	void printCommand()
 	{
-		std::cout << mAction << "\t" << mSleep_ms << "\t\t\t\t" << mWavelength_nm << "\t\t" << mScanDirZ << "\t\t" << mZ_um << "\t" << mP_mW << "\t" << std::endl;
+		std::cout << actionString(mAction) << "\t" << mSleep_ms << "\t\t\t\t" << mWavelength_nm << "\t\t" << mScanDirZ << "\t\t" << mZ_um << "\t" << mP_mW << "\t" << std::endl;
 	}
 };
 
@@ -357,8 +370,7 @@ public:
 	double2 mTileOverlap_um;				//Tile overlap in x and y
 	const int mNplanesPerSlice = 100;		//Number of planes in each slice
 	const int mNslices = 100;				//Number of slices in the entire sample
-	//std::vector <Command> mCommandList;
-	std::vector <Command*> mCommandList2;
+	std::vector <Command*> mCommandList;
 
 	Sequencer(const ROI roi_mm);
 	~Sequencer();

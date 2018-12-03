@@ -821,8 +821,9 @@ void seq_testCommandList()
 	ROI roi_mm = { 0, 10, 10, 0 };
 	Sequencer sequence(roi_mm);
 
-	sequence.pushCommand(new Moving( 0, { 0, 0 }));
-	sequence.pushCommand(new Imaging(0, 750, 1, 0, 10));
+	sequence.pushCommand(new CutSection(0));
+	sequence.pushCommand(new MoveStage( 0, { 0, 0 }));
+	sequence.pushCommand(new AcqStack(0, 750, 1, 0, 10));
 	sequence.printCommandList();
 
 	int iter = 2 * 67 - 1;
@@ -850,11 +851,11 @@ void seq_generateSnakeScanning()
 		{
 			for (int iterTiles = 0; iterTiles < sequence.mNtilesTotal; iterTiles++)
 			{
-				sequence.pushCommand(new Moving(0, { 0, 0 }));
-				sequence.pushCommand(new Imaging(0, wavelengthList_nm.at(iterWL), 1, 0, 10));
+				sequence.pushCommand(new MoveStage(0, { 0, 0 }));
+				sequence.pushCommand(new AcqStack(0, wavelengthList_nm.at(iterWL), 1, 0, 10));
 			}
 		}
-		sequence.pushCommand(new Cutting(0));
+		sequence.pushCommand(new CutSection(0));
 	}
 	//sequence.printCommandList();
 

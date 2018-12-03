@@ -1454,31 +1454,30 @@ Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
 
 Sequencer::~Sequencer()
 {
-	for (int iter = 0; iter < static_cast<int>(mCommandList2.size()); iter++)
-		delete mCommandList2[iter];
+	for (int iter = 0; iter < static_cast<int>(mCommandList.size()); iter++)
+		delete mCommandList[iter];
 }
 
 void Sequencer::pushCommand(Command *command)
 {
-	mCommandList2.push_back(command);
+	mCommandList.push_back(command);
 }
 
 
 void Sequencer::printCommandList()
 {
 	//Print out the commandline labels
-	if (!mCommandList2.empty())
+	if (!mCommandList.empty())
 	{
 		std::cout << "#\t";
-		mCommandList2.at(0)->printHeader();
+		mCommandList.at(0)->printHeader();
 	}
 
-	for (int iter = 0; iter < static_cast<int>(mCommandList2.size()); iter++)
+	for (int iter = 0; iter < static_cast<int>(mCommandList.size()); iter++)
 	{
 		std::cout << iter << "\t";
-		mCommandList2.at(iter)->printCommand();
+		mCommandList.at(iter)->printCommand();
 	}
-
 }
 
 

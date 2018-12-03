@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//seq_main(fpga);
-			//seq_mainFidelity(fpga);
+			seq_mainFidelity(fpga);
 			//seq_contAcquisition(fpga);
 			//seq_testGalvo(fpga);
 			//seq_testPixelclock(fpga);
@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 			//seq_testEthernetSpeed();
 			//seq_testVibratome(fpga);
 			//seq_testStageTrigAcq(fpga);
-			seq_testCommandList();
+			//seq_testCommandList();
 		}
 		catch (const std::invalid_argument &e)
 		{

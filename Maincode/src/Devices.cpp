@@ -284,8 +284,6 @@ unsigned char* const Image::accessTiff() const
 #pragma region "Vibratome"
 Vibratome::Vibratome(const FPGAns::FPGA &fpga): mFpga(fpga){}
 
-Vibratome::~Vibratome() {}
-
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
 void Vibratome::startStop_() const
 {
@@ -370,8 +368,6 @@ ResonantScanner::ResonantScanner(const FPGAns::RTsequence &RTsequence): mRTseque
 	mFFOV_um = mFullScan_um * mFillFactor;								//FFOV
 	mSampRes_umPerPix = mFFOV_um / mRTsequence.mWidthPerFrame_pix;		//Spatial sampling resolution
 }
-
-ResonantScanner::~ResonantScanner() {}
 
 //Set the control voltage that determines the scanning amplitude
 void ResonantScanner::setVoltage_(const double control_V)
@@ -477,9 +473,6 @@ Galvo::Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel): mRTs
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 }
 
-Galvo::~Galvo() {}
-
-
 void Galvo::pushVoltageSinglet(const double timeStep, const double AO_V) const
 {
 	mRTsequence.pushAnalogSinglet(mGalvoRTchannel, timeStep, AO_V);
@@ -510,7 +503,7 @@ PMT16X::PMT16X()
 
 PMT16X::~PMT16X()
 {
-
+	mSerial->close();
 }
 
 std::vector<uint8_t> PMT16X::sendCommand_(std::vector<uint8_t> command_array) const
@@ -827,7 +820,10 @@ Laser::Laser(RTchannel laserID): mLaserID(laserID)
 	mWavelength_nm = downloadWavelength_();
 }
 
-Laser::~Laser() {}
+Laser::~Laser()
+{
+	mSerial->close();
+}
 
 int Laser::downloadWavelength_()
 {
@@ -1017,9 +1013,6 @@ PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserID
 		mRTsequence.pushAnalogSingletFx2p14(mScalingRTchannel, 1.0);
 }
 
-//Do not set the output to 0 with the destructor to allow latching the last value
-PockelsCell::~PockelsCell() {}
-
 double PockelsCell::convert_mWToVolt_(const double power_mW) const
 {
 	double a, b, c;		//Calibration parameters
@@ -1145,8 +1138,6 @@ VirtualLaser::VirtualLaser(FPGAns::RTsequence &RTsequence, const int wavelength_
 {
 	setWavelength(mWavelength_nm);
 }
-
-VirtualLaser::~VirtualLaser() {}
 
 void VirtualLaser::setWavelength(const int wavelength_nm)
 {

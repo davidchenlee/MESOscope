@@ -48,7 +48,6 @@ namespace FPGAns
 			void pushUniformDwellTimes(const int calibFine_tick);
 		public:
 			Pixelclock(const int widthPerFrame_pix, const double dwell_us);
-			~Pixelclock();
 			QU32 readPixelclock() const;
 		};
 
@@ -77,7 +76,9 @@ namespace FPGAns
 			const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix = 400, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
 		RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
 		RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
-		~RTsequence();
+		RTsequence(RTsequence&&) = delete;					//Disable move constructor
+		RTsequence& operator=(RTsequence&&) = delete;		//Disable move-assignment constructor
+
 		void pushQueue(const RTchannel chan, QU32& queue);
 		void clearQueue(const RTchannel chan);
 		void pushDigitalSinglet(const RTchannel chan, double timeStep, const bool DO);

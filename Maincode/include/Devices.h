@@ -24,6 +24,11 @@ class Image
 public:
 	Image(FPGAns::RTsequence &RTsequence);
 	~Image();
+	Image(const Image&) = delete;				//Disable copy-constructor
+	Image& operator=(const Image&) = delete;	//Disable assignment-constructor
+	Image(Image&&) = delete;					//Disable move constructor
+	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
+
 	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
 	void acquire();
 	void initialize();
@@ -58,7 +63,6 @@ class Vibratome
 	void startStop_() const;
 public:
 	Vibratome(const FPGAns::FPGA &fpga);
-	~Vibratome();
 	void cutAndRetract(const int distance_mm) const;
 	void reset(const int distance_mm) const;
 };
@@ -75,7 +79,6 @@ class ResonantScanner
 	void setVoltage_(const double Vcontrol_V);
 public:
 	ResonantScanner(const FPGAns::RTsequence &RTsequence);
-	~ResonantScanner();
 	double mFillFactor;									//Fill factor: how much of an RS swing is covered by the pixels
 	double mFFOV_um;									//Current FFOV
 	double mSampRes_umPerPix;							//Spatial sampling resolution (um per pixel)
@@ -96,7 +99,6 @@ class Galvo
 	const double voltPerUm = 0.02417210 * V / um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 public:
 	Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel);
-	~Galvo();
 	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi_V, const double Vf_V) const;
 	void positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const;
@@ -117,6 +119,11 @@ class PMT16X
 public:
 	PMT16X();
 	~PMT16X();
+	PMT16X(const PMT16X&) = delete;				//Disable copy-constructor
+	PMT16X& operator=(const PMT16X&) = delete;	//Disable assignment-constructor
+	PMT16X(PMT16X&&) = delete;					//Disable move constructor
+	PMT16X& operator=(PMT16X&&) = delete;		//Disable move-assignment constructor
+
 	void readAllGain() const;
 	void setSingleGain(const int channel, const int gain) const;
 	void setAllGainToZero() const;
@@ -144,6 +151,11 @@ class Filterwheel
 public:
 	Filterwheel(const FilterwheelID ID);
 	~Filterwheel();
+	Filterwheel(const Filterwheel&) = delete;				//Disable copy-constructor
+	Filterwheel& operator=(const Filterwheel&) = delete;	//Disable assignment-constructor
+	Filterwheel(Filterwheel&&) = delete;					//Disable move constructor
+	Filterwheel& operator=(Filterwheel&&) = delete;			//Disable move-assignment constructor
+
 	void setColor(const Filtercolor color);
 	void setColor(const int wavelength_nm);
 };
@@ -164,6 +176,11 @@ class Laser
 public:
 	Laser(RTchannel laserID);
 	~Laser();
+	Laser(const Laser&) = delete;				//Disable copy-constructor
+	Laser& operator=(const Laser&) = delete;	//Disable assignment-constructor
+	Laser(Laser&&) = delete;					//Disable move constructor
+	Laser& operator=(Laser&&) = delete;			//Disable move-assignment constructor
+
 	void printWavelength_nm() const;
 	void setWavelength(const int wavelength_nm);
 	void setShutter(const bool state) const;
@@ -192,8 +209,9 @@ class PockelsCell
 
 	double convert_mWToVolt_(const double power_mW) const;
 public:
+	//Do not set the output to 0 through the destructor to allow latching the last value
 	PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserID, const int wavelength_nm);
-	~PockelsCell();
+
 	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
 	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
 	void pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
@@ -216,7 +234,6 @@ class VirtualLaser
 	Filterwheel mFWdetection;
 public:
 	VirtualLaser(FPGAns::RTsequence &RTsequence, const int wavelength_nm, const double power_mW);
-	~VirtualLaser();
 	void setWavelength(const int wavelength_nm);
 	void pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void setShutter(const bool state) const;
@@ -241,6 +258,11 @@ class Stage
 public:
 	Stage();
 	~Stage();
+	Stage(const Stage&) = delete;				//Disable copy-constructor
+	Stage& operator=(const Stage&) = delete;	//Disable assignment-constructor
+	Stage(Stage&&) = delete;					//Disable move constructor
+	Stage& operator=(Stage&&) = delete;			//Disable move-assignment constructor
+
 	double3 readPosition3_mm() const;
 	void printPosition3() const;
 	void moveStage(const Axis stage, const double position);
@@ -272,8 +294,6 @@ public:
 	public:
 		Command(const std::string action, const int wavelength_nm, const int3 stageScanDirection, const double2 stackCenter_mm, const double2 ZiZf_um = { -1,-1 }, const double2 PiPf_mW = { -1,-1 }, const int sleep_ms = -1) :
 			mAction(action), mWavelength_nm(wavelength_nm), mStageScanDirection(stageScanDirection), mStackCenter_mm(stackCenter_mm), mZiZf_um(ZiZf_um), mPiPf_mW(PiPf_mW), mSleep_ms(sleep_ms) {};
-
-		~Command() {};
 
 		void printHeader()
 		{

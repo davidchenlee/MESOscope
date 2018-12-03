@@ -246,9 +246,6 @@ namespace FPGAns
 		}
 	}
 
-	RTsequence::Pixelclock::~Pixelclock() {}
-
-
 	//Pixelclock with equal dwell times
 	//calibFine_tick: fine tune the pixelclock timing
 	void RTsequence::Pixelclock::pushUniformDwellTimes(const int calibFine_tick)
@@ -288,8 +285,6 @@ namespace FPGAns
 		mVectorOfQueues.at(PIXELCLOCK) = pixelclock.readPixelclock();
 	}
 
-	RTsequence::~RTsequence() {}
-
 	//Load the imaging parameters onto the FPGA
 	void RTsequence::uploadImagingParameters_() const
 	{
@@ -304,7 +299,7 @@ namespace FPGAns
 	
 		//SELECTORS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, mLineclockInput));										//Lineclock: resonant scanner (RS) or function generator (FG)
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, mStageAsTrigger));											//Trigger the acquisition with the PC or the Z stage
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, mStageAsTrigger));										//Trigger the acquisition with the PC or the Z stage
 	}
 
 	//Send every single queue in 'vectorOfQueue' to the FPGA buffer

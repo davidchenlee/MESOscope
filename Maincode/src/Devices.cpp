@@ -1434,6 +1434,63 @@ double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, cons
 #pragma endregion "Stages"
 
 
+#pragma region "Command"
+Command::Command(Action action, const int sleep_ms) : mAction(action), mSleep_ms(sleep_ms)
+{
+}
+
+std::string Command::actionToString_(Action action)
+{
+	switch (action)
+	{
+	case CUTSLICE:
+		return "CUTSLICE";
+	case MOVSTAGE:
+		return "MOVSTAGE";
+	case ACQSTACK:
+		return "ACQSTACK";
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action unavailable");
+	}
+}
+
+void Command::printCommand() {}
+
+void Command::printHeader()
+{
+	std::cout << "Action\t\tSleep_ms\tStackCtr_mm\tWavelen_nm\tScanDirZ\tz_um\tP_mW" << std::endl;
+}
+
+CutSection::CutSection(const int sleep_ms) : Command(CUTSLICE, sleep_ms)
+{
+}
+
+void CutSection::printCommand()
+{
+	std::cout << actionToString_(mAction) << "\t" << mSleep_ms << std::endl;
+}
+
+MoveStage::MoveStage(const int sleep_ms, double2 stackCenter_mm) : Command(MOVSTAGE, sleep_ms), mStackCenter_mm(stackCenter_mm)
+{
+}
+
+void MoveStage::printCommand()
+{
+	std::cout << actionToString_(mAction) << "\t" << mSleep_ms << "\t\t(" << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")" << std::endl;
+}
+
+AcqStack::AcqStack(const int sleep_ms, const int wavelength_nm, const int scanDirZ, const double Z_um, const double P_mW) : Command(ACQSTACK, sleep_ms), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW)
+{
+}
+
+void AcqStack::printCommand()
+{
+	std::cout << actionToString_(mAction) << "\t" << mSleep_ms << "\t\t\t\t" << mWavelength_nm << "\t\t" << mScanDirZ << "\t\t" << mZ_um << "\t" << mP_mW << "\t" << std::endl;
+}
+
+#pragma endregion "Command"
+
+
 #pragma region "Sequencer"
 Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
 {

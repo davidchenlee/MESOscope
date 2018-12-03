@@ -36,6 +36,7 @@ namespace Constants
 	enum Axis { XX, YY, ZZ };
 	enum RunMode { SINGLEMODE, CONTMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
 	enum InitialStagePosition { BOTTOMLEFT, TOPLEFT, BOTTOMRIGHT, TOPRIGHT };			//Bottom-left, top-left, bottom-right, top-right
+	enum Action { CUTSLICE, MOVESTAGE, ACQSTACK };
 
 	enum ComID { COMVISION, COMFIDELITY, COMFWDET , COMFWEXC, COMPMT16X };
 	extern const std::vector<std::string> assignCOM;

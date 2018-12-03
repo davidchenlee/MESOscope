@@ -29,8 +29,8 @@ int main(int argc, char* argv[])
 			//seq_testEthernetSpeed();
 			//seq_testVibratome(fpga);
 			//seq_testStageTrigAcq(fpga);
-			//seq_testCommandList();
-			seq_generateSnakeScanning();
+			seq_testCommandList();
+			//seq_generateSnakeScanning();
 		}
 		catch (const std::invalid_argument &e)
 		{

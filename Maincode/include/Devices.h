@@ -283,53 +283,65 @@ public:
 //THE CLASS IS DEFINED HERE!!
 class Command {
 protected:
-	std::string mAction;		//Image, move stage, cut, etc...
-	short mSleep_ms;
-	short mWavelength_nm;
-	short mScanDirZ;				//+1 for positive, -1 for negative
-	std::array<float,2> mStackCenter_mm;
-	float mZ_um;				//Initial and final z position
-	float mP_mW;				//Initial and final laser power
-
+	Action mAction;		//ACQSTACK, MOVESTAGE, CUTSLICE. Do not use strings. A vector of strings gets really big (>300MB)
+	int mSleep_ms;
 public:
-	Command(const std::string action, const short sleep_ms = -1, const std::array<float, 2> stackCenter_mm = { 0, 0 }, const short wavelength_nm = -1, const short scanDirZ = 0, const float Z_um = -1, const float P_mW = -1) :
-		mAction(action), mSleep_ms(sleep_ms), mStackCenter_mm(stackCenter_mm), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW) {};
+	Command(Action action, const int sleep_ms = -1) : mAction(action), mSleep_ms(sleep_ms) {}
 
 	virtual ~Command() {}
 
-	void printHeader()
+	virtual void printCommand()
 	{
-		std::cout << "Action\t\tSleep_ms\tStackCenter_mm\tLambda_nm\tScanDirZ\tz_um\tP_mW" << std::endl;
+		std::cout << "parent print" << std::endl;
 	}
 
-	void printCommand()
+	void printHeader()
 	{
-		std::cout << mAction << "\t" << mSleep_ms << "\t\t(" << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")\t\t" << mWavelength_nm << "\t\t" << mScanDirZ << "\t\t" << mZ_um << "\t" << mP_mW << "\t" << std::endl;
+		std::cout << "Action\tSleep_ms\tStackCenter_mm\tLambda_nm\tScanDirZ\tz_um\tP_mW" << std::endl;
 	}
 };
 
-
 class Cutting : public Command
 {
-	const double3 mVibratomeHome = {};
-	const double3 mMicroscopeHome = {};
+	const double mVibratomeHome = {};
+	const double mMicroscopeHome = {};
 	const int mNplanesPerSlice = 100;		//Number of planes in each slice
 	const int mNslices = 20;				//Number of slices in the entire sample
 public:
-	Cutting(const int sleep_ms): Command("CUT", sleep_ms) {};
+	Cutting(const int sleep_ms): Command(CUTSLICE, sleep_ms) {}
+	
+	void printCommand()
+	{
+		std::cout << mAction << "\t" << mSleep_ms << std::endl;
+	}
 };
 
 class Moving : public Command
 {
+	double2 mStackCenter_mm;
 public:
-	Moving(const int sleep_ms, const double2 stackCenter_mm) : Command("Moving", sleep_ms, stackCenter_mm){};
+	Moving(const int sleep_ms, double2 stackCenter_mm) : Command(MOVESTAGE, sleep_ms), mStackCenter_mm(stackCenter_mm){}
+
+	void printCommand()
+	{
+		std::cout << mAction << "\t" << mSleep_ms << "\t\t(" << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")" << std::endl;
+	}
 };
 
 
 class Imaging : public Command
 {
+	int mWavelength_nm;
+	int mScanDirZ;				//+1 for positive, -1 for negative
+	double mZ_um;				//Initial and final z position
+	double mP_mW;				//Initial and final laser power
 public:
-	Imaging(const int sleep_ms, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double Z_um, const double P_mW) : Command("IMAGE", sleep_ms, stackCenter_mm, wavelength_nm, scanDirZ, Z_um, P_mW){}
+	Imaging(const int sleep_ms, const int wavelength_nm, const int scanDirZ, const double Z_um, const double P_mW) : Command(ACQSTACK, sleep_ms), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW){}
+
+	void printCommand()
+	{
+		std::cout << mAction << "\t" << mSleep_ms << "\t\t\t\t" << mWavelength_nm << "\t\t" << mScanDirZ << "\t\t" << mZ_um << "\t" << mP_mW << "\t" << std::endl;
+	}
 };
 
 
@@ -345,10 +357,13 @@ public:
 	double2 mTileOverlap_um;				//Tile overlap in x and y
 	const int mNplanesPerSlice = 100;		//Number of planes in each slice
 	const int mNslices = 100;				//Number of slices in the entire sample
-	std::vector <Command> mCommandList;
+	//std::vector <Command> mCommandList;
+	std::vector <Command*> mCommandList2;
 
 	Sequencer(const ROI roi_mm);
-	void pushCommand(const Command command);
+	~Sequencer();
+
+	void pushCommand(Command *command);
 	void printCommandList();
 	int2 snakeIndices(const int iter, const InitialStagePosition initialStagePosition) const;
 	double2 convertIndexToPosition_mm(const int2 tileIndices) const;

@@ -1452,27 +1452,35 @@ Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
 	std::cout << "Ntiles x = " << mNtiles.at(XX) << "\tNtiles y = " << mNtiles.at(YY) << std::endl;
 }
 
-void Sequencer::pushCommand(const Command commandline)
+Sequencer::~Sequencer()
 {
-	mCommandList.push_back(commandline);
+	for (int iter = 0; iter < static_cast<int>(mCommandList2.size()); iter++)
+		delete mCommandList2[iter];
 }
+
+void Sequencer::pushCommand(Command *command)
+{
+	mCommandList2.push_back(command);
+}
+
 
 void Sequencer::printCommandList()
 {
 	//Print out the commandline labels
-	if (!mCommandList.empty())
+	if (!mCommandList2.empty())
 	{
 		std::cout << "#\t";
-		mCommandList.at(0).printHeader();
+		mCommandList2.at(0)->printHeader();
 	}
 
-	for (int iter = 0; iter < static_cast<int>(mCommandList.size()); iter++)
+	for (int iter = 0; iter < static_cast<int>(mCommandList2.size()); iter++)
 	{
 		std::cout << iter << "\t";
-		mCommandList.at(iter).printCommand();
+		mCommandList2.at(iter)->printCommand();
 	}
 
 }
+
 
 //The idea is to input the iteration number iter = 0, 1, ..., mNtilesTotal and output the corresponding tile index in the 2D matrix of mNtiles.at(XX)
 //by mNtiles.at(YY). The tile assignement depends on the scanning strategy.

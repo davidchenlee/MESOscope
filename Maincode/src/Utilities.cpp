@@ -86,7 +86,7 @@ Logger::~Logger()
 
 void Logger::record(const std::string description)
 {
-	mFileHandle << description << std::endl;
+	mFileHandle << description + "\n";
 }
 
 void Logger::record(const std::string description, const double input)

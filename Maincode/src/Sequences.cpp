@@ -864,14 +864,17 @@ void seq_generateSnakeScanning()
 
 	std::cout << "Grand total = " << Ngrandtotal << std::endl;
 
-	datalog.record("#\t" + sequence.mCommandList.front()->printHeader());
-	datalog.record("\t" + sequence.mCommandList.front()->printHeaderUnits());
-	for (int iter = 0; iter < 10; iter++)
+	datalog.record("#\t\t" + sequence.mCommandList.front()->printHeader());
+	datalog.record("\t\t" + sequence.mCommandList.front()->printHeaderUnits());
+	for (int iter = 0; iter < Ngrandtotal; iter++)
 	{
-		datalog.record(toString(iter,0) + "\t" + sequence.mCommandList.at(iter)->printCommand());
+		//All the number-to-string conversion and concatenation makes the code slow
+		//datalog.record(toString(iter,0) + "\t\t" + sequence.mCommandList.at(iter)->printCommand());
+
+		//To see how fast this part of the code can go
+		datalog.record(toString(iter, 0) + "\t\tMOVSTAGE\t0\t(0,0)\t750\t1\t0\t10\t10\t20");
 	}
 
-
-	std::cout << "Press any key to continue..." << std::endl;
-	getchar();
+	//std::cout << "Press any key to continue..." << std::endl;
+	//getchar();
 }

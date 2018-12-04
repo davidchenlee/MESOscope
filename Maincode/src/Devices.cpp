@@ -1461,7 +1461,7 @@ std::string Command::printCommand()
 
 std::string Command::printHeader()
 {
-	return 	"Action\t\tSleep\tStackCtr\tWavlen\tScanDir\tz_min\tz_max\tP_min\tP_max";
+	return 	"Action\t\tSleep\tStackCtr\tWavlen\tScanDir\tZ min\tZ max\tPow min\tPow max";
 }
 
 std::string Command::printHeaderUnits()
@@ -1475,7 +1475,6 @@ CutSection::CutSection(const int sleep_ms) : Command(CUTSLICE, sleep_ms)
 
 std::string CutSection::printCommand()
 {
-	//std::cout << actionToString_(mAction) << "\t" << mSleep_ms << std::endl;
 	return actionToString_(mAction) + "\t" + toString(mSleep_ms,0);
 }
 
@@ -1486,8 +1485,6 @@ AcqStack::AcqStack(const int sleep_ms, const double2 stackCenter_mm, const int w
 
 std::string AcqStack::printCommand()
 {
-	//std::cout << actionToString_(mAction) << "\t" << mSleep_ms << "\t\t(" << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")\t\t" << mWavelength_nm <<
-	//	"\t\t" << mScanDirZ << "\t\t" << mZ_um.at(0) << "/" << mZ_um.at(1) << "\t\t" << mP_mW.at(0) << "/" << mP_mW.at(1) << "\t" << std::endl;
 		return actionToString_(mAction) + "\t" + toString(mSleep_ms,0) + "\t(" +
 			toString(mStackCenter_mm.at(XX),3) + "," + toString(mStackCenter_mm.at(YY),3) + ")\t" +
 			toString(mWavelength_nm,0) + "\t" + toString(mScanDirZ,0) + "\t" +
@@ -1513,10 +1510,14 @@ Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
 	mNtilesTotal = mNtiles.at(XX) * mNtiles.at(YY);												//Total number of tiles
 
 	std::cout << "Ntiles x = " << mNtiles.at(XX) << "\tNtiles y = " << mNtiles.at(YY) << std::endl;
+
+	mFileHandle.open(folderPath + "Commandlist.txt");
 }
 
 Sequencer::~Sequencer()
 {
+	mFileHandle.close();
+
 	for (int iter = 0; iter < static_cast<int>(mCommandList.size()); iter++)
 		delete mCommandList.at(iter);
 }

@@ -318,6 +318,7 @@ public:
 
 class Sequencer
 {
+	std::ofstream mFileHandle;
 public:
 	ROI mROI_mm;							//Region of interest
 	double2 mSampleSize_um;					//Sample size in x and y

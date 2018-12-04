@@ -1458,7 +1458,7 @@ void Command::printCommand() {}
 
 void Command::printHeader()
 {
-	std::cout << "Action\t\tSleep_ms\tStackCtr_mm\tWavelen_nm\tScanDirZ\tz_um\tP_mW" << std::endl;
+	std::cout << "Action\t\tSleep_ms\tStackCtr_mm\tWavlen_nm\tScanDirZ\tz_um min/max\tP_mW min/max" << std::endl;
 }
 
 CutSection::CutSection(const int sleep_ms) : Command(CUTSLICE, sleep_ms)
@@ -1470,26 +1470,18 @@ void CutSection::printCommand()
 	std::cout << actionToString_(mAction) << "\t" << mSleep_ms << std::endl;
 }
 
-MoveStage::MoveStage(const int sleep_ms, double2 stackCenter_mm) : Command(MOVSTAGE, sleep_ms), mStackCenter_mm(stackCenter_mm)
-{
-}
-
-void MoveStage::printCommand()
-{
-	std::cout << actionToString_(mAction) << "\t" << mSleep_ms << "\t\t(" << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")" << std::endl;
-}
-
-AcqStack::AcqStack(const int sleep_ms, const int wavelength_nm, const int scanDirZ, const double Z_um, const double P_mW) : Command(ACQSTACK, sleep_ms), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW)
+AcqStack::AcqStack(const int sleep_ms, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW) : 
+	Command(ACQSTACK, sleep_ms), mStackCenter_mm(stackCenter_mm), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW)
 {
 }
 
 void AcqStack::printCommand()
 {
-	std::cout << actionToString_(mAction) << "\t" << mSleep_ms << "\t\t\t\t" << mWavelength_nm << "\t\t" << mScanDirZ << "\t\t" << mZ_um << "\t" << mP_mW << "\t" << std::endl;
+	std::cout << actionToString_(mAction) << "\t" << mSleep_ms << "\t\t(" << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")\t\t" << mWavelength_nm <<
+		"\t\t" << mScanDirZ << "\t\t" << mZ_um.at(0) << "/" << mZ_um.at(1) << "\t\t" << mP_mW.at(0) << "/" << mP_mW.at(1) << "\t" << std::endl;
 }
 
 #pragma endregion "Command"
-
 
 #pragma region "Sequencer"
 Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
@@ -1626,8 +1618,6 @@ InitialStagePosition Sequencer::stageScanningDir(const int wavelength_nm)
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": ");
 	}
-
-
 }
 #pragma endregion "sequencer"
 

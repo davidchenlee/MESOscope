@@ -822,8 +822,7 @@ void seq_testCommandList()
 	Sequencer sequence(roi_mm);
 
 	sequence.pushCommand(new CutSection(0));
-	sequence.pushCommand(new MoveStage( 0, { 0, 0 }));
-	sequence.pushCommand(new AcqStack(0, 750, 1, 0, 10));
+	sequence.pushCommand(new AcqStack(0, { 0,0 }, 750, 1, { 0,1 }, {10,20}));
 	sequence.printCommandList();
 
 	int iter = 2 * 67 - 1;
@@ -845,19 +844,22 @@ void seq_generateSnakeScanning()
 
 	Sequencer sequence(roi_mm);
 
+	int Ngrandtotal = sequence.mNslices * static_cast<int>(wavelengthList_nm.size()) * sequence.mNtilesTotal;
+
 	for (int nSection = 0; nSection < sequence.mNslices; nSection++)
 	{
 		for (int iterWL = 0; iterWL < static_cast<int>(wavelengthList_nm.size()); iterWL++)
 		{
 			for (int iterTiles = 0; iterTiles < sequence.mNtilesTotal; iterTiles++)
 			{
-				sequence.pushCommand(new MoveStage(0, { 0, 0 }));
-				sequence.pushCommand(new AcqStack(0, wavelengthList_nm.at(iterWL), 1, 0, 10));
+				sequence.pushCommand(new AcqStack(0, {0,0}, wavelengthList_nm.at(iterWL), 1, {0,1}, {10,20}));
 			}
 		}
 		sequence.pushCommand(new CutSection(0));
 	}
 	//sequence.printCommandList();
+
+	std::cout << "Grand total = " << sequence.mNslices * static_cast<int>(wavelengthList_nm.size())  * sequence.mNtilesTotal  << std::endl;
 
 	std::cout << "Press any key to continue..." << std::endl;
 	getchar();

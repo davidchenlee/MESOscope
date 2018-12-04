@@ -286,8 +286,8 @@ protected:
 	int mSleep_ms;
 	std::string actionToString_(Action action);
 public:
-	Command(Action action, const int sleep_ms);
-	virtual ~Command() {}
+	Command(Action action, const int sleep_ms = 0);
+	virtual ~Command() {};
 	virtual void printCommand();
 	void printHeader();
 };
@@ -297,31 +297,23 @@ class CutSection : public Command
 	const double mVibratomeHome = {};
 	const double mMicroscopeHome = {};
 	const int mNplanesPerSlice = 100;		//Number of planes in each slice
-	const int mNslices = 20;				//Number of slices in the entire sample
+	const int mNslices = 100;				//Number of slices in the entire sample
 public:
 	CutSection(const int sleep_ms);
 	void printCommand();
 };
 
-class MoveStage : public Command
-{
-	double2 mStackCenter_mm;
-public:
-	MoveStage(const int sleep_ms, double2 stackCenter_mm);
-	void printCommand();
-};
-
 class AcqStack : public Command
 {
+	double2 mStackCenter_mm;
 	int mWavelength_nm;
 	int mScanDirZ;				//+1 for positive, -1 for negative
-	double mZ_um;				//Initial and final z position
-	double mP_mW;				//Initial and final laser power
+	double2 mZ_um;				//Min and max z position
+	double2 mP_mW;				//Min and max laser power
 public:
-	AcqStack(const int sleep_ms, const int wavelength_nm, const int scanDirZ, const double Z_um, const double P_mW);
+	AcqStack(const int sleep_ms, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);
 	void printCommand();
 };
-
 
 class Sequencer
 {
@@ -333,6 +325,11 @@ public:
 	int mNtilesTotal;						//Total number of tiles
 	double2 mTileOverlap_um;				//Tile overlap in x and y
 	const int mNslices = 100;				//Number of slices in the entire sample
+
+	const double mVibratomeHome = {};
+	const double mMicroscopeHome = {};
+	const int mNplanesPerSlice = 100;		//Number of planes in each slice
+
 	std::vector <Command*> mCommandList;
 
 	Sequencer(const ROI roi_mm);

@@ -73,8 +73,8 @@ int main(int argc, char* argv[])
 		std::cout << "Press any key to continue..." << std::endl;
 		getchar();
 	}
-	std::cout << "Press any key to continue..." << std::endl;
-	getchar();
+	//std::cout << "Press any key to continue..." << std::endl;
+	//getchar();
 
 	return 0;
 }

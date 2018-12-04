@@ -840,9 +840,9 @@ void seq_testCommandList()
 
 void seq_generateSnakeScanning()
 {
-	std::vector<int> wavelengthList_nm = { 750, 940, 1040 };
-	//std::vector<int> wavelengthList_nm = { 750 };
-	ROI roi_mm = { 0, 10, 10, 0 };
+	const std::vector<int> wavelengthList_nm{ 750, 940, 1040 };
+	const ROI roi_mm = { 0, 10, 10, 0 };
+
 	Sequencer sequence(roi_mm);
 
 	for (int nSection = 0; nSection < sequence.mNslices; nSection++)

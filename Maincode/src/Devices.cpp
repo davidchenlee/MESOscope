@@ -1435,7 +1435,7 @@ double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, cons
 
 
 #pragma region "Command"
-Command::Command(Action action, const int sleep_ms) : mAction(action), mSleep_ms(sleep_ms)
+Command::Command(Action action, const int sleep_ms ) : mAction(action), mSleep_ms(sleep_ms)
 {
 }
 
@@ -1512,7 +1512,7 @@ Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
 Sequencer::~Sequencer()
 {
 	for (int iter = 0; iter < static_cast<int>(mCommandList.size()); iter++)
-		delete mCommandList[iter];
+		delete mCommandList.at(iter);
 }
 
 void Sequencer::pushCommand(Command *command)

@@ -332,12 +332,15 @@ public:
 	int2 mNtiles;							//Number of tiles in x and y
 	int mNtilesTotal;						//Total number of tiles
 	double2 mTileOverlap_um;				//Tile overlap in x and y
-	const int mNplanesPerSlice = 100;		//Number of planes in each slice
 	const int mNslices = 100;				//Number of slices in the entire sample
 	std::vector <Command*> mCommandList;
 
 	Sequencer(const ROI roi_mm);
 	~Sequencer();
+	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
+	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
+	Sequencer(Sequencer&&) = delete;					//Disable move constructor
+	Sequencer& operator=(Sequencer&&) = delete;			//Disable move-assignment constructor
 
 	void pushCommand(Command *command);
 	void printCommandList();

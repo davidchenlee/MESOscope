@@ -288,8 +288,9 @@ protected:
 public:
 	Command(Action action, const int sleep_ms = 0);
 	virtual ~Command() {};
-	virtual void printCommand();
-	void printHeader();
+	virtual std::string printCommand();
+	std::string printHeader();
+	std::string printHeaderUnits();
 };
 
 class CutSection : public Command
@@ -300,7 +301,7 @@ class CutSection : public Command
 	const int mNslices = 100;				//Number of slices in the entire sample
 public:
 	CutSection(const int sleep_ms);
-	void printCommand();
+	std::string printCommand();
 };
 
 class AcqStack : public Command
@@ -312,7 +313,7 @@ class AcqStack : public Command
 	double2 mP_mW;				//Min and max laser power
 public:
 	AcqStack(const int sleep_ms, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);
-	void printCommand();
+	std::string printCommand();
 };
 
 class Sequencer

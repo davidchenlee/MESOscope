@@ -301,32 +301,32 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	//DATALOG
 	{
 		Logger datalog("datalog_" + sampleName);
-		datalog.record("SAMPLE-------------------------------------------------------");
+		datalog.record("\nSAMPLE-------------------------------------------------------");
 		datalog.record("Sample = ", sampleName);
 		datalog.record("Immersion medium = ", immersionMedium);
 		datalog.record("Correction collar = ", collar);
-		datalog.record("FPGA---------------------------------------------------------");
+		datalog.record("\nFPGA---------------------------------------------------------");
 		datalog.record("FPGA clock (MHz) = ", tickPerUs);
-		datalog.record("LASER--------------------------------------------------------");
+		datalog.record("\nLASER--------------------------------------------------------");
 		datalog.record("Laser wavelength (nm) = ", wavelength_nm);
 		datalog.record("Laser power first frame (mW) = ", Pif_mW.front());
 		datalog.record("Laser power last frame (mW) = ", Pif_mW.back());
 		datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod);
-		datalog.record("SCAN---------------------------------------------------------");
+		datalog.record("\nSCAN---------------------------------------------------------");
 		datalog.record("RS FFOV (um) = ", RScanner.mFFOV_um);
 		datalog.record("RS period (us) = ", 2 * halfPeriodLineclock_us);
 		datalog.record("Pixel dwell time (us) = ", RTsequence.mDwell_us);
 		datalog.record("RS fill factor = ", RScanner.mFillFactor);
 		datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
 		datalog.record("Galvo time step (us) = ", galvoTimeStep);
-		datalog.record("IMAGE--------------------------------------------------------");
+		datalog.record("\nIMAGE--------------------------------------------------------");
 		datalog.record("Max count per pixel = ", RTsequence.mPulsesPerPixel);
 		datalog.record("8-bit upscaling factor = ", RTsequence.mUpscaleU8);
 		datalog.record("Width X (RS) (pix) = ", RTsequence.mWidthPerFrame_pix);
 		datalog.record("Height Y (galvo) (pix) = ", RTsequence.mHeightPerFrame_pix);
 		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes_umPerPix);
 		datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um / RTsequence.mHeightPerFrame_pix);
-		datalog.record("STAGE--------------------------------------------------------");
+		datalog.record("\nSTAGE--------------------------------------------------------");
 	}
 
 	//CREATE CONTAINERS FOR STORING THE STACK OF TIFFs
@@ -839,6 +839,8 @@ void seq_testCommandList()
 
 void seq_generateSnakeScanning()
 {
+	Logger datalog("Commandlist");
+
 	const std::vector<int> wavelengthList_nm{ 750, 940, 1040 };
 	const ROI roi_mm = { 0, 10, 10, 0 };
 
@@ -859,7 +861,16 @@ void seq_generateSnakeScanning()
 	}
 	//sequence.printCommandList();
 
-	std::cout << "Grand total = " << sequence.mNslices * static_cast<int>(wavelengthList_nm.size())  * sequence.mNtilesTotal  << std::endl;
+
+	std::cout << "Grand total = " << Ngrandtotal << std::endl;
+
+	datalog.record("#\t" + sequence.mCommandList.front()->printHeader());
+	datalog.record("\t" + sequence.mCommandList.front()->printHeaderUnits());
+	for (int iter = 0; iter < 10; iter++)
+	{
+		datalog.record(toString(iter,0) + "\t" + sequence.mCommandList.at(iter)->printCommand());
+	}
+
 
 	std::cout << "Press any key to continue..." << std::endl;
 	getchar();

@@ -1454,20 +1454,29 @@ std::string Command::actionToString_(Action action)
 	}
 }
 
-void Command::printCommand() {}
-
-void Command::printHeader()
+std::string Command::printCommand()
 {
-	std::cout << "Action\t\tSleep_ms\tStackCtr_mm\tWavlen_nm\tScanDirZ\tz_um min/max\tP_mW min/max" << std::endl;
+	return "";
+}
+
+std::string Command::printHeader()
+{
+	return 	"Action\t\tSleep\tStackCtr\tWavlen\tScanDir\tz_min\tz_max\tP_min\tP_max";
+}
+
+std::string Command::printHeaderUnits()
+{
+	return "\t\tms\t(mm,mm)\t\tnm\t\tmm\tmm\tmW\tmW";
 }
 
 CutSection::CutSection(const int sleep_ms) : Command(CUTSLICE, sleep_ms)
 {
 }
 
-void CutSection::printCommand()
+std::string CutSection::printCommand()
 {
-	std::cout << actionToString_(mAction) << "\t" << mSleep_ms << std::endl;
+	//std::cout << actionToString_(mAction) << "\t" << mSleep_ms << std::endl;
+	return actionToString_(mAction) + "\t" + toString(mSleep_ms,0);
 }
 
 AcqStack::AcqStack(const int sleep_ms, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW) : 
@@ -1475,10 +1484,15 @@ AcqStack::AcqStack(const int sleep_ms, const double2 stackCenter_mm, const int w
 {
 }
 
-void AcqStack::printCommand()
+std::string AcqStack::printCommand()
 {
-	std::cout << actionToString_(mAction) << "\t" << mSleep_ms << "\t\t(" << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")\t\t" << mWavelength_nm <<
-		"\t\t" << mScanDirZ << "\t\t" << mZ_um.at(0) << "/" << mZ_um.at(1) << "\t\t" << mP_mW.at(0) << "/" << mP_mW.at(1) << "\t" << std::endl;
+	//std::cout << actionToString_(mAction) << "\t" << mSleep_ms << "\t\t(" << mStackCenter_mm.at(XX) << "," << mStackCenter_mm.at(YY) << ")\t\t" << mWavelength_nm <<
+	//	"\t\t" << mScanDirZ << "\t\t" << mZ_um.at(0) << "/" << mZ_um.at(1) << "\t\t" << mP_mW.at(0) << "/" << mP_mW.at(1) << "\t" << std::endl;
+		return actionToString_(mAction) + "\t" + toString(mSleep_ms,0) + "\t(" +
+			toString(mStackCenter_mm.at(XX),3) + "," + toString(mStackCenter_mm.at(YY),3) + ")\t" +
+			toString(mWavelength_nm,0) + "\t" + toString(mScanDirZ,0) + "\t" +
+			toString(mZ_um.at(0), 3) + "\t" + toString(mZ_um.at(1), 3) + "\t" +
+			toString(mP_mW.at(0), 3) + "\t" + toString(mP_mW.at(1), 3);
 }
 
 #pragma endregion "Command"

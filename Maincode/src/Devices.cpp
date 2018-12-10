@@ -1435,7 +1435,7 @@ double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, cons
 
 
 #pragma region "SingleCommand"
-SingleCommand::SingleCommand(Action action, const int sleep_ms ) : mAction(action), mSleep_ms(sleep_ms)
+SingleCommand::SingleCommand(Action action, const int vibratomeSliceIndex) : mAction(action), mVibratomeSliceIndex(vibratomeSliceIndex)
 {
 }
 
@@ -1444,11 +1444,11 @@ std::string SingleCommand::actionToString_(Action action)
 	switch (action)
 	{
 	case CUTSLICE:
-		return "CUTSLICE";
+		return "CUT";
 	case MOVSTAGE:
-		return "MOVSTAGE";
+		return "MOV";
 	case ACQSTACK:
-		return "ACQSTACK";
+		return "ACQ";
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action unavailable");
 	}
@@ -1463,29 +1463,33 @@ void SingleCommand::printToFile(std::ofstream *fileHandle) {/*Virtual function*/
 
 std::string SingleCommand::printHeader()
 {
-	return 	"Action\t\tSleep\tStack_Center\tWavlen\tScanDir\tZ_min\tZ_max\tPow_min\tPow_max";
+	return 	"Action\tSlice#\tWavlen\tStack#\tStack_Center\tScanDir\tZ_min\tZ_max\tP_min\tP_max";
 }
 
 std::string SingleCommand::printHeaderUnits()
 {
-	return "\tms\t(mm,mm)\t\tnm\t\tmm\tmm\tmW\tmW";
+	return "\tnm\t\tmm\t\tnm\tmm\tmm\tmW\tmW";
 }
 
-CutSection::CutSection(const int sleep_ms) : SingleCommand(CUTSLICE, sleep_ms) {}
+CutSection::CutSection(const int vibratomeSliceIndex) : SingleCommand(CUTSLICE, vibratomeSliceIndex) {}
 
 void CutSection::printToFile(std::ofstream *fileHandle)
 {
-	*fileHandle << actionToString_(mAction) + "\t" << mSleep_ms << "\n";
+	*fileHandle << actionToString_(mAction) + "***********************************************************************************************************************************\n";
 }
 
-AcqStack::AcqStack(const int sleep_ms, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW) : 
-	SingleCommand(ACQSTACK, sleep_ms), mStackCenter_mm(stackCenter_mm), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW) {}
+AcqStack::AcqStack(const int vibratomeSliceIndex, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW) :
+	SingleCommand(ACQSTACK, vibratomeSliceIndex), mStackCenter_mm(stackCenter_mm), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW) {}
+
+AcqStack::AcqStack(const int vibratomeSliceIndex, const int2 stackIndices, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW) :
+	SingleCommand(ACQSTACK, vibratomeSliceIndex), mStackIndices(stackIndices), mStackCenter_mm(stackCenter_mm), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW) {}
 
 void AcqStack::printToFile(std::ofstream *fileHandle)
 {
-	*fileHandle << actionToString_(mAction) << "\t" << mSleep_ms << "\t(" <<
-		std::fixed << std::setprecision(3) << mStackCenter_mm.at(0) << "\t" << mStackCenter_mm.at(1) << ")\t" <<
-		std::setprecision(0) << mWavelength_nm << "\t" << mScanDirZ << "\t" << 
+	*fileHandle << actionToString_(mAction) << "\t" << mVibratomeSliceIndex << "\t" << mWavelength_nm << "\t(" <<
+		mStackIndices.at(XX) << "," << mStackIndices.at(YY) << ")\t(" <<
+		std::fixed << std::setprecision(3) << mStackCenter_mm.at(0) << "," << mStackCenter_mm.at(1) << ")\t" <<
+		std::setprecision(0) << mScanDirZ << "\t" <<
 		std::setprecision(3) << mZ_um.at(0) << "\t" << mZ_um.at(1) << "\t" <<
 		std::setprecision(0) << mP_mW.at(0) << "\t" << mP_mW.at(1) << "\n";
 }
@@ -1506,10 +1510,9 @@ Sequencer::Sequencer(const ROI roi_mm, const std::vector<int> wavelengthList_nm)
 	mNstacksInEachDirection.at(XX) = static_cast<int>(std::ceil(mSampleSize_um.at(XX) / mFOV_um.at(XX)));		//Number of stacks in x
 	mNstacksInEachDirection.at(YY) = static_cast<int>(std::ceil(mSampleSize_um.at(YY) / mFOV_um.at(YY)));		//Number of stacks in y
 	mNtotalStacksPerVibratomeSlice = mNstacksInEachDirection.at(XX) * mNstacksInEachDirection.at(YY);			//Total number of stacks
+	mNtotalStackEntireSample = mNvibratomeSlices * static_cast<int>(wavelengthList_nm.size()) * mNtotalStacksPerVibratomeSlice;
 
 	//std::cout << "Nstacks x = " << mNstacksInEachDirection.at(XX) << "\tNstacks y = " << mNstacksInEachDirection.at(YY) << std::endl;
-
-	mNtotalStackEntireSample = mNvibratomeSlices * static_cast<int>(wavelengthList_nm.size()) * mNtotalStacksPerVibratomeSlice;
 	//std::cout << "Total stacks entire sample = " << sequence.mNtotalStackEntireSample << std::endl;
 }
 
@@ -1521,10 +1524,30 @@ Sequencer::~Sequencer()
 
 //Input the iteration number iter = 0, 1, ..., mNtotalStacksPerVibratomeSlice and output the corresponding stack index in the 2D matrix of mNstacksInEachDirection.at(XX) by mNstacksInEachDirection.at(YY).
 //The stack order depends on the scanning strategy.
-int2 Sequencer::iterToStackIndex_(const int iterStack, const InitialStageCorner initialStagePosition) const
+int2 Sequencer::iterToStackIndices_(const int iterStack, const int wavelength_nm) const
 {
 	if (iterStack < 0 || iterStack >= mNtotalStacksPerVibratomeSlice)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": index out of bound");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Index out of bound");
+
+	//Determine the initial position of the stage
+	InitialStageCorner initialStageCorner;
+	switch (wavelength_nm)
+	{
+	case 750:
+		initialStageCorner = BOTTOMLEFT;			//start scanning from the bottom-left
+		break;
+	case 940:
+		if (mNstacksInEachDirection.at(YY) % 2)
+			initialStageCorner = TOPRIGHT;			//If mNstacksInEachDirection.at(YY) is odd, start scanning from the top-left
+		else
+			initialStageCorner = TOPLEFT;			//If mNstacksInEachDirection.at(YY) is even, start scanning from the top-right
+		break;
+	case 1040:
+		initialStageCorner = BOTTOMLEFT;			//start scanning from the bottom-left
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid wavelength");
+	}
 
 	int2 stackIndex;
 	stackIndex.at(XX) = iterStack % (mNstacksInEachDirection.at(XX));										//x index
@@ -1535,7 +1558,7 @@ int2 Sequencer::iterToStackIndex_(const int iterStack, const InitialStageCorner 
 	//The initial position of the stage in the sample plane determines the scanning direction
 	//The y-stage is the slowest to react because it sits under of the x and z stages.
 	//Therefore, for a snake pattern, alternate the motion in x but keep the motion in y unchanged.
-	switch (initialStagePosition)
+	switch (initialStageCorner)
 	{
 	case BOTTOMLEFT:
 		stageMotionDirX = 1 - 2 * (stackIndex.at(YY) % 2); //1 for even Y stack, -1 for odd Y stack
@@ -1574,44 +1597,18 @@ int2 Sequencer::iterToStackIndex_(const int iterStack, const InitialStageCorner 
 		stackIndex.at(YY) = mNstacksInEachDirection.at(YY) - 1 - stackIndex.at(YY);
 	}
 	else
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid direction of motion for the stage");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid direction of motion for the stage");
 
 	return stackIndex;
 }
 
-double2 Sequencer::stackIndexToStackCenter_mm_(const int2 stackIndices) const
+double2 Sequencer::stackIndicesToStackCenter_mm_(const int2 stackIndices) const
 {
 	double2 stagePosition_mm;
 	stagePosition_mm.at(XX) = mFOV_um.at(XX)/1000 * (stackIndices.at(XX) + 0.5);	// (stackIndices + 0.5) ranges from 0.5 to (mNstacksInEachDirection - 0.5)
 	stagePosition_mm.at(YY) = mFOV_um.at(YY)/1000 * (stackIndices.at(YY) + 0.5);	// (stackIndices + 0.5) ranges from 0.5 to (mNstacksInEachDirection - 0.5)
 
 	return stagePosition_mm;
-}
-
-//Forward scan for 750 nm then scan back for 940 nm, etc
-InitialStageCorner Sequencer::initialStageCorner_(const int wavelength_nm) const
-{
-	switch (wavelength_nm)
-	{
-	case 750:
-		return BOTTOMLEFT;			//start scanning from the bottom-left
-	case 940:
-		if (mNstacksInEachDirection.at(YY) % 2)
-			return TOPRIGHT;		//If mNstacksInEachDirection.at(YY) is odd, start scanning from the top-left
-		else
-			return TOPLEFT;			//If mNstacksInEachDirection.at(YY) is even, start scanning from the top-right
-	case 1040:
-		return BOTTOMLEFT;			//start scanning from the bottom-left
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": ");
-	}
-}
-
-double2 Sequencer::iterToStackCenter_mm(const int iterStack, const int wavelength_nm)
-{
-	const int2 stackIndex = iterToStackIndex_(iterStack, initialStageCorner_(wavelength_nm));
-
-	return stackIndexToStackCenter_mm_(stackIndex);
 }
 
 void Sequencer::pushCommand(SingleCommand *command)
@@ -1621,24 +1618,23 @@ void Sequencer::pushCommand(SingleCommand *command)
 
 void Sequencer::generateCommandlist()
 {
-	const int sleep_ms = 0;
-
-	for (int nVibratomeSlice = 0; nVibratomeSlice < mNvibratomeSlices; nVibratomeSlice++)
+	for (int iterVibratomeSlice = 0; iterVibratomeSlice < mNvibratomeSlices; iterVibratomeSlice++)
 	{
 		int scanDirZ = 1;
 		for (int iterWL = 0; iterWL < static_cast<int>(mWavelengthList_nm.size()); iterWL++)
 		{
 			for (int iterStack = 0; iterStack < mNtotalStacksPerVibratomeSlice; iterStack++)
 			{
-				double2 stackCenter_mm = iterToStackCenter_mm(iterStack, mWavelengthList_nm.at(iterWL));
+				const int2 stackIndices = iterToStackIndices_(iterStack, mWavelengthList_nm.at(iterWL));
+				const double2 stackCenter_mm = stackIndicesToStackCenter_mm_(stackIndices);
 				const double2 Z_um = { 0, 1 };
 				const double2 P_mW = { 10, 20 };
-				pushCommand(new AcqStack(sleep_ms, stackCenter_mm, mWavelengthList_nm.at(iterWL), scanDirZ, Z_um, P_mW));
+				pushCommand(new AcqStack(iterVibratomeSlice, stackIndices, stackCenter_mm, mWavelengthList_nm.at(iterWL), scanDirZ, Z_um, P_mW));
 
 				scanDirZ *= -1;		//Alternate the scanning direction in z
 			}
 		}
-		pushCommand(new CutSection(sleep_ms));
+		pushCommand(new CutSection(iterVibratomeSlice));
 	}
 }
 
@@ -1651,14 +1647,14 @@ void Sequencer::printToFile(const std::string fileName) const
 	//Print out the header
 	if (!mCommandList.empty())
 	{
-		*fileHandle << "Iter\tStack\t" + mCommandList.front()->printHeader() + "\n";
-		*fileHandle << "\t\t\t" + mCommandList.front()->printHeaderUnits() + "\n";
+		*fileHandle << "Iter\t" + mCommandList.front()->printHeader() + "\n";
+		*fileHandle << "\t\t" + mCommandList.front()->printHeaderUnits() + "\n";
 	}
 
-	for (int iter = 0; iter < mNtotalStackEntireSample; iter++)
-	//for (int iter = 0; iter < 10; iter++)
+	//for (int iter = 0; iter < mNtotalStackEntireSample; iter++)
+	for (int iter = 0; iter < 10; iter++)
 	{
-		*fileHandle << iter << "\t(" << mStackIndex.at(iter).at(XX) << "," << mStackIndex.at(iter).at(YY) << ")\t";		//Print out the iteration number and stack indices
+		*fileHandle << iter << "\t";		//Print out the iteration number
 		mCommandList.at(iter)->printToFile(fileHandle);
 	}
 	fileHandle->close();

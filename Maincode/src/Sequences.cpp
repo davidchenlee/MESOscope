@@ -826,12 +826,12 @@ void seq_testCommandList()
 	sequence.printCommandList();
 
 	int iter = 2 * 67 - 1;
-	int2 indices = sequence.iterToStackIndex_(iter, TOPRIGHT);
+	int2 indices = sequence.iterToStackIndices_(iter, TOPRIGHT);
 	std::cout << "iter = " << iter << std::endl;
 	std::cout << "sequenced index ii = " << indices.at(XX)<< "\tsequenced index jj = " << indices.at(YY) << std::endl;
 
-	std::cout << "x (mm) = " << sequence.stackIndexToStackCenter_mm_(indices).at(XX) << "\ty (mm) = " <<
-		sequence.stackIndexToStackCenter_mm_(indices).at(YY) << std::endl;
+	std::cout << "x (mm) = " << sequence.stackIndicesToStackCenter_mm_(indices).at(XX) << "\ty (mm) = " <<
+		sequence.stackIndicesToStackCenter_mm_(indices).at(YY) << std::endl;
 
 	std::cout << "Press any key to continue..." << std::endl;
 	getchar();
@@ -846,6 +846,6 @@ void seq_generateScanningPattern()
 	sequence.generateCommandlist();
 	sequence.printToFile("Commandlist");
 
-	std::cout << "Press any key to continue..." << std::endl;
-	getchar();
+	//std::cout << "Press any key to continue..." << std::endl;
+	//getchar();
 }

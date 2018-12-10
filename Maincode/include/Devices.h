@@ -282,11 +282,11 @@ public:
 
 class SingleCommand {
 protected:
-	Action mAction;		//ACQSTACK, MOVSTAGE, CUTSLICE. Using enum for lightweight
-	int mSleep_ms;
+	Action mAction;		//ACQSTACK, MOVSTAGE, CUTSLICE
 	std::string actionToString_(Action action);
+	int mVibratomeSliceIndex = -1;
 public:
-	SingleCommand(Action action, const int sleep_ms = 0);
+	SingleCommand(Action action, const int vibratomeSliceIndex);
 	virtual ~SingleCommand() {};
 	virtual std::string printCommand();
 	virtual void printToFile(std::ofstream *fileHandle);
@@ -299,31 +299,30 @@ class CutSection : public SingleCommand
 	const double mVibratomeHome = {};
 	const double mMicroscopeHome = {};
 	const int mNplanesPerSlice = 100;		//Number of planes in each slice
-	const int mNvibratomeSlices = 100;				//Number of slices in the entire sample
+	const int mNvibratomeSlices = 100;		//Number of slices in the entire sample
 public:
-	CutSection(const int sleep_ms);
+	CutSection(const int vibratomeSliceIndex);
 	void printToFile(std::ofstream *fileHandle);
 };
 
 class AcqStack : public SingleCommand
 {
-	int2 mStackIndices = {-1,-1};			//tmp for printing the stack index
+	int2 mStackIndices = {-1,-1};			//only needed for printing out the stack index
 	double2 mStackCenter_mm;
 	int mWavelength_nm;
 	int mScanDirZ;				//+1 for positive, -1 for negative
 	double2 mZ_um;				//Min and max z position
 	double2 mP_mW;				//Min and max laser power
 public:
-	AcqStack(const int sleep_ms, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);
-	AcqStack(const int sleep_ms, const int2 stackIndices, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);
+	AcqStack(const int vibratomeSliceIndex, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);
+	AcqStack(const int vibratomeSliceIndex, const int2 stackIndices, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);	//Allow indexing the stacks for debugging
 	void printToFile(std::ofstream *fileHandle);
 };
 
 class Sequencer
 {
-	InitialStageCorner initialStageCorner_(const int wavelength_nm) const;
-	int2 iterToStackIndex_(const int iterStack, const InitialStageCorner initialStageCorner_) const;
-	double2 stackIndexToStackCenter_mm_(const int2 stackIndices) const;
+	int2 iterToStackIndices_(const int iterStack, const int wavelength_nm) const;
+	double2 stackIndicesToStackCenter_mm_(const int2 stackIndices) const;
 public:
 	std::vector<int> mWavelengthList_nm;	//Wavelengths
 	ROI mROI_mm;							//Region of interest
@@ -341,7 +340,6 @@ public:
 	const int mNplanesPerSlice = 100;		//Number of planes in each slice
 
 	std::vector<SingleCommand*> mCommandList;
-	std::vector<int2> mStackIndex;
 
 	Sequencer(const ROI roi_mm, const std::vector<int> wavelengthList_nm);
 	~Sequencer();
@@ -351,7 +349,6 @@ public:
 	Sequencer& operator=(Sequencer&&) = delete;			//Disable move-assignment constructor
 
 	void pushCommand(SingleCommand *command);
-	double2 iterToStackCenter_mm(const int iterStack, const int wavelength_nm);
 	void generateCommandlist();
 	void printToFile(const std::string fileName) const;
 };

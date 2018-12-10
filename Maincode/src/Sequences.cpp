@@ -206,7 +206,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.050, 14.150, 18.678 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.683 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -861,8 +861,10 @@ void seq_generateSnakeScanning()
 	}
 	//sequence.printCommandList();
 
-
 	std::cout << "Grand total = " << Ngrandtotal << std::endl;
+
+	std::ofstream *fileHandle = new std::ofstream(folderPath + "CommandlistTest.txt");
+	//fileHandle->open(folderPath + "CommandlistTest.txt");
 
 	datalog.record("#\t\t" + sequence.mCommandList.front()->printHeader());
 	datalog.record("\t\t" + sequence.mCommandList.front()->printHeaderUnits());
@@ -872,8 +874,12 @@ void seq_generateSnakeScanning()
 		//datalog.record(toString(iter,0) + "\t\t" + sequence.mCommandList.at(iter)->printCommand());
 
 		//To see how fast this part of the code can go
-		datalog.record(toString(iter, 0) + "\t\tMOVSTAGE\t0\t(0,0)\t750\t1\t0\t10\t10\t20");
+		//datalog.record(toString(iter, 0) + "\t\tMOVSTAGE\t0\t(0,0)\t750\t1\t0\t10\t10\t20");
+
+		//Faster implementation
+		sequence.mCommandList.at(iter)->printToFile(fileHandle, iter);
 	}
+	fileHandle->close();
 
 	//std::cout << "Press any key to continue..." << std::endl;
 	//getchar();

@@ -289,6 +289,7 @@ public:
 	Command(Action action, const int sleep_ms = 0);
 	virtual ~Command() {};
 	virtual std::string printCommand();
+	virtual void printToFile(std::ofstream *fileHandle, const int iter);
 	std::string printHeader();
 	std::string printHeaderUnits();
 };
@@ -314,11 +315,11 @@ class AcqStack : public Command
 public:
 	AcqStack(const int sleep_ms, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);
 	std::string printCommand();
+	void printToFile(std::ofstream *fileHandle, const int iter);
 };
 
 class Sequencer
 {
-	std::ofstream mFileHandle;
 public:
 	ROI mROI_mm;							//Region of interest
 	double2 mSampleSize_um;					//Sample size in x and y

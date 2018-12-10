@@ -1459,6 +1459,10 @@ std::string Command::printCommand()
 	return "";
 }
 
+void Command::printToFile(std::ofstream *fileHandle, int iter)
+{
+}
+
 std::string Command::printHeader()
 {
 	return 	"Action\t\tSleep\tStackCtr\tWavlen\tScanDir\tZ min\tZ max\tPow min\tPow max";
@@ -1492,6 +1496,13 @@ std::string AcqStack::printCommand()
 			toString(mP_mW.at(0), 3) + "\t" + toString(mP_mW.at(1), 3);
 }
 
+void AcqStack::printToFile(std::ofstream *fileHandle, const int iter)
+{
+	*fileHandle << iter << "\t" << mAction << "\t" << mSleep_ms << "\t" << mStackCenter_mm.at(0) << "\t" << mStackCenter_mm.at(1)
+		<< "\t" <<	mWavelength_nm << "\t" << mScanDirZ << "\t" << mZ_um.at(0) << "\t" << mZ_um.at(1) << "\t" <<
+		mP_mW.at(0) << "\t" << mP_mW.at(1) << "\n";
+}
+
 #pragma endregion "Command"
 
 #pragma region "Sequencer"
@@ -1511,13 +1522,11 @@ Sequencer::Sequencer(const ROI roi_mm): mROI_mm(roi_mm)
 
 	std::cout << "Ntiles x = " << mNtiles.at(XX) << "\tNtiles y = " << mNtiles.at(YY) << std::endl;
 
-	mFileHandle.open(folderPath + "Commandlist.txt");
+	
 }
 
 Sequencer::~Sequencer()
 {
-	mFileHandle.close();
-
 	for (int iter = 0; iter < static_cast<int>(mCommandList.size()); iter++)
 		delete mCommandList.at(iter);
 }

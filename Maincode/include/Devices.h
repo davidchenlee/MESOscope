@@ -280,33 +280,34 @@ public:
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
 };
 
-class Command {
+class SingleCommand {
 protected:
 	Action mAction;		//ACQSTACK, MOVSTAGE, CUTSLICE. Using enum for lightweight
 	int mSleep_ms;
 	std::string actionToString_(Action action);
 public:
-	Command(Action action, const int sleep_ms = 0);
-	virtual ~Command() {};
+	SingleCommand(Action action, const int sleep_ms = 0);
+	virtual ~SingleCommand() {};
 	virtual std::string printCommand();
-	virtual void printToFile(std::ofstream *fileHandle, const int iter);
+	virtual void printToFile(std::ofstream *fileHandle);
 	std::string printHeader();
 	std::string printHeaderUnits();
 };
 
-class CutSection : public Command
+class CutSection : public SingleCommand
 {
 	const double mVibratomeHome = {};
 	const double mMicroscopeHome = {};
 	const int mNplanesPerSlice = 100;		//Number of planes in each slice
-	const int mNslices = 100;				//Number of slices in the entire sample
+	const int mNvibratomeSlices = 100;				//Number of slices in the entire sample
 public:
 	CutSection(const int sleep_ms);
-	std::string printCommand();
+	void printToFile(std::ofstream *fileHandle);
 };
 
-class AcqStack : public Command
+class AcqStack : public SingleCommand
 {
+	int2 mStackIndices = {-1,-1};			//tmp for printing the stack index
 	double2 mStackCenter_mm;
 	int mWavelength_nm;
 	int mScanDirZ;				//+1 for positive, -1 for negative
@@ -314,37 +315,43 @@ class AcqStack : public Command
 	double2 mP_mW;				//Min and max laser power
 public:
 	AcqStack(const int sleep_ms, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);
-	std::string printCommand();
-	void printToFile(std::ofstream *fileHandle, const int iter);
+	AcqStack(const int sleep_ms, const int2 stackIndices, const double2 stackCenter_mm, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);
+	void printToFile(std::ofstream *fileHandle);
 };
 
 class Sequencer
 {
+	InitialStageCorner initialStageCorner_(const int wavelength_nm) const;
+	int2 iterToStackIndex_(const int iterStack, const InitialStageCorner initialStageCorner_) const;
+	double2 stackIndexToStackCenter_mm_(const int2 stackIndices) const;
 public:
+	std::vector<int> mWavelengthList_nm;	//Wavelengths
 	ROI mROI_mm;							//Region of interest
 	double2 mSampleSize_um;					//Sample size in x and y
 	double2 mFOV_um = {150, 200};			//Field of view in x and y
-	int2 mNtiles;							//Number of tiles in x and y
-	int mNtilesTotal;						//Total number of tiles
-	double2 mTileOverlap_um;				//Tile overlap in x and y
-	const int mNslices = 100;				//Number of slices in the entire sample
+	int2 mNstacksInEachDirection;			//Number of stacks in x and y in a vibratome slice
+	int mNtotalStacksPerVibratomeSlice;		//Total number of stacks in a vibratome slice
+	double2 mStackOverlap_um;				//stack overlap in x and y
+	const int mNvibratomeSlices = 100;		//Number of vibratome slices in the entire sample
+
+	int mNtotalStackEntireSample;			//Total number of stacks in the entire sample
 
 	const double mVibratomeHome = {};
 	const double mMicroscopeHome = {};
 	const int mNplanesPerSlice = 100;		//Number of planes in each slice
 
-	std::vector <Command*> mCommandList;
+	std::vector<SingleCommand*> mCommandList;
+	std::vector<int2> mStackIndex;
 
-	Sequencer(const ROI roi_mm);
+	Sequencer(const ROI roi_mm, const std::vector<int> wavelengthList_nm);
 	~Sequencer();
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor
 	Sequencer& operator=(Sequencer&&) = delete;			//Disable move-assignment constructor
 
-	void pushCommand(Command *command);
-	void printCommandList();
-	int2 snakeIndices(const int iter, const InitialStagePosition initialStagePosition) const;
-	double2 convertIndexToPosition_mm(const int2 tileIndices) const;
-	InitialStagePosition stageScanningDir(const int wavelength_nm);
+	void pushCommand(SingleCommand *command);
+	double2 iterToStackCenter_mm(const int iterStack, const int wavelength_nm);
+	void generateCommandlist();
+	void printToFile(const std::string fileName) const;
 };

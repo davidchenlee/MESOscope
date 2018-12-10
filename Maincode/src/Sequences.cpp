@@ -815,7 +815,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 
 }
 
-
+/*
 void seq_testCommandList()
 {
 	ROI roi_mm = { 0, 10, 10, 0 };
@@ -826,61 +826,26 @@ void seq_testCommandList()
 	sequence.printCommandList();
 
 	int iter = 2 * 67 - 1;
-	int2 indices = sequence.snakeIndices(iter, TOPRIGHT);
+	int2 indices = sequence.iterToStackIndex_(iter, TOPRIGHT);
 	std::cout << "iter = " << iter << std::endl;
 	std::cout << "sequenced index ii = " << indices.at(XX)<< "\tsequenced index jj = " << indices.at(YY) << std::endl;
 
-	std::cout << "x (mm) = " << sequence.convertIndexToPosition_mm(indices).at(XX) << "\ty (mm) = " <<
-		sequence.convertIndexToPosition_mm(indices).at(YY) << std::endl;
+	std::cout << "x (mm) = " << sequence.stackIndexToStackCenter_mm_(indices).at(XX) << "\ty (mm) = " <<
+		sequence.stackIndexToStackCenter_mm_(indices).at(YY) << std::endl;
 
 	std::cout << "Press any key to continue..." << std::endl;
 	getchar();
 }
+*/
 
-void seq_generateSnakeScanning()
+void seq_generateScanningPattern()
 {
-	Logger datalog("Commandlist");
-
-	const std::vector<int> wavelengthList_nm{ 750, 940, 1040 };
+	const std::vector<int> wavelengthList_nm{ 750, 940, 1040};
 	const ROI roi_mm = { 0, 10, 10, 0 };
+	Sequencer sequence(roi_mm, wavelengthList_nm);
+	sequence.generateCommandlist();
+	sequence.printToFile("Commandlist");
 
-	Sequencer sequence(roi_mm);
-
-	int Ngrandtotal = sequence.mNslices * static_cast<int>(wavelengthList_nm.size()) * sequence.mNtilesTotal;
-
-	for (int nSection = 0; nSection < sequence.mNslices; nSection++)
-	{
-		for (int iterWL = 0; iterWL < static_cast<int>(wavelengthList_nm.size()); iterWL++)
-		{
-			for (int iterTiles = 0; iterTiles < sequence.mNtilesTotal; iterTiles++)
-			{
-				sequence.pushCommand(new AcqStack(0, {0,0}, wavelengthList_nm.at(iterWL), 1, {0,1}, {10,20}));
-			}
-		}
-		sequence.pushCommand(new CutSection(0));
-	}
-	//sequence.printCommandList();
-
-	std::cout << "Grand total = " << Ngrandtotal << std::endl;
-
-	std::ofstream *fileHandle = new std::ofstream(folderPath + "CommandlistTest.txt");
-	//fileHandle->open(folderPath + "CommandlistTest.txt");
-
-	datalog.record("#\t\t" + sequence.mCommandList.front()->printHeader());
-	datalog.record("\t\t" + sequence.mCommandList.front()->printHeaderUnits());
-	for (int iter = 0; iter < Ngrandtotal; iter++)
-	{
-		//All the number-to-string conversion and concatenation makes the code slow
-		//datalog.record(toString(iter,0) + "\t\t" + sequence.mCommandList.at(iter)->printCommand());
-
-		//To see how fast this part of the code can go
-		//datalog.record(toString(iter, 0) + "\t\tMOVSTAGE\t0\t(0,0)\t750\t1\t0\t10\t10\t20");
-
-		//Faster implementation
-		sequence.mCommandList.at(iter)->printToFile(fileHandle, iter);
-	}
-	fileHandle->close();
-
-	//std::cout << "Press any key to continue..." << std::endl;
-	//getchar();
+	std::cout << "Press any key to continue..." << std::endl;
+	getchar();
 }

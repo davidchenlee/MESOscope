@@ -815,35 +815,13 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 
 }
 
-/*
-void seq_testCommandList()
-{
-	ROI roi_mm = { 0, 10, 10, 0 };
-	Sequencer sequence(roi_mm);
-
-	sequence.pushCommand(new CutSection(0));
-	sequence.pushCommand(new AcqStack(0, { 0,0 }, 750, 1, { 0,1 }, {10,20}));
-	sequence.printCommandList();
-
-	int iter = 2 * 67 - 1;
-	int2 indices = sequence.iterToStackIndices_(iter, TOPRIGHT);
-	std::cout << "iter = " << iter << std::endl;
-	std::cout << "sequenced index ii = " << indices.at(XX)<< "\tsequenced index jj = " << indices.at(YY) << std::endl;
-
-	std::cout << "x (mm) = " << sequence.stackIndicesToStackCenter_mm_(indices).at(XX) << "\ty (mm) = " <<
-		sequence.stackIndicesToStackCenter_mm_(indices).at(YY) << std::endl;
-
-	std::cout << "Press any key to continue..." << std::endl;
-	getchar();
-}
-*/
-
 void seq_generateScanningPattern()
 {
 	const std::vector<int> wavelengthList_nm{ 750, 940, 1040};
 	const ROI roi_mm = { 0, 10, 10, 0 };
 	Sequencer sequence(roi_mm, wavelengthList_nm);
-	sequence.generateCommandlist();
+	//sequence.generateCommandlist();
+	sequence.generateCommandlist2();
 	sequence.printToFile("Commandlist");
 
 	//std::cout << "Press any key to continue..." << std::endl;

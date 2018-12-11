@@ -312,8 +312,8 @@ namespace FPGAns
 			QU32 allQueues;		//Create a single long queue
 			for (int chan = 0; chan < NCHAN; chan++)
 			{
-				allQueues.push_back(vectorOfQueues.at(chan).size());	//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'			
-				for (int iter = 0; iter < static_cast<int>(vectorOfQueues.at(chan).size()); iter++)
+				allQueues.push_back(vectorOfQueues.at(chan).size());	//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'	
+				for (std::vector<int>::size_type iter = 0; iter != vectorOfQueues.at(chan).size(); iter++)
 					allQueues.push_back(vectorOfQueues.at(chan).at(iter));	//Push VectorOfQueues[i]
 			}
 

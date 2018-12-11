@@ -823,6 +823,15 @@ void seq_generateScanningPattern()
 	sequence.generateCommandlist();
 	sequence.printToFile("Commandlist");
 
+	Sequencer::Commandline *aa;
+	Sequencer::AcqStack *t = nullptr;
+
+	//Accessing the child class is NOT a good coding practice
+	t = dynamic_cast<Sequencer::AcqStack*>(aa);
+
+	t->mP_mW;
+
+
 	//std::cout << "Press any key to continue..." << std::endl;
 	//getchar();
 }

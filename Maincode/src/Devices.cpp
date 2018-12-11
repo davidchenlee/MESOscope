@@ -1466,12 +1466,12 @@ std::string Sequencer::Commandline::printHeaderUnits() const
 	return "\t\t(mm,mm)\t\t\tnm\t\tmm\tmm\tmW\tmW";
 }
 
-Sequencer::MovStage::MovStage(const int vibratomeSliceIndex, const int2 stackIJ, const double2 stackCenter_mm) :
-	Commandline(MOV), mVibratomeSliceIndex(vibratomeSliceIndex), mStackIJ(stackIJ), mStackCenter_mm(stackCenter_mm) {}
+Sequencer::MoveStage::MoveStage(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm) :
+	Commandline(MOV), mVibratomeSliceNumber(vibratomeSliceNumber), mStackIJ(stackIJ), mStackCenter_mm(stackCenter_mm) {}
 
-void Sequencer::MovStage::printToFile(std::ofstream *fileHandle) const
+void Sequencer::MoveStage::printToFile(std::ofstream *fileHandle) const
 {
-	*fileHandle << actionToString_(mAction) << "\t" << mVibratomeSliceIndex << "\t(" <<
+	*fileHandle << actionToString_(mAction) << "\t" << mVibratomeSliceNumber << "\t(" <<
 		mStackIJ.at(XX) << "," << mStackIJ.at(YY) << ")\t(" <<
 		std::fixed << std::setprecision(3) << mStackCenter_mm.at(0) << "," << mStackCenter_mm.at(1) << ")\n";
 }
@@ -1486,21 +1486,91 @@ void Sequencer::AcqStack::printToFile(std::ofstream *fileHandle) const
 		std::setprecision(0) << mP_mW.at(0) << "\t" << mP_mW.at(1) << "\n";
 }
 
-Sequencer::SavStack::SavStack() : Commandline(SAV) {}
+Sequencer::SaveStack::SaveStack() : Commandline(SAV) {}
 
-void Sequencer::SavStack::printToFile(std::ofstream *fileHandle) const
+void Sequencer::SaveStack::printToFile(std::ofstream *fileHandle) const
 {
 	*fileHandle << actionToString_(mAction) + "\n";
 }
 
-Sequencer::CutSection::CutSection() : Commandline(CUT) {}
+Sequencer::CutSlice::CutSlice() : Commandline(CUT) {}
 
-void Sequencer::CutSection::printToFile(std::ofstream *fileHandle) const
+void Sequencer::CutSlice::printToFile(std::ofstream *fileHandle) const
 {
 	*fileHandle << actionToString_(mAction) + "******************************************************************************************\n";
 }
 
 #pragma endregion "Commandline"
+
+
+
+#pragma region "Commandline2"
+Sequencer::Commandline2::Commandline2(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm) :
+	mAction(MOV), mVibratomeSliceNumber(vibratomeSliceNumber), mStackIJ(stackIJ), mStackCenter_mm(stackCenter_mm) {}
+
+Sequencer::Commandline2::Commandline2(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW) :
+	mAction(ACQ), mStackNumber(stackNumber), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW) {}
+
+Sequencer::Commandline2::Commandline2(const std::string fileName) :
+	mAction(SAV) {}
+
+Sequencer::Commandline2::Commandline2() :
+	mAction(CUT) {}
+
+std::string Sequencer::Commandline2::actionToString_(const Action action) const
+{
+	switch (action)
+	{
+	case CUT:
+		return "CUT";
+	case SAV:
+		return "SAV";
+	case ACQ:
+		return "ACQ";
+	case MOV:
+		return "MOV";
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action unavailable");
+	}
+}
+
+std::string Sequencer::Commandline2::printHeader() const
+{
+	return 	"Action\tSlice#\tStackIJ\tStack_Center\tStack#\tWavlen\tDirZ\tZ_min\tZ_max\tP_min\tP_max";
+}
+
+std::string Sequencer::Commandline2::printHeaderUnits() const
+{
+	return "\t\t(mm,mm)\t\t\tnm\t\tmm\tmm\tmW\tmW";
+}
+
+void Sequencer::Commandline2::printToFile(std::ofstream *fileHandle) const
+{
+	switch (mAction)
+	{
+	case MOV:
+		*fileHandle << actionToString_(mAction) << "\t" << mVibratomeSliceNumber << "\t(" <<
+			mStackIJ.at(XX) << "," << mStackIJ.at(YY) << ")\t(" <<
+			std::fixed << std::setprecision(3) << mStackCenter_mm.at(0) << "," << mStackCenter_mm.at(1) << ")\n";
+		break;
+	case ACQ:
+		*fileHandle << actionToString_(mAction) << "\t\t\t\t\t" << mStackNumber << "\t" << mWavelength_nm << "\t" << mScanDirZ << "\t" <<
+			std::setprecision(3) << mZ_um.at(0) << "\t" << mZ_um.at(1) << "\t" <<
+			std::setprecision(0) << mP_mW.at(0) << "\t" << mP_mW.at(1) << "\n";
+		break;
+	case SAV:
+		*fileHandle << actionToString_(mAction) + "\n";
+		break;
+	case CUT:
+		*fileHandle << actionToString_(mAction) + "******************************************************************************************\n";
+		break;
+	}
+
+}
+#pragma endregion "Commandline2"
+
+
+
 
 #pragma region "Sequencer"
 Sequencer::Sequencer(const ROI roi_mm, const std::vector<int> wavelengthList_nm): mSampleROI_mm(roi_mm), mWavelengthList_nm(wavelengthList_nm)
@@ -1537,7 +1607,7 @@ double2 Sequencer::stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) c
 	return stagePosition_mm;
 }
 
-void Sequencer::pushCommandSinglet(Commandline *command)
+void Sequencer::pushCommandline(Commandline *command)
 {
 	mCommandList.push_back(command);
 }
@@ -1563,9 +1633,14 @@ void Sequencer::generateCommandlist()
 				while ( xx >= 0 && xx < mNstacksXY.at(XX))		//x direction
 				{
 					stackCenter_mm = stackIndicesToStackCenter_mm_({ xx,yy });
-					pushCommandSinglet(new MovStage(iterVibratomeSlice, { xx,yy }, stackCenter_mm));
-					pushCommandSinglet(new AcqStack(stackNumber, mWavelengthList_nm.at(iterWL), scanDirZ, Z_um, P_mW));
-					pushCommandSinglet(new SavStack());
+
+					pushCommandline(new MoveStage(iterVibratomeSlice, { xx,yy }, stackCenter_mm));
+					pushCommandline(new AcqStack(stackNumber, mWavelengthList_nm.at(iterWL), scanDirZ, Z_um, P_mW));
+					pushCommandline(new SaveStack());
+
+					//pushCommandline(Commandline2(iterVibratomeSlice, { xx,yy }, stackCenter_mm));
+					//pushCommandline(Commandline2(stackNumber, mWavelengthList_nm.at(iterWL), scanDirZ, Z_um, P_mW));
+					//pushCommandline(Commandline2(""));
 					scanDirZ *= -1;		//Alternate the scanning direction in z
 					xx += scanDirX;		//Increase the iterator x
 
@@ -1585,7 +1660,7 @@ void Sequencer::generateCommandlist()
 
 		//Only need to cut 'mNvibratomeSlices -1' times
 		if (iterVibratomeSlice < mNvibratomeSlices - 1)
-			pushCommandSinglet(new CutSection());
+			pushCommandline(new CutSlice());
 	}
 }
 
@@ -1602,8 +1677,8 @@ void Sequencer::printToFile(const std::string fileName) const
 		*fileHandle << "\t\t" + mCommandList.front()->printHeaderUnits() + "\n";
 	}
 
-	//for (std::vector<int>::size_type iter = 0; iter != mCommandList.size(); iter++)
-		for (std::vector<int>::size_type iter = 0; iter != 10; iter++)
+	for (std::vector<int>::size_type iter = 0; iter != mCommandList.size(); iter++)
+		//for (std::vector<int>::size_type iter = 0; iter != 10; iter++) //For debugging
 	{
 		*fileHandle << iter << "\t";		//Print out the iteration number
 		mCommandList.at(iter)->printToFile(fileHandle);

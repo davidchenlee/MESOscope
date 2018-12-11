@@ -286,9 +286,10 @@ class Sequencer
 	double2 stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const;
 public:
 	class Commandline {
+	protected:
+		std::string actionToString_(const Action action) const;
 	public:
 		Action mAction;
-		std::string actionToString_(const Action action) const;
 
 		Commandline(Action action);
 		virtual ~Commandline() {};
@@ -297,13 +298,13 @@ public:
 		std::string printHeaderUnits() const;
 	};
 
-	class MovStage : public Commandline
+	class MoveStage : public Commandline
 	{
 	public:
-		int mVibratomeSliceIndex;
-		int2 mStackIJ;	//x-y indices of the stack array. Only needed for printing out the stack index
+		int mVibratomeSliceNumber;
+		int2 mStackIJ;
 		double2 mStackCenter_mm;
-		MovStage(const int vibratomeSliceIndex, const int2 stackIJ, const double2 stackCenter_mm);
+		MoveStage(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm);
 		void printToFile(std::ofstream *fileHandle) const;
 	};
 
@@ -320,18 +321,43 @@ public:
 		void printToFile(std::ofstream *fileHandle) const;
 	};	
 
-	class SavStack :public Commandline
+	class SaveStack :public Commandline
 	{
 	public:
-		SavStack();
+		SaveStack();
 		void printToFile(std::ofstream *fileHandle) const;
 	};
 
-	class CutSection : public Commandline
+	class CutSlice : public Commandline
 	{
 	public:
-		CutSection();
+		CutSlice();
 		void printToFile(std::ofstream *fileHandle) const;
+	};
+
+	class Commandline2 {
+		std::string actionToString_(const Action action) const;
+	public:
+		Action mAction;
+		int mVibratomeSliceNumber;
+		int2 mStackIJ;
+		double2 mStackCenter_mm;
+		int mStackNumber;
+		int mWavelength_nm;
+		int mScanDirZ;				//+1 for positive, -1 for negative
+		double2 mZ_um;				//Min and max z position
+		double2 mP_mW;				//Min and max laser power
+
+		Commandline2(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm);								//Move stage
+		Commandline2(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);	//Acq stack
+		Commandline2(const std::string fileName);																					//Save data
+		Commandline2();																												//Cut slice
+		~Commandline2() {};
+		std::string printHeader() const;
+		std::string printHeaderUnits() const;
+		void printToFile(std::ofstream *fileHandle) const;
+
+
 	};
 
 	std::vector<Commandline*> mCommandList;
@@ -358,7 +384,7 @@ public:
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor
 	Sequencer& operator=(Sequencer&&) = delete;			//Disable move-assignment constructor
 
-	void pushCommandSinglet(Commandline *command);
+	void pushCommandline(Commandline *command);
 	void generateCommandlist();
 	void printToFile(const std::string fileName) const;
 };

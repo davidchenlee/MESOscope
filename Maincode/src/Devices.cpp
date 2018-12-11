@@ -1435,11 +1435,11 @@ double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, cons
 
 
 #pragma region "Commandline"
-Sequencer::Commandline::Commandline(Action action) : mAction(action)
+Commandline::Commandline(Action action) : mAction(action)
 {
 }
 
-std::string Sequencer::Commandline::actionToString_(const Action action) const
+std::string Commandline::actionToString_(const Action action) const
 {
 	switch (action)
 	{
@@ -1456,120 +1456,52 @@ std::string Sequencer::Commandline::actionToString_(const Action action) const
 	}
 }
 
-std::string Sequencer::Commandline::printHeader() const
+std::string Commandline::printHeader() const
 {
 	return 	"Action\tSlice#\tStackIJ\tStack_Center\tStack#\tWavlen\tDirZ\tZ_min\tZ_max\tP_min\tP_max";
 }
 
-std::string Sequencer::Commandline::printHeaderUnits() const
+std::string Commandline::printHeaderUnits() const
 {
 	return "\t\t(mm,mm)\t\t\tnm\t\tmm\tmm\tmW\tmW";
 }
 
-Sequencer::MoveStage::MoveStage(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm) :
+MoveStage::MoveStage(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm) :
 	Commandline(MOV), mVibratomeSliceNumber(vibratomeSliceNumber), mStackIJ(stackIJ), mStackCenter_mm(stackCenter_mm) {}
 
-void Sequencer::MoveStage::printToFile(std::ofstream *fileHandle) const
+void MoveStage::printToFile(std::ofstream *fileHandle) const
 {
 	*fileHandle << actionToString_(mAction) << "\t" << mVibratomeSliceNumber << "\t(" <<
 		mStackIJ.at(XX) << "," << mStackIJ.at(YY) << ")\t(" <<
 		std::fixed << std::setprecision(3) << mStackCenter_mm.at(0) << "," << mStackCenter_mm.at(1) << ")\n";
 }
 
-Sequencer::AcqStack::AcqStack(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW) :
+AcqStack::AcqStack(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW) :
 	Commandline(ACQ), mStackNumber(stackNumber), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW) {}
-
-void Sequencer::AcqStack::printToFile(std::ofstream *fileHandle) const
+ 
+//In the future (i.e., never), write a more efficient way of saving to file
+void AcqStack::printToFile(std::ofstream *fileHandle) const
 {
 	*fileHandle << actionToString_(mAction) << "\t\t\t\t\t" << mStackNumber <<  "\t" << mWavelength_nm << "\t" << mScanDirZ << "\t" <<
 		std::setprecision(3) << mZ_um.at(0) << "\t" << mZ_um.at(1) << "\t" <<
 		std::setprecision(0) << mP_mW.at(0) << "\t" << mP_mW.at(1) << "\n";
 }
 
-Sequencer::SaveStack::SaveStack() : Commandline(SAV) {}
+SaveStack::SaveStack() : Commandline(SAV) {}
 
-void Sequencer::SaveStack::printToFile(std::ofstream *fileHandle) const
+void SaveStack::printToFile(std::ofstream *fileHandle) const
 {
 	*fileHandle << actionToString_(mAction) + "\n";
 }
 
-Sequencer::CutSlice::CutSlice() : Commandline(CUT) {}
+CutSlice::CutSlice() : Commandline(CUT) {}
 
-void Sequencer::CutSlice::printToFile(std::ofstream *fileHandle) const
+void CutSlice::printToFile(std::ofstream *fileHandle) const
 {
 	*fileHandle << actionToString_(mAction) + "******************************************************************************************\n";
 }
 
 #pragma endregion "Commandline"
-
-
-
-#pragma region "Commandline2"
-Sequencer::Commandline2::Commandline2(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm) :
-	mAction(MOV), mVibratomeSliceNumber(vibratomeSliceNumber), mStackIJ(stackIJ), mStackCenter_mm(stackCenter_mm) {}
-
-Sequencer::Commandline2::Commandline2(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW) :
-	mAction(ACQ), mStackNumber(stackNumber), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW) {}
-
-Sequencer::Commandline2::Commandline2(const std::string fileName) :
-	mAction(SAV) {}
-
-Sequencer::Commandline2::Commandline2() :
-	mAction(CUT) {}
-
-std::string Sequencer::Commandline2::actionToString_(const Action action) const
-{
-	switch (action)
-	{
-	case CUT:
-		return "CUT";
-	case SAV:
-		return "SAV";
-	case ACQ:
-		return "ACQ";
-	case MOV:
-		return "MOV";
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action unavailable");
-	}
-}
-
-std::string Sequencer::Commandline2::printHeader() const
-{
-	return 	"Action\tSlice#\tStackIJ\tStack_Center\tStack#\tWavlen\tDirZ\tZ_min\tZ_max\tP_min\tP_max";
-}
-
-std::string Sequencer::Commandline2::printHeaderUnits() const
-{
-	return "\t\t(mm,mm)\t\t\tnm\t\tmm\tmm\tmW\tmW";
-}
-
-void Sequencer::Commandline2::printToFile(std::ofstream *fileHandle) const
-{
-	switch (mAction)
-	{
-	case MOV:
-		*fileHandle << actionToString_(mAction) << "\t" << mVibratomeSliceNumber << "\t(" <<
-			mStackIJ.at(XX) << "," << mStackIJ.at(YY) << ")\t(" <<
-			std::fixed << std::setprecision(3) << mStackCenter_mm.at(0) << "," << mStackCenter_mm.at(1) << ")\n";
-		break;
-	case ACQ:
-		*fileHandle << actionToString_(mAction) << "\t\t\t\t\t" << mStackNumber << "\t" << mWavelength_nm << "\t" << mScanDirZ << "\t" <<
-			std::setprecision(3) << mZ_um.at(0) << "\t" << mZ_um.at(1) << "\t" <<
-			std::setprecision(0) << mP_mW.at(0) << "\t" << mP_mW.at(1) << "\n";
-		break;
-	case SAV:
-		*fileHandle << actionToString_(mAction) + "\n";
-		break;
-	case CUT:
-		*fileHandle << actionToString_(mAction) + "******************************************************************************************\n";
-		break;
-	}
-
-}
-#pragma endregion "Commandline2"
-
-
 
 
 #pragma region "Sequencer"
@@ -1687,6 +1619,17 @@ void Sequencer::printToFile(const std::string fileName) const
 }
 #pragma endregion "sequencer"
 
+//quick and dirty solution. Accessing the child class is NOT a good practice
+AcqStack* accessClassMembers(Commandline *commandline)
+{
+	switch (commandline->mAction)
+	{
+	case ACQ:
+		return static_cast<AcqStack*>(commandline);
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action unavailable");
+	}
+}
 
 
 /*

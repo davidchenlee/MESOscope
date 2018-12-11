@@ -206,7 +206,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 1;									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm = { 36.050, 14.150, 18.683 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.686 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
 
 	//RS
 	const double FFOVrs_um = 150 * um;
@@ -823,14 +823,7 @@ void seq_generateScanningPattern()
 	sequence.generateCommandlist();
 	sequence.printToFile("Commandlist");
 
-	Sequencer::Commandline *aa;
-	Sequencer::AcqStack *t = nullptr;
-
-	//Accessing the child class is NOT a good coding practice
-	t = dynamic_cast<Sequencer::AcqStack*>(aa);
-
-	t->mP_mW;
-
+	accessClassMembers(sequence.mCommandList.at(0));
 
 	//std::cout << "Press any key to continue..." << std::endl;
 	//getchar();

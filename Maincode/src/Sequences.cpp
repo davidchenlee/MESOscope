@@ -820,8 +820,7 @@ void seq_generateScanningPattern()
 	const std::vector<int> wavelengthList_nm{ 750, 940, 1040};
 	const ROI roi_mm = { 0, 10, 10, 0 };
 	Sequencer sequence(roi_mm, wavelengthList_nm);
-	//sequence.generateCommandlist();
-	sequence.generateCommandlist2();
+	sequence.generateCommandlist();
 	sequence.printToFile("Commandlist");
 
 	//std::cout << "Press any key to continue..." << std::endl;

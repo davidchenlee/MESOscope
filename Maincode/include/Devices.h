@@ -280,53 +280,38 @@ public:
 	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
 };
 
-
 class Commandline {
-protected:
-	std::string actionToString_(const Action action) const;
+	struct MovParam {
+		int vibratomeSliceNumber;
+		int2 stackIJ;
+		double2 stackCenter_mm;
+	};
+	struct AcqParam {
+		int stackNumber;
+		int wavelength_nm;
+		int scanDirZ;				//+1 for positive, -1 for negative
+		double2 Z_um;				//Min and max z position
+		double2 P_mW;				//Min and max laser power
+	};
+
+	struct CommandParam {
+		Action action;
+		union {
+			struct MovParam movParam;
+			struct AcqParam acqParam;
+		};
+	};
+
+		std::string actionToString_(const Action action) const;
 public:
-	Action mAction;
-	Commandline(Action action);
-	virtual ~Commandline() {};
-	virtual void printToFile(std::ofstream *fileHandle) const = 0;
+	CommandParam mParam;
+	Commandline(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm);								//Move stage
+	Commandline(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);	//Acq stack
+	Commandline(const std::string fileName);																					//Save data
+	Commandline();																												//Cut slice
+	~Commandline() {};
 	std::string printHeader() const;
 	std::string printHeaderUnits() const;
-};
-
-class MoveStage : public Commandline
-{
-public:
-	int mVibratomeSliceNumber;
-	int2 mStackIJ;
-	double2 mStackCenter_mm;
-	MoveStage(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm);
-	void printToFile(std::ofstream *fileHandle) const;
-
-};
-
-class AcqStack : public Commandline
-{
-public:
-	int mStackNumber;
-	int mWavelength_nm;
-	int mScanDirZ;				//+1 for positive, -1 for negative
-	double2 mZ_um;				//Min and max z position
-	double2 mP_mW;				//Min and max laser power
-	AcqStack(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);
-	void printToFile(std::ofstream *fileHandle) const;
-};
-
-class SaveStack :public Commandline
-{
-public:
-	SaveStack();
-	void printToFile(std::ofstream *fileHandle) const;
-};
-
-class CutSlice : public Commandline
-{
-public:
-	CutSlice();
 	void printToFile(std::ofstream *fileHandle) const;
 };
 
@@ -334,7 +319,7 @@ class Sequencer
 {
 	double2 stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const;
 public:
-	std::vector<Commandline*> mCommandList;
+	std::vector<Commandline> mCommandList;
 	std::vector<int> mWavelengthList_nm;	//Wavelengths
 	ROI mSampleROI_mm;						//Region of interest across the entire sample
 	double2 mSampleSizeXY_um;				//Sample size in x and y
@@ -352,15 +337,12 @@ public:
 	const int mNvibratomeSlices = static_cast<int>(mSampleSizeZ_um / mVibratomeSliceThickness_um);		//Number of vibratome slices in the entire sample
 
 	Sequencer(const ROI roi_mm, const std::vector<int> wavelengthList_nm);
-	~Sequencer();
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor
 	Sequencer& operator=(Sequencer&&) = delete;			//Disable move-assignment constructor
 
-	void pushCommandline(Commandline *command);
+	void pushCommandline(Commandline command);
 	void generateCommandlist();
 	void printToFile(const std::string fileName) const;
 };
-
-AcqStack* accessClassMembers(Commandline *commandline);

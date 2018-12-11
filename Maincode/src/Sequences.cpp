@@ -821,9 +821,7 @@ void seq_generateScanningPattern()
 	const ROI roi_mm = { 0, 10, 10, 0 };
 	Sequencer sequence(roi_mm, wavelengthList_nm);
 	sequence.generateCommandlist();
-	sequence.printToFile("Commandlist");
-
-	accessClassMembers(sequence.mCommandList.at(0));
+	//sequence.printToFile("Commandlist");
 
 	//std::cout << "Press any key to continue..." << std::endl;
 	//getchar();

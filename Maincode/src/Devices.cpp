@@ -1435,8 +1435,28 @@ double3 Stage::readAbsolutePosition3_mm(const int nSlice, const int nPlane, cons
 
 
 #pragma region "Commandline"
-Commandline::Commandline(Action action) : mAction(action)
+Commandline::Commandline(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm)
 {
+	mParam.action = MOV;
+	mParam.movParam = { vibratomeSliceNumber, stackIJ, stackCenter_mm };
+}
+
+Commandline::Commandline(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW)
+{
+	mParam.action = ACQ;
+	mParam.acqParam = { stackNumber, wavelength_nm, scanDirZ, Z_um, P_mW };
+}
+
+Commandline::Commandline(const std::string fileName)
+{
+	mParam.action = SAV;
+	mParam.acqParam = {};
+}
+
+Commandline::Commandline()
+{
+	mParam.action = CUT;
+	mParam.acqParam = {};
 }
 
 std::string Commandline::actionToString_(const Action action) const
@@ -1466,42 +1486,31 @@ std::string Commandline::printHeaderUnits() const
 	return "\t\t(mm,mm)\t\t\tnm\t\tmm\tmm\tmW\tmW";
 }
 
-MoveStage::MoveStage(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm) :
-	Commandline(MOV), mVibratomeSliceNumber(vibratomeSliceNumber), mStackIJ(stackIJ), mStackCenter_mm(stackCenter_mm) {}
-
-void MoveStage::printToFile(std::ofstream *fileHandle) const
+void Commandline::printToFile(std::ofstream *fileHandle) const
 {
-	*fileHandle << actionToString_(mAction) << "\t" << mVibratomeSliceNumber << "\t(" <<
-		mStackIJ.at(XX) << "," << mStackIJ.at(YY) << ")\t(" <<
-		std::fixed << std::setprecision(3) << mStackCenter_mm.at(0) << "," << mStackCenter_mm.at(1) << ")\n";
+	switch (mParam.action)
+	{
+	case MOV:
+		*fileHandle << actionToString_(mParam.action) << "\t" << mParam.movParam.vibratomeSliceNumber << "\t(" <<
+			mParam.movParam.stackIJ.at(XX) << "," << mParam.movParam.stackIJ.at(YY) << ")\t(" <<
+			std::fixed << std::setprecision(3) << mParam.movParam.stackCenter_mm.at(0) << "," << mParam.movParam.stackCenter_mm.at(1) << ")\n";
+		break;
+	case ACQ:
+		*fileHandle << actionToString_(mParam.action) << "\t\t\t\t\t" << mParam.acqParam.stackNumber << "\t" << mParam.acqParam.wavelength_nm << "\t" << mParam.acqParam.scanDirZ << "\t" <<
+			std::setprecision(3) << mParam.acqParam.Z_um.at(0) << "\t" << mParam.acqParam.Z_um.at(1) << "\t" <<
+			std::setprecision(0) << mParam.acqParam.P_mW.at(0) << "\t" << mParam.acqParam.P_mW.at(1) << "\n";
+		break;
+	case SAV:
+		*fileHandle << actionToString_(mParam.action) + "\n";
+		break;
+	case CUT:
+		*fileHandle << actionToString_(mParam.action) + "******************************************************************************************\n";
+		break;
+	}
+
 }
+#pragma endregion "Commandline2"
 
-AcqStack::AcqStack(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW) :
-	Commandline(ACQ), mStackNumber(stackNumber), mWavelength_nm(wavelength_nm), mScanDirZ(scanDirZ), mZ_um(Z_um), mP_mW(P_mW) {}
- 
-//In the future (i.e., never), write a more efficient way of saving to file
-void AcqStack::printToFile(std::ofstream *fileHandle) const
-{
-	*fileHandle << actionToString_(mAction) << "\t\t\t\t\t" << mStackNumber <<  "\t" << mWavelength_nm << "\t" << mScanDirZ << "\t" <<
-		std::setprecision(3) << mZ_um.at(0) << "\t" << mZ_um.at(1) << "\t" <<
-		std::setprecision(0) << mP_mW.at(0) << "\t" << mP_mW.at(1) << "\n";
-}
-
-SaveStack::SaveStack() : Commandline(SAV) {}
-
-void SaveStack::printToFile(std::ofstream *fileHandle) const
-{
-	*fileHandle << actionToString_(mAction) + "\n";
-}
-
-CutSlice::CutSlice() : Commandline(CUT) {}
-
-void CutSlice::printToFile(std::ofstream *fileHandle) const
-{
-	*fileHandle << actionToString_(mAction) + "******************************************************************************************\n";
-}
-
-#pragma endregion "Commandline"
 
 
 #pragma region "Sequencer"
@@ -1520,14 +1529,12 @@ Sequencer::Sequencer(const ROI roi_mm, const std::vector<int> wavelengthList_nm)
 	mNtotalStacksPerVibratomeSlice = mNstacksXY.at(XX) * mNstacksXY.at(YY);			//Total number of stacks
 	mNtotalStackEntireSample = mNvibratomeSlices * static_cast<int>(wavelengthList_nm.size()) * mNtotalStacksPerVibratomeSlice;
 
+	//Pre-reserve a memory block assuming 3 actions: MOV, ACQ, and SAV for every stack in a vibratome slice; then CUT
+	mCommandList.reserve(3 * mNtotalStackEntireSample + mNvibratomeSlices - 1);
+
 	//std::cout << "Nstacks x = " << mNstacksXY.at(XX) << "\tNstacks y = " << mNstacksXY.at(YY) << std::endl;
 	//std::cout << "Total stacks entire sample = " << sequence.mNtotalStackEntireSample << std::endl;
-}
-
-Sequencer::~Sequencer()
-{
-	for (std::vector<int>::size_type iter = 0; iter != mCommandList.size(); iter++)
-		delete mCommandList.at(iter);
+	//std::cout << "Total commandlines = " << 3*(mNtotalStackEntireSample)+mNvibratomeSlices - 1 << std::endl;
 }
 
 double2 Sequencer::stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const
@@ -1539,7 +1546,7 @@ double2 Sequencer::stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) c
 	return stagePosition_mm;
 }
 
-void Sequencer::pushCommandline(Commandline *command)
+void Sequencer::pushCommandline(Commandline command)
 {
 	mCommandList.push_back(command);
 }
@@ -1566,13 +1573,10 @@ void Sequencer::generateCommandlist()
 				{
 					stackCenter_mm = stackIndicesToStackCenter_mm_({ xx,yy });
 
-					pushCommandline(new MoveStage(iterVibratomeSlice, { xx,yy }, stackCenter_mm));
-					pushCommandline(new AcqStack(stackNumber, mWavelengthList_nm.at(iterWL), scanDirZ, Z_um, P_mW));
-					pushCommandline(new SaveStack());
+					pushCommandline(Commandline(iterVibratomeSlice, { xx,yy }, stackCenter_mm));
+					pushCommandline(Commandline(stackNumber, mWavelengthList_nm.at(iterWL), scanDirZ, Z_um, P_mW));
+					pushCommandline(Commandline(""));
 
-					//pushCommandline(Commandline2(iterVibratomeSlice, { xx,yy }, stackCenter_mm));
-					//pushCommandline(Commandline2(stackNumber, mWavelengthList_nm.at(iterWL), scanDirZ, Z_um, P_mW));
-					//pushCommandline(Commandline2(""));
 					scanDirZ *= -1;		//Alternate the scanning direction in z
 					xx += scanDirX;		//Increase the iterator x
 
@@ -1592,7 +1596,7 @@ void Sequencer::generateCommandlist()
 
 		//Only need to cut 'mNvibratomeSlices -1' times
 		if (iterVibratomeSlice < mNvibratomeSlices - 1)
-			pushCommandline(new CutSlice());
+			pushCommandline(Commandline());
 	}
 }
 
@@ -1605,32 +1609,19 @@ void Sequencer::printToFile(const std::string fileName) const
 	//Print out the header
 	if (!mCommandList.empty())
 	{
-		*fileHandle << "Act#\t" + mCommandList.front()->printHeader() + "\n";
-		*fileHandle << "\t\t" + mCommandList.front()->printHeaderUnits() + "\n";
+		*fileHandle << "Act#\t" + mCommandList.front().printHeader() + "\n";
+		*fileHandle << "\t\t" + mCommandList.front().printHeaderUnits() + "\n";
 	}
 
 	for (std::vector<int>::size_type iter = 0; iter != mCommandList.size(); iter++)
 		//for (std::vector<int>::size_type iter = 0; iter != 10; iter++) //For debugging
 	{
 		*fileHandle << iter << "\t";		//Print out the iteration number
-		mCommandList.at(iter)->printToFile(fileHandle);
+		mCommandList.at(iter).printToFile(fileHandle);
 	}
 	fileHandle->close();
 }
 #pragma endregion "sequencer"
-
-//quick and dirty solution. Accessing the child class is NOT a good practice
-AcqStack* accessClassMembers(Commandline *commandline)
-{
-	switch (commandline->mAction)
-	{
-	case ACQ:
-		return static_cast<AcqStack*>(commandline);
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action unavailable");
-	}
-}
-
 
 /*
 [1] The stage Z has a virtual COM port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.

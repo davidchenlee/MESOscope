@@ -817,7 +817,8 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 
 void seq_scanEntireSample()
 {
-	//Generate the command list and keep it in memory. I prefer generating such list before execution because then I can inspect all the parameters offline
+	//Generate the command list and keep it in memory.
+	//I prefer generating such list before execution because then I can inspect all the parameters offline
 
 	//Create a sample object
 	const ROI roi_mm { 0, 10, 10, 0 };
@@ -827,11 +828,11 @@ void seq_scanEntireSample()
 	const std::vector<int> wavelengthList_nm{ 750, 940, 1040 };
 	const double initialZ_mm = 10;			//Initial height of the stage
 	const double2 FOV_um{ 150,200 };
-	const double stackRangeZ_um = 100;		//Stack thickness
+	const double stackDepth_um = 100;		//Stack thickness
 	const double stepSizeZ_um = 0.5;		//Image resolution in z
 
 
-	Sequencer sequence(sample, initialZ_mm, stackRangeZ_um, wavelengthList_nm, FOV_um, stepSizeZ_um);
+	Sequencer sequence(sample, initialZ_mm, stackDepth_um, wavelengthList_nm, FOV_um, stepSizeZ_um);
 	sequence.generateCommandlist();
 	sequence.printToFile("Commandlist");
 
@@ -844,7 +845,7 @@ void seq_scanEntireSample()
 
 			sequence.mCommandList.at(iterCommandline).printParameters();
 
-			double2 stackCenter_mm, Z_um, P_mW;
+			double2 stackCenter_mm, Zminmax_um, Pminmax_mW;
 			int wavelength_nm;
 			switch (commandline.mAction)
 			{
@@ -854,11 +855,11 @@ void seq_scanEntireSample()
 				break;
 			case ACQ:
 				wavelength_nm = commandline.mCommand.acqStack.wavelength_nm;
-				Z_um = commandline.mCommand.acqStack.Z_um;
-				P_mW = commandline.mCommand.acqStack.P_mW;
-				//Acquire a stack using the parameters: wavelength_nm, Z_um, and P_mW
+				Zminmax_um = commandline.mCommand.acqStack.Zminmax_um;
+				Pminmax_mW = commandline.mCommand.acqStack.Pminmax_mW;
+				//Acquire a stack using the parameters: wavelength_nm, Zminmax_um, and Pminmax_mW
 			case SAV:
-				//Save the stack to file and label it with the acquisition parameters: stackCenter_mm, wavelength_nm, Z_um, P_mW
+				//Save the stack to file and label it with the acquisition parameters: stackCenter_mm, wavelength_nm, Zminmax_um, Pminmax_mW
 				break;
 			case CUT:
 				//Move the stage to vibratomeHome_mm in X and Y. For Z, stageZ = vibratomeHomeZ + nSLice * sliceThickness

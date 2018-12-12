@@ -277,13 +277,13 @@ public:
 	void VEL(const Axis axis, const double vel_mmPerS) const;
 };
 
+
 class Commandline
 {
-	//Command as classes
 	class MoveStage
 	{
 	public:
-		int vibratomeSliceNumber;
+		int sliceNumber;
 		int2 stackIJ;
 		double2 stackCenter_mm;
 	};
@@ -293,14 +293,13 @@ class Commandline
 		int stackNumber;
 		int wavelength_nm;
 		int scanDirZ;			//+1 for positive, -1 for negative
-		double2 Z_um;			//Min and max z position
-		double2 P_mW;			//Min and max laser power
+		double2 Zminmax_um;			//Min and max z position
+		double2 Pminmax_mW;			//Min and max laser power
 	};
 	class CutSlice
 	{
 	public:
-		double3 stagePosition_mm;			//Location of the vibratome blade wrt the stages' origin	
-		double vibratomeSliceThickness_um;
+		double3 stagePosition_mm;	//Location of the vibratome blade wrt the stages' origin	
 	};
 	std::string actionToString_(const Action action) const;
 public:
@@ -311,10 +310,6 @@ public:
 		CutSlice cutSlice;
 	} mCommand;
 
-	Commandline(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm);								//Move stage
-	Commandline(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);	//Acq stack
-	Commandline();																												//Save data
-	Commandline(const double3 stagePosition_mm, const double vibratomeSliceThickness_um);																		//Cut slice
 	std::string printHeader() const;
 	std::string printHeaderUnits() const;
 	void printToFile(std::ofstream *fileHandle) const;
@@ -343,33 +338,37 @@ class Sequencer
 {
 	const Sample mSample;
 
-	//STACK IMAGING
+	//STACK ACQUISITION
 	std::vector<int> mWavelengthList_nm;			//Wavelengths
 	double2 mFOV_um;								//Field of view in x and y
 	const double3 mStackOverlap_um{ 0,0,0 };		//stack overlap in x, y, and z. Hard-coded parameter
-	int2 mNstackArrayDim;							//Dimension of the array of stacks. Value computed dynamically
+	int2 mStackArrayDim;							//Dimension of the array of stacks. Value computed dynamically
 	int mNtotalStacksPerVibratomeSlice;				//Total number of stacks in a vibratome slice. Value computed dynamically
 	int mNtotalStackEntireSample;					//Total number of stacks in the entire sample. Value computed dynamically
 	double mStepSizeZ_um;							//image resolution in the z axis
-
-	double mStagePositionZ_mm;	//Current stage position
 	double mStackRangeZ_mm;
+
+	double mStagePositionZ_mm;						//Current stage position
 
 	//VIBRATOME
 	const double2 mVibratomeHomeXY = { 0,0 };		//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
-	const double mVibratomeSliceThickness_um = 100;	//Slice thickness. Hard-coded parameter
-	int mNvibratomeSlices;							//Number of vibratome slices in the entire sample. Value computed dynamically
+	const double mSliceThickness_um = 100;			//Slice thickness. Hard-coded parameter
+	int mNslices;									//Number of vibratome slices in the entire sample. Value computed dynamically
 	
 	double2 stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const;
 public:
 	std::vector<Commandline> mCommandList;
 	
-	Sequencer(const Sample sample, const double initialStagePositionZ_mm, const double stackRangeZ_um, const std::vector<int> wavelengthList_nm, const double2 FOV_um, const double stepSizeZ_um);
+	Sequencer(const Sample sample, const double initialStagePositionZ_mm, const double stackDepth_um, const std::vector<int> wavelengthList_nm, const double2 FOV_um, const double stepSizeZ_um);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor
 	Sequencer& operator=(Sequencer&&) = delete;			//Disable move-assignment constructor
 
+	void moveStage(const int sliceNumber, const int2 stackIJ, const double2 stackCenter_mm);
+	void acqStack(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Zminmax_um, const double2 Pminmax_mW);
+	void saveStack();
+	void cutSlice();
 	void generateCommandlist();
 	void printToFile(const std::string fileName) const;
 };

@@ -1425,14 +1425,16 @@ Commandline::Commandline(const int stackNumber, const int wavelength_nm, const i
 	mCommandParam.acqParam = { stackNumber, wavelength_nm, scanDirZ, Z_um, P_mW };
 }
 
-Commandline::Commandline(const std::string fileName)
+Commandline::Commandline()
 {
 	mCommandParam.action = SAV;
 }
 
-Commandline::Commandline()
+Commandline::Commandline(const double3 vibratomeHome_mm, const double vibratomeSliceThickness_um)
 {
 	mCommandParam.action = CUT;
+	mCommandParam.cutParam.vibratomeHome_mm = vibratomeHome_mm;
+	mCommandParam.cutParam.vibratomeSliceThickness_um = vibratomeSliceThickness_um;
 }
 
 std::string Commandline::actionToString_(const Action action) const
@@ -1486,39 +1488,72 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
 	}
 }
+
+void Commandline::printParameters() const
+{
+	switch (mCommandParam.action)
+	{
+	case MOV:
+		std::cout << "The command is " << actionToString_(mCommandParam.action) << " with parameters: \n";
+		std::cout << "Vibratome slice number = " << mCommandParam.movParam.vibratomeSliceNumber << "\n";
+		std::cout << "Stack ij = (" << mCommandParam.movParam.stackIJ.at(XX) << "," << mCommandParam.movParam.stackIJ.at(YY) << ")\n";
+		std::cout << "Stack center (mm,mm) = (" << mCommandParam.movParam.stackCenter_mm.at(XX) << "," << mCommandParam.movParam.stackCenter_mm.at(YY) << ")\n" << std::endl;
+		break;
+	case ACQ:
+		std::cout << "The command is " << actionToString_(mCommandParam.action) << " with parameters: \n";
+		std::cout << "wavelength (nm) = " << mCommandParam.acqParam.wavelength_nm << "\n";
+		std::cout << "scanDirZ = " << mCommandParam.acqParam.scanDirZ << "\n";
+		std::cout << "Zmin/Zmax (um) = " << mCommandParam.acqParam.Z_um.at(0) << "/" << mCommandParam.acqParam.Z_um.at(1) << "\n";
+		std::cout << "Pmin/Pmax (mW) = " << mCommandParam.acqParam.P_mW.at(0) << "/" << mCommandParam.acqParam.P_mW.at(1) << "\n" << std::endl;
+		break;
+	case SAV:
+		std::cout << "The command is " << actionToString_(mCommandParam.action) << " with no parameters" << std::endl;
+		break;
+	case CUT:
+		std::cout << "The command is " << actionToString_(mCommandParam.action) << " with no parameters" << std::endl;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
+	}
+}
 #pragma endregion "Commandline"
 
 
 
 #pragma region "Sequencer"
-Sequencer::Sequencer(const ROI roi_mm, const std::vector<int> wavelengthList_nm): mSampleROI_mm(roi_mm), mWavelengthList_nm(wavelengthList_nm)
+Sequencer::Sequencer(const ROI roi_mm, const double sampleLengthZ_um, const std::vector<int> wavelengthList_nm, const double2 FOV_um, const double stepSizeZ_um):
+	mSampleROI_mm(roi_mm), mSampleLengthZ_um(sampleLengthZ_um), mWavelengthList_nm(wavelengthList_nm), mFOV_um(FOV_um), mStepSizeZ_um(stepSizeZ_um)
 {
-	//Convert input ROI = (xmin, ymax, xmax, ymin) to the equivalent sample size
-	mSampleSizeXY_um.at(XX) = 1000 * (mSampleROI_mm.at(2) - mSampleROI_mm.at(0));
-	mSampleSizeXY_um.at(YY) = 1000 * (mSampleROI_mm.at(1) - mSampleROI_mm.at(3));
+	//Convert input ROI = (xmin, ymax, xmax, ymin) to the equivalent sample length in X and Y
+	mSampleLengthXY_um.at(XX) = 1000 * (mSampleROI_mm.at(2) - mSampleROI_mm.at(0));
+	mSampleLengthXY_um.at(YY) = 1000 * (mSampleROI_mm.at(1) - mSampleROI_mm.at(3));
 
-	if (mSampleSizeXY_um.at(XX) < 0 || mSampleSizeXY_um.at(YY) < 0)
+	if (mSampleLengthXY_um.at(XX) < 0 || mSampleLengthXY_um.at(YY) < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
 
-	//Calculate the number of stacks
-	mNstackArray.at(XX) = static_cast<int>(std::ceil(mSampleSizeXY_um.at(XX) / mFOV_um.at(XX)));		//Number of stacks in x
-	mNstackArray.at(YY) = static_cast<int>(std::ceil(mSampleSizeXY_um.at(YY) / mFOV_um.at(YY)));		//Number of stacks in y
-	mNtotalStacksPerVibratomeSlice = mNstackArray.at(XX) * mNstackArray.at(YY);			//Total number of stacks
+	//Calculate the total number of vibratome slices
+	mNvibratomeSlices = static_cast<int>(std::ceil(mSampleLengthZ_um / mVibratomeSliceThickness_um));
+
+	//Calculate the total number of stacks per vibratome slice and in the entire sample
+	mNstackArrayDim.at(XX) = static_cast<int>(std::ceil(mSampleLengthXY_um.at(XX) / mFOV_um.at(XX)));		//Number of stacks in x
+	mNstackArrayDim.at(YY) = static_cast<int>(std::ceil(mSampleLengthXY_um.at(YY) / mFOV_um.at(YY)));		//Number of stacks in y
+	mNtotalStacksPerVibratomeSlice = mNstackArrayDim.at(XX) * mNstackArrayDim.at(YY);						//Total number of stacks in a vibratome slice
 	mNtotalStackEntireSample = mNvibratomeSlices * static_cast<int>(wavelengthList_nm.size()) * mNtotalStacksPerVibratomeSlice;
 
 	//Pre-reserve a memory block assuming 3 actions: MOV, ACQ, and SAV for every stack in a vibratome slice; then CUT
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNvibratomeSlices - 1);
 
-	//std::cout << "Nstacks x = " << mNstackArray.at(XX) << "\tNstacks y = " << mNstackArray.at(YY) << std::endl;
-	//std::cout << "Total stacks entire sample = " << sequence.mNtotalStackEntireSample << std::endl;
-	//std::cout << "Total commandlines = " << 3*(mNtotalStackEntireSample)+mNvibratomeSlices - 1 << std::endl;
+	std::cout << "Num vibratome slices = " << mNvibratomeSlices << std::endl;
+	std::cout << "Stack array dim x = " << mNstackArrayDim.at(XX) << "\tStack array dim y = " << mNstackArrayDim.at(YY) << std::endl;
+	std::cout << "Total num stacks entire sample = " << mNtotalStackEntireSample << std::endl;
+	std::cout << "Total num commandlines = " << 3*(mNtotalStackEntireSample)+ mNvibratomeSlices - 1 << std::endl;
 }
 
 double2 Sequencer::stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const
 {
 	double2 stagePosition_mm;
-	stagePosition_mm.at(XX) = mFOV_um.at(XX)/1000 * (stackArrayIndices.at(XX) + 0.5);	// (stackIJ + 0.5) ranges from 0.5 to (mNstackArray - 0.5)
-	stagePosition_mm.at(YY) = mFOV_um.at(YY)/1000 * (stackArrayIndices.at(YY) + 0.5);	// (stackIJ + 0.5) ranges from 0.5 to (mNstackArray - 0.5)
+	stagePosition_mm.at(XX) = mFOV_um.at(XX)/1000 * (stackArrayIndices.at(XX) + 0.5);	// (stackIJ + 0.5) ranges from 0.5 to (mNstackArrayDim - 0.5)
+	stagePosition_mm.at(YY) = mFOV_um.at(YY)/1000 * (stackArrayIndices.at(YY) + 0.5);	// (stackIJ + 0.5) ranges from 0.5 to (mNstackArrayDim - 0.5)
 
 	return stagePosition_mm;
 }
@@ -1539,15 +1574,15 @@ void Sequencer::generateCommandlist()
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mWavelengthList_nm.size(); iterWL++)
 		{
 			//The y-stage is slow to react because it sits under of the x and z stages. Move y fewer times than x
-			while ( yy >= 0 && yy < mNstackArray.at(YY))			//y direction
+			while ( yy >= 0 && yy < mNstackArrayDim.at(YY))			//y direction
 			{
-				while ( xx >= 0 && xx < mNstackArray.at(XX))		//x direction
+				while ( xx >= 0 && xx < mNstackArrayDim.at(XX))		//x direction
 				{
 					stackCenter_mm = stackIndicesToStackCenter_mm_({ xx,yy });
 
 					mCommandList.push_back(Commandline(iterVibratomeSlice, { xx,yy }, stackCenter_mm));
 					mCommandList.push_back(Commandline(stackNumber, mWavelengthList_nm.at(iterWL), scanDirZ, Z_um, P_mW));
-					mCommandList.push_back(Commandline(""));
+					mCommandList.push_back(Commandline());
 
 					scanDirZ *= -1;		//Alternate the scanning direction in z
 					xx += scanDirX;		//Increase the iterator x
@@ -1566,9 +1601,9 @@ void Sequencer::generateCommandlist()
 			scanDirY *= -1;	
 		}
 
-		//Only need to cut 'mNvibratomeSlices -1' times
+		//Only need to cut 'nVibratomeSlices -1' times
 		if (iterVibratomeSlice < mNvibratomeSlices - 1)
-			mCommandList.push_back(Commandline());
+			mCommandList.push_back(Commandline({ mVibratomeHome, mVibratomeSliceThickness_um }));
 	}
 }
 
@@ -1584,11 +1619,11 @@ void Sequencer::printToFile(const std::string fileName) const
 		*fileHandle << "\t\t" + mCommandList.front().printHeaderUnits() + "\n";
 	}
 
-	for (std::vector<int>::size_type iter = 0; iter != mCommandList.size(); iter++)
-		//for (std::vector<int>::size_type iter = 0; iter != 10; iter++) //For debugging
+	for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != mCommandList.size(); iterCommandline++)
+		//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 10; iterCommandline++) //For debugging
 	{
-		*fileHandle << iter << "\t";		//Print out the iteration number
-		mCommandList.at(iter).printToFile(fileHandle);
+		*fileHandle << iterCommandline << "\t";		//Print out the iteration number
+		mCommandList.at(iterCommandline).printToFile(fileHandle);
 	}
 	fileHandle->close();
 }

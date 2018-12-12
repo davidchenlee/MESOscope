@@ -278,68 +278,75 @@ public:
 };
 
 //Data types for the commandlines
-struct MovParam {
+struct MovParam
+{
 	int vibratomeSliceNumber;
 	int2 stackIJ;
 	double2 stackCenter_mm;
 };
-struct AcqParam {
+struct AcqParam
+{
 	int stackNumber;
 	int wavelength_nm;
-	int scanDirZ;				//+1 for positive, -1 for negative
-	double2 Z_um;				//Min and max z position
-	double2 P_mW;				//Min and max laser power
+	int scanDirZ;						//+1 for positive, -1 for negative
+	double2 Z_um;						//Min and max z position
+	double2 P_mW;						//Min and max laser power
+};
+struct CutParam
+{
+	double3 vibratomeHome_mm;			//Position of the stages at the vibratome blade
+	double vibratomeSliceThickness_um;
 };
 
-struct CommandParam {
+struct CommandParam
+{
 	Action action;
-	union {
+	union
+	{
 		struct MovParam movParam;
 		struct AcqParam acqParam;
+		struct CutParam cutParam;
 	};
 };
 
-class Commandline {
+class Commandline
+{
 	std::string actionToString_(const Action action) const;
 public:
 	CommandParam mCommandParam;
 	Commandline(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm);								//Move stage
 	Commandline(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);	//Acq stack
-	Commandline(const std::string fileName);																					//Save data
-	Commandline();																												//Cut slice
+	Commandline();																					//Save data
+	Commandline(const double3 vibratomeHome_mm, const double vibratomeSliceThickness_um);										//Cut slice
 	~Commandline() {};
 	std::string printHeader() const;
 	std::string printHeaderUnits() const;
 	void printToFile(std::ofstream *fileHandle) const;
+	void printParameters() const;
 };
 
 class Sequencer
 {
-	//STACK ACQUISITION PARAMETERS
+	//PARAMETERS
+	std::vector<int> mWavelengthList_nm;	//Wavelengths
 	ROI mSampleROI_mm;						//Region of interest across the entire sample
-	double2 mSampleSizeXY_um;				//Sample size in x and y
-	const double mSampleSizeZ_um = 10000;	//Sample size in z
-	double2 mFOV_um{ 150, 200 };			//Field of view in x and y
-	double2 mStackOverlap_um{ 0,0 };		//stack overlap in x and y
-	int2 mNstackArray;						//Number of stacks in x and y in each vibratome slice
+	double2 mSampleLengthXY_um;				//Sample size in x and y
+	double mSampleLengthZ_um;				//Sample size in z
+	double2 mFOV_um;						//Field of view in x and y
+	const double2 mStackOverlap_um{ 0,0 };	//stack overlap in x and y
+	int2 mNstackArrayDim;					//Dimension of the array of stacks
 	int mNtotalStacksPerVibratomeSlice;		//Total number of stacks in a vibratome slice
 	int mNtotalStackEntireSample;			//Total number of stacks in the entire sample
-
+	double mStepSizeZ_um;					//image resolution in the z axis
+	const double3 mVibratomeHome = { 0,0,0 };
+	const double mVibratomeSliceThickness_um = 100;
+	int mNvibratomeSlices;					//Number of vibratome slices in the entire sample
+	
 	double2 stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const;
 public:
 	std::vector<Commandline> mCommandList;
-	std::vector<int> mWavelengthList_nm;	//Wavelengths
-
-	//STACK ACQUISITION PARAMETERS
-	const double stepSizeZ_um = 0.5;
-
-	//VIBRATOME PARAMETERS
-	const double2 mVibratomeHome{ 0,0 };
-	const double2 mMicroscopeHome{ 0,0 };
-	const int mVibratomeSliceThickness_um = 100;
-	const int mNvibratomeSlices = static_cast<int>(mSampleSizeZ_um / mVibratomeSliceThickness_um);		//Number of vibratome slices in the entire sample
-
-	Sequencer(const ROI roi_mm, const std::vector<int> wavelengthList_nm);
+	
+	Sequencer(const ROI roi_mm, const double sampleLengthZ_um, const std::vector<int> wavelengthList_nm, const double2 FOV_um, const double stepSizeZ_um);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor

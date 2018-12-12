@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 			//seq_testVibratome(fpga);
 			//seq_testStageTrigAcq(fpga);
 			//seq_testCommandList();
-			seq_generateScanningPattern();
+			seq_scanEntireSample();
 		}
 		catch (const std::invalid_argument &e)
 		{

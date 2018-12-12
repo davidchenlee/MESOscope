@@ -330,7 +330,7 @@ namespace FPGAns
 			}
 			allQueues = {};					//Cleanup the queue C++11 style
 
-			const U32 timeout_ms = -1;		//in ms. A value -1 prevents FIFOIN from timing out
+			const U32 timeout_ms = -1;		//A value -1 prevents FIFOIN from timing out
 			U32 r;							//Elements remaining
 
 			//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute

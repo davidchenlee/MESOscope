@@ -22,7 +22,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
-	double zDelta_um = 10 * um;				//Acquire a stack covering this interval
+	double stackRangeZ_um = 10 * um;				//Acquire a stack covering this interval
 
 	//LASER
 	const int wavelength_nm = 1040;
@@ -69,7 +69,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		break;
 	case STACKMODE:
 		nSameZ = 1;
-		nDiffZ = (int)(zDelta_um / stepSize_um);
+		nDiffZ = (int)(stackRangeZ_um / stepSize_um);
 		overrideFlag = NOOVERRIDE;
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
@@ -77,11 +77,11 @@ void seq_main(const FPGAns::FPGA &fpga)
 		break;
 	case STACKCENTEREDMODE:
 		nSameZ = 1;
-		nDiffZ = (int)(zDelta_um / stepSize_um);
+		nDiffZ = (int)(stackRangeZ_um / stepSize_um);
 		overrideFlag = NOOVERRIDE;
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
+			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) - 0.5 * stackRangeZ_um / 1000 + iterDiffZ * stepSize_um / 1000 });
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
@@ -216,7 +216,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
-	double zDelta_um = 10 * um;				//Acquire a stack covering this interval
+	double stackRangeZ_um = 10 * um;				//Acquire a stack covering this interval
 
 	//LASER
 	const int wavelength_nm = 1040;						//Needed for the filterwheels
@@ -264,7 +264,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		break;
 	case STACKMODE:
 		nSameZ = 1;
-		nDiffZ = (int)(zDelta_um / stepSize_um);
+		nDiffZ = (int)(stackRangeZ_um / stepSize_um);
 		overrideFlag = NOOVERRIDE;
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
@@ -272,11 +272,11 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		break;
 	case STACKCENTEREDMODE:
 		nSameZ = 1;
-		nDiffZ = (int)(zDelta_um / stepSize_um);
+		nDiffZ = (int)(stackRangeZ_um / stepSize_um);
 		overrideFlag = NOOVERRIDE;
 		//Push the stage sequence
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) - 0.5 * zDelta_um / 1000 + iterDiffZ * stepSize_um / 1000 });
+			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) - 0.5 * stackRangeZ_um / 1000 + iterDiffZ * stepSize_um / 1000 });
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
@@ -429,8 +429,8 @@ void seq_testPixelclock(const FPGAns::FPGA &fpga)
 	image.acquire();						//Execute the realtime sequence and acquire the image
 	//image.pushToVector(stackOfAverages);
 	//std::cout << "size: " << stackOfAverages.size() << std::endl;
-	//TiffU8 aa(stackOfAverages, 300, 400);
-	//aa.saveTiff("Untitled");
+	//TiffU8 acqParam(stackOfAverages, 300, 400);
+	//acqParam.saveTiff("Untitled");
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock
@@ -810,7 +810,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	stage.waitForMotionToStop3();
 	pockelsVision.setShutter(false);
 
-	//Disable ZstageAsTrigger to position the stage in the next run without triggering the sequence
+	//Disable ZstageAsTrigger to be able to move the stage without triggering the acquisition sequence
 	NiFpga_WriteBool(fpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false);
 
 }
@@ -823,6 +823,34 @@ void seq_generateScanningPattern()
 	sequence.generateCommandlist();
 	//sequence.printToFile("Commandlist");
 
-	//std::cout << "Press any key to continue..." << std::endl;
-	//getchar();
+	int iter = 1;
+
+	switch (sequence.mCommandList.at(iter).mCommandParam.action)
+	{
+	case MOV:
+		MovParam movParam =	sequence.mCommandList.at(iter).mCommandParam.movParam;
+		movParam.stackCenter_mm;
+		break;
+	case ACQ:
+		AcqParam acqParam = sequence.mCommandList.at(iter).mCommandParam.acqParam;
+		std::cout << "wavelength = " << acqParam.wavelength_nm << std::endl;
+		std::cout << "scanDirZ = " << acqParam.scanDirZ << std::endl;
+		std::cout << "Z_um = " << acqParam.Z_um.at(XX) << std::endl;
+		std::cout << "P_mW = " << acqParam.P_mW.at(XX) << std::endl;
+
+		break;
+	case SAV:
+		break;
+	case CUT:
+		sequence.mVibratomeHome;
+		sequence.mMicroscopeHome;
+		sequence.mVibratomeSliceThickness_um;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
+	}
+
+
+	std::cout << "Press any key to continue..." << std::endl;
+	getchar();
 }

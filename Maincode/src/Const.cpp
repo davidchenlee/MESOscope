@@ -34,27 +34,27 @@ namespace Constants
 																//(Measured using the oscilloscope by looking at RS SYNC through the FPGA)
 
 	//FPGA
-	extern const int AOmax_V = 10 * V;						//in V. Max voltage of the AOs
+	extern const int AOmax_V = 10 * V;						//Max voltage of the AOs
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It corresponds to the FPGA's clock
-	extern const double usPerTick = 1.0 / 160;				//in us. Time step of the FPGA's clock
-	extern const U32 tMIN_tick = 2;							//in ticks. Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
-	extern const double tMIN_us = tMIN_tick * usPerTick;	//in us. Min time step allowed
-	extern const int AO_tMIN_us = 2;						//in us. Time step of the analog output. The AO channels take >1 us to set the output
-	extern const int syncDOtoAO_tick = 4*74;				//in ticks. Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
-	extern const int syncAODOtoLinegate_tick = 0;			//in ticks. Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
+	extern const double usPerTick = 1.0 / 160;				//Time step of the FPGA's clock
+	extern const U32 tMIN_tick = 2;							//Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
+	extern const double tMIN_us = tMIN_tick * usPerTick;	//Min time step allowed
+	extern const int AO_tMIN_us = 2;						//Time step of the analog output. The AO channels take >1 us to set the output
+	extern const int syncDOtoAO_tick = 4*74;				//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
+	extern const int syncAODOtoLinegate_tick = 0;			//Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
 	
 	extern const double linegateTimeout_us = 100 * ms;	//In LV, timeout the start of the data acquisition. Otherwise, when Lineclock fails triggering (e.g.the RS is off),
 														//pixelclock false-triggers after Lineclock is back up
 
-	extern const int FIFOINtimeout_tick = 100;			//in ticks. Timeout of the host-to-target and target-to-host FIFOINs
+	extern const int FIFOINtimeout_tick = 100;			//Timeout of the host-to-target and target-to-host FIFOINs
 	extern const int FIFOINmax = 32773;					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 
 
 	//STAGES
-	extern const int stageTriggerPulse_ms = 5 * ms;			//in ms. Pulsewidth for triggering the stages. (the stage controller has a 20kHz clock = 50 us)
+	extern const int stageTriggerPulse_ms = 5 * ms;			//Pulsewidth for triggering the stages. (the stage controller has a 20kHz clock = 50 us)
 															//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based.
 
 	//PMT

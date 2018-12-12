@@ -54,9 +54,9 @@ class Vibratome
 	int mNslice;						//Slice number
 	double mSectionThickness;			//Thickness of the section
 	double mCuttingSpeed_mmps = 0.5;	//in mm/s. Speed of the vibratome for cutting (manual setting)
-	double mAmplitude_mm = 1.0;			//in mm. Amplitude of the vibratome for cutting (manual setting)
-	double mTravelRange_mm = 52.4;		//in mm. (horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
-	double mHeight_mm = 0;				//in mm. vertical distance between the razor blade and the objective's focal plane
+	double mAmplitude_mm = 1.0;			//Amplitude of the vibratome for cutting (manual setting)
+	double mTravelRange_mm = 52.4;		//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
+	double mHeight_mm = 0;				//vertical distance between the razor blade and the objective's focal plane
 	double mMovingSpeed_mmps = 2.495;	//in mm/s. Forward and backward moving speed of the head. 52.4 mm in 21 seconds = 2.495 mm/s
 
 	void moveHead_(const int duration_ms, const MotionDir motionDir) const;
@@ -142,8 +142,8 @@ class Filterwheel
 	const int mTimeout_ms = 150;
 	Filtercolor mColor;
 	const int mNpos = 6;					//Nunmber of filter positions
-	const double mTuningSpeed_Hz = 0.8;		//in Hz. The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
-	const int mWaitToStop_ms = 3000;		//in ms. Wait until the filterwheel stops turning the turret
+	const double mTuningSpeed_Hz = 0.8;		//The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
+	const int mWaitToStop_ms = 3000;		//Wait until the filterwheel stops turning the turret
 	const int mRxBufSize = 256;				//Serial buffer size
 
 	std::string convertToString_(const Filtercolor color) const;
@@ -249,7 +249,7 @@ class Stage
 	const double3 mPosMin3_mm{ -60, 0, 1 };			//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
 	const double3 mPosMax3_mm{ 50, 30, 25 };
 	int3 mNtile;									//Tile number in x, y, z
-	int3 mNtileOverlap_pix;							//in pixels. Tile overlap in x, y, z
+	int3 mNtileOverlap_pix;							//Tile overlap in x, y, z
 
 	double qCTO_(const Axis axis, const int chan, const int triggerParam) const;
 	bool qTRO_(const Axis axis, const int chan) const;
@@ -275,36 +275,34 @@ public:
 	void downloadConfiguration(const Axis axis, const int chan) const;
 	double qVEL(const Axis axis) const;
 	void VEL(const Axis axis, const double vel_mmPerS) const;
+};
 
+//Data types for the commandlines
+struct MovParam {
+	int vibratomeSliceNumber;
+	int2 stackIJ;
+	double2 stackCenter_mm;
+};
+struct AcqParam {
+	int stackNumber;
+	int wavelength_nm;
+	int scanDirZ;				//+1 for positive, -1 for negative
+	double2 Z_um;				//Min and max z position
+	double2 P_mW;				//Min and max laser power
+};
 
-	double3 readAbsolutePosition3_mm(const int nSection, const int nPlane, const int3 nTileXY) const;
+struct CommandParam {
+	Action action;
+	union {
+		struct MovParam movParam;
+		struct AcqParam acqParam;
+	};
 };
 
 class Commandline {
-	struct MovParam {
-		int vibratomeSliceNumber;
-		int2 stackIJ;
-		double2 stackCenter_mm;
-	};
-	struct AcqParam {
-		int stackNumber;
-		int wavelength_nm;
-		int scanDirZ;				//+1 for positive, -1 for negative
-		double2 Z_um;				//Min and max z position
-		double2 P_mW;				//Min and max laser power
-	};
-
-	struct CommandParam {
-		Action action;
-		union {
-			struct MovParam movParam;
-			struct AcqParam acqParam;
-		};
-	};
-
-		std::string actionToString_(const Action action) const;
+	std::string actionToString_(const Action action) const;
 public:
-	CommandParam mParam;
+	CommandParam mCommandParam;
 	Commandline(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm);								//Move stage
 	Commandline(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW);	//Acq stack
 	Commandline(const std::string fileName);																					//Save data
@@ -317,22 +315,27 @@ public:
 
 class Sequencer
 {
+	//STACK ACQUISITION PARAMETERS
+	ROI mSampleROI_mm;						//Region of interest across the entire sample
+	double2 mSampleSizeXY_um;				//Sample size in x and y
+	const double mSampleSizeZ_um = 10000;	//Sample size in z
+	double2 mFOV_um{ 150, 200 };			//Field of view in x and y
+	double2 mStackOverlap_um{ 0,0 };		//stack overlap in x and y
+	int2 mNstackArray;						//Number of stacks in x and y in each vibratome slice
+	int mNtotalStacksPerVibratomeSlice;		//Total number of stacks in a vibratome slice
+	int mNtotalStackEntireSample;			//Total number of stacks in the entire sample
+
 	double2 stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const;
 public:
 	std::vector<Commandline> mCommandList;
 	std::vector<int> mWavelengthList_nm;	//Wavelengths
-	ROI mSampleROI_mm;						//Region of interest across the entire sample
-	double2 mSampleSizeXY_um;				//Sample size in x and y
-	const double mSampleSizeZ_um = 10000;	//Sample size in z
-	double2 mFOV_um{150, 200};				//Field of view in x and y
-	int2 mNstacksXY;						//Number of stacks in x and y in a vibratome slice
-	double2 mStackOverlap_um{ 0,0 };		//stack overlap in x and y
-	int mNtotalStacksPerVibratomeSlice;		//Total number of stacks in a vibratome slice
-	int mNtotalStackEntireSample;			//Total number of stacks in the entire sample
-	
-	const double mVibratomeHome = 0;
-	const double mMicroscopeHome = 0;
-	const int mNplanesPerSlice = 100;		//Number of planes in each slice
+
+	//STACK ACQUISITION PARAMETERS
+	const double stepSizeZ_um = 0.5;
+
+	//VIBRATOME PARAMETERS
+	const double2 mVibratomeHome{ 0,0 };
+	const double2 mMicroscopeHome{ 0,0 };
 	const int mVibratomeSliceThickness_um = 100;
 	const int mNvibratomeSlices = static_cast<int>(mSampleSizeZ_um / mVibratomeSliceThickness_um);		//Number of vibratome slices in the entire sample
 
@@ -342,7 +345,6 @@ public:
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor
 	Sequencer& operator=(Sequencer&&) = delete;			//Disable move-assignment constructor
 
-	void pushCommandline(Commandline command);
 	void generateCommandlist();
 	void printToFile(const std::string fileName) const;
 };

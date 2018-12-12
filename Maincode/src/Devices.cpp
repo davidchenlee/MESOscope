@@ -1415,26 +1415,26 @@ void Stage::downloadConfiguration(const Axis axis, const int chan) const
 #pragma region "Commandline"
 Commandline::Commandline(const int vibratomeSliceNumber, const int2 stackIJ, const double2 stackCenter_mm)
 {
-	mCommandParam.action = MOV;
-	mCommandParam.movParam = { vibratomeSliceNumber, stackIJ, stackCenter_mm };
+	mAction = MOV;
+	mCommand.moveStage = { vibratomeSliceNumber, stackIJ, stackCenter_mm };
 }
 
 Commandline::Commandline(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Z_um, const double2 P_mW)
 {
-	mCommandParam.action = ACQ;
-	mCommandParam.acqParam = { stackNumber, wavelength_nm, scanDirZ, Z_um, P_mW };
+	mAction = ACQ;
+	mCommand.acqStack = { stackNumber, wavelength_nm, scanDirZ, Z_um, P_mW };
 }
 
 Commandline::Commandline()
 {
-	mCommandParam.action = SAV;
+	mAction = SAV;
 }
 
-Commandline::Commandline(const double3 vibratomeHome_mm, const double vibratomeSliceThickness_um)
+Commandline::Commandline(const double3 stagePosition_mm, const double vibratomeSliceThickness_um)
 {
-	mCommandParam.action = CUT;
-	mCommandParam.cutParam.vibratomeHome_mm = vibratomeHome_mm;
-	mCommandParam.cutParam.vibratomeSliceThickness_um = vibratomeSliceThickness_um;
+	mAction = CUT;
+	mCommand.cutSlice.stagePosition_mm = stagePosition_mm;
+	mCommand.cutSlice.vibratomeSliceThickness_um = vibratomeSliceThickness_um;
 }
 
 std::string Commandline::actionToString_(const Action action) const
@@ -1456,7 +1456,7 @@ std::string Commandline::actionToString_(const Action action) const
 
 std::string Commandline::printHeader() const
 {
-	return 	"Action\tSlice#\tStackIJ\tStack_Center\tStack#\tWavlen\tDirZ\tZ_min\tZ_max\tP_min\tP_max";
+	return 	"Action\tSlice#\tStackIJ\tPosition\tStack#\tWavlen\tDirZ\tZ_min\tZ_max\tP_min\tP_max";
 }
 
 std::string Commandline::printHeaderUnits() const
@@ -1466,23 +1466,23 @@ std::string Commandline::printHeaderUnits() const
 
 void Commandline::printToFile(std::ofstream *fileHandle) const
 {
-	switch (mCommandParam.action)
+	switch (mAction)
 	{
 	case MOV:
-		*fileHandle << actionToString_(mCommandParam.action) << "\t" << mCommandParam.movParam.vibratomeSliceNumber << "\t(" <<
-			mCommandParam.movParam.stackIJ.at(XX) << "," << mCommandParam.movParam.stackIJ.at(YY) << ")\t(" <<
-			std::fixed << std::setprecision(3) << mCommandParam.movParam.stackCenter_mm.at(0) << "," << mCommandParam.movParam.stackCenter_mm.at(1) << ")\n";
+		*fileHandle << actionToString_(mAction) << "\t" << mCommand.moveStage.vibratomeSliceNumber << "\t(" <<
+			mCommand.moveStage.stackIJ.at(XX) << "," << mCommand.moveStage.stackIJ.at(YY) << ")\t(" <<
+			std::fixed << std::setprecision(3) << mCommand.moveStage.stackCenter_mm.at(0) << "," << mCommand.moveStage.stackCenter_mm.at(1) << ")\n";
 		break;
 	case ACQ:
-		*fileHandle << actionToString_(mCommandParam.action) << "\t\t\t\t\t" << mCommandParam.acqParam.stackNumber << "\t" << mCommandParam.acqParam.wavelength_nm << "\t" << mCommandParam.acqParam.scanDirZ << "\t" <<
-			std::setprecision(3) << mCommandParam.acqParam.Z_um.at(0) << "\t" << mCommandParam.acqParam.Z_um.at(1) << "\t" <<
-			std::setprecision(0) << mCommandParam.acqParam.P_mW.at(0) << "\t" << mCommandParam.acqParam.P_mW.at(1) << "\n";
+		*fileHandle << actionToString_(mAction) << "\t\t\t\t\t" << mCommand.acqStack.stackNumber << "\t" << mCommand.acqStack.wavelength_nm << "\t" << mCommand.acqStack.scanDirZ << "\t" <<
+			std::setprecision(3) << mCommand.acqStack.Z_um.at(0) << "\t" << mCommand.acqStack.Z_um.at(1) << "\t" <<
+			std::setprecision(0) << mCommand.acqStack.P_mW.at(0) << "\t" << mCommand.acqStack.P_mW.at(1) << "\n";
 		break;
 	case SAV:
-		*fileHandle << actionToString_(mCommandParam.action) + "\n";
+		*fileHandle << actionToString_(mAction) + "\n";
 		break;
 	case CUT:
-		*fileHandle << actionToString_(mCommandParam.action) + "******************************************************************************************\n";
+		*fileHandle << actionToString_(mAction) << "************************************\t\t\t\t" << mCommand.cutSlice.stagePosition_mm.at(ZZ) << "\t" << mCommand.cutSlice.stagePosition_mm.at(ZZ) << "\n";
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -1491,26 +1491,26 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 
 void Commandline::printParameters() const
 {
-	switch (mCommandParam.action)
+	switch (mAction)
 	{
 	case MOV:
-		std::cout << "The command is " << actionToString_(mCommandParam.action) << " with parameters: \n";
-		std::cout << "Vibratome slice number = " << mCommandParam.movParam.vibratomeSliceNumber << "\n";
-		std::cout << "Stack ij = (" << mCommandParam.movParam.stackIJ.at(XX) << "," << mCommandParam.movParam.stackIJ.at(YY) << ")\n";
-		std::cout << "Stack center (mm,mm) = (" << mCommandParam.movParam.stackCenter_mm.at(XX) << "," << mCommandParam.movParam.stackCenter_mm.at(YY) << ")\n" << std::endl;
+		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
+		std::cout << "Vibratome slice number = " << mCommand.moveStage.vibratomeSliceNumber << "\n";
+		std::cout << "Stack ij = (" << mCommand.moveStage.stackIJ.at(XX) << "," << mCommand.moveStage.stackIJ.at(YY) << ")\n";
+		std::cout << "Stack center (mm,mm) = (" << mCommand.moveStage.stackCenter_mm.at(XX) << "," << mCommand.moveStage.stackCenter_mm.at(YY) << ")\n" << std::endl;
 		break;
 	case ACQ:
-		std::cout << "The command is " << actionToString_(mCommandParam.action) << " with parameters: \n";
-		std::cout << "wavelength (nm) = " << mCommandParam.acqParam.wavelength_nm << "\n";
-		std::cout << "scanDirZ = " << mCommandParam.acqParam.scanDirZ << "\n";
-		std::cout << "Zmin/Zmax (um) = " << mCommandParam.acqParam.Z_um.at(0) << "/" << mCommandParam.acqParam.Z_um.at(1) << "\n";
-		std::cout << "Pmin/Pmax (mW) = " << mCommandParam.acqParam.P_mW.at(0) << "/" << mCommandParam.acqParam.P_mW.at(1) << "\n" << std::endl;
+		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
+		std::cout << "wavelength (nm) = " << mCommand.acqStack.wavelength_nm << "\n";
+		std::cout << "scanDirZ = " << mCommand.acqStack.scanDirZ << "\n";
+		std::cout << "Zmin/Zmax (um) = " << mCommand.acqStack.Z_um.at(0) << "/" << mCommand.acqStack.Z_um.at(1) << "\n";
+		std::cout << "Pmin/Pmax (mW) = " << mCommand.acqStack.P_mW.at(0) << "/" << mCommand.acqStack.P_mW.at(1) << "\n" << std::endl;
 		break;
 	case SAV:
-		std::cout << "The command is " << actionToString_(mCommandParam.action) << " with no parameters" << std::endl;
+		std::cout << "The command is " << actionToString_(mAction) << " with no parameters" << std::endl;
 		break;
 	case CUT:
-		std::cout << "The command is " << actionToString_(mCommandParam.action) << " with no parameters" << std::endl;
+		std::cout << "The command is " << actionToString_(mAction) << " with no parameters" << std::endl;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -1521,30 +1521,23 @@ void Commandline::printParameters() const
 
 
 #pragma region "Sequencer"
-Sequencer::Sequencer(const ROI roi_mm, const double sampleLengthZ_um, const std::vector<int> wavelengthList_nm, const double2 FOV_um, const double stepSizeZ_um):
-	mSampleROI_mm(roi_mm), mSampleLengthZ_um(sampleLengthZ_um), mWavelengthList_nm(wavelengthList_nm), mFOV_um(FOV_um), mStepSizeZ_um(stepSizeZ_um)
+Sequencer::Sequencer(const Sample sample, const double initialStagePositionZ_mm, const double stackRangeZ_um, const std::vector<int> wavelengthList_nm, const double2 FOV_um, const double stepSizeZ_um):
+	mSample(sample), mStagePositionZ_mm(initialStagePositionZ_mm), mStackRangeZ_mm(stackRangeZ_um/1000), mWavelengthList_nm(wavelengthList_nm), mFOV_um(FOV_um), mStepSizeZ_um(stepSizeZ_um)
 {
-	//Convert input ROI = (xmin, ymax, xmax, ymin) to the equivalent sample length in X and Y
-	mSampleLengthXY_um.at(XX) = 1000 * (mSampleROI_mm.at(2) - mSampleROI_mm.at(0));
-	mSampleLengthXY_um.at(YY) = 1000 * (mSampleROI_mm.at(1) - mSampleROI_mm.at(3));
-
-	if (mSampleLengthXY_um.at(XX) < 0 || mSampleLengthXY_um.at(YY) < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
-
 	//Calculate the total number of vibratome slices
-	mNvibratomeSlices = static_cast<int>(std::ceil(mSampleLengthZ_um / mVibratomeSliceThickness_um));
+	mNvibratomeSlices = static_cast<int>(std::ceil(mSample.mLength_um.at(ZZ) / mVibratomeSliceThickness_um));
 
 	//Calculate the total number of stacks per vibratome slice and in the entire sample
-	mNstackArrayDim.at(XX) = static_cast<int>(std::ceil(mSampleLengthXY_um.at(XX) / mFOV_um.at(XX)));		//Number of stacks in x
-	mNstackArrayDim.at(YY) = static_cast<int>(std::ceil(mSampleLengthXY_um.at(YY) / mFOV_um.at(YY)));		//Number of stacks in y
-	mNtotalStacksPerVibratomeSlice = mNstackArrayDim.at(XX) * mNstackArrayDim.at(YY);						//Total number of stacks in a vibratome slice
-	mNtotalStackEntireSample = mNvibratomeSlices * static_cast<int>(wavelengthList_nm.size()) * mNtotalStacksPerVibratomeSlice;
+	mNstackArrayDim.at(XX) = static_cast<int>(std::ceil(mSample.mLength_um.at(XX) / mFOV_um.at(XX)));							//Number of stacks in x
+	mNstackArrayDim.at(YY) = static_cast<int>(std::ceil(mSample.mLength_um.at(YY) / mFOV_um.at(YY)));							//Number of stacks in y
+	mNtotalStacksPerVibratomeSlice = mNstackArrayDim.at(XX) * mNstackArrayDim.at(YY);											//Total number of stacks in a vibratome slice
+	mNtotalStackEntireSample = mNvibratomeSlices * static_cast<int>(wavelengthList_nm.size()) * mNtotalStacksPerVibratomeSlice;	//Total number of stacks in the entire sample
 
 	//Pre-reserve a memory block assuming 3 actions: MOV, ACQ, and SAV for every stack in a vibratome slice; then CUT
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNvibratomeSlices - 1);
 
 	std::cout << "Num vibratome slices = " << mNvibratomeSlices << std::endl;
-	std::cout << "Stack array dim x = " << mNstackArrayDim.at(XX) << "\tStack array dim y = " << mNstackArrayDim.at(YY) << std::endl;
+	std::cout << "StackArray dim (x, y) = (" << mNstackArrayDim.at(XX) << "," << mNstackArrayDim.at(YY) << ")" << std::endl;
 	std::cout << "Total num stacks entire sample = " << mNtotalStackEntireSample << std::endl;
 	std::cout << "Total num commandlines = " << 3*(mNtotalStackEntireSample)+ mNvibratomeSlices - 1 << std::endl;
 }
@@ -1563,13 +1556,14 @@ void Sequencer::generateCommandlist()
 {
 	int stackNumber = 0;
 	double2 stackCenter_mm;
-	const double2 Z_um{ 0, 1 };
+	double2 Z_um;
 	const double2 P_mW{ 10, 20 };
 
 	for (int iterVibratomeSlice = 0; iterVibratomeSlice < mNvibratomeSlices; iterVibratomeSlice++)
 	{
 		int scanDirX = 1, scanDirY = 1, scanDirZ = 1;	//Initialize the scanning directions
 		int xx = 0, yy = 0;								//Initialize the stack indices
+		Z_um = { mStagePositionZ_mm, mStagePositionZ_mm + mStackRangeZ_mm };
 
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mWavelengthList_nm.size(); iterWL++)
 		{
@@ -1603,7 +1597,11 @@ void Sequencer::generateCommandlist()
 
 		//Only need to cut 'nVibratomeSlices -1' times
 		if (iterVibratomeSlice < mNvibratomeSlices - 1)
-			mCommandList.push_back(Commandline({ mVibratomeHome, mVibratomeSliceThickness_um }));
+		{
+			mCommandList.push_back(Commandline({ mVibratomeHomeXY.at(XX),mVibratomeHomeXY.at(YY),0 }, mVibratomeSliceThickness_um));
+			mStagePositionZ_mm += mStackRangeZ_mm;
+		}
+			
 	}
 }
 
@@ -1619,8 +1617,8 @@ void Sequencer::printToFile(const std::string fileName) const
 		*fileHandle << "\t\t" + mCommandList.front().printHeaderUnits() + "\n";
 	}
 
-	for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != mCommandList.size(); iterCommandline++)
-		//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 10; iterCommandline++) //For debugging
+	//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != mCommandList.size(); iterCommandline++)
+		for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 3*3*67*50+10; iterCommandline++) //For debugging
 	{
 		*fileHandle << iterCommandline << "\t";		//Print out the iteration number
 		mCommandList.at(iterCommandline).printToFile(fileHandle);

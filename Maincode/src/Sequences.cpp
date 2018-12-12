@@ -818,53 +818,59 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 void seq_scanEntireSample()
 {
 	//Generate the command list and keep it in memory. I prefer generating such list before execution because then I can inspect all the parameters offline
-	const std::vector<int> wavelengthList_nm{ 750, 940, 1040};
+
+	//Create a sample object
 	const ROI roi_mm { 0, 10, 10, 0 };
-	const double sampleLengthZ_um = 10000;
-	const double2 FOM_um{ 150,200 };
-	const double stepSizeZ_um = 0.5;
+	const double sampleLengthZ_mm = 10;
+	Sample sample(roi_mm, sampleLengthZ_mm);
 
-	Sequencer sequence(roi_mm, sampleLengthZ_um, wavelengthList_nm, FOM_um, stepSizeZ_um);
+	const std::vector<int> wavelengthList_nm{ 750, 940, 1040 };
+	const double initialZ_mm = 10;			//Initial height of the stage
+	const double2 FOV_um{ 150,200 };
+	const double stackRangeZ_um = 100;		//Stack thickness
+	const double stepSizeZ_um = 0.5;		//Image resolution in z
+
+
+	Sequencer sequence(sample, initialZ_mm, stackRangeZ_um, wavelengthList_nm, FOV_um, stepSizeZ_um);
 	sequence.generateCommandlist();
-	//sequence.printToFile("Commandlist");
+	sequence.printToFile("Commandlist");
 
-	
-	//Read the commands line by line
-	for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 10; iterCommandline++)
+	if (0)
 	{
-		CommandParam commandParam = sequence.mCommandList.at(iterCommandline).mCommandParam;
-
-		sequence.mCommandList.at(iterCommandline).printParameters();
-
-		double2 stackCenter_mm, Z_um, P_mW;
-		double3 vibratomeHome_mm;
-		int wavelength_nm;
-		switch (commandParam.action)
+		//Read the commands line by line
+		for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 10; iterCommandline++)
 		{
-		case MOV:
-			stackCenter_mm = commandParam.movParam.stackCenter_mm;
-			//Move the stage to stackCenter_mm
-			break;
-		case ACQ:
-			wavelength_nm = commandParam.acqParam.wavelength_nm;
-			Z_um = commandParam.acqParam.Z_um;
-			P_mW = commandParam.acqParam.P_mW;
-			//Acquire a stack with using wavelength_nm, Z_um, and P_mW
-		case SAV:
-			//Save the stack to file and label it with the stackCenter_mm, wavelength_nm, Z_um, P_mW;
-			break;
-		case CUT:
-			//1. Move the stage to
-			vibratomeHome_mm = commandParam.cutParam.vibratomeHome_mm;
-			//2. Increase the height of the z stage in
-			commandParam.cutParam.vibratomeSliceThickness_um;
-			//3. Cut a slice
-			break;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
+			Commandline commandline = sequence.mCommandList.at(iterCommandline);
+
+			sequence.mCommandList.at(iterCommandline).printParameters();
+
+			double2 stackCenter_mm, Z_um, P_mW;
+			int wavelength_nm;
+			switch (commandline.mAction)
+			{
+			case MOV:
+				stackCenter_mm = commandline.mCommand.moveStage.stackCenter_mm;
+				//Move the stage to stackCenter_mm
+				break;
+			case ACQ:
+				wavelength_nm = commandline.mCommand.acqStack.wavelength_nm;
+				Z_um = commandline.mCommand.acqStack.Z_um;
+				P_mW = commandline.mCommand.acqStack.P_mW;
+				//Acquire a stack using the parameters: wavelength_nm, Z_um, and P_mW
+			case SAV:
+				//Save the stack to file and label it with the acquisition parameters: stackCenter_mm, wavelength_nm, Z_um, P_mW
+				break;
+			case CUT:
+				//Move the stage to vibratomeHome_mm in X and Y. For Z, stageZ = vibratomeHomeZ + nSLice * sliceThickness
+
+				//Cut a slice
+				break;
+			default:
+				throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
+			}
 		}
 	}
-	
+
 
 	std::cout << "Press any key to continue..." << std::endl;
 	getchar();

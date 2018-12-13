@@ -825,18 +825,18 @@ void seq_scanEntireSample()
 	const double sampleLengthZ_mm = 10;
 	Sample sample(roi_mm, sampleLengthZ_mm);
 
-	const std::vector<int> wavelengthList_nm{ 750, 940, 1040 };
-	const double initialZ_mm = 10;			//Initial height of the stage
+	const std::vector<LaserParam> laserParamList{ { 750, 10, 5 }, { 940, 11, 6 }, {1040, 12, 7} };
+	
 	const double2 FOV_um{ 150,200 };
-	const double stackDepth_um = 100;		//Stack thickness
 	const double stepSizeZ_um = 0.5;		//Image resolution in z
+	const double scanZi_mm = 10;			//Initial height of the stage
+	const double stackDepth_um = 100;		//Stack thickness
 
-
-	Sequencer sequence(sample, initialZ_mm, stackDepth_um, wavelengthList_nm, FOV_um, stepSizeZ_um);
+	Sequencer sequence(sample, laserParamList, FOV_um, stepSizeZ_um, scanZi_mm, stackDepth_um);
 	sequence.generateCommandlist();
 	sequence.printToFile("Commandlist");
 
-	if (0)
+	if (1)
 	{
 		//Read the commands line by line
 		for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 10; iterCommandline++)
@@ -845,7 +845,7 @@ void seq_scanEntireSample()
 
 			sequence.mCommandList.at(iterCommandline).printParameters();
 
-			double scanZi_mm, stackDepth_mm, scanPi_mW, stackPdiff_mW;
+			double scanZi_mm, stackDepth_mm, scanPi_mW, stackPinc_mW;
 			double2 stackCenter_mm;
 			int wavelength_nm;
 			switch (commandline.mAction)
@@ -859,7 +859,7 @@ void seq_scanEntireSample()
 				scanZi_mm = commandline.mCommand.acqStack.scanZi_mm;
 				stackDepth_mm = commandline.mCommand.acqStack.stackDepth_um;
 				scanPi_mW = commandline.mCommand.acqStack.scanPi_mW;
-				stackPdiff_mW = commandline.mCommand.acqStack.stackPdiff_mW;
+				stackPinc_mW = commandline.mCommand.acqStack.stackPinc_mW;
 				//Acquire a stack using the parameters: wavelength_nm, Zminmax_um, and Pminmax_mW
 			case SAV:
 				//Save the stack to file and label it with the acquisition parameters: stackCenter_mm, wavelength_nm, Zminmax_um, Pminmax_mW

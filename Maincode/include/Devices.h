@@ -296,7 +296,7 @@ class Commandline
 		double scanZi_mm;		//Initial z-scan position of the stack
 		double stackDepth_um;	//Stack depth or thickness
 		double scanPi_mW;
-		double stackPdiff_mW;
+		double stackPinc_mW;
 	};
 	class CutSlice
 	{
@@ -336,12 +336,20 @@ public:
 	}
 };
 
+class LaserParam
+{
+public:
+	int mWavelength_nm;
+	double mScanPi_mW;
+	double mStackPinc_mW;
+};
+
 class Sequencer
 {
 	const Sample mSample;
 
-	//STACK ACQUISITION
-	std::vector<int> mWavelengthList_nm;			//Wavelengths
+	//STACK
+	int mCurrentStackNumber = 0;
 	double2 mFOV_um;								//Field of view in x and y
 	const double3 mStackOverlap_um{ 0,0,0 };		//stack overlap in x, y, and z. Hard-coded parameter
 	int2 mStackArrayDim;							//Dimension of the array of stacks. Value computed dynamically
@@ -349,27 +357,35 @@ class Sequencer
 	int mNtotalStackEntireSample;					//Total number of stacks in the entire sample. Value computed dynamically
 	double mStepSizeZ_um;							//Image resolution in the z axis
 
-	double mCurrentStagePositionZ_mm;				//Current stage position
-	double mStackDepth_mm;
+	//Z STAGE POSITION
+	int mCurrentScanDirZ = 1;						//Initial value set to 1 (because usually we start scanning from the surface of the sample to the inside)
+	double mCurrentScanZi_mm;						//Current stage position
+	double mStackDepth_um;
+
+	//LASER
+	std::vector<LaserParam> mLaserParam;
 
 	//VIBRATOME
-	const double2 mVibratomeHomeXY = { 0,0 };		//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
-	const double mFocalplaneBladeOffsetZ_um = 35;	//Positive if the blade is higher than the FP; negative otherwise
-	const double mSliceThickness_um = 100;			//Slice thickness. Hard-coded parameter
-	int mNslices;									//Number of vibratome slices in the entire sample. Value computed dynamically
+	int mCurrentSliceNumber = 0;
+	const double2 mVibratomeHomeXY = { 0,0 };													//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
+	const double mBladeOffsetZ_um = 35;															//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	const double mSliceThickness_um = mStackDepth_um;											//Slice thickness. For now, cut the same as the depth the stacks**************************************************MODIFY		
+	double mCurrentPlaneToCutZ_mm = mCurrentScanZi_mm + mSliceThickness_um / 1000;				//Height of the plane to cut	
+	int mNslices = static_cast<int>(std::ceil(mSample.mLength_um.at(ZZ) / mSliceThickness_um));	//Number of vibratome slices in the entire sample. Value computed dynamically
 	
+	double giveScanPi_mW_(const double scanPmin_mW, const double stackPinc_mW, const int scanDirZ);
 	double2 stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const;
 public:
 	std::vector<Commandline> mCommandList;
 	
-	Sequencer(const Sample sample, const double initialStagePositionZ_mm, const double stackDepth_um, const std::vector<int> wavelengthList_nm, const double2 FOV_um, const double stepSizeZ_um);
+	Sequencer(const Sample sample, const std::vector<LaserParam> laserParam, const double2 FOV_um, const double stepSizeZ_um, const double scanZi_mm, const double stackDepth_um);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor
 	Sequencer& operator=(Sequencer&&) = delete;			//Disable move-assignment constructor
 
-	void moveStage(const int sliceNumber, const int2 stackIJ, const double2 stackCenter_mm);
-	void acqStack(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double scanZi_mm, const double stackDepth_um, const double scanPi_mW, const double stackPdiff_mW);
+	void moveStage(const int2 stackIJ);
+	void acqStack(const LaserParam laserParam);
 	void saveStack();
 	void cutSlice();
 	void generateCommandlist();

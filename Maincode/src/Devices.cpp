@@ -1502,14 +1502,14 @@ void Commandline::printParameters() const
 
 
 #pragma region "Sequencer"
-Sequencer::Sequencer(const Sample sample, const std::vector<LaserParam> laserParam, const double2 FOV_um, const double stepSizeZ_um, const double scanZi_mm, const double stackDepth_um):
-	mSample(sample), mLaserParam(laserParam), mFOV_um(FOV_um), mStepSizeZ_um(stepSizeZ_um), mCurrentScanZi_mm(scanZi_mm), mStackDepth_um(stackDepth_um)
+Sequencer::Sequencer(const SampleParam sample, const std::vector<LaserParam> laserParam, const StackParam stackParam, const double stageInitialZ_mm):
+	mSample(sample), mLaserParam(laserParam), mStackParam(stackParam), mCurrentScanZi_mm(stageInitialZ_mm)
 {
 	//Calculate the total number of stacks per vibratome slice and in the entire sample
-	mStackArrayDim.at(XX) = static_cast<int>(std::ceil(mSample.mLength_um.at(XX) / mFOV_um.at(XX)));					//Number of stacks in x
-	mStackArrayDim.at(YY) = static_cast<int>(std::ceil(mSample.mLength_um.at(YY) / mFOV_um.at(YY)));					//Number of stacks in y
-	mNtotalStacksPerVibratomeSlice = mStackArrayDim.at(XX) * mStackArrayDim.at(YY);										//Total number of stacks in a vibratome slice
-	mNtotalStackEntireSample = mNslices * static_cast<int>(mLaserParam.size()) * mNtotalStacksPerVibratomeSlice;	//Total number of stacks in the entire sample
+	mStackArrayDim.at(XX) = static_cast<int>(std::ceil(mSample.mLength_um.at(XX) / mStackParam.mFOV_um.at(XX)));					//Number of stacks in x
+	mStackArrayDim.at(YY) = static_cast<int>(std::ceil(mSample.mLength_um.at(YY) / mStackParam.mFOV_um.at(YY)));					//Number of stacks in y
+	mNtotalStacksPerVibratomeSlice = mStackArrayDim.at(XX) * mStackArrayDim.at(YY);													//Total number of stacks in a vibratome slice
+	mNtotalStackEntireSample = mNslices * static_cast<int>(mLaserParam.size()) * mNtotalStacksPerVibratomeSlice;					//Total number of stacks in the entire sample
 
 	//Pre-reserve a memory block assuming 3 actions: MOV, ACQ, and SAV for every stack in a vibratome slice; then CUT
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNslices - 1);
@@ -1518,7 +1518,6 @@ Sequencer::Sequencer(const Sample sample, const std::vector<LaserParam> laserPar
 	std::cout << "StackArray dim (x, y) = (" << mStackArrayDim.at(XX) << "," << mStackArrayDim.at(YY) << ")" << std::endl;
 	std::cout << "Total num stacks entire sample = " << mNtotalStackEntireSample << std::endl;
 	std::cout << "Total num commandlines = " << 3*(mNtotalStackEntireSample)+ mNslices - 1 << std::endl;
-
 }
 
 //The initial laser power of a stack-scan depends on whether the stack is imaged from the top down or from the bottom up.
@@ -1534,8 +1533,8 @@ double Sequencer::giveScanPi_mW_(const double scanPmin_mW, const double stackPin
 double2 Sequencer::stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const
 {
 	double2 stagePosition_mm;
-	stagePosition_mm.at(XX) = mFOV_um.at(XX)/1000 * (stackArrayIndices.at(XX) + 0.5);	// (stackIJ + 0.5) ranges from 0.5 to (mStackArrayDim - 0.5)
-	stagePosition_mm.at(YY) = mFOV_um.at(YY)/1000 * (stackArrayIndices.at(YY) + 0.5);	// (stackIJ + 0.5) ranges from 0.5 to (mStackArrayDim - 0.5)
+	stagePosition_mm.at(XX) = mStackParam.mFOV_um.at(XX)/1000 * (stackArrayIndices.at(XX) + 0.5);	// (stackIJ + 0.5) ranges from 0.5 to (mStackArrayDim - 0.5)
+	stagePosition_mm.at(YY) = mStackParam.mFOV_um.at(YY)/1000 * (stackArrayIndices.at(YY) + 0.5);	// (stackIJ + 0.5) ranges from 0.5 to (mStackArrayDim - 0.5)
 
 	return stagePosition_mm;
 }
@@ -1556,14 +1555,14 @@ void Sequencer::acqStack(const LaserParam laserParam)
 
 	Commandline commandline;
 	commandline.mAction = ACQ;
-	commandline.mCommand.acqStack = { mCurrentStackNumber, laserParam.mWavelength_nm, mCurrentScanDirZ, mCurrentScanZi_mm, mStackDepth_um, scanPi_mW, laserParam.mStackPinc_mW };
+	commandline.mCommand.acqStack = { mCurrentStackNumber, laserParam.mWavelength_nm, mCurrentScanDirZ, mCurrentScanZi_mm, mStackParam.mStackDepth_um, scanPi_mW, laserParam.mStackPinc_mW };
 	mCommandList.push_back(commandline);
 
 	mCurrentStackNumber++;	//Keep track of the number of stacks acquired
 
 	//Update the parameters for the next iteration
-	mCurrentScanZi_mm += mCurrentScanDirZ * mStackDepth_um / 1000;		//Next initial z-scan position
-	mCurrentScanDirZ *= -1;												//Switch the scanning direction in z
+	mCurrentScanZi_mm += mCurrentScanDirZ * mStackParam.mStackDepth_um / 1000;		//Next initial z-scan position
+	mCurrentScanDirZ *= -1;															//Switch the scanning direction in z
 }
 
 void Sequencer::saveStack()
@@ -1584,7 +1583,7 @@ void Sequencer::cutSlice()
 
 	//Update the parameters for the next iteration
 	mCurrentScanZi_mm = mCurrentPlaneToCutZ_mm;				//For now, measure from the surface after every cut************************************MODIFY
-	mCurrentPlaneToCutZ_mm += mStackDepth_um / 1000;		//Increase the height of the cut plane for the next iteration
+	mCurrentPlaneToCutZ_mm += mStackParam.mStackDepth_um / 1000;		//Increase the height of the cut plane for the next iteration
 }
 
 //Snake scanning

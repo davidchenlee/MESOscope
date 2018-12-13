@@ -823,20 +823,23 @@ void seq_scanEntireSample()
 	//Create a sample object
 	const ROI roi_mm { 0, 10, 10, 0 };
 	const double sampleLengthZ_mm = 10;
-	Sample sample(roi_mm, sampleLengthZ_mm);
+	SampleParam sampleParam(roi_mm, sampleLengthZ_mm);
 
+	//Create a list of laser parameters
 	const std::vector<LaserParam> laserParamList{ { 750, 10, 5 }, { 940, 11, 6 }, {1040, 12, 7} };
 	
+
 	const double2 FOV_um{ 150,200 };
 	const double stepSizeZ_um = 0.5;		//Image resolution in z
-	const double scanZi_mm = 10;			//Initial height of the stage
-	const double stackDepth_um = 100;		//Stack thickness
+	const double stageInitialZ_mm = 10;			//Initial height of the stage
+	const double stackDepth_um = 100;		//Stack depth or thickness
+	StackParam stackParam(FOV_um, stepSizeZ_um, stackDepth_um);
 
-	Sequencer sequence(sample, laserParamList, FOV_um, stepSizeZ_um, scanZi_mm, stackDepth_um);
+	Sequencer sequence(sampleParam, laserParamList, stackParam, stageInitialZ_mm);
 	sequence.generateCommandlist();
 	sequence.printToFile("Commandlist");
 
-	if (1)
+	if (0)
 	{
 		//Read the commands line by line
 		for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 10; iterCommandline++)

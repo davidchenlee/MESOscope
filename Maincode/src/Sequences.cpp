@@ -800,7 +800,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	Image image(RTsequence);
 	image.initialize();
 
-	stage.moveStage(ZZ, stagePosition0_mm.at(ZZ) + 0.060); //Move the stage, which will trigger the control sequence and data acquisition
+	stage.moveStage_(ZZ, stagePosition0_mm.at(ZZ) + 0.060); //Move the stage, which will trigger the control sequence and data acquisition
 	
 	image.startFIFOOUTpc();
 	image.download();
@@ -820,22 +820,28 @@ void seq_scanEntireSample()
 	//Generate the command list and keep it in memory.
 	//I prefer generating such list before execution because then I can inspect all the parameters offline
 
-	//Create a sample object
-	const ROI roi_mm { 0, 10, 10, 0 };
+	//Configure the sample
+	const ROI roi_mm = { 0, 10, 10, 0 };
 	const double sampleLengthZ_mm = 10;
-	SampleParam sampleParam(roi_mm, sampleLengthZ_mm);
+	SampleConfig sampleConfig(roi_mm, sampleLengthZ_mm);
 
-	//Create a list of laser parameters
-	const std::vector<LaserParam> laserParamList{ { 750, 10, 5 }, { 940, 11, 6 }, {1040, 12, 7} };
+	//Configure the laser: {wavelength_nm, laser power mW, laser power incremental mW}
+	const std::vector<LaserConfig> laserConfigList{ { 750, 10, 5 }, { 940, 11, 6 }, {1040, 12, 7} };
 	
+	//Configure a stack
+	const double2 FOV_um = { 150,200 };
+	const double stepSizeZ_um = 0.5;			//Image resolution in z
+	const double stackDepth_um = 100;			//Stack depth or thickness
+	const double3 stackOverlap_um = { 0,0,0 };	//Stack overlap in x, y, and z
+	StackConfig stackConfig(FOV_um, stepSizeZ_um, stackDepth_um, stackOverlap_um);
 
-	const double2 FOV_um{ 150,200 };
-	const double stepSizeZ_um = 0.5;		//Image resolution in z
-	const double stageInitialZ_mm = 10;			//Initial height of the stage
-	const double stackDepth_um = 100;		//Stack depth or thickness
-	StackParam stackParam(FOV_um, stepSizeZ_um, stackDepth_um);
+	//Configure the vibratome
+	const double mSliceThickness_um = stackDepth_um;		//Slice thickness. For now, cut the same as the depth the stacks*******************MODIFY		
+	const VibratomeConfig vibratomeConfig(mSliceThickness_um); 
 
-	Sequencer sequence(sampleParam, laserParamList, stackParam, stageInitialZ_mm);
+	//Create a sequence
+	const double stageInitialZ_mm =10;		//Initial height of the stage
+	Sequencer sequence(sampleConfig, laserConfigList, stackConfig, vibratomeConfig, stageInitialZ_mm);
 	sequence.generateCommandlist();
 	sequence.printToFile("Commandlist");
 
@@ -854,15 +860,15 @@ void seq_scanEntireSample()
 			switch (commandline.mAction)
 			{
 			case MOV:
-				stackCenter_mm = commandline.mCommand.moveStage.stackCenter_mm;
+				stackCenter_mm = commandline.mCommand.moveStage_.stackCenter_mm;
 				//Move the stage to stackCenter_mm
 				break;
 			case ACQ:
-				wavelength_nm = commandline.mCommand.acqStack.wavelength_nm;
-				scanZi_mm = commandline.mCommand.acqStack.scanZi_mm;
-				stackDepth_mm = commandline.mCommand.acqStack.stackDepth_um;
-				scanPi_mW = commandline.mCommand.acqStack.scanPi_mW;
-				stackPinc_mW = commandline.mCommand.acqStack.stackPinc_mW;
+				wavelength_nm = commandline.mCommand.acqStack_.wavelength_nm;
+				scanZi_mm = commandline.mCommand.acqStack_.scanZi_mm;
+				stackDepth_mm = commandline.mCommand.acqStack_.stackDepth_um;
+				scanPi_mW = commandline.mCommand.acqStack_.scanPi_mW;
+				stackPinc_mW = commandline.mCommand.acqStack_.stackPinc_mW;
 				//Acquire a stack using the parameters: wavelength_nm, Zminmax_um, and Pminmax_mW
 			case SAV:
 				//Save the stack to file and label it with the acquisition parameters: stackCenter_mm, wavelength_nm, Zminmax_um, Pminmax_mW

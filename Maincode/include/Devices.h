@@ -265,7 +265,7 @@ public:
 
 	double3 readPosition3_mm() const;
 	void printPosition3() const;
-	void moveStage(const Axis stage, const double position);
+	void moveStage_(const Axis stage, const double position);
 	void moveStage3(const double3 positions);
 	double downloadPosition_mm(const Axis axis);
 	bool isMoving(const Axis axis) const;
@@ -283,20 +283,20 @@ class Commandline
 	class MoveStage
 	{
 	public:
-		int sliceNumber;
-		int2 stackIJ;
-		double2 stackCenter_mm;
+		int sliceNumber;		//Slice number
+		int2 stackIJ;			//Indices for the 2D array of stacks
+		double2 stackCenter_mm;	//X and Y positiosn of the center of the stack
 	};
 	class AcqStack
 	{
 	public:
 		int stackNumber;
 		int wavelength_nm;
-		int scanDirZ;			//+1 for positive, -1 for negative
-		double scanZi_mm;		//Initial z-scan position of the stack
+		int scanDirZ;			//Z-stage scan direction: +1 for positive, -1 for negative
+		double scanZi_mm;		//Initial z position of a stack-scan
 		double stackDepth_um;	//Stack depth or thickness
-		double scanPi_mW;
-		double stackPinc_mW;
+		double scanPi_mW;		//Initial laser power for a stack-scan
+		double stackPinc_mW;	//Laser power increase for a stack-scan
 	};
 	class CutSlice
 	{
@@ -307,9 +307,9 @@ class Commandline
 public:
 	Action mAction;
 	union {
-		MoveStage moveStage;
-		AcqStack acqStack;
-		CutSlice cutSlice;
+		MoveStage moveStage_;
+		AcqStack acqStack_;
+		CutSlice cutSlice_;
 	} mCommand;
 
 	std::string printHeader() const;
@@ -318,13 +318,13 @@ public:
 	void printParameters() const;
 };
 
-class SampleParam
+class SampleConfig
 {
 public:
 	ROI mROI_mm;			//Region of interest across the entire sample
 	double3 mLength_um;		//Sample size in x, y, and z
 
-	SampleParam(const ROI roi_mm, const double sampleLengthZ_mm): mROI_mm(roi_mm)
+	SampleConfig(const ROI roi_mm, const double sampleLengthZ_mm): mROI_mm(roi_mm)
 	{
 		//Convert input ROI = (xmin, ymax, xmax, ymin) to the equivalent sample length in X and Y
 		mLength_um.at(XX) = 1000 * (mROI_mm.at(2) - mROI_mm.at(0));
@@ -336,67 +336,74 @@ public:
 	}
 };
 
-class LaserParam
+class LaserConfig
 {
 public:
-	int mWavelength_nm;
-	double mScanPi_mW;
-	double mStackPinc_mW;
+	int mWavelength_nm;		//Laser wavelength
+	double mScanPi_mW;		//Initial laser power for a stack-scan 
+	double mStackPinc_mW;	//Laser power increase for a stack-scan
 };
 
-class StackParam
+class StackConfig
 {
 public:
 	double2 mFOV_um;			//Field of view in x and y
 	double mStepSizeZ_um;		//Image resolution in z
 	double mStackDepth_um;		//Stack depth or thickness
+	double3 mStackOverlap_um;	//Stack overlap in x, y, and z
 
-	StackParam(const double2 FOV_um, const double stepSizeZ_um, const double stackDepth_um):
-		mFOV_um(FOV_um), mStepSizeZ_um(stepSizeZ_um), mStackDepth_um(stackDepth_um) {}
+	StackConfig(const double2 FOV_um, const double stepSizeZ_um, const double stackDepth_um, const double3 stackOverlap_um):
+		mFOV_um(FOV_um), mStepSizeZ_um(stepSizeZ_um), mStackDepth_um(stackDepth_um), mStackOverlap_um(stackOverlap_um) {}
+};
+
+class VibratomeConfig
+{
+public:
+	const double2 mHomePosition_mm{ 0,0 };		//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
+	const double mBladeOffsetZ_um = 35;			//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	double mSliceThickness_um;					//Slice thickness	
+
+	VibratomeConfig(const double stackDepth_um) : mSliceThickness_um(stackDepth_um){}
 };
 
 class Sequencer
 {
-	const SampleParam mSample;
+	const SampleConfig mSample;
 
 	//STACK
-	StackParam mStackParam;
-	int mCurrentStackNumber = 0;
-	const double3 mStackOverlap_um{ 0,0,0 };		//stack overlap in x, y, and z. Hard-coded parameter
-	int2 mStackArrayDim;							//Dimension of the array of stacks. Value computed dynamically
-	int mNtotalStacksPerVibratomeSlice;				//Total number of stacks in a vibratome slice. Value computed dynamically
-	int mNtotalStackEntireSample;					//Total number of stacks in the entire sample. Value computed dynamically
+	StackConfig mStackConfig;
+	int mStackCounter = 0;		//To counter the number of stacks
+	int2 mStackArrayDim;		//Dimension of the array of stacks. Value computed dynamically
 
-	//Z STAGE POSITION
-	int mCurrentScanDirZ = 1;						//Initial value set to 1 (because usually we start scanning from the surface of the sample to the inside)
-	double mCurrentScanZi_mm;						//Current stage position
+	//STAGE POSITION
+	int3 mScanDir{ 1,1,1 };	//Scan directions in x, y, and z. Initial values all set to 1		
+	double mScanZi_mm;		//Initial z-stage position for a stack-scan
 
 	//LASER
-	std::vector<LaserParam> mLaserParam;
+	std::vector<LaserConfig> mLaserConfig;
 
 	//VIBRATOME
-	int mCurrentSliceNumber = 0;
-	const double2 mVibratomeHomeXY = { 0,0 };													//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
-	const double mBladeOffsetZ_um = 35;															//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
-	const double mSliceThickness_um = mStackParam.mStackDepth_um;								//Slice thickness. For now, cut the same as the depth the stacks**************************************************MODIFY		
-	double mCurrentPlaneToCutZ_mm = mCurrentScanZi_mm + mSliceThickness_um / 1000;				//Height of the plane to cut	
-	int mNslices = static_cast<int>(std::ceil(mSample.mLength_um.at(ZZ) / mSliceThickness_um));	//Number of vibratome slices in the entire sample. Value computed dynamically
+	VibratomeConfig mVibratomeConfig;
+	int mSliceCounter = 0;						//To count the number of the slices
+	double mPlaneToCutZ_mm = mScanZi_mm + mVibratomeConfig.mSliceThickness_um / 1000;		//Height of the plane to cut	
+	int mNtotalSlices = static_cast<int>(std::ceil(mSample.mLength_um.at(ZZ) / mVibratomeConfig.mSliceThickness_um));	//Number of vibratome slices in the entire sample. Value computed dynamically
 	
-	double giveScanPi_mW_(const double scanPmin_mW, const double stackPinc_mW, const int scanDirZ);
+	double calculateStackScanInitialP_mW_(const double scanPmin_mW, const double stackPinc_mW, const int scanDirZ);
 	double2 stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const;
+	void reverseStageScanDirection_(const Axis axis);
+	void moveStage_(const int2 stackIJ);
+	void acqStack_(const LaserConfig laserConfig);
+	void saveStack_();
+	void cutSlice_();
 public:
 	std::vector<Commandline> mCommandList;
 	
-	Sequencer(const SampleParam sampleParam, const std::vector<LaserParam> laserParam, const StackParam stackParam, const double stageInitialZ_mm);
+	Sequencer(const SampleConfig sampleConfig, const std::vector<LaserConfig> laserConfig, const StackConfig stackConfig, const VibratomeConfig vibratomeConfig, const double stageInitialZ_mm);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor
 	Sequencer& operator=(Sequencer&&) = delete;			//Disable move-assignment constructor
 
-	void moveStage(const int2 stackIJ);
-	void acqStack(const LaserParam laserParam);
-	void saveStack();
-	void cutSlice();
 	void generateCommandlist();
 	void printToFile(const std::string fileName) const;
 };

@@ -293,8 +293,10 @@ class Commandline
 		int stackNumber;
 		int wavelength_nm;
 		int scanDirZ;			//+1 for positive, -1 for negative
-		double2 Zminmax_um;			//Min and max z position
-		double2 Pminmax_mW;			//Min and max laser power
+		double scanZi_mm;		//Initial z-scan position of the stack
+		double stackDepth_um;	//Stack depth or thickness
+		double scanPi_mW;
+		double stackPdiff_mW;
 	};
 	class CutSlice
 	{
@@ -345,13 +347,14 @@ class Sequencer
 	int2 mStackArrayDim;							//Dimension of the array of stacks. Value computed dynamically
 	int mNtotalStacksPerVibratomeSlice;				//Total number of stacks in a vibratome slice. Value computed dynamically
 	int mNtotalStackEntireSample;					//Total number of stacks in the entire sample. Value computed dynamically
-	double mStepSizeZ_um;							//image resolution in the z axis
-	double mStackRangeZ_mm;
+	double mStepSizeZ_um;							//Image resolution in the z axis
 
-	double mStagePositionZ_mm;						//Current stage position
+	double mCurrentStagePositionZ_mm;				//Current stage position
+	double mStackDepth_mm;
 
 	//VIBRATOME
 	const double2 mVibratomeHomeXY = { 0,0 };		//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
+	const double mFocalplaneBladeOffsetZ_um = 35;	//Positive if the blade is higher than the FP; negative otherwise
 	const double mSliceThickness_um = 100;			//Slice thickness. Hard-coded parameter
 	int mNslices;									//Number of vibratome slices in the entire sample. Value computed dynamically
 	
@@ -366,7 +369,7 @@ public:
 	Sequencer& operator=(Sequencer&&) = delete;			//Disable move-assignment constructor
 
 	void moveStage(const int sliceNumber, const int2 stackIJ, const double2 stackCenter_mm);
-	void acqStack(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Zminmax_um, const double2 Pminmax_mW);
+	void acqStack(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double scanZi_mm, const double stackDepth_um, const double scanPi_mW, const double stackPdiff_mW);
 	void saveStack();
 	void cutSlice();
 	void generateCommandlist();

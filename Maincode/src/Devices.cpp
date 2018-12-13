@@ -1432,7 +1432,7 @@ std::string Commandline::actionToString_(const Action action) const
 
 std::string Commandline::printHeader() const
 {
-	return 	"Action\tSlice#\tStackIJ\tPosition\tStack#\tWavlen\tDirZ\tZ_min\tZ_max\tP_min\tP_max";
+	return 	"Action\tSlice#\tStackIJ\tPosition\tStack#\tWavlen\tDirZ\tScanZi\tStckZf\tScanPi\tStckPf";
 }
 
 std::string Commandline::printHeaderUnits() const
@@ -1442,6 +1442,8 @@ std::string Commandline::printHeaderUnits() const
 
 void Commandline::printToFile(std::ofstream *fileHandle) const
 {
+	double scanZf_mm, scanPf_mW;
+
 	switch (mAction)
 	{
 	case MOV:
@@ -1450,9 +1452,11 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 			std::fixed << std::setprecision(3) << mCommand.moveStage.stackCenter_mm.at(0) << "," << mCommand.moveStage.stackCenter_mm.at(1) << ")\n";
 		break;
 	case ACQ:
+		scanZf_mm = mCommand.acqStack.scanZi_mm + mCommand.acqStack.scanDirZ * mCommand.acqStack.stackDepth_um / 1000;
+		scanPf_mW = mCommand.acqStack.scanPi_mW + mCommand.acqStack.scanDirZ * mCommand.acqStack.stackPdiff_mW;
 		*fileHandle << actionToString_(mAction) << "\t\t\t\t\t" << mCommand.acqStack.stackNumber << "\t" << mCommand.acqStack.wavelength_nm << "\t" << mCommand.acqStack.scanDirZ << "\t" <<
-			std::setprecision(3) << mCommand.acqStack.Zminmax_um.at(0) << "\t" << mCommand.acqStack.Zminmax_um.at(1) << "\t" <<
-			std::setprecision(0) << mCommand.acqStack.Pminmax_mW.at(0) << "\t" << mCommand.acqStack.Pminmax_mW.at(1) << "\n";
+			std::setprecision(3) << mCommand.acqStack.scanZi_mm << "\t" << scanZf_mm << "\t" <<
+			std::setprecision(0) << mCommand.acqStack.scanPi_mW << "\t" << scanPf_mW << "\n";
 		break;
 	case SAV:
 		*fileHandle << actionToString_(mAction) + "\n";
@@ -1482,8 +1486,8 @@ void Commandline::printParameters() const
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
 		std::cout << "wavelength (nm) = " << mCommand.acqStack.wavelength_nm << "\n";
 		std::cout << "scanDirZ = " << mCommand.acqStack.scanDirZ << "\n";
-		std::cout << "Zmin/Zmax (um) = " << mCommand.acqStack.Zminmax_um.at(0) << "/" << mCommand.acqStack.Zminmax_um.at(1) << "\n";
-		std::cout << "Pmin/Pmax (mW) = " << mCommand.acqStack.Pminmax_mW.at(0) << "/" << mCommand.acqStack.Pminmax_mW.at(1) << "\n" << std::endl;
+		std::cout << "scanZi/stackDepth (mm) = " << mCommand.acqStack.scanZi_mm << "/" << mCommand.acqStack.stackDepth_um/1000 << "\n";
+		std::cout << "scanPi/stackPdiff (mW) = " << mCommand.acqStack.scanPi_mW << "/" << mCommand.acqStack.stackPdiff_mW << "\n" << std::endl;
 		break;
 	case SAV:
 		std::cout << "The command is " << actionToString_(mAction) << " with no parameters" << std::endl;
@@ -1501,7 +1505,7 @@ void Commandline::printParameters() const
 
 #pragma region "Sequencer"
 Sequencer::Sequencer(const Sample sample, const double initialStagePositionZ_mm, const double stackDepth_um, const std::vector<int> wavelengthList_nm, const double2 FOV_um, const double stepSizeZ_um):
-	mSample(sample), mStagePositionZ_mm(initialStagePositionZ_mm), mStackRangeZ_mm(stackDepth_um/1000), mWavelengthList_nm(wavelengthList_nm), mFOV_um(FOV_um), mStepSizeZ_um(stepSizeZ_um)
+	mSample(sample), mCurrentStagePositionZ_mm(initialStagePositionZ_mm), mStackDepth_mm(stackDepth_um/1000), mWavelengthList_nm(wavelengthList_nm), mFOV_um(FOV_um), mStepSizeZ_um(stepSizeZ_um)
 {
 	//Calculate the total number of vibratome slices
 	mNslices = static_cast<int>(std::ceil(mSample.mLength_um.at(ZZ) / mSliceThickness_um));
@@ -1538,11 +1542,11 @@ void Sequencer::moveStage(const int sliceNumber, const int2 stackIJ, const doubl
 	mCommandList.push_back(commandline);
 }
 
-void Sequencer::acqStack(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double2 Zminmax_um, const double2 Pminmax_mW)
+void Sequencer::acqStack(const int stackNumber, const int wavelength_nm, const int scanDirZ, const double scanZi_mm, const double stackDepth_um, const double scanPi_mW, const double stackPdiff_mW)
 {
 	Commandline commandline;
 	commandline.mAction = ACQ;
-	commandline.mCommand.acqStack = { stackNumber, wavelength_nm, scanDirZ, Zminmax_um, Pminmax_mW };
+	commandline.mCommand.acqStack = { stackNumber, wavelength_nm, scanDirZ, scanZi_mm, stackDepth_um, scanPi_mW, stackPdiff_mW };
 	mCommandList.push_back(commandline);
 }
 
@@ -1556,11 +1560,11 @@ void Sequencer::saveStack()
 void Sequencer::cutSlice()
 {
 	//Increase the height of the z stage
-	mStagePositionZ_mm += mStackRangeZ_mm;
+	mCurrentStagePositionZ_mm += mStackDepth_mm;
 
 	Commandline commandline;
 	commandline.mAction = CUT;
-	commandline.mCommand.cutSlice = { mVibratomeHomeXY.at(XX), mVibratomeHomeXY.at(YY), mStagePositionZ_mm};
+	commandline.mCommand.cutSlice = { mVibratomeHomeXY.at(XX), mVibratomeHomeXY.at(YY), mCurrentStagePositionZ_mm + mFocalplaneBladeOffsetZ_um/1000};
 	mCommandList.push_back(commandline);
 
 }
@@ -1570,14 +1574,15 @@ void Sequencer::generateCommandlist()
 {
 	int stackNumber = 0;
 	double2 stackCenter_mm;
-	double2 Zminmax_um;
-	const double2 Pminmax_mW{ 10, 20 };
+	double scanZi_mm = 10;		//Initial z-scan position
+	const double stackDepth_um = 100;
+	double scanPi_mW = 10;
+	double stackPdiff_mW = 10;
 
 	for (int iterSlice = 0; iterSlice < mNslices; iterSlice++)
 	{
 		int scanDirX = 1, scanDirY = 1, scanDirZ = 1;	//Initialize the scanning directions
 		int xx = 0, yy = 0;								//Initialize the stack indices
-		Zminmax_um = { mStagePositionZ_mm, mStagePositionZ_mm + mStackRangeZ_mm };
 
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mWavelengthList_nm.size(); iterWL++)
 		{
@@ -1589,13 +1594,15 @@ void Sequencer::generateCommandlist()
 					stackCenter_mm = stackIndicesToStackCenter_mm_({ xx,yy });
 
 					moveStage(iterSlice, { xx,yy }, stackCenter_mm);
-					acqStack(stackNumber, mWavelengthList_nm.at(iterWL), scanDirZ, Zminmax_um, Pminmax_mW);
+					acqStack(stackNumber, mWavelengthList_nm.at(iterWL), scanDirZ, scanZi_mm, stackDepth_um, scanPi_mW, stackPdiff_mW);
 					saveStack();
+
+					scanZi_mm += scanDirZ * stackDepth_um/1000;		//Update the initial z-scan position
+					scanPi_mW += scanDirZ * stackPdiff_mW;			//Update the initial z-scan laser power
 
 					scanDirZ *= -1;		//Alternate the scanning direction in z
 					xx += scanDirX;		//Increase the iterator x
-
-					stackNumber++;
+					stackNumber++;		//Keep track of the number of stacks
 				}
 
 				//Initialize the next cycle by going back in x one step and switching the scanning direction
@@ -1613,6 +1620,7 @@ void Sequencer::generateCommandlist()
 		if (iterSlice < mNslices - 1)
 		{
 			cutSlice(); //Increases the height of the z stage
+			scanZi_mm += stackDepth_um / 1000;		//Increase the initial z-scan position
 		}
 
 	}

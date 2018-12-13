@@ -845,7 +845,8 @@ void seq_scanEntireSample()
 
 			sequence.mCommandList.at(iterCommandline).printParameters();
 
-			double2 stackCenter_mm, Zminmax_um, Pminmax_mW;
+			double scanZi_mm, stackDepth_mm, scanPi_mW, stackPdiff_mW;
+			double2 stackCenter_mm;
 			int wavelength_nm;
 			switch (commandline.mAction)
 			{
@@ -855,8 +856,10 @@ void seq_scanEntireSample()
 				break;
 			case ACQ:
 				wavelength_nm = commandline.mCommand.acqStack.wavelength_nm;
-				Zminmax_um = commandline.mCommand.acqStack.Zminmax_um;
-				Pminmax_mW = commandline.mCommand.acqStack.Pminmax_mW;
+				scanZi_mm = commandline.mCommand.acqStack.scanZi_mm;
+				stackDepth_mm = commandline.mCommand.acqStack.stackDepth_um;
+				scanPi_mW = commandline.mCommand.acqStack.scanPi_mW;
+				stackPdiff_mW = commandline.mCommand.acqStack.stackPdiff_mW;
 				//Acquire a stack using the parameters: wavelength_nm, Zminmax_um, and Pminmax_mW
 			case SAV:
 				//Save the stack to file and label it with the acquisition parameters: stackCenter_mm, wavelength_nm, Zminmax_um, Pminmax_mW

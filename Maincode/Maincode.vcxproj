@@ -162,7 +162,8 @@
     <ClCompile Include="src\Const.cpp" />
     <ClCompile Include="src\Devices.cpp" />
     <ClCompile Include="src\FPGAapi.cpp" />
-    <ClCompile Include="src\Sequences.cpp" />
+    <ClCompile Include="src\Sequencer.cpp" />
+    <ClCompile Include="src\Routine.cpp" />
     <ClCompile Include="src\serial.cc" />
     <ClCompile Include="src\Utilities.cpp" />
     <ClCompile Include="src\win.cc" />
@@ -172,7 +173,8 @@
     <ClInclude Include="include\Const.h" />
     <ClInclude Include="include\Devices.h" />
     <ClInclude Include="include\FPGAapi.h" />
-    <ClInclude Include="include\Sequences.h" />
+    <ClInclude Include="include\Sequencer.h" />
+    <ClInclude Include="include\Routines.h" />
     <ClInclude Include="include\serial\serial.h" />
     <ClInclude Include="include\serial\win.h" />
     <ClInclude Include="include\Utilities.h" />

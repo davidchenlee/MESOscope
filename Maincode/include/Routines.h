@@ -1,5 +1,6 @@
 #pragma once
 #include "Devices.h"
+#include "Sequencer.h"
 //#include <concrt.h> 	//Concurrency::wait(2000);
 
 void seq_main(const FPGAns::FPGA &fpga);

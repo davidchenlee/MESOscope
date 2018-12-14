@@ -1,4 +1,4 @@
-#include "Sequences.h"
+#include "Routines.h"
 
 void seq_main(const FPGAns::FPGA &fpga)
 {
@@ -823,9 +823,9 @@ void seq_scanEntireSample()
 	//Configure the sample
 	const ROI roi_mm = { 0, 10, 10, 0 };
 	const double sampleLengthZ_mm = 10;
-	SampleConfig sampleConfig(roi_mm, sampleLengthZ_mm);
+	SampleConfig sampleConfig("", roi_mm, sampleLengthZ_mm);
 
-	//Configure the laser: {wavelength_nm, laser power mW, laser power incremental mW}
+	//Configure the laser {wavelength_nm, laser power mW, laser power incremental mW}
 	const std::vector<LaserConfig> laserConfigList{ { 750, 10, 5 }, { 940, 11, 6 }, {1040, 12, 7} };
 	
 	//Configure a stack
@@ -836,13 +836,13 @@ void seq_scanEntireSample()
 	StackConfig stackConfig(FOV_um, stepSizeZ_um, stackDepth_um, stackOverlap_um);
 
 	//Configure the vibratome
-	const double mSliceThickness_um = stackDepth_um;		//Slice thickness. For now, cut the same as the depth the stacks*******************MODIFY		
-	const VibratomeConfig vibratomeConfig(mSliceThickness_um); 
+	const double sliceThickness_um = stackDepth_um;		//Slice thickness. For now, cut the same as the depth the stacks*******************MODIFY		
+	const VibratomeConfig vibratomeConfig(sliceThickness_um); 
 
 	//Create a sequence
-	const double stageInitialZ_mm =10;		//Initial height of the stage
+	const double stageInitialZ_mm = 10;		//Initial height of the stage
 	Sequencer sequence(sampleConfig, laserConfigList, stackConfig, vibratomeConfig, stageInitialZ_mm);
-	sequence.generateCommandlist();
+	sequence.generateCommandList();
 	sequence.printToFile("Commandlist");
 
 	if (0)
@@ -850,33 +850,36 @@ void seq_scanEntireSample()
 		//Read the commands line by line
 		for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 10; iterCommandline++)
 		{
-			Commandline commandline = sequence.mCommandList.at(iterCommandline);
+			Commandline commandline = sequence.getCommandline(iterCommandline);
+			commandline.printParameters();
 
-			sequence.mCommandList.at(iterCommandline).printParameters();
+			//Initialize to unreal values for safety
+			double scanZi_mm = -1, stackDepth_mm = -1, scanPi_mW = -1, stackPinc_mW = -1;
+			double2 stackCenter_mm{1000,1000};
+			int wavelength_nm = -1;
 
-			double scanZi_mm, stackDepth_mm, scanPi_mW, stackPinc_mW;
-			double2 stackCenter_mm;
-			int wavelength_nm;
 			switch (commandline.mAction)
 			{
 			case MOV:
-				stackCenter_mm = commandline.mCommand.moveStage_.stackCenter_mm;
 				//Move the stage to stackCenter_mm
+				stackCenter_mm = commandline.mCommand.moveStage.stackCenter_mm;
 				break;
 			case ACQ:
-				wavelength_nm = commandline.mCommand.acqStack_.wavelength_nm;
-				scanZi_mm = commandline.mCommand.acqStack_.scanZi_mm;
-				stackDepth_mm = commandline.mCommand.acqStack_.stackDepth_um;
-				scanPi_mW = commandline.mCommand.acqStack_.scanPi_mW;
-				stackPinc_mW = commandline.mCommand.acqStack_.stackPinc_mW;
-				//Acquire a stack using the parameters: wavelength_nm, Zminmax_um, and Pminmax_mW
+				//Acquire a stack using the parameters:
+				wavelength_nm = commandline.mCommand.acqStack.wavelength_nm;
+				scanZi_mm = commandline.mCommand.acqStack.scanZi_mm;
+				stackDepth_mm = commandline.mCommand.acqStack.stackDepth_um;
+				scanPi_mW = commandline.mCommand.acqStack.scanPi_mW;
+				stackPinc_mW = commandline.mCommand.acqStack.stackPinc_mW;
 			case SAV:
-				//Save the stack to file and label it with the acquisition parameters: stackCenter_mm, wavelength_nm, Zminmax_um, Pminmax_mW
+				//Save the stack to file and label it with the acquisition parameters:
+				wavelength_nm, scanZi_mm, stackDepth_mm, scanPi_mW, stackPinc_mW;
+				stackCenter_mm;
 				break;
 			case CUT:
-				//Move the stage to vibratomeHome_mm in X and Y. For Z, stageZ = vibratomeHomeZ + nSLice * sliceThickness
-
-				//Cut a slice
+				//Move the stage to
+				double3 stagePosition_mm = commandline.mCommand.cutSlice.bladePosition_mm;
+				//Then cut a slice off
 				break;
 			default:
 				throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");

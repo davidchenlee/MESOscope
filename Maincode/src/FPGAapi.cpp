@@ -9,12 +9,12 @@ namespace FPGAns
 
 		if (static_cast<U32>(t_tick) > 0x0000FFFF)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step overflow. Time step cast to the max: " << std::fixed << _UI16_MAX * usPerTick << " us" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step overflow. Time step cast to the max: " << std::fixed << _UI16_MAX * usPerTick << " us\n";
 			return _UI16_MAX;
 		}
 		else if (static_cast<U32>(t_tick) < tMIN_tick)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step underflow. Time step cast to the min: " << std::fixed << tMIN_tick * usPerTick << " us" << std::endl;;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step underflow. Time step cast to the min: " << std::fixed << tMIN_tick * usPerTick << " us\n";
 			return tMIN_tick;
 		}
 		else
@@ -30,12 +30,12 @@ namespace FPGAns
 	{
 		if (voltage_V > AOmax_V)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage cast to the max: " + std::to_string(AOmax_V) + " V" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage cast to the max: " + std::to_string(AOmax_V) + " V\n";
 			return (I16)_I16_MAX;
 		}
 		else if (voltage_V < -AOmax_V)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage cast to the min: " + std::to_string(-AOmax_V) + " V" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage cast to the min: " + std::to_string(-AOmax_V) + " V\n";
 			return (I16)_I16_MIN;
 		}
 		else
@@ -51,7 +51,7 @@ namespace FPGAns
 			//Check for overflow
 			if (input > _I16_MAX)
 			{
-				std::cerr << "WARNING in " << __FUNCTION__ << ": Input overflow, _I16_MAX used instead" << std::endl;
+				std::cerr << "WARNING in " << __FUNCTION__ << ": Input overflow, _I16_MAX used instead\n";
 				return AOmax_V;
 			}
 			else
@@ -62,7 +62,7 @@ namespace FPGAns
 			//Check for underoverflow
 			if (input < _I16_MIN)
 			{
-				std::cerr << "WARNING in " << __FUNCTION__ << ": Input underflow, _I16_MIN used instead" << std::endl;
+				std::cerr << "WARNING in " << __FUNCTION__ << ": Input underflow, _I16_MIN used instead\n";
 				return -AOmax_V;
 			}
 			else
@@ -103,14 +103,14 @@ namespace FPGAns
 		if (status < 0)
 			throw  FPGAns::FPGAexception((std::string)functionName + " with FPGA code " + std::to_string(status));
 		if (status > 0)
-			std::cerr << "A warning has ocurred in " << functionName << " with FPGA code " << status << std::endl;
+			std::cerr << "A warning has ocurred in " << functionName << " with FPGA code " << status << "\n";
 	}
 
 	void linearRamp(QU32 &queue, double timeStep, const double rampLength, const double Vi_V, const double Vf_V)
 	{
 		if (timeStep < AO_tMIN_us)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us\n";
 			timeStep = AO_tMIN_us;		//Analog Out time increment in us
 		}
 
@@ -120,15 +120,15 @@ namespace FPGAns
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Not enought points to generate a linear ramp");
 
 		//For debugging
-		//std::cout << "nPoints: " << nPoints << std::endl;
-		//std::cout << "time \tticks \tv" << std::endl;
+		//std::cout << "nPoints: " << nPoints << "\n";
+		//std::cout << "time \tticks \tv\n";
 
 		for (int ii = 0; ii < nPoints; ii++)
 		{
 			const double V = Vi_V + (Vf_V - Vi_V)*ii / (nPoints - 1);
 			queue.push_back(FPGAns::packAnalogSinglet(timeStep, V));
 
-			//std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * FPGAns::convertUsTotick(timeStep) << "\t" << V << "\t" << std::endl;	//For debugging
+			//std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * FPGAns::convertUsTotick(timeStep) << "\t" << V << "\t\n";	//For debugging
 		}
 		//getchar();	//For debugging
 	}
@@ -148,7 +148,7 @@ namespace FPGAns
 
 	FPGA::~FPGA()
 	{
-		//std::cout << "FPGA destructor was called" << std::endl;
+		//std::cout << "FPGA destructor was called\n";
 	};
 
 	//The object has to be closed explicitly because of the exception catching
@@ -166,7 +166,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_Close(mFpgaHandle, !resetFlag));
 
 		if (resetFlag)
-			std::cout << "The FPGA has been successfully reset" << std::endl;
+			std::cout << "The FPGA has been successfully reset\n";
 
 		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
 		checkStatus(__FUNCTION__, NiFpga_Finalize());
@@ -378,7 +378,7 @@ namespace FPGAns
 	{
 		if (timeStep < AO_tMIN_us)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us" << std::endl;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us\n";
 			timeStep = AO_tMIN_us;
 		}
 
@@ -409,8 +409,8 @@ namespace FPGAns
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo2Mon, &AOlastVoltage_I16.at(GALVO2)));
 	
 		//For debugging
-		//std::cout << convertI16toVolt(AOlastVoltage_I16.at(GALVO1)) << std::endl;
-		//std::cout << convertI16toVolt((I16)mVectorOfQueues.at(GALVO1).front()) << std::endl;
+		//std::cout << convertI16toVolt(AOlastVoltage_I16.at(GALVO1)) << "\n";
+		//std::cout << convertI16toVolt((I16)mVectorOfQueues.at(GALVO1).front()) << "\n";
 
 		//Create a vector of queues
 		VQU32 vectorOfQueuesForRamp(NCHAN);

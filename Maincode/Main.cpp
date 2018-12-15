@@ -34,32 +34,32 @@ int main(int argc, char* argv[])
 		}
 		catch (const std::invalid_argument &e)
 		{
-			std::cout << "An invalid argument has occurred in " << e.what() << std::endl;
-			std::cout << "Press any key to continue..." << std::endl;
+			std::cout << "An invalid argument has occurred in " << e.what() << "\n";
+			std::cout << "Press any key to continue...\n";
 			getchar();
 		}
 		catch (const std::overflow_error &e)
 		{
-			std::cout << "An overflow has occurred in " << e.what() << std::endl;
-			std::cout << "Press any key to continue..." << std::endl;
+			std::cout << "An overflow has occurred in " << e.what() << "\n";
+			std::cout << "Press any key to continue...\n";
 			getchar();
 		}
 		catch (const FPGAns::FPGAexception &e)
 		{
-			std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
-			std::cout << "Press any key to continue..." << std::endl;
+			std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
+			std::cout << "Press any key to continue...\n";
 			getchar();
 		}
 		catch (const std::runtime_error &e)
 		{
-			std::cout << "A runtime error has occurred in " << e.what() << std::endl;
-			std::cout << "Press any key to continue..." << std::endl;
+			std::cout << "A runtime error has occurred in " << e.what() << "\n";
+			std::cout << "Press any key to continue...\n";
 			getchar();
 		}
 		catch (...)
 		{
-			std::cout << "An unknown error has occurred" << std::endl;
-			std::cout << "Press any key to continue..." << std::endl;
+			std::cout << "An unknown error has occurred" << "\n";
+			std::cout << "Press any key to continue...\n";
 			getchar();
 		}
 
@@ -69,11 +69,11 @@ int main(int argc, char* argv[])
 	//Catch exceptions thrown by the constructor FPGAns::FPGA
 	catch (const FPGAns::FPGAexception &e)
 	{
-		std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
-		std::cout << "Press any key to continue..." << std::endl;
+		std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
+		std::cout << "Press any key to continue...\n";
 		getchar();
 	}
-	//std::cout << "Press any key to continue..." << std::endl;
+	//std::cout << "Press any key to continue...\n";
 	//getchar();
 
 	return 0;

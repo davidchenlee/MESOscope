@@ -77,20 +77,20 @@ void Commandline::printParameters() const
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
 		std::cout << "Vibratome slice number = " << mCommand.moveStage.sliceNumber << "\n";
 		std::cout << "Stack ij = (" << mCommand.moveStage.stackIJ.at(XX) << "," << mCommand.moveStage.stackIJ.at(YY) << ")\n";
-		std::cout << "Stack center (mm,mm) = (" << mCommand.moveStage.stackCenter_mm.at(XX) << "," << mCommand.moveStage.stackCenter_mm.at(YY) << ")\n" << std::endl;
+		std::cout << "Stack center (mm,mm) = (" << mCommand.moveStage.stackCenter_mm.at(XX) << "," << mCommand.moveStage.stackCenter_mm.at(YY) << ")\n\n";
 		break;
 	case ACQ:
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
 		std::cout << "wavelength (nm) = " << mCommand.acqStack.wavelength_nm << "\n";
 		std::cout << "scanDirZ = " << mCommand.acqStack.scanDirZ << "\n";
 		std::cout << "scanZi/stackDepth (mm) = " << mCommand.acqStack.scanZi_mm << "/" << mCommand.acqStack.stackDepth_um / 1000 << "\n";
-		std::cout << "scanPi/stackPdiff (mW) = " << mCommand.acqStack.scanPi_mW << "/" << mCommand.acqStack.stackPinc_mW << "\n" << std::endl;
+		std::cout << "scanPi/stackPdiff (mW) = " << mCommand.acqStack.scanPi_mW << "/" << mCommand.acqStack.stackPinc_mW << "\n\n";
 		break;
 	case SAV:
-		std::cout << "The command is " << actionToString_(mAction) << " with no parameters" << std::endl;
+		std::cout << "The command is " << actionToString_(mAction) << " with no parameters\n";
 		break;
 	case CUT:
-		std::cout << "The command is " << actionToString_(mAction) << " with no parameters" << std::endl;
+		std::cout << "The command is " << actionToString_(mAction) << " with no parameters\n";
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -106,7 +106,7 @@ Sequencer::Sequencer(const SampleConfig sample, const LaserListConfig laserListC
 	mScanZi_mm = mStageConfig.stageInitialZ_mm;
 
 	//Initialize the height of the plane to be cut
-	mPlaneToCutZ_mm = mScanZi_mm + (mVibratomeConfig.sliceThickness_um - mVibratomeConfig.sliceOffsetZ_um) / 1000;
+	mPlaneToSliceZ_mm = mScanZi_mm + (mVibratomeConfig.sliceThickness_um - mVibratomeConfig.sliceOffsetZ_um) / 1000;
 
 	//Calculate the total number of stacks per vibratome slice and in the entire sample
 	mStackArrayDim.at(XX) = static_cast<int>(std::ceil(1000 * mSample.length_mm.at(XX) / mStackConfig.FOV_um.at(XX)));						//Number of stacks in x
@@ -155,7 +155,7 @@ void Sequencer::reverseStageScanDirection_(const Axis axis)
 
 void Sequencer::resetStageScanDirections_()
 {
-	mScanDir = initialScanDir;
+	mScanDir = mInitialScanDir;
 }
 
 void Sequencer::moveStage_(const int2 stackIJ)
@@ -173,7 +173,7 @@ void Sequencer::moveStage_(const int2 stackIJ)
 void Sequencer::acqStack_(const int iterWL)
 {
 	//Read the corresponding laser configuration
-	const SingleLaserConfig singleLaserConfig = mLaserListConfig.mLaserConfig.at(iterWL);
+	const LaserListConfig::SingleLaserConfig singleLaserConfig = mLaserListConfig.mLaserConfig.at(iterWL);
 
 	//Determine if the initial laser power is the lowest (top of the stack) or the highest (bottom of the stack)
 	const int scanPi_mW = calculateStackScanInitialP_mW_(singleLaserConfig.scanPi_mW, singleLaserConfig.stackPinc_mW, mScanDir.at(ZZ));
@@ -203,7 +203,7 @@ void Sequencer::saveStack_()
 void Sequencer::cutSlice_()
 {
 	//Move the sample to face the vibratome blade. Notice the additional offset in z
-	const double3 samplePosition_mm = { mVibratomeConfig.samplePosition_mm.at(XX), mVibratomeConfig.samplePosition_mm.at(YY), mPlaneToCutZ_mm + mVibratomeConfig.bladeOffsetZ_um / 1000 };
+	const double3 samplePosition_mm = { mVibratomeConfig.samplePosition_mm.at(XX), mVibratomeConfig.samplePosition_mm.at(YY), mPlaneToSliceZ_mm + mVibratomeConfig.bladeOffsetZ_um / 1000 };
 
 	Commandline commandline;
 	commandline.mAction = CUT;
@@ -214,7 +214,7 @@ void Sequencer::cutSlice_()
 	mCommandCounter++;	//Count the number of commands
 
 	mScanZi_mm += mStackConfig.stackDepth_um / 1000;			//Increae the height of the z-stage for the next iteration		
-	mPlaneToCutZ_mm += mStackConfig.stackDepth_um / 1000;		//Increase the height of the plane to be cut for the next iteration
+	mPlaneToSliceZ_mm += mStackConfig.stackDepth_um / 1000;		//Increase the height of the plane to be cut for the next iteration
 }
 
 //Snake scanning
@@ -266,8 +266,12 @@ Commandline Sequencer::getCommandline(const int iterCommandLine) const
 void Sequencer::printSequencerParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "SEQUENCER ************************************************************\n";
+	*fileHandle << "Stages initial scan directions (x,y,z) = {" << mInitialScanDir.at(XX) << "," << mInitialScanDir.at(YY) << "," << mInitialScanDir.at(ZZ) << "}\n";
+	*fileHandle << std::setprecision(4);
+	*fileHandle << "Z-stage initial position (mm) = " << mStageConfig.stageInitialZ_mm << "\n";
+	*fileHandle << std::setprecision(0);
 	*fileHandle << "# vibratome slices = " << mNtotalSlices << "\n";
-	*fileHandle << "StackArray dim (x, y) = (" << mStackArrayDim.at(XX) << "," << mStackArrayDim.at(YY) << ")\n";
+	*fileHandle << "StackArray dim (x,y) = (" << mStackArrayDim.at(XX) << "," << mStackArrayDim.at(YY) << ")\n";
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
 	*fileHandle << "\n";

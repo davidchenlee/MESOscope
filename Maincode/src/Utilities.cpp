@@ -3,7 +3,7 @@
 //Convert an int to hex and print it out
 void printHex(int input)
 {
-	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << std::endl;
+	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << "\n";
 }
 
 void printHex(std::vector<uint8_t>  input)
@@ -13,7 +13,7 @@ void printHex(std::vector<uint8_t>  input)
 		std::cout << std::hex << std::uppercase << (int)input[ii];
 		std::cout << " ";
 	}
-	std::cout << std::nouppercase << std::dec << std::endl;
+	std::cout << std::nouppercase << std::dec << "\n";
 }
 
 //Convert a string to hex and print it out
@@ -25,12 +25,12 @@ void printHex(std::string input)
 		std::cout << std::hex << std::uppercase << (int)cstr[ii];
 		std::cout << " ";
 	}
-	std::cout << std::nouppercase << std::dec << std::endl;
+	std::cout << std::nouppercase << std::dec << "\n";
 }
 
 void printBinary16(int input)
 {
-	std::cout << std::bitset<16>(input) << std::endl;
+	std::cout << std::bitset<16>(input) << "\n";
 }
 
 //Convert a double to a fixed 2p14
@@ -91,12 +91,12 @@ void Logger::record(const std::string description)
 
 void Logger::record(const std::string description, const double input)
 {
-	mFileHandle << description << input << std::endl;
+	mFileHandle << description << input << "\n";
 }
 
 void Logger::record(const std::string description, const std::string input)
 {
-	mFileHandle << description << input << std::endl;
+	mFileHandle << description << input << "\n";
 }
 
 #pragma region "TiffU8"
@@ -214,9 +214,9 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	}
 	   	  
 	/*For debugging
-	std::cout << nFrames << std::endl;
-	std::cout << width << std::endl;
-	std::cout << height << std::endl;
+	std::cout << nFrames << "\n";
+	std::cout << width << "\n";
+	std::cout << height << "\n";
 	*/
 
 	if (!overrideFlag)
@@ -266,7 +266,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	_TIFFfree(buffer);		//Destroy the buffer
 	TIFFClose(tiffHandle);	//Close the output tiff file
 
-	std::cout << "Tiff successfully saved" << std::endl;
+	std::cout << "Tiff successfully saved\n";
 }
 
 //The galvo (vectical axis of the image) performs bi-directional scanning
@@ -357,7 +357,7 @@ void TiffU8::analyze() const
 	for (int index = 0; index < mWidthPerFrame * mHeightPerFrame; index++)
 		totalCount += mArray[index];
 
-	//std::cout << "Total count = " << totalCount << std::endl;
+	//std::cout << "Total count = " << totalCount << "\n";
 }
 
 
@@ -367,7 +367,7 @@ void TiffU8::saveTxt(const std::string filename) const
 	fileHandle.open(folderPath + filename + ".txt");			//Open the file
 
 	for (int pixIndex = 0; pixIndex < mWidthPerFrame * mHeightPerFrame * mNframes; pixIndex++)
-		fileHandle << mArray[pixIndex] << std::endl;					//Write each element
+		fileHandle << mArray[pixIndex] << "\n";					//Write each element
 
 	fileHandle.close();											//Close the txt file
 }

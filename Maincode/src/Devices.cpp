@@ -43,7 +43,7 @@ void Image::FIFOOUTpcGarbageCollector_() const
 		//Check if there are elements in FIFOOUTpc
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nElemToReadA));
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nElemToReadB));
-		//std::cout << "FIFOOUTpc cleanup A/B: " << nElemToReadA << "/" << nElemToReadB << std::endl;
+		//std::cout << "FIFOOUTpc cleanup A/B: " << nElemToReadA << "/" << nElemToReadB << "\n";
 		//getchar();
 
 		if (nElemToReadA == 0 && nElemToReadB == 0)
@@ -63,7 +63,7 @@ void Image::FIFOOUTpcGarbageCollector_() const
 		}
 	}
 	if (nElemTotalA > 0 || nElemTotalB > 0)
-		std::cout << "FIFOOUTpc garbage collector called. Number of elements cleaned up in FIFOOUTpc A/B: " << nElemTotalA << "/" << nElemTotalB << std::endl;
+		std::cout << "FIFOOUTpc garbage collector called. Number of elements cleaned up in FIFOOUTpc A/B: " << nElemTotalA << "/" << nElemTotalB << "\n";
 }
 
 //Configure FIFOOUTpc. According to NI, this step is optional
@@ -72,7 +72,7 @@ void Image::configureFIFOOUTpc_(const U32 depth) const
 	U32 actualDepth;
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
-	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << std::endl;
+	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << "\n";
 }
 
 //Stop the connection between FIFOOUTpc and FIFOOUTfpga
@@ -120,16 +120,16 @@ void Image::readFIFOOUTpc_()
 		if (nullReadCounterA > timeout_iter && nullReadCounterB > timeout_iter)
 			throw ImageException((std::string)__FUNCTION__ + ": FIFOOUTpc downloading timeout");
 
-		//std::cout << "FIFO A: " << nElemTotalA << "\tFIFO B: " << nElemTotalB << std::endl;	//For debugging
-		//std::cout << "nullReadCounter A: " << nullReadCounterA << "\tnullReadCounter: " << nullReadCounterB << std::endl;	//For debugging
+		//std::cout << "FIFO A: " << nElemTotalA << "\tFIFO B: " << nElemTotalB << "\n";	//For debugging
+		//std::cout << "nullReadCounter A: " << nullReadCounterA << "\tnullReadCounter: " << nullReadCounterB << "\n";	//For debugging
 	}
 
 	/*
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
-	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * mRTsequence.mNpixAllFrames / duration / 1000 << " Mbps" << std::endl; //2 FIFOOUTs of 32 bits each
-	std::cout << "Total of elements read: " << nElemTotalA << "\t" << nElemTotalB << std::endl; //Print out the total number of elements read
+	std::cout << "Elapsed time: " << duration << " ms" << "\n";
+	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * mRTsequence.mNpixAllFrames / duration / 1000 << " Mbps" << "\n"; //2 FIFOOUTs of 32 bits each
+	std::cout << "Total of elements read: " << nElemTotalA << "\t" << nElemTotalB << "\n"; //Print out the total number of elements read
 	*/
 	
 
@@ -149,7 +149,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	{
 		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), FIFOOUTpc, buffer, 0, timeout_ms, &nElemToRead));
-		//std::cout << "Number of elements remaining in FIFOOUT: " << nElemToRead << std::endl;	//For debugging
+		//std::cout << "Number of elements remaining in FIFOOUT: " << nElemToRead << "\n";	//For debugging
 
 		//If data available in FIFOOUTpc, retrieve it
 		if (nElemToRead > 0)
@@ -213,7 +213,7 @@ void Image::acquire()
 		}
 		catch (const ImageException &e) //Notify the exception and continue with the next iteration
 		{
-			std::cerr << "An ImageException has occurred in: " << e.what() << std::endl;
+			std::cerr << "An ImageException has occurred in: " << e.what() << "\n";
 		}
 	}
 }
@@ -241,7 +241,7 @@ void Image::download()
 		}
 		catch (const ImageException &e) //Notify the exception and continue with the next iteration
 		{
-			std::cerr << "An ImageException has occurred in: " << e.what() << std::endl;
+			std::cerr << "An ImageException has occurred in: " << e.what() << "\n";
 		}
 	}
 }
@@ -322,7 +322,7 @@ void Vibratome::moveHead_(const int duration_ms, const MotionDir channel) const
 	else
 	{
 		Sleep(minDuration_ms - delay_ms);
-		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << minDuration_ms << "ms" << std::endl;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << minDuration_ms << "ms" << "\n";
 	}
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, false));
 }
@@ -333,17 +333,17 @@ void Vibratome::cutAndRetract(const int distance_mm) const
 	const int retractingTime_ms = static_cast<int>(1000 * distance_mm / mMovingSpeed_mmps);
 
 	startStop_();
-	std::cout << "The vibratome is cutting for " << cuttingTime_ms/1000.0 << " seconds" << std::endl;
+	std::cout << "The vibratome is cutting for " << cuttingTime_ms/1000.0 << " seconds" << "\n";
 	Sleep(cuttingTime_ms);
 	Sleep(2000);
-	std::cout << "The vibratome is retracting for " << retractingTime_ms/1000.0 << " seconds" << std::endl;
+	std::cout << "The vibratome is retracting for " << retractingTime_ms/1000.0 << " seconds" << "\n";
 	moveHead_(retractingTime_ms, BACKWARD);
 }
 
 void Vibratome::reset(const int distance_mm) const
 {
 	const int retractingTime_ms = static_cast<int>(1000 * distance_mm / mMovingSpeed_mmps);
-	std::cout << "The vibratome is retracting for " << retractingTime_ms / 1000.0 << " seconds" << std::endl;
+	std::cout << "The vibratome is retracting for " << retractingTime_ms / 1000.0 << " seconds" << "\n";
 	moveHead_(retractingTime_ms, BACKWARD);
 }
 
@@ -360,7 +360,7 @@ ResonantScanner::ResonantScanner(const FPGAns::RTsequence &RTsequence): mRTseque
 	else
 		mFillFactor = sin(PI / 2 * temporalFillFactor);					//Note that the fill factor doesn't depend on the RS amplitude because the RS period is fixed
 
-	//std::cout << "Fill factor = " << mFillFactor << std::endl;		//For debugging
+	//std::cout << "Fill factor = " << mFillFactor << "\n";		//For debugging
 
 	//Download the current control voltage from the FPGA and update the scan parameters
 	mControl_V = downloadControl_V();									//Control voltage
@@ -393,7 +393,7 @@ void ResonantScanner::setFFOV(const double FFOV_um)
 	mControl_V = mFullScan_um * mVoltPerUm;								//Control voltage
 	mFFOV_um = FFOV_um;													//FFOV
 	mSampRes_umPerPix = mFFOV_um / mRTsequence.mWidthPerFrame_pix;		//Spatial sampling resolution
-	//std::cout << "mControl_V = " << mControl_V << std::endl; //For debugging
+	//std::cout << "mControl_V = " << mControl_V << "\n"; //For debugging
 
 	if (mControl_V < 0 || mControl_V > mVMAX_V)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX_V/mVoltPerUm) + " um");
@@ -408,7 +408,7 @@ void ResonantScanner::turnOn_um(const double FFOV_um)
 	setFFOV(FFOV_um);
 	Sleep(mDelay_ms);
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
-	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um" << std::endl;
+	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um\n";
 }
 
 //First set the control voltage, then set RSenable on
@@ -417,7 +417,7 @@ void ResonantScanner::turnOn_V(const double control_V)
 	setVoltage_(control_V);
 	Sleep(mDelay_ms);
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
-	std::cout << "RS control voltage successfully set to: " << control_V << " V" << std::endl;
+	std::cout << "RS control voltage successfully set to: " << control_V << " V\n";
 }
 
 //First set RSenable off, then set the control voltage to 0
@@ -426,7 +426,7 @@ void ResonantScanner::turnOff()
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTsequence.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSrun, false));
 	Sleep(mDelay_ms);
 	setVoltage_(0);
-	std::cout << "RS successfully turned off" << std::endl;
+	std::cout << "RS successfully turned off" << "\n";
 }
 
 //Download the current control voltage of the RS from the FPGA
@@ -553,12 +553,12 @@ void PMT16X::readAllGain() const
 
 	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) != 'I' || parameters.at(17) != sumCheck_(parameters, parameters.size() - 2))
-		std::cout << "Warning in " + (std::string)__FUNCTION__  + ": CheckSum mismatch" << std::endl;
+		std::cout << "Warning in " + (std::string)__FUNCTION__  + ": CheckSum mismatch\n";
 	
 	//Print out the gains
-	std::cout << "PMT16X gains:" << std::endl;
+	std::cout << "PMT16X gains:\n";
 	for (int ii = 1; ii <= 16; ii++)
-		std::cout << "Gain #" << ii << " (0-255) = " << (int)parameters.at(ii) << std::endl;		
+		std::cout << "Gain #" << ii << " (0-255) = " << (int)parameters.at(ii) << "\n";		
 }
 
 void PMT16X::setSingleGain(const int channel, const int gain) const
@@ -576,9 +576,9 @@ void PMT16X::setSingleGain(const int channel, const int gain) const
 
 	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) == 'g' && parameters.at(1) == (uint8_t)channel && parameters.at(2) == (uint8_t)gain && parameters.at(3) == sumCheck_(parameters, parameters.size()-2))
-		std::cout << "PMT16X channel " << channel << " successfully set to " << gain << std::endl;
+		std::cout << "PMT16X channel " << channel << " successfully set to " << gain << "\n";
 	else
-		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
+		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch\n";
 }
 
 void PMT16X::setAllGainToZero() const
@@ -588,7 +588,7 @@ void PMT16X::setAllGainToZero() const
 
 	//Check that the chars returned by the PMT16X are correct. The second char returned is the sumcheck
 	if (parameters.at(0) == 'R' && parameters.at(1) == 'R')
-		std::cout << "All PMT16X gains successfully set to 0" << std::endl;
+		std::cout << "All PMT16X gains successfully set to 0\n";
 }
 
 void PMT16X::setAllGain(const int gain) const
@@ -601,9 +601,9 @@ void PMT16X::setAllGain(const int gain) const
 
 	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) == 'S' && parameters.at(1) == (uint8_t)gain && parameters.at(2) == sumCheck_(parameters, parameters.size() - 2))
-		std::cout << "All PMT16X gains successfully set to " << gain << std::endl;
+		std::cout << "All PMT16X gains successfully set to " << gain << "\n";
 	else
-		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
+		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch\n";
 }
 
 void PMT16X::setAllGain(std::vector<uint8_t> gains) const
@@ -622,12 +622,12 @@ void PMT16X::setAllGain(std::vector<uint8_t> gains) const
 
 	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) != 'G' || parameters.at(17) != sumCheck_(parameters, parameters.size() - 2))
-		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
+		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch\n";
 
 	//Print out the gains
-	std::cout << "PMT16X gains successfully set to:" << std::endl;
+	std::cout << "PMT16X gains successfully set to:\n";
 	for (int ii = 1; ii <= 16; ii++)
-		std::cout << "Gain #" << ii << " (0-255) = " << (int)parameters.at(ii) << std::endl;
+		std::cout << "Gain #" << ii << " (0-255) = " << (int)parameters.at(ii) << "\n";
 
 }
 
@@ -638,7 +638,7 @@ void PMT16X::readTemp() const
 
 	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) != 'T' || parameters.at(4) != sumCheck_(parameters, parameters.size() - 2))
-		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch" << std::endl;
+		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch\n";
 
 	const int TEMPH = (int)(parameters.at(1));
 	const int TEMPL = (int)(parameters.at(2));
@@ -646,8 +646,8 @@ void PMT16X::readTemp() const
 
 	const int alertTemp_C = (int)(parameters.at(3));
 
-	std::cout << "PMT16X temperature = " << temp_C << " \370C" << std::endl;
-	std::cout << "PMT16X alert temperature = " << alertTemp_C <<  " \370C" << std::endl;
+	std::cout << "PMT16X temperature = " << temp_C << " \370C\n";
+	std::cout << "PMT16X alert temperature = " << alertTemp_C <<  " \370C\n";
 }
 #pragma endregion "PMT16X"
 
@@ -716,7 +716,7 @@ void Filterwheel::downloadColor_()
 	{
 		mSerial->write(TxBuffer);
 		mSerial->read(RxBuffer, mRxBufSize);
-		//std::cout << "Full RxBuffer: " << RxBuffer << std::endl; //For debugging
+		//std::cout << "Full RxBuffer: " << RxBuffer << "\n"; //For debugging
 
 		//Delete echoed command
 		std::string::size_type ii = RxBuffer.find(TxBuffer);
@@ -728,7 +728,7 @@ void Filterwheel::downloadColor_()
 		RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
 		//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
-		//std::cout << "Cleaned RxBuffer: " << RxBuffer << std::endl; //For debugging
+		//std::cout << "Cleaned RxBuffer: " << RxBuffer << "\n"; //For debugging
 		mColor = static_cast<Filtercolor>(std::stoi(RxBuffer));	//convert string to int, and then to Filtercolor
 	}
 	catch (const serial::IOException)
@@ -754,17 +754,17 @@ void Filterwheel::setColor(const Filtercolor color)
 			const int diffPos = maxPos - minPos;
 			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
 
-			//std::cout << "Tuning the " << mDeviceName << " to " + convertToString_(color) << std::endl;
+			//std::cout << "Tuning the " << mDeviceName << " to " + convertToString_(color) << "\n";
 			Sleep((int)(1000.0 * minSteps / mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
-														//std::cout << "setColor full RxBuffer: " << RxBuffer << std::endl; //For debugging
+														//std::cout << "setColor full RxBuffer: " << RxBuffer << "\n"; //For debugging
 
 			downloadColor_();
 			if (color == mColor)
-				std::cout << "The " << mDeviceName << " successfully set to " + convertToString_(mColor) << std::endl;
+				std::cout << "The " << mDeviceName << " successfully set to " + convertToString_(mColor) << "\n";
 			else
-				std::cout << "WARNING: The " << mDeviceName << " might not be in the correct position " + convertToString_(color) << std::endl;
+				std::cout << "WARNING: The " << mDeviceName << " might not be in the correct position " + convertToString_(color) << "\n";
 		}
 		catch (const serial::IOException)
 		{
@@ -851,7 +851,7 @@ int Laser::downloadWavelength_()
 
 			RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
 			RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
-			//std::cout << RxBuffer << std::endl;	//For debugging
+			//std::cout << RxBuffer << "\n";	//For debugging
 
 			return std::stoi(RxBuffer);	//Convert string to int
 
@@ -869,7 +869,7 @@ int Laser::downloadWavelength_()
 
 void Laser::printWavelength_nm() const
 {
-	std::cout << mLaserNameString +  " wavelength is " << mWavelength_nm << " nm" << std::endl;
+	std::cout << mLaserNameString +  " wavelength is " << mWavelength_nm << " nm\n";
 }
 
 void Laser::setWavelength(const int wavelength_nm)
@@ -889,17 +889,17 @@ void Laser::setWavelength(const int wavelength_nm)
 			{
 				mSerial->write(TxBuffer + "\r");
 
-				//std::cout << "Sleep time in ms: " << (int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s) << std::endl;	//For debugging
-				std::cout << "Tuning VISION to " << wavelength_nm << " nm" << std::endl;
+				//std::cout << "Sleep time in ms: " << (int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s) << "\n";	//For debugging
+				std::cout << "Tuning VISION to " << wavelength_nm << " nm\n";
 				Sleep((int)std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s));	//Wait till the laser finishes tuning
 
 				mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
 
 				downloadWavelength_();
 				if (mWavelength_nm = wavelength_nm)
-					std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm" << std::endl;
+					std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm\n";
 				else
-					std::cout << "WARNING: VISION might not be in the correct wavelength " << wavelength_nm << " nm" << std::endl;
+					std::cout << "WARNING: VISION might not be in the correct wavelength " << wavelength_nm << " nm\n";
 			}
 			catch (const serial::IOException)
 			{
@@ -908,7 +908,7 @@ void Laser::setWavelength(const int wavelength_nm)
 		}
 		break;
 	case FIDELITY:
-		std::cout << "WARNING: FIDELITY wavelength only supports 1040 nm" << std::endl;
+		std::cout << "WARNING: FIDELITY wavelength only supports 1040 nm\n";
 	default:
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}
@@ -938,9 +938,9 @@ void Laser::setShutter(const bool state) const
 		mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work.
 
 		if (state)
-			std::cout << mLaserNameString + " shutter successfully opened" << std::endl;
+			std::cout << mLaserNameString + " shutter successfully opened\n";
 		else
-			std::cout << mLaserNameString + " shutter successfully closed" << std::endl;
+			std::cout << mLaserNameString + " shutter successfully closed\n";
 	}
 	catch (const serial::IOException)
 	{
@@ -1238,9 +1238,9 @@ double3 Stage::readPosition3_mm() const
 
 void Stage::printPosition3() const
 {
-	std::cout << "Stage X position = " << mPosition3_mm[XX] << " mm" << std::endl;
-	std::cout << "Stage Y position = " << mPosition3_mm[YY] << " mm" << std::endl;
-	std::cout << "Stage Z position = " << mPosition3_mm[ZZ] << " mm" << std::endl;
+	std::cout << "Stage X position = " << mPosition3_mm[XX] << " mm\n";
+	std::cout << "Stage Y position = " << mPosition3_mm[YY] << " mm\n";
+	std::cout << "Stage Z position = " << mPosition3_mm[ZZ] << " mm\n";
 }
 
 //Retrieve the stage position from the controller
@@ -1345,7 +1345,7 @@ double Stage::downloadDOconfig(const Axis axis, const int chan, const int trigge
 	if (!PI_qCTO(mID[axis], &chan, &triggerParam, &value, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query CTO for the stage" + std::to_string(axis));
 
-	//std::cout << value << std::endl;
+	//std::cout << value << "\n";
 	return value;
 }
 
@@ -1356,7 +1356,7 @@ bool Stage::isDOenable(const Axis axis, const int chan) const
 	if (!PI_qTRO(mID[axis], &chan, &triggerState, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query TRO for the stage" + std::to_string(axis));
 
-	//std::cout << triggerState << std::endl;
+	//std::cout << triggerState << "\n";
 	return triggerState;
 }
 
@@ -1374,7 +1374,7 @@ double Stage::qVEL(const Axis axis) const
 	if(!PI_qVEL(mID[axis], mNstagesPerController, &vel_mmPerS))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage" + std::to_string(axis));
 
-	//std::cout << vel_mmPerS << std::endl;
+	//std::cout << vel_mmPerS << "\n";
 	return vel_mmPerS;
 }
 
@@ -1418,14 +1418,14 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 	bool triggerState = isDOenable(axis, chan);
 	double vel_mmPerS = qVEL(axis);
 
-	std::cout << "triggerStep: " << triggerStep << std::endl;
-	std::cout << "triggerMode: " << triggerMode << std::endl;
-	std::cout << "polarity: " << polarity << std::endl;
-	std::cout << "startThreshold: " << startThreshold << std::endl;
-	std::cout << "stopThreshold: " << stopThreshold << std::endl;
-	std::cout << "triggerPosition: " << triggerPosition << std::endl;
-	std::cout << "triggerState: " << triggerState << std::endl;
-	std::cout << "vel_mmPerS: " << vel_mmPerS << std::endl;
+	std::cout << "triggerStep: " << triggerStep << "\n";
+	std::cout << "triggerMode: " << triggerMode << "\n";
+	std::cout << "polarity: " << polarity << "\n";
+	std::cout << "startThreshold: " << startThreshold << "\n";
+	std::cout << "stopThreshold: " << stopThreshold << "\n";
+	std::cout << "triggerPosition: " << triggerPosition << "\n";
+	std::cout << "triggerState: " << triggerState << "\n";
+	std::cout << "vel_mmPerS: " << vel_mmPerS << "\n";
 }
 #pragma endregion "Stages"
 

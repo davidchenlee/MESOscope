@@ -154,7 +154,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
 		{
 			std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
-				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << std::endl;
+				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << "\n";
 
 			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Override the previous laser power
 
@@ -177,7 +177,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 		stackSameZ.average();	//Average the frames acquired via discontinuous acquisition
 		stackDiffZ.pushImage(iterDiffZ, stackSameZ.accessTiff());
 
-		std::cout << std::endl;
+		std::cout << "\n";
 		P_mW += (Pif_mW.back() - Pif_mW.front()) / nDiffZ;
 	}
 	pockels.setShutter(false);
@@ -349,7 +349,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
 		{
 			std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
-				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << std::endl;
+				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << "\n";
 
 			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Override the previous laser power
 
@@ -372,7 +372,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 		stackSameZ.average();	//Average the frames acquired via discontinuous acquisition
 		stackDiffZ.pushImage(iterDiffZ, stackSameZ.accessTiff());
 
-		std::cout << std::endl;
+		std::cout << "\n";
 		P_mW += (Pif_mW.back() - Pif_mW.front()) / nDiffZ;
 	}
 	pockels.setShutter(false);
@@ -411,7 +411,7 @@ void seq_testGalvo(const FPGAns::FPGA &fpga)
 
 	for (int iter = 0; iter < nFramesDiscont; iter++)
 	{
-		std::cout << "Iteration: " << iter + 1 << std::endl;
+		std::cout << "Iteration: " << iter + 1 << "\n";
 
 		//Execute the realtime sequence and acquire the image
 		Image image(RTsequence);
@@ -428,7 +428,7 @@ void seq_testPixelclock(const FPGAns::FPGA &fpga)
 	Image image(RTsequence);
 	image.acquire();						//Execute the realtime sequence and acquire the image
 	//image.pushToVector(stackOfAverages);
-	//std::cout << "size: " << stackOfAverages.size() << std::endl;
+	//std::cout << "size: " << stackOfAverages.size() << "\n";
 	//TiffU8 acqParam(stackOfAverages, 300, 400);
 	//acqParam.saveTiff("Untitled");
 }
@@ -552,7 +552,7 @@ void seq_testStagePosition()
 	const double3 stagePosition0_mm = { 35.020, 19.808, 18.542 };	//Stage initial position
 	Stage stage;
 
-	std::cout << "Stages initial position:" << std::endl;
+	std::cout << "Stages initial position:" << "\n";
 	stage.printPosition3();
 
 	auto t_start = std::chrono::high_resolution_clock::now();
@@ -561,20 +561,20 @@ void seq_testStagePosition()
 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
+	std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
 	stage.waitForMotionToStop(ZZ);
 
-	std::cout << "Stages final position:" << std::endl;
+	std::cout << "Stages final position:" << "\n";
 	stage.printPosition3();
 	
 	/*
 	int input = 1;
 	while (input)
 	{
-		std::cout << "Stage X position = " << stage.downloadPosition_mm(XX) << std::endl;
-		std::cout << "Stage Y position = " << stage.downloadPosition_mm(YY) << std::endl;
-		std::cout << "Stage X position = " << stage.downloadPosition_mm(ZZ) << std::endl;
+		std::cout << "Stage X position = " << stage.downloadPosition_mm(XX) << "\n";
+		std::cout << "Stage Y position = " << stage.downloadPosition_mm(YY) << "\n";
+		std::cout << "Stage X position = " << stage.downloadPosition_mm(ZZ) << "\n";
 
 		std::cout << "Enter command: ";
 		std::cin >> input;
@@ -588,19 +588,19 @@ void seq_testStageConfig()
 {
 	Stage stage;
 
-	//std::cout << "Stages initial position:" << std::endl;
+	//std::cout << "Stages initial position:" << "\n";
 	//stage.printPosition3();
 	//stage.isDOenable(XX, 1);
 	//stage.isDOenable(ZZ, 1);
 	//stage.setDOenable(ZZ, 1, 1);
 	//stage.downloadDOconfig(ZZ, 1, 1);
-	//std::cout << "x stage vel: " << stage.qVEL(XX) << " mm/s" << std::endl;
-	//std::cout << "y stage vel: " << stage.qVEL(YY) << " mm/s" << std::endl;
-	//std::cout << "z stage vel: " << stage.qVEL(ZZ) << " mm/s" << std::endl;
+	//std::cout << "x stage vel: " << stage.qVEL(XX) << " mm/s" << "\n";
+	//std::cout << "y stage vel: " << stage.qVEL(YY) << " mm/s" << "\n";
+	//std::cout << "z stage vel: " << stage.qVEL(ZZ) << " mm/s" << "\n";
 	stage.printStageConfig(ZZ, 1);
 	//stage.downloadConfiguration(ZZ, 2);
 
-	std::cout << "Press any key to continue..." << std::endl;
+	std::cout << "Press any key to continue...\n";
 	getchar();
 }
 
@@ -613,7 +613,7 @@ void seq_testPMT16X()
 	//pmt.readTemp();
 	//pmt.setAllGain({ 100,255,255,255,255,255,255,255,255,255,255,255,255,255,100,255});
 
-	std::cout << "Press any key to continue..." << std::endl;
+	std::cout << "Press any key to continue...\n";
 	getchar();
 }
 
@@ -625,7 +625,7 @@ void seq_testLaser(const FPGAns::FPGA &fpga)
 	//laser.setWavelength(940);
 	//laser.printWavelength_nm();
 
-	std::cout << "Press any key to continue..." << std::endl;
+	std::cout << "Press any key to continue...\n";
 	getchar();
 }
 
@@ -639,7 +639,7 @@ void seq_testVirtualLaser(const FPGAns::FPGA &fpga)
 	Sleep(3000);
 	laser.setShutter(false);
 
-	std::cout << "Press any key to continue..." << std::endl;
+	std::cout << "Press any key to continue...\n";
 	getchar();
 }
 
@@ -670,23 +670,23 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 	image.acquire();
 	pockels.setShutter(false);
 
-	std::cout << "Press any key to continue..." << std::endl;
+	std::cout << "Press any key to continue...\n";
 	getchar();
 }
 
 void seq_testRS(const FPGAns::FPGA &fpga)
 {
 	ResonantScanner RScanner(fpga);
-	std::cout << "aaa = " << RScanner.downloadControl_V() << std::endl;
+	std::cout << "aaa = " << RScanner.downloadControl_V() << "\n";
 	//RScanner.turnOn_um(150);
 	//RScanner.turnOff();
 }
 
 void seq_testConvertI16toVolt()
 {
-	std::cout << "volt to I16: " << FPGAns::convertVoltToI16(1) << std::endl;
-	std::cout << "I16 to colt: " << FPGAns::convertI16toVolt(32767) << std::endl;
-	std::cout << "volt to I16 to volt: " << FPGAns::convertI16toVolt(FPGAns::convertVoltToI16(0)) << std::endl;
+	std::cout << "volt to I16: " << FPGAns::convertVoltToI16(1) << "\n";
+	std::cout << "I16 to colt: " << FPGAns::convertI16toVolt(32767) << "\n";
+	std::cout << "volt to I16 to volt: " << FPGAns::convertI16toVolt(FPGAns::convertVoltToI16(0)) << "\n";
 }
 
 void seq_testTiffU8()
@@ -734,7 +734,7 @@ void seq_testEthernetSpeed()
 	   	 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "Elapsed time: " << duration << " ms" << std::endl;
+	std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
 }
 
@@ -744,7 +744,7 @@ void seq_testVibratome(const FPGAns::FPGA &fpga)
 	//vibratome.reset(20);
 	vibratome.cutAndRetract(20);
 
-	std::cout << "Press any key to continue..." << std::endl;
+	std::cout << "Press any key to continue...\n";
 	getchar();
 }
 
@@ -829,6 +829,7 @@ void seq_testSequencer()
 	SampleConfig sampleConfig("", roi_mm, sampleLengthZ_mm);
 
 	//Configure the lasers {wavelength_nm, laser power mW, laser power incremental mW}
+	using SingleLaserConfig = LaserListConfig::SingleLaserConfig;
 	const SingleLaserConfig blueLaser{ 750, 10, 5 };
 	const SingleLaserConfig greenLaser{ 940, 11, 6 };
 	const SingleLaserConfig redLaser{ 1040, 12, 7 };
@@ -871,7 +872,7 @@ void seq_testSequencer()
 			switch (commandline.mAction)
 			{
 			case MOV:
-				//Move the stage to stackCenter_mm
+				//Move the x and y stages to stackCenter_mm
 				stackCenter_mm = commandline.mCommand.moveStage.stackCenter_mm;
 				break;
 			case ACQ:
@@ -882,14 +883,14 @@ void seq_testSequencer()
 				scanPi_mW = commandline.mCommand.acqStack.scanPi_mW;
 				stackPinc_mW = commandline.mCommand.acqStack.stackPinc_mW;
 			case SAV:
-				//Save the stack to file and label it with the acquisition parameters:
+				//Save the stack to file and label it with the scan parameters:
 				wavelength_nm, scanZi_mm, stackDepth_mm, scanPi_mW, stackPinc_mW;
 				stackCenter_mm;
 				break;
 			case CUT:
 				//Move the stage to
 				double3 stagePosition_mm = commandline.mCommand.cutSlice.samplePosition_mm;
-				//Then cut a slice off
+				//and then cut a slice off
 				break;
 			default:
 				throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -898,6 +899,6 @@ void seq_testSequencer()
 	}
 
 
-	//std::cout << "Press any key to continue..." << std::endl;
+	//std::cout << "Press any key to continue...\n";
 	//getchar();
 }

@@ -69,17 +69,17 @@ struct SampleConfig
 	}
 };
 
-//Parameters for a single laser
-struct SingleLaserConfig
-{
-	int wavelength_nm;	//Laser wavelength
-	int scanPi_mW;		//Initial laser power for a stack-scan 
-	int stackPinc_mW;	//Laser power increase for a stack-scan
-};
-
-//A list of laser parameters. The body is defined here
+//Collect single laser parameters to form a list. The body is defined here
 struct LaserListConfig
 {
+	//Parameters for a single laser
+	struct SingleLaserConfig
+	{
+		int wavelength_nm;	//Laser wavelength
+		int scanPi_mW;		//Initial laser power for a stack-scan 
+		int stackPinc_mW;	//Laser power increase for a stack-scan
+	};
+
 	std::vector <SingleLaserConfig> mLaserConfig;
 
 	LaserListConfig(const std::vector <SingleLaserConfig> laserConfig) : mLaserConfig(laserConfig) {}
@@ -96,7 +96,7 @@ struct LaserListConfig
 		{
 			*fileHandle << "Wavelength (nm) = " << mLaserConfig.at(iterWL).wavelength_nm <<
 				"\tLaser power (mW) = " << mLaserConfig.at(iterWL).scanPi_mW <<
-				"\tLaser power increase (mW) = " << mLaserConfig.at(iterWL).stackPinc_mW << "\n";
+				"\tPower increase (mW) = " << mLaserConfig.at(iterWL).stackPinc_mW << "\n";
 		}
 		*fileHandle << "\n";
 	}
@@ -171,20 +171,20 @@ struct VibratomeConfig
 //The body is defined here
 struct StageConfig
 {
-	const double stageInitialZ_mm = 10;		//Initial height of the stage
+	const double stageInitialZ_mm;		//Initial height of the stage
 	StageConfig(const double stageInitialZ_mm) : stageInitialZ_mm(stageInitialZ_mm){}
 };
 
 //A list of commands that form a sequence
 class Sequencer
 {
-	//Unchanged parameters throughout the sequence
+	//Parameters that are unchanged throughout the sequence
 	const SampleConfig mSample;						//Sample
 	const StackConfig mStackConfig;					//Stack
 	const LaserListConfig mLaserListConfig;			//Laser
 	const VibratomeConfig mVibratomeConfig;			//Vibratome
 	const StageConfig mStageConfig;					//Stage
-	const int3 initialScanDir{ 1,1,1 };				//Initial scan directions in x, y, and z
+	const int3 mInitialScanDir{ 1,1,1 };			//Initial scan directions in x, y, and z
 
 	//Parameters that vary throughout the sequence
 	std::vector<Commandline> mCommandList;
@@ -192,9 +192,9 @@ class Sequencer
 	int mStackCounter = 0;				//Count the number of stacks
 	int mSliceCounter = 0;				//Count the number of the slices
 	int2 mStackArrayDim;				//Dimension of the array of stacks. Value computed dynamically
-	int3 mScanDir{ initialScanDir };	//Scan directions in x, y, and z
+	int3 mScanDir{ mInitialScanDir };	//Scan directions in x, y, and z
 	double mScanZi_mm;					//Initial z-stage position for a stack-scan
-	double mPlaneToCutZ_mm;				//Height of the plane to cut	
+	double mPlaneToSliceZ_mm;			//Height of the plane to cut	
 	int mNtotalSlices = static_cast<int>(std::ceil(1000 * mSample.length_mm.at(ZZ) / mVibratomeConfig.sliceThickness_um));	//Number of vibratome slices in the entire sample. Value computed dynamically
 
 	int calculateStackScanInitialP_mW_(const int scanPmin_mW, const int stackPinc_mW, const int scanDirZ);

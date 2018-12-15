@@ -4,7 +4,7 @@
 int main(int argc, char* argv[])
 {
 	if (argc < 4) {
-		std::cout << "ERROR: not enough arguments" << std::endl;
+		std::cout << "ERROR: not enough arguments\n";
 		return 0;
 	}
 
@@ -62,23 +62,23 @@ int main(int argc, char* argv[])
 
 		catch (const std::invalid_argument &e)
 		{
-			std::cout << "An invalid argument has occurred: " << e.what() << std::endl;
+			std::cout << "An invalid argument has occurred: " << e.what() << "\n";
 		}
 		catch (const std::overflow_error &e)
 		{
-			std::cout << "An overflow has occurred: " << e.what() << std::endl;
+			std::cout << "An overflow has occurred: " << e.what() << "\n";
 		}
 		catch (const FPGAns::FPGAexception &e)
 		{
-			std::cout << "An FPGA exception has occurred in " << e.what() << std::endl;
+			std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
 		}
 		catch (const std::runtime_error &e)
 		{
-			std::cout << "A runtime error has occurred: " << e.what() << std::endl;
+			std::cout << "A runtime error has occurred: " << e.what() << "\n";
 		}
 		catch (...)
 		{
-			std::cout << "An unknown error has occurred" << std::endl;
+			std::cout << "An unknown error has occurred\n";
 		}
 
 		fpga.close();		//Close the FPGA connection
@@ -86,10 +86,10 @@ int main(int argc, char* argv[])
 
 	catch (const FPGAns::FPGAexception &e)
 	{
-		std::cout << "An FPGA exception has occurred: " << e.what() << std::endl;
+		std::cout << "An FPGA exception has occurred: " << e.what() << "\n";
 	}
 
-	//std::cout << "\nPress any key to continue..." << std::endl;
+	//std::cout << "\nPress any key to continue...\n";
 	//getchar();
 
 	return 0;

@@ -828,8 +828,11 @@ void seq_testSequencer()
 	const double sampleLengthZ_mm = 10;
 	SampleConfig sampleConfig("", roi_mm, sampleLengthZ_mm);
 
-	//Configure the laser {wavelength_nm, laser power mW, laser power incremental mW}
-	const std::vector<LaserConfig> laserConfigList{ { 750, 10, 5 }, { 940, 11, 6 }, {1040, 12, 7} };
+	//Configure the lasers {wavelength_nm, laser power mW, laser power incremental mW}
+	const SingleLaserConfig blueLaser{ 750, 10, 5 };
+	const SingleLaserConfig greenLaser{ 940, 11, 6 };
+	const SingleLaserConfig redLaser{ 1040, 12, 7 };
+	const std::vector<SingleLaserConfig> laserList{ blueLaser, greenLaser, redLaser };
 	
 	//Configure the stacks
 	const double2 FOV_um = { 150,200 };
@@ -848,7 +851,7 @@ void seq_testSequencer()
 	StageConfig stageConfig(stageInitialZ_mm);
 
 	//Create a sequence
-	Sequencer sequence(sampleConfig, laserConfigList, stackConfig, vibratomeConfig, stageConfig);
+	Sequencer sequence(sampleConfig, laserList, stackConfig, vibratomeConfig, stageConfig);
 	sequence.generateCommandList();
 	sequence.printToFile("Commandlist");
 

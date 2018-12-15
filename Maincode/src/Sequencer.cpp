@@ -35,24 +35,34 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 	switch (mAction)
 	{
 	case MOV:
-		*fileHandle << actionToString_(mAction) << "\t" << mCommand.moveStage.sliceNumber << "\t(" <<
-			mCommand.moveStage.stackIJ.at(XX) << "," << mCommand.moveStage.stackIJ.at(YY) << ")\t(" <<
-			std::fixed << std::setprecision(3) << mCommand.moveStage.stackCenter_mm.at(0) << "," << mCommand.moveStage.stackCenter_mm.at(1) << ")\n";
+		*fileHandle << actionToString_(mAction) << "\t" << mCommand.moveStage.sliceNumber;
+		*fileHandle << "\t(" << mCommand.moveStage.stackIJ.at(XX) << "," << mCommand.moveStage.stackIJ.at(YY) << ")\t";
+		*fileHandle << std::setprecision(3);
+		*fileHandle << "(" << mCommand.moveStage.stackCenter_mm.at(0) << "," << mCommand.moveStage.stackCenter_mm.at(1) << ")\n";
 		break;
 	case ACQ:
 		scanZf_mm = mCommand.acqStack.scanZi_mm + mCommand.acqStack.scanDirZ * mCommand.acqStack.stackDepth_um / 1000;
 		scanPf_mW = mCommand.acqStack.scanPi_mW + mCommand.acqStack.scanDirZ * mCommand.acqStack.stackPinc_mW;
-		*fileHandle << actionToString_(mAction) << "\t\t\t\t\t" << mCommand.acqStack.stackNumber << "\t" << mCommand.acqStack.wavelength_nm << "\t" << mCommand.acqStack.scanDirZ << "\t" <<
-			std::setprecision(3) << mCommand.acqStack.scanZi_mm << "\t" << scanZf_mm << "\t" <<
-			std::setprecision(0) << mCommand.acqStack.scanPi_mW << "\t" << scanPf_mW << "\n";
+		
+		*fileHandle << actionToString_(mAction) << "\t\t\t\t\t";
+		*fileHandle << mCommand.acqStack.stackNumber << "\t";
+		*fileHandle << mCommand.acqStack.wavelength_nm << "\t";
+		*fileHandle << mCommand.acqStack.scanDirZ << "\t";
+		*fileHandle << std::setprecision(3);
+		*fileHandle << mCommand.acqStack.scanZi_mm << "\t";
+		*fileHandle << scanZf_mm << "\t";
+		*fileHandle << std::setprecision(0);
+		*fileHandle << mCommand.acqStack.scanPi_mW << "\t" << scanPf_mW << "\n";
 		break;
 	case SAV:
 		*fileHandle << actionToString_(mAction) + "\n";
 		break;
 	case CUT:
-		*fileHandle << actionToString_(mAction) << std::setprecision(3)  << "\t**************************Sample facing the vibratome at (mm) = (" <<
-			mCommand.cutSlice.samplePosition_mm.at(XX) << "," << mCommand.cutSlice.samplePosition_mm.at(YY) << "," << mCommand.cutSlice.samplePosition_mm.at(ZZ) <<
-			") *******************************\n";
+		*fileHandle << actionToString_(mAction);
+		*fileHandle << std::setprecision(3);
+		*fileHandle << "\t************Sample facing the vibratome at (mm) = ";
+		*fileHandle << "(" << mCommand.cutSlice.samplePosition_mm.at(XX) << "," << mCommand.cutSlice.samplePosition_mm.at(YY) << "," << mCommand.cutSlice.samplePosition_mm.at(ZZ) << ")";
+		*fileHandle << "*******************************\n";
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -89,8 +99,8 @@ void Commandline::printParameters() const
 #pragma endregion "Commandline"
 
 #pragma region "Sequencer"
-Sequencer::Sequencer(const SampleConfig sample, const std::vector<LaserConfig> laserConfig, const StackConfig stackConfig, const VibratomeConfig vibratomeConfig, const StageConfig stageConfig) :
-	mSample(sample), mLaserConfig(laserConfig), mStackConfig(stackConfig), mVibratomeConfig(vibratomeConfig), mStageConfig(stageConfig)
+Sequencer::Sequencer(const SampleConfig sample, const LaserListConfig laserListConfig, const StackConfig stackConfig, const VibratomeConfig vibratomeConfig, const StageConfig stageConfig) :
+	mSample(sample), mLaserListConfig(laserListConfig), mStackConfig(stackConfig), mVibratomeConfig(vibratomeConfig), mStageConfig(stageConfig)
 {
 	//Initialize the z-stage
 	mScanZi_mm = mStageConfig.stageInitialZ_mm;
@@ -99,10 +109,10 @@ Sequencer::Sequencer(const SampleConfig sample, const std::vector<LaserConfig> l
 	mPlaneToCutZ_mm = mScanZi_mm + (mVibratomeConfig.sliceThickness_um - mVibratomeConfig.sliceOffsetZ_um) / 1000;
 
 	//Calculate the total number of stacks per vibratome slice and in the entire sample
-	mStackArrayDim.at(XX) = static_cast<int>(std::ceil(1000 * mSample.length_mm.at(XX) / mStackConfig.FOV_um.at(XX)));							//Number of stacks in x
-	mStackArrayDim.at(YY) = static_cast<int>(std::ceil(1000 * mSample.length_mm.at(YY) / mStackConfig.FOV_um.at(YY)));							//Number of stacks in y
-	const int mNtotalStacksPerVibratomeSlice = mStackArrayDim.at(XX) * mStackArrayDim.at(YY);											//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserConfig.size()) * mNtotalStacksPerVibratomeSlice;		//Total number of stacks in the entire sample
+	mStackArrayDim.at(XX) = static_cast<int>(std::ceil(1000 * mSample.length_mm.at(XX) / mStackConfig.FOV_um.at(XX)));						//Number of stacks in x
+	mStackArrayDim.at(YY) = static_cast<int>(std::ceil(1000 * mSample.length_mm.at(YY) / mStackConfig.FOV_um.at(YY)));						//Number of stacks in y
+	const int mNtotalStacksPerVibratomeSlice = mStackArrayDim.at(XX) * mStackArrayDim.at(YY);												//Total number of stacks in a vibratome slice
+	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserListConfig.listSize()) * mNtotalStacksPerVibratomeSlice;		//Total number of stacks in the entire sample
 
 	//Pre-reserve a memory block assuming 3 actions for every stack in a vibratome slice (MOV, ACQ, and SAV); and then CUT
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
@@ -110,7 +120,7 @@ Sequencer::Sequencer(const SampleConfig sample, const std::vector<LaserConfig> l
 
 //The initial laser power of a stack-scan depends on whether the stack is imaged from the top down or from the bottom up.
 //Give the laser power at the top of the stack scanPmin_mW, the power increment stackPinc_mW, and the scanning direction scanDirZ to return the initial laser power of the scan
-double Sequencer::calculateStackScanInitialP_mW_(const double scanPmin_mW, const double stackPinc_mW, const int scanDirZ)
+int Sequencer::calculateStackScanInitialP_mW_(const int scanPmin_mW, const int stackPinc_mW, const int scanDirZ)
 {
 	if (scanDirZ > 0)	//z-stage scans upwards
 		return scanPmin_mW;
@@ -162,11 +172,15 @@ void Sequencer::moveStage_(const int2 stackIJ)
 
 void Sequencer::acqStack_(const int iterWL)
 {
-	const double scanPi_mW = calculateStackScanInitialP_mW_(mLaserConfig.at(iterWL).scanPi_mW, mLaserConfig.at(iterWL).stackPinc_mW, mScanDir.at(ZZ));
+	//Read the corresponding laser configuration
+	const SingleLaserConfig singleLaserConfig = mLaserListConfig.mLaserConfig.at(iterWL);
+
+	//Determine if the initial laser power is the lowest (top of the stack) or the highest (bottom of the stack)
+	const int scanPi_mW = calculateStackScanInitialP_mW_(singleLaserConfig.scanPi_mW, singleLaserConfig.stackPinc_mW, mScanDir.at(ZZ));
 
 	Commandline commandline;
 	commandline.mAction = ACQ;
-	commandline.mCommand.acqStack = { mStackCounter, mLaserConfig.at(iterWL).wavelength_nm, mScanDir.at(ZZ), mScanZi_mm, mStackConfig.stackDepth_um, scanPi_mW, mLaserConfig.at(iterWL).stackPinc_mW };
+	commandline.mCommand.acqStack = { mStackCounter, singleLaserConfig.wavelength_nm, mScanDir.at(ZZ), mScanZi_mm, mStackConfig.stackDepth_um, scanPi_mW, singleLaserConfig.stackPinc_mW };
 	mCommandList.push_back(commandline);
 
 	mStackCounter++;	//Count the number of stacks acquired
@@ -188,7 +202,7 @@ void Sequencer::saveStack_()
 
 void Sequencer::cutSlice_()
 {
-	//Move the sample here to face the vibratome blade. Notice the additional offset in z
+	//Move the sample to face the vibratome blade. Notice the additional offset in z
 	const double3 samplePosition_mm = { mVibratomeConfig.samplePosition_mm.at(XX), mVibratomeConfig.samplePosition_mm.at(YY), mPlaneToCutZ_mm + mVibratomeConfig.bladeOffsetZ_um / 1000 };
 
 	Commandline commandline;
@@ -211,9 +225,9 @@ void Sequencer::generateCommandList()
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
 		int xx = 0, yy = 0;				//Reset the stack indices after every cut
-		resetStageScanDirections_();	//Reset the stage scan directions
+		resetStageScanDirections_();	//Reset the scan directions of the stages
 
-		for (std::vector<int>::size_type iterWL = 0; iterWL != mLaserConfig.size(); iterWL++)
+		for (std::vector<int>::size_type iterWL = 0; iterWL != mLaserListConfig.listSize(); iterWL++)
 		{
 			//The y-stage is the slowest stage to react because it sits under of other 2 stages. For the best performance, iterate over y fewer times
 			while (yy >= 0 && yy < mStackArrayDim.at(YY))			//y direction
@@ -249,13 +263,14 @@ Commandline Sequencer::getCommandline(const int iterCommandLine) const
 	return mCommandList.at(iterCommandLine);
 }
 
-void Sequencer::printParams(std::ofstream *fileHandle) const
+void Sequencer::printSequencerParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "SEQUENCER ************************************************************\n";
 	*fileHandle << "# vibratome slices = " << mNtotalSlices << "\n";
 	*fileHandle << "StackArray dim (x, y) = (" << mStackArrayDim.at(XX) << "," << mStackArrayDim.at(YY) << ")\n";
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
-	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n\n";
+	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
+	*fileHandle << "\n";
 }
 
 //Print the commandlist to file
@@ -263,8 +278,11 @@ void Sequencer::printToFile(const std::string fileName) const
 {
 	std::ofstream *fileHandle = new std::ofstream(folderPath + fileName + ".txt");
 
+	*fileHandle << std::fixed;	//Show a fixed number of digits
+
 	mSample.printParams(fileHandle);
-	printParams(fileHandle);
+	mLaserListConfig.printParams(fileHandle);
+	printSequencerParams(fileHandle);
 	mStackConfig.printParams(fileHandle);
 	mVibratomeConfig.printParams(fileHandle);
 
@@ -281,6 +299,8 @@ void Sequencer::printToFile(const std::string fileName) const
 		*fileHandle << iterCommandline << "\t";		//Print out the iteration number
 		mCommandList.at(iterCommandline).printToFile(fileHandle);
 	}
+
+	*fileHandle << std::defaultfloat;
 	fileHandle->close();
 }
 #pragma endregion "sequencer"

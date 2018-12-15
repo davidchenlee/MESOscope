@@ -5,27 +5,21 @@ using namespace Constants;
 //Single commands
 class Commandline
 {
-	class MoveStage
-	{
-	public:
+	struct MoveStage {
 		int sliceNumber;		//Slice number
 		int2 stackIJ;			//Indices for the 2D array of stacks
 		double2 stackCenter_mm;	//X and Y positiosn of the center of the stack
 	};
-	class AcqStack
-	{
-	public:
+	struct AcqStack {
 		int stackNumber;
 		int wavelength_nm;
 		int scanDirZ;			//Z-stage scan direction: +1 for positive, -1 for negative
 		double scanZi_mm;		//Initial z position of a stack-scan
 		double stackDepth_um;	//Stack depth or thickness
-		double scanPi_mW;		//Initial laser power for a stack-scan
-		double stackPinc_mW;	//Laser power increase for a stack-scan
+		int scanPi_mW;			//Initial laser power for a stack-scan
+		int stackPinc_mW;		//Laser power increase for a stack-scan
 	};
-	class CutSlice
-	{
-	public:
+	struct CutSlice {
 		double3 samplePosition_mm;		//Position the sample faving the vibratome blade
 	};
 	std::string actionToString_(const Action action) const;
@@ -43,9 +37,9 @@ public:
 	void printParameters() const;
 };
 
-class SampleConfig
+//The body is defined here
+struct SampleConfig
 {
-public:
 	std::string sampleName;
 	ROI ROI_mm;				//Region of interest across the entire sample
 	double3 length_mm;		//Sample size in x, y, and z
@@ -68,22 +62,49 @@ public:
 	{
 		*fileHandle << "SAMPLE ************************************************************\n";
 		*fileHandle << "Name = " << sampleName << "\n";
-		*fileHandle << "ROI (mm) = (" << ROI_mm.at(0) << "," << ROI_mm.at(1) << "," << ROI_mm.at(2) << "," << ROI_mm.at(3) << ")\n";
-		*fileHandle << "Length (mm) = (" << length_mm.at(XX) << "," << length_mm.at(YY) << "," << length_mm.at(ZZ) << ")\n\n";
+		*fileHandle << std::setprecision(3);
+		*fileHandle << "ROI (mm) = [" << ROI_mm.at(0) << "," << ROI_mm.at(1) << "," << ROI_mm.at(2) << "," << ROI_mm.at(3) << "]\n";
+		*fileHandle << "Length (mm) = (" << length_mm.at(XX) << "," << length_mm.at(YY) << "," << length_mm.at(ZZ) << ")\n";
+		*fileHandle << "\n";
 	}
 };
 
-class LaserConfig
+//Parameters for a single laser
+struct SingleLaserConfig
 {
-public:
-	int wavelength_nm;		//Laser wavelength
-	double scanPi_mW;		//Initial laser power for a stack-scan 
-	double stackPinc_mW;	//Laser power increase for a stack-scan
+	int wavelength_nm;	//Laser wavelength
+	int scanPi_mW;		//Initial laser power for a stack-scan 
+	int stackPinc_mW;	//Laser power increase for a stack-scan
 };
 
-class StackConfig
+//A list of laser parameters. The body is defined here
+struct LaserListConfig
 {
-public:
+	std::vector <SingleLaserConfig> mLaserConfig;
+
+	LaserListConfig(const std::vector <SingleLaserConfig> laserConfig) : mLaserConfig(laserConfig) {}
+	std::size_t listSize() const
+	{
+		return mLaserConfig.size();
+	}
+
+	void printParams(std::ofstream *fileHandle) const
+	{
+		*fileHandle << "LASER ************************************************************\n";
+
+		for (std::vector<int>::size_type iterWL = 0; iterWL != mLaserConfig.size(); iterWL++)
+		{
+			*fileHandle << "Wavelength (nm) = " << mLaserConfig.at(iterWL).wavelength_nm <<
+				"\tLaser power (mW) = " << mLaserConfig.at(iterWL).scanPi_mW <<
+				"\tLaser power increase (mW) = " << mLaserConfig.at(iterWL).stackPinc_mW << "\n";
+		}
+		*fileHandle << "\n";
+	}
+};
+
+//The body is defined here
+struct StackConfig
+{
 	double2 FOV_um;				//Field of view in x and y
 	double stepSizeZ_um;		//Image resolution in z
 	double stackDepth_um;		//Stack depth or thickness
@@ -108,16 +129,18 @@ public:
 	void printParams(std::ofstream *fileHandle) const
 	{
 		*fileHandle << "STACK ************************************************************\n";
+		*fileHandle << std::setprecision(1);
 		*fileHandle << "FOV (um) = (" << FOV_um.at(XX) << "," << FOV_um.at(YY) << ")\n";
 		*fileHandle << "Step size Z (um) = " << stepSizeZ_um << "\n";
 		*fileHandle << "Stack depth (um) = " << stackDepth_um << "\n";
-		*fileHandle << "Stack overlap (um) = (" << stackOverlap_um.at(XX) << "," << stackOverlap_um.at(YY) << "," << stackOverlap_um.at(ZZ) << ")\n\n";
+		*fileHandle << "Stack overlap (um) = (" << stackOverlap_um.at(XX) << "," << stackOverlap_um.at(YY) << "," << stackOverlap_um.at(ZZ) << ")\n";
+		*fileHandle << "\n";
 	}
 };
 
-class VibratomeConfig
+//The body is defined here
+struct VibratomeConfig
 {
-public:
 	const double2 samplePosition_mm{ 0,0 };		//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
 	const double bladeOffsetZ_um = 3;			//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double sliceThickness_um;					//Slice thickness	
@@ -135,16 +158,19 @@ public:
 	void printParams(std::ofstream *fileHandle) const
 	{
 		*fileHandle << "VIBRATOME ************************************************************\n";
+		*fileHandle << std::setprecision(4);
 		*fileHandle << "Blade position (mm) = (" << samplePosition_mm.at(XX) << "," << samplePosition_mm.at(YY) << ")\n";
+		*fileHandle << std::setprecision(1);
 		*fileHandle << "Blade offset Z (um) = " << bladeOffsetZ_um << "\n";
 		*fileHandle << "Slice offset Z (um) = " << sliceOffsetZ_um << "\n";
-		*fileHandle << "Slice thickessZ (um) = " << sliceThickness_um << "\n\n";
+		*fileHandle << "Slice thickessZ (um) = " << sliceThickness_um << "\n";
+		*fileHandle << "\n";
 	}
 };
 
-class StageConfig
+//The body is defined here
+struct StageConfig
 {
-public:
 	const double stageInitialZ_mm = 10;		//Initial height of the stage
 	StageConfig(const double stageInitialZ_mm) : stageInitialZ_mm(stageInitialZ_mm){}
 };
@@ -155,7 +181,7 @@ class Sequencer
 	//Unchanged parameters throughout the sequence
 	const SampleConfig mSample;						//Sample
 	const StackConfig mStackConfig;					//Stack
-	const std::vector<LaserConfig> mLaserConfig;	//Laser
+	const LaserListConfig mLaserListConfig;			//Laser
 	const VibratomeConfig mVibratomeConfig;			//Vibratome
 	const StageConfig mStageConfig;					//Stage
 	const int3 initialScanDir{ 1,1,1 };				//Initial scan directions in x, y, and z
@@ -167,11 +193,11 @@ class Sequencer
 	int mSliceCounter = 0;				//Count the number of the slices
 	int2 mStackArrayDim;				//Dimension of the array of stacks. Value computed dynamically
 	int3 mScanDir{ initialScanDir };	//Scan directions in x, y, and z
-	double mScanZi_mm;					//z-stage position for a stack-scan
+	double mScanZi_mm;					//Initial z-stage position for a stack-scan
 	double mPlaneToCutZ_mm;				//Height of the plane to cut	
 	int mNtotalSlices = static_cast<int>(std::ceil(1000 * mSample.length_mm.at(ZZ) / mVibratomeConfig.sliceThickness_um));	//Number of vibratome slices in the entire sample. Value computed dynamically
 
-	double calculateStackScanInitialP_mW_(const double scanPmin_mW, const double stackPinc_mW, const int scanDirZ);
+	int calculateStackScanInitialP_mW_(const int scanPmin_mW, const int stackPinc_mW, const int scanDirZ);
 	double2 stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const;
 	void reverseStageScanDirection_(const Axis axis);
 	void resetStageScanDirections_();
@@ -180,7 +206,7 @@ class Sequencer
 	void saveStack_();
 	void cutSlice_();
 public:
-	Sequencer(const SampleConfig sampleConfig, const std::vector<LaserConfig> laserConfig, const StackConfig stackConfig, const VibratomeConfig vibratomeConfig, const StageConfig stageConfig);
+	Sequencer(const SampleConfig sampleConfig, const LaserListConfig laserListConfig, const StackConfig stackConfig, const VibratomeConfig vibratomeConfig, const StageConfig stageConfig);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor
@@ -188,6 +214,6 @@ public:
 
 	Commandline getCommandline(const int iterCommandline) const;
 	void generateCommandList();
-	void printParams(std::ofstream *fileHandle) const;
+	void printSequencerParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
 };

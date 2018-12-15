@@ -20,7 +20,7 @@ class Commandline
 		int stackPinc_mW;		//Laser power increase for a stack-scan
 	};
 	struct CutSlice {
-		double3 samplePosition_mm;		//Position the sample faving the vibratome blade
+		double3 samplePosition_mm;		//Position the sample facing the vibratome blade
 	};
 	std::string actionToString_(const Action action) const;
 public:
@@ -108,10 +108,10 @@ struct StackConfig
 	double2 FOV_um;				//Field of view in x and y
 	double stepSizeZ_um;		//Image resolution in z
 	double stackDepth_um;		//Stack depth or thickness
-	double3 stackOverlap_um;	//Stack overlap in x, y, and z
+	double3 stackOverlap_pct;	//Stack overlap in x, y, and z
 
-	StackConfig(const double2 FOV_um, const double stepSizeZ_um, const double stackDepth_um, const double3 stackOverlap_um) :
-		FOV_um(FOV_um), stepSizeZ_um(stepSizeZ_um), stackDepth_um(stackDepth_um), stackOverlap_um(stackOverlap_um)
+	StackConfig(const double2 FOV_um, const double stepSizeZ_um, const double stackDepth_um, const double3 stackOverlap_pct) :
+		FOV_um(FOV_um), stepSizeZ_um(stepSizeZ_um), stackDepth_um(stackDepth_um), stackOverlap_pct(stackOverlap_pct)
 	{
 		if (FOV_um.at(XX) <= 0 || FOV_um.at(YY) <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
@@ -122,8 +122,9 @@ struct StackConfig
 		if (stackDepth_um <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth must be positive");
 
-		if (stackOverlap_um.at(XX) <= 0 || stackOverlap_um.at(YY) <= 0 || stackOverlap_um.at(ZZ) <= 0)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be positive");
+		if (stackOverlap_pct.at(XX) < 0 || stackOverlap_pct.at(YY) < 0 || stackOverlap_pct.at(ZZ) < 0
+			|| stackOverlap_pct.at(XX) > 0.2 || stackOverlap_pct.at(YY) > 0.2 || stackOverlap_pct.at(ZZ) > 0.2)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range 0-0.2%");
 	}
 
 	void printParams(std::ofstream *fileHandle) const
@@ -133,7 +134,8 @@ struct StackConfig
 		*fileHandle << "FOV (um) = (" << FOV_um.at(XX) << "," << FOV_um.at(YY) << ")\n";
 		*fileHandle << "Step size Z (um) = " << stepSizeZ_um << "\n";
 		*fileHandle << "Stack depth (um) = " << stackDepth_um << "\n";
-		*fileHandle << "Stack overlap (um) = (" << stackOverlap_um.at(XX) << "," << stackOverlap_um.at(YY) << "," << stackOverlap_um.at(ZZ) << ")\n";
+		*fileHandle << "Stack overlap (%) = (" << stackOverlap_pct.at(XX) << "," << stackOverlap_pct.at(YY) << "," << stackOverlap_pct.at(ZZ) << ")\n";
+		*fileHandle << "Stack overlap (um) = (" << stackOverlap_pct.at(XX) * FOV_um.at(XX) << "," << stackOverlap_pct.at(YY) * FOV_um.at(YY) << ")\n";
 		*fileHandle << "\n";
 	}
 };

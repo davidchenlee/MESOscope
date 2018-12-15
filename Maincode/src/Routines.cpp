@@ -839,8 +839,8 @@ void seq_testSequencer()
 	const double2 FOV_um = { 150,200 };
 	const double stepSizeZ_um = 0.5;					//Image resolution in z
 	const double stackDepth_um = 100;					//Stack depth or thickness
-	const double3 stackOverlap_um = { 0.1,0.1,0.1 };	//Stack overlap in x, y, and z
-	StackConfig stackConfig(FOV_um, stepSizeZ_um, stackDepth_um, stackOverlap_um);
+	const double3 stackOverlap_pct = { 0.1,0.1,0.0 };	//Percentage of stack overlap in x, y, and z
+	StackConfig stackConfig(FOV_um, stepSizeZ_um, stackDepth_um, stackOverlap_pct);
 
 	//Configure the vibratome
 	const double sliceOffset_um = 20;					//Cut this much above the bottom of the stack

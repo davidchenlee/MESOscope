@@ -163,7 +163,7 @@
     <ClCompile Include="src\Devices.cpp" />
     <ClCompile Include="src\FPGAapi.cpp" />
     <ClCompile Include="src\Sequencer.cpp" />
-    <ClCompile Include="src\Routine.cpp" />
+    <ClCompile Include="src\Routines.cpp" />
     <ClCompile Include="src\serial.cc" />
     <ClCompile Include="src\Utilities.cpp" />
     <ClCompile Include="src\win.cc" />

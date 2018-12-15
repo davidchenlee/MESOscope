@@ -42,7 +42,7 @@
     <ClCompile Include="src\Sequencer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Routine.cpp">
+    <ClCompile Include="src\Routines.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

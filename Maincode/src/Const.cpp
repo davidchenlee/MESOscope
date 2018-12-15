@@ -54,7 +54,7 @@ namespace Constants
 
 
 	//STAGES
-	extern const int stageTriggerPulse_ms = 5 * ms;			//Pulsewidth for triggering the stages. (the stage controller has a 20kHz clock = 50 us)
+	extern const int stageTriggerPulse_ms = 5 * ms;			//Pulsewidth for triggering the stages via the DI (the stage controller has a 20kHz clock = 50 us)
 															//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based.
 
 	//PMT

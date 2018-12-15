@@ -2,6 +2,7 @@
 #include "Utilities.h"
 using namespace Constants;
 
+//Single commands
 class Commandline
 {
 	class MoveStage
@@ -25,7 +26,7 @@ class Commandline
 	class CutSlice
 	{
 	public:
-		double3 bladePosition_mm;	//Location of the vibratome blade wrt the stages' origin	
+		double3 samplePosition_mm;		//Position the sample faving the vibratome blade
 	};
 	std::string actionToString_(const Action action) const;
 public:
@@ -47,20 +48,28 @@ class SampleConfig
 public:
 	std::string sampleName;
 	ROI ROI_mm;				//Region of interest across the entire sample
-	double3 length_um;		//Sample size in x, y, and z
+	double3 length_mm;		//Sample size in x, y, and z
 
 	SampleConfig(const std::string sampleName, ROI roi_mm, const double sampleLengthZ_mm) : sampleName(sampleName), ROI_mm(roi_mm)
 	{
 		//Convert input ROI = (xmin, ymax, xmax, ymin) to the equivalent sample length in X and Y
-		length_um.at(XX) = 1000 * (ROI_mm.at(2) - ROI_mm.at(0));
-		length_um.at(YY) = 1000 * (ROI_mm.at(1) - ROI_mm.at(3));
-		length_um.at(ZZ) = 1000 * sampleLengthZ_mm;
+		length_mm.at(XX) = ROI_mm.at(2) - ROI_mm.at(0);
+		length_mm.at(YY) = ROI_mm.at(1) - ROI_mm.at(3);
+		length_mm.at(ZZ) = sampleLengthZ_mm;
 
-		if (length_um.at(XX) <= 0 || length_um.at(YY) <= 0 || length_um.at(ZZ) <= 0)
+		if (length_mm.at(XX) <= 0 || length_mm.at(YY) <= 0 || length_mm.at(ZZ) <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
 
 		if (sampleLengthZ_mm <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Z must be positive");
+	}
+
+	void printParams(std::ofstream *fileHandle) const
+	{
+		*fileHandle << "SAMPLE ************************************************************\n";
+		*fileHandle << "Name = " << sampleName << "\n";
+		*fileHandle << "ROI (mm) = (" << ROI_mm.at(0) << "," << ROI_mm.at(1) << "," << ROI_mm.at(2) << "," << ROI_mm.at(3) << ")\n";
+		*fileHandle << "Length (mm) = (" << length_mm.at(XX) << "," << length_mm.at(YY) << "," << length_mm.at(ZZ) << ")\n\n";
 	}
 };
 
@@ -95,49 +104,83 @@ public:
 		if (stackOverlap_um.at(XX) <= 0 || stackOverlap_um.at(YY) <= 0 || stackOverlap_um.at(ZZ) <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be positive");
 	}
+
+	void printParams(std::ofstream *fileHandle) const
+	{
+		*fileHandle << "STACK ************************************************************\n";
+		*fileHandle << "FOV (um) = (" << FOV_um.at(XX) << "," << FOV_um.at(YY) << ")\n";
+		*fileHandle << "Step size Z (um) = " << stepSizeZ_um << "\n";
+		*fileHandle << "Stack depth (um) = " << stackDepth_um << "\n";
+		*fileHandle << "Stack overlap (um) = (" << stackOverlap_um.at(XX) << "," << stackOverlap_um.at(YY) << "," << stackOverlap_um.at(ZZ) << ")\n\n";
+	}
 };
 
 class VibratomeConfig
 {
 public:
-	const double2 homePosition_mm{ 0,0 };		//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
-	const double bladeOffsetZ_um = 35;			//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	const double2 samplePosition_mm{ 0,0 };		//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
+	const double bladeOffsetZ_um = 3;			//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double sliceThickness_um;					//Slice thickness	
+	double sliceOffsetZ_um;						//Cut this much above the bottom of the stack
 
-	VibratomeConfig(const double stackDepth_um) : sliceThickness_um(stackDepth_um)
+	VibratomeConfig(const double sliceOffset_um, const double sliceThickness_um) : sliceOffsetZ_um(sliceOffset_um), sliceThickness_um(sliceThickness_um)
 	{
 		if (sliceThickness_um <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice thickness must be positive");
+
+		if (sliceOffset_um < 0)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be positive");
+	}
+
+	void printParams(std::ofstream *fileHandle) const
+	{
+		*fileHandle << "VIBRATOME ************************************************************\n";
+		*fileHandle << "Blade position (mm) = (" << samplePosition_mm.at(XX) << "," << samplePosition_mm.at(YY) << ")\n";
+		*fileHandle << "Blade offset Z (um) = " << bladeOffsetZ_um << "\n";
+		*fileHandle << "Slice offset Z (um) = " << sliceOffsetZ_um << "\n";
+		*fileHandle << "Slice thickessZ (um) = " << sliceThickness_um << "\n\n";
 	}
 };
 
+class StageConfig
+{
+public:
+	const double stageInitialZ_mm = 10;		//Initial height of the stage
+	StageConfig(const double stageInitialZ_mm) : stageInitialZ_mm(stageInitialZ_mm){}
+};
+
+//A list of commands that form a sequence
 class Sequencer
 {
-	//Scan parameters (unchanged throughout the sequence)
-	const SampleConfig mSample;				//Sample
-	const StackConfig mStackConfig;				//Stack
+	//Unchanged parameters throughout the sequence
+	const SampleConfig mSample;						//Sample
+	const StackConfig mStackConfig;					//Stack
 	const std::vector<LaserConfig> mLaserConfig;	//Laser
-	const VibratomeConfig mVibratomeConfig;		//Vibratome
+	const VibratomeConfig mVibratomeConfig;			//Vibratome
+	const StageConfig mStageConfig;					//Stage
+	const int3 initialScanDir{ 1,1,1 };				//Initial scan directions in x, y, and z
 
-	//Sequencer variables (vary throughout the sequence)
+	//Parameters that vary throughout the sequence
 	std::vector<Commandline> mCommandList;
-	int mStackCounter = 0;		//To counter the number of stacks
-	int mSliceCounter = 0;		//To count the number of the slices
-	int2 mStackArrayDim;		//Dimension of the array of stacks. Value computed dynamically
-	int3 mScanDir{ 1,1,1 };		//Scan directions in x, y, and z. Initial values all set to 1		
-	double mScanZi_mm;			//z-stage position for a stack-scan
-	double mPlaneToCutZ_mm = mScanZi_mm + mVibratomeConfig.sliceThickness_um / 1000;								//Height of the plane to cut	
-	int mNtotalSlices = static_cast<int>(std::ceil(mSample.length_um.at(ZZ) / mVibratomeConfig.sliceThickness_um));	//Number of vibratome slices in the entire sample. Value computed dynamically
+	int mCommandCounter = 0;
+	int mStackCounter = 0;				//Count the number of stacks
+	int mSliceCounter = 0;				//Count the number of the slices
+	int2 mStackArrayDim;				//Dimension of the array of stacks. Value computed dynamically
+	int3 mScanDir{ initialScanDir };	//Scan directions in x, y, and z
+	double mScanZi_mm;					//z-stage position for a stack-scan
+	double mPlaneToCutZ_mm;				//Height of the plane to cut	
+	int mNtotalSlices = static_cast<int>(std::ceil(1000 * mSample.length_mm.at(ZZ) / mVibratomeConfig.sliceThickness_um));	//Number of vibratome slices in the entire sample. Value computed dynamically
 
 	double calculateStackScanInitialP_mW_(const double scanPmin_mW, const double stackPinc_mW, const int scanDirZ);
 	double2 stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const;
 	void reverseStageScanDirection_(const Axis axis);
+	void resetStageScanDirections_();
 	void moveStage_(const int2 stackIJ);
-	void acqStack_(const LaserConfig laserConfig);
+	void acqStack_(const int iterWL);
 	void saveStack_();
 	void cutSlice_();
 public:
-	Sequencer(const SampleConfig sampleConfig, const std::vector<LaserConfig> laserConfig, const StackConfig stackConfig, const VibratomeConfig vibratomeConfig, const double stageInitialZ_mm);
+	Sequencer(const SampleConfig sampleConfig, const std::vector<LaserConfig> laserConfig, const StackConfig stackConfig, const VibratomeConfig vibratomeConfig, const StageConfig stageConfig);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor
@@ -145,5 +188,6 @@ public:
 
 	Commandline getCommandline(const int iterCommandline) const;
 	void generateCommandList();
+	void printParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
 };

@@ -1330,8 +1330,16 @@ void Stage::stopALL() const
 	PI_StopAll(mID[ZZ]);
 }
 
-//Request the configuration of the digital output
-double Stage::qCTO_(const Axis axis, const int chan, const int triggerParam) const
+//Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
+//This function requests the trigger parameters of the stage
+//1: trigger step
+//2: axis
+//3: trigger mode (0: position distance, 2: on target, 6: in motion)
+//7: polarity
+//8: start threshold
+//9: stop threshold
+//10: trigger position
+double Stage::downloadDOconfig(const Axis axis, const int chan, const int triggerParam) const
 {
 	double value;
 	if (!PI_qCTO(mID[axis], &chan, &triggerParam, &value, 1))
@@ -1339,11 +1347,10 @@ double Stage::qCTO_(const Axis axis, const int chan, const int triggerParam) con
 
 	//std::cout << value << std::endl;
 	return value;
-
 }
 
-//Request the enable/disable status of the digital output
-bool Stage::qTRO_(const Axis axis, const int chan) const
+//Request the enable/disable status of the stage DO
+bool Stage::isDOenable(const Axis axis, const int chan) const
 {
 	BOOL triggerState;
 	if (!PI_qTRO(mID[axis], &chan, &triggerState, 1))
@@ -1353,8 +1360,8 @@ bool Stage::qTRO_(const Axis axis, const int chan) const
 	return triggerState;
 }
 
-//Set the enable/disable status of the digital output
-void Stage::TRO_(const Axis axis, const int chan, const BOOL triggerState) const
+//Enable or disable the stage DO
+void Stage::setDOenable(const Axis axis, const int chan, const BOOL triggerState) const
 {
 	if (!PI_TRO(mID[axis], &chan, &triggerState, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set TRO for the stage" + std::to_string(axis));
@@ -1378,26 +1385,37 @@ void Stage::VEL(const Axis axis, const double vel_mmPerS) const
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage" + std::to_string(axis));
 }
 
-//Request the CTO (trigger) configuration of the stage
-void Stage::downloadConfiguration(const Axis axis, const int chan) const
+//Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
+//Print out the relevant parameters
+void Stage::printStageConfig(const Axis axis, const int chan) const
 {
-	if (chan < 1 || chan > 2)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested channel must be in the range 1-4" + std::to_string(axis));
 
-	//1: trigger step
-	//2: axis
-	//3: trigger mode (0: position distance, 2: on target, 6: in motion)
-	//7: polarity
-	//8: start threshold
-	//9: stop threshold
-	//10: trigger position
-	double triggerStep = qCTO_(axis, chan, 1);
-	double triggerMode = qCTO_(axis, chan, 3);
-	double polarity = qCTO_(axis, chan, 7);
-	double startThreshold = qCTO_(axis, chan, 8);
-	double stopThreshold = qCTO_(axis, chan, 9);
-	double triggerPosition = qCTO_(axis, chan, 10);
-	bool triggerState = qTRO_(axis, chan);
+	switch (axis)
+	{
+	case XX:
+		//Only DO1 is wired to the FPGA
+		if (chan != 1)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA" + std::to_string(axis));
+		break;
+	case YY:
+		//Only DO1 is wired to the FPGA
+		if (chan != 1)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA" + std::to_string(axis));
+		break;
+	case ZZ:
+		//Only DO1 and DO2 are wired to the FPGA
+		if (chan < 1 || chan > 2)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 and DO2 are currently wired to the FPGA" + std::to_string(axis));
+		break;
+	}
+
+	double triggerStep = downloadDOconfig(axis, chan, 1);
+	double triggerMode = downloadDOconfig(axis, chan, 3);
+	double polarity = downloadDOconfig(axis, chan, 7);
+	double startThreshold = downloadDOconfig(axis, chan, 8);
+	double stopThreshold = downloadDOconfig(axis, chan, 9);
+	double triggerPosition = downloadDOconfig(axis, chan, 10);
+	bool triggerState = isDOenable(axis, chan);
 	double vel_mmPerS = qVEL(axis);
 
 	std::cout << "triggerStep: " << triggerStep << std::endl;

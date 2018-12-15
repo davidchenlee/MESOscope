@@ -583,21 +583,21 @@ void seq_testStagePosition()
 	*/
 }
 
-//Test configuring TRO_ and CTO for the stages
+//Test configuring setDOenable and CTO for the stages
 void seq_testStageConfig()
 {
 	Stage stage;
 
 	//std::cout << "Stages initial position:" << std::endl;
 	//stage.printPosition3();
-	//stage.qTRO_(XX, 1);
-	//stage.qTRO_(ZZ, 1);
-	//stage.TRO_(ZZ, 1, 1);
-	//stage.qCTO_(ZZ, 1, 1);
-	std::cout << "x stage vel: " << stage.qVEL(XX) << " mm/s" << std::endl;
-	std::cout << "y stage vel: " << stage.qVEL(YY) << " mm/s" << std::endl;
-	std::cout << "z stage vel: " << stage.qVEL(ZZ) << " mm/s" << std::endl;
-	//stage.downloadConfiguration(ZZ, 1);
+	//stage.isDOenable(XX, 1);
+	//stage.isDOenable(ZZ, 1);
+	//stage.setDOenable(ZZ, 1, 1);
+	//stage.downloadDOconfig(ZZ, 1, 1);
+	//std::cout << "x stage vel: " << stage.qVEL(XX) << " mm/s" << std::endl;
+	//std::cout << "y stage vel: " << stage.qVEL(YY) << " mm/s" << std::endl;
+	//std::cout << "z stage vel: " << stage.qVEL(ZZ) << " mm/s" << std::endl;
+	stage.printStageConfig(ZZ, 1);
 	//stage.downloadConfiguration(ZZ, 2);
 
 	std::cout << "Press any key to continue..." << std::endl;
@@ -749,6 +749,9 @@ void seq_testVibratome(const FPGAns::FPGA &fpga)
 }
 
 //The pc triggers the z-stage motion, then the position of the stage triggers the control sequence and data acquisition
+//Remember that I am not using MACROS on the stages anymore
+//With the PI monitor for the step reponse I see that the motion start and end of the stage is somewhat nonlinear (+/- 1 um off target).
+//1. My current sol is to first trigger the stage motion, then after a certain fixed distance use the stage DO to trigger the data acquisition. The problem right now is that I can not find a way to reset the stage DO
 void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS
@@ -778,7 +781,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	fw.setColor(wavelength_nm);
 
 	//CREATE THE REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, width, height, STAGETRIG);
+	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, width, height, STAGETRIG);	//Notice the STAGETRIG flag
 
 	//GALVO FOR RT
 	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
@@ -800,7 +803,8 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	Image image(RTsequence);
 	image.initialize();
 
-	stage.moveStage_(ZZ, stagePosition0_mm.at(ZZ) + 0.060); //Move the stage, which will trigger the control sequence and data acquisition
+	//Move the stage, which will trigger the control sequence and data acquisition
+	stage.moveStage_(ZZ, stagePosition0_mm.at(ZZ) + 0.060); //Why did I used 60 um and not 100 um?
 	
 	image.startFIFOOUTpc();
 	image.download();
@@ -812,10 +816,9 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 
 	//Disable ZstageAsTrigger to be able to move the stage without triggering the acquisition sequence
 	NiFpga_WriteBool(fpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false);
-
 }
 
-void seq_scanEntireSample()
+void seq_testSequencer()
 {
 	//Generate the command list and keep it in memory.
 	//I prefer generating such list before execution because then I can inspect all the parameters offline
@@ -828,20 +831,24 @@ void seq_scanEntireSample()
 	//Configure the laser {wavelength_nm, laser power mW, laser power incremental mW}
 	const std::vector<LaserConfig> laserConfigList{ { 750, 10, 5 }, { 940, 11, 6 }, {1040, 12, 7} };
 	
-	//Configure a stack
+	//Configure the stacks
 	const double2 FOV_um = { 150,200 };
-	const double stepSizeZ_um = 0.5;			//Image resolution in z
-	const double stackDepth_um = 100;			//Stack depth or thickness
-	const double3 stackOverlap_um = { 0,0,0 };	//Stack overlap in x, y, and z
+	const double stepSizeZ_um = 0.5;					//Image resolution in z
+	const double stackDepth_um = 100;					//Stack depth or thickness
+	const double3 stackOverlap_um = { 0.1,0.1,0.1 };	//Stack overlap in x, y, and z
 	StackConfig stackConfig(FOV_um, stepSizeZ_um, stackDepth_um, stackOverlap_um);
 
 	//Configure the vibratome
-	const double sliceThickness_um = stackDepth_um;		//Slice thickness. For now, cut the same as the depth the stacks*******************MODIFY		
-	const VibratomeConfig vibratomeConfig(sliceThickness_um); 
+	const double sliceOffset_um = 20;					//Cut this much above the bottom of the stack
+	const double sliceThickness_um = stackDepth_um;		//Usually cut as much as the depth of the stack
+	const VibratomeConfig vibratomeConfig(sliceOffset_um, sliceThickness_um);
+
+	//Configure the stages
+	const double stageInitialZ_mm = 10;					//Initial height of the stage
+	StageConfig stageConfig(stageInitialZ_mm);
 
 	//Create a sequence
-	const double stageInitialZ_mm = 10;		//Initial height of the stage
-	Sequencer sequence(sampleConfig, laserConfigList, stackConfig, vibratomeConfig, stageInitialZ_mm);
+	Sequencer sequence(sampleConfig, laserConfigList, stackConfig, vibratomeConfig, stageConfig);
 	sequence.generateCommandList();
 	sequence.printToFile("Commandlist");
 
@@ -878,7 +885,7 @@ void seq_scanEntireSample()
 				break;
 			case CUT:
 				//Move the stage to
-				double3 stagePosition_mm = commandline.mCommand.cutSlice.bladePosition_mm;
+				double3 stagePosition_mm = commandline.mCommand.cutSlice.samplePosition_mm;
 				//Then cut a slice off
 				break;
 			default:
@@ -888,6 +895,6 @@ void seq_scanEntireSample()
 	}
 
 
-	std::cout << "Press any key to continue..." << std::endl;
-	getchar();
+	//std::cout << "Press any key to continue..." << std::endl;
+	//getchar();
 }

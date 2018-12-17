@@ -233,7 +233,8 @@ namespace FPGAns
 #pragma endregion "FPGA"
 
 #pragma region "RTsequence"
-	RTsequence::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell_us): mWidthPerFrame_pix(widthPerFrame_pix), mDwell_us(dwell_us)
+	RTsequence::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell_us): 
+		mWidthPerFrame_pix(widthPerFrame_pix), mDwell_us(dwell_us)
 	{
 		switch (pixelclockType)
 		{

@@ -35,7 +35,7 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 	switch (mAction)
 	{
 	case MOV:
-		*fileHandle << actionToString_(mAction) << "\t" << mCommand.moveStage.sliceNumber;
+		*fileHandle << actionToString_(mAction) << "\t" << mCommand.moveStage.mSliceNumber;
 		*fileHandle << "\t(" << mCommand.moveStage.stackIJ.at(XX) << "," << mCommand.moveStage.stackIJ.at(YY) << ")\t";
 		*fileHandle << std::setprecision(3);
 		*fileHandle << "(" << mCommand.moveStage.stackCenter_mm.at(0) << "," << mCommand.moveStage.stackCenter_mm.at(1) << ")\n";
@@ -75,7 +75,7 @@ void Commandline::printParameters() const
 	{
 	case MOV:
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
-		std::cout << "Vibratome slice number = " << mCommand.moveStage.sliceNumber << "\n";
+		std::cout << "Vibratome slice number = " << mCommand.moveStage.mSliceNumber << "\n";
 		std::cout << "Stack ij = (" << mCommand.moveStage.stackIJ.at(XX) << "," << mCommand.moveStage.stackIJ.at(YY) << ")\n";
 		std::cout << "Stack center (mm,mm) = (" << mCommand.moveStage.stackCenter_mm.at(XX) << "," << mCommand.moveStage.stackCenter_mm.at(YY) << ")\n\n";
 		break;
@@ -105,26 +105,29 @@ Sequencer::Sequencer(const SampleConfig sample, const LaserListConfig laserListC
 	//Initialize the z-stage
 	mScanZi_mm = mStageConfig.stageInitialZ_mm;
 
-	//Initialize the height of the plane to be sliced
-	mPlaneToSliceZ_mm = mScanZi_mm + (mVibratomeConfig.sliceThickness_um - mVibratomeConfig.sliceOffsetZ_um) / 1000;
+	//Initialize the height of the plane to sliced
+	mPlaneToSliceZ_mm = mScanZi_mm + (mStackConfig.stackDepth_um - mVibratomeConfig.cutAboveBottomOfStack_um) / 1000;
 
 	//Calculate the total number of stacks in a vibratome slice and also in the entire sample
 	//If the overlap between consecutive tiles is a*FOV_um, then N tiles cover the distance L = FOV_um ( (1-a)*N + 1 )
 	//Therefore, the given L_um and FOV_um, then N =1/(1-a) * ( L_um/FOV_um - 1 )
-	const double overlapX_pct = mStackConfig.stackOverlap_pct.at(XX);
-	const double overlapY_pct = mStackConfig.stackOverlap_pct.at(YY);
-	mStackArrayDim.at(XX) = static_cast<int>(std::ceil( 1/(1-overlapX_pct)*(1000 * mSample.length_mm.at(XX) / mStackConfig.FOV_um.at(XX)) - overlapX_pct));		//Number of stacks in x
-	mStackArrayDim.at(YY) = static_cast<int>(std::ceil( 1/(1-overlapY_pct)*(1000 * mSample.length_mm.at(YY) / mStackConfig.FOV_um.at(YY)) - overlapY_pct));		//Number of stacks in y
+	const double overlapX_frac = mStackConfig.stackOverlap_frac.at(XX);
+	const double overlapY_frac = mStackConfig.stackOverlap_frac.at(YY);
+	mStackArrayDim.at(XX) = static_cast<int>(std::ceil( 1/(1-overlapX_frac) * (1000 * mSample.length_mm.at(XX) / mStackConfig.FOV_um.at(XX)) - overlapX_frac));		//Number of stacks in x
+	mStackArrayDim.at(YY) = static_cast<int>(std::ceil( 1/(1-overlapY_frac) * (1000 * mSample.length_mm.at(YY) / mStackConfig.FOV_um.at(YY)) - overlapY_frac));		//Number of stacks in y
 
-	//Old code
-	//mStackArrayDim.at(XX) = static_cast<int>(std::ceil(1000 * mSample.length_mm.at(XX) / mStackConfig.FOV_um.at(XX)));	//Number of stacks in x
-	//mStackArrayDim.at(YY) = static_cast<int>(std::ceil(1000 * mSample.length_mm.at(YY) / mStackConfig.FOV_um.at(YY)));	//Number of stacks in y
+	//Initialize the number of vibratome slices in the entire sample
+	const double overlapZ_frac = mStackConfig.stackOverlap_frac.at(ZZ);
+	mNtotalSlices = static_cast<int>(std::ceil(1 / (1 - overlapZ_frac) * (1000 * mSample.length_mm.at(ZZ) / mStackConfig.stackDepth_um) - overlapZ_frac));
 
 	const int mNtotalStacksPerVibratomeSlice = mStackArrayDim.at(XX) * mStackArrayDim.at(YY);												//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserListConfig.listSize()) * mNtotalStacksPerVibratomeSlice;		//Total number of stacks in the entire sample
+	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserListConfig.listSize()) * mNtotalStacksPerVibratomeSlice;	//Total number of stacks in the entire sample
 
 	//Pre-reserve a memory block assuming 3 actions for every stack in a vibratome slice (MOV, ACQ, and SAV); and then CUT
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
+
+	if (mVibratomeConfig.cutAboveBottomOfStack_um < mStackConfig.stackOverlap_frac.at(ZZ) * mStackConfig.stackDepth_um)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slicing plane overlaps with the stitching region. Increase 'cutAboveBottomOfStack_um'");
 }
 
 //The initial laser power of a stack-scan depends on whether the stack is imaged from the top down or from the bottom up.
@@ -140,11 +143,11 @@ int Sequencer::calculateStackScanInitialP_mW_(const int scanPmin_mW, const int s
 //The first stack center is L_um/2 away from the ROI's edge. The next center is (1-a)*L_um away from the first center, where a*L_um is the stack overlap
 double2 Sequencer::stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const
 {
-	const double overlapX_pct = mStackConfig.stackOverlap_pct.at(XX);
-	const double overlapY_pct = mStackConfig.stackOverlap_pct.at(YY);
+	const double overlapX_frac = mStackConfig.stackOverlap_frac.at(XX);
+	const double overlapY_frac = mStackConfig.stackOverlap_frac.at(YY);
 	double2 stagePosition_mm;
-	stagePosition_mm.at(XX) = mSample.ROI_mm.at(0) + mStackConfig.FOV_um.at(XX) / 1000 * ((1 - overlapX_pct) * stackArrayIndices.at(XX) + 0.5);
-	stagePosition_mm.at(YY) = mSample.ROI_mm.at(3) + mStackConfig.FOV_um.at(YY) / 1000 * ((1 - overlapY_pct) * stackArrayIndices.at(YY) + 0.5);
+	stagePosition_mm.at(XX) = mSample.ROI_mm.at(0) + mStackConfig.FOV_um.at(XX) / 1000 * ((1 - overlapX_frac) * stackArrayIndices.at(XX) + 0.5);
+	stagePosition_mm.at(YY) = mSample.ROI_mm.at(3) + mStackConfig.FOV_um.at(YY) / 1000 * ((1 - overlapY_frac) * stackArrayIndices.at(YY) + 0.5);
 
 	return stagePosition_mm;
 }
@@ -215,7 +218,7 @@ void Sequencer::saveStack_()
 void Sequencer::cutSlice_()
 {
 	//Move the sample to face the vibratome blade. Notice the additional offset in z
-	const double3 samplePosition_mm = { mVibratomeConfig.samplePosition_mm.at(XX), mVibratomeConfig.samplePosition_mm.at(YY), mPlaneToSliceZ_mm + mVibratomeConfig.bladeOffsetZ_um / 1000 };
+	const double3 samplePosition_mm = { mVibratomeConfig.samplePosition_mm.at(XX), mVibratomeConfig.samplePosition_mm.at(YY), mPlaneToSliceZ_mm + mVibratomeConfig.bladeFocalplaneOffsetZ_um / 1000 };
 
 	Commandline commandline;
 	commandline.mAction = CUT;
@@ -225,8 +228,13 @@ void Sequencer::cutSlice_()
 	mSliceCounter++;	//Count the number of vibratome slices
 	mCommandCounter++;	//Count the number of commands
 
-	mScanZi_mm += mStackConfig.stackDepth_um / 1000;			//Increae the height of the z-stage for the next iteration		
-	mPlaneToSliceZ_mm += mStackConfig.stackDepth_um / 1000;		//Increase the height of the plane to be cut for the next iteration
+	//Increase the height of the z-stage for the next iteration		
+	//Because of the overlap, the effective stack depth is (1-a)*stackDepth_um, where a*stackDepth_um is the overlap
+	mScanZi_mm += (1 - mStackConfig.stackOverlap_frac.at(ZZ)) * mStackConfig.stackDepth_um / 1000;
+
+	//Increase the height of the plane to be cut for the next iteration
+	//Because of the overlap, the effective stack depth is (1-a)*stackDepth_um, where a*stackDepth_um is the overlap
+	mPlaneToSliceZ_mm += (1 - mStackConfig.stackOverlap_frac.at(ZZ)) * mStackConfig.stackDepth_um / 1000;
 }
 
 //Snake scanning
@@ -310,7 +318,7 @@ void Sequencer::printToFile(const std::string fileName) const
 	}
 
 	//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != mCommandList.size(); iterCommandline++)
-	for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 2*(3 * 3 * mStackArrayDim.at(XX) * mStackArrayDim.at(YY)+1) + 2 ; iterCommandline++) //For debugging
+	for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 3*(3 * 3 * mStackArrayDim.at(XX) * mStackArrayDim.at(YY)+1) + 2 ; iterCommandline++) //For debugging
 	{
 		*fileHandle << iterCommandline << "\t";		//Print out the iteration number
 		mCommandList.at(iterCommandline).printToFile(fileHandle);

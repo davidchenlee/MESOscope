@@ -1,12 +1,13 @@
 #pragma once
 #include "Utilities.h"
+#include "Devices.h"
 using namespace Constants;
 
 //Single commands
 class Commandline
 {
 	struct MoveStage {
-		int sliceNumber;		//Slice number
+		int mSliceNumber;		//Slice number
 		int2 stackIJ;			//Indices for the 2D array of stacks
 		double2 stackCenter_mm;	//X and Y positiosn of the center of the stack
 	};
@@ -41,10 +42,12 @@ public:
 struct SampleConfig
 {
 	std::string sampleName;
+	std::string immersionMedium;
 	ROI ROI_mm;				//Region of interest across the entire sample
 	double3 length_mm;		//Sample size in x, y, and z
 
-	SampleConfig(const std::string sampleName, ROI roi_mm, const double sampleLengthZ_mm) : sampleName(sampleName), ROI_mm(roi_mm)
+	SampleConfig(const std::string sampleName, const std::string immersionMedium, ROI roi_mm, const double sampleLengthZ_mm) :
+		sampleName(sampleName), immersionMedium(immersionMedium), ROI_mm(roi_mm)
 	{
 		//Convert input ROI = (xmin, ymax, xmax, ymin) to the equivalent sample length in X and Y
 		length_mm.at(XX) = ROI_mm.at(2) - ROI_mm.at(0);
@@ -62,6 +65,7 @@ struct SampleConfig
 	{
 		*fileHandle << "SAMPLE ************************************************************\n";
 		*fileHandle << "Name = " << sampleName << "\n";
+		*fileHandle << "Immersion medium = " << immersionMedium << "\n";
 		*fileHandle << std::setprecision(3);
 		*fileHandle << "ROI (mm) = [" << ROI_mm.at(0) << "," << ROI_mm.at(1) << "," << ROI_mm.at(2) << "," << ROI_mm.at(3) << "]\n";
 		*fileHandle << "Length (mm) = (" << length_mm.at(XX) << "," << length_mm.at(YY) << "," << length_mm.at(ZZ) << ")\n";
@@ -108,10 +112,10 @@ struct StackConfig
 	double2 FOV_um;				//Field of view in x and y
 	double stepSizeZ_um;		//Image resolution in z
 	double stackDepth_um;		//Stack depth or thickness
-	double3 stackOverlap_pct;	//Stack overlap in x, y, and z
+	double3 stackOverlap_frac;	//Stack overlap in x, y, and z
 
-	StackConfig(const double2 FOV_um, const double stepSizeZ_um, const double stackDepth_um, const double3 stackOverlap_pct) :
-		FOV_um(FOV_um), stepSizeZ_um(stepSizeZ_um), stackDepth_um(stackDepth_um), stackOverlap_pct(stackOverlap_pct)
+	StackConfig(const double2 FOV_um, const double stepSizeZ_um, const double stackDepth_um, const double3 stackOverlap_frac) :
+		FOV_um(FOV_um), stepSizeZ_um(stepSizeZ_um), stackDepth_um(stackDepth_um), stackOverlap_frac(stackOverlap_frac)
 	{
 		if (FOV_um.at(XX) <= 0 || FOV_um.at(YY) <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
@@ -122,8 +126,8 @@ struct StackConfig
 		if (stackDepth_um <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth must be positive");
 
-		if (stackOverlap_pct.at(XX) < 0 || stackOverlap_pct.at(YY) < 0 || stackOverlap_pct.at(ZZ) < 0
-			|| stackOverlap_pct.at(XX) > 0.2 || stackOverlap_pct.at(YY) > 0.2 || stackOverlap_pct.at(ZZ) > 0.2)
+		if (stackOverlap_frac.at(XX) < 0 || stackOverlap_frac.at(YY) < 0 || stackOverlap_frac.at(ZZ) < 0
+			|| stackOverlap_frac.at(XX) > 0.2 || stackOverlap_frac.at(YY) > 0.2 || stackOverlap_frac.at(ZZ) > 0.2)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range 0-0.2%");
 	}
 
@@ -134,8 +138,8 @@ struct StackConfig
 		*fileHandle << "FOV (um) = (" << FOV_um.at(XX) << "," << FOV_um.at(YY) << ")\n";
 		*fileHandle << "Step size Z (um) = " << stepSizeZ_um << "\n";
 		*fileHandle << "Stack depth (um) = " << stackDepth_um << "\n";
-		*fileHandle << "Stack overlap (%) = (" << stackOverlap_pct.at(XX) << "," << stackOverlap_pct.at(YY) << "," << stackOverlap_pct.at(ZZ) << ")\n";
-		*fileHandle << "Stack overlap (um) = (" << stackOverlap_pct.at(XX) * FOV_um.at(XX) << "," << stackOverlap_pct.at(YY) * FOV_um.at(YY) << ")\n";
+		*fileHandle << "Stack overlap (frac) = (" << stackOverlap_frac.at(XX) << "," << stackOverlap_frac.at(YY) << "," << stackOverlap_frac.at(ZZ) << ")\n";
+		*fileHandle << "Stack overlap (um) = (" << stackOverlap_frac.at(XX) * FOV_um.at(XX) << "," << stackOverlap_frac.at(YY) * FOV_um.at(YY) << "," << stackOverlap_frac.at(ZZ) * stackDepth_um << ")\n";
 		*fileHandle << "\n";
 	}
 };
@@ -143,16 +147,13 @@ struct StackConfig
 //The body is defined here
 struct VibratomeConfig
 {
-	const double2 samplePosition_mm{ 0,0 };		//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
-	const double bladeOffsetZ_um = 3;			//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
-	double sliceThickness_um;					//Slice thickness	
-	double sliceOffsetZ_um;						//Cut this much above the bottom of the stack
+	const double2 samplePosition_mm{ 0,0 };			//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
+	const double bladeFocalplaneOffsetZ_um = 0;		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	double cutAboveBottomOfStack_um;				//Cut this much above the bottom of the stack
 
-	VibratomeConfig(const double sliceOffset_um, const double sliceThickness_um) : sliceOffsetZ_um(sliceOffset_um), sliceThickness_um(sliceThickness_um)
+	VibratomeConfig(const double sliceOffset_um) :
+		cutAboveBottomOfStack_um(sliceOffset_um)
 	{
-		if (sliceThickness_um <= 0)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice thickness must be positive");
-
 		if (sliceOffset_um < 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be positive");
 	}
@@ -161,11 +162,10 @@ struct VibratomeConfig
 	{
 		*fileHandle << "VIBRATOME ************************************************************\n";
 		*fileHandle << std::setprecision(4);
-		*fileHandle << "Blade position (mm) = (" << samplePosition_mm.at(XX) << "," << samplePosition_mm.at(YY) << ")\n";
+		*fileHandle << "Blade position x,y (mm) = (" << samplePosition_mm.at(XX) << "," << samplePosition_mm.at(YY) << ")\n";
 		*fileHandle << std::setprecision(1);
-		*fileHandle << "Blade offset Z (um) = " << bladeOffsetZ_um << "\n";
-		*fileHandle << "Slice offset Z (um) = " << sliceOffsetZ_um << "\n";
-		*fileHandle << "Slice thickessZ (um) = " << sliceThickness_um << "\n";
+		*fileHandle << "Blade-focal plane vertical offset (um) = " << bladeFocalplaneOffsetZ_um << "\n";
+		*fileHandle << "Cut above the bottom of the stack (um) = " << cutAboveBottomOfStack_um << "\n";
 		*fileHandle << "\n";
 	}
 };
@@ -174,7 +174,24 @@ struct VibratomeConfig
 struct StageConfig
 {
 	const double stageInitialZ_mm;		//Initial height of the stage
-	StageConfig(const double stageInitialZ_mm) : stageInitialZ_mm(stageInitialZ_mm){}
+	StageConfig(const double stageInitialZ_mm) :
+		stageInitialZ_mm(stageInitialZ_mm){}
+};
+
+//The body is defined here
+struct GalvoConfig
+{
+	double FFOVrs_um;
+	ResonantScanner RScanner;
+};
+
+//The body is defined here
+struct ResonantScannerConfig
+{
+	double FFOVgalvo_um;		//Full FOV in the slow axis
+	double galvoTimeStep;
+	double posMax_um;
+	double duration;
 };
 
 //A list of commands that form a sequence
@@ -197,7 +214,7 @@ class Sequencer
 	int3 mScanDir{ mInitialScanDir };	//Scan directions in x, y, and z
 	double mScanZi_mm;					//Initial z-stage position for a stack-scan
 	double mPlaneToSliceZ_mm;			//Height of the plane to cut	
-	int mNtotalSlices = static_cast<int>(std::ceil(1000 * mSample.length_mm.at(ZZ) / mVibratomeConfig.sliceThickness_um));	//Number of vibratome slices in the entire sample. Value computed dynamically
+	int mNtotalSlices;					//Number of vibratome slices in the entire sample
 
 	int calculateStackScanInitialP_mW_(const int scanPmin_mW, const int stackPinc_mW, const int scanDirZ);
 	double2 stackIndicesToStackCenter_mm_(const int2 stackArrayIndices) const;

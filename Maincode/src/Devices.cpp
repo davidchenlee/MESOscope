@@ -1,7 +1,8 @@
 #include "Devices.h"
 
 #pragma region "Image"
-Image::Image(FPGAns::RTsequence &RTsequence) : mRTsequence(RTsequence), mTiff(mRTsequence.mWidthPerFrame_pix, mRTsequence.mHeightPerFrame_pix, mRTsequence.mNframes)
+Image::Image(FPGAns::RTsequence &RTsequence) :
+	mRTsequence(RTsequence), mTiff(mRTsequence.mWidthPerFrame_pix, mRTsequence.mHeightPerFrame_pix, mRTsequence.mNframes)
 {
 	mBufArrayA = new U32[mRTsequence.mNpixAllFrames];
 	mBufArrayB = new U32[mRTsequence.mNpixAllFrames];
@@ -467,7 +468,8 @@ void ResonantScanner::isRunning()
 
 #pragma region "Galvo"
 
-Galvo::Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel): mRTsequence(RTsequence), mGalvoRTchannel(galvoChannel)
+Galvo::Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel):
+	mRTsequence(RTsequence), mGalvoRTchannel(galvoChannel)
 {
 	if ( mGalvoRTchannel != GALVO1 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -991,7 +993,8 @@ void Shutter::pulseHigh() const
 #pragma region "Pockels cells"
 //Curently, output of the pockels cell is hardcoded on the FPGA side.  The pockels' output is HIGH when 'framegate' is HIGH
 //Each Uniblitz shutter goes with a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
-PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserID, const int wavelength_nm) : mRTsequence(RTsequence), mPockelsRTchannel(laserID), mWavelength_nm(wavelength_nm), mShutter(mRTsequence.mFpga, mPockelsRTchannel)
+PockelsCell::PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserID, const int wavelength_nm) :
+	mRTsequence(RTsequence), mPockelsRTchannel(laserID), mWavelength_nm(wavelength_nm), mShutter(mRTsequence.mFpga, mPockelsRTchannel)
 {
 	if (mPockelsRTchannel != VISION && mPockelsRTchannel != FIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
@@ -1131,10 +1134,10 @@ void PockelsCell::setShutter(const bool state) const
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
-VirtualLaser::VirtualLaser(FPGAns::RTsequence &RTsequence, const int wavelength_nm, const double power_mW): mWavelength_nm(wavelength_nm),
-																											mVision(VISION), mFidelity(FIDELITY),
-																											mPockelsVision(RTsequence, VISION, wavelength_nm), mPockelsFidelity(RTsequence, FIDELITY, 1040),
-																											mFWexcitation(FWEXC), mFWdetection(FWDET)
+VirtualLaser::VirtualLaser(FPGAns::RTsequence &RTsequence, const int wavelength_nm, const double power_mW):
+	mWavelength_nm(wavelength_nm), mVision(VISION), mFidelity(FIDELITY),
+	mPockelsVision(RTsequence, VISION, wavelength_nm), mPockelsFidelity(RTsequence, FIDELITY, 1040),
+	mFWexcitation(FWEXC), mFWdetection(FWDET)
 {
 	setWavelength(mWavelength_nm);
 }

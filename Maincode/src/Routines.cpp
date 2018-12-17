@@ -22,7 +22,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
-	double stackRangeZ_um = 10 * um;				//Acquire a stack covering this interval
+	double stackRangeZ_um = 10 * um;		//Acquire a stack covering this interval
 
 	//LASER
 	const int wavelength_nm = 1040;
@@ -826,7 +826,7 @@ void seq_testSequencer()
 	//Configure the sample
 	const ROI roi_mm = { 0, 10, 10, 0 };
 	const double sampleLengthZ_mm = 10;
-	SampleConfig sampleConfig("", roi_mm, sampleLengthZ_mm);
+	SampleConfig sampleConfig("Beads_4um", "grycerol_1.47", roi_mm, sampleLengthZ_mm);
 
 	//Configure the lasers {wavelength_nm, laser power mW, laser power incremental mW}
 	using SingleLaserConfig = LaserListConfig::SingleLaserConfig;
@@ -839,13 +839,12 @@ void seq_testSequencer()
 	const double2 FOV_um = { 150,200 };
 	const double stepSizeZ_um = 0.5;					//Image resolution in z
 	const double stackDepth_um = 100;					//Stack depth or thickness
-	const double3 stackOverlap_pct = { 0.1,0.1,0.0 };	//Percentage of stack overlap in x, y, and z
-	StackConfig stackConfig(FOV_um, stepSizeZ_um, stackDepth_um, stackOverlap_pct);
+	const double3 stackOverlap_frac = { 0.1,0.1,0.1 };	//Percentage of stack overlap in x, y, and z
+	StackConfig stackConfig(FOV_um, stepSizeZ_um, stackDepth_um, stackOverlap_frac);
 
 	//Configure the vibratome
-	const double sliceOffset_um = 20;					//Cut this much above the bottom of the stack
-	const double sliceThickness_um = stackDepth_um;		//Usually cut as much as the depth of the stack
-	const VibratomeConfig vibratomeConfig(sliceOffset_um, sliceThickness_um);
+	const double cutAboveBottomOfStack_um = 9;			//Cut this much above the bottom of the stack
+	const VibratomeConfig vibratomeConfig(cutAboveBottomOfStack_um);
 
 	//Configure the stages
 	const double stageInitialZ_mm = 10;					//Initial height of the stage

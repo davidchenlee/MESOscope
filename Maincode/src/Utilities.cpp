@@ -1,12 +1,12 @@
 #include "Utilities.h"
 
 //Convert an int to hex and print it out
-void printHex(int input)
+void printHex(const int input)
 {
 	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << "\n";
 }
 
-void printHex(std::vector<uint8_t>  input)
+void printHex(const std::vector<uint8_t>  input)
 {
 	for (size_t ii = 0; ii < input.size(); ii++)
 	{
@@ -17,7 +17,7 @@ void printHex(std::vector<uint8_t>  input)
 }
 
 //Convert a string to hex and print it out
-void printHex(std::string input)
+void printHex(const std::string input)
 {
 	const char *cstr = input.c_str();
 	for (size_t ii = 0; ii < input.size(); ii++)
@@ -28,7 +28,7 @@ void printHex(std::string input)
 	std::cout << std::nouppercase << std::dec << "\n";
 }
 
-void printBinary16(int input)
+void printBinary16(const int input)
 {
 	std::cout << std::bitset<16>(input) << "\n";
 }
@@ -74,6 +74,23 @@ std::string file_exists(const std::string filename)
 	return filename + suffix;
 }
 
+std::string axisToString(const Axis axis)
+{
+	switch (axis)
+	{
+	case XX:
+		return "X";
+	case YY:
+		return "Y";
+	case ZZ:
+		return "Z";
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
+	}
+}
+
+
+#pragma region "Logger"
 Logger::Logger(const std::string filename)
 {
 	mFileHandle.open(folderPath + filename + ".txt");
@@ -98,6 +115,7 @@ void Logger::record(const std::string description, const std::string input)
 {
 	mFileHandle << description << input << "\n";
 }
+#pragma endregion "Logger"
 
 #pragma region "TiffU8"
 
@@ -107,7 +125,7 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "r");
 
 	if (tiffHandle == nullptr)
-		throw std::runtime_error((std::string)__FUNCTION__ + "Opening Tiff failed");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Opening Tiff failed");
 
 	int widthAllFrames, heightAllFrames;
 	TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &widthAllFrames);
@@ -115,7 +133,7 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 	//TIFFGetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, &mStripSize);
 
 	if (heightAllFrames % 2)
-		throw std::runtime_error((std::string)__FUNCTION__ + "Odd number of rows not supported");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Odd number of rows not supported");
 
 	std::cout << "Width all frames = " << widthAllFrames << "\n";
 	std::cout << "Height all frames = " << heightAllFrames << "\n";
@@ -128,14 +146,14 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 																//alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
 
 	if (mBytesPerLine == NULL)
-		throw std::runtime_error((std::string)__FUNCTION__ + "Failed assigning mBytesPerLine");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failed assigning mBytesPerLine");
 
 	unsigned char* buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);
 
 	if (buffer == NULL) //Check that the buffer memory was allocated
 	{
 		TIFFClose(tiffHandle);
-		std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory for raster of TIFF image");
+		std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
 	}
 
 	mArray = new unsigned char[mWidthPerFrame * heightAllFrames];	//Allocate memory for the image
@@ -232,7 +250,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 		if (buffer == NULL) //Check that the buffer memory was allocated
 		{
 			TIFFClose(tiffHandle);
-			std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory for raster of TIFF image");
+			std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
 		}
 
 	for (int frame = 0; frame < nFrames; frame++)
@@ -278,7 +296,7 @@ void TiffU8::mirrorOddFrames()
 		unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);		//Buffer used to store the row of pixel information for writing to file
 
 		if (buffer == NULL) //Check that the buffer memory was allocated
-			std::runtime_error((std::string)__FUNCTION__ + "Could not allocate memory");
+			std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory");
 
 		for (int frame = 1; frame < mNframes; frame += 2)
 		{

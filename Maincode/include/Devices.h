@@ -69,7 +69,7 @@ public:
 
 class ResonantScanner
 {
-	const FPGAns::RTsequence &mRTsequence;
+	const FPGAns::RTsequence &mRTsequence;				//Needed to retrieve 'mRTsequence.mWidthPerFrame_pix' to calculate the fill factor
 	const double mVMAX_V = 5 * V;						//Max control voltage allowed
 	const int mDelay_ms = 10;
 	double mVoltPerUm = 0.00595;						//Calibration factor. Last calibrated 
@@ -249,8 +249,10 @@ class Stage
 	const double3 mPosMin3_mm{ -60, 0, 1 };			//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
 	const double3 mPosMax3_mm{ 50, 30, 25 };
 	int3 mNtile;									//Tile number in x, y, z
-	int3 mNtileOverlap_pix;							//Tile overlap in x, y, z
+	int3 mNtileOverlap_pix;							//Tile overlap in x, y, z	
 public:
+	enum DOparamId { TriggerStep = 1, AxisNumber = 2, TriggerMode = 3, Polarity = 7, StartThreshold = 8, StopThreshold = 9, TriggerPosition = 10 };
+
 	Stage();
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor
@@ -267,10 +269,12 @@ public:
 	void waitForMotionToStop(const Axis axis) const;
 	void waitForMotionToStop3() const;
 	void stopALL() const;
-	void printStageConfig(const Axis axis, const int chan) const;
 	double qVEL(const Axis axis) const;
 	void VEL(const Axis axis, const double vel_mmPerS) const;
-	double downloadDOconfig(const Axis axis, const int chan, const int triggerParam) const;
-	bool isDOenable(const Axis axis, const int chan) const;
-	void setDOenable(const Axis axis, const int chan, const BOOL triggerState) const;
+	void setDOsingleParam(const Axis axis, const int DOchan, const DOparamId paramId, const double value) const;
+	void setDOallParam(const Axis axis, const int DOchan, const double triggerStep_mm, const int triggerMode, const double startThreshold_mm, const double stopThreshold_mm) const;
+	double downloadDOsingleParam(const Axis axis, const int DOchan, const DOparamId paramId) const;
+	bool isDOenabled(const Axis axis, const int DOchan) const;
+	void setDOenabled(const Axis axis, const int DOchan, const BOOL triggerState) const;
+	void printStageConfig(const Axis axis, const int DOchan) const;
 };

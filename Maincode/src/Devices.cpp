@@ -103,7 +103,7 @@ void Image::readFIFOOUTpc_()
 	const U32 timeout_ms = 100;						//FIFOOUTpc timeout
 	
 	//Null read timeout
-	int timeout_iter = 100;						//Timeout the whileloop if the data download fails
+	int timeout_iter = 200;						//Timeout the whileloop if the data download fails
 	int nullReadCounterA = 0;
 	int nullReadCounterB = 0;
 
@@ -121,7 +121,7 @@ void Image::readFIFOOUTpc_()
 		if (nullReadCounterA > timeout_iter && nullReadCounterB > timeout_iter)
 			throw ImageException((std::string)__FUNCTION__ + ": FIFOOUTpc downloading timeout");
 
-		//std::cout << "FIFO A: " << nElemTotalA << "\tFIFO B: " << nElemTotalB << "\n";	//For debugging
+		std::cout << "FIFO A: " << nElemTotalA << "\tFIFO B: " << nElemTotalB << "\n";	//For debugging
 		//std::cout << "nullReadCounter A: " << nullReadCounterA << "\tnullReadCounter: " << nullReadCounterB << "\n";	//For debugging
 	}
 
@@ -359,7 +359,7 @@ ResonantScanner::ResonantScanner(const FPGAns::RTsequence &RTsequence): mRTseque
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
-		mFillFactor = sin(PI / 2 * temporalFillFactor);					//Note that the fill factor doesn't depend on the RS amplitude because the RS period is fixed
+		mFillFactor = sin(PI / 2 * temporalFillFactor);			//Note that the fill factor doesn't depend on the RS amplitude because the RS period is fixed
 
 	//std::cout << "Fill factor = " << mFillFactor << "\n";		//For debugging
 
@@ -1202,6 +1202,7 @@ Stage::Stage()
 	const std::string stageIDz = "0165500631";	//Z-stage (ES-100)
 
 	//Open the connections to the stage controllers and assign the IDs
+	std::cout << "Establishing connection to the stages\n";
 	mID[XX] = PI_ConnectUSB(stageIDx.c_str());
 	mID[YY] = PI_ConnectUSB(stageIDy.c_str());
 	mID[ZZ] = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
@@ -1251,7 +1252,7 @@ double Stage::downloadPosition_mm(const Axis axis)
 {
 	double position_mm;
 	if (!PI_qPOS(mID[axis], mNstagesPerController, &position_mm))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query position for the stage " + std::to_string(axis));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query position for the stage " + axisToString(axis));
 
 	return position_mm;
 }
@@ -1261,13 +1262,13 @@ void Stage::moveStage_(const Axis axis, const double position_mm)
 {
 	//Check if the requested position is within range
 	if (position_mm < mPosMin3_mm[axis] || position_mm > mPosMax3_mm[axis])
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position out of bounds for stage " + std::to_string(axis));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position out of bounds for stage " + axisToString(axis));
 
 	//Move the stage
 	if (mPosition3_mm[axis] != position_mm ) //Move only if the requested position is different from the current position
 	{
 		if (!PI_MOV(mID[axis], mNstagesPerController, &position_mm) )	//~14 ms to execute this function
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage" + std::to_string(axis) + " to the target position");
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString(axis) + " to the target position");
 
 		mPosition3_mm[axis] = position_mm;
 	}
@@ -1287,7 +1288,7 @@ bool Stage::isMoving(const Axis axis) const
 	BOOL isMoving;
 
 	if (!PI_IsMoving(mID[axis], mNstagesPerController, &isMoving))	//~55 ms to execute this function
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage " + std::to_string(axis));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage " + axisToString(axis));
 
 	return isMoving;
 }
@@ -1297,7 +1298,7 @@ void Stage::waitForMotionToStop(const Axis axis) const
 	BOOL isMoving;
 	do {
 		if (!PI_IsMoving(mID[axis], mNstagesPerController, &isMoving))
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage" + std::to_string(axis));
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage" + axisToString(axis));
 
 		std::cout << ".";
 	} while (isMoving);
@@ -1333,49 +1334,12 @@ void Stage::stopALL() const
 	PI_StopAll(mID[ZZ]);
 }
 
-//Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
-//This function requests the trigger parameters of the stage
-//1: trigger step
-//2: axis
-//3: trigger mode (0: position distance, 2: on target, 6: in motion)
-//7: polarity
-//8: start threshold
-//9: stop threshold
-//10: trigger position
-double Stage::downloadDOconfig(const Axis axis, const int chan, const int triggerParam) const
-{
-	double value;
-	if (!PI_qCTO(mID[axis], &chan, &triggerParam, &value, 1))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query CTO for the stage" + std::to_string(axis));
-
-	//std::cout << value << "\n";
-	return value;
-}
-
-//Request the enable/disable status of the stage DO
-bool Stage::isDOenable(const Axis axis, const int chan) const
-{
-	BOOL triggerState;
-	if (!PI_qTRO(mID[axis], &chan, &triggerState, 1))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query TRO for the stage" + std::to_string(axis));
-
-	//std::cout << triggerState << "\n";
-	return triggerState;
-}
-
-//Enable or disable the stage DO
-void Stage::setDOenable(const Axis axis, const int chan, const BOOL triggerState) const
-{
-	if (!PI_TRO(mID[axis], &chan, &triggerState, 1))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set TRO for the stage" + std::to_string(axis));
-}
-
 //Request the velocity of the stage in mm/s
 double Stage::qVEL(const Axis axis) const
 {
 	double vel_mmPerS;
-	if(!PI_qVEL(mID[axis], mNstagesPerController, &vel_mmPerS))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage" + std::to_string(axis));
+	if (!PI_qVEL(mID[axis], mNstagesPerController, &vel_mmPerS))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage " + axisToString(axis));
 
 	//std::cout << vel_mmPerS << "\n";
 	return vel_mmPerS;
@@ -1384,51 +1348,106 @@ double Stage::qVEL(const Axis axis) const
 //Set the velocity of the stage in mm/s
 void Stage::VEL(const Axis axis, const double vel_mmPerS) const
 {
-	if(!PI_VEL(mID[axis], mNstagesPerController, &vel_mmPerS))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage" + std::to_string(axis));
+	if (!PI_VEL(mID[axis], mNstagesPerController, &vel_mmPerS))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString(axis));
+}
+
+//Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
+//This function requests the trigger parameters of the stage. Consult the manual for C-863 p165
+//1: trigger step in mm
+//2: axis of the controller ( always 1 because each controller has only 1 stage)
+//3: trigger mode (0: position distance, 2: on target, 6: in motion, 7: position+offset)
+//7: polarity (0 for active low, 1 for active high)
+//8: start threshold in mm
+//9: stop threshold in mm
+//10: trigger position in mm
+double Stage::downloadDOsingleParam(const Axis axis, const int DOchan, const DOparamId param) const
+{
+	const int triggerParam = static_cast<int>(param);
+	double value;
+	if (!PI_qCTO(mID[axis], &DOchan, &triggerParam, &value, 1))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger config for the stage " + axisToString(axis));
+
+	//std::cout << value << "\n";
+	return value;
+}
+
+void Stage::setDOsingleParam(const Axis axis, const int DOchan, const DOparamId paramId, const double value) const
+{
+	const int triggerParam = static_cast<int>(paramId);
+	if (!PI_CTO(mID[axis], &DOchan, &triggerParam, &value, 1))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + axisToString(axis));
+}
+
+void Stage::setDOallParam(const Axis axis, const int DOchan, const double triggerStep_mm, const int triggerMode, const double startThreshold_mm, const double stopThreshold_mm) const
+{
+	setDOsingleParam(axis, DOchan, TriggerStep, triggerStep_mm);					//Trigger step
+	setDOsingleParam(axis, DOchan, AxisNumber, 1);									//Axis of the controller (always 1 because each controller has only 1 stage)
+	setDOsingleParam(axis, DOchan, TriggerMode, static_cast<double>(triggerMode));	//Trigger mode
+	setDOsingleParam(axis, DOchan, Polarity, 1);									//Polarity (0 for active low, 1 for active high)
+	setDOsingleParam(axis, DOchan, StartThreshold, startThreshold_mm);				//Start threshold
+	setDOsingleParam(axis, DOchan, StopThreshold, stopThreshold_mm);				//Stop threshold
+}
+
+//Request the enable/disable status of the stage DO
+bool Stage::isDOenabled(const Axis axis, const int DOchan) const
+{
+	BOOL triggerState;
+	if (!PI_qTRO(mID[axis], &DOchan, &triggerState, 1))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger EN/DIS stage for the stage " + axisToString(axis));
+
+	//std::cout << triggerState << "\n";
+	return triggerState;
+}
+
+//Enable or disable the stage DO
+void Stage::setDOenabled(const Axis axis, const int DOchan, const BOOL triggerState) const
+{
+	if (!PI_TRO(mID[axis], &DOchan, &triggerState, 1))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger EN/DIS state for the stage " + axisToString(axis));
 }
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
 //Print out the relevant parameters
 void Stage::printStageConfig(const Axis axis, const int chan) const
 {
-
 	switch (axis)
 	{
 	case XX:
 		//Only DO1 is wired to the FPGA
 		if (chan != 1)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA" + std::to_string(axis));
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString(axis));
 		break;
 	case YY:
 		//Only DO1 is wired to the FPGA
 		if (chan != 1)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA" + std::to_string(axis));
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString(axis));
 		break;
 	case ZZ:
 		//Only DO1 and DO2 are wired to the FPGA
 		if (chan < 1 || chan > 2)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 and DO2 are currently wired to the FPGA" + std::to_string(axis));
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 and DO2 are currently wired to the FPGA for the stage " + axisToString(axis));
 		break;
 	}
 
-	double triggerStep = downloadDOconfig(axis, chan, 1);
-	double triggerMode = downloadDOconfig(axis, chan, 3);
-	double polarity = downloadDOconfig(axis, chan, 7);
-	double startThreshold = downloadDOconfig(axis, chan, 8);
-	double stopThreshold = downloadDOconfig(axis, chan, 9);
-	double triggerPosition = downloadDOconfig(axis, chan, 10);
-	bool triggerState = isDOenable(axis, chan);
-	double vel_mmPerS = qVEL(axis);
+	const double triggerStep_mm = downloadDOsingleParam(axis, chan, TriggerStep);
+	const int triggerMode = static_cast<int>(downloadDOsingleParam(axis, chan, TriggerMode));
+	const int polarity = static_cast<int>(downloadDOsingleParam(axis, chan, Polarity));
+	const double startThreshold_mm = downloadDOsingleParam(axis, chan, StartThreshold);
+	const double stopThreshold_mm = downloadDOsingleParam(axis, chan, StopThreshold);
+	const double triggerPosition_mm = downloadDOsingleParam(axis, chan, TriggerPosition);
+	const bool triggerState = isDOenabled(axis, chan);
+	const double vel_mmPerS = qVEL(axis);
 
-	std::cout << "triggerStep: " << triggerStep << "\n";
-	std::cout << "triggerMode: " << triggerMode << "\n";
-	std::cout << "polarity: " << polarity << "\n";
-	std::cout << "startThreshold: " << startThreshold << "\n";
-	std::cout << "stopThreshold: " << stopThreshold << "\n";
-	std::cout << "triggerPosition: " << triggerPosition << "\n";
-	std::cout << "triggerState: " << triggerState << "\n";
-	std::cout << "vel_mmPerS: " << vel_mmPerS << "\n";
+	std::cout << "Configuration for the stage = " << axisToString(axis) << ", DOchan = " << chan << ":\n";
+	std::cout << "is DO trigger enabled? = " << triggerState << "\n";
+	std::cout << "Trigger step (mm) = " << triggerStep_mm << "\n";
+	std::cout << "Trigger mode = " << triggerMode << "\n";
+	std::cout << "Polarity = " << polarity << "\n";
+	std::cout << "Start threshold position (mm) = " << startThreshold_mm << "\n";
+	std::cout << "Stop threshold position (mm) = " << stopThreshold_mm << "\n";
+	std::cout << "Trigger position (mm) = " << triggerPosition_mm << "\n";
+	std::cout << "Vel (mm/s) = " << vel_mmPerS << "\n\n";
 }
 #pragma endregion "Stages"
 

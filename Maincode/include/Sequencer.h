@@ -181,17 +181,23 @@ struct StageConfig
 //The body is defined here
 struct GalvoConfig
 {
-	double FFOVrs_um;
-	ResonantScanner RScanner;
+	const Galvo &mGalvo;
+	double mFFOV_um;				//Full FOV in the slow axis
+	double mTimeStep;				//Time steps size of the linear ramp
+	double mPosMax_um;				//Max distance from the center
+	double mLinearRampDuration;		//Linear ramp duration
+
+	GalvoConfig(const Galvo &galvo, const double FFOV_um, const double timeStep, const double posMax_um, const double linearRampDuration) :
+		mGalvo(galvo), mFFOV_um(FFOV_um), mTimeStep(timeStep), mPosMax_um(posMax_um), mLinearRampDuration(linearRampDuration) {}
 };
 
 //The body is defined here
 struct ResonantScannerConfig
 {
-	double FFOVgalvo_um;		//Full FOV in the slow axis
-	double galvoTimeStep;
-	double posMax_um;
-	double duration;
+	const ResonantScanner &mRScanner;
+	double FFOVrs_um;
+
+	ResonantScannerConfig(const ResonantScanner &RScanner) : mRScanner(RScanner) {}
 };
 
 //A list of commands that form a sequence

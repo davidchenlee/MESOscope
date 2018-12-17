@@ -12,10 +12,11 @@ using namespace Constants;
 std::string file_exists(const std::string filename);
 std::string toString(const double number, const int nDecimalPlaces);
 void printHex(int input);
-void printHex(std::vector<uint8_t>  input);
-void printHex(std::string input);
-void printBinary16(int input);
+void printHex(const std::vector<uint8_t>  input);
+void printHex(const std::string input);
+void printBinary16(const int input);
 U16 convertDoubleToFx2p14(double n);
+std::string axisToString(const Axis axis);
 
 class Logger
 {

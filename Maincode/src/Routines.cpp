@@ -18,7 +18,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const double FFOVrs_um = 150 * um;
 	ResonantScanner RScanner(fpga);
 	RScanner.setFFOV(FFOVrs_um);
-	RScanner.isRunning();					//Make sure that the RS is running
+	RScanner.isRunning();					//To make sure that the RS is running
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -212,7 +212,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const double FFOVrs_um = 150 * um;
 	ResonantScanner RScanner(fpga);
 	RScanner.setFFOV(FFOVrs_um);
-	RScanner.isRunning();					//Make sure that the RS is running
+	RScanner.isRunning();					//To make sure that the RS is running
 
 	//STACK
 	const double stepSize_um = 0.5 * um;
@@ -602,7 +602,7 @@ void seq_testStageConfig()
 	const int triggerMode = 0;
 	const double startThreshold = 0;
 	const double stopThreshold = 0;
-	stage.setDOconfig(ZZ, DOchan, triggerStep_mm, triggerMode, startThreshold, stopThreshold);
+	stage.setDOallParam(ZZ, DOchan, triggerStep_mm, triggerMode, startThreshold, stopThreshold);
 	stage.printStageConfig(ZZ, DOchan);
 
 	std::cout << "Press any key to continue...\n";
@@ -762,10 +762,10 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
-	const int nFramesCont = 100;		//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow
+	const int nFramesCont = 160;		//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transmission will fail
 
 	//STAGES
-	const double3 stagePosition0_mm = { 36.050, 14.150, 18.665 - 0.020 };	//Stage initial position
+	const double3 stagePosition0_mm = { 36.050, 14.150, 18.655};	//Stage initial position
 	Stage stage;
 	stage.moveStage3(stagePosition0_mm);
 	stage.waitForMotionToStop3();
@@ -777,10 +777,10 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	//vision.setWavelength(wavelength_nm);
 
 	//RS
-	const double FFOVrs_um = 150 * um;
+	const double FFOVrs_um = 100 * um;
 	ResonantScanner RScanner(fpga);
 	RScanner.setFFOV(FFOVrs_um);
-	RScanner.isRunning();					//Make sure that the RS is running
+	RScanner.isRunning();		//To make sure that the RS is running
 
 	//FILTERWHEEL
 	Filterwheel fw(FWDET);
@@ -809,10 +809,11 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	Image image(RTsequence);
 	image.initialize();
 
-	//Move the stage, which will trigger the control sequence and data acquisition
-	stage.moveStage_(ZZ, stagePosition0_mm.at(ZZ) + 0.060); 
-	
 	image.startFIFOOUTpc();
+	//Move the stage, which will trigger the control sequence and data acquisition
+	stage.moveStage_(ZZ, stagePosition0_mm.at(ZZ) + 0.100); 
+	
+
 	image.download();
 	image.mirrorOddFrames();
 	image.saveTiffMultiPage("Untitled");

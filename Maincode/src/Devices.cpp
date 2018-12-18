@@ -99,11 +99,11 @@ void Image::readFIFOOUTpc_()
 	auto t_start = std::chrono::high_resolution_clock::now();
 	*/
 	
-	const int readFifoWaitingTime_ms = 5;			//Waiting time between each iteration
-	const U32 timeout_ms = 100;						//FIFOOUTpc timeout
+	const int readFifoWaitingTime_ms = 5;	//Waiting time between each iteration
+	const U32 timeout_ms = 100;				//FIFOOUTpc timeout
 	
-	//Null read timeout
-	int timeout_iter = 200;						//Timeout the whileloop if the data download fails
+	//Null reading timeout
+	int timeout_iter = 200;					//Timeout the whileloop if the data transfer fails
 	int nullReadCounterA = 0;
 	int nullReadCounterB = 0;
 
@@ -119,7 +119,7 @@ void Image::readFIFOOUTpc_()
 		readChunk_(nElemTotalB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArrayB, nullReadCounterB);	//FIFOOUTpc B
 
 		if (nullReadCounterA > timeout_iter && nullReadCounterB > timeout_iter)
-			throw ImageException((std::string)__FUNCTION__ + ": FIFOOUTpc downloading timeout");
+			throw ImageException((std::string)__FUNCTION__ + ": FIFO null-reading timeout");
 
 		std::cout << "FIFO A: " << nElemTotalA << "\tFIFO B: " << nElemTotalB << "\n";	//For debugging
 		//std::cout << "nullReadCounter A: " << nullReadCounterA << "\tnullReadCounter: " << nullReadCounterB << "\n";	//For debugging
@@ -136,7 +136,7 @@ void Image::readFIFOOUTpc_()
 
 	//If all the expected data is NOT read successfully
 	if (nElemTotalA <mRTsequence.mNpixAllFrames || nElemTotalB < mRTsequence.mNpixAllFrames)
-		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFOOUT elements than expected ");
+		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFO elements than expected");
 }
 
 //Read a chunk of data in the FIFOpc
@@ -157,7 +157,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 		{
 			//If more data than expected
 			if (static_cast<int>(nElemRead + nElemToRead) > mRTsequence.mNpixAllFrames)
-				throw std::runtime_error((std::string)__FUNCTION__ + ": FIFO buffer overflow");
+				throw std::runtime_error((std::string)__FUNCTION__ + ": Received more FIFO elements than expected");
 
 			//Retrieve the elements in FIFOOUTpc
 			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTsequence.mFpga).getFpgaHandle(), FIFOOUTpc, buffer + nElemRead, nElemToRead, timeout_ms, &dummy));
@@ -181,7 +181,7 @@ void Image::correctInterleaved_()
 		std::reverse(mBufArrayB + lineIndex * mRTsequence.mWidthPerFrame_pix, mBufArrayB + lineIndex * mRTsequence.mWidthPerFrame_pix + mRTsequence.mWidthPerFrame_pix);
 }
 
-//When multiplexing later on, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
+//Once multiplexing is implemented, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
 void Image::demultiplex_()
 {
 	for (int pixIndex = 0; pixIndex < mRTsequence.mNpixAllFrames; pixIndex++)
@@ -1308,7 +1308,7 @@ void Stage::waitForMotionToStop(const Axis axis) const
 
 void Stage::waitForMotionToStop3() const
 {
-	std::cout << "Updating the stage position: ";
+	std::cout << "Stages moving to the new position: ";
 
 	BOOL isMoving_x, isMoving_y, isMoving_z;
 	do {

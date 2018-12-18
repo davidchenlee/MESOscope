@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 			//seq_testGalvo(fpga);
 			//seq_testPixelclock(fpga);
 			//seq_testStagePosition();
-			seq_testStageConfig();
+			//seq_testStageConfig();
 			//seq_testAODO(fpga);
 			//seq_testPMT16X();
 			//seq_testLaser(fpga);
@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 			//seq_testTiffU8();
 			//seq_testEthernetSpeed();
 			//seq_testVibratome(fpga);
-			//seq_testStageTrigAcq(fpga);
+			seq_testStageTrigAcq(fpga);
 			//seq_testCommandList();
 			//seq_testSequencer();
 		}

@@ -212,12 +212,12 @@ unsigned char* const TiffU8::accessTiff() const
 
 //Split mArray into sub-images (or "frames")
 //Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image which has to be resized into sub-images
-void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag) const
+void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag, const Direction stackDir) const
 {
 	int width, height, nFrames;
 
 	//Multi page structure
-	if (pageStructFlag)		
+	if (pageStructFlag)
 	{
 		nFrames = mNframes;
 		width = mWidthPerFrame;
@@ -238,8 +238,8 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	*/
 
 	if (!overrideFlag)
-		filename = file_exists(filename);	//Check if the file exits. This gives some overhead
-
+		filename = file_exists(filename);	//Check if the file exits. It gives some overhead
+	
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
 
 	if (tiffHandle == nullptr)
@@ -247,17 +247,34 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 
 	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);	//Buffer used to store the row of pixel information for writing to file
 
-		if (buffer == NULL) //Check that the buffer memory was allocated
-		{
-			TIFFClose(tiffHandle);
-			std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
-		}
+	if (buffer == NULL) //Check that the buffer memory was allocated
+	{
+		TIFFClose(tiffHandle);
+		std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
+	}
 
-	for (int frame = 0; frame < nFrames; frame++)
+	//Choose whether to save the first frame at the top or bottom of the stack
+	int scanDirection = static_cast<int>(stackDir);
+	int iterFrame, lastFrame;
+	switch (scanDirection)
+	{
+	case 1:		//Forward order: first frame at the top of the stack
+		iterFrame = 0;
+		lastFrame = nFrames - 1;
+		break;
+	case -1:	//Reverse order: first frame at the bottom of the stack
+		iterFrame = nFrames - 1;
+		lastFrame = 0;
+		break;
+	default:
+		std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
+	}
+
+	while (true)
 	{
 		//TAGS
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, width);											//Set the width of the image
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, height);								//Set the height of the image
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, height);											//Set the height of the image
 		//TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);							//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
 		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);											//Set number of channels per pixel
 		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);												//Set the size of the channels
@@ -265,7 +282,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);							//Single channel with min as black				
 		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, width));		//Set the strip size of the file to be size of one row of pixels
 		//TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);									//Specify that it's a frame within the multipage file
-		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, frame, nFrames);									//Specify the frame number
+		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, iterFrame, nFrames);									//Specify the frame number
 
 		//IMAGEJ TAG FOR USING HYPERSTACKS
 		std::string TIFFTAG_ImageJ = "ImageJ=1.52e\nimages=" + std::to_string(nFrames) + "\nchannels=1\nslices=" + std::to_string(nFrames) + "\nhyperstack=true\nmode=grayscale\nunit=\\u00B5m\nloop=false ";
@@ -274,11 +291,16 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 		//Write the sub-image to the file one strip at a time
 		for (int rowIndex = 0; rowIndex < height; rowIndex++)
 		{	
-			std::memcpy(buffer, &mArray[(frame * height + height - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
+			std::memcpy(buffer, &mArray[(iterFrame * height + height - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
 			if (TIFFWriteScanline(tiffHandle, buffer, rowIndex, 0) < 0)
 				break;
 		}
 		TIFFWriteDirectory(tiffHandle); //Create a page structure. This gives a large overhead
+
+		iterFrame += scanDirection;
+
+		if (iterFrame == lastFrame)
+			break;
 	}
 
 	_TIFFfree(buffer);		//Destroy the buffer

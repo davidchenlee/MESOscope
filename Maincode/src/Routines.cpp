@@ -93,14 +93,14 @@ void seq_main(const FPGAns::FPGA &fpga)
 	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
-	const double galvoDuration_us = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
+	const double frameDuration_us = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
 	Galvo galvo(RTsequence, GALVO1);
-	galvo.positionLinearRamp(galvoTimeStep, galvoDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
+	galvo.positionLinearRamp(galvoTimeStep, frameDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELL FOR RT
 	PockelsCell pockels(RTsequence, VISION, wavelength_nm);
 	//pockelsVision.voltageLinearRamp(4*us, 40*us, 0, 1*V);
-	//pockelsVision.voltageLinearRamp(galvoTimeStep, galvoDuration_us, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
+	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration_us, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
 
 	//DATALOG
@@ -145,9 +145,9 @@ void seq_main(const FPGAns::FPGA &fpga)
 	//ACQUIRE FRAMES AT DIFFERENT Zs
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 	{
-		stage.moveStage3(stagePosition_mm.at(iterDiffZ));
-		stage.waitForMotionToStop3();
-		stage.printPosition3();		//Print the stage position
+		stage.moveAllStages(stagePosition_mm.at(iterDiffZ));
+		stage.waitForMotionToStopAllStages();
+		stage.printPositionXYZ();		//Print the stage position
 		//P_mW += 0.5;				//Increase the laser power by this amount
 
 		//Acquire many frames at the same Z via discontinuous acquisition
@@ -288,14 +288,14 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
-	const double galvoDuration_us = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
+	const double frameDuration_us = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
 	Galvo galvo(RTsequence, GALVO1);
-	galvo.positionLinearRamp(galvoTimeStep, galvoDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
+	galvo.positionLinearRamp(galvoTimeStep, frameDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELLS (RT sequence)
 	PockelsCell pockelsVision(RTsequence, VISION, wavelength_nm);
 	PockelsCell pockelsFidelity(RTsequence, FIDELITY, 1040);
-	//pockelsVision.voltageLinearRamp(galvoTimeStep, galvoDuration_us, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
+	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration_us, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);									//Linearly scale the laser intensity across all the frames
 
 	//DATALOG
@@ -340,9 +340,9 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 	//ACQUIRE FRAMES AT DIFFERENT Zs
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 	{
-		stage.moveStage3(stagePosition_mm.at(iterDiffZ));
-		stage.waitForMotionToStop3();
-		stage.printPosition3();		//Print the stage position
+		stage.moveAllStages(stagePosition_mm.at(iterDiffZ));
+		stage.waitForMotionToStopAllStages();
+		stage.printPositionXYZ();		//Print the stage position
 		//P_mW += 0.5;				//Increase the laser power by this amount
 
 		//Acquire many frames at the same Z via discontinuous acquisition
@@ -406,8 +406,8 @@ void seq_testGalvo(const FPGAns::FPGA &fpga)
 
 	//GALVO FOR RT
 	Galvo galvo(RTsequence, GALVO1);
-	const double galvoDuration_us = halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
-	galvo.positionLinearRamp(galvoTimeStep, galvoDuration_us, posMax_um, -posMax_um);			//Linear ramp for the galvo
+	const double frameDuration_us = halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+	galvo.positionLinearRamp(galvoTimeStep, frameDuration_us, posMax_um, -posMax_um);			//Linear ramp for the galvo
 
 	for (int iter = 0; iter < nFramesDiscont; iter++)
 	{
@@ -443,16 +443,16 @@ void seq_testAODO(const FPGAns::FPGA &fpga)
 	RTsequence.pushDigitalSinglet(DODEBUG, 4 * us, 0);
 
 	//AO
-	RTsequence.pushAnalogSinglet(GALVO1, 8 * us, 4);
-	RTsequence.pushAnalogSinglet(GALVO1, 4 * us, 2);
-	RTsequence.pushAnalogSinglet(GALVO1, 4 * us, 1);
+	RTsequence.pushAnalogSinglet(GALVO1, 8 * us, 4 * V);
+	RTsequence.pushAnalogSinglet(GALVO1, 4 * us, 2 * V);
+	RTsequence.pushAnalogSinglet(GALVO1, 4 * us, 1 * V);
 
 	RTsequence.triggerRT();	//Execute the realtime sequence
 }
 
 void seq_testAOramp(const FPGAns::FPGA &fpga)
 {
-	const double Vmax = 5;
+	const double Vmax = 5 * V;
 	const double step = 4 * us;
 
 	FPGAns::RTsequence RTsequence(fpga);
@@ -465,7 +465,7 @@ void seq_testAOramp(const FPGAns::FPGA &fpga)
 	RTsequence.pushDigitalSinglet(DODEBUG, 4 * us, 0);
 }
 
-//Generate a long digital pulse and check the galvoDuration_us with the oscilloscope
+//Generate a long digital pulse and check the frameDuration_us with the oscilloscope
 void seq_checkDigitalTiming(const FPGAns::FPGA &fpga)
 {
 	const double step = 400 * us;
@@ -475,7 +475,7 @@ void seq_checkDigitalTiming(const FPGAns::FPGA &fpga)
 	RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
 }
 
-//Generate many short digital pulses and check the overall galvoDuration_us with the oscilloscope
+//Generate many short digital pulses and check the overall frameDuration_us with the oscilloscope
 void seq_calibDigitalLatency(const FPGAns::FPGA &fpga)
 {
 	const double step = 4 * us;
@@ -499,10 +499,10 @@ void seq_calibAnalogLatency(const FPGAns::FPGA &fpga)
 	const double step = 4 * us;
 
 	FPGAns::RTsequence RTsequence(fpga);
-	RTsequence.pushAnalogSinglet(GALVO1, step, 10);						//Initial pulse
+	RTsequence.pushAnalogSinglet(GALVO1, step, 10 * V);						//Initial pulse
 	RTsequence.pushAnalogSinglet(GALVO1, step, 0);
 	RTsequence.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5 * V);			//Linear ramp to accumulate the error
-	RTsequence.pushAnalogSinglet(GALVO1, step, 10);						//Initial pulse
+	RTsequence.pushAnalogSinglet(GALVO1, step, 10 * V);						//Initial pulse
 	RTsequence.pushAnalogSinglet(GALVO1, step, 0);						//Final pulse
 
 	//DO0
@@ -553,20 +553,20 @@ void seq_testStagePosition()
 	Stage stage;
 
 	std::cout << "Stages initial position:" << "\n";
-	stage.printPosition3();
+	stage.printPositionXYZ();
 
 	auto t_start = std::chrono::high_resolution_clock::now();
 
-	stage.moveStage3(stagePosition0_mm);
+	stage.moveAllStages(stagePosition0_mm);
 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 	std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
-	stage.waitForMotionToStop(ZZ);
+	stage.waitForMotionToStopSingleStage(ZZ);
 
 	std::cout << "Stages final position:" << "\n";
-	stage.printPosition3();
+	stage.printPositionXYZ();
 	
 	/*
 	int input = 1;
@@ -583,26 +583,38 @@ void seq_testStagePosition()
 	*/
 }
 
-//Test configuring setDOenabled and CTO for the stages
+//Test configuring setDOtriggerEnabled and CTO for the stages
 void seq_testStageConfig()
 {
 	Stage stage;
 	const int DOchan = 1;
 	//std::cout << "Stages initial position:" << "\n";
-	//stage.printPosition3();
-	//stage.isDOenabled(ZZ, DOchannel);
-	//stage.setDOenabled(ZZ, DOchannel , true);
+	//stage.printPositionXYZ();
+	//stage.isDOtriggerEnabled(ZZ, DOchannel);
+	//stage.setDOtriggerEnabled(ZZ, DOchannel , true);
 	//const int triggerParam = 1;
-	//stage.downloadDOsingleParam(ZZ, DOchannel , triggerParam);
-	//std::cout << "x stage vel: " << stage.qVEL(XX) << " mm/s" << "\n";
-	//std::cout << "y stage vel: " << stage.qVEL(YY) << " mm/s" << "\n";
-	//std::cout << "z stage vel: " << stage.qVEL(ZZ) << " mm/s" << "\n";
+	//stage.downloadDOtriggerSingleParam(ZZ, DOchannel , triggerParam);
+	//std::cout << "x stage vel: " << stage.downloadSingleVelocity(XX) << " mm/s" << "\n";
+	//std::cout << "y stage vel: " << stage.downloadSingleVelocity(YY) << " mm/s" << "\n";
+	//std::cout << "z stage vel: " << stage.downloadSingleVelocity(ZZ) << " mm/s" << "\n";
 
 	const double triggerStep_mm = 0.0005;
-	const int triggerMode = 0;
+	const StageDOtriggerMode triggerMode = PositionDist;
 	const double startThreshold = 0;
 	const double stopThreshold = 0;
-	stage.setDOallParam(ZZ, DOchan, triggerStep_mm, triggerMode, startThreshold, stopThreshold);
+
+
+
+	//Declare and start a stopwatch
+	double duration;
+	auto t_start = std::chrono::high_resolution_clock::now();
+
+	stage.setDOtriggerAllParams(ZZ, DOchan, triggerStep_mm, triggerMode, startThreshold, stopThreshold);
+
+	//Stop the stopwatch
+	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "Elapsed time: " << duration << " ms" << "\n";
+
 	stage.printStageConfig(ZZ, DOchan);
 
 	std::cout << "Press any key to continue...\n";
@@ -763,12 +775,19 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix = 300;
 	const int heightPerFrame_pix = 400;
 	const int nFramesCont = 160;		//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transmission will fail
+	const double stepSizeZ_um = 0.5 * um;
+
 
 	//STAGES
-	const double3 stagePosition0_mm = { 36.050, 14.150, 18.655};	//Stage initial position
+	const double3 stackCenterXYZ_mm = { 36.050, 14.150, 18.645 };	//Center of the stack in x, y, and z
+	const double stackDepth_mm = - nFramesCont * stepSizeZ_um / 1000;
+	const double3 stageXiYiZi_mm = { stackCenterXYZ_mm.at(XX), stackCenterXYZ_mm.at(YY), stackCenterXYZ_mm.at(ZZ) - stackDepth_mm /2};	//Stage initial position
+
 	Stage stage;
-	stage.moveStage3(stagePosition0_mm);
-	stage.waitForMotionToStop3();
+
+	stage.moveAllStages(stageXiYiZi_mm);
+	stage.waitForMotionToStopAllStages();
+	
 
 	//LASER
 	const int wavelength_nm = 1040;
@@ -793,9 +812,9 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
 	const double galvoTimeStep = 8 * us;
 	const double posMax_um = FFOVgalvo_um / 2;
-	const double galvoDuration_us = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
+	const double frameDuration_us = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
 	Galvo galvo(RTsequence, GALVO1);
-	galvo.positionLinearRamp(galvoTimeStep, galvoDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
+	galvo.positionLinearRamp(galvoTimeStep, frameDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELL FOR RT
 	PockelsCell pockelsVision(RTsequence, FIDELITY, 1040);
@@ -805,24 +824,44 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	pockelsVision.setShutter(true);
 	Sleep(50);
 
+
+
+
+	//DO1 pulse HIGH for 50 us when the stage moves 0.5 um
+	const int DO1 = 1;
+	const double triggerStep_mm = 0.0002;
+	const StageDOtriggerMode triggerMode = PositionDist;
+	const double startThreshold = 0, stopThreshold = 0;
+	stage.setDOtriggerAllParams(ZZ, DO1, triggerStep_mm, triggerMode, startThreshold, stopThreshold);
+
+	//DO2 is HIGH when the stage z is in motion
+	const int DO2 = 2;
+	stage.setDOtriggerSingleParam(ZZ, DO2, TriggerMode, InMotion);
+
+	//Set the stage velocities
+	const double stageVelZ_mmps = 1000 * stepSizeZ_um / (halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix);
+	stage.setAllVelocities({ 5, 5, stageVelZ_mmps });
+
+
+
 	//EXECUTE THE RT SEQUENCE
 	Image image(RTsequence);
 	image.initialize();
 
 	image.startFIFOOUTpc();
-	//Move the stage, which will trigger the control sequence and data acquisition
-	stage.moveStage_(ZZ, stagePosition0_mm.at(ZZ) + 0.100); 
+	//Move the stage to trigger the control sequence and data acquisition
+	stage.moveSingleStage(ZZ, stageXiYiZi_mm.at(ZZ) + stackDepth_mm);
 	
 
 	image.download();
 	image.mirrorOddFrames();
-	image.saveTiffMultiPage("Untitled");
+	image.saveTiffMultiPage("Untitled", NOOVERRIDE, BACKWARD);
 
-	stage.waitForMotionToStop3();
+	stage.waitForMotionToStopAllStages();
 	pockelsVision.setShutter(false);
 
 	//Disable ZstageAsTrigger to be able to move the stage without triggering the acquisition sequence
-	NiFpga_WriteBool(fpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false);
+	image.setZstageTriggerEnabled(false);
 
 	std::cout << "Press any key to continue...\n";
 	getchar();

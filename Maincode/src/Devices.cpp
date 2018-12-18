@@ -263,21 +263,27 @@ void Image::average()
 }
 
 //Save each frame in mTiff in a single Tiff page
-void Image::saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag) const
+void Image::saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const Direction stackDir) const
 {
-	mTiff.saveToFile(filename, SINGLEPAGE, overrideFlag);
+	mTiff.saveToFile(filename, SINGLEPAGE, overrideFlag, stackDir);
 }
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag) const
+void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag, const Direction stackDir) const
 {
-	mTiff.saveToFile(filename, MULTIPAGE, overrideFlag);
+	mTiff.saveToFile(filename, MULTIPAGE, overrideFlag, stackDir);
 }
 
 //Access the Tiff data in the Image object
 unsigned char* const Image::accessTiff() const
 {
 	return mTiff.accessTiff();
+}
+
+//Disable ZstageAsTrigger to be able to move the stage without triggering the acquisition sequence
+void Image::setZstageTriggerEnabled(const bool state)
+{
+	NiFpga_WriteBool(mRTsequence.mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, state);
 }
 #pragma endregion "Image"
 
@@ -298,13 +304,13 @@ void Vibratome::startStop_() const
 }
 
 //Move the head of the vibratome forward or backward for the duration 'duration_ms'. The timing varies in approx 1 ms
-void Vibratome::moveHead_(const int duration_ms, const MotionDir channel) const
+void Vibratome::moveHead_(const int duration_ms, const Direction motionDir) const
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
 	const int minDuration_ms = 10;		//in ms
 	const int delay_ms = 1;				//Used to roughly calibrate the pulse length
 
-	switch (channel)
+	switch (motionDir)
 	{
 	case BACKWARD:
 		selectedChannel = NiFpga_FPGAvi_ControlBool_VTback;
@@ -1195,7 +1201,7 @@ void VirtualLaser::setShutter(const bool state) const
 #pragma endregion "VirtualLaser"
 
 #pragma region "Stages"
-Stage::Stage()
+Stage::Stage(const double3 vel_mmps)
 {
 	const std::string stageIDx = "116049107";	//X-stage (V-551.4B)
 	const std::string stageIDy = "116049105";	//Y-stage (V-551.2B)
@@ -1220,9 +1226,12 @@ Stage::Stage()
 	std::cout << "Connection to the stages successfully established\n";
 
 	//Record the current position
-	mPosition3_mm[XX] = downloadPosition_mm(XX);
-	mPosition3_mm[YY] = downloadPosition_mm(YY);
-	mPosition3_mm[ZZ] = downloadPosition_mm(ZZ);
+	mPositionXYZ_mm[XX] = downloadPosition_mm(XX);
+	mPositionXYZ_mm[YY] = downloadPosition_mm(YY);
+	mPositionXYZ_mm[ZZ] = downloadPosition_mm(ZZ);
+
+	//Set the stage velocities
+	setAllVelocities(vel_mmps);
 }
 
 Stage::~Stage()
@@ -1235,16 +1244,16 @@ Stage::~Stage()
 }
 
 //Recall the current position for the 3 stages
-double3 Stage::readPosition3_mm() const
+double3 Stage::readPositionXYZ_mm() const
 {
-	return mPosition3_mm;
+	return mPositionXYZ_mm;
 }
 
-void Stage::printPosition3() const
+void Stage::printPositionXYZ() const
 {
-	std::cout << "Stage X position = " << mPosition3_mm[XX] << " mm\n";
-	std::cout << "Stage Y position = " << mPosition3_mm[YY] << " mm\n";
-	std::cout << "Stage Z position = " << mPosition3_mm[ZZ] << " mm\n";
+	std::cout << "Stage X position = " << mPositionXYZ_mm[XX] << " mm\n";
+	std::cout << "Stage Y position = " << mPositionXYZ_mm[YY] << " mm\n";
+	std::cout << "Stage Z position = " << mPositionXYZ_mm[ZZ] << " mm\n";
 }
 
 //Retrieve the stage position from the controller
@@ -1258,30 +1267,29 @@ double Stage::downloadPosition_mm(const Axis axis)
 }
 
 //Move the stage to the requested position
-void Stage::moveStage_(const Axis axis, const double position_mm)
+void Stage::moveSingleStage(const Axis axis, const double position_mm)
 {
 	//Check if the requested position is within range
-	if (position_mm < mPosMin3_mm[axis] || position_mm > mPosMax3_mm[axis])
+	if (position_mm < mSoftPosMinXYZ_mm[axis] || position_mm > mSoftPosMaxXYZ_mm[axis])
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position out of bounds for stage " + axisToString(axis));
 
 	//Move the stage
-	if (mPosition3_mm[axis] != position_mm ) //Move only if the requested position is different from the current position
+	if (mPositionXYZ_mm[axis] != position_mm ) //Move only if the requested position is different from the current position
 	{
 		if (!PI_MOV(mID[axis], mNstagesPerController, &position_mm) )	//~14 ms to execute this function
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString(axis) + " to the target position");
 
-		mPosition3_mm[axis] = position_mm;
+		mPositionXYZ_mm[axis] = position_mm;
 	}
 }
 
 //Move the 3 stages to the requested position
-void Stage::moveStage3(const double3 positionXYZ_mm)
+void Stage::moveAllStages(const double3 positionXYZ_mm)
 {
-	moveStage_(XX, positionXYZ_mm[XX]);
-	moveStage_(YY, positionXYZ_mm[YY]);
-	moveStage_(ZZ, positionXYZ_mm[ZZ]);
+	moveSingleStage(XX, positionXYZ_mm[XX]);
+	moveSingleStage(YY, positionXYZ_mm[YY]);
+	moveSingleStage(ZZ, positionXYZ_mm[ZZ]);
 }
-
 
 bool Stage::isMoving(const Axis axis) const
 {
@@ -1293,7 +1301,7 @@ bool Stage::isMoving(const Axis axis) const
 	return isMoving;
 }
 
-void Stage::waitForMotionToStop(const Axis axis) const
+void Stage::waitForMotionToStopSingleStage(const Axis axis) const
 {
 	BOOL isMoving;
 	do {
@@ -1306,7 +1314,7 @@ void Stage::waitForMotionToStop(const Axis axis) const
 	std::cout << "\n";
 }
 
-void Stage::waitForMotionToStop3() const
+void Stage::waitForMotionToStopAllStages() const
 {
 	std::cout << "Stages moving to the new position: ";
 
@@ -1327,29 +1335,42 @@ void Stage::waitForMotionToStop3() const
 	std::cout << "\n";
 }
 
-void Stage::stopALL() const
+void Stage::stopAllstages() const
 {
 	PI_StopAll(mID[XX]);
 	PI_StopAll(mID[YY]);
 	PI_StopAll(mID[ZZ]);
+
+	std::cout << "Stages stopped\n";
 }
 
 //Request the velocity of the stage in mm/s
-double Stage::qVEL(const Axis axis) const
+double Stage::downloadSingleVelocity(const Axis axis) const
 {
-	double vel_mmPerS;
-	if (!PI_qVEL(mID[axis], mNstagesPerController, &vel_mmPerS))
+	double vel_mmps;
+	if (!PI_qVEL(mID[axis], mNstagesPerController, &vel_mmps))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage " + axisToString(axis));
 
-	//std::cout << vel_mmPerS << "\n";
-	return vel_mmPerS;
+	//std::cout << vel_mmps << "\n";
+	return vel_mmps;
 }
 
 //Set the velocity of the stage in mm/s
-void Stage::VEL(const Axis axis, const double vel_mmPerS) const
+void Stage::setSingleVelocity(const Axis axis, const double vel_mmps) const
 {
-	if (!PI_VEL(mID[axis], mNstagesPerController, &vel_mmPerS))
+	if (vel_mmps <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be greater than zero for the stage " + axisToString(axis));
+
+	if (!PI_VEL(mID[axis], mNstagesPerController, &vel_mmps))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString(axis));
+}
+
+//Set the velocity of the stage in mm/s
+void Stage::setAllVelocities(const double3 vel_mmps) const
+{
+	setSingleVelocity(XX, vel_mmps.at(XX));
+	setSingleVelocity(YY, vel_mmps.at(YY));
+	setSingleVelocity(ZZ, vel_mmps.at(ZZ));
 }
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
@@ -1361,7 +1382,7 @@ void Stage::VEL(const Axis axis, const double vel_mmPerS) const
 //8: start threshold in mm
 //9: stop threshold in mm
 //10: trigger position in mm
-double Stage::downloadDOsingleParam(const Axis axis, const int DOchan, const DOparamId param) const
+double Stage::downloadDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam param) const
 {
 	const int triggerParam = static_cast<int>(param);
 	double value;
@@ -1372,25 +1393,32 @@ double Stage::downloadDOsingleParam(const Axis axis, const int DOchan, const DOp
 	return value;
 }
 
-void Stage::setDOsingleParam(const Axis axis, const int DOchan, const DOparamId paramId, const double value) const
+void Stage::setDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const
 {
 	const int triggerParam = static_cast<int>(paramId);
 	if (!PI_CTO(mID[axis], &DOchan, &triggerParam, &value, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + axisToString(axis));
 }
 
-void Stage::setDOallParam(const Axis axis, const int DOchan, const double triggerStep_mm, const int triggerMode, const double startThreshold_mm, const double stopThreshold_mm) const
+void Stage::setDOtriggerAllParams(const Axis axis, const int DOchan, const double triggerStep_mm, const StageDOtriggerMode triggerMode, const double startThreshold_mm, const double stopThreshold_mm) const
 {
-	setDOsingleParam(axis, DOchan, TriggerStep, triggerStep_mm);					//Trigger step
-	setDOsingleParam(axis, DOchan, AxisNumber, 1);									//Axis of the controller (always 1 because each controller has only 1 stage)
-	setDOsingleParam(axis, DOchan, TriggerMode, static_cast<double>(triggerMode));	//Trigger mode
-	setDOsingleParam(axis, DOchan, Polarity, 1);									//Polarity (0 for active low, 1 for active high)
-	setDOsingleParam(axis, DOchan, StartThreshold, startThreshold_mm);				//Start threshold
-	setDOsingleParam(axis, DOchan, StopThreshold, stopThreshold_mm);				//Stop threshold
+	if ( triggerStep_mm <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be greater than zero");
+
+	if (startThreshold_mm < mStagePosLimitXYZ_mm.at(axis).at(0) || startThreshold_mm > mStagePosLimitXYZ_mm.at(axis).at(1))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'startThreshold_mm is out of bound for the stage " + axisToString(axis));
+
+
+	setDOtriggerSingleParam(axis, DOchan, TriggerStep, triggerStep_mm);						//Trigger step
+	setDOtriggerSingleParam(axis, DOchan, AxisNumber, 1);									//Axis of the controller (always 1 because each controller has only 1 stage)
+	setDOtriggerSingleParam(axis, DOchan, TriggerMode, static_cast<double>(triggerMode));	//Trigger mode
+	setDOtriggerSingleParam(axis, DOchan, Polarity, 1);										//Polarity (0 for active low, 1 for active high)
+	setDOtriggerSingleParam(axis, DOchan, StartThreshold, startThreshold_mm);				//Start threshold
+	setDOtriggerSingleParam(axis, DOchan, StopThreshold, stopThreshold_mm);					//Stop threshold
 }
 
 //Request the enable/disable status of the stage DO
-bool Stage::isDOenabled(const Axis axis, const int DOchan) const
+bool Stage::isDOtriggerEnabled(const Axis axis, const int DOchan) const
 {
 	BOOL triggerState;
 	if (!PI_qTRO(mID[axis], &DOchan, &triggerState, 1))
@@ -1401,7 +1429,7 @@ bool Stage::isDOenabled(const Axis axis, const int DOchan) const
 }
 
 //Enable or disable the stage DO
-void Stage::setDOenabled(const Axis axis, const int DOchan, const BOOL triggerState) const
+void Stage::setDOtriggerEnabled(const Axis axis, const int DOchan, const BOOL triggerState) const
 {
 	if (!PI_TRO(mID[axis], &DOchan, &triggerState, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger EN/DIS state for the stage " + axisToString(axis));
@@ -1430,14 +1458,14 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 		break;
 	}
 
-	const double triggerStep_mm = downloadDOsingleParam(axis, chan, TriggerStep);
-	const int triggerMode = static_cast<int>(downloadDOsingleParam(axis, chan, TriggerMode));
-	const int polarity = static_cast<int>(downloadDOsingleParam(axis, chan, Polarity));
-	const double startThreshold_mm = downloadDOsingleParam(axis, chan, StartThreshold);
-	const double stopThreshold_mm = downloadDOsingleParam(axis, chan, StopThreshold);
-	const double triggerPosition_mm = downloadDOsingleParam(axis, chan, TriggerPosition);
-	const bool triggerState = isDOenabled(axis, chan);
-	const double vel_mmPerS = qVEL(axis);
+	const double triggerStep_mm = downloadDOtriggerSingleParam(axis, chan, TriggerStep);
+	const int triggerMode = static_cast<int>(downloadDOtriggerSingleParam(axis, chan, TriggerMode));
+	const int polarity = static_cast<int>(downloadDOtriggerSingleParam(axis, chan, Polarity));
+	const double startThreshold_mm = downloadDOtriggerSingleParam(axis, chan, StartThreshold);
+	const double stopThreshold_mm = downloadDOtriggerSingleParam(axis, chan, StopThreshold);
+	const double triggerPosition_mm = downloadDOtriggerSingleParam(axis, chan, TriggerPosition);
+	const bool triggerState = isDOtriggerEnabled(axis, chan);
+	const double vel_mmps = downloadSingleVelocity(axis);
 
 	std::cout << "Configuration for the stage = " << axisToString(axis) << ", DOchan = " << chan << ":\n";
 	std::cout << "is DO trigger enabled? = " << triggerState << "\n";
@@ -1447,7 +1475,7 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 	std::cout << "Start threshold position (mm) = " << startThreshold_mm << "\n";
 	std::cout << "Stop threshold position (mm) = " << stopThreshold_mm << "\n";
 	std::cout << "Trigger position (mm) = " << triggerPosition_mm << "\n";
-	std::cout << "Vel (mm/s) = " << vel_mmPerS << "\n\n";
+	std::cout << "Vel (mm/s) = " << vel_mmps << "\n\n";
 }
 #pragma endregion "Stages"
 

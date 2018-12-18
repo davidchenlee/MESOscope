@@ -236,9 +236,11 @@ namespace FPGAns
 	RTsequence::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell_us): 
 		mWidthPerFrame_pix(widthPerFrame_pix), mDwell_us(dwell_us)
 	{
+		const int calibFine_tick = -32;
 		switch (pixelclockType)
 		{
-		case UNIFORM: pushUniformDwellTimes(-32);
+		case UNIFORM:
+			pushUniformDwellTimes(calibFine_tick);
 			break;
 		//case nonuniform: pushCorrectedDwellTimes();
 			//break;

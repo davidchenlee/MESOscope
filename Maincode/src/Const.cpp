@@ -17,8 +17,7 @@ namespace Constants
 	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//microsecond
 	extern const int ms = 1000 * us;						//millisecond
-	extern const int s = 1000000 * us;						//second
-	extern const int um = 1;								//micron
+	extern const int um = 1;								//micron	
 	extern const int V = 1;									//volt
 	extern const int mW = 1;								//milliwatt
 

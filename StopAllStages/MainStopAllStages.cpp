@@ -5,7 +5,7 @@ int main(int argc, char* argv[])
 	try
 	{
 		Stage stage;
-		stage.stopALL();
+		stage.stopAllstages();
 	}
 
 	catch (const std::invalid_argument &e)

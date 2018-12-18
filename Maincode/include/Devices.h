@@ -36,9 +36,10 @@ public:
 	void download();
 	void mirrorOddFrames();
 	void average();
-	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag) const;
-	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
+	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const Direction stackDir = FORWARD) const;
+	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const Direction stackDir = FORWARD) const;
 	unsigned char* const accessTiff() const;
+	void setZstageTriggerEnabled(const bool state);
 };
 
 class ImageException : public std::runtime_error
@@ -49,7 +50,6 @@ public:
 
 class Vibratome
 {
-	enum MotionDir { BACKWARD, FORWARD };
 	const FPGAns::FPGA &mFpga;
 	int mNslice;						//Slice number
 	double mSectionThickness;			//Thickness of the section
@@ -59,7 +59,7 @@ class Vibratome
 	double mHeight_mm = 0;				//vertical distance between the razor blade and the objective's focal plane
 	double mMovingSpeed_mmps = 2.495;	//in mm/s. Forward and backward moving speed of the head. 52.4 mm in 21 seconds = 2.495 mm/s
 
-	void moveHead_(const int duration_ms, const MotionDir motionDir) const;
+	void moveHead_(const int duration_ms, const Direction motionDir) const;
 	void startStop_() const;
 public:
 	Vibratome(const FPGAns::FPGA &fpga);
@@ -241,40 +241,40 @@ public:
 
 class Stage
 {
-	const int mPort_z = 4;							//COM port
+	const int mPort_z = 4;								//COM port
 	const int mBaud_z = 38400;
-	int3 mID;										//Controller IDs
-	const char mNstagesPerController[2] = "1";		//Number of stages per controller (currently 1)
-	double3 mPosition3_mm;							//Absolute position of the stages (x, y, z)
-	const double3 mPosMin3_mm{ -60, 0, 1 };			//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
-	const double3 mPosMax3_mm{ 50, 30, 25 };
+	int3 mID;											//Controller IDs
+	const char mNstagesPerController[2] = "1";			//Number of stages per controller (currently 1)
+	double3 mPositionXYZ_mm;							//Absolute position of the stages (x, y, z)
+	const double3 mSoftPosMinXYZ_mm{ -60, 0, 1 };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
+	const double3 mSoftPosMaxXYZ_mm{ 50, 30, 25 };
+	const std::vector<double2> mStagePosLimitXYZ_mm{ {-65,65},{-30,30},{0,26} };	//Position range of the stages
 	int3 mNtile;									//Tile number in x, y, z
 	int3 mNtileOverlap_pix;							//Tile overlap in x, y, z	
 public:
-	enum DOparamId { TriggerStep = 1, AxisNumber = 2, TriggerMode = 3, Polarity = 7, StartThreshold = 8, StopThreshold = 9, TriggerPosition = 10 };
-
-	Stage();
+	Stage(const double3 vel_mmps = {5, 5, 0.02});
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor
 	Stage& operator=(const Stage&) = delete;	//Disable assignment-constructor
 	Stage(Stage&&) = delete;					//Disable move constructor
 	Stage& operator=(Stage&&) = delete;			//Disable move-assignment constructor
 
-	double3 readPosition3_mm() const;
-	void printPosition3() const;
-	void moveStage_(const Axis stage, const double position);
-	void moveStage3(const double3 positions);
+	double3 readPositionXYZ_mm() const;
+	void printPositionXYZ() const;
+	void moveSingleStage(const Axis stage, const double position_mm);
+	void moveAllStages(const double3 positionXYZ_mm);
 	double downloadPosition_mm(const Axis axis);
 	bool isMoving(const Axis axis) const;
-	void waitForMotionToStop(const Axis axis) const;
-	void waitForMotionToStop3() const;
-	void stopALL() const;
-	double qVEL(const Axis axis) const;
-	void VEL(const Axis axis, const double vel_mmPerS) const;
-	void setDOsingleParam(const Axis axis, const int DOchan, const DOparamId paramId, const double value) const;
-	void setDOallParam(const Axis axis, const int DOchan, const double triggerStep_mm, const int triggerMode, const double startThreshold_mm, const double stopThreshold_mm) const;
-	double downloadDOsingleParam(const Axis axis, const int DOchan, const DOparamId paramId) const;
-	bool isDOenabled(const Axis axis, const int DOchan) const;
-	void setDOenabled(const Axis axis, const int DOchan, const BOOL triggerState) const;
+	void waitForMotionToStopSingleStage(const Axis axis) const;
+	void waitForMotionToStopAllStages() const;
+	void stopAllstages() const;
+	double downloadSingleVelocity(const Axis axis) const;
+	void setSingleVelocity(const Axis axis, const double vel_mmps) const;
+	void setAllVelocities(const double3 vel_mmps) const;
+	void setDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const;
+	void setDOtriggerAllParams(const Axis axis, const int DOchan, const double triggerStep_mm, const StageDOtriggerMode triggerMode, const double startThreshold_mm, const double stopThreshold_mm) const;
+	double downloadDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam paramId) const;
+	bool isDOtriggerEnabled(const Axis axis, const int DOchan) const;
+	void setDOtriggerEnabled(const Axis axis, const int DOchan, const BOOL triggerState) const;
 	void printStageConfig(const Axis axis, const int DOchan) const;
 };

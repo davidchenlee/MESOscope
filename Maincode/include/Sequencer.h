@@ -43,11 +43,12 @@ struct SampleConfig
 {
 	std::string sampleName;
 	std::string immersionMedium;
+	std::string objectiveCollar;
 	ROI ROI_mm;				//Region of interest across the entire sample
 	double3 length_mm;		//Sample size in x, y, and z
 
-	SampleConfig(const std::string sampleName, const std::string immersionMedium, ROI roi_mm, const double sampleLengthZ_mm) :
-		sampleName(sampleName), immersionMedium(immersionMedium), ROI_mm(roi_mm)
+	SampleConfig(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi_mm, const double sampleLengthZ_mm) :
+		sampleName(sampleName), immersionMedium(immersionMedium), objectiveCollar(objectiveCollar), ROI_mm(roi_mm)
 	{
 		//Convert input ROI = (xmin, ymax, xmax, ymin) to the equivalent sample length in X and Y
 		length_mm.at(XX) = ROI_mm.at(2) - ROI_mm.at(0);

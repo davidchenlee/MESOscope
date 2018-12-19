@@ -205,7 +205,7 @@ TiffU8::~TiffU8()
 }
 
 //Access the Tiff data in the TiffU8 object
-unsigned char* const TiffU8::accessTiff() const
+unsigned char* const TiffU8::pointerToTiff() const
 {
 	return mArray;
 }
@@ -282,7 +282,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);							//Single channel with min as black				
 		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, width));		//Set the strip size of the file to be size of one row of pixels
 		//TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);									//Specify that it's a frame within the multipage file
-		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, iterFrame, nFrames);									//Specify the frame number
+		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, iterFrame, nFrames);								//Specify the frame number
 
 		//IMAGEJ TAG FOR USING HYPERSTACKS
 		std::string TIFFTAG_ImageJ = "ImageJ=1.52e\nimages=" + std::to_string(nFrames) + "\nchannels=1\nslices=" + std::to_string(nFrames) + "\nhyperstack=true\nmode=grayscale\nunit=\\u00B5m\nloop=false ";

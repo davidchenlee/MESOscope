@@ -193,7 +193,7 @@ void Image::demultiplex_()
 			upscaled = _UI8_MAX;
 
 		//Transfer the result to Tiff
-		(mTiff.accessTiff())[pixIndex] = upscaled;
+		(mTiff.pointerToTiff())[pixIndex] = upscaled;
 	}
 }
 
@@ -275,9 +275,9 @@ void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector o
 }
 
 //Access the Tiff data in the Image object
-unsigned char* const Image::accessTiff() const
+unsigned char* const Image::pointerToTiff() const
 {
-	return mTiff.accessTiff();
+	return mTiff.pointerToTiff();
 }
 
 //Disable ZstageAsTrigger to be able to move the stage without triggering the acquisition sequence
@@ -1252,7 +1252,7 @@ void Stage::configVelAndDOtriggers_(const double3 velXYZ_mmps) const
 
 	//DO1 TRIGGER: set DO1 to output a pulse when the stage moves a certain distance
 	const int DO1 = 1;
-	const double triggerStep_mm = 0.0002;
+	const double triggerStep_mm = 0.0005;
 	const StageDOtriggerMode triggerMode = PositionDist;
 	const double startThreshold = 0, stopThreshold = 0;
 	setDOtriggerAllParams(ZZ, DO1, triggerStep_mm, triggerMode, startThreshold, stopThreshold);
@@ -1500,6 +1500,28 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 	std::cout << "Vel (mm/s) = " << vel_mmps << "\n\n";
 }
 #pragma endregion "Stages"
+
+#pragma region "Stack"
+Stack::Stack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ) :
+	mDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ), mSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ) {}
+
+void Stack::pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff)
+{
+	mSameZ.pushImage(indexSameZ, pointerToTiff);
+}
+
+void Stack::pushDiffZ(const int indexDiffZ)
+{
+	mSameZ.average();	//Average the images with the same Z
+	mDiffZ.pushImage(indexDiffZ, mSameZ.pointerToTiff());
+}
+
+void Stack::saveToFile(const std::string filename, OverrideFileSelector overrideFlag) const
+{
+	mDiffZ.saveToFile(filename, MULTIPAGE, overrideFlag);
+}
+#pragma endregion "Stack"
+
 
 
 /*

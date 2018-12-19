@@ -7,29 +7,29 @@ int main(int argc, char* argv[])
 		FPGAns::FPGA fpga;		//Create a FPGA session
 		try
 		{
-			//seq_main(fpga);
-			//seq_mainFidelity(fpga);
+			//mainVision(fpga);
+			//mainFidelity(fpga);
 			//seq_contAcquisition(fpga);
-			//seq_testGalvo(fpga);
-			//seq_testPixelclock(fpga);
-			//seq_testStagePosition();
-			//seq_testStageConfig();
-			//seq_testAODO(fpga);
-			//seq_testPMT16X();
-			//seq_testLaser(fpga);
-			//seq_testVirtualLaser(fpga);
-			//seq_testPockels(fpga);
-			//seq_testFilterwheel();
-			//seq_testShutter(fpga);
-			//seq_testRS(fpga);
+			//testGalvo(fpga);
+			//testPixelclock(fpga);
+			//testStagePosition();
+			//testStageConfig();
+			//testAODO(fpga);
+			//testPMT16X();
+			//testLaser(fpga);
+			//testVirtualLaser(fpga);
+			//testPockels(fpga);
+			//testFilterwheel();
+			//testShutter(fpga);
+			//testRS(fpga);
 			//seq_contAcquisitionTest(fpga);
 			//seq_testConvertI16toVoltage();
 			//seq_testGalvoSync(fpga);
-			//seq_testTiffU8();
-			//seq_testEthernetSpeed();
-			//seq_testVibratome(fpga);
-			seq_testStageTrigAcq(fpga);
-			//seq_testSequencer();
+			//testTiffU8();
+			//testEthernetSpeed();
+			//testVibratome(fpga);
+			testStageTrigAcq(fpga);
+			//testSequencer();
 		}
 		catch (const std::invalid_argument &e)
 		{

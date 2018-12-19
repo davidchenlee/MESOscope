@@ -23,7 +23,6 @@
 			<Property Name="NI.LV.FPGA.CompileConfigString" Type="Str">USB-7856R/Clk40Derived4x1B60MHz/falsefalseFPGA_EXECUTION_MODEFPGA_TARGETFPGA_TARGET_CLASSUSB_7856RFPGA_TARGET_FAMILYKINTEX7TARGET_TYPEFPGA</Property>
 			<Property Name="NI.LV.FPGA.Version" Type="Int">6</Property>
 			<Property Name="NI.SortType" Type="Int">3</Property>
-			<Property Name="niFpga_TopLevelVIID" Type="Path">/D/OwnCloud/Codes/MESOscope/LabView/src/Subvi buffer pixelclock.vi</Property>
 			<Property Name="Resource Name" Type="Str">RIO0</Property>
 			<Property Name="rseries.aio./Connector1/AI0" Type="Str">0</Property>
 			<Property Name="rseries.aio./Connector1/AI1" Type="Str">0</Property>
@@ -2152,6 +2151,42 @@
 					<Property Name="SupportResourceEstimation" Type="Bool">false</Property>
 					<Property Name="TargetName" Type="Str">FPGA Target</Property>
 					<Property Name="TopLevelVI" Type="Ref">/My Computer/FPGA Target/FPGAvi.vi</Property>
+				</Item>
+				<Item Name="Subvi timeout U32" Type="{F4C5E96F-7410-48A5-BB87-3559BC9B167F}">
+					<Property Name="AllowEnableRemoval" Type="Bool">false</Property>
+					<Property Name="BuildSpecDecription" Type="Str"></Property>
+					<Property Name="BuildSpecName" Type="Str">Subvi timeout U32</Property>
+					<Property Name="Comp.BitfileName" Type="Str">MESOscope_FPGATarget_SubvitimeoutU32_fxlhh-lS5WM.lvbitx</Property>
+					<Property Name="Comp.CustomXilinxParameters" Type="Str"></Property>
+					<Property Name="Comp.MaxFanout" Type="Int">-1</Property>
+					<Property Name="Comp.RandomSeed" Type="Bool">false</Property>
+					<Property Name="Comp.Version.Build" Type="Int">0</Property>
+					<Property Name="Comp.Version.Fix" Type="Int">0</Property>
+					<Property Name="Comp.Version.Major" Type="Int">1</Property>
+					<Property Name="Comp.Version.Minor" Type="Int">0</Property>
+					<Property Name="Comp.VersionAutoIncrement" Type="Bool">false</Property>
+					<Property Name="Comp.Vivado.EnableMultiThreading" Type="Bool">true</Property>
+					<Property Name="Comp.Vivado.OptDirective" Type="Str"></Property>
+					<Property Name="Comp.Vivado.PhysOptDirective" Type="Str"></Property>
+					<Property Name="Comp.Vivado.PlaceDirective" Type="Str"></Property>
+					<Property Name="Comp.Vivado.RouteDirective" Type="Str"></Property>
+					<Property Name="Comp.Vivado.RunPowerOpt" Type="Bool">false</Property>
+					<Property Name="Comp.Vivado.Strategy" Type="Str">Default</Property>
+					<Property Name="Comp.Xilinx.DesignStrategy" Type="Str">balanced</Property>
+					<Property Name="Comp.Xilinx.MapEffort" Type="Str">default(noTiming)</Property>
+					<Property Name="Comp.Xilinx.ParEffort" Type="Str">standard</Property>
+					<Property Name="Comp.Xilinx.SynthEffort" Type="Str">normal</Property>
+					<Property Name="Comp.Xilinx.SynthGoal" Type="Str">speed</Property>
+					<Property Name="Comp.Xilinx.UseRecommended" Type="Bool">true</Property>
+					<Property Name="DefaultBuildSpec" Type="Bool">true</Property>
+					<Property Name="DestinationDirectory" Type="Path">FPGA Bitfiles</Property>
+					<Property Name="ProjectPath" Type="Path">/D/OwnCloud/Codes/MESOscope/LabView/MESOscope.lvproj</Property>
+					<Property Name="RelativePath" Type="Bool">true</Property>
+					<Property Name="RunWhenLoaded" Type="Bool">false</Property>
+					<Property Name="SupportDownload" Type="Bool">true</Property>
+					<Property Name="SupportResourceEstimation" Type="Bool">false</Property>
+					<Property Name="TargetName" Type="Str">FPGA Target</Property>
+					<Property Name="TopLevelVI" Type="Ref">/My Computer/FPGA Target/src/Subvi timeout U32.vi</Property>
 				</Item>
 			</Item>
 		</Item>

@@ -1208,7 +1208,7 @@ Stage::Stage(const double3 vel_mmps)
 	const std::string stageIDz = "0165500631";	//Z-stage (ES-100)
 
 	//Open the connections to the stage controllers and assign the IDs
-	std::cout << "Establishing connection to the stages\n";
+	std::cout << "Establishing connection with the stages\n";
 	mID[XX] = PI_ConnectUSB(stageIDx.c_str());
 	mID[YY] = PI_ConnectUSB(stageIDy.c_str());
 	mID[ZZ] = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
@@ -1223,7 +1223,7 @@ Stage::Stage(const double3 vel_mmps)
 	if (mID[ZZ] < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
 
-	std::cout << "Connection to the stages successfully established\n";
+	std::cout << "Connection with the stages successfully established\n";
 
 	//Record the current position
 	mPositionXYZ_mm[XX] = downloadPosition_mm(XX);

@@ -1,6 +1,6 @@
 #include "Routines.h"
 
-void seq_main(const FPGAns::FPGA &fpga)
+void mainVision(const FPGAns::FPGA &fpga)
 {
 	//const RunMode acqMode = SINGLEMODE;			//Single shot
 	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
@@ -194,7 +194,7 @@ void seq_main(const FPGAns::FPGA &fpga)
 
 }
 
-void seq_mainFidelity(const FPGAns::FPGA &fpga)
+void mainFidelity(const FPGAns::FPGA &fpga)
 {
 	//const RunMode acqMode = SINGLEMODE;			//Single shot
 	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
@@ -389,7 +389,7 @@ void seq_mainFidelity(const FPGAns::FPGA &fpga)
 
 }
 
-void seq_testGalvo(const FPGAns::FPGA &fpga)
+void testGalvo(const FPGAns::FPGA &fpga)
 {
 	const int width_pix = 300;
 	const int height_pix = 400;
@@ -420,7 +420,7 @@ void seq_testGalvo(const FPGAns::FPGA &fpga)
 	}
 }
 
-void seq_testPixelclock(const FPGAns::FPGA &fpga)
+void testPixelclock(const FPGAns::FPGA &fpga)
 {
 	std::vector<unsigned char> stackOfAverages;
 
@@ -434,7 +434,7 @@ void seq_testPixelclock(const FPGAns::FPGA &fpga)
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock
-void seq_testAODO(const FPGAns::FPGA &fpga)
+void testAODO(const FPGAns::FPGA &fpga)
 {
 	FPGAns::RTsequence RTsequence(fpga);
 
@@ -450,7 +450,7 @@ void seq_testAODO(const FPGAns::FPGA &fpga)
 	RTsequence.triggerRT();	//Execute the realtime sequence
 }
 
-void seq_testAOramp(const FPGAns::FPGA &fpga)
+void testAOramp(const FPGAns::FPGA &fpga)
 {
 	const double Vmax = 5 * V;
 	const double step = 4 * us;
@@ -466,7 +466,7 @@ void seq_testAOramp(const FPGAns::FPGA &fpga)
 }
 
 //Generate a long digital pulse and check the frameDuration_us with the oscilloscope
-void seq_checkDigitalTiming(const FPGAns::FPGA &fpga)
+void checkDigitalTiming(const FPGAns::FPGA &fpga)
 {
 	const double step = 400 * us;
 
@@ -476,7 +476,7 @@ void seq_checkDigitalTiming(const FPGAns::FPGA &fpga)
 }
 
 //Generate many short digital pulses and check the overall frameDuration_us with the oscilloscope
-void seq_calibDigitalLatency(const FPGAns::FPGA &fpga)
+void calibDigitalLatency(const FPGAns::FPGA &fpga)
 {
 	const double step = 4 * us;
 
@@ -493,7 +493,7 @@ void seq_calibDigitalLatency(const FPGAns::FPGA &fpga)
 }
 
 //First calibrate the digital channels, then use it as a time reference
-void seq_calibAnalogLatency(const FPGAns::FPGA &fpga)
+void calibAnalogLatency(const FPGAns::FPGA &fpga)
 {
 	const double delay = 400 * us;
 	const double step = 4 * us;
@@ -513,7 +513,7 @@ void seq_calibAnalogLatency(const FPGAns::FPGA &fpga)
 	RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
 }
 
-void seq_testFilterwheel()
+void testFilterwheel()
 {
 	Filterwheel FWexcitation(FWEXC);
 	Filterwheel FWdetection(FWDET);
@@ -530,7 +530,7 @@ void seq_testFilterwheel()
 	}
 }
 
-void seq_testShutter(const FPGAns::FPGA &fpga)
+void testShutter(const FPGAns::FPGA &fpga)
 {
 	//CREATE A REALTIME SEQUENCE
 	FPGAns::RTsequence RTsequence(fpga);
@@ -546,7 +546,7 @@ void seq_testShutter(const FPGAns::FPGA &fpga)
 	//shutterFidelity.close();
 }
 
-void seq_testStagePosition()
+void testStagePosition()
 {
 	double duration;
 	const double3 stagePosition0_mm = { 35.020, 19.808, 18.542 };	//Stage initial position
@@ -584,7 +584,7 @@ void seq_testStagePosition()
 }
 
 //Test configuring setDOtriggerEnabled and CTO for the stages
-void seq_testStageConfig()
+void testStageConfig()
 {
 	Stage stage;
 	const int DOchan = 1;
@@ -621,7 +621,7 @@ void seq_testStageConfig()
 	getchar();
 }
 
-void seq_testPMT16X()
+void testPMT16X()
 {
 	PMT16X pmt;
 	pmt.readAllGain();
@@ -634,7 +634,7 @@ void seq_testPMT16X()
 	getchar();
 }
 
-void seq_testLaser(const FPGAns::FPGA &fpga)
+void testLaser(const FPGAns::FPGA &fpga)
 {
 	Laser laser(VISION);
 	//Laser laser(FIDELITY);
@@ -646,7 +646,7 @@ void seq_testLaser(const FPGAns::FPGA &fpga)
 	getchar();
 }
 
-void seq_testVirtualLaser(const FPGAns::FPGA &fpga)
+void testVirtualLaser(const FPGAns::FPGA &fpga)
 {
 	//CREATE A REALTIME SEQUENCE
 	FPGAns::RTsequence RTsequence(fpga);
@@ -665,7 +665,7 @@ void seq_testVirtualLaser(const FPGAns::FPGA &fpga)
 //1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter automatically
 //2. Set pockelsAutoOff = DISABLE for holding the last value
 //3. Tune Vision's wavelength manually
-void seq_testPockels(const FPGAns::FPGA &fpga)
+void testPockels(const FPGAns::FPGA &fpga)
 {
 	//CREATE A REALTIME SEQUENCE
 	FPGAns::RTsequence RTsequence(fpga);
@@ -691,7 +691,7 @@ void seq_testPockels(const FPGAns::FPGA &fpga)
 	getchar();
 }
 
-void seq_testRS(const FPGAns::FPGA &fpga)
+void testRS(const FPGAns::FPGA &fpga)
 {
 	ResonantScanner RScanner(fpga);
 	std::cout << "aaa = " << RScanner.downloadControl_V() << "\n";
@@ -699,14 +699,14 @@ void seq_testRS(const FPGAns::FPGA &fpga)
 	//RScanner.turnOff();
 }
 
-void seq_testConvertI16toVolt()
+void testConvertI16toVolt()
 {
 	std::cout << "volt to I16: " << FPGAns::convertVoltToI16(1) << "\n";
 	std::cout << "I16 to colt: " << FPGAns::convertI16toVolt(32767) << "\n";
 	std::cout << "volt to I16 to volt: " << FPGAns::convertI16toVolt(FPGAns::convertVoltToI16(0)) << "\n";
 }
 
-void seq_testTiffU8()
+void testTiffU8()
 {
 	std::string inputFilename("Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610");
 	std::string outputFilename("test");
@@ -729,7 +729,7 @@ void seq_testTiffU8()
 
 //To measure the saving speed of a Tiff file, either locally or remotely
 //Select a local or remote folder accordingly
-void seq_testEthernetSpeed()
+void testEthernetSpeed()
 {
 	std::string filename = "testEthernetSpeed";
 
@@ -755,7 +755,7 @@ void seq_testEthernetSpeed()
 
 }
 
-void seq_testVibratome(const FPGAns::FPGA &fpga)
+void testVibratome(const FPGAns::FPGA &fpga)
 {
 	Vibratome vibratome(fpga);
 	//vibratome.reset(20);
@@ -769,7 +769,7 @@ void seq_testVibratome(const FPGAns::FPGA &fpga)
 //Remember that I am not using MACROS on the stages anymore
 //With the PI monitor for the step reponse I see that the motion start and end of the stage is somewhat nonlinear (+/- 1 um off target).
 //1. My current sol is to first trigger the stage motion, then after a certain fixed distance use the stage DO to trigger the data acquisition. The problem right now is that I can not find a way to reset the stage DO
-void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
+void testStageTrigAcq(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix = 300;
@@ -826,7 +826,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 
 
 
-
+	//Config the stages***********************************************************
 	//DO1 pulse HIGH for 50 us when the stage moves 0.5 um
 	const int DO1 = 1;
 	const double triggerStep_mm = 0.0002;
@@ -841,7 +841,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	//Set the stage velocities
 	const double stageVelZ_mmps = 1000 * stepSizeZ_um / (halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix);
 	stage.setAllVelocities({ 5, 5, stageVelZ_mmps });
-
+	//***********************************************************
 
 
 	//EXECUTE THE RT SEQUENCE
@@ -854,7 +854,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	
 
 	image.download();
-	image.mirrorOddFrames();
+	image.mirrorOddFrames(); //For max optimization, do this when saving the data to Tiff
 	image.saveTiffMultiPage("Untitled", NOOVERRIDE, BACKWARD);
 
 	stage.waitForMotionToStopAllStages();
@@ -867,7 +867,7 @@ void seq_testStageTrigAcq(const FPGAns::FPGA &fpga)
 	getchar();
 }
 
-void seq_testSequencer()
+void testSequencer()
 {
 	//Generate the command list and keep it in memory.
 	//I prefer generating such list before execution because then I can inspect all the parameters offline

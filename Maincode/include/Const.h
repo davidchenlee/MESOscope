@@ -34,7 +34,7 @@ namespace Constants
 	enum FilterwheelID { FWDET = 1, FWEXC = 2 };
 	enum Filtercolor { BLUE = 1, GREEN = 2, RED = 3 };
 	enum Axis { XX, YY, ZZ };
-	enum RunMode { SINGLEMODE, CONTMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
+	enum RunMode { SINGLEMODE, LIVEMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
 	enum InitialStageCorner { BOTTOMLEFT, TOPLEFT, BOTTOMRIGHT, TOPRIGHT };			//Bottom-left, top-left, bottom-right, top-right
 	enum Action { CUT, ACQ, SAV, MOV };
 	enum StackScanDirection { BOTTOMUP = -1, TOPDOWN = 1 };

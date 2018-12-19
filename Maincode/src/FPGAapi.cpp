@@ -196,7 +196,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, FIFOOUTfpga));												//Enable pushing data to FIFOOUTfpga. For debugging purposes
 
 		//TRIGGERS AND DELAYS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));															//Pc as trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));															//Pc trigger signal
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));												//Z-stage as tigger
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));														//Memory-flush trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncDOtoAO_tick, static_cast<U16>(syncDOtoAO_tick)));							//DO and AO relative sync
@@ -339,7 +339,8 @@ namespace FPGAns
 			//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
 			checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, timeout_ms, &r));
 
-			//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers
+			//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
+			//This boolean serves as the master trigger of the entire sequence
 			checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
 			checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
 		}
@@ -445,6 +446,12 @@ namespace FPGAns
 	{
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, true));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));
+	}
+
+	//Disable ZstageAsTrigger to be able to move the stage without triggering the acquisition sequence
+	void RTsequence::setZstageTriggerEnabled(const bool state)
+	{
+		NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, state);
 	}
 
 #pragma endregion "RTsequence"

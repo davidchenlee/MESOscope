@@ -270,7 +270,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 		std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
 	}
 
-	while (true)
+	do
 	{
 		//TAGS
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, width);											//Set the width of the image
@@ -297,11 +297,14 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 		}
 		TIFFWriteDirectory(tiffHandle); //Create a page structure. This gives a large overhead
 
-		iterFrame += scanDirection;
-
 		if (iterFrame == lastFrame)
 			break;
+
+		iterFrame += scanDirection;
 	}
+	while (true);
+
+
 
 	_TIFFfree(buffer);		//Destroy the buffer
 	TIFFClose(tiffHandle);	//Close the output tiff file

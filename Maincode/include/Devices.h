@@ -39,7 +39,6 @@ public:
 	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDirection stackScanDir = TOPDOWN) const;
 	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const StackScanDirection stackScanDir = TOPDOWN) const;
 	unsigned char* const pointerToTiff() const;
-	void setZstageTriggerEnabled(const bool state);
 };
 
 class ImageException : public std::runtime_error
@@ -289,7 +288,7 @@ class Stack
 {
 	TiffU8 mDiffZ;		//For imaging a stack of different z planes
 	TiffU8 mSameZ;		//For imaging the same z plane many times and compute the average image
-
+public:
 	Stack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
 	void pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff);
 	void pushDiffZ(const int indexDiffZ);

@@ -2,9 +2,11 @@
 
 void mainVision(const FPGAns::FPGA &fpga)
 {
+	//Each of the following modes can be used in 'continuous acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and forth 'nFramesCont' times
+	//without stopping on the same z plane  and the images are averaged
 	//const RunMode acqMode = SINGLEMODE;			//Single shot
-	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
-	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times for averaging
+	//const RunMode acqMode = LIVEMODE;				//Image the same z plane many times and override the saved image. Used for live adjustment
+	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times and average the images
 	//const RunMode acqMode = STACKMODE;			//Stack volume from the initial z position
 	const RunMode acqMode = STACKCENTEREDMODE;		//Stack volume centered at the initial z position
 
@@ -12,7 +14,7 @@ void mainVision(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);									//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm{ 36.050, 14.150, 18.697 };	//Stage initial position. For 5% overlap: x=+-0.190, y=+-0.142
+	const double3 stagePosition0_mm{ 36.050, 14.150, 18.697 };	//Stage initial position
 
 	//RS
 	const double FFOVrs_um(150 * um);
@@ -57,7 +59,7 @@ void mainVision(const FPGAns::FPGA &fpga)
 		overrideFlag = NOOVERRIDE;
 		stagePosition_mm.push_back(stagePosition0_mm);
 		break;
-	case CONTMODE:
+	case LIVEMODE:
 		nSameZ = 500;
 		nDiffZ = 1; //Do not change this
 		overrideFlag = OVERRIDE;
@@ -136,9 +138,8 @@ void mainVision(const FPGAns::FPGA &fpga)
 		datalog.record("STAGE--------------------------------------------------------");
 	}
 
-	//CREATE CONTAINERS FOR STORING THE STACK OF TIFFs
-	TiffU8 stackDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ);
-	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
+	//CREATE A STACK FOR STORING THE TIFFs
+	Stack stack(widthPerFrame_pix, heightPerFrame_pix, nDiffZ, nSameZ);
 
 	//OPEN THE UNIBLITZ SHUTTERS
 	pockels.setShutter(true);
@@ -165,19 +166,18 @@ void mainVision(const FPGAns::FPGA &fpga)
 			image.acquire();			//Execute the RT sequence and acquire the image
 			image.mirrorOddFrames();
 			image.average();			//Average the frames acquired via continuous acquisition
-			stackSameZ.pushImage(iterSameZ, image.pointerToTiff());
+			stack.pushSameZ(iterSameZ, image.pointerToTiff());
 
-			if (acqMode == SINGLEMODE || acqMode == CONTMODE)
+			if (acqMode == SINGLEMODE || acqMode == LIVEMODE)
 			{
 				//Save individual files
 				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P_mW, 1) + "mW" +
 					"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(XX), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(YY), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(ZZ), 4));
 				image.saveTiffSinglePage(singleFilename, overrideFlag);
-				Sleep(500);
+				Sleep(500);	//This sets the "refresh rate" for LIVEMODE
 			}
 		}
-		stackSameZ.average();	//Average the frames acquired via discontinuous acquisition
-		stackDiffZ.pushImage(iterDiffZ, stackSameZ.pointerToTiff());
+		stack.pushDiffZ(iterDiffZ);
 
 		std::cout << "\n";
 		P_mW += (Pif_mW.back() - Pif_mW.front()) / nDiffZ;
@@ -191,16 +191,19 @@ void mainVision(const FPGAns::FPGA &fpga)
 			"_x=" + toString(stagePosition_mm.front().at(XX), 3) + "_y=" + toString(stagePosition_mm.front().at(YY), 3) +
 			"_zi=" + toString(stagePosition_mm.front().at(ZZ), 4) + "_zf=" + toString(stagePosition_mm.back().at(ZZ), 4) + "_Step=" + toString(stepSizeZ_um / 1000, 4));
 
-		stackDiffZ.saveToFile(stackFilename, MULTIPAGE, overrideFlag);
+		//stackDiffZ.saveToFile(stackFilename, MULTIPAGE, overrideFlag);
+		stack.saveToFile(stackFilename, overrideFlag);
 	}
 
 }
 
 void mainFidelity(const FPGAns::FPGA &fpga)
 {
+	//Each of the following modes can be used in 'continuous acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and forth 'nFramesCont' times
+	//without stopping on the same z plane  and the images are averaged
 	//const RunMode acqMode = SINGLEMODE;			//Single shot
-	//const RunMode acqMode = CONTMODE;				//Image the same z plane many times
-	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times for averaging
+	//const RunMode acqMode = LIVEMODE;				//Image the same z plane many times and override the saved file. Used for live adjustment
+	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times and average the images
 	//const RunMode acqMode = STACKMODE;			//Stack volume from the initial z position
 	const RunMode acqMode = STACKCENTEREDMODE;		//Stack volume centered at the initial z position
 
@@ -208,7 +211,7 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);										//Number of frames for continuous acquisition
-	const double3 stagePosition0_mm{ 36.050, 14.150, 18.681 };		//Stage initial position
+	const double3 stagePosition0_mm{ 36.050, 14.150, 18.682 };		//Stage initial position
 
 	//RS
 	const double FFOVrs_um(150 * um);
@@ -254,7 +257,7 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 		overrideFlag = NOOVERRIDE;
 		stagePosition_mm.push_back(stagePosition0_mm);
 		break;
-	case CONTMODE:
+	case LIVEMODE:
 		nSameZ = 500;
 		nDiffZ = 1; //Do not change this
 		overrideFlag = OVERRIDE;
@@ -333,7 +336,7 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 		datalog.record("\nSTAGE--------------------------------------------------------");
 	}
 
-	//CREATE STACKS FOR STORING THE IMAGES
+	//CREATE A STACK FOR STORING THE TIFFS
 	TiffU8 stackDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ);
 	TiffU8 stackSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ);
 
@@ -364,7 +367,7 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 			image.average();			//Average the frames acquired via continuous acquisition
 			stackSameZ.pushImage(iterSameZ, image.pointerToTiff());
 
-			if (acqMode == SINGLEMODE || acqMode == CONTMODE)
+			if (acqMode == SINGLEMODE || acqMode == LIVEMODE)
 			{
 				//Save individual files
 				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P_mW, 1) + "mW" +
@@ -769,7 +772,7 @@ void testStageTrigAcq(const FPGAns::FPGA &fpga)
 
 	//STAGES
 	const StackScanDirection stackScanDirZ = BOTTOMUP;				//Scan direction in z
-	const double3 stackCenterXYZ_mm{ 36.050, 14.150, 18.645 };		//Center of the stack in x, y, and z
+	const double3 stackCenterXYZ_mm{ 36.050, 14.150, 18.650 };		//Center of the stack in x, y, and z
 	const double stackDepth_mm( static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ_um / 1000);
 	const double3 stageXYZi_mm{ stackCenterXYZ_mm.at(XX), stackCenterXYZ_mm.at(YY), stackCenterXYZ_mm.at(ZZ) - stackDepth_mm /2};	//Stage initial position
 	const double stageVelXY_mmps(5);
@@ -828,8 +831,8 @@ void testStageTrigAcq(const FPGAns::FPGA &fpga)
 	stage.waitForMotionToStopAllStages();
 	pockelsVision.setShutter(false);
 
-	//Disable ZstageAsTrigger to be able to move the stage without triggering the acquisition sequence
-	image.setZstageTriggerEnabled(false);
+	//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence
+	//RTsequence.setZstageTriggerEnabled(false);
 
 	std::cout << "Press any key to continue...\n";
 	getchar();

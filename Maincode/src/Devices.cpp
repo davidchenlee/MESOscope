@@ -121,7 +121,7 @@ void Image::readFIFOOUTpc_()
 		if (nullReadCounterA > timeout_iter && nullReadCounterB > timeout_iter)
 			throw ImageException((std::string)__FUNCTION__ + ": FIFO null-reading timeout");
 
-		std::cout << "FIFO A: " << nElemTotalA << "\tFIFO B: " << nElemTotalB << "\n";	//For debugging
+		//std::cout << "FIFO A: " << nElemTotalA << "\tFIFO B: " << nElemTotalB << "\n";	//For debugging
 		//std::cout << "nullReadCounter A: " << nullReadCounterA << "\tnullReadCounter: " << nullReadCounterB << "\n";	//For debugging
 	}
 
@@ -278,12 +278,6 @@ void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector o
 unsigned char* const Image::pointerToTiff() const
 {
 	return mTiff.pointerToTiff();
-}
-
-//Disable ZstageAsTrigger to be able to move the stage without triggering the acquisition sequence
-void Image::setZstageTriggerEnabled(const bool state)
-{
-	NiFpga_WriteBool(mRTsequence.mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, state);
 }
 #pragma endregion "Image"
 
@@ -1243,22 +1237,21 @@ Stage::~Stage()
 	std::cout << "Connection to the stages successfully closed\n";
 }
 
+
+//DO1 and DO2 are used to trigger the stack acquisition. Currently DO2 is used as the only trigger. See the implementation on LV
 void Stage::configVelAndDOtriggers_(const double3 velXYZ_mmps) const
 {
-	//DO1 and DO2 are used to trigger the stack acquisition. See the LV implementation.
-	//Basically, DO1 is set up to output a pulse (width = 50 us) whenever the stage covers a certain distance.
-	//The first of such pulses is used to trigger the stack acquisition
-	//DO2 is used to gate DO1 and avoid false triggering
-
-	//DO1 TRIGGER: set DO1 to output a pulse when the stage moves a certain distance
+	//DO1 TRIGGER: DO1 is set to output a pulse (fixed width = 50 us) whenever the stage covers a certain distance (e.g. 0.3 um)
 	const int DO1 = 1;
-	const double triggerStep_mm = 0.0005;
+	setDOtriggerEnabled(ZZ, DO1, true);	//Enable DO1 trigger
+	const double triggerStep_mm = 0.0003;
 	const StageDOtriggerMode triggerMode = PositionDist;
 	const double startThreshold = 0, stopThreshold = 0;
 	setDOtriggerAllParams(ZZ, DO1, triggerStep_mm, triggerMode, startThreshold, stopThreshold);
 
-	//DO2 TRIGGER: set DO2 to output HIGH when the stage z is in motion
+	//DO2 TRIGGER: DO2 is set to output HIGH when the stage z is in motion
 	const int DO2 = 2;
+	setDOtriggerEnabled(ZZ, DO2, true);	//Enable DO2 trigger
 	setDOtriggerSingleParam(ZZ, DO2, TriggerMode, InMotion);
 
 	//Set the stage velocities

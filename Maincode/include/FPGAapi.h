@@ -88,6 +88,7 @@ namespace FPGAns
 		void presetFPGAoutput() const;
 		void uploadRT() const;
 		void triggerRT() const;
+		void setZstageTriggerEnabled(const bool state);
 	};
 
 	class FPGAexception : public std::runtime_error

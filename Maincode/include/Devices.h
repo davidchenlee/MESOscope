@@ -36,8 +36,8 @@ public:
 	void download();
 	void mirrorOddFrames();
 	void average();
-	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const Direction stackDir = FORWARD) const;
-	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const Direction stackDir = FORWARD) const;
+	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDirection stackScanDir = TOPDOWN) const;
+	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const StackScanDirection stackScanDir = TOPDOWN) const;
 	unsigned char* const accessTiff() const;
 	void setZstageTriggerEnabled(const bool state);
 };
@@ -50,6 +50,7 @@ public:
 
 class Vibratome
 {
+	enum MotionDir { BACKWARD = -1, FORWARD = 1 };
 	const FPGAns::FPGA &mFpga;
 	int mNslice;						//Slice number
 	double mSectionThickness;			//Thickness of the section
@@ -59,7 +60,7 @@ class Vibratome
 	double mHeight_mm = 0;				//vertical distance between the razor blade and the objective's focal plane
 	double mMovingSpeed_mmps = 2.495;	//in mm/s. Forward and backward moving speed of the head. 52.4 mm in 21 seconds = 2.495 mm/s
 
-	void moveHead_(const int duration_ms, const Direction motionDir) const;
+	void moveHead_(const int duration_ms, const MotionDir motionDir) const;
 	void startStop_() const;
 public:
 	Vibratome(const FPGAns::FPGA &fpga);
@@ -241,6 +242,9 @@ public:
 
 class Stage
 {
+	enum StageDOparam { TriggerStep = 1, AxisNumber = 2, TriggerMode = 3, Polarity = 7, StartThreshold = 8, StopThreshold = 9, TriggerPosition = 10 };
+	enum StageDOtriggerMode { PositionDist = 0, OnTarget = 2, InMotion = 6, PositionOffset = 7 };
+
 	const int mPort_z = 4;								//COM port
 	const int mBaud_z = 38400;
 	int3 mID;											//Controller IDs
@@ -251,8 +255,10 @@ class Stage
 	const std::vector<double2> mStagePosLimitXYZ_mm{ {-65,65},{-30,30},{0,26} };	//Position range of the stages
 	int3 mNtile;									//Tile number in x, y, z
 	int3 mNtileOverlap_pix;							//Tile overlap in x, y, z	
+
+	void configVelAndDOtriggers_(const double3 velXYZ_mmps) const;
 public:
-	Stage(const double3 vel_mmps = {5, 5, 0.02});
+	Stage(const double3 vel_mmps);
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor
 	Stage& operator=(const Stage&) = delete;	//Disable assignment-constructor

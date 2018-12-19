@@ -212,7 +212,7 @@ unsigned char* const TiffU8::accessTiff() const
 
 //Split mArray into sub-images (or "frames")
 //Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image which has to be resized into sub-images
-void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag, const Direction stackDir) const
+void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag, const StackScanDirection stackScanDir) const
 {
 	int width, height, nFrames;
 
@@ -254,15 +254,15 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	}
 
 	//Choose whether to save the first frame at the top or bottom of the stack
-	int scanDirection = static_cast<int>(stackDir);
+	int scanDirection = static_cast<int>(stackScanDir);
 	int iterFrame, lastFrame;
 	switch (scanDirection)
 	{
-	case 1:		//Forward order: first frame at the top of the stack
+	case 1:		//Forward saving: first frame at the top of the stack
 		iterFrame = 0;
 		lastFrame = nFrames - 1;
 		break;
-	case -1:	//Reverse order: first frame at the bottom of the stack
+	case -1:	//Reverse saving: first frame at the bottom of the stack
 		iterFrame = nFrames - 1;
 		lastFrame = 0;
 		break;

@@ -263,15 +263,15 @@ void Image::average()
 }
 
 //Save each frame in mTiff in a single Tiff page
-void Image::saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const Direction stackDir) const
+void Image::saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDirection stackScanDir) const
 {
-	mTiff.saveToFile(filename, SINGLEPAGE, overrideFlag, stackDir);
+	mTiff.saveToFile(filename, SINGLEPAGE, overrideFlag, stackScanDir);
 }
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag, const Direction stackDir) const
+void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDirection stackScanDir) const
 {
-	mTiff.saveToFile(filename, MULTIPAGE, overrideFlag, stackDir);
+	mTiff.saveToFile(filename, MULTIPAGE, overrideFlag, stackScanDir);
 }
 
 //Access the Tiff data in the Image object
@@ -304,7 +304,7 @@ void Vibratome::startStop_() const
 }
 
 //Move the head of the vibratome forward or backward for the duration 'duration_ms'. The timing varies in approx 1 ms
-void Vibratome::moveHead_(const int duration_ms, const Direction motionDir) const
+void Vibratome::moveHead_(const int duration_ms, const MotionDir motionDir) const
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
 	const int minDuration_ms = 10;		//in ms
@@ -1201,7 +1201,7 @@ void VirtualLaser::setShutter(const bool state) const
 #pragma endregion "VirtualLaser"
 
 #pragma region "Stages"
-Stage::Stage(const double3 vel_mmps)
+Stage::Stage(const double3 velXYZ_mmps)
 {
 	const std::string stageIDx = "116049107";	//X-stage (V-551.4B)
 	const std::string stageIDy = "116049105";	//Y-stage (V-551.2B)
@@ -1230,8 +1230,8 @@ Stage::Stage(const double3 vel_mmps)
 	mPositionXYZ_mm[YY] = downloadPosition_mm(YY);
 	mPositionXYZ_mm[ZZ] = downloadPosition_mm(ZZ);
 
-	//Set the stage velocities
-	setAllVelocities(vel_mmps);
+	//Configure the stage velocities and DO triggers
+	configVelAndDOtriggers_(velXYZ_mmps);
 }
 
 Stage::~Stage()
@@ -1241,6 +1241,28 @@ Stage::~Stage()
 	PI_CloseConnection(mID[YY]);
 	PI_CloseConnection(mID[ZZ]);
 	std::cout << "Connection to the stages successfully closed\n";
+}
+
+void Stage::configVelAndDOtriggers_(const double3 velXYZ_mmps) const
+{
+	//DO1 and DO2 are used to trigger the stack acquisition. See the LV implementation.
+	//Basically, DO1 is set up to output a pulse (width = 50 us) whenever the stage covers a certain distance.
+	//The first of such pulses is used to trigger the stack acquisition
+	//DO2 is used to gate DO1 and avoid false triggering
+
+	//DO1 TRIGGER: set DO1 to output a pulse when the stage moves a certain distance
+	const int DO1 = 1;
+	const double triggerStep_mm = 0.0002;
+	const StageDOtriggerMode triggerMode = PositionDist;
+	const double startThreshold = 0, stopThreshold = 0;
+	setDOtriggerAllParams(ZZ, DO1, triggerStep_mm, triggerMode, startThreshold, stopThreshold);
+
+	//DO2 TRIGGER: set DO2 to output HIGH when the stage z is in motion
+	const int DO2 = 2;
+	setDOtriggerSingleParam(ZZ, DO2, TriggerMode, InMotion);
+
+	//Set the stage velocities
+	setAllVelocities({ velXYZ_mmps.at(XX), velXYZ_mmps.at(YY), velXYZ_mmps.at(ZZ) });
 }
 
 //Recall the current position for the 3 stages

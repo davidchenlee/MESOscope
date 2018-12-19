@@ -41,7 +41,9 @@ void mainVision(const FPGAns::FPGA &fpga)
 	FWdetection.setColor(wavelength_nm);
 
 	//STAGES
-	Stage stage;
+	const double stageVelXY_mmps = 5;
+	const double stageVelZ_mmps = 0.02;
+	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
 	std::vector<double3> stagePosition_mm;
 
 	int nDiffZ;				//Number of frames at different Z for discontinuous acquisition
@@ -236,7 +238,9 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 	FWdetection.setColor(wavelength_nm);
 
 	//STAGES
-	Stage stage;
+	const double stageVelXY_mmps = 5;
+	const double stageVelZ_mmps = 0.02;
+	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
 	std::vector<double3> stagePosition_mm;
 
 	int nDiffZ;				//Number of frames at different Z for discontinuous acquisition
@@ -550,7 +554,9 @@ void testStagePosition()
 {
 	double duration;
 	const double3 stagePosition0_mm = { 35.020, 19.808, 18.542 };	//Stage initial position
-	Stage stage;
+	const double stageVelXY_mmps = 5;
+	const double stageVelZ_mmps = 0.02;
+	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
 
 	std::cout << "Stages initial position:" << "\n";
 	stage.printPositionXYZ();
@@ -586,7 +592,9 @@ void testStagePosition()
 //Test configuring setDOtriggerEnabled and CTO for the stages
 void testStageConfig()
 {
-	Stage stage;
+	const double stageVelXY_mmps = 5;
+	const double stageVelZ_mmps = 0.02;
+	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
 	const int DOchan = 1;
 	//std::cout << "Stages initial position:" << "\n";
 	//stage.printPositionXYZ();
@@ -597,24 +605,6 @@ void testStageConfig()
 	//std::cout << "x stage vel: " << stage.downloadSingleVelocity(XX) << " mm/s" << "\n";
 	//std::cout << "y stage vel: " << stage.downloadSingleVelocity(YY) << " mm/s" << "\n";
 	//std::cout << "z stage vel: " << stage.downloadSingleVelocity(ZZ) << " mm/s" << "\n";
-
-	const double triggerStep_mm = 0.0005;
-	const StageDOtriggerMode triggerMode = PositionDist;
-	const double startThreshold = 0;
-	const double stopThreshold = 0;
-
-
-
-	//Declare and start a stopwatch
-	double duration;
-	auto t_start = std::chrono::high_resolution_clock::now();
-
-	stage.setDOtriggerAllParams(ZZ, DOchan, triggerStep_mm, triggerMode, startThreshold, stopThreshold);
-
-	//Stop the stopwatch
-	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "Elapsed time: " << duration << " ms" << "\n";
-
 	stage.printStageConfig(ZZ, DOchan);
 
 	std::cout << "Press any key to continue...\n";
@@ -777,18 +767,28 @@ void testStageTrigAcq(const FPGAns::FPGA &fpga)
 	const int nFramesCont = 160;		//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transmission will fail
 	const double stepSizeZ_um = 0.5 * um;
 
+	//CREATE THE REAL-TIME SEQUENCE
+	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
+
+	//GALVO FOR RT
+	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
+	const double galvoTimeStep = 8 * us;
+	const double posMax_um = FFOVgalvo_um / 2;
+	const double frameDuration_us = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
+	Galvo galvo(RTsequence, GALVO1);
+	galvo.positionLinearRamp(galvoTimeStep, frameDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//STAGES
+	const StackScanDirection stackScanDirZ = TOPDOWN;				//Scan direction in z
 	const double3 stackCenterXYZ_mm = { 36.050, 14.150, 18.645 };	//Center of the stack in x, y, and z
-	const double stackDepth_mm = - nFramesCont * stepSizeZ_um / 1000;
-	const double3 stageXiYiZi_mm = { stackCenterXYZ_mm.at(XX), stackCenterXYZ_mm.at(YY), stackCenterXYZ_mm.at(ZZ) - stackDepth_mm /2};	//Stage initial position
-
-	Stage stage;
-
-	stage.moveAllStages(stageXiYiZi_mm);
+	const double stackDepth_mm = static_cast<int>(stackScanDirZ) *  nFramesCont * stepSizeZ_um / 1000;
+	const double3 stageXYZi_mm = { stackCenterXYZ_mm.at(XX), stackCenterXYZ_mm.at(YY), stackCenterXYZ_mm.at(ZZ) - stackDepth_mm /2};	//Stage initial position
+	const double stageVelXY_mmps = 5;
+	const double stageVelZ_mmps = 1000 * stepSizeZ_um / (halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix);
+	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
+	stage.moveAllStages(stageXYZi_mm);
 	stage.waitForMotionToStopAllStages();
 	
-
 	//LASER
 	const int wavelength_nm = 1040;
 	double laserPower_mW = 20 * mW;
@@ -805,17 +805,6 @@ void testStageTrigAcq(const FPGAns::FPGA &fpga)
 	Filterwheel fw(FWDET);
 	fw.setColor(wavelength_nm);
 
-	//CREATE THE REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
-
-	//GALVO FOR RT
-	const double FFOVgalvo_um = 200 * um;	//Full FOV in the slow axis
-	const double galvoTimeStep = 8 * us;
-	const double posMax_um = FFOVgalvo_um / 2;
-	const double frameDuration_us = 62.5 * us * RTsequence.mHeightPerFrame_pix;				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
-	Galvo galvo(RTsequence, GALVO1);
-	galvo.positionLinearRamp(galvoTimeStep, frameDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
-
 	//POCKELS CELL FOR RT
 	PockelsCell pockelsVision(RTsequence, FIDELITY, 1040);
 	pockelsVision.pushPowerSinglet(8 * us, laserPower_mW);
@@ -825,37 +814,18 @@ void testStageTrigAcq(const FPGAns::FPGA &fpga)
 	Sleep(50);
 
 
-
-	//Config the stages***********************************************************
-	//DO1 pulse HIGH for 50 us when the stage moves 0.5 um
-	const int DO1 = 1;
-	const double triggerStep_mm = 0.0002;
-	const StageDOtriggerMode triggerMode = PositionDist;
-	const double startThreshold = 0, stopThreshold = 0;
-	stage.setDOtriggerAllParams(ZZ, DO1, triggerStep_mm, triggerMode, startThreshold, stopThreshold);
-
-	//DO2 is HIGH when the stage z is in motion
-	const int DO2 = 2;
-	stage.setDOtriggerSingleParam(ZZ, DO2, TriggerMode, InMotion);
-
-	//Set the stage velocities
-	const double stageVelZ_mmps = 1000 * stepSizeZ_um / (halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix);
-	stage.setAllVelocities({ 5, 5, stageVelZ_mmps });
-	//***********************************************************
-
-
 	//EXECUTE THE RT SEQUENCE
 	Image image(RTsequence);
 	image.initialize();
 
 	image.startFIFOOUTpc();
 	//Move the stage to trigger the control sequence and data acquisition
-	stage.moveSingleStage(ZZ, stageXiYiZi_mm.at(ZZ) + stackDepth_mm);
+	stage.moveSingleStage(ZZ, stageXYZi_mm.at(ZZ) + stackDepth_mm);
 	
 
 	image.download();
 	image.mirrorOddFrames(); //For max optimization, do this when saving the data to Tiff
-	image.saveTiffMultiPage("Untitled", NOOVERRIDE, BACKWARD);
+	image.saveTiffMultiPage("Untitled", NOOVERRIDE, stackScanDirZ);
 
 	stage.waitForMotionToStopAllStages();
 	pockelsVision.setShutter(false);

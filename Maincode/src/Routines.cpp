@@ -75,7 +75,7 @@ void mainVision(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = (int)(stackDepthZ_um / stepSizeZ_um);
 		overrideFlag = NOOVERRIDE;
-		//Generate the sequence for the stages
+		//Generate the control sequence for the stages
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) + iterDiffZ * stepSizeZ_um / 1000 });
 		break;
@@ -83,7 +83,7 @@ void mainVision(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = (int)(stackDepthZ_um / stepSizeZ_um);
 		overrideFlag = NOOVERRIDE;
-		//Generate the sequence for the stages
+		//Generate the control sequence for the stages
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) - 0.5 * stackDepthZ_um / 1000 + iterDiffZ * stepSizeZ_um / 1000 });
 		break;
@@ -91,18 +91,18 @@ void mainVision(const FPGAns::FPGA &fpga)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 	}
 
-	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
+	FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
 
 	//GALVO FOR RT
 	const double FFOVgalvo_um(200 * um);	//Full FOV in the slow axis
 	const double galvoTimeStep(8 * us);
 	const double posMax_um(FFOVgalvo_um / 2);
-	const double frameDuration_us(62.5 * us * RTsequence.mHeightPerFrame_pix);				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
-	Galvo galvo(RTsequence, GALVO1);
+	const double frameDuration_us(62.5 * us * RTcontrol.mHeightPerFrame_pix);				//= halfPeriodLineclock_us * RTcontrol.mHeightPerFrame_pix
+	Galvo galvo(RTcontrol, GALVO1);
 	galvo.positionLinearRamp(galvoTimeStep, frameDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
 	//POCKELS CELL FOR RT
-	PockelsCell pockels(RTsequence, VISION, wavelength_nm);
+	PockelsCell pockels(RTcontrol, VISION, wavelength_nm);
 	//pockelsVision.voltageLinearRamp(4*us, 40*us, 0, 1*V);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration_us, 0.5*V, 1*V);	//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);								//Linearly scale the laser intensity across all the frames
@@ -124,17 +124,17 @@ void mainVision(const FPGAns::FPGA &fpga)
 		datalog.record("SCAN---------------------------------------------------------");
 		datalog.record("RS FFOV (um) = ", RScanner.mFFOV_um);
 		datalog.record("RS period (us) = ", 2 * halfPeriodLineclock_us);
-		datalog.record("Pixel dwell time (us) = ", RTsequence.mDwell_us);
+		datalog.record("Pixel dwell time (us) = ", RTcontrol.mDwell_us);
 		datalog.record("RS fill factor = ", RScanner.mFillFactor);
 		datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
 		datalog.record("Galvo time step (us) = ", galvoTimeStep);
 		datalog.record("IMAGE--------------------------------------------------------");
-		datalog.record("Max count per pixel = ", RTsequence.mPulsesPerPixel);
-		datalog.record("8-bit upscaling factor = ", RTsequence.mUpscaleU8);
-		datalog.record("Width X (RS) (pix) = ", RTsequence.mWidthPerFrame_pix);
-		datalog.record("Height Y (galvo) (pix) = ", RTsequence.mHeightPerFrame_pix);
+		datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPixel);
+		datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleU8);
+		datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
+		datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
 		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes_umPerPix);
-		datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um / RTsequence.mHeightPerFrame_pix);
+		datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um / RTcontrol.mHeightPerFrame_pix);
 		datalog.record("STAGE--------------------------------------------------------");
 	}
 
@@ -161,9 +161,9 @@ void mainVision(const FPGAns::FPGA &fpga)
 
 			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Override the previous laser power
 
-			//EXECUTE THE RT SEQUENCE
-			Image image(RTsequence);
-			image.acquire();			//Execute the RT sequence and acquire the image
+			//EXECUTE THE RT CONTROL SEQUENCE
+			Image image(RTcontrol);
+			image.acquire();			//Execute the RT control sequence and acquire the image
 			image.mirrorOddFrames();
 			image.average();			//Average the frames acquired via continuous acquisition
 			stack.pushSameZ(iterSameZ, image.pointerToTiff());
@@ -273,7 +273,7 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = (int)(stackDepthZ_um / stepSizeZ_um);
 		overrideFlag = NOOVERRIDE;
-		//Generate the sequence for the stages
+		//Generate the control sequence for the stages
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) + iterDiffZ * stepSizeZ_um / 1000 });
 		break;
@@ -281,7 +281,7 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = (int)(stackDepthZ_um / stepSizeZ_um);
 		overrideFlag = NOOVERRIDE;
-		//Generate the sequence for the stages
+		//Generate the control sequence for the stages
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) - 0.5 * stackDepthZ_um / 1000 + iterDiffZ * stepSizeZ_um / 1000 });
 		break;
@@ -289,19 +289,19 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 	}
 
-	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
+	FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
 
-	//GALVO (RT sequence)
+	//GALVO (RT control sequence)
 	const double FFOVgalvo_um(200 * um);	//Full FOV in the slow axis
 	const double galvoTimeStep(8 * us);
 	const double posMax_um(FFOVgalvo_um / 2);
-	const double frameDuration_us(62.5 * us * RTsequence.mHeightPerFrame_pix);				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
-	Galvo galvo(RTsequence, GALVO1);
+	const double frameDuration_us(62.5 * us * RTcontrol.mHeightPerFrame_pix);				//= halfPeriodLineclock_us * RTcontrol.mHeightPerFrame_pix
+	Galvo galvo(RTcontrol, GALVO1);
 	galvo.positionLinearRamp(galvoTimeStep, frameDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
 
-	//POCKELS CELLS (RT sequence)
-	PockelsCell pockelsVision(RTsequence, VISION, wavelength_nm);
-	PockelsCell pockelsFidelity(RTsequence, FIDELITY, 1040);
+	//POCKELS CELLS (RT control sequence)
+	PockelsCell pockelsVision(RTcontrol, VISION, wavelength_nm);
+	PockelsCell pockelsFidelity(RTcontrol, FIDELITY, 1040);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration_us, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);											//Linearly scale the laser intensity across all the frames
 
@@ -322,17 +322,17 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 		datalog.record("\nSCAN---------------------------------------------------------");
 		datalog.record("RS FFOV (um) = ", RScanner.mFFOV_um);
 		datalog.record("RS period (us) = ", 2 * halfPeriodLineclock_us);
-		datalog.record("Pixel dwell time (us) = ", RTsequence.mDwell_us);
+		datalog.record("Pixel dwell time (us) = ", RTcontrol.mDwell_us);
 		datalog.record("RS fill factor = ", RScanner.mFillFactor);
 		datalog.record("Galvo FFOV (um) = ", FFOVgalvo_um);
 		datalog.record("Galvo time step (us) = ", galvoTimeStep);
 		datalog.record("\nIMAGE--------------------------------------------------------");
-		datalog.record("Max count per pixel = ", RTsequence.mPulsesPerPixel);
-		datalog.record("8-bit upscaling factor = ", RTsequence.mUpscaleU8);
-		datalog.record("Width X (RS) (pix) = ", RTsequence.mWidthPerFrame_pix);
-		datalog.record("Height Y (galvo) (pix) = ", RTsequence.mHeightPerFrame_pix);
+		datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPixel);
+		datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleU8);
+		datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
+		datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
 		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes_umPerPix);
-		datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um / RTsequence.mHeightPerFrame_pix);
+		datalog.record("Resolution Y (galvo) (um/pix) = ", FFOVgalvo_um / RTcontrol.mHeightPerFrame_pix);
 		datalog.record("\nSTAGE--------------------------------------------------------");
 	}
 
@@ -360,9 +360,9 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 
 			pockels.pushPowerSinglet(8 * us, P_mW, OVERRIDE);	//Override the previous laser power
 
-			//EXECUTE THE RT SEQUENCE
-			Image image(RTsequence);
-			image.acquire();			//Execute the RT sequence and acquire the image
+			//EXECUTE THE RT CONTROL SEQUENCE
+			Image image(RTcontrol);
+			image.acquire();			//Execute the RT control sequence and acquire the image
 			image.mirrorOddFrames();
 			image.average();			//Average the frames acquired via continuous acquisition
 			stackSameZ.pushImage(iterSameZ, image.pointerToTiff());
@@ -396,6 +396,86 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 
 }
 
+//The pc triggers the z-stage motion, then the position of the stage triggers both the scanning routine and the data acquisition
+//Remember that I am not using MACROS on the stages anymore
+//With the PI monitor for the step reponse I see that the motion start and end of the stage is somewhat nonlinear (+/- 1 um off target).
+//1. My current sol is to first trigger the stage motion, then after a certain fixed distance use the stage DO to trigger the data acquisition. The problem right now is that I can not find a way to reset the stage DO
+void testStageTrigAcq(const FPGAns::FPGA &fpga)
+{
+	//ACQUISITION SETTINGS
+	const int widthPerFrame_pix(300);
+	const int heightPerFrame_pix(400);
+	const int nFramesCont(160);				//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transmission will fail
+	const double stepSizeZ_um(0.5 * um);
+
+	//STAGES
+	const StackScanDir stackScanDirZ = BOTTOMUP;					//Scan direction in z
+	const double3 stackCenterXYZ_mm{ 36.050, 14.150, 18.650 };		//Center of the stack in x, y, and z
+	const double stackDepth_mm(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ_um / 1000);
+	const double3 stageXYZi_mm{ stackCenterXYZ_mm.at(XX), stackCenterXYZ_mm.at(YY), stackCenterXYZ_mm.at(ZZ) - stackDepth_mm / 2 };	//Stage initial position
+	const double stageVelXY_mmps(5);
+	const double stageVelZ_mmps(1000 * stepSizeZ_um / (halfPeriodLineclock_us * heightPerFrame_pix));
+	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
+	stage.moveAllStages(stageXYZi_mm);
+	stage.waitForMotionToStopAllStages();
+
+	//LASER
+	const int wavelength_nm(1040);
+	double laserPower_mW(20 * mW);
+	//Laser vision(VISION);
+	//vision.setWavelength(wavelength_nm);
+
+	//RS
+	const double FFOVrs_um(100 * um);
+	ResonantScanner RScanner(fpga);
+	RScanner.setFFOV(FFOVrs_um);
+	RScanner.isRunning();		//To make sure that the RS is running
+
+	//FILTERWHEEL
+	Filterwheel fw(FWDET);
+	fw.setColor(wavelength_nm);
+
+	//CREATE THE REALTIME CONTROL SEQUENCE
+	FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
+
+	//GALVO FOR RT
+	const double FFOVgalvo_um(200 * um);	//Full FOV in the slow axis
+	const double galvoTimeStep(8 * us);
+	const double posMax_um(FFOVgalvo_um / 2);
+	const double frameDuration_us(62.5 * us * RTcontrol.mHeightPerFrame_pix);				//= halfPeriodLineclock_us * RTcontrol.mHeightPerFrame_pix
+	Galvo galvo(RTcontrol, GALVO1);
+	galvo.positionLinearRamp(galvoTimeStep, frameDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
+
+	//POCKELS CELL FOR RT
+	PockelsCell pockelsVision(RTcontrol, FIDELITY, 1040);
+	pockelsVision.pushPowerSinglet(8 * us, laserPower_mW);
+
+	//OPEN THE SHUTTER
+	pockelsVision.setShutter(true);
+	Sleep(50);
+
+
+	//EXECUTE THE RT CONTROL SEQUENCE
+	Image image(RTcontrol);
+	image.initialize();
+
+	image.startFIFOOUTpc();
+	//Move the stage to trigger the control sequence and data acquisition
+	stage.moveSingleStage(ZZ, stageXYZi_mm.at(ZZ) + stackDepth_mm);
+	image.download();
+	image.mirrorOddFrames();	//For max optimization, do this when saving the data to Tiff
+	image.saveTiffMultiPage("Untitled", NOOVERRIDE, stackScanDirZ);
+
+	stage.waitForMotionToStopAllStages();
+	pockelsVision.setShutter(false);
+
+	//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence
+	//RTcontrol.setZstageTriggerEnabled(false);
+
+	std::cout << "Press any key to continue...\n";
+	getchar();
+}
+
 void testGalvo(const FPGAns::FPGA &fpga)
 {
 	const int width_pix(300);
@@ -408,21 +488,21 @@ void testGalvo(const FPGAns::FPGA &fpga)
 	const double galvoTimeStep(8 * us);
 	const double posMax_um(FFOVgalvo_um / 2);
 
-	//CREATE A REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, FG, nFramesCont, width_pix, height_pix);
+	//CREATE A REALTIME CONTROL SEQUENCE
+	FPGAns::RTcontrol RTcontrol(fpga, FG, nFramesCont, width_pix, height_pix);
 
 	//GALVO FOR RT
-	Galvo galvo(RTsequence, GALVO1);
-	const double frameDuration_us = halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix;	//= 62.5us * 400 pixels = 25 ms
+	Galvo galvo(RTcontrol, GALVO1);
+	const double frameDuration_us = halfPeriodLineclock_us * RTcontrol.mHeightPerFrame_pix;		//= 62.5us * 400 pixels = 25 ms
 	galvo.positionLinearRamp(galvoTimeStep, frameDuration_us, posMax_um, -posMax_um);			//Linear ramp for the galvo
 
 	for (int iter = 0; iter < nFramesDiscont; iter++)
 	{
 		std::cout << "Iteration: " << iter + 1 << "\n";
 
-		//Execute the realtime sequence and acquire the image
-		Image image(RTsequence);
-		image.acquire(); //Execute the RT sequence and acquire the image
+		//Execute the realtime control sequence and acquire the image
+		Image image(RTcontrol);
+		image.acquire(); //Execute the RT control sequence and acquire the image
 		image.saveTiffSinglePage("Untitled", OVERRIDE);
 	}
 }
@@ -431,9 +511,9 @@ void testPixelclock(const FPGAns::FPGA &fpga)
 {
 	std::vector<unsigned char> stackOfAverages;
 
-	FPGAns::RTsequence RTsequence(fpga); 		//Create a realtime sequence
-	Image image(RTsequence);
-	image.acquire();							//Execute the realtime sequence and acquire the image
+	FPGAns::RTcontrol RTcontrol(fpga); 			//Create a realtime control sequence
+	Image image(RTcontrol);
+	image.acquire();							//Execute the realtime control sequence and acquire the image
 	//image.pushToVector(stackOfAverages);
 	//std::cout << "size: " << stackOfAverages.size() << "\n";
 	//TiffU8 acqParam(stackOfAverages, 300, 400);
@@ -443,18 +523,18 @@ void testPixelclock(const FPGAns::FPGA &fpga)
 //Test the analog and digital output and the relative timing wrt the pixel clock
 void testAODO(const FPGAns::FPGA &fpga)
 {
-	FPGAns::RTsequence RTsequence(fpga);
+	FPGAns::RTcontrol RTcontrol(fpga);
 
 	//DO
-	RTsequence.pushDigitalSinglet(DODEBUG, 4 * us, 1);
-	RTsequence.pushDigitalSinglet(DODEBUG, 4 * us, 0);
+	RTcontrol.pushDigitalSinglet(DODEBUG, 4 * us, 1);
+	RTcontrol.pushDigitalSinglet(DODEBUG, 4 * us, 0);
 
 	//AO
-	RTsequence.pushAnalogSinglet(GALVO1, 8 * us, 4 * V);
-	RTsequence.pushAnalogSinglet(GALVO1, 4 * us, 2 * V);
-	RTsequence.pushAnalogSinglet(GALVO1, 4 * us, 1 * V);
+	RTcontrol.pushAnalogSinglet(GALVO1, 8 * us, 4 * V);
+	RTcontrol.pushAnalogSinglet(GALVO1, 4 * us, 2 * V);
+	RTcontrol.pushAnalogSinglet(GALVO1, 4 * us, 1 * V);
 
-	RTsequence.triggerRT();	//Execute the realtime sequence
+	RTcontrol.triggerRT();	//Execute the realtime control sequence
 }
 
 void testAOramp(const FPGAns::FPGA &fpga)
@@ -462,14 +542,14 @@ void testAOramp(const FPGAns::FPGA &fpga)
 	const double Vmax(5 * V);
 	const double step(4 * us);
 
-	FPGAns::RTsequence RTsequence(fpga);
-	RTsequence.pushLinearRamp(GALVO1, step, 2 * ms, 0, -Vmax);
-	RTsequence.pushLinearRamp(GALVO1, step, 20 * ms, -Vmax, Vmax);
-	RTsequence.pushLinearRamp(GALVO1, step, 2 * ms, Vmax, 0);
+	FPGAns::RTcontrol RTcontrol(fpga);
+	RTcontrol.pushLinearRamp(GALVO1, step, 2 * ms, 0, -Vmax);
+	RTcontrol.pushLinearRamp(GALVO1, step, 20 * ms, -Vmax, Vmax);
+	RTcontrol.pushLinearRamp(GALVO1, step, 2 * ms, Vmax, 0);
 
 	const double pulsewidth(300 * us);
-	RTsequence.pushDigitalSinglet(DODEBUG, pulsewidth, 1);
-	RTsequence.pushDigitalSinglet(DODEBUG, 4 * us, 0);
+	RTcontrol.pushDigitalSinglet(DODEBUG, pulsewidth, 1);
+	RTcontrol.pushDigitalSinglet(DODEBUG, 4 * us, 0);
 }
 
 //Generate a long digital pulse and check the frameDuration_us with the oscilloscope
@@ -477,9 +557,9 @@ void checkDigitalTiming(const FPGAns::FPGA &fpga)
 {
 	const double step(400 * us);
 
-	FPGAns::RTsequence RTsequence(fpga);
-	RTsequence.pushDigitalSinglet(DODEBUG, step, 1);
-	RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
+	FPGAns::RTcontrol RTcontrol(fpga);
+	RTcontrol.pushDigitalSinglet(DODEBUG, step, 1);
+	RTcontrol.pushDigitalSinglet(DODEBUG, step, 0);
 }
 
 //Generate many short digital pulses and check the overall frameDuration_us with the oscilloscope
@@ -487,16 +567,16 @@ void calibDigitalLatency(const FPGAns::FPGA &fpga)
 {
 	const double step(4 * us);
 
-	FPGAns::RTsequence RTsequence(fpga);
+	FPGAns::RTcontrol RTcontrol(fpga);
 
-	RTsequence.pushDigitalSinglet(DODEBUG, step, 1);
+	RTcontrol.pushDigitalSinglet(DODEBUG, step, 1);
 
 	//Many short digital pulses to accumulate the error
 	for (U32 ii = 0; ii < 99; ii++)
-		RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
+		RTcontrol.pushDigitalSinglet(DODEBUG, step, 0);
 
-	RTsequence.pushDigitalSinglet(DODEBUG, step, 1);
-	RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
+	RTcontrol.pushDigitalSinglet(DODEBUG, step, 1);
+	RTcontrol.pushDigitalSinglet(DODEBUG, step, 0);
 }
 
 //First calibrate the digital channels, then use it as a time reference
@@ -505,19 +585,19 @@ void calibAnalogLatency(const FPGAns::FPGA &fpga)
 	const double delay(400 * us);
 	const double step(4 * us);
 
-	FPGAns::RTsequence RTsequence(fpga);
-	RTsequence.pushAnalogSinglet(GALVO1, step, 10 * V);					//Initial pulse
-	RTsequence.pushAnalogSinglet(GALVO1, step, 0);
-	RTsequence.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5 * V);			//Linear ramp to accumulate the error
-	RTsequence.pushAnalogSinglet(GALVO1, step, 10 * V);					//Initial pulse
-	RTsequence.pushAnalogSinglet(GALVO1, step, 0);						//Final pulse
+	FPGAns::RTcontrol RTcontrol(fpga);
+	RTcontrol.pushAnalogSinglet(GALVO1, step, 10 * V);					//Initial pulse
+	RTcontrol.pushAnalogSinglet(GALVO1, step, 0);
+	RTcontrol.pushLinearRamp(GALVO1, 4 * us, delay, 0, 5 * V);			//Linear ramp to accumulate the error
+	RTcontrol.pushAnalogSinglet(GALVO1, step, 10 * V);					//Initial pulse
+	RTcontrol.pushAnalogSinglet(GALVO1, step, 0);						//Final pulse
 
 	//DO0
-	RTsequence.pushDigitalSinglet(DODEBUG, step, 1);
-	RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
-	RTsequence.pushDigitalSinglet(DODEBUG, delay, 0);
-	RTsequence.pushDigitalSinglet(DODEBUG, step, 1);
-	RTsequence.pushDigitalSinglet(DODEBUG, step, 0);
+	RTcontrol.pushDigitalSinglet(DODEBUG, step, 1);
+	RTcontrol.pushDigitalSinglet(DODEBUG, step, 0);
+	RTcontrol.pushDigitalSinglet(DODEBUG, delay, 0);
+	RTcontrol.pushDigitalSinglet(DODEBUG, step, 1);
+	RTcontrol.pushDigitalSinglet(DODEBUG, step, 0);
 }
 
 void testFilterwheel()
@@ -539,10 +619,10 @@ void testFilterwheel()
 
 void testShutter(const FPGAns::FPGA &fpga)
 {
-	//CREATE A REALTIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga);
+	//CREATE A REALTIME CONTROL SEQUENCE
+	FPGAns::RTcontrol RTcontrol(fpga);
 
-	PockelsCell fidelity(RTsequence, FIDELITY, 1040);
+	PockelsCell fidelity(RTcontrol, FIDELITY, 1040);
 	fidelity.setShutter(true);
 	Sleep(5000);
 	fidelity.setShutter(false);
@@ -641,10 +721,10 @@ void testLaser(const FPGAns::FPGA &fpga)
 
 void testVirtualLaser(const FPGAns::FPGA &fpga)
 {
-	//CREATE A REALTIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga);
+	//CREATE A REALTIME CONTROL SEQUENCE
+	FPGAns::RTcontrol RTcontrol(fpga);
 
-	VirtualLaser laser(RTsequence, 1030, 10 * mW);
+	VirtualLaser laser(RTcontrol, 1030, 10 * mW);
 	laser.setShutter(true);
 	Sleep(3000);
 	laser.setShutter(false);
@@ -660,12 +740,12 @@ void testVirtualLaser(const FPGAns::FPGA &fpga)
 //3. Tune Vision's wavelength manually
 void testPockels(const FPGAns::FPGA &fpga)
 {
-	//CREATE A REALTIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga);
+	//CREATE A REALTIME CONTROL SEQUENCE
+	FPGAns::RTcontrol RTcontrol(fpga);
 
 	//DEFINE THE POCKELS CELLS
-	PockelsCell pockelsVision(RTsequence, VISION, 1040);			//Vision
-	PockelsCell pockelsFidelity(RTsequence, FIDELITY, 1040);		//Fidelity
+	PockelsCell pockelsVision(RTcontrol, VISION, 1040);			//Vision
+	PockelsCell pockelsFidelity(RTcontrol, FIDELITY, 1040);		//Fidelity
 
 	//DEFINE A POCKELS CELL DYNAMICALLY THROUGH THE COPY CONTRUCTOR
 	//PockelsCell pockels(pockelsVision);
@@ -674,9 +754,9 @@ void testPockels(const FPGAns::FPGA &fpga)
 	pockels.pushPowerSinglet(8 * us, 0 * mW);
 	//pockels.pushVoltageSinglet(8 * us, 0.0 * V);
 
-	//LOAD AND EXECUTE THE SEQUENCE ON THE FPGA
+	//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 	pockels.setShutter(true);
-	Image image(RTsequence);
+	Image image(RTcontrol);
 	image.acquire();
 	pockels.setShutter(false);
 
@@ -753,86 +833,6 @@ void testVibratome(const FPGAns::FPGA &fpga)
 	Vibratome vibratome(fpga);
 	//vibratome.reset(20);
 	vibratome.cutAndRetract(20);
-
-	std::cout << "Press any key to continue...\n";
-	getchar();
-}
-
-//The pc triggers the z-stage motion, then the position of the stage triggers both the scanning routine and the data acquisition
-//Remember that I am not using MACROS on the stages anymore
-//With the PI monitor for the step reponse I see that the motion start and end of the stage is somewhat nonlinear (+/- 1 um off target).
-//1. My current sol is to first trigger the stage motion, then after a certain fixed distance use the stage DO to trigger the data acquisition. The problem right now is that I can not find a way to reset the stage DO
-void testStageTrigAcq(const FPGAns::FPGA &fpga)
-{
-	//ACQUISITION SETTINGS
-	const int widthPerFrame_pix(300);
-	const int heightPerFrame_pix(400);
-	const int nFramesCont(160);				//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transmission will fail
-	const double stepSizeZ_um(0.5 * um);
-
-	//STAGES
-	const StackScanDir stackScanDirZ = BOTTOMUP;					//Scan direction in z
-	const double3 stackCenterXYZ_mm{ 36.050, 14.150, 18.650 };		//Center of the stack in x, y, and z
-	const double stackDepth_mm( static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ_um / 1000);
-	const double3 stageXYZi_mm{ stackCenterXYZ_mm.at(XX), stackCenterXYZ_mm.at(YY), stackCenterXYZ_mm.at(ZZ) - stackDepth_mm /2};	//Stage initial position
-	const double stageVelXY_mmps(5);
-	const double stageVelZ_mmps(1000 * stepSizeZ_um / (halfPeriodLineclock_us * heightPerFrame_pix));
-	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
-	stage.moveAllStages(stageXYZi_mm);
-	stage.waitForMotionToStopAllStages();
-	
-	//LASER
-	const int wavelength_nm(1040);
-	double laserPower_mW(20 * mW);
-	//Laser vision(VISION);
-	//vision.setWavelength(wavelength_nm);
-
-	//RS
-	const double FFOVrs_um(100 * um);
-	ResonantScanner RScanner(fpga);
-	RScanner.setFFOV(FFOVrs_um);
-	RScanner.isRunning();		//To make sure that the RS is running
-
-	//FILTERWHEEL
-	Filterwheel fw(FWDET);
-	fw.setColor(wavelength_nm);
-
-	//CREATE THE REAL-TIME SEQUENCE
-	FPGAns::RTsequence RTsequence(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
-
-	//GALVO FOR RT
-	const double FFOVgalvo_um(200 * um);	//Full FOV in the slow axis
-	const double galvoTimeStep(8 * us);
-	const double posMax_um(FFOVgalvo_um / 2);
-	const double frameDuration_us(62.5 * us * RTsequence.mHeightPerFrame_pix);				//= halfPeriodLineclock_us * RTsequence.mHeightPerFrame_pix
-	Galvo galvo(RTsequence, GALVO1);
-	galvo.positionLinearRamp(galvoTimeStep, frameDuration_us, posMax_um, -posMax_um);		//Linear ramp for the galvo
-
-	//POCKELS CELL FOR RT
-	PockelsCell pockelsVision(RTsequence, FIDELITY, 1040);
-	pockelsVision.pushPowerSinglet(8 * us, laserPower_mW);
-
-	//OPEN THE SHUTTER
-	pockelsVision.setShutter(true);
-	Sleep(50);
-
-
-	//EXECUTE THE RT SEQUENCE
-	Image image(RTsequence);
-	image.initialize();
-
-	image.startFIFOOUTpc();
-	//Move the stage to trigger the scanning sequence and data acquisition
-	stage.moveSingleStage(ZZ, stageXYZi_mm.at(ZZ) + stackDepth_mm);
-	image.download();
-	image.mirrorOddFrames();	//For max optimization, do this when saving the data to Tiff
-	image.saveTiffMultiPage("Untitled", NOOVERRIDE, stackScanDirZ);
-
-	stage.waitForMotionToStopAllStages();
-	pockelsVision.setShutter(false);
-
-	//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence
-	//RTsequence.setZstageTriggerEnabled(false);
 
 	std::cout << "Press any key to continue...\n";
 	getchar();

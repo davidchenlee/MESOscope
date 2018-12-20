@@ -8,7 +8,7 @@
 
 class Image
 {
-	FPGAns::RTsequence &mRTsequence;		//Const because the variables referenced by mRTsequence are not changed by the methods in this class
+	FPGAns::RTcontrol &mRTcontrol;			//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
 	U32* mBufArrayA;						//Vector to read FIFOOUTpc A
 	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
 	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB after demultiplexing
@@ -22,14 +22,14 @@ class Image
 	void demultiplex_();
 	void FIFOOUTpcGarbageCollector_() const;
 public:
-	Image(FPGAns::RTsequence &RTsequence);
+	Image(FPGAns::RTcontrol &RTcontrol);
 	~Image();
 	Image(const Image&) = delete;				//Disable copy-constructor
 	Image& operator=(const Image&) = delete;	//Disable assignment-constructor
 	Image(Image&&) = delete;					//Disable move constructor
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
-	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
+	//const methods do not change the class members. The variables referenced by mRTcontrol can be modifiede, but not mRTcontrol itself
 	void acquire();
 	void initialize();
 	void startFIFOOUTpc();
@@ -69,7 +69,7 @@ public:
 
 class ResonantScanner
 {
-	const FPGAns::RTsequence &mRTsequence;				//Needed to retrieve 'mRTsequence.mWidthPerFrame_pix' to calculate the fill factor
+	const FPGAns::RTcontrol &mRTcontrol;				//Needed to retrieve 'mRTcontrol.mWidthPerFrame_pix' to calculate the fill factor
 	const double mVMAX_V = 5 * V;						//Max control voltage allowed
 	const int mDelay_ms = 10;
 	double mVoltPerUm = 0.00595;						//Calibration factor. Last calibrated 
@@ -78,7 +78,7 @@ class ResonantScanner
 
 	void setVoltage_(const double Vcontrol_V);
 public:
-	ResonantScanner(const FPGAns::RTsequence &RTsequence);
+	ResonantScanner(const FPGAns::RTcontrol &RTcontrol);
 	double mFillFactor;									//Fill factor: how much of an RS swing is covered by the pixels
 	double mFFOV_um;									//Current FFOV
 	double mSampRes_umPerPix;							//Spatial sampling resolution (um per pixel)
@@ -94,12 +94,12 @@ public:
 
 class Galvo
 {
-	FPGAns::RTsequence &mRTsequence;					//Non-const because some of methods in this class change the variables referenced by mRTsequence	
+	FPGAns::RTcontrol &mRTcontrol;						//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
 	const double voltPerUm = 0.02417210 * V / um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 public:
-	Galvo(FPGAns::RTsequence &RTsequence, const RTchannel galvoChannel);
-	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
+	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel);
+	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi_V, const double Vf_V) const;
 	void positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const;
 	void voltageToZero() const;
@@ -169,8 +169,8 @@ class Laser
 	std::string mPort;
 	int mBaud;
 	const int mTimeout_ms = 100;
-	const double mTuningSpeed_nm_s = 35;				//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
-	const int mRxBufSize = 256;							//Serial buffer size
+	const double mTuningSpeed_nm_s = 35;		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
+	const int mRxBufSize = 256;					//Serial buffer size
 
 	int downloadWavelength_();
 public:
@@ -200,7 +200,7 @@ public:
 
 class PockelsCell
 {
-	FPGAns::RTsequence &mRTsequence;			//Non-const because some methods in this class change the variables referenced by mRTsequence						
+	FPGAns::RTcontrol &mRTcontrol;				//Non-const because some methods in this class change the variables referenced by mRTcontrol						
 	RTchannel mPockelsRTchannel;
 	RTchannel mScalingRTchannel;
 	int mWavelength_nm;							//Laser wavelength
@@ -210,9 +210,9 @@ class PockelsCell
 	double convert_mWToVolt_(const double power_mW) const;
 public:
 	//Do not set the output to 0 through the destructor to allow latching the last value
-	PockelsCell(FPGAns::RTsequence &RTsequence, const RTchannel laserID, const int wavelength_nm);
+	PockelsCell(FPGAns::RTcontrol &RTcontrol, const RTchannel laserID, const int wavelength_nm);
 
-	//const methods do not change the class members. The variables referenced by mRTsequence could change, but not mRTsequence
+	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol
 	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
 	void pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const;
@@ -233,7 +233,7 @@ class VirtualLaser
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
 public:
-	VirtualLaser(FPGAns::RTsequence &RTsequence, const int wavelength_nm, const double power_mW);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power_mW);
 	void setWavelength(const int wavelength_nm);
 	void pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void setShutter(const bool state) const;

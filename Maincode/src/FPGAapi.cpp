@@ -154,7 +154,7 @@ namespace FPGAns
 	//The object has to be closed explicitly because of the exception catching
 	void FPGA::close(const FPGAresetSelector resetFlag) const
 	{
-		//Flush the RAM buffers on the FPGA as precaution. Make sure that the sequence has already finished
+		//Flush the RAM buffers on the FPGA as precaution. Make sure that the control sequence has already finished
 		Sleep(100);	//Do not flush too soon, otherwise the sequence will be cut off
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpgaHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
@@ -189,7 +189,7 @@ namespace FPGAns
 
 		//FIFOIN
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(NCHAN)));											//Number of input channels
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));														//Control-sequence trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));														//Trigger of the control sequence
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_FIFOINtimeout_tick, static_cast<U16>(FIFOINtimeout_tick)));						//FIFOIN timeout
 
 		//FIFOOUT
@@ -205,7 +205,7 @@ namespace FPGAns
 
 		if (linegateTimeout_us <= 2 * halfPeriodLineclock_us)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(getFpgaHandle(), NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(linegateTimeout_us * tickPerUs)));		//Sequence trigger timeout
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(getFpgaHandle(), NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(linegateTimeout_us * tickPerUs)));		//Timeout for triggering the control sequence
 
 		//POCKELS CELLS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));										//Enable gating the pockels by framegate. For debugging purposes
@@ -232,8 +232,8 @@ namespace FPGAns
 
 #pragma endregion "FPGA"
 
-#pragma region "RTsequence"
-	RTsequence::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell_us): 
+#pragma region "RTcontrol"
+	RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell_us): 
 		mWidthPerFrame_pix(widthPerFrame_pix), mDwell_us(dwell_us)
 	{
 		const int calibFine_tick = -32;
@@ -251,7 +251,7 @@ namespace FPGAns
 
 	//Pixelclock with equal dwell times
 	//calibFine_tick: fine tune the pixelclock timing
-	void RTsequence::Pixelclock::pushUniformDwellTimes(const int calibFine_tick)
+	void RTcontrol::Pixelclock::pushUniformDwellTimes(const int calibFine_tick)
 	{
 		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (halfPeriodLineclock_us-400*125ns)/2
@@ -270,12 +270,12 @@ namespace FPGAns
 			mPixelclockQ.push_back(FPGAns::packPixelclockSinglet(mDwell_us, 1));
 	}
 
-	QU32 RTsequence::Pixelclock::readPixelclock() const
+	QU32 RTcontrol::Pixelclock::readPixelclock() const
 	{
 		return mPixelclockQ;
 	}
 
-	RTsequence::RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, const AcqTriggerSelector stageAsTrigger) :
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, const AcqTriggerSelector stageAsTrigger) :
 		mFpga(fpga), mVectorOfQueues(NCHAN), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mStageAsTrigger(stageAsTrigger)
 	{
 		//Set the imaging parameters
@@ -289,7 +289,7 @@ namespace FPGAns
 	}
 
 	//Load the imaging parameters onto the FPGA
-	void RTsequence::uploadImagingParameters_() const
+	void RTcontrol::uploadImagingParameters_() const
 	{
 		if (mNframes < 0 || mHeightAllFrames_pix < 0 || mNlinesSkip < 0 || mHeightPerFrame_pix < 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
@@ -309,7 +309,7 @@ namespace FPGAns
 	//For this, concatenate all the individual queues 'vectorOfQueuesForRamp.at(ii)' in the queue 'allQueues'.
 	//The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
 	//Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
-	void RTsequence::uploadFIFOIN_(const VQU32 &vectorOfQueues) const
+	void RTcontrol::uploadFIFOIN_(const VQU32 &vectorOfQueues) const
 	{
 		{
 			QU32 allQueues;		//Create a single long queue
@@ -340,21 +340,21 @@ namespace FPGAns
 			checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, timeout_ms, &r));
 
 			//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
-			//This boolean serves as the master trigger of the entire sequence
+			//This boolean serves as the master trigger for the entire control sequence
 			checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
 			checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
 		}
 	}
 	
 	//Trigger the FPGA outputs in a non-realtime way (see the LV implementation)
-	void RTsequence::triggerNRT_() const
+	void RTcontrol::triggerNRT_() const
 	{	
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, true));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));
 	}
 
 	//Push all the elements in 'tailQ' into 'headQ'
-	void RTsequence::concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const
+	void RTcontrol::concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const
 	{
 		while (!givingQueue.empty())
 		{
@@ -363,22 +363,22 @@ namespace FPGAns
 		}
 	}
 
-	void RTsequence::pushQueue(const RTchannel chan, QU32& queue)
+	void RTcontrol::pushQueue(const RTchannel chan, QU32& queue)
 	{
 		concatenateQueues_(mVectorOfQueues.at(chan), queue);
 	}
 
-	void RTsequence::clearQueue(const RTchannel chan)
+	void RTcontrol::clearQueue(const RTchannel chan)
 	{
 		mVectorOfQueues.at(chan).clear();
 	}
 
-	void RTsequence::pushDigitalSinglet(const RTchannel chan, double timeStep, const bool DO)
+	void RTcontrol::pushDigitalSinglet(const RTchannel chan, double timeStep, const bool DO)
 	{
 		mVectorOfQueues.at(chan).push_back(FPGAns::packDigitalSinglet(timeStep, DO));
 	}
 
-	void RTsequence::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V, const OverrideFileSelector overrideFlag)
+	void RTcontrol::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V, const OverrideFileSelector overrideFlag)
 	{
 		if (timeStep < AO_tMIN_us)
 		{
@@ -394,18 +394,18 @@ namespace FPGAns
 	}
 
 	//Push a fixed-point number. For scaling the pockels cell output
-	void RTsequence::pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor)
+	void RTcontrol::pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor)
 	{
 		mVectorOfQueues.at(chan).push_back(static_cast<U32>(convertDoubleToFx2p14(scalingFactor)));
 	}
 
-	void RTsequence::pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V)
+	void RTcontrol::pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V)
 	{
 		linearRamp(mVectorOfQueues.at(chan), timeStep, rampLength, Vi_V, Vf_V);
 	}
 
-	//Preset the FPGA output with the first value in the RT sequence to avoid discontinuities at the start of the sequence
-	void RTsequence::presetFPGAoutput() const
+	//Preset the FPGA output with the first value in the RT control sequence to avoid discontinuities at the start of the sequence
+	void RTcontrol::presetFPGAoutput() const
 	{
 		//Read from the FPGA the last voltage in the galvo AO. See the LV implementation
 		std::vector<I16> AOlastVoltage_I16(NCHAN, 0);
@@ -425,36 +425,36 @@ namespace FPGAns
 				//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 				if ((chan == GALVO1 || chan == GALVO2) )	//Only do GALVO1 and GALVO2 for now
 				{
-					const double Vi_V = convertI16toVolt(AOlastVoltage_I16.at(chan));				//Last element of the last RT sequence
-					const double Vf_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT sequence
+					const double Vi_V = convertI16toVolt(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
+					const double Vf_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT control sequence
 					linearRamp(vectorOfQueuesForRamp.at(chan), 10 * us, 5 * ms, Vi_V, Vf_V);
 				}
 			}
 		}
-		uploadFIFOIN_(vectorOfQueuesForRamp);		//Load the sequence on the FPGA
+		uploadFIFOIN_(vectorOfQueuesForRamp);		//Load the control sequence on the FPGA
 		triggerNRT_();								//Trigger the FPGA outputs (non-RT trigger)
 	}
 
-	void RTsequence::uploadRT() const
+	void RTcontrol::uploadRT() const
 	{
 		uploadFIFOIN_(mVectorOfQueues);
 	}
 
 
-	//Trigger the RT sequence on the FPGA
-	void RTsequence::triggerRT() const
+	//Trigger the RT control sequence on the FPGA
+	void RTcontrol::triggerRT() const
 	{
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, true));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));
 	}
 
-	//Disable ZstageAsTrigger to be able to move the stage without triggering the acquisition sequence
-	void RTsequence::setZstageTriggerEnabled(const bool state)
+	//Disable ZstageAsTrigger to be able to move the stage without triggering the acquisition
+	void RTcontrol::setZstageTriggerEnabled(const bool state)
 	{
 		NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, state);
 	}
 
-#pragma endregion "RTsequence"
+#pragma endregion "RTcontrol"
 
 }//namespace
 
@@ -464,7 +464,7 @@ namespace FPGAns
 extern const double RSpkpk_um = 250 * um;					//Peak-to-peak amplitude of the resonant scanner. Needed for generating a non-uniform pixelclock
 
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
-double RTsequence::Pixelclock::convertSpatialCoordToTime_us(const double x) const
+double RTcontrol::Pixelclock::convertSpatialCoordToTime_us(const double x) const
 {
 double arg = 2 * x / RSpkpk_um;
 if (arg > 1)
@@ -474,27 +474,27 @@ return halfPeriodLineclock_us * asin(arg) / Constants::PI; //The returned value 
 }
 
 //Discretize the spatial coordinate, then convert it to time
-double RTsequence::Pixelclock::getDiscreteTime_us(const int pix) const
+double RTcontrol::Pixelclock::getDiscreteTime_us(const int pix) const
 {
 const double dx = 0.5 * um;
 return convertSpatialCoordToTime_us(dx * pix);
 }
 
 //Calculate the dwell time for the pixel
-double RTsequence::Pixelclock::calculateDwellTime_us(const int pix) const
+double RTcontrol::Pixelclock::calculateDwellTime_us(const int pix) const
 {
 return getDiscreteTime_us(pix + 1) - getDiscreteTime_us(pix);
 }
 
 //Calculate the practical dwell time of each pixel, considering that the FPGA has discrete time steps
-double RTsequence::Pixelclock::calculatePracticalDwellTime_us(const int pix) const
+double RTcontrol::Pixelclock::calculatePracticalDwellTime_us(const int pix) const
 {
 return round(calculateDwellTime_us(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
 }
 
 
 //Pixelclock with equal pixel size (spatial).
-void RTsequence::Pixelclock::pushCorrectedDwellTimes()
+void RTcontrol::Pixelclock::pushCorrectedDwellTimes()
 {
 //The pixel clock is triggered by the line clock (see the LV implementation) followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 const int calibCoarse_tick = 2043;	//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan

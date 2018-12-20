@@ -31,7 +31,7 @@ public:
 	void record(const std::string description, const std::string input);
 };
 
-//For manipulating and saving Tiff images
+//For manipulating and saving U8 Tiff images
 class TiffU8
 {
 	unsigned char* mArray;

@@ -34,8 +34,8 @@ namespace FPGAns
 
 	};
 
-	//Create a realtime sequence and pixelclock
-	class RTsequence
+	//Create a realtime control sequence and pixelclock
+	class RTcontrol
 	{
 		//Private subclass
 		class Pixelclock
@@ -72,12 +72,12 @@ namespace FPGAns
 		int mHeightAllFrames_pix;																	//Total number of lines in all the frames without including the skipped lines
 		int mNpixAllFrames;																			//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
-		RTsequence(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput = FG,
+		RTcontrol(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput = FG,
 			const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix = 400, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
-		RTsequence(const RTsequence&) = delete;				//Disable copy-constructor
-		RTsequence& operator=(const RTsequence&) = delete;	//Disable assignment-constructor
-		RTsequence(RTsequence&&) = delete;					//Disable move constructor
-		RTsequence& operator=(RTsequence&&) = delete;		//Disable move-assignment constructor
+		RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
+		RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
+		RTcontrol(RTcontrol&&) = delete;					//Disable move constructor
+		RTcontrol& operator=(RTcontrol&&) = delete;			//Disable move-assignment constructor
 
 		void pushQueue(const RTchannel chan, QU32& queue);
 		void clearQueue(const RTchannel chan);

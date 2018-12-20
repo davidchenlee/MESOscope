@@ -5,6 +5,7 @@
 
 void mainVision(const FPGAns::FPGA &fpga);
 void mainFidelity(const FPGAns::FPGA &fpga);
+void testStageTrigAcq(const FPGAns::FPGA &fpga);
 void testGalvo(const FPGAns::FPGA &fpga);
 void testPixelclock(const FPGAns::FPGA &fpga);
 void testAODO(const FPGAns::FPGA &fpga);
@@ -25,5 +26,4 @@ void testConvertI16toVolt();
 void testTiffU8();
 void testEthernetSpeed();
 void testVibratome(const FPGAns::FPGA &fpga);
-void testStageTrigAcq(const FPGAns::FPGA &fpga);
 void testSequencer();

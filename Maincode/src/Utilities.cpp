@@ -10,7 +10,7 @@ void printHex(const std::vector<uint8_t>  input)
 {
 	for (size_t ii = 0; ii < input.size(); ii++)
 	{
-		std::cout << std::hex << std::uppercase << (int)input[ii];
+		std::cout << std::hex << std::uppercase << static_cast<int>(input[ii]);
 		std::cout << " ";
 	}
 	std::cout << std::nouppercase << std::dec << "\n";
@@ -22,7 +22,7 @@ void printHex(const std::string input)
 	const char *cstr = input.c_str();
 	for (size_t ii = 0; ii < input.size(); ii++)
 	{
-		std::cout << std::hex << std::uppercase << (int)cstr[ii];
+		std::cout << std::hex << std::uppercase << static_cast<int>(cstr[ii]);
 		std::cout << " ";
 	}
 	std::cout << std::nouppercase << std::dec << "\n";
@@ -64,7 +64,7 @@ std::string toString(const double number, const int nDecimalPlaces)
 }
 
 //Check if the file already exists
-std::string file_exists(const std::string filename)
+std::string doesFileExist(const std::string filename)
 {
 	std::string suffix("");
 
@@ -238,7 +238,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	*/
 
 	if (!overrideFlag)
-		filename = file_exists(filename);	//Check if the file exits. It gives some overhead
+		filename = doesFileExist(filename);	//Check if the file exits. It gives some overhead
 	
 	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
 

@@ -9,26 +9,27 @@ int main(int argc, char* argv[])
 		{
 			//mainVision(fpga);
 			//mainFidelity(fpga);
-			//seq_contAcquisition(fpga);
+			testContinuousXYZacq(fpga);
 			//testGalvo(fpga);
 			//testPixelclock(fpga);
+			//testAODO(fpga);
+			//testAOramp(fpga);
+			//checkDigitalTiming(fpga);
+			//calibDigitalLatency(fpga);
+			//calibAnalogLatency(fpga);
+			//testFilterwheel();
+			//testShutter(fpga);
 			//testStagePosition();
 			//testStageConfig();
-			//testAODO(fpga);
 			//testPMT16X();
 			//testLaser(fpga);
 			//testVirtualLaser(fpga);
 			//testPockels(fpga);
-			//testFilterwheel();
-			//testShutter(fpga);
 			//testRS(fpga);
-			//seq_contAcquisitionTest(fpga);
-			//seq_testConvertI16toVoltage();
-			//seq_testGalvoSync(fpga);
+			//testConvertI16toVolt();
 			//testTiffU8();
 			//testEthernetSpeed();
 			//testVibratome(fpga);
-			testStageTrigAcq(fpga);
 			//testSequencer();
 		}
 		catch (const std::invalid_argument &e)

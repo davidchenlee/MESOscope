@@ -3,7 +3,7 @@
 namespace FPGAns
 {
 	//Convert time to ticks
-	U16 convertUsTotick(const double t)
+	U16 convertTimeToTick(const double t)
 	{
 		const double t_tick = t/us * tickPerUs;
 
@@ -26,20 +26,20 @@ namespace FPGAns
 	//0x7FFF = 32767
 	//0xFFFF = -1
 	//0x8000 = -32768
-	I16 convertVoltToI16(const double voltage_V)
+	I16 convertVoltageToI16(const double voltage)
 	{
-		if (voltage_V > AOmax_V)
+		if (voltage > AOmax)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage cast to the max: " + std::to_string(AOmax_V) + " V\n";
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage cast to the max: " + std::to_string(AOmax/V) + " V\n";
 			return (I16)_I16_MAX;
 		}
-		else if (voltage_V < -AOmax_V)
+		else if (voltage < -AOmax)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage cast to the min: " + std::to_string(-AOmax_V) + " V\n";
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage cast to the min: " + std::to_string(-AOmax/V) + " V\n";
 			return (I16)_I16_MIN;
 		}
 		else
-			return (I16)(voltage_V / AOmax_V * _I16_MAX);
+			return (I16)(voltage / AOmax * _I16_MAX);
 	}
 
 	//Convert I16 (-32768 to 32767) to voltage (-10V to 10V)
@@ -52,10 +52,10 @@ namespace FPGAns
 			if (input > _I16_MAX)
 			{
 				std::cerr << "WARNING in " << __FUNCTION__ << ": Input overflow, _I16_MAX used instead\n";
-				return AOmax_V;
+				return AOmax/V;
 			}
 			else
-				return 1.0 * input / _I16_MAX * AOmax_V;
+				return 1.0 * input / _I16_MAX * AOmax;
 		}
 		else //Negative case
 		{
@@ -63,10 +63,10 @@ namespace FPGAns
 			if (input < _I16_MIN)
 			{
 				std::cerr << "WARNING in " << __FUNCTION__ << ": Input underflow, _I16_MIN used instead\n";
-				return -AOmax_V;
+				return -AOmax/V;
 			}
 			else
-				return -1.0 * input / _I16_MIN * AOmax_V;
+				return -1.0 * input / _I16_MIN * AOmax;
 		}		
 	}
 
@@ -77,25 +77,25 @@ namespace FPGAns
 		return (t_tick << 16) | (0x0000FFFF & AO_U16);
 	}
 
-	//Send out an analog instruction, where the analog output 'AO_V' is held for 'timeStep'
-	U32 packAnalogSinglet(const double timeStep, const double AO_V)
+	//Send out an analog instruction, where the analog output 'AO' is held for 'timeStep'
+	U32 packAnalogSinglet(const double timeStep, const double AO)
 	{
 		const U16 AOlatency_tick = 2;	//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
-		return packU32(convertUsTotick(timeStep) - AOlatency_tick, convertVoltToI16(AO_V));
+		return packU32(convertTimeToTick(timeStep) - AOlatency_tick, convertVoltageToI16(AO/V));
 	}
 
 	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 	U32 packDigitalSinglet(const double timeStep, const bool DO)
 	{
 		const U16 DOlatency_tick = 2;	//To calibrate, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
-		return packU32(convertUsTotick(timeStep) - DOlatency_tick, static_cast<U16>(DO));
+		return packU32(convertTimeToTick(timeStep) - DOlatency_tick, static_cast<U16>(DO));
 	}
 
 	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'
 	U32 packPixelclockSinglet(const double timeStep, const bool DO)
 	{
 		const U16 PixelclockLatency_tick = 1;//The pixel-clock is implemented using a SCTL. I think the latency comes from reading the LUT buffer
-		return packU32(convertUsTotick(timeStep) - PixelclockLatency_tick, static_cast<U16>(DO));
+		return packU32(convertTimeToTick(timeStep) - PixelclockLatency_tick, static_cast<U16>(DO));
 	}
 
 	void checkStatus(char functionName[], NiFpga_Status status)
@@ -106,15 +106,15 @@ namespace FPGAns
 			std::cerr << "A warning has ocurred in " << functionName << " with FPGA code " << status << "\n";
 	}
 
-	void linearRamp(QU32 &queue, double timeStep, const double rampLength, const double Vi_V, const double Vf_V)
+	void linearRamp(QU32 &queue, double timeStep, const double rampLength, const double Vi, const double Vf)
 	{
-		if (timeStep < AO_tMIN_us)
+		if (timeStep < AO_tMIN)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us\n";
-			timeStep = AO_tMIN_us;		//Analog Out time increment in us
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN / us << " us\n";
+			timeStep = AO_tMIN;		//Analog Out time increment in us
 		}
 
-		const int nPoints = (int)(rampLength / timeStep);		//Number of points
+		const int nPoints = static_cast<int>(rampLength / timeStep);		//Number of points
 
 		if (nPoints <= 1)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Not enought points to generate a linear ramp");
@@ -125,7 +125,7 @@ namespace FPGAns
 
 		for (int ii = 0; ii < nPoints; ii++)
 		{
-			const double V = Vi_V + (Vf_V - Vi_V)*ii / (nPoints - 1);
+			const double V = Vi + (Vf - Vi)*ii / (nPoints - 1);
 			queue.push_back(FPGAns::packAnalogSinglet(timeStep, V));
 
 			//std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * FPGAns::convertUsTotick(timeStep) << "\t" << V << "\t\n";	//For debugging
@@ -180,35 +180,35 @@ namespace FPGAns
 	//Load the imaging parameters onto the FPGA. See 'Const.cpp' for the definition of each variable
 	void FPGA::initializeFpga_() const
 	{
-		if (NCHAN < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 || linegateTimeout_us < 0 || stageTriggerPulse_ms < 0)
+		if (NCHAN < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 || linegateTimeout < 0 || stageTriggerPulse < 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 		//INPUT SELECTORS
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(getFpgaHandle(), NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));									//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getFpgaHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));								//For debugging the photoncounters
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(getFpgaHandle(), NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));										//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getFpgaHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));									//For debugging the photoncounters
 
 		//FIFOIN
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(NCHAN)));											//Number of input channels
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));														//Trigger of the control sequence
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_FIFOINtimeout_tick, static_cast<U16>(FIFOINtimeout_tick)));						//FIFOIN timeout
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(NCHAN)));												//Number of input channels
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));															//Trigger of the control sequence
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_FIFOINtimeout_tick, static_cast<U16>(FIFOINtimeout_tick)));							//FIFOIN timeout
 
 		//FIFOOUT
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, FIFOOUTfpga));												//Enable pushing data to FIFOOUTfpga. For debugging purposes
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTfpgaEnable, FIFOOUTfpga));													//Enable pushing data to FIFOOUTfpga. For debugging purposes
 
 		//TRIGGERS AND DELAYS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));															//Pc trigger signal
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));												//Z-stage as tigger
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));														//Memory-flush trigger
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncDOtoAO_tick, static_cast<U16>(syncDOtoAO_tick)));							//DO and AO relative sync
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, static_cast<U16>(syncAODOtoLinegate_tick)));			//DO and AO sync to linegate
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));													//Trigger the FPGA outputs (non-RT trigger)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));																//Pc trigger signal
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));													//Z-stage as tigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));															//Memory-flush trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncDOtoAO_tick, static_cast<U16>(syncDOtoAO_tick)));								//DO and AO relative sync
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, static_cast<U16>(syncAODOtoLinegate_tick)));				//DO and AO sync to linegate
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));														//Trigger the FPGA outputs (non-RT trigger)
 
-		if (linegateTimeout_us <= 2 * halfPeriodLineclock_us)
+		if (linegateTimeout <= 2 * halfPeriodLineclock)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(getFpgaHandle(), NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(linegateTimeout_us * tickPerUs)));		//Timeout for triggering the control sequence
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(getFpgaHandle(), NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(linegateTimeout / us * tickPerUs)));			//Timeout for triggering the control sequence
 
 		//POCKELS CELLS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));										//Enable gating the pockels by framegate. For debugging purposes
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));											//Enable gating the pockels by framegate. For debugging purposes
 
 		//VIBRATOME
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
@@ -216,8 +216,8 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTforward, false));
 
 		//STAGES
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(getFpgaHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stageTriggerPulse_ms * tickPerUs)));	//Trigger pulse width
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ScanDirection, false));														//Z-stage scan direction (1 for up, 0 for down)
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(getFpgaHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stageTriggerPulse / us * tickPerUs)));	//Trigger pulse width
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ScanDirection, false));															//Z-stage scan direction (1 for up, 0 for down)
 
 		/*
 		//SHUTTERS. Commented out to allow keeping the shutter on
@@ -233,8 +233,8 @@ namespace FPGAns
 #pragma endregion "FPGA"
 
 #pragma region "RTcontrol"
-	RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell_us): 
-		mWidthPerFrame_pix(widthPerFrame_pix), mDwell_us(dwell_us)
+	RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell): 
+		mWidthPerFrame_pix(widthPerFrame_pix), mDwell(dwell)
 	{
 		const int calibFine_tick = -32;
 		switch (pixelclockType)
@@ -253,21 +253,21 @@ namespace FPGAns
 	//calibFine_tick: fine tune the pixelclock timing
 	void RTcontrol::Pixelclock::pushUniformDwellTimes(const int calibFine_tick)
 	{
-		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime_us'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (halfPeriodLineclock_us-400*125ns)/2
+		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (halfPeriodLineclock-400*125ns)/2
 
-		const double initialWaitingTime_us = (halfPeriodLineclock_us - mWidthPerFrame_pix * mDwell_us) / 2; //Relative delay of the pixel clock wrt the line clock
+		const double initialWaitingTime = (halfPeriodLineclock - mWidthPerFrame_pix * mDwell) / 2; //Relative delay of the pixel clock wrt the line clock
 
 		//Check if the pixelclock overflows each Lineclock
-		if (initialWaitingTime_us <= 0)
+		if (initialWaitingTime <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 
-		mPixelclockQ.push_back(FPGAns::packU32(FPGAns::convertUsTotick(initialWaitingTime_us) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
+		mPixelclockQ.push_back(FPGAns::packU32(FPGAns::convertTimeToTick(initialWaitingTime) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
 		for (int pix = 0; pix < mWidthPerFrame_pix + 1; pix++)
-			mPixelclockQ.push_back(FPGAns::packPixelclockSinglet(mDwell_us, 1));
+			mPixelclockQ.push_back(FPGAns::packPixelclockSinglet(mDwell, 1));
 	}
 
 	QU32 RTcontrol::Pixelclock::readPixelclock() const
@@ -284,7 +284,7 @@ namespace FPGAns
 		uploadImagingParameters_();
 
 		//Generate a pixelclock
-		const Pixelclock pixelclock(mWidthPerFrame_pix, mDwell_us);
+		const Pixelclock pixelclock(mWidthPerFrame_pix, mDwell);
 		mVectorOfQueues.at(PIXELCLOCK) = pixelclock.readPixelclock();
 	}
 
@@ -378,19 +378,19 @@ namespace FPGAns
 		mVectorOfQueues.at(chan).push_back(FPGAns::packDigitalSinglet(timeStep, DO));
 	}
 
-	void RTcontrol::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO_V, const OverrideFileSelector overrideFlag)
+	void RTcontrol::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO, const OverrideFileSelector overrideFlag)
 	{
-		if (timeStep < AO_tMIN_us)
+		if (timeStep < AO_tMIN)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN_us << " us\n";
-			timeStep = AO_tMIN_us;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN / us << " us\n";
+			timeStep = AO_tMIN;
 		}
 
 		//Clear the current content
 		if (overrideFlag)
 			mVectorOfQueues.at(chan).clear();
 
-		mVectorOfQueues.at(chan).push_back(FPGAns::packAnalogSinglet(timeStep, AO_V));
+		mVectorOfQueues.at(chan).push_back(FPGAns::packAnalogSinglet(timeStep, AO));
 	}
 
 	//Push a fixed-point number. For scaling the pockels cell output
@@ -399,9 +399,9 @@ namespace FPGAns
 		mVectorOfQueues.at(chan).push_back(static_cast<U32>(convertDoubleToFx2p14(scalingFactor)));
 	}
 
-	void RTcontrol::pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi_V, const double Vf_V)
+	void RTcontrol::pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi, const double Vf)
 	{
-		linearRamp(mVectorOfQueues.at(chan), timeStep, rampLength, Vi_V, Vf_V);
+		linearRamp(mVectorOfQueues.at(chan), timeStep, rampLength, Vi, Vf);
 	}
 
 	//Preset the FPGA output with the first value in the RT control sequence to avoid discontinuities at the start of the sequence
@@ -425,9 +425,9 @@ namespace FPGAns
 				//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 				if ((chan == GALVO1 || chan == GALVO2) )	//Only do GALVO1 and GALVO2 for now
 				{
-					const double Vi_V = convertI16toVolt(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
-					const double Vf_V = convertI16toVolt((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT control sequence
-					linearRamp(vectorOfQueuesForRamp.at(chan), 10 * us, 5 * ms, Vi_V, Vf_V);
+					const double Vi = convertI16toVolt(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
+					const double Vf = convertI16toVolt((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT control sequence
+					linearRamp(vectorOfQueuesForRamp.at(chan), 10 * us, 5 * ms, Vi, Vf);
 				}
 			}
 		}
@@ -470,7 +470,7 @@ double arg = 2 * x / RSpkpk_um;
 if (arg > 1)
 throw std::invalid_argument((std::string)__FUNCTION__ + ": Argument of asin greater than 1");
 else
-return halfPeriodLineclock_us * asin(arg) / Constants::PI; //The returned value is in the range [-halfPeriodLineclock_us/PI, halfPeriodLineclock_us/PI]
+return halfPeriodLineclock / us * asin(arg) / Constants::PI; //The returned value is in the range [-halfPeriodLineclock / us/PI, halfPeriodLineclock / us/PI]
 }
 
 //Discretize the spatial coordinate, then convert it to time

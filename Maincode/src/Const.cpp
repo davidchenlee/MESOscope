@@ -18,6 +18,7 @@ namespace Constants
 	extern const int us = 1;								//microsecond
 	extern const int ms = 1000 * us;						//millisecond
 	extern const int um = 1;								//micron	
+	extern const int mm = 1000 * um;						//millimeter
 	extern const int V = 1;									//volt
 	extern const int mW = 1;								//milliwatt
 
@@ -28,32 +29,31 @@ namespace Constants
 	extern const double VISIONpulsePeriod = 0.0125 * us;		//The pulse repetition rate of VISION is 80 MHz
 
 	//PIXELCLOCK
-	extern const double halfPeriodLineclock_us = 63.05 * us;	//Half the period of the resonant scanner. I measure 25.220 ms for 400 half oscillations. Therefore, halfPeriodLineclock_us = 25200us/400 = 63.05 us
+	extern const double halfPeriodLineclock = 63.05 * us;		//Half the period of the resonant scanner. I measure 25.220 ms for 400 half oscillations. Therefore, halfPeriodLineclock = 25200us/400 = 63.05 us
 																//There is a slight difference between the forward and backward oscillation time. Forward = 63.14 us, backwards = 62.99 us. Diff = 150 ns (i.e., ~ 1 pixel)
 																//(Measured using the oscilloscope by looking at RS SYNC through the FPGA)
 
 	//FPGA
-	extern const int AOmax_V = 10 * V;						//Max voltage of the AOs
+	extern const int AOmax = 10 * V;						//Max voltage of the AOs
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It corresponds to the FPGA's clock
 	extern const double usPerTick = 1.0 / 160;				//Time step of the FPGA's clock
 	extern const U32 tMIN_tick = 2;							//Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
-	extern const double tMIN_us = tMIN_tick * usPerTick;	//Min time step allowed
-	extern const int AO_tMIN_us = 2;						//Time step of the analog output. The AO channels take >1 us to set the output
+	extern const int AO_tMIN = 2 * us;						//Time step of the analog output. The AO channels has a delay of >1 us 
 	extern const int syncDOtoAO_tick = 4*74;				//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 	extern const int syncAODOtoLinegate_tick = 0;			//Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
 	
-	extern const double linegateTimeout_us = 100 * ms;	//In LV, timeout the start of the data acquisition. Otherwise, when Lineclock fails triggering (e.g.the RS is off),
-														//pixelclock false-triggers after Lineclock is back up
+	extern const double linegateTimeout = 100 * ms;			//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
+															//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered
 
-	extern const int FIFOINtimeout_tick = 100;			//Timeout of the host-to-target and target-to-host FIFOINs
-	extern const int FIFOINmax = 32773;					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
+	extern const int FIFOINtimeout_tick = 100;				//Timeout of the host-to-target and target-to-host FIFOINs
+	extern const int FIFOINmax = 32773;						//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
 
 
 	//STAGES
-	extern const int stageTriggerPulse_ms = 5 * ms;			//Pulsewidth for triggering the stages via the DI (the stage controller has a 20kHz clock = 50 us)
+	extern const int stageTriggerPulse = 5 * ms;			//Pulsewidth for triggering the stages via the DI (the stage controller has a 20kHz clock = 50 us)
 															//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based.
 
 	//PMT

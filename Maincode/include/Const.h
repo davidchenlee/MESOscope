@@ -54,25 +54,25 @@ namespace Constants
 	extern const int us;
 	extern const int ms;
 	extern const int um;
+	extern const int mm;
 	extern const int V;
 	extern const int mW;
 
-	extern const double halfPeriodLineclock_us;
+	extern const double halfPeriodLineclock;
 	extern const double VISIONpulsePeriod;
 
-	extern const int AOmax_V;
+	extern const int AOmax;
 	extern const int tickPerUs;
 	extern const double usPerTick;
 	extern const U32 tMIN_tick;
-	extern const double tMIN_us;
-	extern const int AO_tMIN_us;
+	extern const int AO_tMIN;
 	extern const int syncDOtoAO_tick;
 	extern const int syncAODOtoLinegate_tick;
-	extern const double linegateTimeout_us;
+	extern const double linegateTimeout;
 	extern const int FIFOINtimeout_tick;
 	extern const int FIFOINmax;
 
-	extern const int stageTriggerPulse_ms;
+	extern const int stageTriggerPulse;
 
 	extern const int nPulses;
 	extern const U8 pulseArray[];

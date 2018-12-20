@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 				default:
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser is not available");
 				}
-				RS.turnOn_um(FFOV_um);
+				RS.turnOn(FFOV_um);
 			}
 			else if (runCommand == "0")
 			{

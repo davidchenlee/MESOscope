@@ -51,59 +51,55 @@ class Vibratome
 {
 	enum MotionDir { BACKWARD = -1, FORWARD = 1 };
 	const FPGAns::FPGA &mFpga;
-	int mNslice;						//Slice number
-	double mSectionThickness;			//Thickness of the section
 	double mCuttingSpeed_mmps = 0.5;	//in mm/s. Speed of the vibratome for cutting (manual setting)
-	double mAmplitude_mm = 1.0;			//Amplitude of the vibratome for cutting (manual setting)
-	double mTravelRange_mm = 52.4;		//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
-	double mHeight_mm = 0;				//vertical distance between the razor blade and the objective's focal plane
 	double mMovingSpeed_mmps = 2.495;	//in mm/s. Forward and backward moving speed of the head. 52.4 mm in 21 seconds = 2.495 mm/s
+	//double mTravelRange = 52.4 * mm;	//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
 
-	void moveHead_(const int duration_ms, const MotionDir motionDir) const;
-	void startStop_() const;
+	void moveHead_(const double duration, const MotionDir motionDir) const;
+	void run() const;
 public:
 	Vibratome(const FPGAns::FPGA &fpga);
-	void cutAndRetract(const int distance_mm) const;
-	void reset(const int distance_mm) const;
+	void cutAndRetractDistance(const double distance) const;
+	void retractDistance(const double distance) const;
 };
 
 class ResonantScanner
 {
 	const FPGAns::RTcontrol &mRTcontrol;				//Needed to retrieve 'mRTcontrol.mWidthPerFrame_pix' to calculate the fill factor
-	const double mVMAX_V = 5 * V;						//Max control voltage allowed
-	const int mDelay_ms = 10;
-	double mVoltPerUm = 0.00595;						//Calibration factor. Last calibrated 
-	double mFullScan_um;								//Full scan = distance between turning points
-	double mControl_V;									//Control voltage 0-5V
+	const double mVMAX = 5 * V;							//Max control voltage allowed
+	const double mDelay = 10 * ms;
+	const double mVoltPerUm = 0.00595;					//Calibration factor. Last calibrated 
+	double mFullScan;									//Full scan = distance between turning points
+	double mControlVoltage;								//Control voltage 0-5V
 
-	void setVoltage_(const double Vcontrol_V);
+	void setVoltage_(const double controlVoltage);
 public:
 	ResonantScanner(const FPGAns::RTcontrol &RTcontrol);
 	double mFillFactor;									//Fill factor: how much of an RS swing is covered by the pixels
-	double mFFOV_um;									//Current FFOV
+	double mFFOV;									//Current FFOV
 	double mSampRes_umPerPix;							//Spatial sampling resolution (um per pixel)
 
-	void setFFOV(const double FFOV_um);
-	void turnOn_um(const double FFOV_um);
-	void turnOn_V(const double Vcontrol_V);
+	void setFFOV(const double FFOV);
+	void turnOn(const double FFOV);
+	void turnOnUsingVoltage(const double controlVoltage);
 	void turnOff();
-	double downloadControl_V();
-	double getSamplingResolution_um();
+	double downloadControlVoltage_V();
+	double getSamplingResolution_umPerPix();
 	void isRunning();
 };
 
 class Galvo
 {
-	FPGAns::RTcontrol &mRTcontrol;						//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
+	FPGAns::RTcontrol &mRTcontrol;				//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
-	const double voltPerUm = 0.02417210 * V / um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
+	const double voltPerUm = 0.02417210 ;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 public:
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel);
 	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol
-	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi_V, const double Vf_V) const;
-	void positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const;
+	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
+	void positionLinearRamp(const double timeStep, const double rampLength, const double xi, const double xf) const;
 	void voltageToZero() const;
-	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
+	void pushVoltageSinglet(const double timeStep, const double AO) const;
 };
 
 class PMT16X
@@ -111,7 +107,7 @@ class PMT16X
 	serial::Serial *mSerial;
 	std::string mPort = assignCOM.at(COMPMT16X);
 	const int mBaud = 9600;
-	const int mTimeout_ms = 300;
+	const int mTimeout = 300 * ms;
 	const int mRxBufferSize = 256;				//Serial buffer size
 
 	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index) const;		//The PMT requires a sumcheck. Refer to the manual
@@ -139,11 +135,10 @@ class Filterwheel
 	serial::Serial *mSerial;
 	std::string mPort;
 	const int mBaud = 115200;
-	const int mTimeout_ms = 150;
+	const int mTimeout = 150 * ms;
 	Filtercolor mColor;
 	const int mNpos = 6;					//Nunmber of filter positions
 	const double mTuningSpeed_Hz = 0.8;		//The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
-	const int mWaitToStop_ms = 3000;		//Wait until the filterwheel stops turning the turret
 	const int mRxBufSize = 256;				//Serial buffer size
 
 	std::string convertToString_(const Filtercolor color) const;
@@ -168,8 +163,8 @@ class Laser
 	serial::Serial *mSerial;
 	std::string mPort;
 	int mBaud;
-	const int mTimeout_ms = 100;
-	const double mTuningSpeed_nm_s = 35;		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
+	const int mTimeout = 100 * ms;
+	const double mTuningSpeed_nmPerS = 35;		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
 	const int mRxBufSize = 256;					//Serial buffer size
 
 	int downloadWavelength_();
@@ -190,12 +185,11 @@ class Shutter
 {
 	const FPGAns::FPGA &mFpga;
 	NiFpga_FPGAvi_ControlBool mDeviceID;						//Device ID
-	const int mDelay_ms = 10;
 public:
 	Shutter(const FPGAns::FPGA &fpga, RTchannel laserID);		//I use RTchannel to re-use the laserID. The shutters are not RT
 	~Shutter();
-	void openClose(const bool state) const;
-	void pulseHigh() const;
+	void setShutter(const bool state) const;
+	void pulse(const double pulsewidth) const;
 };
 
 class PockelsCell
@@ -204,19 +198,19 @@ class PockelsCell
 	RTchannel mPockelsRTchannel;
 	RTchannel mScalingRTchannel;
 	int mWavelength_nm;							//Laser wavelength
-	const double maxPower_mW = 250 * mW;		//Soft limit for the laser power
+	const double maxPower = 250 * mW;			//Soft limit for the laser power
 	Shutter mShutter;
 
-	double convert_mWToVolt_(const double power_mW) const;
+	double convertLaserpowerToVolt_(const double power) const;
 public:
 	//Do not set the output to 0 through the destructor to allow latching the last value
 	PockelsCell(FPGAns::RTcontrol &RTcontrol, const RTchannel laserID, const int wavelength_nm);
 
 	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol
-	void pushVoltageSinglet(const double timeStep, const double AO_V) const;
-	void pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
-	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const;
-	void powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const;
+	void pushVoltageSinglet(const double timeStep, const double AO) const;
+	void pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
+	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi, const double Vf) const;
+	void powerLinearRamp(const double timeStep, const double rampDuration, const double Pi, const double Pf) const;
 	void voltageToZero() const;
 	void scalingLinearRamp(const double Si, const double Sf) const;
 	void setShutter(const bool state) const;
@@ -233,9 +227,9 @@ class VirtualLaser
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
 public:
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power_mW);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power);
 	void setWavelength(const int wavelength_nm);
-	void pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
+	void pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void setShutter(const bool state) const;
 };
 

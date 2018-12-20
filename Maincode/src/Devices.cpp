@@ -286,23 +286,23 @@ unsigned char* const Image::pointerToTiff() const
 Vibratome::Vibratome(const FPGAns::FPGA &fpga): mFpga(fpga){}
 
 //Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
-void Vibratome::startStop_() const
+void Vibratome::run() const
 {
-	const int SleepTime = 20; //in ms. It has to be ~ 12 ms or longer to 
+	const double SleepTime = 20 * ms; //in ms. It has to be ~ 12 ms or longer otherwise the vibratome control pad does not read the signal
 	
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, true));
 
-	Sleep(SleepTime);
+	Sleep(static_cast<DWORD>(SleepTime/ms));
 
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
 }
 
-//Move the head of the vibratome forward or backward for the duration 'duration_ms'. The timing varies in approx 1 ms
-void Vibratome::moveHead_(const int duration_ms, const MotionDir motionDir) const
+//Move the head of the vibratome forward or backward for 'duration'. The timing varies in approx 1 ms
+void Vibratome::moveHead_(const double duration, const MotionDir motionDir) const
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
-	const int minDuration_ms = 10;		//in ms
-	const int delay_ms = 1;				//Used to roughly calibrate the pulse length
+	const double minDuration = 10 * ms;
+	const double delay = 1 * ms;				//Used to roughly calibrate the pulse length
 
 	switch (motionDir)
 	{
@@ -318,34 +318,35 @@ void Vibratome::moveHead_(const int duration_ms, const MotionDir motionDir) cons
 
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, true));
 
-	if (duration_ms >= minDuration_ms)
-		Sleep(duration_ms - delay_ms);
+	if (duration >= minDuration)
+		Sleep(static_cast<DWORD>((duration - delay)/ms));
 	else
 	{
-		Sleep(minDuration_ms - delay_ms);
-		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << minDuration_ms << "ms" << "\n";
+		Sleep(static_cast<DWORD>((minDuration - delay)/ms));
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << 1.0 * minDuration / ms << "ms" << "\n";
 	}
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, false));
 }
 
-void Vibratome::cutAndRetract(const int distance_mm) const
+void Vibratome::cutAndRetractDistance(const double distance) const
 {
-	const int cuttingTime_ms = static_cast<int>(1000.0 * distance_mm / mCuttingSpeed_mmps);
-	const int retractingTime_ms = static_cast<int>(1000 * distance_mm / mMovingSpeed_mmps);
+	const int cuttingTime_ms = static_cast<int>(distance / um / mCuttingSpeed_mmps);
+	const int retractingTime_ms = static_cast<int>(distance / um / mMovingSpeed_mmps);
 
-	startStop_();
+	run();
 	std::cout << "The vibratome is cutting for " << cuttingTime_ms/1000.0 << " seconds" << "\n";
 	Sleep(cuttingTime_ms);
 	Sleep(2000);
 	std::cout << "The vibratome is retracting for " << retractingTime_ms/1000.0 << " seconds" << "\n";
-	moveHead_(retractingTime_ms, BACKWARD);
+	moveHead_(retractingTime_ms * ms, BACKWARD);
 }
 
-void Vibratome::reset(const int distance_mm) const
+
+void Vibratome::retractDistance(const double distance) const
 {
-	const int retractingTime_ms = static_cast<int>(1000 * distance_mm / mMovingSpeed_mmps);
+	const int retractingTime_ms = static_cast<int>(distance / um / mMovingSpeed_mmps);
 	std::cout << "The vibratome is retracting for " << retractingTime_ms / 1000.0 << " seconds" << "\n";
-	moveHead_(retractingTime_ms, BACKWARD);
+	moveHead_(retractingTime_ms * ms, BACKWARD);
 }
 
 
@@ -355,7 +356,7 @@ void Vibratome::reset(const int distance_mm) const
 ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol): mRTcontrol(RTcontrol)
 {	
 	//Calculate the spatial fill factor
-	const double temporalFillFactor = mRTcontrol.mWidthPerFrame_pix * mRTcontrol.mDwell_us / halfPeriodLineclock_us;
+	const double temporalFillFactor = mRTcontrol.mWidthPerFrame_pix * mRTcontrol.mDwell / halfPeriodLineclock;
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
@@ -364,74 +365,74 @@ ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol): mRTcontrol
 	//std::cout << "Fill factor = " << mFillFactor << "\n";		//For debugging
 
 	//Download the current control voltage from the FPGA and update the scan parameters
-	mControl_V = downloadControl_V();									//Control voltage
-	mFullScan_um = mControl_V / mVoltPerUm;								//Full scan FOV = distance from turning point to turning point
-	mFFOV_um = mFullScan_um * mFillFactor;								//FFOV
-	mSampRes_umPerPix = mFFOV_um / mRTcontrol.mWidthPerFrame_pix;		//Spatial sampling resolution
+	mControlVoltage = downloadControlVoltage_V() / V;			//Control voltage
+	mFullScan = mControlVoltage * um / V / mVoltPerUm;			//Full scan FOV = distance from turning point to turning point
+	mFFOV = mFullScan * mFillFactor;							//FFOV
+	mSampRes_umPerPix = (mFFOV / um) / mRTcontrol.mWidthPerFrame_pix;		//Spatial sampling resolution
 }
 
 //Set the control voltage that determines the scanning amplitude
-void ResonantScanner::setVoltage_(const double control_V)
+void ResonantScanner::setVoltage_(const double controlVoltage)
 {
-	if (control_V < 0 || control_V > mVMAX_V)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage must be in the range 0-" + std::to_string(mVMAX_V) + " V" );
+	if (controlVoltage < 0 || controlVoltage > mVMAX)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage must be in the range 0-" + std::to_string(mVMAX) + " V" );
 
 	//Update the scan parameters
-	mControl_V = control_V;												//Control voltage
-	mFullScan_um = control_V / mVoltPerUm;								//Full scan FOV
-	mFFOV_um = mFullScan_um * mFillFactor;								//FFOV
-	mSampRes_umPerPix = mFFOV_um / mRTcontrol.mWidthPerFrame_pix;		//Spatial sampling resolution
+	mControlVoltage = controlVoltage;									//Control voltage
+	mFullScan = controlVoltage / mVoltPerUm * um / V;					//Full scan FOV
+	mFFOV = mFullScan * mFillFactor;									//FFOV
+	mSampRes_umPerPix = (mFFOV/um) / mRTcontrol.mWidthPerFrame_pix;		//Spatial sampling resolution
 
 	//Upload the control voltage
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::convertVoltToI16(mControl_V)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::convertVoltageToI16(mControlVoltage)));
 }
 
 //Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
-void ResonantScanner::setFFOV(const double FFOV_um)
+void ResonantScanner::setFFOV(const double FFOV)
 {
 	//Update the scan parameters
-	mFullScan_um = FFOV_um / mFillFactor;								//Full scan FOV
-	mControl_V = mFullScan_um * mVoltPerUm;								//Control voltage
-	mFFOV_um = FFOV_um;													//FFOV
-	mSampRes_umPerPix = mFFOV_um / mRTcontrol.mWidthPerFrame_pix;		//Spatial sampling resolution
-	//std::cout << "mControl_V = " << mControl_V << "\n"; //For debugging
+	mFullScan = FFOV / mFillFactor;										//Full scan FOV
+	mControlVoltage = mFullScan * mVoltPerUm * V / um;					//Control voltage
+	mFFOV = FFOV;														//FFOV
+	mSampRes_umPerPix = (mFFOV / um) / mRTcontrol.mWidthPerFrame_pix;	//Spatial sampling resolution
+	//std::cout << "mControlVoltage = " << mControlVoltage << "\n"; //For debugging
 
-	if (mControl_V < 0 || mControl_V > mVMAX_V)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX_V/mVoltPerUm) + " um");
+	if (mControlVoltage < 0 || mControlVoltage > mVMAX)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX/mVoltPerUm) + " um");
 
 	//Upload the control voltage
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::convertVoltToI16(mControl_V)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::convertVoltageToI16(mControlVoltage)));
 }
 
 //First set the FFOV, then set RSenable on
-void ResonantScanner::turnOn_um(const double FFOV_um)
+void ResonantScanner::turnOn(const double FFOV_um)
 {
 	setFFOV(FFOV_um);
-	Sleep(mDelay_ms);
+	Sleep(static_cast<DWORD>(mDelay/ms));
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
 	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um\n";
 }
 
 //First set the control voltage, then set RSenable on
-void ResonantScanner::turnOn_V(const double control_V)
+void ResonantScanner::turnOnUsingVoltage(const double controlVoltage)
 {
-	setVoltage_(control_V);
-	Sleep(mDelay_ms);
+	setVoltage_(controlVoltage);
+	Sleep(static_cast<DWORD>(mDelay/ms));
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
-	std::cout << "RS control voltage successfully set to: " << control_V << " V\n";
+	std::cout << "RS control voltage successfully set to: " << controlVoltage / V << " V\n";
 }
 
 //First set RSenable off, then set the control voltage to 0
 void ResonantScanner::turnOff()
 {
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSrun, false));
-	Sleep(mDelay_ms);
+	Sleep(static_cast<DWORD>(mDelay/ms));
 	setVoltage_(0);
 	std::cout << "RS successfully turned off" << "\n";
 }
 
 //Download the current control voltage of the RS from the FPGA
-double ResonantScanner::downloadControl_V()
+double ResonantScanner::downloadControlVoltage_V()
 {
 	I16 control_I16;
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
@@ -440,7 +441,7 @@ double ResonantScanner::downloadControl_V()
 }
 
 //Spatial sampling resolution (um per pixel)
-double ResonantScanner::getSamplingResolution_um()
+double ResonantScanner::getSamplingResolution_umPerPix()
 {
 	return mSampRes_umPerPix;
 }
@@ -475,24 +476,24 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel):
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 }
 
-void Galvo::pushVoltageSinglet(const double timeStep, const double AO_V) const
+void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
 {
-	mRTcontrol.pushAnalogSinglet(mGalvoRTchannel, timeStep, AO_V);
+	mRTcontrol.pushAnalogSinglet(mGalvoRTchannel, timeStep, AO);
 }
 
-void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, const double Vi_V, const double Vf_V) const
+void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const
 {
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, Vi_V, Vf_V);
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, Vi, Vf);
 }
 
-void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double xi_V, const double xf_V) const
+void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double xi, const double xf) const
 {
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, voltPerUm * xi_V, voltPerUm * xf_V);
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, voltPerUm * xi * V / um, voltPerUm * xf * V / um);
 }
 
 void Galvo::voltageToZero() const
 {
-	mRTcontrol.pushAnalogSinglet(mGalvoRTchannel, AO_tMIN_us, 0 * V);
+	mRTcontrol.pushAnalogSinglet(mGalvoRTchannel, AO_tMIN, 0 * V);
 }
 #pragma endregion "Galvo"
 
@@ -500,7 +501,7 @@ void Galvo::voltageToZero() const
 #pragma region "PMT16X"
 PMT16X::PMT16X()
 {
-	mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+	mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout/ms));
 }
 
 PMT16X::~PMT16X()
@@ -560,7 +561,7 @@ void PMT16X::readAllGain() const
 	//Print out the gains
 	std::cout << "PMT16X gains:\n";
 	for (int ii = 1; ii <= 16; ii++)
-		std::cout << "Gain #" << ii << " (0-255) = " << (int)parameters.at(ii) << "\n";		
+		std::cout << "Gain #" << ii << " (0-255) = " << static_cast<int>(parameters.at(ii)) << "\n";		
 }
 
 void PMT16X::setSingleGain(const int channel, const int gain) const
@@ -629,7 +630,7 @@ void PMT16X::setAllGain(std::vector<uint8_t> gains) const
 	//Print out the gains
 	std::cout << "PMT16X gains successfully set to:\n";
 	for (int ii = 1; ii <= 16; ii++)
-		std::cout << "Gain #" << ii << " (0-255) = " << (int)parameters.at(ii) << "\n";
+		std::cout << "Gain #" << ii << " (0-255) = " << static_cast<int>(parameters.at(ii)) << "\n";
 
 }
 
@@ -642,11 +643,11 @@ void PMT16X::readTemp() const
 	if (parameters.at(0) != 'T' || parameters.at(4) != sumCheck_(parameters, parameters.size() - 2))
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch\n";
 
-	const int TEMPH = (int)(parameters.at(1));
-	const int TEMPL = (int)(parameters.at(2));
+	const int TEMPH = static_cast<int>(parameters.at(1));
+	const int TEMPL = static_cast<int>(parameters.at(2));
 	const double temp_C = TEMPH + 0.01 * TEMPL; //According to the manual
 
-	const int alertTemp_C = (int)(parameters.at(3));
+	const int alertTemp_C = static_cast<int>(parameters.at(3));
 
 	std::cout << "PMT16X temperature = " << temp_C << " \370C\n";
 	std::cout << "PMT16X alert temperature = " << alertTemp_C <<  " \370C\n";
@@ -673,7 +674,7 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mDeviceID(ID)
 
 	try
 	{
-		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout / ms));
 		downloadColor_();	//Download the current filter position
 	}
 	catch (const serial::IOException)
@@ -757,7 +758,7 @@ void Filterwheel::setColor(const Filtercolor color)
 			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
 
 			//std::cout << "Tuning the " << mDeviceName << " to " + convertToString_(color) << "\n";
-			Sleep((int)(1000.0 * minSteps / mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret
+			Sleep(static_cast<DWORD>(1000.0 * minSteps / mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
 														//std::cout << "setColor full RxBuffer: " << RxBuffer << "\n"; //For debugging
@@ -812,7 +813,7 @@ Laser::Laser(RTchannel laserID): mLaserID(laserID)
 
 	try
 	{
-		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout_ms));
+		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout / ms));
 	}
 	catch (const serial::IOException)
 	{
@@ -891,9 +892,9 @@ void Laser::setWavelength(const int wavelength_nm)
 			{
 				mSerial->write(TxBuffer + "\r");
 
-				//std::cout << "Sleep time in ms: " << (int) std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s) << "\n";	//For debugging
+				//std::cout << "Sleep time in ms: " << static_cast<int>( std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmPerS) ) << "\n";	//For debugging
 				std::cout << "Tuning VISION to " << wavelength_nm << " nm\n";
-				Sleep((int)std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nm_s));	//Wait till the laser finishes tuning
+				Sleep(static_cast<DWORD>( std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmPerS)) );	//Wait till the laser finishes tuning
 
 				mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
 
@@ -974,17 +975,17 @@ Shutter::~Shutter()
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
 }
 
-void Shutter::openClose(const bool state) const
+void Shutter::setShutter(const bool state) const
 {
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, state));
 }
 
 
-void Shutter::pulseHigh() const
+void Shutter::pulse(const double pulsewidth) const
 {
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, true));
 
-	Sleep(mDelay_ms);
+	Sleep(static_cast<DWORD>(pulsewidth/ms));
 
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
 }
@@ -1016,7 +1017,7 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const RTchannel laserID, 
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, 1.0);
 }
 
-double PockelsCell::convert_mWToVolt_(const double power_mW) const
+double PockelsCell::convertLaserpowerToVolt_(const double power) const
 {
 	double a, b, c;		//Calibration parameters
 
@@ -1025,19 +1026,19 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 	{
 	case VISION:
 		if (mWavelength_nm == 750) {
-			a = 788;
-			b = 0.6152;
-			c = -0.027;
+			a = 788 * mW;
+			b = 0.6152 / V;
+			c = -0.027 * V;
 		}
 		else if (mWavelength_nm == 940) {
-			a = 464;
-			b = 0.488;
-			c = -0.087;
+			a = 464 * mW;
+			b = 0.488 / V;
+			c = -0.087 * V;
 		}
 		else if (mWavelength_nm == 1040) {
-			a = 200;
-			b = 0.441;
-			c = 0.037;
+			a = 200 * mW;
+			b = 0.441 / V;
+			c = 0.037 * V;
 		}
 		else
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -1045,15 +1046,15 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 
 		//FIDELITY
 	case FIDELITY:
-		a = 101.20;
-		b = 0.276;
-		c = -0.049;
+		a = 101.20 * mW;
+		b = 0.276 / V;
+		c = -0.049 * V;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
 	}
 
-	double arg = sqrt(power_mW / a);
+	double arg = sqrt(power / a);
 	if (arg > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Arg of asin is greater than 1");
 
@@ -1070,43 +1071,43 @@ double PockelsCell::convert_mWToVolt_(const double power_mW) const
 }
 
 
-void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO_V) const
+void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO) const
 {
-	if (AO_V < 0)
+	if (AO < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, AO_V);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, AO);
 }
 
-void PockelsCell::pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag) const
+void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag) const
 {
-	if (P_mW < 0 || P_mW > maxPower_mW)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(P_mW));
+	if (P < 0 || P > maxPower)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(P/mW));
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, convert_mWToVolt_(P_mW), overrideFlag);
-}
-
-//Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
-void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi_V, const double Vf_V) const
-{
-	if (Vi_V < 0 || Vf_V < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
-
-	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, Vi_V, Vf_V);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, convertLaserpowerToVolt_(P), overrideFlag);
 }
 
 //Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
-void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDuration, const double Pi_mW, const double Pf_mW) const
+void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi, const double Vf) const
 {
-	if (Pi_mW < 0 || Pf_mW < 0)
+	if (Vi < 0 || Vf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, convert_mWToVolt_(Pi_mW), convert_mWToVolt_(Pf_mW));
+	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, Vi, Vf);
+}
+
+//Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
+void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDuration, const double Pi, const double Pf) const
+{
+	if (Pi < 0 || Pf < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
+
+	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, convertLaserpowerToVolt_(Pi), convertLaserpowerToVolt_(Pf));
 }
 
 void PockelsCell::voltageToZero() const
 {
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, AO_tMIN_us, 0 * V);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, AO_tMIN, 0 * V);
 }
 
 //Linearly scale the pockels output across all the frames
@@ -1126,7 +1127,7 @@ void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 
 void PockelsCell::setShutter(const bool state) const
 {
-	mShutter.openClose(state);
+	mShutter.setShutter(state);
 }
 
 #pragma endregion "Pockels cells"
@@ -1134,7 +1135,7 @@ void PockelsCell::setShutter(const bool state) const
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power_mW):
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power):
 	mWavelength_nm(wavelength_nm), mVision(VISION), mFidelity(FIDELITY),
 	mPockelsVision(RTcontrol, VISION, wavelength_nm), mPockelsFidelity(RTcontrol, FIDELITY, 1040),
 	mFWexcitation(FWEXC), mFWdetection(FWDET)
@@ -1166,15 +1167,15 @@ void VirtualLaser::setWavelength(const int wavelength_nm)
 	mWavelength_nm = wavelength_nm;
 }
 
-void VirtualLaser::pushPowerSinglet(const double timeStep, const double P_mW, const OverrideFileSelector overrideFlag) const
+void VirtualLaser::pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag) const
 {
 	switch (mLaserID)
 	{
 	case VISION:
-		mPockelsVision.pushPowerSinglet(timeStep, P_mW, overrideFlag);
+		mPockelsVision.pushPowerSinglet(timeStep, P, overrideFlag);
 		break;
 	case FIDELITY:
-		mPockelsFidelity.pushPowerSinglet(timeStep, P_mW, overrideFlag);
+		mPockelsFidelity.pushPowerSinglet(timeStep, P, overrideFlag);
 		break;
 	}
 }

@@ -9,7 +9,7 @@
 #include <tiffio.h>					//Tiff files
 using namespace Constants;
 
-std::string file_exists(const std::string filename);
+std::string doesFileExist(const std::string filename);
 std::string toString(const double number, const int nDecimalPlaces);
 void printHex(int input);
 void printHex(const std::vector<uint8_t>  input);
@@ -59,8 +59,8 @@ public:
 
 class Stack
 {
+	TiffU8 mSameZ;		//For saving the same z plane many times and the compute the average image
 	TiffU8 mDiffZ;		//For saving different z planes
-	TiffU8 mSameZ;		//For saving the same z plane many times and compute the average image
 public:
 	Stack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
 	void pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff);

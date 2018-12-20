@@ -36,8 +36,8 @@ public:
 	void download();
 	void mirrorOddFrames();
 	void average();
-	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDirection stackScanDir = TOPDOWN) const;
-	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const StackScanDirection stackScanDir = TOPDOWN) const;
+	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDir stackScanDir = TOPDOWN) const;
+	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const StackScanDir stackScanDir = TOPDOWN) const;
 	unsigned char* const pointerToTiff() const;
 };
 
@@ -284,13 +284,3 @@ public:
 	void printStageConfig(const Axis axis, const int DOchan) const;
 };
 
-class Stack
-{
-	TiffU8 mDiffZ;		//For imaging a stack of different z planes
-	TiffU8 mSameZ;		//For imaging the same z plane many times and compute the average image
-public:
-	Stack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
-	void pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff);
-	void pushDiffZ(const int indexDiffZ);
-	void saveToFile(const std::string filename, OverrideFileSelector overrideFlag) const;
-};

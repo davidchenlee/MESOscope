@@ -37,7 +37,7 @@ namespace Constants
 	enum RunMode { SINGLEMODE, LIVEMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
 	enum InitialStageCorner { BOTTOMLEFT, TOPLEFT, BOTTOMRIGHT, TOPRIGHT };			//Bottom-left, top-left, bottom-right, top-right
 	enum Action { CUT, ACQ, SAV, MOV };
-	enum StackScanDirection { BOTTOMUP = -1, TOPDOWN = 1 };
+	enum StackScanDir { BOTTOMUP = -1, TOPDOWN = 1 };
 
 	enum ComID { COMVISION, COMFIDELITY, COMFWDET , COMFWEXC, COMPMT16X };
 	extern const std::vector<std::string> assignCOM;

@@ -18,6 +18,8 @@ void printBinary16(const int input);
 U16 convertDoubleToFx2p14(double n);
 std::string axisToString(const Axis axis);
 
+
+//For saving the parameters to a text file
 class Logger
 {
 	std::ofstream mFileHandle;
@@ -29,7 +31,7 @@ public:
 	void record(const std::string description, const std::string input);
 };
 
-
+//For manipulating and saving Tiff images
 class TiffU8
 {
 	unsigned char* mArray;
@@ -45,7 +47,7 @@ public:
 	TiffU8(const int width, const int height, const int nframes);
 	~TiffU8();
 	unsigned char* const pointerToTiff() const;
-	void saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag = NOOVERRIDE, const StackScanDirection stackScanDir = TOPDOWN) const;
+	void saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag = NOOVERRIDE, const StackScanDir stackScanDir = TOPDOWN) const;
 	void mirrorOddFrames();
 	void averageEvenOdd();
 	void average();
@@ -53,3 +55,16 @@ public:
 	void saveTxt(const std::string fileName) const;
 	void pushImage(const int frame, const unsigned char* inputArray) const;
 };
+
+
+class Stack
+{
+	TiffU8 mDiffZ;		//For saving different z planes
+	TiffU8 mSameZ;		//For saving the same z plane many times and compute the average image
+public:
+	Stack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
+	void pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff);
+	void pushDiffZ(const int indexDiffZ);
+	void saveToFile(const std::string filename, OverrideFileSelector overrideFlag) const;
+};
+

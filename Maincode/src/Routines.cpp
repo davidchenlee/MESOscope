@@ -75,7 +75,7 @@ void mainVision(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = (int)(stackDepthZ_um / stepSizeZ_um);
 		overrideFlag = NOOVERRIDE;
-		//Push the stage sequence
+		//Generate the sequence for the stages
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) + iterDiffZ * stepSizeZ_um / 1000 });
 		break;
@@ -83,7 +83,7 @@ void mainVision(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = (int)(stackDepthZ_um / stepSizeZ_um);
 		overrideFlag = NOOVERRIDE;
-		//Push the stage sequence
+		//Generate the sequence for the stages
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) - 0.5 * stackDepthZ_um / 1000 + iterDiffZ * stepSizeZ_um / 1000 });
 		break;
@@ -273,7 +273,7 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = (int)(stackDepthZ_um / stepSizeZ_um);
 		overrideFlag = NOOVERRIDE;
-		//Push the stage sequence
+		//Generate the sequence for the stages
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) + iterDiffZ * stepSizeZ_um / 1000 });
 		break;
@@ -281,7 +281,7 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = (int)(stackDepthZ_um / stepSizeZ_um);
 		overrideFlag = NOOVERRIDE;
-		//Push the stage sequence
+		//Generate the sequence for the stages
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) - 0.5 * stackDepthZ_um / 1000 + iterDiffZ * stepSizeZ_um / 1000 });
 		break;
@@ -758,7 +758,7 @@ void testVibratome(const FPGAns::FPGA &fpga)
 	getchar();
 }
 
-//The pc triggers the z-stage motion, then the position of the stage triggers the control sequence and data acquisition
+//The pc triggers the z-stage motion, then the position of the stage triggers both the scanning routine and the data acquisition
 //Remember that I am not using MACROS on the stages anymore
 //With the PI monitor for the step reponse I see that the motion start and end of the stage is somewhat nonlinear (+/- 1 um off target).
 //1. My current sol is to first trigger the stage motion, then after a certain fixed distance use the stage DO to trigger the data acquisition. The problem right now is that I can not find a way to reset the stage DO
@@ -771,7 +771,7 @@ void testStageTrigAcq(const FPGAns::FPGA &fpga)
 	const double stepSizeZ_um(0.5 * um);
 
 	//STAGES
-	const StackScanDirection stackScanDirZ = BOTTOMUP;				//Scan direction in z
+	const StackScanDir stackScanDirZ = BOTTOMUP;					//Scan direction in z
 	const double3 stackCenterXYZ_mm{ 36.050, 14.150, 18.650 };		//Center of the stack in x, y, and z
 	const double stackDepth_mm( static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ_um / 1000);
 	const double3 stageXYZi_mm{ stackCenterXYZ_mm.at(XX), stackCenterXYZ_mm.at(YY), stackCenterXYZ_mm.at(ZZ) - stackDepth_mm /2};	//Stage initial position
@@ -822,7 +822,7 @@ void testStageTrigAcq(const FPGAns::FPGA &fpga)
 	image.initialize();
 
 	image.startFIFOOUTpc();
-	//Move the stage to trigger the control sequence and data acquisition
+	//Move the stage to trigger the scanning sequence and data acquisition
 	stage.moveSingleStage(ZZ, stageXYZi_mm.at(ZZ) + stackDepth_mm);
 	image.download();
 	image.mirrorOddFrames();	//For max optimization, do this when saving the data to Tiff

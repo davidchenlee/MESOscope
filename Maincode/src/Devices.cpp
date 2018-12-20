@@ -263,13 +263,13 @@ void Image::average()
 }
 
 //Save each frame in mTiff in a single Tiff page
-void Image::saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDirection stackScanDir) const
+void Image::saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDir stackScanDir) const
 {
 	mTiff.saveToFile(filename, SINGLEPAGE, overrideFlag, stackScanDir);
 }
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDirection stackScanDir) const
+void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDir stackScanDir) const
 {
 	mTiff.saveToFile(filename, MULTIPAGE, overrideFlag, stackScanDir);
 }
@@ -1494,26 +1494,7 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 }
 #pragma endregion "Stages"
 
-#pragma region "Stack"
-Stack::Stack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ) :
-	mDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ), mSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ) {}
 
-void Stack::pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff)
-{
-	mSameZ.pushImage(indexSameZ, pointerToTiff);
-}
-
-void Stack::pushDiffZ(const int indexDiffZ)
-{
-	mSameZ.average();	//Average the images with the same Z
-	mDiffZ.pushImage(indexDiffZ, mSameZ.pointerToTiff());
-}
-
-void Stack::saveToFile(const std::string filename, OverrideFileSelector overrideFlag) const
-{
-	mDiffZ.saveToFile(filename, MULTIPAGE, overrideFlag);
-}
-#pragma endregion "Stack"
 
 
 

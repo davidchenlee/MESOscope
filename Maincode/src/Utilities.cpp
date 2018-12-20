@@ -212,7 +212,7 @@ unsigned char* const TiffU8::pointerToTiff() const
 
 //Split mArray into sub-images (or "frames")
 //Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image which has to be resized into sub-images
-void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag, const StackScanDirection stackScanDir) const
+void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag, const StackScanDir stackScanDir) const
 {
 	int width, height, nFrames;
 
@@ -421,3 +421,25 @@ void TiffU8::pushImage(const int frame, const unsigned char* inputArray) const
 }
 
 #pragma endregion "TiffU8"
+
+
+#pragma region "Stack"
+Stack::Stack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ) :
+	mDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ), mSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ) {}
+
+void Stack::pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff)
+{
+	mSameZ.pushImage(indexSameZ, pointerToTiff);
+}
+
+void Stack::pushDiffZ(const int indexDiffZ)
+{
+	mSameZ.average();	//Average the images with the same Z
+	mDiffZ.pushImage(indexDiffZ, mSameZ.pointerToTiff());
+}
+
+void Stack::saveToFile(const std::string filename, OverrideFileSelector overrideFlag) const
+{
+	mDiffZ.saveToFile(filename, MULTIPAGE, overrideFlag);
+}
+#pragma endregion "Stack"

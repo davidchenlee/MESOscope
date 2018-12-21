@@ -30,7 +30,7 @@ namespace Constants
 	enum TiffPageStructSelector { SINGLEPAGE = false, MULTIPAGE = true};
 	enum OverrideFileSelector { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
-	enum RTchannel { PIXELCLOCK, GALVO1, GALVO2, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };		//NCHAN = number of RT channels available, including the channel for the pixelclock
+	enum RTchannel { RTPIXELCLOCK, RTGALVO1, RTGALVO2, RTDODEBUG, RTVISION, RTSCALINGVISION, RTFIDELITY, RTSCALINGFIDELITY, RTNCHAN };		//RTNCHAN = number of RT channels available, including the channel for the pixelclock
 	enum FilterwheelID { FWDET = 1, FWEXC = 2 };
 	enum Filtercolor { BLUE = 1, GREEN = 2, RED = 3 };
 	enum Axis { XX, YY, ZZ };
@@ -38,6 +38,7 @@ namespace Constants
 	enum InitialStageCorner { BOTTOMLEFT, TOPLEFT, BOTTOMRIGHT, TOPRIGHT };			//Bottom-left, top-left, bottom-right, top-right
 	enum Action { CUT, ACQ, SAV, MOV };
 	enum StackScanDir { BOTTOMUP = -1, TOPDOWN = 1 };
+	enum LaserSelector { VISION, FIDELITY, AUTO};
 
 	enum ComID { COMVISION, COMFIDELITY, COMFWDET , COMFWEXC, COMPMT16X };
 	extern const std::vector<std::string> assignCOM;

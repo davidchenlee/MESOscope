@@ -158,7 +158,7 @@ public:
 class Laser
 {
 	std::string mLaserNameString;
-	RTchannel mLaserID;
+	LaserSelector mLaserID;
 	int mWavelength_nm;
 	serial::Serial *mSerial;
 	std::string mPort;
@@ -169,7 +169,7 @@ class Laser
 
 	int downloadWavelength_nm_();
 public:
-	Laser(RTchannel laserID);
+	Laser(const LaserSelector laserID);
 	~Laser();
 	Laser(const Laser&) = delete;				//Disable copy-constructor
 	Laser& operator=(const Laser&) = delete;	//Disable assignment-constructor
@@ -186,7 +186,7 @@ class Shutter
 	const FPGAns::FPGA &mFpga;
 	NiFpga_FPGAvi_ControlBool mDeviceID;						//Device ID
 public:
-	Shutter(const FPGAns::FPGA &fpga, RTchannel laserID);		//I use RTchannel to re-use the laserID. The shutters are not RT
+	Shutter(const FPGAns::FPGA &fpga, const LaserSelector laserID);
 	~Shutter();
 	void setShutter(const bool state) const;
 	void pulse(const double pulsewidth) const;
@@ -204,7 +204,7 @@ class PockelsCell
 	double convertLaserpowerToVolt_(const double power) const;
 public:
 	//Do not set the output to 0 through the destructor to allow latching the last value
-	PockelsCell(FPGAns::RTcontrol &RTcontrol, const RTchannel laserID, const int wavelength_nm);
+	PockelsCell(FPGAns::RTcontrol &RTcontrol, const LaserSelector laserSelector, const int wavelength_nm);
 
 	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol itself
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
@@ -218,7 +218,7 @@ public:
 
 class VirtualLaser
 {
-	RTchannel mLaserID;		//Keep track of the current laser being used
+	LaserSelector mLaserID;		//Keep track of the current laser being used
 	int mWavelength_nm;		//Keep track of the current wavelength being used
 	Laser mVision;
 	Laser mFidelity;
@@ -226,10 +226,10 @@ class VirtualLaser
 	PockelsCell mPockelsFidelity;
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
+	void setWavelength_(const int wavelength_nm);
 public:
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power);
-	void setWavelength(const int wavelength_nm);
-	void pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm);
+	void pushPowerSinglet(const double timeStep, const double power, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void setShutter(const bool state) const;
 };
 

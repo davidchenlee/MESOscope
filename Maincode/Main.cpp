@@ -9,6 +9,7 @@ int main(int argc, char* argv[])
 		{
 			//mainVision(fpga);
 			discreteScanZ(fpga, VISION);
+			//discreteScanZVirtualLaser(fpga);
 			//continuousScanZ(fpga);
 			//testGalvo(fpga);
 			//testPixelclock(fpga);

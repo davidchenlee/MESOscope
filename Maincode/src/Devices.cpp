@@ -472,7 +472,7 @@ void ResonantScanner::isRunning()
 Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel):
 	mRTcontrol(RTcontrol), mGalvoRTchannel(galvoChannel)
 {
-	if ( mGalvoRTchannel != GALVO1 )
+	if ( mGalvoRTchannel != RTGALVO1 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 }
 
@@ -793,7 +793,7 @@ void Filterwheel::setColor(const int wavelength_nm)
 #pragma endregion "Filterwheel"
 
 #pragma region "Laser"
-Laser::Laser(RTchannel laserID): mLaserID(laserID)
+Laser::Laser(const LaserSelector laserID): mLaserID(laserID)
 {
 	switch (mLaserID)
 	{
@@ -954,7 +954,7 @@ void Laser::setShutter(const bool state) const
 
 
 #pragma region "Shutters"
-Shutter::Shutter(const FPGAns::FPGA &fpga, RTchannel laserID) : mFpga(fpga)
+Shutter::Shutter(const FPGAns::FPGA &fpga, const LaserSelector laserID) : mFpga(fpga)
 {
 	switch (laserID)
 	{
@@ -994,21 +994,23 @@ void Shutter::pulse(const double pulsewidth) const
 #pragma region "Pockels cells"
 //Curently, output of the pockels cell is hardcoded on the FPGA side.  The pockels' output is HIGH when 'framegate' is HIGH
 //Each Uniblitz shutter goes with a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
-PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const RTchannel laserID, const int wavelength_nm) :
-	mRTcontrol(RTcontrol), mPockelsRTchannel(laserID), mWavelength_nm(wavelength_nm), mShutter(mRTcontrol.mFpga, mPockelsRTchannel)
+PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const LaserSelector laserSelector, const int wavelength_nm) :
+	mRTcontrol(RTcontrol), mWavelength_nm(wavelength_nm), mShutter(mRTcontrol.mFpga, laserSelector)
 {
-	if (mPockelsRTchannel != VISION && mPockelsRTchannel != FIDELITY)
+	if (laserSelector != VISION && laserSelector != FIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
 
-	switch (mPockelsRTchannel)
+	switch (laserSelector)
 	{
 	case VISION:
-		mScalingRTchannel = SCALINGVISION;
+		mPockelsRTchannel = RTVISION;
+		mScalingRTchannel = RTSCALINGVISION;
 		break;
 	case FIDELITY:
 		if (wavelength_nm != 1040)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength of FIDELITY is fixed at 1040 nm");
-		mScalingRTchannel = SCALINGFIDELITY;
+		mPockelsRTchannel = RTFIDELITY;
+		mScalingRTchannel = RTSCALINGFIDELITY;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
@@ -1026,7 +1028,7 @@ double PockelsCell::convertLaserpowerToVolt_(const double power) const
 	//VISION
 	switch (mPockelsRTchannel)
 	{
-	case VISION:
+	case RTVISION:
 		if (mWavelength_nm == 750) {
 			a = 788 * mW;
 			b = 0.6152 / V;
@@ -1047,7 +1049,7 @@ double PockelsCell::convertLaserpowerToVolt_(const double power) const
 		break;
 
 		//FIDELITY
-	case FIDELITY:
+	case RTFIDELITY:
 		a = 101.20 * mW;
 		b = 0.276 / V;
 		c = -0.049 * V;
@@ -1060,16 +1062,7 @@ double PockelsCell::convertLaserpowerToVolt_(const double power) const
 	if (arg > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Arg of asin is greater than 1");
 
-	switch (mPockelsRTchannel)
-	{
-	case VISION:
-		return asin(arg) / b + c;
-	case FIDELITY:
-		//return (PI - asin(arg)) / b + c; //different expression from VISION because currently no HWP in front of the pockels
-		return asin(arg) / b + c;
-	default:
-		return 0;
-	}
+	return asin(arg) / b + c;
 }
 
 
@@ -1137,15 +1130,30 @@ void PockelsCell::setShutter(const bool state) const
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power):
-	mWavelength_nm(wavelength_nm), mVision(VISION), mFidelity(FIDELITY),
-	mPockelsVision(RTcontrol, VISION, wavelength_nm), mPockelsFidelity(RTcontrol, FIDELITY, 1040),
-	mFWexcitation(FWEXC), mFWdetection(FWDET)
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm) :
+	mWavelength_nm(wavelength_nm), mVision(VISION), mFidelity(FIDELITY), mPockelsVision(RTcontrol, VISION, wavelength_nm), mPockelsFidelity(RTcontrol, FIDELITY, 1040), mFWexcitation(FWEXC), mFWdetection(FWDET)
 {
-	setWavelength(mWavelength_nm);
+	//Use VISION for everything below 1040 nm
+	if (wavelength_nm < 1040)
+	{
+		std::cout << "Using VISION\n";
+		mLaserID = VISION;
+		mVision.setWavelength(wavelength_nm);
+	}
+	//Use FIDELITY for 1040 nm
+	else if (wavelength_nm == 1040)
+	{
+		std::cout << "Using FIDELITY\n";
+		mLaserID = FIDELITY;
+	}
+	else
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
+
+	mFWexcitation.setColor(wavelength_nm);
+	mFWdetection.setColor(wavelength_nm);
 }
 
-void VirtualLaser::setWavelength(const int wavelength_nm)
+void VirtualLaser::setWavelength_(const int wavelength_nm)
 {
 	//Use VISION for everything below 1040 nm
 	if (wavelength_nm < 1040)
@@ -1155,29 +1163,24 @@ void VirtualLaser::setWavelength(const int wavelength_nm)
 	}
 	//Use FIDELITY for 1040 nm
 	else if (wavelength_nm == 1040)
-	{
 		mLaserID = FIDELITY;
-	}
 	else
-	{
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm not implemented");
-	}
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 
 	mFWexcitation.setColor(wavelength_nm);
 	mFWdetection.setColor(wavelength_nm);
-
 	mWavelength_nm = wavelength_nm;
 }
 
-void VirtualLaser::pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag) const
+void VirtualLaser::pushPowerSinglet(const double timeStep, const double power, const OverrideFileSelector overrideFlag) const
 {
 	switch (mLaserID)
 	{
 	case VISION:
-		mPockelsVision.pushPowerSinglet(timeStep, P, overrideFlag);
+		mPockelsVision.pushPowerSinglet(timeStep, power, overrideFlag);
 		break;
 	case FIDELITY:
-		mPockelsFidelity.pushPowerSinglet(timeStep, P, overrideFlag);
+		mPockelsFidelity.pushPowerSinglet(timeStep, power, overrideFlag);
 		break;
 	}
 }

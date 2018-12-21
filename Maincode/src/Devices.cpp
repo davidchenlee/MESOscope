@@ -365,8 +365,8 @@ ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol): mRTcontrol
 	//std::cout << "Fill factor = " << mFillFactor << "\n";		//For debugging
 
 	//Download the current control voltage from the FPGA and update the scan parameters
-	mControlVoltage = downloadControlVoltage_V() / V;			//Control voltage
-	mFullScan = mControlVoltage * um / V / mVoltPerUm;			//Full scan FOV = distance from turning point to turning point
+	mControlVoltage = downloadControlVoltage();					//Control voltage
+	mFullScan = mControlVoltage / mVoltagePerDistance;			//Full scan FOV = distance from turning point to turning point
 	mFFOV = mFullScan * mFillFactor;							//FFOV
 	mSampRes_umPerPix = (mFFOV / um) / mRTcontrol.mWidthPerFrame_pix;		//Spatial sampling resolution
 }
@@ -379,7 +379,7 @@ void ResonantScanner::setVoltage_(const double controlVoltage)
 
 	//Update the scan parameters
 	mControlVoltage = controlVoltage;									//Control voltage
-	mFullScan = controlVoltage / mVoltPerUm * um / V;					//Full scan FOV
+	mFullScan = controlVoltage / mVoltagePerDistance;					//Full scan FOV
 	mFFOV = mFullScan * mFillFactor;									//FFOV
 	mSampRes_umPerPix = (mFFOV/um) / mRTcontrol.mWidthPerFrame_pix;		//Spatial sampling resolution
 
@@ -392,13 +392,13 @@ void ResonantScanner::setFFOV(const double FFOV)
 {
 	//Update the scan parameters
 	mFullScan = FFOV / mFillFactor;										//Full scan FOV
-	mControlVoltage = mFullScan * mVoltPerUm * V / um;					//Control voltage
+	mControlVoltage = mFullScan * mVoltagePerDistance;					//Control voltage
 	mFFOV = FFOV;														//FFOV
 	mSampRes_umPerPix = (mFFOV / um) / mRTcontrol.mWidthPerFrame_pix;	//Spatial sampling resolution
 	//std::cout << "mControlVoltage = " << mControlVoltage << "\n"; //For debugging
 
 	if (mControlVoltage < 0 || mControlVoltage > mVMAX)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX/mVoltPerUm) + " um");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX/mVoltagePerDistance /um) + " um");
 
 	//Upload the control voltage
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::convertVoltageToI16(mControlVoltage)));
@@ -432,12 +432,12 @@ void ResonantScanner::turnOff()
 }
 
 //Download the current control voltage of the RS from the FPGA
-double ResonantScanner::downloadControlVoltage_V()
+double ResonantScanner::downloadControlVoltage()
 {
 	I16 control_I16;
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
 
-	return FPGAns::convertI16toVolt(control_I16);
+	return FPGAns::convertI16toVoltage(control_I16);
 }
 
 //Spatial sampling resolution (um per pixel)
@@ -488,7 +488,7 @@ void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, co
 
 void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double xi, const double xf) const
 {
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, voltPerUm * xi * V / um, voltPerUm * xf * V / um);
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
 }
 
 void Galvo::voltageToZero() const
@@ -820,7 +820,7 @@ Laser::Laser(RTchannel laserID): mLaserID(laserID)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with " + mLaserNameString);
 	}
 
-	mWavelength_nm = downloadWavelength_();
+	mWavelength_nm = downloadWavelength_nm_();
 }
 
 Laser::~Laser()
@@ -828,7 +828,7 @@ Laser::~Laser()
 	mSerial->close();
 }
 
-int Laser::downloadWavelength_()
+int Laser::downloadWavelength_nm_()
 {
 	switch (mLaserID)
 	{
@@ -898,7 +898,7 @@ void Laser::setWavelength(const int wavelength_nm)
 
 				mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
 
-				downloadWavelength_();
+				downloadWavelength_nm_();
 				if (mWavelength_nm = wavelength_nm)
 					std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm\n";
 				else
@@ -1361,7 +1361,7 @@ void Stage::stopAllstages() const
 }
 
 //Request the velocity of the stage in mm/s
-double Stage::downloadSingleVelocity(const Axis axis) const
+double Stage::downloadSingleVelocity_mmps(const Axis axis) const
 {
 	double vel_mmps;
 	if (!PI_qVEL(mID[axis], mNstagesPerController, &vel_mmps))
@@ -1481,7 +1481,7 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 	const double stopThreshold_mm = downloadDOtriggerSingleParam(axis, chan, StopThreshold);
 	const double triggerPosition_mm = downloadDOtriggerSingleParam(axis, chan, TriggerPosition);
 	const bool triggerState = isDOtriggerEnabled(axis, chan);
-	const double vel_mmps = downloadSingleVelocity(axis);
+	const double vel_mmps = downloadSingleVelocity_mmps(axis);
 
 	std::cout << "Configuration for the stage = " << axisToString(axis) << ", DOchan = " << chan << ":\n";
 	std::cout << "is DO trigger enabled? = " << triggerState << "\n";

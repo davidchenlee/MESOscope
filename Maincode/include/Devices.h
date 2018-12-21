@@ -68,7 +68,7 @@ class ResonantScanner
 	const FPGAns::RTcontrol &mRTcontrol;				//Needed to retrieve 'mRTcontrol.mWidthPerFrame_pix' to calculate the fill factor
 	const double mVMAX = 5 * V;							//Max control voltage allowed
 	const double mDelay = 10 * ms;
-	const double mVoltPerUm = 0.00595;					//Calibration factor. Last calibrated 
+	const double mVoltagePerDistance = 0.00595 * V/um;	//Calibration factor. Last calibrated 
 	double mFullScan;									//Full scan = distance between turning points
 	double mControlVoltage;								//Control voltage 0-5V
 
@@ -76,23 +76,23 @@ class ResonantScanner
 public:
 	ResonantScanner(const FPGAns::RTcontrol &RTcontrol);
 	double mFillFactor;									//Fill factor: how much of an RS swing is covered by the pixels
-	double mFFOV;									//Current FFOV
+	double mFFOV;										//Current FFOV
 	double mSampRes_umPerPix;							//Spatial sampling resolution (um per pixel)
 
 	void setFFOV(const double FFOV);
 	void turnOn(const double FFOV);
 	void turnOnUsingVoltage(const double controlVoltage);
 	void turnOff();
-	double downloadControlVoltage_V();
+	double downloadControlVoltage();
 	double getSamplingResolution_umPerPix();
 	void isRunning();
 };
 
 class Galvo
 {
-	FPGAns::RTcontrol &mRTcontrol;				//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
+	FPGAns::RTcontrol &mRTcontrol;								//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
-	const double voltPerUm = 0.02417210 ;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
+	const double mVoltagePerDistance = 0.02417210 * V/um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 public:
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel);
 	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol
@@ -167,7 +167,7 @@ class Laser
 	const double mTuningSpeed_nmPerS = 35;		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
 	const int mRxBufSize = 256;					//Serial buffer size
 
-	int downloadWavelength_();
+	int downloadWavelength_nm_();
 public:
 	Laser(RTchannel laserID);
 	~Laser();
@@ -267,7 +267,7 @@ public:
 	void waitForMotionToStopSingleStage(const Axis axis) const;
 	void waitForMotionToStopAllStages() const;
 	void stopAllstages() const;
-	double downloadSingleVelocity(const Axis axis) const;
+	double downloadSingleVelocity_mmps(const Axis axis) const;
 	void setSingleVelocity(const Axis axis, const double vel_mmps) const;
 	void setAllVelocities(const double3 vel_mmps) const;
 	void setDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const;

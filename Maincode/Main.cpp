@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 		{
 			//mainVision(fpga);
 			//mainFidelity(fpga);
-			testContinuousXYZacq(fpga);
+			continuousScanZ(fpga);
 			//testGalvo(fpga);
 			//testPixelclock(fpga);
 			//testAODO(fpga);

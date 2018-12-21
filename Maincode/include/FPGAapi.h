@@ -11,7 +11,7 @@ namespace FPGAns
 {
 	U16 convertTimeToTick(const double t);
 	I16 convertVoltageToI16(const double voltage);
-	double convertI16toVolt(const int input);
+	double convertI16toVoltage(const int input);
 	U32 packU32(const U16 t_tick, const U16 AO_U16);
 	U32 packAnalogSinglet(const double timeStep, const double AO);
 	U32 packDigitalSinglet(const double timeStep, const bool DO);

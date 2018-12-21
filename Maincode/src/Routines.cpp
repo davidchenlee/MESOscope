@@ -403,7 +403,7 @@ I triggered the stack acquisition using DO2 for both scanning directions: top-do
 almost identical, with a difference of maybe 1 plane only (0.5 um)
 Remember that I do not use MACROS on the stages anymore
 */
-void testContinuousXYZacq(const FPGAns::FPGA &fpga)
+void continuousScanZ(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix(300);
@@ -417,7 +417,8 @@ void testContinuousXYZacq(const FPGAns::FPGA &fpga)
 	const double stackDepth_mm(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ_um / 1000);
 	const double3 stageXYZi_mm{ stackCenterXYZ_mm.at(XX), stackCenterXYZ_mm.at(YY), stackCenterXYZ_mm.at(ZZ) - stackDepth_mm / 2 };	//Initial position of the stages
 	const double stageVelXY_mmps(5); //Initial velocity of the stage x and y
-	const double stageVelZ_mmps(1000 * stepSizeZ_um / (halfPeriodLineclock / us * heightPerFrame_pix));	//Initial velocity of the stage z
+	const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;	//TODO: combine this with the galvo's one
+	const double stageVelZ_mmps(1000 * stepSizeZ_um / frameDurationTmp);	//Initial velocity of the stage z
 	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
 	stage.moveAllStages(stageXYZi_mm);
 	stage.waitForMotionToStopAllStages();
@@ -457,20 +458,19 @@ void testContinuousXYZacq(const FPGAns::FPGA &fpga)
 	pockelsVision.setShutter(true);
 	Sleep(50);
 
-
 	//EXECUTE THE RT CONTROL SEQUENCE
 	Image image(RTcontrol);
 	image.initialize();
 
 	image.startFIFOOUTpc();
 	//Move the stage to trigger the control sequence and data acquisition
+	std::cout << "Scanning the stack...\n";
 	stage.moveSingleStage(ZZ, stageXYZi_mm.at(ZZ) + stackDepth_mm);
 	image.download();
 	image.mirrorOddFrames();	//For max optimization, do this when saving the data to Tiff
-	image.saveTiffMultiPage("Untitled", NOOVERRIDE, stackScanDirZ);
 
-	stage.waitForMotionToStopAllStages();
 	pockelsVision.setShutter(false);
+	image.saveTiffMultiPage("Untitled", NOOVERRIDE, stackScanDirZ);
 
 	//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence
 	//RTcontrol.setZstageTriggerEnabled(false);
@@ -688,9 +688,9 @@ void testStageConfig()
 	//stage.setDOtriggerEnabled(ZZ, DOchannel , true);
 	//const int triggerParam = 1;
 	//stage.downloadDOtriggerSingleParam(ZZ, DOchannel , triggerParam);
-	//std::cout << "x stage vel: " << stage.downloadSingleVelocity(XX) << " mm/s" << "\n";
-	//std::cout << "y stage vel: " << stage.downloadSingleVelocity(YY) << " mm/s" << "\n";
-	//std::cout << "z stage vel: " << stage.downloadSingleVelocity(ZZ) << " mm/s" << "\n";
+	//std::cout << "x stage vel: " << stage.downloadSingleVelocity_mmps(XX) << " mm/s" << "\n";
+	//std::cout << "y stage vel: " << stage.downloadSingleVelocity_mmps(YY) << " mm/s" << "\n";
+	//std::cout << "z stage vel: " << stage.downloadSingleVelocity_mmps(ZZ) << " mm/s" << "\n";
 	stage.printStageConfig(ZZ, DOchan);
 
 	std::cout << "Press any key to continue...\n";
@@ -770,7 +770,7 @@ void testPockels(const FPGAns::FPGA &fpga)
 void testRS(const FPGAns::FPGA &fpga)
 {
 	ResonantScanner RScanner(fpga);
-	std::cout << "aaa = " << RScanner.downloadControlVoltage_V() << "\n";
+	std::cout << "aaa = " << RScanner.downloadControlVoltage() << "\n";
 	//RScanner.turnOn(150 * um);
 	//RScanner.turnOff();
 }
@@ -778,8 +778,8 @@ void testRS(const FPGAns::FPGA &fpga)
 void testConvertI16toVolt()
 {
 	std::cout << "volt to I16: " << FPGAns::convertVoltageToI16(1) << "\n";
-	std::cout << "I16 to colt: " << FPGAns::convertI16toVolt(32767) << "\n";
-	std::cout << "volt to I16 to volt: " << FPGAns::convertI16toVolt(FPGAns::convertVoltageToI16(0)) << "\n";
+	std::cout << "I16 to colt: " << FPGAns::convertI16toVoltage(32767) << "\n";
+	std::cout << "volt to I16 to volt: " << FPGAns::convertI16toVoltage(FPGAns::convertVoltageToI16(0)) << "\n";
 }
 
 void testTiffU8()
@@ -847,31 +847,31 @@ void testSequencer()
 	//I prefer generating such list before execution because then I can inspect all the parameters offline
 
 	//Configure the sample
-	const ROI roi_mm{ 0, 10, 10, 0 };
-	const double sampleLengthZ_mm(10);
-	SampleConfig sampleConfig("Beads_4um", "grycerol", "1.47", roi_mm, sampleLengthZ_mm);
+	const ROI roi{ 0, 10.*mm, 10.*mm, 0 };
+	const double sampleLengthZ(10.*mm);
+	SampleConfig sampleConfig("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ);
 
 	//Configure the lasers {wavelength_nm, laser power mW, laser power incremental mW}
 	using SingleLaserConfig = LaserListConfig::SingleLaserConfig;
-	const SingleLaserConfig blueLaser{ 750, 10, 5 };
-	const SingleLaserConfig greenLaser{ 940, 11, 6 };
-	const SingleLaserConfig redLaser{ 1040, 12, 7 };
+	const SingleLaserConfig blueLaser{ 750, 10*mW, 5*mW };
+	const SingleLaserConfig greenLaser{ 940, 11*mW, 6*mW };
+	const SingleLaserConfig redLaser{ 1040, 12*mW, 7*mW };
 	const std::vector<SingleLaserConfig> laserList{ blueLaser, greenLaser, redLaser };
 	
 	//Configure the stacks
-	const double2 FOV_um{ 150,200 };
-	const double stepSizeZ_um(0.5);						//Image resolution in z
-	const double stackDepth_um(100);					//Stack depth or thickness
+	const double2 FOV{ 150.*um, 200.*um };
+	const double stepSizeZ(0.5*um);						//Image resolution in z
+	const double stackDepth(100*um);					//Stack depth or thickness
 	const double3 stackOverlap_frac{ 0.1,0.1,0.1 };		//Percentage of stack overlap in x, y, and z
-	StackConfig stackConfig(FOV_um, stepSizeZ_um, stackDepth_um, stackOverlap_frac);
+	StackConfig stackConfig(FOV, stepSizeZ, stackDepth, stackOverlap_frac);
 
 	//Configure the vibratome
-	const double cutAboveBottomOfStack_um(9);			//Cut this much above the bottom of the stack
-	const VibratomeConfig vibratomeConfig(cutAboveBottomOfStack_um);
+	const double cutAboveBottomOfStack(15*um);			//Cut this much above the bottom of the stack
+	const VibratomeConfig vibratomeConfig(cutAboveBottomOfStack);
 
 	//Configure the stages
-	const double stageInitialZ_mm(10);					//Initial heightPerFrame_pix of the stage
-	StageConfig stageConfig(stageInitialZ_mm);
+	const double stageInitialZ(10*mm);					//Initial heightPerFrame_pix of the stage
+	StageConfig stageConfig(stageInitialZ);
 
 	//Create a sequence
 	Sequencer sequence(sampleConfig, laserList, stackConfig, vibratomeConfig, stageConfig);
@@ -887,31 +887,31 @@ void testSequencer()
 			commandline.printParameters();
 
 			//Initialize to unreal values for safety
-			double scanZi_mm(-1), stackDepth_mm(-1), scanPi_mW(-1), stackPinc_mW(-1);
-			double2 stackCenter_mm{1000,1000};
+			double scanZi(-1*mm), stackDepth(-1*mm), scanPi(-1*mW), stackPinc(-1*mW);
+			double2 stackCenter{ 1000.*mm, 1000.*mm};
 			int wavelength_nm(-1);
 
 			switch (commandline.mAction)
 			{
 			case MOV:
-				//Move the x and y stages to stackCenter_mm
-				stackCenter_mm = commandline.mCommand.moveStage.stackCenter_mm;
+				//Move the x and y stages to mStackCenter
+				stackCenter = commandline.mCommand.moveStage.mStackCenter;
 				break;
 			case ACQ:
 				//Acquire a stack using the parameters:
-				wavelength_nm = commandline.mCommand.acqStack.wavelength_nm;
-				scanZi_mm = commandline.mCommand.acqStack.scanZi_mm;
-				stackDepth_mm = commandline.mCommand.acqStack.stackDepth_um;
-				scanPi_mW = commandline.mCommand.acqStack.scanPi_mW;
-				stackPinc_mW = commandline.mCommand.acqStack.stackPinc_mW;
+				wavelength_nm = commandline.mCommand.acqStack.mWavelength_nm;
+				scanZi = commandline.mCommand.acqStack.mScanZi;
+				stackDepth = commandline.mCommand.acqStack.mStackDepth;
+				scanPi = commandline.mCommand.acqStack.mScanPi;
+				stackPinc = commandline.mCommand.acqStack.mStackPinc;
 			case SAV:
 				//Save the stack to file and label it with the scan parameters:
-				wavelength_nm, scanZi_mm, stackDepth_mm, scanPi_mW, stackPinc_mW;
-				stackCenter_mm;
+				wavelength_nm, scanZi, stackDepth, scanPi, stackPinc;
+				stackCenter;
 				break;
 			case CUT:
 				//Move the stage to
-				double3 stagePosition_mm = commandline.mCommand.cutSlice.samplePosition_mm;
+				double3 stagePosition = commandline.mCommand.cutSlice.mSamplePosition;
 				//and then cut a slice off
 				break;
 			default:

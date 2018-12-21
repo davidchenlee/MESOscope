@@ -43,7 +43,7 @@ namespace FPGAns
 	}
 
 	//Convert I16 (-32768 to 32767) to voltage (-10V to 10V)
-	double convertI16toVolt(const int input)
+	double convertI16toVoltage(const int input)
 	{
 		//Positive case
 		if (input >= 0)
@@ -413,8 +413,8 @@ namespace FPGAns
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo2Mon, &AOlastVoltage_I16.at(GALVO2)));
 	
 		//For debugging
-		//std::cout << convertI16toVolt(AOlastVoltage_I16.at(GALVO1)) << "\n";
-		//std::cout << convertI16toVolt((I16)mVectorOfQueues.at(GALVO1).front()) << "\n";
+		//std::cout << convertI16toVoltage(AOlastVoltage_I16.at(GALVO1)) << "\n";
+		//std::cout << convertI16toVoltage((I16)mVectorOfQueues.at(GALVO1).front()) << "\n";
 
 		//Create a vector of queues
 		VQU32 vectorOfQueuesForRamp(NCHAN);
@@ -425,8 +425,8 @@ namespace FPGAns
 				//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 				if ((chan == GALVO1 || chan == GALVO2) )	//Only do GALVO1 and GALVO2 for now
 				{
-					const double Vi = convertI16toVolt(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
-					const double Vf = convertI16toVolt((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT control sequence
+					const double Vi = convertI16toVoltage(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
+					const double Vf = convertI16toVoltage((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT control sequence
 					linearRamp(vectorOfQueuesForRamp.at(chan), 10 * us, 5 * ms, Vi, Vf);
 				}
 			}

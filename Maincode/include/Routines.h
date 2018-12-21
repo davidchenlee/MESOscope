@@ -5,7 +5,7 @@
 
 void mainVision(const FPGAns::FPGA &fpga);
 void mainFidelity(const FPGAns::FPGA &fpga);
-void testContinuousXYZacq(const FPGAns::FPGA &fpga);
+void continuousScanZ(const FPGAns::FPGA &fpga);
 void testGalvo(const FPGAns::FPGA &fpga);
 void testPixelclock(const FPGAns::FPGA &fpga);
 void testAODO(const FPGAns::FPGA &fpga);

@@ -3,8 +3,7 @@
 #include "Sequencer.h"
 //#include <concrt.h> 	//Concurrency::wait(2000);
 
-void discreteScanZ(const FPGAns::FPGA &fpga, const LaserSelector laserSelector);
-void discreteScanZVirtualLaser(const FPGAns::FPGA &fpga);
+void discreteScanZ(const FPGAns::FPGA &fpga);
 void continuousScanZ(const FPGAns::FPGA &fpga);
 void testGalvo(const FPGAns::FPGA &fpga);
 void testPixelclock(const FPGAns::FPGA &fpga);

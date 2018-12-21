@@ -56,7 +56,7 @@ class Vibratome
 	//double mTravelRange = 52.4 * mm;	//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
 
 	void moveHead_(const double duration, const MotionDir motionDir) const;
-	void run() const;
+	void pushStartStopButton() const;
 public:
 	Vibratome(const FPGAns::FPGA &fpga);
 	void cutAndRetractDistance(const double distance) const;
@@ -158,7 +158,7 @@ public:
 class Laser
 {
 	std::string mLaserNameString;
-	LaserSelector mLaserID;
+	LaserSelector mWhichLaser;
 	int mWavelength_nm;
 	serial::Serial *mSerial;
 	std::string mPort;
@@ -184,7 +184,7 @@ public:
 class Shutter
 {
 	const FPGAns::FPGA &mFpga;
-	NiFpga_FPGAvi_ControlBool mDeviceID;						//Device ID
+	NiFpga_FPGAvi_ControlBool mDeviceID;	//Device ID
 public:
 	Shutter(const FPGAns::FPGA &fpga, const LaserSelector laserID);
 	~Shutter();
@@ -218,8 +218,8 @@ public:
 
 class VirtualLaser
 {
-	LaserSelector mLaserID;		//Keep track of the current laser being used
-	int mWavelength_nm;		//Keep track of the current wavelength being used
+	LaserSelector mWhichLaser;		//Keep track of the current laser being used
+	int mWavelength_nm;				//Keep track of the current wavelength being used
 	Laser mVision;
 	Laser mFidelity;
 	PockelsCell mPockelsVision;
@@ -228,7 +228,7 @@ class VirtualLaser
 	Filterwheel mFWdetection;
 	void setWavelength_(const int wavelength_nm);
 public:
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector = AUTO);
 	void pushPowerSinglet(const double timeStep, const double power, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void setShutter(const bool state) const;
 };

@@ -285,8 +285,8 @@ unsigned char* const Image::pointerToTiff() const
 #pragma region "Vibratome"
 Vibratome::Vibratome(const FPGAns::FPGA &fpga): mFpga(fpga){}
 
-//Start running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
-void Vibratome::run() const
+//Start or stop running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
+void Vibratome::pushStartStopButton() const
 {
 	const double SleepTime = 20 * ms; //in ms. It has to be ~ 12 ms or longer otherwise the vibratome control pad does not read the signal
 	
@@ -330,14 +330,14 @@ void Vibratome::moveHead_(const double duration, const MotionDir motionDir) cons
 
 void Vibratome::cutAndRetractDistance(const double distance) const
 {
-	const int cuttingTime_ms = static_cast<int>(distance / um / mCuttingSpeed_mmps);
-	const int retractingTime_ms = static_cast<int>(distance / um / mMovingSpeed_mmps);
+	const double cuttingTime_ms = distance / um / mCuttingSpeed_mmps;
+	const double retractingTime_ms = distance / um / mMovingSpeed_mmps;
 
-	run();
-	std::cout << "The vibratome is cutting for " << cuttingTime_ms/1000.0 << " seconds" << "\n";
-	Sleep(cuttingTime_ms);
+	pushStartStopButton();
+	std::cout << "The vibratome is cutting for " << cuttingTime_ms / 1000 << " seconds" << "\n";
+	Sleep(static_cast<DWORD>(cuttingTime_ms));
 	Sleep(2000);
-	std::cout << "The vibratome is retracting for " << retractingTime_ms/1000.0 << " seconds" << "\n";
+	std::cout << "The vibratome is retracting for " << retractingTime_ms / 1000 << " seconds" << "\n";
 	moveHead_(retractingTime_ms * ms, BACKWARD);
 }
 
@@ -662,11 +662,11 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mDeviceID(ID)
 	{
 	case FWDET:
 		mPort = assignCOM.at(COMFWDET);
-		mDeviceName = "detection filterwheel";
+		mDeviceName = "Detection filterwheel";
 		break;
 	case FWEXC:
 		mPort = assignCOM.at(COMFWEXC);
-		mDeviceName = "excitation filterwheel";
+		mDeviceName = "Excitation filterwheel";
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected filterwheel unavailable");
@@ -757,7 +757,7 @@ void Filterwheel::setColor(const Filtercolor color)
 			const int diffPos = maxPos - minPos;
 			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
 
-			//std::cout << "Tuning the " << mDeviceName << " to " + convertToString_(color) << "\n";
+			//std::cout << "Tuning the " << mDeviceName << " to " + convertToString_(color) << "...\n";
 			Sleep(static_cast<DWORD>(1000.0 * minSteps / mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
@@ -793,9 +793,9 @@ void Filterwheel::setColor(const int wavelength_nm)
 #pragma endregion "Filterwheel"
 
 #pragma region "Laser"
-Laser::Laser(const LaserSelector laserID): mLaserID(laserID)
+Laser::Laser(const LaserSelector laserID): mWhichLaser(laserID)
 {
-	switch (mLaserID)
+	switch (mWhichLaser)
 	{
 	case VISION:
 		mLaserNameString = "VISION";
@@ -830,7 +830,7 @@ Laser::~Laser()
 
 int Laser::downloadWavelength_nm_()
 {
-	switch (mLaserID)
+	switch (mWhichLaser)
 	{
 	case VISION:
 		try
@@ -877,7 +877,7 @@ void Laser::printWavelength_nm() const
 
 void Laser::setWavelength(const int wavelength_nm)
 {
-	switch (mLaserID)
+	switch (mWhichLaser)
 	{
 	case VISION:
 		if (wavelength_nm < 680 || wavelength_nm > 1080)
@@ -893,7 +893,7 @@ void Laser::setWavelength(const int wavelength_nm)
 				mSerial->write(TxBuffer + "\r");
 
 				//std::cout << "Sleep time in ms: " << static_cast<int>( std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmPerS) ) << "\n";	//For debugging
-				std::cout << "Tuning VISION to " << wavelength_nm << " nm\n";
+				std::cout << "Tuning VISION to " << wavelength_nm << " nm...\n";
 				Sleep(static_cast<DWORD>( std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmPerS)) );	//Wait till the laser finishes tuning
 
 				mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
@@ -923,7 +923,7 @@ void Laser::setShutter(const bool state) const
 	std::string TxBuffer;		//Command to the laser
 	std::string RxBuffer;		//Reply from the laser
 
-	switch (mLaserID)
+	switch (mWhichLaser)
 	{
 	case VISION:
 		TxBuffer = "S=" + std::to_string(state);
@@ -1008,7 +1008,7 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const LaserSelector laser
 		break;
 	case FIDELITY:
 		if (wavelength_nm != 1040)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength of FIDELITY is fixed at 1040 nm");
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength of FIDELITY can not be different from 1040 nm");
 		mPockelsRTchannel = RTFIDELITY;
 		mScalingRTchannel = RTSCALINGFIDELITY;
 		break;
@@ -1130,25 +1130,41 @@ void PockelsCell::setShutter(const bool state) const
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm) :
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector) :
 	mWavelength_nm(wavelength_nm), mVision(VISION), mFidelity(FIDELITY), mPockelsVision(RTcontrol, VISION, wavelength_nm), mPockelsFidelity(RTcontrol, FIDELITY, 1040), mFWexcitation(FWEXC), mFWdetection(FWDET)
 {
-	//Use VISION for everything below 1040 nm
-	if (wavelength_nm < 1040)
+	switch (laserSelector)
 	{
-		std::cout << "Using VISION\n";
-		mLaserID = VISION;
+	case VISION:
+		std::cout << "Using VISION at "<< mWavelength_nm << " nm\n";
+		mWhichLaser = VISION;
 		mVision.setWavelength(wavelength_nm);
+		break;
+	case FIDELITY:
+		if (wavelength_nm != 1040)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength of FIDELITY can not be different from 1040 nm");
+		std::cout << "Using FIDELITY at " << mWavelength_nm << " nm\n";
+		mWhichLaser = FIDELITY;
+		break;
+	case AUTO:	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
+		if (wavelength_nm < 1040)
+		{
+			std::cout << "Using VISION at " << mWavelength_nm << " nm\n";
+			mWhichLaser = VISION;
+			mVision.setWavelength(wavelength_nm);
+		}
+		
+		else if (wavelength_nm == 1040)
+		{
+			std::cout << "Using FIDELITY at " << mWavelength_nm << " nm\n";
+			mWhichLaser = FIDELITY;
+		}
+		else
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
+		break;
 	}
-	//Use FIDELITY for 1040 nm
-	else if (wavelength_nm == 1040)
-	{
-		std::cout << "Using FIDELITY\n";
-		mLaserID = FIDELITY;
-	}
-	else
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 
+	//Set the filterwheels
 	mFWexcitation.setColor(wavelength_nm);
 	mFWdetection.setColor(wavelength_nm);
 }
@@ -1158,12 +1174,12 @@ void VirtualLaser::setWavelength_(const int wavelength_nm)
 	//Use VISION for everything below 1040 nm
 	if (wavelength_nm < 1040)
 	{
-		mLaserID = VISION;
+		mWhichLaser = VISION;
 		mVision.setWavelength(wavelength_nm);
 	}
 	//Use FIDELITY for 1040 nm
 	else if (wavelength_nm == 1040)
-		mLaserID = FIDELITY;
+		mWhichLaser = FIDELITY;
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 
@@ -1174,7 +1190,7 @@ void VirtualLaser::setWavelength_(const int wavelength_nm)
 
 void VirtualLaser::pushPowerSinglet(const double timeStep, const double power, const OverrideFileSelector overrideFlag) const
 {
-	switch (mLaserID)
+	switch (mWhichLaser)
 	{
 	case VISION:
 		mPockelsVision.pushPowerSinglet(timeStep, power, overrideFlag);
@@ -1187,7 +1203,7 @@ void VirtualLaser::pushPowerSinglet(const double timeStep, const double power, c
 
 void VirtualLaser::setShutter(const bool state) const
 {
-	switch (mLaserID)
+	switch (mWhichLaser)
 	{
 	case VISION:
 		mPockelsVision.setShutter(state);

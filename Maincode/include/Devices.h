@@ -206,7 +206,7 @@ public:
 	//Do not set the output to 0 through the destructor to allow latching the last value
 	PockelsCell(FPGAns::RTcontrol &RTcontrol, const RTchannel laserID, const int wavelength_nm);
 
-	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol
+	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol itself
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi, const double Vf) const;

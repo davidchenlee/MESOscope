@@ -4,7 +4,7 @@
 //#include <concrt.h> 	//Concurrency::wait(2000);
 
 void mainVision(const FPGAns::FPGA &fpga);
-void mainFidelity(const FPGAns::FPGA &fpga);
+void discreteScanZ(const FPGAns::FPGA &fpga, const RTchannel laserSelector);
 void continuousScanZ(const FPGAns::FPGA &fpga);
 void testGalvo(const FPGAns::FPGA &fpga);
 void testPixelclock(const FPGAns::FPGA &fpga);

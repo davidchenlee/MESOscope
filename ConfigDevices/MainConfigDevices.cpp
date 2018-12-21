@@ -31,16 +31,19 @@ int main(int argc, char* argv[])
 			{
 				switch (whichLaser)
 				{
+				//Vision
 				case 'V':
 				case 'v':
 					vision.setShutter(1);
 					break;
+				//Fidelity
 				case 'F':
 				case 'f':
 					fidelity.setShutter(1);
 					break;
-				case 'VF':
-				case 'vf':
+				//Both Vision and Fidelity
+				case 'B':
+				case 'b':
 					vision.setShutter(1);
 					fidelity.setShutter(1);
 					break;

@@ -765,9 +765,9 @@ void Filterwheel::setColor(const Filtercolor color)
 
 			downloadColor_();
 			if (color == mColor)
-				std::cout << "The " << mDeviceName << " successfully set to " + convertToString_(mColor) << "\n";
+				std::cout << mDeviceName << " successfully set to " + convertToString_(mColor) << "\n";
 			else
-				std::cout << "WARNING: The " << mDeviceName << " might not be in the correct position " + convertToString_(color) << "\n";
+				std::cout << "WARNING: " << mDeviceName << " might not be in the correct position " + convertToString_(color) << "\n";
 		}
 		catch (const serial::IOException)
 		{
@@ -1006,6 +1006,8 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const RTchannel laserID, 
 		mScalingRTchannel = SCALINGVISION;
 		break;
 	case FIDELITY:
+		if (wavelength_nm != 1040)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength of FIDELITY is fixed at 1040 nm");
 		mScalingRTchannel = SCALINGFIDELITY;
 		break;
 	default:

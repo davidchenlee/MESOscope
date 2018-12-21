@@ -14,7 +14,7 @@ void mainVision(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);									//Number of frames for continuous XY acquisition
-	const double3 stagePosition0_mm{ 36.050, 14.150, 18.697 };	//Stage initial position
+	const double3 stagePosition0_mm{ 36.050, 14.150, 18.682 };	//Stage initial position
 
 	//RS
 	const double FFOVrs(150 * um);
@@ -27,8 +27,8 @@ void mainVision(const FPGAns::FPGA &fpga)
 	double stackDepthZ_um(10 * um);			//Acquire a stack of this depth or thickness in Z
 
 	//LASER
-	const int wavelength_nm(1040);
-	const std::vector<double> Pif{ 15.*mW, 15.*mW };
+	const int wavelength_nm(750);
+	const std::vector<double> Pif{ 35.*mW, 35.*mW };
 	double P = Pif.front();
 	Laser vision(VISION);
 	vision.setWavelength(wavelength_nm);
@@ -143,7 +143,7 @@ void mainVision(const FPGAns::FPGA &fpga)
 	//CREATE A STACK FOR STORING THE TIFFs
 	Stack stack(widthPerFrame_pix, heightPerFrame_pix, nDiffZ, nSameZ);
 
-	//SELECT A POCKELS AND OPEN THE UNIBLITZ SHUTTERS
+	//OPEN THE UNIBLITZ SHUTTERS
 	pockelsVision.setShutter(true);
 
 	//ACQUIRE FRAMES AT DIFFERENT Zs
@@ -196,7 +196,7 @@ void mainVision(const FPGAns::FPGA &fpga)
 
 }
 
-void mainFidelity(const FPGAns::FPGA &fpga)
+void discreteScanZ(const FPGAns::FPGA &fpga, const RTchannel laserSelector)
 {
 	//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 	//forth on the same z plane. The images the can be averaged
@@ -223,10 +223,27 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 	double stackDepthZ_um(10 * um);					//Acquire a stack of this depth or thickness in Z
 
 	//LASER
-	const int wavelength_nm(1040);							//Needed for the filterwheels
-	const std::vector<double> Pif{ 20.*mW, 20.*mW };		//For 750 nm over 200 um
+	Laser vision(VISION);
+	//Laser fidelity(FIDELITY);		//This does not do anything
+	int wavelength_nm;
+	std::vector<double> Pif;		//Initial and final laser power for linearramp
+	switch (laserSelector)
+	{
+	case VISION:
+		std::cout << "Using VISION laser\n";
+		wavelength_nm = 750;
+		Pif = { 40.*mW, 40.*mW };
+		vision.setWavelength(wavelength_nm);
+		break;
+	case FIDELITY:
+		std::cout << "Using FIDELITY laser\n";
+		wavelength_nm = 1040;		//Needed for the filterwheels
+		Pif = { 15.*mW, 15.*mW };
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser not available");
+	}
 	double P = Pif.front();
-	//Laser fidelity(FIDELITY);						//This does not do anything
 
 	//SAMPLE
 	const std::string sampleName("Bead4um");
@@ -299,8 +316,7 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);	//Linear ramp for the galvo
 
 	//POCKELS CELLS (RT control sequence)
-	PockelsCell pockelsVision(RTcontrol, VISION, wavelength_nm);
-	PockelsCell pockelsFidelity(RTcontrol, FIDELITY, 1040);
+	PockelsCell pockels(RTcontrol, laserSelector, wavelength_nm);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);											//Linearly scale the laser intensity across all the frames
 
@@ -339,7 +355,6 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 	Stack stack(widthPerFrame_pix, heightPerFrame_pix, nDiffZ, nSameZ);
 
 	//SELECT A POCKELS AND OPEN THE UNIBLITZ SHUTTERS
-	PockelsCell pockels(pockelsFidelity);	//Allows to choose pockelsFidelity or pockelsVision
 	pockels.setShutter(true);
 
 	//ACQUIRE FRAMES AT DIFFERENT Zs
@@ -348,7 +363,7 @@ void mainFidelity(const FPGAns::FPGA &fpga)
 		stage.moveAllStages(stagePosition_mm.at(iterDiffZ));
 		stage.waitForMotionToStopAllStages();
 		stage.printPositionXYZ();		//Print the stage position
-		//P += 0.5;					//Increase the laser power by this amount
+		//P += 0.5;						//Increase the laser power by this amount
 
 		//Acquire many frames at the same Z via discontinuous acquisition
 		for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
@@ -750,18 +765,15 @@ void testPockels(const FPGAns::FPGA &fpga)
 	PockelsCell pockelsVision(RTcontrol, VISION, 1040);			//Vision
 	PockelsCell pockelsFidelity(RTcontrol, FIDELITY, 1040);		//Fidelity
 
-	//DEFINE A POCKELS CELL DYNAMICALLY THROUGH THE COPY CONTRUCTOR
-	//PockelsCell pockels(pockelsVision);
-	PockelsCell pockels(pockelsFidelity);
+	PockelsCell pockels(pockelsVision);
+	//PockelsCell pockels(pockelsFidelity);
 	pockels.pushPowerSinglet(400 * us, 30 * mW);
-	pockels.pushPowerSinglet(8 * us, 0 * mW);
+	//pockels.pushPowerSinglet(8 * us, 0 * mW);
 	//pockels.pushVoltageSinglet(8 * us, 0.0 * V);
 
 	//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
-	pockels.setShutter(true);
 	Image image(RTcontrol);
 	image.acquire();
-	pockels.setShutter(false);
 
 	std::cout << "Press any key to continue...\n";
 	getchar();

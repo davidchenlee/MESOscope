@@ -8,8 +8,8 @@ int main(int argc, char* argv[])
 		try
 		{
 			//mainVision(fpga);
-			//mainFidelity(fpga);
-			continuousScanZ(fpga);
+			discreteScanZ(fpga, VISION);
+			//continuousScanZ(fpga);
 			//testGalvo(fpga);
 			//testPixelclock(fpga);
 			//testAODO(fpga);

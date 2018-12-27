@@ -157,7 +157,6 @@ public:
 
 class Laser
 {
-	std::string mLaserNameString;
 	LaserSelector mWhichLaser;
 	int mWavelength_nm;
 	serial::Serial *mSerial;
@@ -169,6 +168,7 @@ class Laser
 
 	int downloadWavelength_nm_();
 public:
+	std::string laserName;
 	Laser(const LaserSelector laserID);
 	~Laser();
 	Laser(const Laser&) = delete;				//Disable copy-constructor
@@ -179,6 +179,7 @@ public:
 	void printWavelength_nm() const;
 	void setWavelength(const int wavelength_nm);
 	void setShutter(const bool state) const;
+	bool isShutterOpen() const;
 };
 
 class Shutter
@@ -227,6 +228,8 @@ class VirtualLaser
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
 	void setWavelength_(const int wavelength_nm);
+	std::string laserSelectorToString_(const LaserSelector whichLaser) const;
+	void checkShutterIsOpen_(const Laser &laser) const;
 public:
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector = AUTO);
 	void pushPowerSinglet(const double timeStep, const double power, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;

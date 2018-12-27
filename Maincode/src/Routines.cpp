@@ -14,7 +14,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);										//Number of frames for continuous XY acquisition
-	const double3 stagePosition0_mm{ 36.050, 14.150, 18.682 };		//Stage initial position
+	const double3 stagePosition0_mm{ 36.050, 14.150, 18.687 };		//Stage initial position
 
 	//RS
 	const double FFOVrs(150 * um);
@@ -92,8 +92,8 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const LaserSelector laserSelector = AUTO;
-	const int wavelength_nm = 750;
-	std::vector<double> Pif{ 40.*mW, 40.*mW};		//Initial and final laser power for linear ramp
+	const int wavelength_nm = 1040;
+	std::vector<double> Pif{ 15.*mW, 15.*mW};		//Initial and final laser power for linear ramp
 	double P = Pif.front();
 	VirtualLaser laser(RTcontrol, wavelength_nm, laserSelector);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
@@ -500,10 +500,11 @@ void testPMT16X()
 
 void testLaser(const FPGAns::FPGA &fpga)
 {
-	Laser laser(VISION);
-	//Laser laser(FIDELITY);
+	//Laser laser(VISION);
+	Laser laser(FIDELITY);
+	std::cout << laser.isShutterOpen() << std::endl;
 	//laser.setShutter(false);
-	laser.setWavelength(750);
+	//laser.setWavelength(750);
 	//laser.printWavelength_nm();
 
 	std::cout << "Press any key to continue...\n";

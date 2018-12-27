@@ -1,6 +1,6 @@
 #include "Devices.h"
 
-//argv[1] = FOV, argv[2] = On/Off
+//argv[0] = Program's name, argv[1] = which laser, argv[2] = FOV, argv[3] = On/Off
 int main(int argc, char* argv[])
 {
 	if (argc < 4) {
@@ -19,8 +19,8 @@ int main(int argc, char* argv[])
 			Laser fidelity(FIDELITY);
 
 			//Set the FOV
-			char whichLaser(*argv[1]);			//V for Vision, F for Fidelity VF for both
-			int FFOV_um(std::stoi(argv[2]));	//Field of view
+			std::string whichLaser(argv[1]);			//V for Vision, F for Fidelity VF for both
+			int FFOV_um(std::stoi(argv[2]));	//Field of view in um
 			std::string runCommand(argv[3]);	//1 for run RS, 0 for stop RS
 
 			if (FFOV_um < 0 || FFOV_um > 300)
@@ -29,27 +29,22 @@ int main(int argc, char* argv[])
 			//Turn the RS On/Off
 			if (runCommand == "1")
 			{
-				switch (whichLaser)
+				if (whichLaser == "V" || whichLaser == "v")
 				{
-				//Vision
-				case 'V':
-				case 'v':
-					vision.setShutter(1);
-					break;
-				//Fidelity
-				case 'F':
-				case 'f':
-					fidelity.setShutter(1);
-					break;
-				//Both Vision and Fidelity
-				case 'B':
-				case 'b':
-					vision.setShutter(1);
-					fidelity.setShutter(1);
-					break;
-				default:
-					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser is not available");
+					vision.setShutter(true);
 				}
+				else if (whichLaser == "F" || whichLaser == "f")
+				{
+					fidelity.setShutter(true);
+				}
+				else if (whichLaser == "B" || whichLaser == "b")
+				{
+					vision.setShutter(true);
+					fidelity.setShutter(true);
+				}
+				else
+					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser is not available");
+
 				RS.turnOn(FFOV_um);
 			}
 			else if (runCommand == "0")

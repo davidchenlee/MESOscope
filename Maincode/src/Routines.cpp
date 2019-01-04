@@ -14,7 +14,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);										//Number of frames for continuous XY acquisition
-	const double3 stagePosition0_mm{ 36.050, 14.150, 18.687 };		//Stage initial position
+	const double3 stagePosition0_mm{ 35.05, 10.40, 18.102 };		//Stage initial position
 
 	//RS
 	const double FFOVrs(150 * um);
@@ -28,8 +28,8 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 
 	//SAMPLE
 	const std::string sampleName("Bead4um");
-	const std::string immersionMedium("Glycerol");
-	const std::string collar("1.47");
+	const std::string immersionMedium("SiliconMineralOil5050");
+	const std::string collar("1.49");
 
 	//STAGES
 	const double stageVelXY_mmps(5);
@@ -91,9 +91,9 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);	//Linear ramp for the galvo
 
 	//LASER
-	const LaserSelector laserSelector = AUTO;
-	const int wavelength_nm = 1040;
-	std::vector<double> Pif{ 15.*mW, 15.*mW};		//Initial and final laser power for linear ramp
+	const LaserSelector laserSelector = VISION;
+	const int wavelength_nm = 750;
+	std::vector<double> Pif{ 50.*mW, 50.*mW};		//Initial and final laser power for linear ramp
 	double P = Pif.front();
 	VirtualLaser laser(RTcontrol, wavelength_nm, laserSelector);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
@@ -207,7 +207,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//STAGES
 	const StackScanDir stackScanDirZ = TOPDOWN;							//Scan direction in z
-	const double3 stackCenterXYZ_mm{ 36.050, 14.150, 18.650 };			//Center of x, y, z stack
+	const double3 stackCenterXYZ_mm{ 35.05, 10.40, 18.102 };			//Center of x, y, z stack
 	const double stackDepth_mm(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ_um / 1000);
 	const double3 stageXYZi_mm{ stackCenterXYZ_mm.at(XX), stackCenterXYZ_mm.at(YY), stackCenterXYZ_mm.at(ZZ) - stackDepth_mm / 2 };	//Initial position of the stages
 	const double stageVelXY_mmps(5); //Initial velocity of the stage x and y
@@ -218,7 +218,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 	stage.waitForMotionToStopAllStages();
 
 	//RS
-	const double FFOVrs(100 * um);
+	const double FFOVrs(150 * um);
 	ResonantScanner RScanner(fpga);
 	RScanner.setFFOV(FFOVrs);
 	RScanner.isRunning();		//To make sure that the RS is running
@@ -228,8 +228,8 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const LaserSelector laserSelector = AUTO;
-	const int wavelength_nm = 1040;
-	std::vector<double> Pif{ 15.*mW, 15.*mW };		//Initial and final laser power for linear ramp
+	const int wavelength_nm = 750;
+	std::vector<double> Pif{ 55.*mW, 55.*mW };		//Initial and final laser power for linear ramp
 	double P = Pif.front();
 	VirtualLaser laser(RTcontrol, wavelength_nm, laserSelector);
 
@@ -398,14 +398,17 @@ void testFilterwheel()
 		
 	if (0)
 	{
-		FWdetection.setColor(1040);
 		FWexcitation.setColor(1040);
+		FWdetection.setColor(1040);
 	}
 	else
 	{
+		FWexcitation.setColor(NONE);
 		FWdetection.setColor(750);
-		FWexcitation.setColor(750);
 	}
+
+	std::cout << "Press any key to continue...\n";
+	getchar();
 }
 
 void testShutter(const FPGAns::FPGA &fpga)
@@ -422,6 +425,9 @@ void testShutter(const FPGAns::FPGA &fpga)
 	//shutterFidelity.open();
 	//Sleep(5000);
 	//shutterFidelity.close();
+
+	std::cout << "Press any key to continue...\n";
+	getchar();
 }
 
 void testStagePosition()

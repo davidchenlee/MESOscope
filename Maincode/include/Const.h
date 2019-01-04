@@ -32,13 +32,12 @@ namespace Constants
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
 	enum RTchannel { RTPIXELCLOCK, RTGALVO1, RTGALVO2, RTDODEBUG, RTVISION, RTSCALINGVISION, RTFIDELITY, RTSCALINGFIDELITY, RTNCHAN };		//RTNCHAN = number of RT channels available, including the channel for the pixelclock
 	enum FilterwheelID { FWDET = 1, FWEXC = 2 };
-	enum Filtercolor { BLUE = 1, GREEN = 2, RED = 3 };
 	enum Axis { XX, YY, ZZ };
 	enum RunMode { SINGLEMODE, LIVEMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
-	enum InitialStageCorner { BOTTOMLEFT, TOPLEFT, BOTTOMRIGHT, TOPRIGHT };			//Bottom-left, top-left, bottom-right, top-right
 	enum Action { CUT, ACQ, SAV, MOV };
 	enum StackScanDir { BOTTOMUP = -1, TOPDOWN = 1 };
 	enum LaserSelector { VISION, FIDELITY, AUTO};
+	enum Filtercolor { BLUE, GREEN, RED, NONE };
 
 	enum ComID { COMVISION, COMFIDELITY, COMFWDET , COMFWEXC, COMPMT16X };
 	extern const std::vector<std::string> assignCOM;

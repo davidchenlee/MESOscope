@@ -656,17 +656,19 @@ void PMT16X::readTemp() const
 
 
 #pragma region "Filterwheel"
-Filterwheel::Filterwheel(const FilterwheelID ID): mDeviceID(ID)
+Filterwheel::Filterwheel(const FilterwheelID whichFilterwheel): mWhichFilterwheel(whichFilterwheel)
 {
-	switch (ID)
+	switch (whichFilterwheel)
 	{
-	case FWDET:
-		mPort = assignCOM.at(COMFWDET);
-		mDeviceName = "Detection filterwheel";
-		break;
 	case FWEXC:
 		mPort = assignCOM.at(COMFWEXC);
-		mDeviceName = "Excitation filterwheel";
+		mFilterwheelName = "Excitation filterwheel";
+		mFWconfig = mFWExcConfig;								//Assign the filter positions
+		break;
+	case FWDET:
+		mPort = assignCOM.at(COMFWDET);
+		mFilterwheelName = "Detection filterwheel";
+		mFWconfig = mFWDetConfig;								//Assign the filter positions
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected filterwheel unavailable");
@@ -679,34 +681,13 @@ Filterwheel::Filterwheel(const FilterwheelID ID): mDeviceID(ID)
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the " + mDeviceName);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the " + mFilterwheelName);
 	}
 }
 
 Filterwheel::~Filterwheel()
 {
 	mSerial->close();
-}
-
-//Convert from enum Filtercolor to string
-std::string Filterwheel::convertToString_(const Filtercolor color) const
-{
-	std::string colorStr;
-	switch (color)
-	{
-	case BLUE:
-		colorStr = "BLUE";
-		break;
-	case GREEN:
-		colorStr = "GREEN";
-		break;
-	case RED:
-		colorStr = "RED";
-		break;
-	default:
-		colorStr = "UNKNOWN";
-	}
-	return colorStr;
 }
 
 //Download the current filter position
@@ -732,19 +713,20 @@ void Filterwheel::downloadColor_()
 		//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
 		//std::cout << "Cleaned RxBuffer: " << RxBuffer << "\n"; //For debugging
-		mColor = static_cast<Filtercolor>(std::stoi(RxBuffer));	//convert string to int, and then to Filtercolor
+		mColorPosition.mPosition = std::stoi(RxBuffer);									//convert string to int
+		mColorPosition.mColor = convertPositionToColor_(mColorPosition.mPosition);
 	}
 	catch (const serial::IOException)
 	{
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the " + mDeviceName);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the " + mFilterwheelName);
 	}
 }
 
-void Filterwheel::setColor(const Filtercolor color)
+void Filterwheel::setPosition_(const int position)
 {
-	if (color != mColor)
+	if (position != mColorPosition.mPosition)
 	{
-		std::string TxBuffer("pos=" + std::to_string(color) + "\r");
+		std::string TxBuffer("pos=" + std::to_string(position) + "\r");
 		std::string RxBuffer;
 
 		try
@@ -752,28 +734,80 @@ void Filterwheel::setColor(const Filtercolor color)
 			mSerial->write(TxBuffer);
 
 			//Find the shortest way to reach the targeted position
-			const int minPos = (std::min)(color, mColor);
-			const int maxPos = (std::max)(color, mColor);
+			const int minPos = (std::min)(position, mColorPosition.mPosition);
+			const int maxPos = (std::max)(position, mColorPosition.mPosition);
 			const int diffPos = maxPos - minPos;
 			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
 
-			//std::cout << "Tuning the " << mDeviceName << " to " + convertToString_(color) << "...\n";
+			//std::cout << "Tuning the " << mDeviceName << " to " + convertColorToString_(color) << "...\n";
 			Sleep(static_cast<DWORD>(1000.0 * minSteps / mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
 														//std::cout << "setColor full RxBuffer: " << RxBuffer << "\n"; //For debugging
 
-			downloadColor_();
-			if (color == mColor)
-				std::cout << mDeviceName << " successfully set to " + convertToString_(mColor) << "\n";
+			downloadColor_();	//Check if the filterwheel was set successfully 
+
+			if (position == mColorPosition.mPosition)
+				std::cout << mFilterwheelName << " successfully set to " + convertColorToString_(mColorPosition.mColor) << " (position = " << mColorPosition.mPosition << ")\n";
 			else
-				std::cout << "WARNING: " << mDeviceName << " might not be in the correct position " + convertToString_(color) << "\n";
+				std::cout << "WARNING: " << mFilterwheelName << " might not be in the correct position " << position << "\n";
 		}
 		catch (const serial::IOException)
 		{
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the " + mDeviceName);
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the " + mFilterwheelName);
 		}
 	}
+}
+
+int Filterwheel::convertColorToPosition_(const Filtercolor color) const
+{
+	for (std::vector<int>::size_type iter = 0; iter != mFWconfig.size(); iter++)
+	{
+		if (color == mFWconfig.at(iter).mColor)
+			return mFWconfig.at(iter).mPosition;
+	}
+	
+	throw std::runtime_error((std::string)__FUNCTION__ + ": Failure converting color to position");
+}
+
+Filtercolor Filterwheel::convertPositionToColor_(const int position) const
+{
+	for (std::vector<int>::size_type iter = 0; iter != mFWconfig.size(); iter++)
+	{
+		if (position == mFWconfig.at(iter).mPosition)
+			return mFWconfig.at(iter).mColor;
+	}
+
+	throw std::runtime_error((std::string)__FUNCTION__ + ": Failure converting position to color");
+}
+
+//Convert from enum Filtercolor to string
+std::string Filterwheel::convertColorToString_(const Filtercolor color) const
+{
+	std::string colorStr;
+	switch (color)
+	{
+	case BLUE:
+		colorStr = "BLUE";
+		break;
+	case GREEN:
+		colorStr = "GREEN";
+		break;
+	case RED:
+		colorStr = "RED";
+		break;
+	case NONE:
+		colorStr = "NONE";
+		break;
+	default:
+		colorStr = "UNKNOWN";
+	}
+	return colorStr;
+}
+
+void Filterwheel::setColor(const Filtercolor color)
+{
+	setPosition_(convertColorToPosition_(color));
 }
 
 //Set the filter color using the laser wavelength
@@ -788,7 +822,7 @@ void Filterwheel::setColor(const int wavelength_nm)
 	else
 		color = BLUE;
 
-	setColor(color);
+	setPosition_(convertColorToPosition_(color));
 }
 #pragma endregion "Filterwheel"
 
@@ -998,15 +1032,15 @@ bool Laser::isShutterOpen() const
 
 
 #pragma region "Shutters"
-Shutter::Shutter(const FPGAns::FPGA &fpga, const LaserSelector laserID) : mFpga(fpga)
+Shutter::Shutter(const FPGAns::FPGA &fpga, const LaserSelector whichLaser) : mFpga(fpga)
 {
-	switch (laserID)
+	switch (whichLaser)
 	{
 	case VISION:
-		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterVision;
+		mWhichShutter = NiFpga_FPGAvi_ControlBool_ShutterVision;
 		break;
 	case FIDELITY:
-		mDeviceID = NiFpga_FPGAvi_ControlBool_ShutterFidelity;
+		mWhichShutter = NiFpga_FPGAvi_ControlBool_ShutterFidelity;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected shutter unavailable");
@@ -1016,22 +1050,22 @@ Shutter::Shutter(const FPGAns::FPGA &fpga, const LaserSelector laserID) : mFpga(
 Shutter::~Shutter()
 {
 	//This is to prevent keeping the shutter open in case of an exception
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mWhichShutter, false));
 }
 
 void Shutter::setShutter(const bool state) const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, state));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mWhichShutter, state));
 }
 
 
 void Shutter::pulse(const double pulsewidth) const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, true));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mWhichShutter, true));
 
 	Sleep(static_cast<DWORD>(pulsewidth/ms));
 
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mDeviceID, false));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mWhichShutter, false));
 }
 #pragma endregion "Shutters"
 
@@ -1213,7 +1247,13 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	std::cout << "Using " << laserSelectorToString_(mWhichLaser) << " at " << mWavelength_nm << " nm\n";
 
 	//Set the filterwheels
-	mFWexcitation.setColor(wavelength_nm);
+	if (0) //Multiplexing
+	{
+		mFWexcitation.setColor(wavelength_nm);
+	}
+	else   //Single beam
+		mFWexcitation.setColor(NONE);
+
 	mFWdetection.setColor(wavelength_nm);
 }
 

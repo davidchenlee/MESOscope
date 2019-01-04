@@ -130,21 +130,30 @@ public:
 
 class Filterwheel
 {
-	FilterwheelID mDeviceID;				//Device ID = 1, 2, ...
-	std::string mDeviceName;				//Device given name
+
+	struct ColorPosition { Filtercolor mColor; int mPosition; };
+	const std::vector<ColorPosition> mFWExcConfig{ { BLUE, 1 }, { NONE, 2 }, { GREEN, 3 }, { NONE, 4 }, { RED, 5 }, { NONE, 6 } };
+	const std::vector<ColorPosition> mFWDetConfig{ { BLUE, 1 }, { GREEN, 2 }, { RED, 3 }, { NONE, 4 }, { NONE, 5 }, { NONE, 6 } };
+		
+	FilterwheelID mWhichFilterwheel;		//Device ID = 1, 2, ...
+	std::string mFilterwheelName;			//Device given name
+	std::vector<ColorPosition> mFWconfig;	//Store the filterwheel configuration for excitation or detection
+	ColorPosition mColorPosition;			//Current color and corresponding filterwheel position
 	serial::Serial *mSerial;
 	std::string mPort;
 	const int mBaud = 115200;
 	const int mTimeout = 150 * ms;
-	Filtercolor mColor;
-	const int mNpos = 6;					//Nunmber of filter positions
+	const int mNpos = 6;					//Number of filter positions
 	const double mTuningSpeed_Hz = 0.8;		//The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
 	const int mRxBufSize = 256;				//Serial buffer size
 
-	std::string convertToString_(const Filtercolor color) const;
 	void downloadColor_();
+	void setPosition_(const int position);
+	int convertColorToPosition_(const Filtercolor color) const;
+	Filtercolor convertPositionToColor_(const int position) const;
+	std::string convertColorToString_(const Filtercolor color) const;
 public:
-	Filterwheel(const FilterwheelID ID);
+	Filterwheel(const FilterwheelID whichFilterwheel);
 	~Filterwheel();
 	Filterwheel(const Filterwheel&) = delete;				//Disable copy-constructor
 	Filterwheel& operator=(const Filterwheel&) = delete;	//Disable assignment-constructor
@@ -185,9 +194,9 @@ public:
 class Shutter
 {
 	const FPGAns::FPGA &mFpga;
-	NiFpga_FPGAvi_ControlBool mDeviceID;	//Device ID
+	NiFpga_FPGAvi_ControlBool mWhichShutter;	//Device ID
 public:
-	Shutter(const FPGAns::FPGA &fpga, const LaserSelector laserID);
+	Shutter(const FPGAns::FPGA &fpga, const LaserSelector whichLaser);
 	~Shutter();
 	void setShutter(const bool state) const;
 	void pulse(const double pulsewidth) const;

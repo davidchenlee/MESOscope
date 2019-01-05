@@ -328,7 +328,7 @@ namespace FPGAns
 			std::vector<U32> FIFOIN(sizeFIFOINqueue);					//Create a 1D array with the channels concatenated
 			for (int ii = 0; ii < sizeFIFOINqueue; ii++)
 			{
-				FIFOIN[ii] = allQueues.front();							//Transfer the queue elements to the array
+				FIFOIN.at(ii) = allQueues.front();							//Transfer the queue elements to the array
 				allQueues.pop_front();
 			}
 			allQueues = {};					//Cleanup the queue C++11 style

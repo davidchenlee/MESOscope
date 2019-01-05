@@ -1332,26 +1332,26 @@ Stage::Stage(const double3 velXYZ_mmps)
 
 	//Open the connections to the stage controllers and assign the IDs
 	std::cout << "Establishing connection with the stages\n";
-	mID[XX] = PI_ConnectUSB(stageIDx.c_str());
-	mID[YY] = PI_ConnectUSB(stageIDy.c_str());
-	mID[ZZ] = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
-	//mID[ZZ] = PI_ConnectUSB(stageIDz.c_str());
+	mID.at(XX) = PI_ConnectUSB(stageIDx.c_str());
+	mID.at(YY) = PI_ConnectUSB(stageIDy.c_str());
+	mID.at(ZZ) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	//mID.at(ZZ) = PI_ConnectUSB(stageIDz.c_str());
 
-	if (mID[XX] < 0)
+	if (mID.at(XX) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
 
-	if (mID[YY] < 0)
+	if (mID.at(YY) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
 
-	if (mID[ZZ] < 0)
+	if (mID.at(ZZ) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
 
 	std::cout << "Connection with the stages successfully established\n";
 
 	//Record the current position
-	mPositionXYZ_mm[XX] = downloadPosition_mm(XX);
-	mPositionXYZ_mm[YY] = downloadPosition_mm(YY);
-	mPositionXYZ_mm[ZZ] = downloadPosition_mm(ZZ);
+	mPositionXYZ_mm.at(XX) = downloadPosition_mm(XX);
+	mPositionXYZ_mm.at(YY) = downloadPosition_mm(YY);
+	mPositionXYZ_mm.at(ZZ) = downloadPosition_mm(ZZ);
 
 	//Configure the stage velocities and DO triggers
 	configVelAndDOtriggers_(velXYZ_mmps);
@@ -1360,9 +1360,9 @@ Stage::Stage(const double3 velXYZ_mmps)
 Stage::~Stage()
 {
 	//Close the Connections
-	PI_CloseConnection(mID[XX]);
-	PI_CloseConnection(mID[YY]);
-	PI_CloseConnection(mID[ZZ]);
+	PI_CloseConnection(mID.at(XX));
+	PI_CloseConnection(mID.at(YY));
+	PI_CloseConnection(mID.at(ZZ));
 	std::cout << "Connection to the stages successfully closed\n";
 }
 
@@ -1395,16 +1395,16 @@ double3 Stage::readPositionXYZ_mm() const
 
 void Stage::printPositionXYZ() const
 {
-	std::cout << "Stage X position = " << mPositionXYZ_mm[XX] << " mm\n";
-	std::cout << "Stage Y position = " << mPositionXYZ_mm[YY] << " mm\n";
-	std::cout << "Stage Z position = " << mPositionXYZ_mm[ZZ] << " mm\n";
+	std::cout << "Stage X position = " << mPositionXYZ_mm.at(XX) << " mm\n";
+	std::cout << "Stage Y position = " << mPositionXYZ_mm.at(YY) << " mm\n";
+	std::cout << "Stage Z position = " << mPositionXYZ_mm.at(ZZ) << " mm\n";
 }
 
 //Retrieve the stage position from the controller
 double Stage::downloadPosition_mm(const Axis axis)
 {
 	double position_mm;
-	if (!PI_qPOS(mID[axis], mNstagesPerController, &position_mm))
+	if (!PI_qPOS(mID.at(axis), mNstagesPerController, &position_mm))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query position for the stage " + axisToString(axis));
 
 	return position_mm;
@@ -1414,32 +1414,32 @@ double Stage::downloadPosition_mm(const Axis axis)
 void Stage::moveSingleStage(const Axis axis, const double position_mm)
 {
 	//Check if the requested position is within range
-	if (position_mm < mSoftPosMinXYZ_mm[axis] || position_mm > mSoftPosMaxXYZ_mm[axis])
+	if (position_mm < mSoftPosMinXYZ_mm.at(axis) || position_mm > mSoftPosMaxXYZ_mm.at(axis))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position out of bounds for stage " + axisToString(axis));
 
 	//Move the stage
-	if (mPositionXYZ_mm[axis] != position_mm ) //Move only if the requested position is different from the current position
+	if (mPositionXYZ_mm.at(axis) != position_mm ) //Move only if the requested position is different from the current position
 	{
-		if (!PI_MOV(mID[axis], mNstagesPerController, &position_mm) )	//~14 ms to execute this function
+		if (!PI_MOV(mID.at(axis), mNstagesPerController, &position_mm) )	//~14 ms to execute this function
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString(axis) + " to the target position");
 
-		mPositionXYZ_mm[axis] = position_mm;
+		mPositionXYZ_mm.at(axis) = position_mm;
 	}
 }
 
 //Move the 3 stages to the requested position
 void Stage::moveAllStages(const double3 positionXYZ_mm)
 {
-	moveSingleStage(XX, positionXYZ_mm[XX]);
-	moveSingleStage(YY, positionXYZ_mm[YY]);
-	moveSingleStage(ZZ, positionXYZ_mm[ZZ]);
+	moveSingleStage(XX, positionXYZ_mm.at(XX));
+	moveSingleStage(YY, positionXYZ_mm.at(YY));
+	moveSingleStage(ZZ, positionXYZ_mm.at(ZZ));
 }
 
 bool Stage::isMoving(const Axis axis) const
 {
 	BOOL isMoving;
 
-	if (!PI_IsMoving(mID[axis], mNstagesPerController, &isMoving))	//~55 ms to execute this function
+	if (!PI_IsMoving(mID.at(axis), mNstagesPerController, &isMoving))	//~55 ms to execute this function
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage " + axisToString(axis));
 
 	return isMoving;
@@ -1449,7 +1449,7 @@ void Stage::waitForMotionToStopSingleStage(const Axis axis) const
 {
 	BOOL isMoving;
 	do {
-		if (!PI_IsMoving(mID[axis], mNstagesPerController, &isMoving))
+		if (!PI_IsMoving(mID.at(axis), mNstagesPerController, &isMoving))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage" + axisToString(axis));
 
 		std::cout << ".";
@@ -1464,13 +1464,13 @@ void Stage::waitForMotionToStopAllStages() const
 
 	BOOL isMoving_x, isMoving_y, isMoving_z;
 	do {
-		if (!PI_IsMoving(mID[XX], mNstagesPerController, &isMoving_x))
+		if (!PI_IsMoving(mID.at(XX), mNstagesPerController, &isMoving_x))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage X");
 
-		if (!PI_IsMoving(mID[YY], mNstagesPerController, &isMoving_y))
+		if (!PI_IsMoving(mID.at(YY), mNstagesPerController, &isMoving_y))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Y");
 
-		if (!PI_IsMoving(mID[ZZ], mNstagesPerController, &isMoving_z))
+		if (!PI_IsMoving(mID.at(ZZ), mNstagesPerController, &isMoving_z))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Z");
 
 		std::cout << ".";
@@ -1481,9 +1481,9 @@ void Stage::waitForMotionToStopAllStages() const
 
 void Stage::stopAllstages() const
 {
-	PI_StopAll(mID[XX]);
-	PI_StopAll(mID[YY]);
-	PI_StopAll(mID[ZZ]);
+	PI_StopAll(mID.at(XX));
+	PI_StopAll(mID.at(YY));
+	PI_StopAll(mID.at(ZZ));
 
 	std::cout << "Stages stopped\n";
 }
@@ -1492,7 +1492,7 @@ void Stage::stopAllstages() const
 double Stage::downloadSingleVelocity_mmps(const Axis axis) const
 {
 	double vel_mmps;
-	if (!PI_qVEL(mID[axis], mNstagesPerController, &vel_mmps))
+	if (!PI_qVEL(mID.at(axis), mNstagesPerController, &vel_mmps))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage " + axisToString(axis));
 
 	//std::cout << vel_mmps << "\n";
@@ -1505,7 +1505,7 @@ void Stage::setSingleVelocity(const Axis axis, const double vel_mmps) const
 	if (vel_mmps <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be greater than zero for the stage " + axisToString(axis));
 
-	if (!PI_VEL(mID[axis], mNstagesPerController, &vel_mmps))
+	if (!PI_VEL(mID.at(axis), mNstagesPerController, &vel_mmps))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString(axis));
 }
 
@@ -1530,7 +1530,7 @@ double Stage::downloadDOtriggerSingleParam(const Axis axis, const int DOchan, co
 {
 	const int triggerParam = static_cast<int>(param);
 	double value;
-	if (!PI_qCTO(mID[axis], &DOchan, &triggerParam, &value, 1))
+	if (!PI_qCTO(mID.at(axis), &DOchan, &triggerParam, &value, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger config for the stage " + axisToString(axis));
 
 	//std::cout << value << "\n";
@@ -1540,7 +1540,7 @@ double Stage::downloadDOtriggerSingleParam(const Axis axis, const int DOchan, co
 void Stage::setDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const
 {
 	const int triggerParam = static_cast<int>(paramId);
-	if (!PI_CTO(mID[axis], &DOchan, &triggerParam, &value, 1))
+	if (!PI_CTO(mID.at(axis), &DOchan, &triggerParam, &value, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + axisToString(axis));
 }
 
@@ -1565,7 +1565,7 @@ void Stage::setDOtriggerAllParams(const Axis axis, const int DOchan, const doubl
 bool Stage::isDOtriggerEnabled(const Axis axis, const int DOchan) const
 {
 	BOOL triggerState;
-	if (!PI_qTRO(mID[axis], &DOchan, &triggerState, 1))
+	if (!PI_qTRO(mID.at(axis), &DOchan, &triggerState, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger EN/DIS stage for the stage " + axisToString(axis));
 
 	//std::cout << triggerState << "\n";
@@ -1575,7 +1575,7 @@ bool Stage::isDOtriggerEnabled(const Axis axis, const int DOchan) const
 //Enable or disable the stage DO
 void Stage::setDOtriggerEnabled(const Axis axis, const int DOchan, const BOOL triggerState) const
 {
-	if (!PI_TRO(mID[axis], &DOchan, &triggerState, 1))
+	if (!PI_TRO(mID.at(axis), &DOchan, &triggerState, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger EN/DIS state for the stage " + axisToString(axis));
 }
 

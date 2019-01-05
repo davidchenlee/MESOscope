@@ -55,7 +55,7 @@ namespace FPGAns
 				return AOmax/V;
 			}
 			else
-				return 1.0 * input / _I16_MAX * AOmax;
+				return 1. * input / _I16_MAX * AOmax;
 		}
 		else //Negative case
 		{
@@ -66,7 +66,7 @@ namespace FPGAns
 				return -AOmax/V;
 			}
 			else
-				return -1.0 * input / _I16_MIN * AOmax;
+				return -1. * input / _I16_MIN * AOmax;
 		}		
 	}
 

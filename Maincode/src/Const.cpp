@@ -17,9 +17,10 @@ namespace Constants
 	extern const double PI = 3.1415926535897;
 	extern const int us = 1;								//Microsecond
 	extern const int ms = 1000 * us;						//Millisecond
+	extern const int sec = 1000 * ms;						//Second
 	extern const int um = 1;								//Micron	
 	extern const int mm = 1000 * um;						//Millimeter
-	extern const double mmps = 1.0 * mm / (1000 * ms);		//Millimeters per second
+	extern const double mmps = 1. * mm / sec;				//Millimeters per second
 	extern const int V = 1;									//Volt
 	extern const int mW = 1;								//Milliwatt
 
@@ -37,7 +38,7 @@ namespace Constants
 	//FPGA
 	extern const int AOmax = 10 * V;						//Max voltage of the AOs
 	extern const int tickPerUs = 160;						//Number of ticks in 1 us. It corresponds to the FPGA's clock
-	extern const double usPerTick = 1.0 / 160;				//Time step of the FPGA's clock
+	extern const double usPerTick = 1. / 160;				//Time step of the FPGA's clock
 	extern const U32 tMIN_tick = 2;							//Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
 	extern const int AO_tMIN = 2 * us;						//Time step of the analog output. The AO channels has a delay of >1 us 
 	extern const int syncDOtoAO_tick = 4*74;				//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 

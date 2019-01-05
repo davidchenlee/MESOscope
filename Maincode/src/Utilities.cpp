@@ -362,9 +362,9 @@ void TiffU8::averageEvenOdd()
 		for (int pixIndex = 0; pixIndex < 2 * nPixPerFrame; pixIndex++)
 		{
 			if (mNframes % 2)	//Odd number of frames: 1, 3, 5, etc
-				mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / (nFramesHalf + 1));
+				mArray[pixIndex] = static_cast<unsigned char>(1. * avg[pixIndex] / (nFramesHalf + 1));
 			else				//Even number of frames: 0, 2, 4, etc
-				mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / nFramesHalf);
+				mArray[pixIndex] = static_cast<unsigned char>(1. * avg[pixIndex] / nFramesHalf);
 		}
 
 		mHeightPerFrame = 2 * mHeightPerFrame;
@@ -387,7 +387,7 @@ void TiffU8::average()
 				avg[pixIndex] += mArray[frame * nPixPerFrame + pixIndex];
 
 		for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-			mArray[pixIndex] = static_cast<unsigned char>(1.0 * avg[pixIndex] / mNframes);
+			mArray[pixIndex] = static_cast<unsigned char>(1. * avg[pixIndex] / mNframes);
 
 		mNframes = 1;
 		delete[] avg;

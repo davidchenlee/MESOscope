@@ -323,30 +323,30 @@ void Vibratome::moveHead_(const double duration, const MotionDir motionDir) cons
 	else
 	{
 		Sleep(static_cast<DWORD>((minDuration - delay)/ms));
-		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << 1.0 * minDuration / ms << "ms" << "\n";
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << 1. * minDuration / ms << "ms" << "\n";
 	}
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, false));
 }
 
 void Vibratome::cutAndRetractDistance(const double distance) const
 {
-	const double cuttingTime_ms = distance / um / mCuttingSpeed_mmps;
-	const double retractingTime_ms = distance / um / mMovingSpeed_mmps;
+	const double cuttingTime = distance / mCuttingSpeed;
+	const double retractingTime = distance / mMovingSpeed;
 
 	pushStartStopButton();
-	std::cout << "The vibratome is cutting for " << cuttingTime_ms / 1000 << " seconds" << "\n";
-	Sleep(static_cast<DWORD>(cuttingTime_ms));
+	std::cout << "The vibratome is cutting for " << cuttingTime / sec << " seconds" << "\n";
+	Sleep(static_cast<DWORD>(cuttingTime / ms));
 	Sleep(2000);
-	std::cout << "The vibratome is retracting for " << retractingTime_ms / 1000 << " seconds" << "\n";
-	moveHead_(retractingTime_ms * ms, BACKWARD);
+	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
+	moveHead_(retractingTime, BACKWARD);
 }
 
 
 void Vibratome::retractDistance(const double distance) const
 {
-	const int retractingTime_ms = static_cast<int>(distance / um / mMovingSpeed_mmps);
-	std::cout << "The vibratome is retracting for " << retractingTime_ms / 1000.0 << " seconds" << "\n";
-	moveHead_(retractingTime_ms * ms, BACKWARD);
+	const double retractingTime = static_cast<int>(distance / mMovingSpeed);
+	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
+	moveHead_(retractingTime, BACKWARD);
 }
 
 
@@ -740,7 +740,7 @@ void Filterwheel::setPosition_(const int position)
 			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
 
 			//std::cout << "Tuning the " << mDeviceName << " to " + convertColorToString_(color) << "...\n";
-			Sleep(static_cast<DWORD>(1000.0 * minSteps / mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret. Factor of 1000 to convert from s to ms
+			Sleep(static_cast<DWORD>(1. * minSteps / mTuningSpeed_Hz / ms));	//Wait until the filterwheel stops turning the turret
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
 														//std::cout << "setColor full RxBuffer: " << RxBuffer << "\n"; //For debugging
@@ -926,9 +926,9 @@ void Laser::setWavelength(const int wavelength_nm)
 			{
 				mSerial->write(TxBuffer + "\r");
 
-				//std::cout << "Sleep time in ms: " << static_cast<int>( std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmPerS) ) << "\n";	//For debugging
+				//std::cout << "Sleep time in ms: " << static_cast<int>( std::abs( 1.*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmps / ms ) ) << "\n";	//For debugging
 				std::cout << "Tuning VISION to " << wavelength_nm << " nm...\n";
-				Sleep(static_cast<DWORD>( std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmPerS)) );	//Wait till the laser stops tuning. Factor of 1000 to convert from s to ms
+				Sleep(static_cast<DWORD>( std::abs( 1.*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmps / ms )) );	//Wait till the laser stops tuning
 
 				mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
 
@@ -1192,7 +1192,7 @@ void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
-	mRTcontrol.clearQueue(mScalingRTchannel);	//Delete the default scaling factors of 1.0s created in the PockelsCell constructor
+	mRTcontrol.clearQueue(mScalingRTchannel);	//Delete the default scaling factors of 1.0 created in the PockelsCell constructor
 
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, Si + (Sf - Si) / (mRTcontrol.mNframes - 1) * ii);

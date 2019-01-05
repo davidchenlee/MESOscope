@@ -149,8 +149,8 @@ struct StackConfig
 //The body is defined here
 struct VibratomeConfig
 {
-	const double2 mSamplePosition{ 0.*mm,0.*mm };		//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
-	const double mBladeFocalplaneOffsetZ = 0*um;		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	const double2 mSamplePosition{ 0. * mm,0. * mm };		//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
+	const double mBladeFocalplaneOffsetZ = 0 * um;		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack;						//Cut this much above the bottom of the stack
 
 	VibratomeConfig(const double sliceOffset) :

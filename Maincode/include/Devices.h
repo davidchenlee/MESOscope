@@ -51,8 +51,8 @@ class Vibratome
 {
 	enum MotionDir { BACKWARD = -1, FORWARD = 1 };
 	const FPGAns::FPGA &mFpga;
-	double mCuttingSpeed_mmps = 0.5;	//in mm/s. Speed of the vibratome for cutting (manual setting)
-	double mMovingSpeed_mmps = 2.495;	//in mm/s. Forward and backward moving speed of the head. 52.4 mm in 21 seconds = 2.495 mm/s
+	double mCuttingSpeed = 0.5 * mmps;	//Speed of the vibratome for cutting (manual setting)
+	double mMovingSpeed = 2.495 * mmps;	//Forward and backward moving speed of the head. 52.4 mm in 21 seconds = 2.495 mm/s
 	//double mTravelRange = 52.4 * mm;	//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
 
 	void moveHead_(const double duration, const MotionDir motionDir) const;
@@ -172,7 +172,7 @@ class Laser
 	std::string mPort;
 	int mBaud;
 	const int mTimeout = 100 * ms;
-	const double mTuningSpeed_nmPerS = 35;		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
+	const double mTuningSpeed_nmps = 35;		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
 	const int mRxBufSize = 256;					//Serial buffer size
 
 	int downloadWavelength_nm_();

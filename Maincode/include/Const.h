@@ -53,6 +53,7 @@ namespace Constants
 	extern const double PI;
 	extern const int us;
 	extern const int ms;
+	extern const int sec;
 	extern const int um;
 	extern const int mm;
 	extern const double mmps;

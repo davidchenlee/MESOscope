@@ -91,7 +91,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	//LASER
 	const LaserSelector whichLaser = VISION;
 	const int wavelength_nm = 750;
-	std::vector<double> Pif{ 50.*mW, 50.*mW};		//Initial and final laser power for linear ramp
+	std::vector<double> Pif{ 50. * mW, 50. * mW};		//Initial and final laser power for linear ramp
 	double P = Pif.front();
 	VirtualLaser laser(RTcontrol, wavelength_nm, whichLaser);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
@@ -225,7 +225,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 	//LASER
 	const LaserSelector whichLaser = AUTO;
 	const int wavelength_nm = 750;
-	std::vector<double> Pif{ 55.*mW, 55.*mW };		//Initial and final laser power for linear ramp
+	std::vector<double> Pif{ 55. * mW, 55. * mW };		//Initial and final laser power for linear ramp
 	double P = Pif.front();
 	VirtualLaser laser(RTcontrol, wavelength_nm, whichLaser);
 
@@ -631,8 +631,8 @@ void testSequencer()
 	//I prefer generating such list before execution because then I can inspect all the parameters offline
 
 	//Configure the sample
-	const ROI roi{ 0, 10.*mm, 10.*mm, 0 };
-	const double sampleLengthZ(10.*mm);
+	const ROI roi{ 0, 10. * mm, 10. * mm, 0 };
+	const double sampleLengthZ(10. * mm);
 	SampleConfig sampleConfig("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ);
 
 	//Configure the lasers {wavelength_nm, laser power mW, laser power incremental mW}
@@ -643,7 +643,7 @@ void testSequencer()
 	const std::vector<SingleLaserConfig> laserList{ blueLaser, greenLaser, redLaser };
 	
 	//Configure the stacks
-	const double2 FOV{ 150.*um, 200.*um };
+	const double2 FOV{ 150. * um, 200. * um };
 	const double stepSizeZ(0.5*um);						//Image resolution in z
 	const double stackDepth(100*um);					//Stack depth or thickness
 	const double3 stackOverlap_frac{ 0.1,0.1,0.1 };		//Percentage of stack overlap in x, y, and z
@@ -672,7 +672,7 @@ void testSequencer()
 
 			//Initialize to unreal values for safety
 			double scanZi(-1*mm), stackDepth(-1*mm), scanPi(-1*mW), stackPinc(-1*mW);
-			double2 stackCenter{ 1000.*mm, 1000.*mm};
+			double2 stackCenter{ 1000. * mm, 1000. * mm};
 			int wavelength_nm(-1);
 
 			switch (commandline.mAction)

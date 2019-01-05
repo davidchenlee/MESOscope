@@ -19,7 +19,7 @@ namespace Constants
 	extern const int ms = 1000 * us;						//Millisecond
 	extern const int um = 1;								//Micron	
 	extern const int mm = 1000 * um;						//Millimeter
-	extern const int mmps = mm / (1000 * ms);				//Millimeters per second
+	extern const double mmps = 1.0 * mm / (1000 * ms);		//Millimeters per second
 	extern const int V = 1;									//Volt
 	extern const int mW = 1;								//Milliwatt
 

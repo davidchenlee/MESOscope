@@ -13,8 +13,8 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
-	const int nFramesCont(1);										//Number of frames for continuous XY acquisition
-	const double3 stagePosition0{ 35.05*mm, 10.40*mm, 18.126*mm };		//Stage initial position
+	const int nFramesCont(1);												//Number of frames for continuous XY acquisition
+	const double3 stagePosition0{35.05 * mm, 10.40 * mm, 18.131 * mm };		//Stage initial position
 
 	//RS
 	const double FFOVrs(150 * um);
@@ -32,9 +32,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	const std::string collar("1.49");
 
 	//STAGES
-	const double stageVelXY_mmps(5);
-	const double stageVelZ_mmps(0.02);
-	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
+	Stage stage(5 * mmps, 5 * mmps, 0.02 * mmps);
 	std::vector<double3> stagePosition;
 
 	int nDiffZ;				//Number of frames at different Zs
@@ -91,9 +89,9 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);	//Linear ramp for the galvo
 
 	//LASER
-	const LaserSelector whichLaser = FIDELITY;
-	const int wavelength_nm = 1040;
-	std::vector<double> Pif{ 25.*mW, 25.*mW};		//Initial and final laser power for linear ramp
+	const LaserSelector whichLaser = VISION;
+	const int wavelength_nm = 750;
+	std::vector<double> Pif{ 50.*mW, 50.*mW};		//Initial and final laser power for linear ramp
 	double P = Pif.front();
 	VirtualLaser laser(RTcontrol, wavelength_nm, whichLaser);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
@@ -206,14 +204,12 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 	const double stepSizeZ(0.5 * um);
 
 	//STAGES
-	const StackScanDir stackScanDirZ = TOPDOWN;							//Scan direction in z
-	const double3 stackCenterXYZ{ 35.05*mm, 10.40*mm, 18.126*mm };			//Center of x, y, z stack
+	const StackScanDir stackScanDirZ = TOPDOWN;																			//Scan direction in z
+	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.131 * mm };												//Center of x, y, z stack
 	const double stackDepth(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ);
 	const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages
-	const double stageVelXY_mmps(5); //Initial velocity of the stage x and y
-	const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;	//TODO: combine this with the galvo's one
-	const double stageVelZ_mmps(1000 * stepSizeZ / frameDurationTmp);		//Initial velocity of the stage z. stepSizeZ/frameDurationTmp is in m/s
-	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
+	const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;											//TODO: combine this with the galvo's one
+	Stage stage(5 * mmps, 5 * mmps, stepSizeZ / frameDurationTmp);
 	stage.moveAllStages(stageXYZi);
 	stage.waitForMotionToStopAllStages();
 
@@ -433,10 +429,8 @@ void testShutter(const FPGAns::FPGA &fpga)
 void testStagePosition()
 {
 	double duration;
-	const double3 stagePosition0{ 35.020*mm, 19.808*mm, 18.542*mm };	//Stage initial position
-	const double stageVelXY_mmps(5);
-	const double stageVelZ_mmps(0.02);
-	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
+	const double3 stagePosition0{ 35.020 * mm, 19.808 * mm, 18.542 * mm };	//Stage initial position
+	Stage stage;
 
 	std::cout << "Stages initial position:" << "\n";
 	stage.printPositionXYZ();
@@ -472,9 +466,7 @@ void testStagePosition()
 //Test configuring setDOtriggerEnabled and CTO for the stages
 void testStageConfig()
 {
-	const double stageVelXY_mmps(5);
-	const double stageVelZ_mmps(0.02);
-	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
+	Stage stage;
 	const int DOchan = 1;
 	//std::cout << "Stages initial position:" << "\n";
 	//stage.printPositionXYZ();
@@ -482,10 +474,10 @@ void testStageConfig()
 	//stage.setDOtriggerEnabled(ZZ, DOchannel , true);
 	//const int triggerParam = 1;
 	//stage.downloadDOtriggerSingleParam(ZZ, DOchannel , triggerParam);
-	//std::cout << "x stage vel: " << stage.downloadSingleVelocity_mmps(XX) << " mm/s" << "\n";
-	//std::cout << "y stage vel: " << stage.downloadSingleVelocity_mmps(YY) << " mm/s" << "\n";
-	//std::cout << "z stage vel: " << stage.downloadSingleVelocity_mmps(ZZ) << " mm/s" << "\n";
-	stage.printStageConfig(ZZ, DOchan);
+	std::cout << "x stage vel: " << stage.downloadSingleVelocity(XX) / mmps << " mm/s" << "\n";
+	std::cout << "y stage vel: " << stage.downloadSingleVelocity(YY) / mmps << " mm/s" << "\n";
+	std::cout << "z stage vel: " << stage.downloadSingleVelocity(ZZ) / mmps << " mm/s" << "\n";
+	//stage.printStageConfig(ZZ, DOchan);
 
 	std::cout << "Press any key to continue...\n";
 	getchar();

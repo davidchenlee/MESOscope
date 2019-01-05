@@ -1324,7 +1324,7 @@ void VirtualLaser::setShutter(const bool state) const
 #pragma endregion "VirtualLaser"
 
 #pragma region "Stages"
-Stage::Stage(const double3 velXYZ_mmps)
+Stage::Stage(const double velX, const double velY, const double velZ)
 {
 	const std::string stageIDx = "116049107";	//X-stage (V-551.4B)
 	const std::string stageIDy = "116049105";	//Y-stage (V-551.2B)
@@ -1354,7 +1354,7 @@ Stage::Stage(const double3 velXYZ_mmps)
 	mPositionXYZ.at(ZZ) = downloadPosition(ZZ);
 
 	//Configure the stage velocities and DO triggers
-	configVelAndDOtriggers_(velXYZ_mmps);
+	configVelAndDOtriggers_({ velX, velY, velZ });
 }
 
 Stage::~Stage()
@@ -1368,15 +1368,16 @@ Stage::~Stage()
 
 
 //DO1 and DO2 are used to trigger the stack acquisition. Currently DO2 is used as the only trigger. See the implementation on LV
-void Stage::configVelAndDOtriggers_(const double3 velXYZ_mmps) const
+void Stage::configVelAndDOtriggers_(const double3 velXYZ) const
 {
 	//DO1 TRIGGER: DO1 is set to output a pulse (fixed width = 50 us) whenever the stage covers a certain distance (e.g. 0.3 um)
 	const int DO1 = 1;
 	setDOtriggerEnabled(ZZ, DO1, true);	//Enable DO1 trigger
-	const double triggerStep_mm = 0.0003;
+	const double triggerStep = 0.3 * um;
 	const StageDOtriggerMode triggerMode = PositionDist;
-	const double startThreshold = 0, stopThreshold = 0;
-	setDOtriggerAllParams(ZZ, DO1, triggerStep_mm, triggerMode, startThreshold, stopThreshold);
+	const double startThreshold = 0 * mm;
+	const double stopThreshold = 0 * mm;
+	setDOtriggerAllParams(ZZ, DO1, triggerStep, triggerMode, startThreshold, stopThreshold);
 
 	//DO2 TRIGGER: DO2 is set to output HIGH when the stage z is in motion
 	const int DO2 = 2;
@@ -1384,7 +1385,7 @@ void Stage::configVelAndDOtriggers_(const double3 velXYZ_mmps) const
 	setDOtriggerSingleParam(ZZ, DO2, TriggerMode, InMotion);
 
 	//Set the stage velocities
-	setAllVelocities({ velXYZ_mmps.at(XX), velXYZ_mmps.at(YY), velXYZ_mmps.at(ZZ) });
+	setAllVelocities({ velXYZ.at(XX), velXYZ.at(YY), velXYZ.at(ZZ) });
 }
 
 //Recall the current position for the 3 stages
@@ -1407,7 +1408,7 @@ double Stage::downloadPosition(const Axis axis)
 	if (!PI_qPOS(mID.at(axis), mNstagesPerController, &position_mm))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query position for the stage " + axisToString(axis));
 
-	return position_mm * mm;	//Multiply by mm to convert from explicit units to implicit units
+	return position_mm * mm;	//Multiply by mm to convert from explicit to implicit units
 }
 
 //Move the stage to the requested position
@@ -1420,7 +1421,7 @@ void Stage::moveSingleStage(const Axis axis, const double position)
 	//Move the stage
 	if (mPositionXYZ.at(axis) != position ) //Move only if the requested position is different from the current position
 	{
-		const double position_mm = position / mm;							//Divide by mm to convert from implicit units to explicit units
+		const double position_mm = position / mm;							//Divide by mm to convert from implicit to explicit units
 		if (!PI_MOV(mID.at(axis), mNstagesPerController, &position_mm) )	//~14 ms to execute this function
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString(axis) + " to the target position");
 
@@ -1489,33 +1490,34 @@ void Stage::stopAllstages() const
 	std::cout << "Stages stopped\n";
 }
 
-//Request the velocity of the stage in mm/s
-double Stage::downloadSingleVelocity_mmps(const Axis axis) const
+//Request the velocity of the stage
+double Stage::downloadSingleVelocity(const Axis axis) const
 {
 	double vel_mmps;
 	if (!PI_qVEL(mID.at(axis), mNstagesPerController, &vel_mmps))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage " + axisToString(axis));
 
-	//std::cout << vel_mmps << "\n";
-	return vel_mmps;
+	//std::cout << vel_mmps << " mm/s\n";
+	return vel_mmps * mmps;					//Multiply by mmps to convert from explicit to implicit units
 }
 
-//Set the velocity of the stage in mm/s
-void Stage::setSingleVelocity(const Axis axis, const double vel_mmps) const
+//Set the velocity of the stage
+void Stage::setSingleVelocity(const Axis axis, const double vel) const
 {
-	if (vel_mmps <= 0)
+	if (vel <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be greater than zero for the stage " + axisToString(axis));
 
+	const double vel_mmps = vel / mmps;		//Divide by mmps to convert implicit to explicit units
 	if (!PI_VEL(mID.at(axis), mNstagesPerController, &vel_mmps))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString(axis));
 }
 
-//Set the velocity of the stage in mm/s
-void Stage::setAllVelocities(const double3 vel_mmps) const
+//Set the velocity of the stage 
+void Stage::setAllVelocities(const double3 vel) const
 {
-	setSingleVelocity(XX, vel_mmps.at(XX));
-	setSingleVelocity(YY, vel_mmps.at(YY));
-	setSingleVelocity(ZZ, vel_mmps.at(ZZ));
+	setSingleVelocity(XX, vel.at(XX));
+	setSingleVelocity(YY, vel.at(YY));
+	setSingleVelocity(ZZ, vel.at(ZZ));
 }
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
@@ -1545,21 +1547,21 @@ void Stage::setDOtriggerSingleParam(const Axis axis, const int DOchan, const Sta
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + axisToString(axis));
 }
 
-void Stage::setDOtriggerAllParams(const Axis axis, const int DOchan, const double triggerStep_mm, const StageDOtriggerMode triggerMode, const double startThreshold_mm, const double stopThreshold_mm) const
+void Stage::setDOtriggerAllParams(const Axis axis, const int DOchan, const double triggerStep, const StageDOtriggerMode triggerMode, const double startThreshold, const double stopThreshold) const
 {
-	if ( triggerStep_mm <= 0)
+	if ( triggerStep <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be greater than zero");
 
-	if (startThreshold_mm < mStagePosLimitXYZ.at(axis).at(0) || startThreshold_mm > mStagePosLimitXYZ.at(axis).at(1))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'startThreshold_mm is out of bound for the stage " + axisToString(axis));
+	if (startThreshold < mStagePosLimitXYZ.at(axis).at(0) || startThreshold > mStagePosLimitXYZ.at(axis).at(1))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'startThreshold is out of bound for the stage " + axisToString(axis));
 
 
-	setDOtriggerSingleParam(axis, DOchan, TriggerStep, triggerStep_mm);						//Trigger step
+	setDOtriggerSingleParam(axis, DOchan, TriggerStep, triggerStep / mm);					//Trigger step
 	setDOtriggerSingleParam(axis, DOchan, AxisNumber, 1);									//Axis of the controller (always 1 because each controller has only 1 stage)
 	setDOtriggerSingleParam(axis, DOchan, TriggerMode, static_cast<double>(triggerMode));	//Trigger mode
 	setDOtriggerSingleParam(axis, DOchan, Polarity, 1);										//Polarity (0 for active low, 1 for active high)
-	setDOtriggerSingleParam(axis, DOchan, StartThreshold, startThreshold_mm);				//Start threshold
-	setDOtriggerSingleParam(axis, DOchan, StopThreshold, stopThreshold_mm);					//Stop threshold
+	setDOtriggerSingleParam(axis, DOchan, StartThreshold, startThreshold / mm);				//Start threshold
+	setDOtriggerSingleParam(axis, DOchan, StopThreshold, stopThreshold / mm);				//Stop threshold
 }
 
 //Request the enable/disable status of the stage DO
@@ -1610,17 +1612,17 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 	const double stopThreshold_mm = downloadDOtriggerSingleParam(axis, chan, StopThreshold);
 	const double triggerPosition_mm = downloadDOtriggerSingleParam(axis, chan, TriggerPosition);
 	const bool triggerState = isDOtriggerEnabled(axis, chan);
-	const double vel_mmps = downloadSingleVelocity_mmps(axis);
+	const double vel = downloadSingleVelocity(axis);
 
 	std::cout << "Configuration for the stage = " << axisToString(axis) << ", DOchan = " << chan << ":\n";
 	std::cout << "is DO trigger enabled? = " << triggerState << "\n";
-	std::cout << "Trigger step (mm) = " << triggerStep_mm << "\n";
+	std::cout << "Trigger step = " << triggerStep_mm << " mm\n";
 	std::cout << "Trigger mode = " << triggerMode << "\n";
 	std::cout << "Polarity = " << polarity << "\n";
-	std::cout << "Start threshold position (mm) = " << startThreshold_mm << "\n";
-	std::cout << "Stop threshold position (mm) = " << stopThreshold_mm << "\n";
-	std::cout << "Trigger position (mm) = " << triggerPosition_mm << "\n";
-	std::cout << "Vel (mm/s) = " << vel_mmps << "\n\n";
+	std::cout << "Start threshold position = " << startThreshold_mm << " mm\n";
+	std::cout << "Stop threshold position = " << stopThreshold_mm << " mm\n";
+	std::cout << "Trigger position = " << triggerPosition_mm << " mm\n";
+	std::cout << "Vel = " << vel / mmps << " mm/s\n\n";
 }
 #pragma endregion "Stages"
 

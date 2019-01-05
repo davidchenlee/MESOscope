@@ -4,9 +4,7 @@ int main(int argc, char* argv[])
 {
 	try
 	{
-		const double stageVelXY_mmps(5);
-		const double stageVelZ_mmps(0.02);
-		Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
+		Stage stage;
 		stage.stopAllstages();
 	}
 

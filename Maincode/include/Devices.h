@@ -250,20 +250,20 @@ class Stage
 	enum StageDOparam { TriggerStep = 1, AxisNumber = 2, TriggerMode = 3, Polarity = 7, StartThreshold = 8, StopThreshold = 9, TriggerPosition = 10 };
 	enum StageDOtriggerMode { PositionDist = 0, OnTarget = 2, InMotion = 6, PositionOffset = 7 };
 
-	const int mPort_z = 4;									//COM port
+	const int mPort_z = 4;											//COM port
 	const int mBaud_z = 38400;
-	int3 mID;												//Controller IDs
-	const char mNstagesPerController[2] = "1";				//Number of stages per controller (currently 1)
-	double3 mPositionXYZ;									//Absolute position of the stages (x, y, z)
-	const double3 mSoftPosMinXYZ{ -60.*mm, 0.*mm, 1.*mm };	//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
-	const double3 mSoftPosMaxXYZ{ 50.*mm, 30.*mm, 25.*mm };
-	const std::vector<double2> mStagePosLimitXYZ{ {-65.*mm,65.*mm},{-30.*mm,30.*mm},{0.*mm,26.*mm} };	//Position range of the stages
-	int3 mNtile;											//Tile number in x, y, z
-	int3 mNtileOverlap_pix;									//Tile overlap in x, y, z	
+	int3 mID;														//Controller IDs
+	const char mNstagesPerController[2] = "1";						//Number of stages per controller (currently 1)
+	double3 mPositionXYZ;											//Absolute position of the stages (x, y, z)
+	const double3 mSoftPosMinXYZ{ -60. * mm, 0. * mm, 1. * mm };	//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
+	const double3 mSoftPosMaxXYZ{ 50. * mm, 30. * mm, 25. * mm };
+	const std::vector<double2> mStagePosLimitXYZ{ {-65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages
+	int3 mNtile;													//Tile number in x, y, z
+	int3 mNtileOverlap_pix;											//Tile overlap in x, y, z	
 
-	void configVelAndDOtriggers_(const double3 velXYZ_mmps) const;
+	void configVelAndDOtriggers_(const double3 velXYZ) const;
 public:
-	Stage(const double3 vel_mmps);
+	Stage(const double velX = 5. * mmps, const double velY = 5. * mmps, const double velZ = 0.02 * mmps);
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor
 	Stage& operator=(const Stage&) = delete;	//Disable assignment-constructor
@@ -279,11 +279,11 @@ public:
 	void waitForMotionToStopSingleStage(const Axis axis) const;
 	void waitForMotionToStopAllStages() const;
 	void stopAllstages() const;
-	double downloadSingleVelocity_mmps(const Axis axis) const;
-	void setSingleVelocity(const Axis axis, const double vel_mmps) const;
-	void setAllVelocities(const double3 vel_mmps) const;
+	double downloadSingleVelocity(const Axis axis) const;
+	void setSingleVelocity(const Axis axis, const double vel) const;
+	void setAllVelocities(const double3 vel) const;
 	void setDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const;
-	void setDOtriggerAllParams(const Axis axis, const int DOchan, const double triggerStep_mm, const StageDOtriggerMode triggerMode, const double startThreshold_mm, const double stopThreshold_mm) const;
+	void setDOtriggerAllParams(const Axis axis, const int DOchan, const double triggerStep, const StageDOtriggerMode triggerMode, const double startThreshold, const double stopThreshold) const;
 	double downloadDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam paramId) const;
 	bool isDOtriggerEnabled(const Axis axis, const int DOchan) const;
 	void setDOtriggerEnabled(const Axis axis, const int DOchan, const BOOL triggerState) const;

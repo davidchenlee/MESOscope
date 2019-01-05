@@ -55,6 +55,7 @@ namespace Constants
 	extern const int ms;
 	extern const int um;
 	extern const int mm;
+	extern const double mmps;
 	extern const int V;
 	extern const int mW;
 

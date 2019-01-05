@@ -14,16 +14,15 @@ int main(int argc, char* argv[])
 		try
 		{
 			ResonantScanner RS(fpga);
-			//Shutter shutter1(fpga, VISION);
 			Laser vision(VISION);
 			Laser fidelity(FIDELITY);
 
 			//Set the FOV
 			std::string whichLaser(argv[1]);			//V for Vision, F for Fidelity VF for both
-			int FFOV_um(std::stoi(argv[2]));	//Field of view in um
-			std::string runCommand(argv[3]);	//1 for run RS, 0 for stop RS
+			double FFOV(1.*std::stoi(argv[2]) / um);	//Field of view in um
+			std::string runCommand(argv[3]);			//1 for run RS, 0 for stop RS
 
-			if (FFOV_um < 0 || FFOV_um > 300)
+			if (FFOV < 0 || FFOV > 300)
 				throw std::invalid_argument((std::string)__FUNCTION__ + ": RS FFOV must be in the range 0-300 um");
 
 			//Turn the RS On/Off
@@ -45,7 +44,7 @@ int main(int argc, char* argv[])
 				else
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser is not available");
 
-				RS.turnOn(FFOV_um);
+				RS.turnOn(FFOV);
 			}
 			else if (runCommand == "0")
 			{

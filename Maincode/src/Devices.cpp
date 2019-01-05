@@ -368,7 +368,7 @@ ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol): mRTcontrol
 	mControlVoltage = downloadControlVoltage();								//Control voltage
 	mFullScan = mControlVoltage / mVoltagePerDistance;						//Full scan FOV = distance between the turning points
 	mFFOV = mFullScan * mFillFactor;										//FFOV
-	mSampRes_umpp = (mFFOV / um) / mRTcontrol.mWidthPerFrame_pix;			//Spatial sampling resolution
+	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;						//Spatial sampling resolution (length/pixel)
 }
 
 //Set the control voltage that determines the scanning amplitude
@@ -381,7 +381,7 @@ void ResonantScanner::setVoltage_(const double controlVoltage)
 	mControlVoltage = controlVoltage;									//Control voltage
 	mFullScan = controlVoltage / mVoltagePerDistance;					//Full scan FOV
 	mFFOV = mFullScan * mFillFactor;									//FFOV
-	mSampRes_umpp = (mFFOV/um) / mRTcontrol.mWidthPerFrame_pix;			//Spatial sampling resolution
+	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;					//Spatial sampling resolution (length/pixel)
 
 	//Upload the control voltage
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::convertVoltageToI16(mControlVoltage)));
@@ -394,7 +394,7 @@ void ResonantScanner::setFFOV(const double FFOV)
 	mFullScan = FFOV / mFillFactor;										//Full scan FOV
 	mControlVoltage = mFullScan * mVoltagePerDistance;					//Control voltage
 	mFFOV = FFOV;														//FFOV
-	mSampRes_umpp = (mFFOV / um) / mRTcontrol.mWidthPerFrame_pix;		//Spatial sampling resolution
+	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;					//Spatial sampling resolution (length/pixel)
 	//std::cout << "mControlVoltage = " << mControlVoltage << "\n";		//For debugging
 
 	if (mControlVoltage < 0 || mControlVoltage > mVMAX)
@@ -405,12 +405,12 @@ void ResonantScanner::setFFOV(const double FFOV)
 }
 
 //First set the FFOV, then set RSenable on
-void ResonantScanner::turnOn(const double FFOV_um)
+void ResonantScanner::turnOn(const double FFOV)
 {
-	setFFOV(FFOV_um);
+	setFFOV(FFOV);
 	Sleep(static_cast<DWORD>(mDelay/ms));
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
-	std::cout << "RS FFOV successfully set to: " << FFOV_um << " um\n";
+	std::cout << "RS FFOV successfully set to: " << FFOV / um << " um\n";
 }
 
 //First set the control voltage, then set RSenable on
@@ -923,7 +923,8 @@ void Laser::setWavelength(const int wavelength_nm)
 
 				mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
 
-				downloadWavelength_nm_();
+				downloadWavelength_nm_();				//Check if the laser was set successfully 
+
 				if (mWavelength_nm = wavelength_nm)
 					std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm\n";
 				else

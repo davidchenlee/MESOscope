@@ -14,7 +14,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);												//Number of frames for continuous XY acquisition
-	const double3 stagePosition0{35.05 * mm, 10.40 * mm, 18.136 * mm };		//Stage initial position
+	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.136 * mm };	//Stage initial position
 
 	//RS
 	const ResonantScanner RScanner(fpga);
@@ -87,11 +87,10 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);	//Linear ramp for the galvo
 
 	//LASER
-	const LaserSelector whichLaser = VISION;
 	const int wavelength_nm = 750;
 	std::vector<double> Pif{ 50. * mW, 50. * mW};		//Initial and final laser power for linear ramp
 	double P = Pif.front();
-	VirtualLaser laser(RTcontrol, wavelength_nm, whichLaser);
+	VirtualLaser laser(RTcontrol, wavelength_nm, VISION);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);											//Linearly scale the laser intensity across all the frames
 
@@ -121,7 +120,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 		datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleU8);
 		datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
 		datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
-		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes_umpp);
+		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
 		datalog.record("Resolution Y (galvo) (um/pix) = ", (FFOVgalvo / um) / RTcontrol.mHeightPerFrame_pix);
 		datalog.record("\nSTAGE--------------------------------------------------------");
 	}
@@ -179,6 +178,9 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 			"_zi=" + toString(stagePosition.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePosition.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4));
 		stack.saveToFile(stackFilename, overrideFlag);
 	}
+
+	std::cout << "Press any key to continue...\n";
+	getchar();
 }
 
 /*
@@ -219,11 +221,10 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 	FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
 
 	//LASER
-	const LaserSelector whichLaser = AUTO;
 	const int wavelength_nm = 750;
 	std::vector<double> Pif{ 55. * mW, 55. * mW };		//Initial and final laser power for linear ramp
 	double P = Pif.front();
-	VirtualLaser laser(RTcontrol, wavelength_nm, whichLaser);
+	VirtualLaser laser(RTcontrol, wavelength_nm, AUTO);
 
 	//GALVO FOR RT
 	const double FFOVgalvo(200 * um);											//Full FOV in the slow axis

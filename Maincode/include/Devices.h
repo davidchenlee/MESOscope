@@ -76,7 +76,7 @@ class ResonantScanner
 public:
 	double mFillFactor;									//Fill factor: how much of an RS swing is covered by the pixels
 	double mFFOV;										//Current FFOV
-	double mSampRes_umpp;								//Spatial sampling resolution (um per pixel)
+	double mSampRes;									//Spatial sampling resolution (length/pixel)
 
 	ResonantScanner(const FPGAns::RTcontrol &RTcontrol);
 	void setFFOV(const double FFOV);

@@ -131,14 +131,14 @@ public:
 class Filterwheel
 {
 
-	struct ColorPosition { Filtercolor mColor; int mPosition; };
-	const std::vector<ColorPosition> mFWExcConfig{ { BLUE, 1 }, { NONE, 2 }, { GREEN, 3 }, { NONE, 4 }, { RED, 5 }, { NONE, 6 } };
-	const std::vector<ColorPosition> mFWDetConfig{ { BLUE, 1 }, { GREEN, 2 }, { RED, 3 }, { NONE, 4 }, { NONE, 5 }, { NONE, 6 } };
+	const std::vector<Filtercolor> mExcConfig{ BLUE, NONE, GREEN, NONE, RED, NONE };
+	const std::vector<Filtercolor> mDetConfig{ BLUE, GREEN, RED, NONE, NONE, NONE };
 		
 	FilterwheelID mWhichFilterwheel;		//Device ID = 1, 2, ...
 	std::string mFilterwheelName;			//Device given name
-	std::vector<ColorPosition> mFWconfig;	//Store the filterwheel configuration for excitation or detection
-	ColorPosition mColorPosition;			//Current color and corresponding filterwheel position
+	std::vector<Filtercolor> mFWconfig;		//Store the filterwheel configuration for excitation or detection
+	Filtercolor mColor;						//Current filterwheel color
+	int mPosition;							//Current filterwheel position
 	serial::Serial *mSerial;
 	std::string mPort;
 	const int mBaud = 115200;

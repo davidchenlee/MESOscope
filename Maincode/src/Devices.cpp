@@ -663,12 +663,12 @@ Filterwheel::Filterwheel(const FilterwheelID whichFilterwheel): mWhichFilterwhee
 	case FWEXC:
 		mPort = assignCOM.at(COMFWEXC);
 		mFilterwheelName = "Excitation filterwheel";
-		mFWconfig = mFWExcConfig;								//Assign the filter positions
+		mFWconfig = mExcConfig;								//Assign the filter positions
 		break;
 	case FWDET:
 		mPort = assignCOM.at(COMFWDET);
 		mFilterwheelName = "Detection filterwheel";
-		mFWconfig = mFWDetConfig;								//Assign the filter positions
+		mFWconfig = mDetConfig;								//Assign the filter positions
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected filterwheel unavailable");
@@ -713,8 +713,8 @@ void Filterwheel::downloadColor_()
 		//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
 		//std::cout << "Cleaned RxBuffer: " << RxBuffer << "\n"; //For debugging
-		mColorPosition.mPosition = std::stoi(RxBuffer);									//convert string to int
-		mColorPosition.mColor = convertPositionToColor_(mColorPosition.mPosition);
+		mPosition = std::stoi(RxBuffer);									//convert string to int
+		mColor = convertPositionToColor_(mPosition);
 	}
 	catch (const serial::IOException)
 	{
@@ -724,7 +724,7 @@ void Filterwheel::downloadColor_()
 
 void Filterwheel::setPosition_(const int position)
 {
-	if (position != mColorPosition.mPosition)
+	if (position != mPosition)
 	{
 		std::string TxBuffer("pos=" + std::to_string(position) + "\r");
 		std::string RxBuffer;
@@ -734,8 +734,8 @@ void Filterwheel::setPosition_(const int position)
 			mSerial->write(TxBuffer);
 
 			//Find the shortest way to reach the targeted position
-			const int minPos = (std::min)(position, mColorPosition.mPosition);
-			const int maxPos = (std::max)(position, mColorPosition.mPosition);
+			const int minPos = (std::min)(position, mPosition);
+			const int maxPos = (std::max)(position, mPosition);
 			const int diffPos = maxPos - minPos;
 			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
 
@@ -747,8 +747,8 @@ void Filterwheel::setPosition_(const int position)
 
 			downloadColor_();	//Check if the filterwheel was set successfully 
 
-			if (position == mColorPosition.mPosition)
-				std::cout << mFilterwheelName << " successfully set to " + convertColorToString_(mColorPosition.mColor) << " (position = " << mColorPosition.mPosition << ")\n";
+			if (position == mPosition)
+				std::cout << mFilterwheelName << " successfully set to " + convertColorToString_(mColor) << " (position = " << mPosition << ")\n";
 			else
 				std::cout << "WARNING: " << mFilterwheelName << " might not be in the correct position " << position << "\n";
 		}
@@ -763,8 +763,8 @@ int Filterwheel::convertColorToPosition_(const Filtercolor color) const
 {
 	for (std::vector<int>::size_type iter = 0; iter != mFWconfig.size(); iter++)
 	{
-		if (color == mFWconfig.at(iter).mColor)
-			return mFWconfig.at(iter).mPosition;
+		if (color == mFWconfig.at(iter))
+			return iter + 1;			//The index for mFWconfig starts from 0. The index for the filterwheel position start from 1
 	}
 	
 	throw std::runtime_error((std::string)__FUNCTION__ + ": Failure converting color to position");
@@ -774,8 +774,8 @@ Filtercolor Filterwheel::convertPositionToColor_(const int position) const
 {
 	for (std::vector<int>::size_type iter = 0; iter != mFWconfig.size(); iter++)
 	{
-		if (position == mFWconfig.at(iter).mPosition)
-			return mFWconfig.at(iter).mColor;
+		if (position == iter + 1)		//The index for mFWconfig starts from 0. The index for the filterwheel position start from 1
+			return mFWconfig.at(iter);
 	}
 
 	throw std::runtime_error((std::string)__FUNCTION__ + ": Failure converting position to color");

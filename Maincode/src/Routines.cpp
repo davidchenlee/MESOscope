@@ -14,7 +14,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);										//Number of frames for continuous XY acquisition
-	const double3 stagePosition0_mm{ 35.05, 10.40, 18.102 };		//Stage initial position
+	const double3 stagePosition0_mm{ 35.05, 10.40, 18.126 };		//Stage initial position
 
 	//RS
 	const double FFOVrs(150 * um);
@@ -27,7 +27,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	double stackDepthZ_um(10 * um);					//Acquire a stack of this depth or thickness in Z
 
 	//SAMPLE
-	const std::string sampleName("Bead4um");
+	const std::string sampleName("Beads4um");
 	const std::string immersionMedium("SiliconMineralOil5050");
 	const std::string collar("1.49");
 
@@ -91,11 +91,11 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);	//Linear ramp for the galvo
 
 	//LASER
-	const LaserSelector laserSelector = VISION;
-	const int wavelength_nm = 750;
-	std::vector<double> Pif{ 50.*mW, 50.*mW};		//Initial and final laser power for linear ramp
+	const LaserSelector whichLaser = FIDELITY;
+	const int wavelength_nm = 1040;
+	std::vector<double> Pif{ 25.*mW, 25.*mW};		//Initial and final laser power for linear ramp
 	double P = Pif.front();
-	VirtualLaser laser(RTcontrol, wavelength_nm, laserSelector);
+	VirtualLaser laser(RTcontrol, wavelength_nm, whichLaser);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);											//Linearly scale the laser intensity across all the frames
 
@@ -227,11 +227,11 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 	FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
 
 	//LASER
-	const LaserSelector laserSelector = AUTO;
+	const LaserSelector whichLaser = AUTO;
 	const int wavelength_nm = 750;
 	std::vector<double> Pif{ 55.*mW, 55.*mW };		//Initial and final laser power for linear ramp
 	double P = Pif.front();
-	VirtualLaser laser(RTcontrol, wavelength_nm, laserSelector);
+	VirtualLaser laser(RTcontrol, wavelength_nm, whichLaser);
 
 	//GALVO FOR RT
 	const double FFOVgalvo(200 * um);											//Full FOV in the slow axis

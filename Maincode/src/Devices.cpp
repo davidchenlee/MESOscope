@@ -495,7 +495,7 @@ void Galvo::voltageToZero() const
 #pragma region "PMT16X"
 PMT16X::PMT16X()
 {
-	mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout/ms));
+	mSerial = new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout/ms));
 }
 
 PMT16X::~PMT16X()
@@ -650,17 +650,17 @@ void PMT16X::readTemp() const
 
 
 #pragma region "Filterwheel"
-Filterwheel::Filterwheel(const FilterwheelID whichFilterwheel): mWhichFilterwheel(whichFilterwheel)
+Filterwheel::Filterwheel(const FilterwheelSelector whichFilterwheel): mWhichFilterwheel(whichFilterwheel)
 {
 	switch (whichFilterwheel)
 	{
 	case FWEXC:
-		mPort = assignCOM.at(COMFWEXC);
+		mPort = COMFWEXC;
 		mFilterwheelName = "Excitation filterwheel";
 		mFWconfig = mExcConfig;								//Assign the filter positions
 		break;
 	case FWDET:
-		mPort = assignCOM.at(COMFWDET);
+		mPort = COMFWDET;
 		mFilterwheelName = "Detection filterwheel";
 		mFWconfig = mDetConfig;								//Assign the filter positions
 		break;
@@ -670,7 +670,7 @@ Filterwheel::Filterwheel(const FilterwheelID whichFilterwheel): mWhichFilterwhee
 
 	try
 	{
-		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout / ms));
+		mSerial = new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms));
 		downloadColor_();	//Download the current filter position
 	}
 	catch (const serial::IOException)
@@ -706,7 +706,7 @@ void Filterwheel::downloadColor_()
 		RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
 		//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
-		//std::cout << "Cleaned RxBuffer: " << RxBuffer << "\n"; //For debugging
+		//std::cout << "RxBuffer: " << RxBuffer << "\n"; //For debugging
 		mPosition = std::stoi(RxBuffer);									//convert string to int
 		mColor = convertPositionToColor_(mPosition);
 	}
@@ -734,7 +734,7 @@ void Filterwheel::setPosition_(const int position)
 			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
 
 			//std::cout << "Tuning the " << mDeviceName << " to " + convertColorToString_(color) << "...\n";
-			Sleep(static_cast<DWORD>(1. * minSteps / mTuningSpeed_Hz / ms));	//Wait until the filterwheel stops turning the turret
+			Sleep(static_cast<DWORD>(1. * minSteps / mTuningSpeed / ms));	//Wait until the filterwheel stops turning the turret
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
 														//std::cout << "setColor full RxBuffer: " << RxBuffer << "\n"; //For debugging
@@ -766,13 +766,10 @@ int Filterwheel::convertColorToPosition_(const Filtercolor color) const
 
 Filtercolor Filterwheel::convertPositionToColor_(const int position) const
 {
-	for (std::vector<int>::size_type iter = 0; iter != mFWconfig.size(); iter++)
-	{
-		if (position == iter + 1)		//The index for mFWconfig starts from 0. The index for the filterwheel position start from 1
-			return mFWconfig.at(iter);
-	}
+	if (position < 1 || position > mNpos)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": the filterwheel position must be between 1 and " + std::to_string(mNpos));
 
-	throw std::runtime_error((std::string)__FUNCTION__ + ": Failure converting position to color");
+	return mFWconfig.at(position - 1);
 }
 
 //Convert from enum Filtercolor to string
@@ -827,12 +824,12 @@ Laser::Laser(const LaserSelector laserID): mWhichLaser(laserID)
 	{
 	case VISION:
 		laserName = "VISION";
-		mPort = assignCOM.at(COMVISION);
+		mPort = COMVISION;
 		mBaud = 19200;
 		break;
 	case FIDELITY:
 		laserName = "FIDELITY";
-		mPort = assignCOM.at(COMFIDELITY);
+		mPort = COMFIDELITY;
 		mBaud = 115200;
 		break;
 	default:
@@ -841,7 +838,7 @@ Laser::Laser(const LaserSelector laserID): mWhichLaser(laserID)
 
 	try
 	{
-		mSerial = new serial::Serial(mPort, mBaud, serial::Timeout::simpleTimeout(mTimeout / ms));
+		mSerial = new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms));
 	}
 	catch (const serial::IOException)
 	{
@@ -920,9 +917,9 @@ void Laser::setWavelength(const int wavelength_nm)
 			{
 				mSerial->write(TxBuffer + "\r");
 
-				//std::cout << "Sleep time in ms: " << static_cast<int>( std::abs( 1.*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmps / ms ) ) << "\n";	//For debugging
+				//std::cout << "Sleep time in ms: " << static_cast<int>( std::abs( 1.*(mWavelength_nm - wavelength_nm) / mTuningSpeed / ms ) ) << "\n";	//For debugging
 				std::cout << "Tuning VISION to " << wavelength_nm << " nm...\n";
-				Sleep(static_cast<DWORD>( std::abs( 1.*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmps / ms )) );	//Wait till the laser stops tuning
+				Sleep(static_cast<DWORD>( std::abs( 1.*(mWavelength_nm - wavelength_nm) / mTuningSpeed / ms )) );	//Wait till the laser stops tuning
 
 				mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
 

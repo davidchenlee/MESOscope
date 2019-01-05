@@ -14,7 +14,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);												//Number of frames for continuous XY acquisition
-	const double3 stagePosition0{35.05 * mm, 10.40 * mm, 18.131 * mm };		//Stage initial position
+	const double3 stagePosition0{35.05 * mm, 10.40 * mm, 18.136 * mm };		//Stage initial position
 
 	//RS
 	const ResonantScanner RScanner(fpga);
@@ -203,7 +203,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//STAGES
 	const StackScanDir stackScanDirZ = TOPDOWN;																			//Scan direction in z
-	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.131 * mm };												//Center of x, y, z stack
+	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.136 * mm };												//Center of x, y, z stack
 	const double stackDepth(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ);
 	const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages
 	const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;											//TODO: combine this with the galvo's one
@@ -388,7 +388,7 @@ void testFilterwheel()
 	Filterwheel FWexcitation(FWEXC);
 	Filterwheel FWdetection(FWDET);
 		
-	if (0)
+	if (1)
 	{
 		FWexcitation.setColor(1040);
 		FWdetection.setColor(1040);
@@ -494,11 +494,11 @@ void testPMT16X()
 
 void testLaser(const FPGAns::FPGA &fpga)
 {
-	//Laser laser(VISION);
-	Laser laser(FIDELITY);
-	std::cout << laser.isShutterOpen() << std::endl;
+	Laser laser(VISION);
+	//Laser laser(FIDELITY);
+	//std::cout << laser.isShutterOpen() << std::endl;
 	//laser.setShutter(false);
-	//laser.setWavelength(750);
+	laser.setWavelength(1040);
 	//laser.printWavelength_nm();
 
 	std::cout << "Press any key to continue...\n";

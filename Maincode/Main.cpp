@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//discreteScanZ(fpga);
-			continuousScanZ(fpga);
+			//continuousScanZ(fpga);
 			//testGalvo(fpga);
 			//testPixelclock(fpga);
 			//testAODO(fpga);
@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 			//testStagePosition();
 			//testStageConfig();
 			//testPMT16X();
-			//testLaser(fpga);
+			testLaser(fpga);
 			//testVirtualLaser(fpga);
 			//testPockels(fpga);
 			//testRS(fpga);

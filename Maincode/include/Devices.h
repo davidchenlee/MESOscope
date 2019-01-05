@@ -104,7 +104,7 @@ public:
 class PMT16X
 {
 	serial::Serial *mSerial;
-	std::string mPort = assignCOM.at(COMPMT16X);
+	int mPort = COMPMT16X;
 	const int mBaud = 9600;
 	const int mTimeout = 300 * ms;
 	const int mRxBufferSize = 256;				//Serial buffer size
@@ -133,17 +133,17 @@ class Filterwheel
 	const std::vector<Filtercolor> mExcConfig{ BLUE, NONE, GREEN, NONE, RED, NONE };
 	const std::vector<Filtercolor> mDetConfig{ BLUE, GREEN, RED, NONE, NONE, NONE };
 		
-	FilterwheelID mWhichFilterwheel;		//Device ID = 1, 2, ...
+	FilterwheelSelector mWhichFilterwheel;	//Device ID = 1, 2, ...
 	std::string mFilterwheelName;			//Device given name
 	std::vector<Filtercolor> mFWconfig;		//Store the filterwheel configuration for excitation or detection
 	Filtercolor mColor;						//Current filterwheel color
 	int mPosition;							//Current filterwheel position
 	serial::Serial *mSerial;
-	std::string mPort;
+	int mPort;
 	const int mBaud = 115200;
 	const int mTimeout = 150 * ms;
 	const int mNpos = 6;					//Number of filter positions
-	const double mTuningSpeed_Hz = 0.8;		//The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
+	const double mTuningSpeed = 0.8/sec;	//The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
 	const int mRxBufSize = 256;				//Serial buffer size
 
 	void downloadColor_();
@@ -152,7 +152,7 @@ class Filterwheel
 	Filtercolor convertPositionToColor_(const int position) const;
 	std::string convertColorToString_(const Filtercolor color) const;
 public:
-	Filterwheel(const FilterwheelID whichFilterwheel);
+	Filterwheel(const FilterwheelSelector whichFilterwheel);
 	~Filterwheel();
 	Filterwheel(const Filterwheel&) = delete;				//Disable copy-constructor
 	Filterwheel& operator=(const Filterwheel&) = delete;	//Disable assignment-constructor
@@ -168,10 +168,10 @@ class Laser
 	LaserSelector mWhichLaser;
 	int mWavelength_nm;
 	serial::Serial *mSerial;
-	std::string mPort;
+	int mPort;
 	int mBaud;
 	const int mTimeout = 100 * ms;
-	const double mTuningSpeed_nmps = 35;		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
+	const double mTuningSpeed = 35./sec;			//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
 	const int mRxBufSize = 256;					//Serial buffer size
 
 	int downloadWavelength_nm_();

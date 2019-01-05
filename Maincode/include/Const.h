@@ -31,16 +31,14 @@ namespace Constants
 	enum OverrideFileSelector { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
 	enum RTchannel { RTPIXELCLOCK, RTGALVO1, RTGALVO2, RTDODEBUG, RTVISION, RTSCALINGVISION, RTFIDELITY, RTSCALINGFIDELITY, RTNCHAN };		//RTNCHAN = number of RT channels available, including the channel for the pixelclock
-	enum FilterwheelID { FWDET = 1, FWEXC = 2 };
+	enum FilterwheelSelector { FWDET, FWEXC };
 	enum Axis { XX, YY, ZZ };
 	enum RunMode { SINGLEMODE, LIVEMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
 	enum Action { CUT, ACQ, SAV, MOV };
 	enum StackScanDir { BOTTOMUP = -1, TOPDOWN = 1 };
 	enum LaserSelector { VISION, FIDELITY, AUTO};
 	enum Filtercolor { BLUE, GREEN, RED, NONE };
-
-	enum ComID { COMVISION, COMFIDELITY, COMFWDET , COMFWEXC, COMPMT16X };
-	extern const std::vector<std::string> assignCOM;
+	enum ComSelector { COMVISION = 1, COMFIDELITY = 8, COMFWDET = 5, COMFWEXC = 9, COMPMT16X = 6};
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;

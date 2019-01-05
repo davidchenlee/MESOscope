@@ -15,12 +15,13 @@ namespace Constants
 
 	//GENERAL CONSTANTS
 	extern const double PI = 3.1415926535897;
-	extern const int us = 1;								//microsecond
-	extern const int ms = 1000 * us;						//millisecond
-	extern const int um = 1;								//micron	
-	extern const int mm = 1000 * um;						//millimeter
-	extern const int V = 1;									//volt
-	extern const int mW = 1;								//milliwatt
+	extern const int us = 1;								//Microsecond
+	extern const int ms = 1000 * us;						//Millisecond
+	extern const int um = 1;								//Micron	
+	extern const int mm = 1000 * um;						//Millimeter
+	extern const int mmps = mm / (1000 * ms);				//Millimeters per second
+	extern const int V = 1;									//Volt
+	extern const int mW = 1;								//Milliwatt
 
 	//SERIAL PORTS. Assign a port to 'enum ComID'
 	extern const std::vector<std::string> assignCOM = { "COM1", "COM8", "COM5", "COM9", "COM6"};

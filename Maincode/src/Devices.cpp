@@ -740,7 +740,7 @@ void Filterwheel::setPosition_(const int position)
 			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
 
 			//std::cout << "Tuning the " << mDeviceName << " to " + convertColorToString_(color) << "...\n";
-			Sleep(static_cast<DWORD>(1000.0 * minSteps / mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret
+			Sleep(static_cast<DWORD>(1000.0 * minSteps / mTuningSpeed_Hz)); //Wait until the filterwheel stops turning the turret. Factor of 1000 to convert from s to ms
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
 														//std::cout << "setColor full RxBuffer: " << RxBuffer << "\n"; //For debugging
@@ -928,7 +928,7 @@ void Laser::setWavelength(const int wavelength_nm)
 
 				//std::cout << "Sleep time in ms: " << static_cast<int>( std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmPerS) ) << "\n";	//For debugging
 				std::cout << "Tuning VISION to " << wavelength_nm << " nm...\n";
-				Sleep(static_cast<DWORD>( std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmPerS)) );	//Wait till the laser stops tuning
+				Sleep(static_cast<DWORD>( std::abs(1000.0*(mWavelength_nm - wavelength_nm) / mTuningSpeed_nmPerS)) );	//Wait till the laser stops tuning. Factor of 1000 to convert from s to ms
 
 				mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
 
@@ -1349,9 +1349,9 @@ Stage::Stage(const double3 velXYZ_mmps)
 	std::cout << "Connection with the stages successfully established\n";
 
 	//Record the current position
-	mPositionXYZ_mm.at(XX) = downloadPosition_mm(XX);
-	mPositionXYZ_mm.at(YY) = downloadPosition_mm(YY);
-	mPositionXYZ_mm.at(ZZ) = downloadPosition_mm(ZZ);
+	mPositionXYZ.at(XX) = downloadPosition(XX);
+	mPositionXYZ.at(YY) = downloadPosition(YY);
+	mPositionXYZ.at(ZZ) = downloadPosition(ZZ);
 
 	//Configure the stage velocities and DO triggers
 	configVelAndDOtriggers_(velXYZ_mmps);
@@ -1388,51 +1388,52 @@ void Stage::configVelAndDOtriggers_(const double3 velXYZ_mmps) const
 }
 
 //Recall the current position for the 3 stages
-double3 Stage::readPositionXYZ_mm() const
+double3 Stage::readPositionXYZ() const
 {
-	return mPositionXYZ_mm;
+	return mPositionXYZ;
 }
 
 void Stage::printPositionXYZ() const
 {
-	std::cout << "Stage X position = " << mPositionXYZ_mm.at(XX) << " mm\n";
-	std::cout << "Stage Y position = " << mPositionXYZ_mm.at(YY) << " mm\n";
-	std::cout << "Stage Z position = " << mPositionXYZ_mm.at(ZZ) << " mm\n";
+	std::cout << "Stage X position = " << mPositionXYZ.at(XX) / mm << " mm\n";
+	std::cout << "Stage Y position = " << mPositionXYZ.at(YY) / mm << " mm\n";
+	std::cout << "Stage Z position = " << mPositionXYZ.at(ZZ) / mm << " mm\n";
 }
 
 //Retrieve the stage position from the controller
-double Stage::downloadPosition_mm(const Axis axis)
+double Stage::downloadPosition(const Axis axis)
 {
-	double position_mm;
+	double position_mm;	//Position in mm
 	if (!PI_qPOS(mID.at(axis), mNstagesPerController, &position_mm))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query position for the stage " + axisToString(axis));
 
-	return position_mm;
+	return position_mm * mm;	//Multiply by mm to convert from explicit units to implicit units
 }
 
 //Move the stage to the requested position
-void Stage::moveSingleStage(const Axis axis, const double position_mm)
+void Stage::moveSingleStage(const Axis axis, const double position)
 {
 	//Check if the requested position is within range
-	if (position_mm < mSoftPosMinXYZ_mm.at(axis) || position_mm > mSoftPosMaxXYZ_mm.at(axis))
+	if (position < mSoftPosMinXYZ.at(axis) || position > mSoftPosMaxXYZ.at(axis))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position out of bounds for stage " + axisToString(axis));
 
 	//Move the stage
-	if (mPositionXYZ_mm.at(axis) != position_mm ) //Move only if the requested position is different from the current position
+	if (mPositionXYZ.at(axis) != position ) //Move only if the requested position is different from the current position
 	{
+		const double position_mm = position / mm;							//Divide by mm to convert from implicit units to explicit units
 		if (!PI_MOV(mID.at(axis), mNstagesPerController, &position_mm) )	//~14 ms to execute this function
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString(axis) + " to the target position");
 
-		mPositionXYZ_mm.at(axis) = position_mm;
+		mPositionXYZ.at(axis) = position;
 	}
 }
 
 //Move the 3 stages to the requested position
-void Stage::moveAllStages(const double3 positionXYZ_mm)
+void Stage::moveAllStages(const double3 positionXYZ)
 {
-	moveSingleStage(XX, positionXYZ_mm.at(XX));
-	moveSingleStage(YY, positionXYZ_mm.at(YY));
-	moveSingleStage(ZZ, positionXYZ_mm.at(ZZ));
+	moveSingleStage(XX, positionXYZ.at(XX));
+	moveSingleStage(YY, positionXYZ.at(YY));
+	moveSingleStage(ZZ, positionXYZ.at(ZZ));
 }
 
 bool Stage::isMoving(const Axis axis) const
@@ -1549,7 +1550,7 @@ void Stage::setDOtriggerAllParams(const Axis axis, const int DOchan, const doubl
 	if ( triggerStep_mm <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be greater than zero");
 
-	if (startThreshold_mm < mStagePosLimitXYZ_mm.at(axis).at(0) || startThreshold_mm > mStagePosLimitXYZ_mm.at(axis).at(1))
+	if (startThreshold_mm < mStagePosLimitXYZ.at(axis).at(0) || startThreshold_mm > mStagePosLimitXYZ.at(axis).at(1))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'startThreshold_mm is out of bound for the stage " + axisToString(axis));
 
 

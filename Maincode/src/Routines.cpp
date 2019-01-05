@@ -14,7 +14,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);										//Number of frames for continuous XY acquisition
-	const double3 stagePosition0_mm{ 35.05, 10.40, 18.126 };		//Stage initial position
+	const double3 stagePosition0{ 35.05*mm, 10.40*mm, 18.126*mm };		//Stage initial position
 
 	//RS
 	const double FFOVrs(150 * um);
@@ -23,8 +23,8 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	RScanner.isRunning();							//To make sure that the RS is running
 
 	//STACK
-	const double stepSizeZ_um(0.5 * um);
-	double stackDepthZ_um(10 * um);					//Acquire a stack of this depth or thickness in Z
+	const double stepSizeZ(0.5 * um);
+	double stackDepthZ(10 * um);					//Acquire a stack of this depth or thickness in Z
 
 	//SAMPLE
 	const std::string sampleName("Beads4um");
@@ -35,7 +35,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	const double stageVelXY_mmps(5);
 	const double stageVelZ_mmps(0.02);
 	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
-	std::vector<double3> stagePosition_mm;
+	std::vector<double3> stagePosition;
 
 	int nDiffZ;				//Number of frames at different Zs
 	int nSameZ;				//Number of frames at the same Z
@@ -46,35 +46,35 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 		nSameZ = 1;
 		nDiffZ = 1; //Do not change this
 		overrideFlag = NOOVERRIDE;
-		stagePosition_mm.push_back(stagePosition0_mm);
+		stagePosition.push_back(stagePosition0);
 		break;
 	case LIVEMODE:
 		nSameZ = 500;
 		nDiffZ = 1; //Do not change this
 		overrideFlag = OVERRIDE;
-		stagePosition_mm.push_back(stagePosition0_mm);
+		stagePosition.push_back(stagePosition0);
 		break;
 	case AVGMODE:
 		nSameZ = 10;
 		nDiffZ = 1; //Do not change this
 		overrideFlag = NOOVERRIDE;
-		stagePosition_mm.push_back(stagePosition0_mm);
+		stagePosition.push_back(stagePosition0);
 		break;
 	case STACKMODE:
 		nSameZ = 1;
-		nDiffZ = static_cast<int>(stackDepthZ_um / stepSizeZ_um);
+		nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
 		overrideFlag = NOOVERRIDE;
 		//Generate the control sequence for the stages
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) + iterDiffZ * stepSizeZ_um / 1000 });
+			stagePosition.push_back({ stagePosition0.at(XX), stagePosition0.at(YY), stagePosition0.at(ZZ) + iterDiffZ * stepSizeZ });
 		break;
 	case STACKCENTEREDMODE:
 		nSameZ = 1;
-		nDiffZ = static_cast<int>(stackDepthZ_um / stepSizeZ_um);
+		nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
 		overrideFlag = NOOVERRIDE;
 		//Generate the control sequence for the stages
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-			stagePosition_mm.push_back({ stagePosition0_mm.at(XX), stagePosition0_mm.at(YY), stagePosition0_mm.at(ZZ) - 0.5 * stackDepthZ_um / 1000 + iterDiffZ * stepSizeZ_um / 1000 });
+			stagePosition.push_back({ stagePosition0.at(XX), stagePosition0.at(YY), stagePosition0.at(ZZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
@@ -139,7 +139,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	//ACQUIRE FRAMES AT DIFFERENT Zs
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 	{
-		stage.moveAllStages(stagePosition_mm.at(iterDiffZ));
+		stage.moveAllStages(stagePosition.at(iterDiffZ));
 		stage.waitForMotionToStopAllStages();
 		stage.printPositionXYZ();		//Print the stage position
 		//P += 0.5;						//Increase the laser power by this amount
@@ -163,7 +163,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 			{
 				//Save individual files
 				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P / mW, 1) + "mW" +
-					"_x=" + toString(stagePosition_mm.at(iterDiffZ).at(XX), 3) + "_y=" + toString(stagePosition_mm.at(iterDiffZ).at(YY), 3) + "_z=" + toString(stagePosition_mm.at(iterDiffZ).at(ZZ), 4));
+					"_x=" + toString(stagePosition.at(iterDiffZ).at(XX) / mm, 3) + "_y=" + toString(stagePosition.at(iterDiffZ).at(YY) / mm, 3) + "_z=" + toString(stagePosition.at(iterDiffZ).at(ZZ) / mm, 4));
 				image.saveTiffSinglePage(singleFilename, overrideFlag);
 				Sleep(500);
 			}
@@ -179,8 +179,8 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	{
 		//Save the stackDiffZ to file
 		std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(Pif.front() / mW, 1) + "mW_Pf=" + toString(Pif.back() / mW, 1) + "mW" +
-			"_x=" + toString(stagePosition_mm.front().at(XX), 3) + "_y=" + toString(stagePosition_mm.front().at(YY), 3) +
-			"_zi=" + toString(stagePosition_mm.front().at(ZZ), 4) + "_zf=" + toString(stagePosition_mm.back().at(ZZ), 4) + "_Step=" + toString(stepSizeZ_um / 1000, 4));
+			"_x=" + toString(stagePosition.front().at(XX) / mm, 3) + "_y=" + toString(stagePosition.front().at(YY) / mm, 3) +
+			"_zi=" + toString(stagePosition.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePosition.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4));
 		stack.saveToFile(stackFilename, overrideFlag);
 	}
 }
@@ -203,18 +203,18 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(160);				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-	const double stepSizeZ_um(0.5 * um);
+	const double stepSizeZ(0.5 * um);
 
 	//STAGES
 	const StackScanDir stackScanDirZ = TOPDOWN;							//Scan direction in z
-	const double3 stackCenterXYZ_mm{ 35.05, 10.40, 18.102 };			//Center of x, y, z stack
-	const double stackDepth_mm(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ_um / 1000);
-	const double3 stageXYZi_mm{ stackCenterXYZ_mm.at(XX), stackCenterXYZ_mm.at(YY), stackCenterXYZ_mm.at(ZZ) - stackDepth_mm / 2 };	//Initial position of the stages
+	const double3 stackCenterXYZ{ 35.05*mm, 10.40*mm, 18.126*mm };			//Center of x, y, z stack
+	const double stackDepth(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ);
+	const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages
 	const double stageVelXY_mmps(5); //Initial velocity of the stage x and y
 	const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;	//TODO: combine this with the galvo's one
-	const double stageVelZ_mmps(1000 * stepSizeZ_um / frameDurationTmp);		//Initial velocity of the stage z
+	const double stageVelZ_mmps(1000 * stepSizeZ / frameDurationTmp);		//Initial velocity of the stage z. stepSizeZ/frameDurationTmp is in m/s
 	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
-	stage.moveAllStages(stageXYZi_mm);
+	stage.moveAllStages(stageXYZi);
 	stage.waitForMotionToStopAllStages();
 
 	//RS
@@ -253,7 +253,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 	image.startFIFOOUTpc();
 	//Move the stage to trigger the control sequence and data acquisition
 	std::cout << "Scanning the stack...\n";
-	stage.moveSingleStage(ZZ, stageXYZi_mm.at(ZZ) + stackDepth_mm);
+	stage.moveSingleStage(ZZ, stageXYZi.at(ZZ) + stackDepth);
 	image.download();
 	image.mirrorOddFrames();	//For max optimization, do this when saving the data to Tiff
 
@@ -433,7 +433,7 @@ void testShutter(const FPGAns::FPGA &fpga)
 void testStagePosition()
 {
 	double duration;
-	const double3 stagePosition0_mm{ 35.020, 19.808, 18.542 };	//Stage initial position
+	const double3 stagePosition0{ 35.020*mm, 19.808*mm, 18.542*mm };	//Stage initial position
 	const double stageVelXY_mmps(5);
 	const double stageVelZ_mmps(0.02);
 	Stage stage({ stageVelXY_mmps, stageVelXY_mmps, stageVelZ_mmps });
@@ -443,7 +443,7 @@ void testStagePosition()
 
 	auto t_start = std::chrono::high_resolution_clock::now();
 
-	stage.moveAllStages(stagePosition0_mm);
+	stage.moveAllStages(stagePosition0);
 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
@@ -458,9 +458,9 @@ void testStagePosition()
 	int input = 1;
 	while (input)
 	{
-		std::cout << "Stage X position = " << stage.downloadPosition_mm(XX) << "\n";
-		std::cout << "Stage Y position = " << stage.downloadPosition_mm(YY) << "\n";
-		std::cout << "Stage X position = " << stage.downloadPosition_mm(ZZ) << "\n";
+		std::cout << "Stage X position = " << stage.downloadPosition(XX) << "\n";
+		std::cout << "Stage Y position = " << stage.downloadPosition(YY) << "\n";
+		std::cout << "Stage X position = " << stage.downloadPosition(ZZ) << "\n";
 
 		std::cout << "Enter command: ";
 		std::cin >> input;

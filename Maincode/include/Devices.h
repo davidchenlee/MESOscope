@@ -250,16 +250,16 @@ class Stage
 	enum StageDOparam { TriggerStep = 1, AxisNumber = 2, TriggerMode = 3, Polarity = 7, StartThreshold = 8, StopThreshold = 9, TriggerPosition = 10 };
 	enum StageDOtriggerMode { PositionDist = 0, OnTarget = 2, InMotion = 6, PositionOffset = 7 };
 
-	const int mPort_z = 4;								//COM port
+	const int mPort_z = 4;									//COM port
 	const int mBaud_z = 38400;
-	int3 mID;											//Controller IDs
-	const char mNstagesPerController[2] = "1";			//Number of stages per controller (currently 1)
-	double3 mPositionXYZ_mm;							//Absolute position of the stages (x, y, z)
-	const double3 mSoftPosMinXYZ_mm{ -60, 0, 1 };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
-	const double3 mSoftPosMaxXYZ_mm{ 50, 30, 25 };
-	const std::vector<double2> mStagePosLimitXYZ_mm{ {-65,65},{-30,30},{0,26} };	//Position range of the stages
-	int3 mNtile;									//Tile number in x, y, z
-	int3 mNtileOverlap_pix;							//Tile overlap in x, y, z	
+	int3 mID;												//Controller IDs
+	const char mNstagesPerController[2] = "1";				//Number of stages per controller (currently 1)
+	double3 mPositionXYZ;									//Absolute position of the stages (x, y, z)
+	const double3 mSoftPosMinXYZ{ -60.*mm, 0.*mm, 1.*mm };	//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
+	const double3 mSoftPosMaxXYZ{ 50.*mm, 30.*mm, 25.*mm };
+	const std::vector<double2> mStagePosLimitXYZ{ {-65.*mm,65.*mm},{-30.*mm,30.*mm},{0.*mm,26.*mm} };	//Position range of the stages
+	int3 mNtile;											//Tile number in x, y, z
+	int3 mNtileOverlap_pix;									//Tile overlap in x, y, z	
 
 	void configVelAndDOtriggers_(const double3 velXYZ_mmps) const;
 public:
@@ -270,11 +270,11 @@ public:
 	Stage(Stage&&) = delete;					//Disable move constructor
 	Stage& operator=(Stage&&) = delete;			//Disable move-assignment constructor
 
-	double3 readPositionXYZ_mm() const;
+	double3 readPositionXYZ() const;
 	void printPositionXYZ() const;
-	void moveSingleStage(const Axis stage, const double position_mm);
-	void moveAllStages(const double3 positionXYZ_mm);
-	double downloadPosition_mm(const Axis axis);
+	void moveSingleStage(const Axis stage, const double position);
+	void moveAllStages(const double3 positionXYZ);
+	double downloadPosition(const Axis axis);
 	bool isMoving(const Axis axis) const;
 	void waitForMotionToStopSingleStage(const Axis axis) const;
 	void waitForMotionToStopAllStages() const;

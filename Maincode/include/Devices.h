@@ -74,18 +74,17 @@ class ResonantScanner
 
 	void setVoltage_(const double controlVoltage);
 public:
-	ResonantScanner(const FPGAns::RTcontrol &RTcontrol);
 	double mFillFactor;									//Fill factor: how much of an RS swing is covered by the pixels
 	double mFFOV;										//Current FFOV
-	double mSampRes_umPerPix;							//Spatial sampling resolution (um per pixel)
+	double mSampRes_umpp;								//Spatial sampling resolution (um per pixel)
 
+	ResonantScanner(const FPGAns::RTcontrol &RTcontrol);
 	void setFFOV(const double FFOV);
 	void turnOn(const double FFOV);
 	void turnOnUsingVoltage(const double controlVoltage);
 	void turnOff();
-	double downloadControlVoltage();
-	double getSamplingResolution_umPerPix();
-	void isRunning();
+	double downloadControlVoltage() const;
+	void isRunning() const;
 };
 
 class Galvo

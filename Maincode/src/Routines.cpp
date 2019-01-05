@@ -17,9 +17,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	const double3 stagePosition0{35.05 * mm, 10.40 * mm, 18.131 * mm };		//Stage initial position
 
 	//RS
-	const double FFOVrs(150 * um);
-	ResonantScanner RScanner(fpga);
-	RScanner.setFFOV(FFOVrs);
+	const ResonantScanner RScanner(fpga);
 	RScanner.isRunning();							//To make sure that the RS is running
 
 	//STACK
@@ -119,11 +117,11 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 		datalog.record("Galvo FFOV (um) = ", FFOVgalvo / um);
 		datalog.record("Galvo time step (us) = ", galvoTimeStep);
 		datalog.record("\nIMAGE--------------------------------------------------------");
-		datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPixel);
+		datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
 		datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleU8);
 		datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
 		datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
-		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes_umPerPix);
+		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes_umpp);
 		datalog.record("Resolution Y (galvo) (um/pix) = ", (FFOVgalvo / um) / RTcontrol.mHeightPerFrame_pix);
 		datalog.record("\nSTAGE--------------------------------------------------------");
 	}
@@ -214,9 +212,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 	stage.waitForMotionToStopAllStages();
 
 	//RS
-	const double FFOVrs(150 * um);
 	ResonantScanner RScanner(fpga);
-	RScanner.setFFOV(FFOVrs);
 	RScanner.isRunning();		//To make sure that the RS is running
 
 	//CREATE THE REALTIME CONTROL SEQUENCE
@@ -259,8 +255,8 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 	//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence
 	//RTcontrol.setZstageTriggerEnabled(false);
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	//std::cout << "Press any key to continue...\n";
+	//getchar();
 }
 
 void testGalvo(const FPGAns::FPGA &fpga)
@@ -280,8 +276,8 @@ void testGalvo(const FPGAns::FPGA &fpga)
 
 	//GALVO FOR RT
 	Galvo galvo(RTcontrol, RTGALVO1);
-	const double frameDuration = halfPeriodLineclock / us * RTcontrol.mHeightPerFrame_pix;		//= 62.5us * 400 pixels = 25 ms
-	galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);						//Linear ramp for the galvo
+	const double frameDuration(halfPeriodLineclock * RTcontrol.mHeightPerFrame_pix);		//= 62.5us * 400 pixels = 25 ms
+	galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);				//Linear ramp for the galvo
 
 	for (int iter = 0; iter < nFramesDiscont; iter++)
 	{
@@ -377,7 +373,7 @@ void calibAnalogLatency(const FPGAns::FPGA &fpga)
 	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);
 	RTcontrol.pushLinearRamp(RTGALVO1, 4 * us, delay, 0, 5 * V);			//Linear ramp to accumulate the error
 	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 10 * V);					//Initial pulse
-	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);						//Final pulse
+	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);							//Final pulse
 
 	//DO0
 	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
@@ -637,16 +633,16 @@ void testSequencer()
 
 	//Configure the lasers {wavelength_nm, laser power mW, laser power incremental mW}
 	using SingleLaserConfig = LaserListConfig::SingleLaserConfig;
-	const SingleLaserConfig blueLaser{ 750, 10*mW, 5*mW };
-	const SingleLaserConfig greenLaser{ 940, 11*mW, 6*mW };
-	const SingleLaserConfig redLaser{ 1040, 12*mW, 7*mW };
+	const SingleLaserConfig blueLaser{ 750, 10 * mW, 5 * mW };
+	const SingleLaserConfig greenLaser{ 940, 11 * mW, 6 * mW };
+	const SingleLaserConfig redLaser{ 1040, 12 * mW, 7 * mW };
 	const std::vector<SingleLaserConfig> laserList{ blueLaser, greenLaser, redLaser };
 	
 	//Configure the stacks
 	const double2 FOV{ 150. * um, 200. * um };
-	const double stepSizeZ(0.5*um);						//Image resolution in z
-	const double stackDepth(100*um);					//Stack depth or thickness
-	const double3 stackOverlap_frac{ 0.1,0.1,0.1 };		//Percentage of stack overlap in x, y, and z
+	const double stepSizeZ(0.5 * um);						//Image resolution in z
+	const double stackDepth(100 * um);						//Stack depth or thickness
+	const double3 stackOverlap_frac{ 0.1, 0.1, 0.1 };		//Percentage of stack overlap in x, y, and z
 	StackConfig stackConfig(FOV, stepSizeZ, stackDepth, stackOverlap_frac);
 
 	//Configure the vibratome

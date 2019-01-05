@@ -360,15 +360,15 @@ ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol): mRTcontrol
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
-		mFillFactor = sin(PI / 2 * temporalFillFactor);			//Note that the fill factor doesn't depend on the RS amplitude because the RS period is fixed
+		mFillFactor = sin(PI / 2 * temporalFillFactor);						//Note that the fill factor doesn't depend on the RS amplitude because the RS period is fixed
 
-	//std::cout << "Fill factor = " << mFillFactor << "\n";		//For debugging
+	//std::cout << "Fill factor = " << mFillFactor << "\n";					//For debugging
 
 	//Download the current control voltage from the FPGA and update the scan parameters
-	mControlVoltage = downloadControlVoltage();					//Control voltage
-	mFullScan = mControlVoltage / mVoltagePerDistance;			//Full scan FOV = distance from turning point to turning point
-	mFFOV = mFullScan * mFillFactor;							//FFOV
-	mSampRes_umPerPix = (mFFOV / um) / mRTcontrol.mWidthPerFrame_pix;		//Spatial sampling resolution
+	mControlVoltage = downloadControlVoltage();								//Control voltage
+	mFullScan = mControlVoltage / mVoltagePerDistance;						//Full scan FOV = distance between the turning points
+	mFFOV = mFullScan * mFillFactor;										//FFOV
+	mSampRes_umpp = (mFFOV / um) / mRTcontrol.mWidthPerFrame_pix;			//Spatial sampling resolution
 }
 
 //Set the control voltage that determines the scanning amplitude
@@ -381,7 +381,7 @@ void ResonantScanner::setVoltage_(const double controlVoltage)
 	mControlVoltage = controlVoltage;									//Control voltage
 	mFullScan = controlVoltage / mVoltagePerDistance;					//Full scan FOV
 	mFFOV = mFullScan * mFillFactor;									//FFOV
-	mSampRes_umPerPix = (mFFOV/um) / mRTcontrol.mWidthPerFrame_pix;		//Spatial sampling resolution
+	mSampRes_umpp = (mFFOV/um) / mRTcontrol.mWidthPerFrame_pix;			//Spatial sampling resolution
 
 	//Upload the control voltage
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::convertVoltageToI16(mControlVoltage)));
@@ -394,8 +394,8 @@ void ResonantScanner::setFFOV(const double FFOV)
 	mFullScan = FFOV / mFillFactor;										//Full scan FOV
 	mControlVoltage = mFullScan * mVoltagePerDistance;					//Control voltage
 	mFFOV = FFOV;														//FFOV
-	mSampRes_umPerPix = (mFFOV / um) / mRTcontrol.mWidthPerFrame_pix;	//Spatial sampling resolution
-	//std::cout << "mControlVoltage = " << mControlVoltage << "\n"; //For debugging
+	mSampRes_umpp = (mFFOV / um) / mRTcontrol.mWidthPerFrame_pix;		//Spatial sampling resolution
+	//std::cout << "mControlVoltage = " << mControlVoltage << "\n";		//For debugging
 
 	if (mControlVoltage < 0 || mControlVoltage > mVMAX)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX/mVoltagePerDistance /um) + " um");
@@ -432,7 +432,7 @@ void ResonantScanner::turnOff()
 }
 
 //Download the current control voltage of the RS from the FPGA
-double ResonantScanner::downloadControlVoltage()
+double ResonantScanner::downloadControlVoltage() const
 {
 	I16 control_I16;
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
@@ -440,14 +440,8 @@ double ResonantScanner::downloadControlVoltage()
 	return FPGAns::convertI16toVoltage(control_I16);
 }
 
-//Spatial sampling resolution (um per pixel)
-double ResonantScanner::getSamplingResolution_umPerPix()
-{
-	return mSampRes_umPerPix;
-}
-
 //Check if the RS is set to run. It does not actually check if the RS is running, for example, by looking at the RSsync signal
-void ResonantScanner::isRunning()
+void ResonantScanner::isRunning() const
 {
 	//Retrieve the state of the RS from the FPGA (see the LabView implementation)
 	NiFpga_Bool isRunning;

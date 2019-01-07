@@ -1,4 +1,5 @@
 #pragma once
+#include <thread>
 #include <fstream>					//file management
 #include <ctime>					//Clock()
 #include <algorithm>				//std::max and std::min
@@ -149,9 +150,9 @@ class Filterwheel
 
 	void downloadColor_();
 	void setPosition_(const int position);
-	int convertColorToPosition_(const Filtercolor color) const;
-	Filtercolor convertPositionToColor_(const int position) const;
-	std::string convertColorToString_(const Filtercolor color) const;
+	int colorToPosition_(const Filtercolor color) const;
+	Filtercolor positionToColor_(const int position) const;
+	std::string colorToString_(const Filtercolor color) const;
 public:
 	Filterwheel(const FilterwheelSelector whichFilterwheel);
 	~Filterwheel();
@@ -159,9 +160,7 @@ public:
 	Filterwheel& operator=(const Filterwheel&) = delete;	//Disable assignment-constructor
 	Filterwheel(Filterwheel&&) = delete;					//Disable move constructor
 	Filterwheel& operator=(Filterwheel&&) = delete;			//Disable move-assignment constructor
-
-	void setColor(const Filtercolor color);
-	void setColor(const int wavelength_nm);
+	void setWavelength(const int wavelength_nm);
 };
 
 class Laser
@@ -211,7 +210,7 @@ class PockelsCell
 	const double maxPower = 250 * mW;			//Soft limit for the laser power
 	Shutter mShutter;
 
-	double convertLaserpowerToVolt_(const double power) const;
+	double laserpowerToVolt_(const double power) const;
 public:
 	//Do not set the output to 0 through the destructor to allow latching the last value
 	PockelsCell(FPGAns::RTcontrol &RTcontrol, const LaserSelector laserSelector, const int wavelength_nm);
@@ -237,7 +236,7 @@ class VirtualLaser
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
 	void setWavelength_(const int wavelength_nm);
-	std::string laserSelectorToString_(const LaserSelector whichLaser) const;
+	std::string laserNameToString_(const LaserSelector whichLaser) const;
 	void checkShutterIsOpen_(const Laser &laser) const;
 public:
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector = AUTO);

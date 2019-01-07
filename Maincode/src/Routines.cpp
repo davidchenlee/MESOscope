@@ -14,15 +14,15 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);												//Number of frames for continuous XY acquisition
-	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.179 * mm };	//Stage initial position
+	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.189 * mm };	//Stage initial position
 
 	//RS
 	const ResonantScanner RScanner(fpga);
-	RScanner.isRunning();							//To make sure that the RS is running
+	RScanner.isRunning();					//Make sure that the RS is running
 
 	//STACK
 	const double stepSizeZ(0.5 * um);
-	double stackDepthZ(10 * um);					//Acquire a stack of this depth or thickness in Z
+	double stackDepthZ(10 * um);			//Acquire a stack of this depth or thickness in Z
 
 	//SAMPLE
 	const std::string sampleName("Beads4um");
@@ -85,12 +85,15 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	Galvo galvo(RTcontrol, RTGALVO1);
 	galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
 
-	//LASER
-	const int wavelength_nm = 1040;
-	//std::vector<double> Pif{ 50. * mW, 50. * mW};		//Initial and final laser power for linear ramp
-	std::vector<double> Pif{ 25. * mW, 25. * mW };		//Initial and final laser power for linear ramp
+	//LASER+
+	const int wavelength_nm = 750;
+	std::vector<double> Pif{ 50. * mW, 50. * mW};		//Initial and final laser power for linear ramp
+	VirtualLaser laser(RTcontrol, wavelength_nm, VISION);
+	//const int wavelength_nm = 1040;
+	//std::vector<double> Pif{ 25. * mW, 25. * mW };		//Initial and final laser power for linear ramp
+	//VirtualLaser laser(RTcontrol, wavelength_nm, FIDELITY);
+
 	double P = Pif.front();
-	VirtualLaser laser(RTcontrol, wavelength_nm, FIDELITY);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);											//Linearly scale the laser intensity across all the frames
 
@@ -204,7 +207,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//STAGES
 	const StackScanDir stackScanDirZ = TOPDOWN;																			//Scan direction in z
-	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.179 * mm };												//Center of x, y, z stack
+	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.189 * mm };												//Center of x, y, z stack
 	const double stackDepth(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ);
 	const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages
 	const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;											//TODO: combine this with the galvo's one
@@ -214,7 +217,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//RS
 	ResonantScanner RScanner(fpga);
-	RScanner.isRunning();		//To make sure that the RS is running
+	RScanner.isRunning();		//Make sure that the RS is running
 
 	//CREATE THE REALTIME CONTROL SEQUENCE
 	FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
@@ -226,7 +229,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 	VirtualLaser laser(RTcontrol, wavelength_nm, AUTO);
 
 	//GALVO FOR RT
-	const double FFOVgalvo(200 * um);											//Full FOV in the slow axis
+	const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
 	const double posMax(FFOVgalvo / 2);
 	Galvo galvo(RTcontrol, RTGALVO1);
 	galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
@@ -384,16 +387,18 @@ void testFilterwheel()
 	Filterwheel FWexcitation(FWEXC);
 	Filterwheel FWdetection(FWDET);
 		
-	if (1)
-	{
-		FWexcitation.setColor(1040);
-		FWdetection.setColor(1040);
-	}
+	int wavelength_nm;
+	if (0)
+		wavelength_nm = 1040;
 	else
-	{
-		FWexcitation.setColor(NONE);
-		FWdetection.setColor(750);
-	}
+		wavelength_nm = 750;
+
+	//FWexcitation.setWavelength(wavelength);
+	//FWdetection.setWavelength(wavelength);
+	std::thread th1(&Filterwheel::setWavelength, &FWexcitation, wavelength_nm);
+	std::thread th2(&Filterwheel::setWavelength, &FWdetection, wavelength_nm);
+	th1.join();
+	th2.join();
 
 	std::cout << "Press any key to continue...\n";
 	getchar();
@@ -553,9 +558,9 @@ void testRS(const FPGAns::FPGA &fpga)
 
 void testConvertI16toVolt()
 {
-	std::cout << "volt to I16: " << FPGAns::convertVoltageToI16(1) << "\n";
-	std::cout << "I16 to colt: " << FPGAns::convertI16toVoltage(32767) << "\n";
-	std::cout << "volt to I16 to volt: " << FPGAns::convertI16toVoltage(FPGAns::convertVoltageToI16(0)) << "\n";
+	std::cout << "volt to I16: " << FPGAns::voltageToI16(1) << "\n";
+	std::cout << "I16 to colt: " << FPGAns::I16toVoltage(32767) << "\n";
+	std::cout << "volt to I16 to volt: " << FPGAns::I16toVoltage(FPGAns::voltageToI16(0)) << "\n";
 }
 
 void testTiffU8()
@@ -699,4 +704,35 @@ void testSequencer()
 
 	//std::cout << "Press any key to continue...\n";
 	//getchar();
+}
+
+FUNC::FUNC(const int i): dummy(i) {}
+
+void FUNC::func1(const int x)
+{
+	Sleep(1000);
+	std::cout << "func1 " << x << "\n";
+	dummy = x;
+}
+
+void FUNC::func2(const int x)
+{
+	std::cout << "func2 " << x << "\n";
+	dummy = x;
+}
+
+void testThread()
+{
+	std::cout << "func1 and func2 will execute concurrently\n";
+
+	FUNC x(1);
+	
+	std::thread first(&FUNC::func1, &x, 123);
+	std::thread second(&FUNC::func2, &x, 314);
+
+	first.join();//pauses until first finishes
+	second.join();//pauses until second finishes
+
+	std::cout << "Press any key to continue...\n";
+	getchar();
 }

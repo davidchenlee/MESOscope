@@ -384,7 +384,7 @@ void ResonantScanner::setVoltage_(const double controlVoltage)
 	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;					//Spatial sampling resolution (length/pixel)
 
 	//Upload the control voltage
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::convertVoltageToI16(mControlVoltage)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::voltageToI16(mControlVoltage)));
 }
 
 //Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
@@ -401,7 +401,7 @@ void ResonantScanner::setFFOV(const double FFOV)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX/mVoltagePerDistance /um) + " um");
 
 	//Upload the control voltage
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::convertVoltageToI16(mControlVoltage)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::voltageToI16(mControlVoltage)));
 }
 
 //First set the FFOV, then set RSenable on
@@ -437,7 +437,7 @@ double ResonantScanner::downloadControlVoltage() const
 	I16 control_I16;
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
 
-	return FPGAns::convertI16toVoltage(control_I16);
+	return FPGAns::I16toVoltage(control_I16);
 }
 
 //Check if the RS is set to run. It does not actually check if the RS is running, for example, by looking at the RSsync signal
@@ -485,11 +485,12 @@ void Galvo::positionLinearRamp(const double timeStep, const double rampLength, c
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
 }
 
+//Generate a linear ramp to scan the galvo across a frame (a plane with fixed z)
 void Galvo::generateFrameScan(const double xi, const double xf) const
 {
-	const double fineTuneHalfPeriodLineclock = - 0.55 * us;
-	const double timeStep(8 * us);
-	const double frameDuration((halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix);
+	const double timeStep(8 * us);	//Time step of the linear ramp
+	const double fineTuneHalfPeriodLineclock = - 0.55 * us;	//Fine tune the RS period
+	const double frameDuration((halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix);	//Time to scan a frame = (time for the RS to travel from side to side) x (# height of the frame in pixels)
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
 }
 
@@ -714,9 +715,9 @@ void Filterwheel::downloadColor_()
 		RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '>'), RxBuffer.end());
 		//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
-		//std::cout << "RxBuffer: " << RxBuffer << "\n"; //For debugging
-		mPosition = std::stoi(RxBuffer);									//convert string to int
-		mColor = convertPositionToColor_(mPosition);
+		//std::cout << "RxBuffer: " << RxBuffer << "\n";	//For debugging
+		mPosition = std::stoi(RxBuffer);					//convert string to int
+		mColor = positionToColor_(mPosition);
 	}
 	catch (const serial::IOException)
 	{
@@ -741,7 +742,7 @@ void Filterwheel::setPosition_(const int position)
 			const int diffPos = maxPos - minPos;
 			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
 
-			//std::cout << "Tuning the " << mDeviceName << " to " + convertColorToString_(color) << "...\n";
+			//std::cout << "Tuning the " << mDeviceName << " to " + colorToString_(color) << "...\n";
 			Sleep(static_cast<DWORD>(1. * minSteps / mTuningSpeed / ms));	//Wait until the filterwheel stops turning the turret
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
@@ -750,9 +751,19 @@ void Filterwheel::setPosition_(const int position)
 			downloadColor_();	//Check if the filterwheel was set successfully 
 
 			if (position == mPosition)
-				std::cout << mFilterwheelName << " successfully set to " + convertColorToString_(mColor) << " (position = " << mPosition << ")\n";
+			{
+				//Thread-safe message
+				std::stringstream msg;
+				msg << mFilterwheelName << " successfully set to " + colorToString_(mColor) << " (position = " << mPosition << ")\n";
+				std::cout << msg.str();
+			}
 			else
-				std::cout << "WARNING: " << mFilterwheelName << " might not be in the correct position " << position << "\n";
+			{
+				//Thread-safe message
+				std::stringstream msg;
+				msg << "WARNING: " << mFilterwheelName << " might not be in the correct position " << position << "\n";
+				std::cout << msg.str();
+			}
 		}
 		catch (const serial::IOException)
 		{
@@ -761,7 +772,7 @@ void Filterwheel::setPosition_(const int position)
 	}
 }
 
-int Filterwheel::convertColorToPosition_(const Filtercolor color) const
+int Filterwheel::colorToPosition_(const Filtercolor color) const
 {
 	for (std::vector<int>::size_type iter = 0; iter != mFWconfig.size(); iter++)
 	{
@@ -772,7 +783,7 @@ int Filterwheel::convertColorToPosition_(const Filtercolor color) const
 	throw std::runtime_error((std::string)__FUNCTION__ + ": Failure converting color to position");
 }
 
-Filtercolor Filterwheel::convertPositionToColor_(const int position) const
+Filtercolor Filterwheel::positionToColor_(const int position) const
 {
 	if (position < 1 || position > mNpos)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": the filterwheel position must be between 1 and " + std::to_string(mNpos));
@@ -781,7 +792,7 @@ Filtercolor Filterwheel::convertPositionToColor_(const int position) const
 }
 
 //Convert from enum Filtercolor to string
-std::string Filterwheel::convertColorToString_(const Filtercolor color) const
+std::string Filterwheel::colorToString_(const Filtercolor color) const
 {
 	std::string colorStr;
 	switch (color)
@@ -804,24 +815,23 @@ std::string Filterwheel::convertColorToString_(const Filtercolor color) const
 	return colorStr;
 }
 
-void Filterwheel::setColor(const Filtercolor color)
-{
-	setPosition_(convertColorToPosition_(color));
-}
-
 //Set the filter color using the laser wavelength
-void Filterwheel::setColor(const int wavelength_nm)
+void Filterwheel::setWavelength(const int wavelength_nm)
 {
 	Filtercolor color;
 	//Wavelength intervals chosen based on the 2p-excitation spectrum of the fluorescent labels (DAPI, GFP, and tdTomato)
-	if (wavelength_nm > 940)
+	if (wavelength_nm > 940 && wavelength_nm <= 1080)
 		color = RED;
 	else if (wavelength_nm > 790)
 		color = GREEN;
-	else
+	else if (wavelength_nm >= 680)
 		color = BLUE;
+	else if (wavelength_nm == 0)
+		color = NONE;
+	else
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The filterwheel wavelength must be in the range 680 - 1080 nm");
 
-	setPosition_(convertColorToPosition_(color));
+	setPosition_(colorToPosition_(color));
 }
 #pragma endregion "Filterwheel"
 
@@ -1099,7 +1109,7 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const LaserSelector laser
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, 1.0);
 }
 
-double PockelsCell::convertLaserpowerToVolt_(const double power) const
+double PockelsCell::laserpowerToVolt_(const double power) const
 {
 	double a, b, c;		//Calibration parameters
 
@@ -1157,7 +1167,7 @@ void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const 
 	if (P < 0 || P > maxPower)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(P/mW));
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, convertLaserpowerToVolt_(P), overrideFlag);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, laserpowerToVolt_(P), overrideFlag);
 }
 
 //Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
@@ -1175,7 +1185,7 @@ void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDurat
 	if (Pi < 0 || Pf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, convertLaserpowerToVolt_(Pi), convertLaserpowerToVolt_(Pf));
+	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, laserpowerToVolt_(Pi), laserpowerToVolt_(Pf));
 }
 
 void PockelsCell::voltageToZero() const
@@ -1244,17 +1254,23 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 		break;
 	}
 
-	std::cout << "Using " << laserSelectorToString_(mWhichLaser) << " at " << mWavelength_nm << " nm\n";
+	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << mWavelength_nm << " nm\n";
 
-	//Set the filterwheels
-	if (0) //Multiplexing
-	{
-		mFWexcitation.setColor(wavelength_nm);
-	}
-	else   //Single beam
-		mFWexcitation.setColor(NONE);
+	//For the excitation filterwheel
+	int ExcWavelength_nm;
+	if (1)	//For a single beam, set the wavelength to 0, meaning that no beamsplitter is used
+		ExcWavelength_nm = 0;	
+	else	//Multiplexing
+		ExcWavelength_nm = wavelength_nm;
 
-	mFWdetection.setColor(wavelength_nm);
+	//mFWexcitation.setWavelength(ExcWavelength_nm);
+	//mFWdetection.setWavelength(wavelength_nm);
+
+	std::thread th1(&Filterwheel::setWavelength, &mFWexcitation, ExcWavelength_nm);
+	std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
+	th1.join();
+	th2.join();
+
 }
 
 void VirtualLaser::setWavelength_(const int wavelength_nm)
@@ -1271,12 +1287,12 @@ void VirtualLaser::setWavelength_(const int wavelength_nm)
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 
-	mFWexcitation.setColor(wavelength_nm);
-	mFWdetection.setColor(wavelength_nm);
+	mFWexcitation.setWavelength(wavelength_nm);
+	mFWdetection.setWavelength(wavelength_nm);
 	mWavelength_nm = wavelength_nm;
 }
 
-std::string VirtualLaser::laserSelectorToString_(const LaserSelector whichLaser) const
+std::string VirtualLaser::laserNameToString_(const LaserSelector whichLaser) const
 {
 	switch (whichLaser)
 	{

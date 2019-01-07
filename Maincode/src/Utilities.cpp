@@ -34,7 +34,7 @@ void printBinary16(const int input)
 }
 
 //Convert a double to a fixed 2p14
-U16 convertDoubleToFx2p14(double n)
+U16 doubleToFx2p14(double n)
 {
 	const int FIXED_BIT = 14; //Number of decimal digits. It MUST match the LV implementation: currently fx2.14 (U16 is split into 2 integer digits + 14 decimal digits)
 	U16 int_part = 0, frac_part = 0;

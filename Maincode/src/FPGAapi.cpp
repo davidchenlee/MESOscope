@@ -3,7 +3,7 @@
 namespace FPGAns
 {
 	//Convert time to ticks
-	U16 convertTimeToTick(const double t)
+	U16 timeToTick(const double t)
 	{
 		const double t_tick = t/us * tickPerUs;
 
@@ -26,7 +26,7 @@ namespace FPGAns
 	//0x7FFF = 32767
 	//0xFFFF = -1
 	//0x8000 = -32768
-	I16 convertVoltageToI16(const double voltage)
+	I16 voltageToI16(const double voltage)
 	{
 		if (voltage > AOmax)
 		{
@@ -43,7 +43,7 @@ namespace FPGAns
 	}
 
 	//Convert I16 (-32768 to 32767) to voltage (-10V to 10V)
-	double convertI16toVoltage(const int input)
+	double I16toVoltage(const int input)
 	{
 		//Positive case
 		if (input >= 0)
@@ -81,21 +81,21 @@ namespace FPGAns
 	U32 packAnalogSinglet(const double timeStep, const double AO)
 	{
 		const U16 AOlatency_tick = 2;	//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
-		return packU32(convertTimeToTick(timeStep) - AOlatency_tick, convertVoltageToI16(AO/V));
+		return packU32(timeToTick(timeStep) - AOlatency_tick, voltageToI16(AO/V));
 	}
 
 	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 	U32 packDigitalSinglet(const double timeStep, const bool DO)
 	{
 		const U16 DOlatency_tick = 2;	//To calibrate, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
-		return packU32(convertTimeToTick(timeStep) - DOlatency_tick, static_cast<U16>(DO));
+		return packU32(timeToTick(timeStep) - DOlatency_tick, static_cast<U16>(DO));
 	}
 
 	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'
 	U32 packPixelclockSinglet(const double timeStep, const bool DO)
 	{
 		const U16 PixelclockLatency_tick = 1;//The pixel-clock is implemented using a SCTL. I think the latency comes from reading the LUT buffer
-		return packU32(convertTimeToTick(timeStep) - PixelclockLatency_tick, static_cast<U16>(DO));
+		return packU32(timeToTick(timeStep) - PixelclockLatency_tick, static_cast<U16>(DO));
 	}
 
 	void checkStatus(char functionName[], NiFpga_Status status)
@@ -128,7 +128,7 @@ namespace FPGAns
 			const double V = Vi + (Vf - Vi)*ii / (nPoints - 1);
 			queue.push_back(FPGAns::packAnalogSinglet(timeStep, V));
 
-			//std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * FPGAns::convertUsTotick(timeStep) << "\t" << V << "\t\n";	//For debugging
+			//std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * timeToTick(timeStep) << "\t" << V << "\t\n";	//For debugging
 		}
 		//getchar();	//For debugging
 	}
@@ -262,7 +262,7 @@ namespace FPGAns
 		if (initialWaitingTime <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 
-		mPixelclockQ.push_back(FPGAns::packU32(FPGAns::convertTimeToTick(initialWaitingTime) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
+		mPixelclockQ.push_back(FPGAns::packU32(FPGAns::timeToTick(initialWaitingTime) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
@@ -396,7 +396,7 @@ namespace FPGAns
 	//Push a fixed-point number. For scaling the pockels cell output
 	void RTcontrol::pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor)
 	{
-		mVectorOfQueues.at(chan).push_back(static_cast<U32>(convertDoubleToFx2p14(scalingFactor)));
+		mVectorOfQueues.at(chan).push_back(static_cast<U32>(doubleToFx2p14(scalingFactor)));
 	}
 
 	void RTcontrol::pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi, const double Vf)
@@ -413,8 +413,8 @@ namespace FPGAns
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo2Mon, &AOlastVoltage_I16.at(RTGALVO2)));
 	
 		//For debugging
-		//std::cout << convertI16toVoltage(AOlastVoltage_I16.at(RTGALVO1)) << "\n";
-		//std::cout << convertI16toVoltage((I16)mVectorOfQueues.at(RTGALVO1).front()) << "\n";
+		//std::cout << I16toVoltage(AOlastVoltage_I16.at(RTGALVO1)) << "\n";
+		//std::cout << I16toVoltage((I16)mVectorOfQueues.at(RTGALVO1).front()) << "\n";
 
 		//Create a vector of queues
 		VQU32 vectorOfQueuesForRamp(RTNCHAN);
@@ -425,8 +425,8 @@ namespace FPGAns
 				//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 				if ((chan == RTGALVO1 || chan == RTGALVO2) )	//Only do GALVO1 and GALVO2 for now
 				{
-					const double Vi = convertI16toVoltage(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
-					const double Vf = convertI16toVoltage((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT control sequence
+					const double Vi = I16toVoltage(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
+					const double Vf = I16toVoltage((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT control sequence
 					linearRamp(vectorOfQueuesForRamp.at(chan), 10 * us, 5 * ms, Vi, Vf);
 				}
 			}

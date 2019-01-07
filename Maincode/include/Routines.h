@@ -1,7 +1,6 @@
 #pragma once
 #include "Devices.h"
 #include "Sequencer.h"
-//#include <concrt.h> 	//Concurrency::wait(2000);
 
 void discreteScanZ(const FPGAns::FPGA &fpga);
 void continuousScanZ(const FPGAns::FPGA &fpga);
@@ -26,3 +25,14 @@ void testTiffU8();
 void testEthernetSpeed();
 void testVibratome(const FPGAns::FPGA &fpga);
 void testSequencer();
+
+class FUNC
+{
+	int dummy;
+public:
+	FUNC(const int i);
+	void func1(const int x);
+	void func2(const int x);
+};
+
+void testThread();

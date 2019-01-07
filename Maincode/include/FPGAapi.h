@@ -1,6 +1,4 @@
 #pragma once
-//#include <iostream>
-//#include <string>		//std::to_string
 #include <windows.h>	//Sleep. Also the PI stages
 #include "NiFpga_FPGAvi.h"
 #include "Const.h"
@@ -9,9 +7,9 @@ using namespace Constants;
 
 namespace FPGAns
 {
-	U16 convertTimeToTick(const double t);
-	I16 convertVoltageToI16(const double voltage);
-	double convertI16toVoltage(const int input);
+	U16 timeToTick(const double t);
+	I16 voltageToI16(const double voltage);
+	double I16toVoltage(const int input);
 	U32 packU32(const U16 t_tick, const U16 AO_U16);
 	U32 packAnalogSinglet(const double timeStep, const double AO);
 	U32 packDigitalSinglet(const double timeStep, const bool DO);

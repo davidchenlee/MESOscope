@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//discreteScanZ(fpga);
-			//continuousScanZ(fpga);
+			continuousScanZ(fpga);
 			//testGalvo(fpga);
 			//testPixelclock(fpga);
 			//testAODO(fpga);
@@ -30,6 +30,7 @@ int main(int argc, char* argv[])
 			//testEthernetSpeed();
 			//testVibratome(fpga);
 			//testSequencer();
+			//testThread();
 		}
 		catch (const std::invalid_argument &e)
 		{

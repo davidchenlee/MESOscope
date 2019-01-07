@@ -14,7 +14,7 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);												//Number of frames for continuous XY acquisition
-	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.136 * mm };	//Stage initial position
+	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.179 * mm };	//Stage initial position
 
 	//RS
 	const ResonantScanner RScanner(fpga);
@@ -76,21 +76,21 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 	}
 
+	//CREATE A REALTIME CONTROL SEQUENCE
 	FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
 
 	//GALVO
-	const double FFOVgalvo(200 * um);											//Full FOV in the slow axis
-	const double galvoTimeStep(8 * us);
+	const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
 	const double posMax(FFOVgalvo / 2);
-	const double frameDuration(62.5 * us * RTcontrol.mHeightPerFrame_pix);		//= halfPeriodLineclock * RTcontrol.mHeightPerFrame_pix
 	Galvo galvo(RTcontrol, RTGALVO1);
-	galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);	//Linear ramp for the galvo
+	galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
 
 	//LASER
-	const int wavelength_nm = 750;
-	std::vector<double> Pif{ 50. * mW, 50. * mW};		//Initial and final laser power for linear ramp
+	const int wavelength_nm = 1040;
+	//std::vector<double> Pif{ 50. * mW, 50. * mW};		//Initial and final laser power for linear ramp
+	std::vector<double> Pif{ 25. * mW, 25. * mW };		//Initial and final laser power for linear ramp
 	double P = Pif.front();
-	VirtualLaser laser(RTcontrol, wavelength_nm, VISION);
+	VirtualLaser laser(RTcontrol, wavelength_nm, FIDELITY);
 	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
 	//pockelsVision.scalingLinearRamp(1.0, 2.0);											//Linearly scale the laser intensity across all the frames
 
@@ -114,7 +114,6 @@ void discreteScanZ(const FPGAns::FPGA &fpga)
 		datalog.record("Pixel dwell time (us) = ", RTcontrol.mDwell / us);
 		datalog.record("RS fill factor = ", RScanner.mFillFactor);
 		datalog.record("Galvo FFOV (um) = ", FFOVgalvo / um);
-		datalog.record("Galvo time step (us) = ", galvoTimeStep);
 		datalog.record("\nIMAGE--------------------------------------------------------");
 		datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
 		datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleU8);
@@ -205,7 +204,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//STAGES
 	const StackScanDir stackScanDirZ = TOPDOWN;																			//Scan direction in z
-	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.136 * mm };												//Center of x, y, z stack
+	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.179 * mm };												//Center of x, y, z stack
 	const double stackDepth(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ);
 	const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages
 	const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;											//TODO: combine this with the galvo's one
@@ -228,11 +227,9 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//GALVO FOR RT
 	const double FFOVgalvo(200 * um);											//Full FOV in the slow axis
-	const double galvoTimeStep(8 * us);
 	const double posMax(FFOVgalvo / 2);
-	const double frameDuration(62.5 * us * RTcontrol.mHeightPerFrame_pix);		//= halfPeriodLineclock * RTcontrol.mHeightPerFrame_pix
 	Galvo galvo(RTcontrol, RTGALVO1);
-	galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);	//Linear ramp for the galvo
+	galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
 
 	//SET THE LASER POWER and OPEN THE SHUTTER
 	laser.pushPowerSinglet(8 * us, P);
@@ -267,15 +264,13 @@ void testGalvo(const FPGAns::FPGA &fpga)
 	const int nFramesDiscont(1);
 	const int nFramesCont(2);
 
+	//CREATE A REALTIME CONTROL SEQUENCE
+	FPGAns::RTcontrol RTcontrol(fpga, FG, nFramesCont, width_pix, height_pix);
+
 	//GALVO
 	const double FFOVgalvo(200 * um);				//Full FOV in the slow axis
 	const double galvoTimeStep(8 * us);
 	const double posMax(FFOVgalvo / 2);
-
-	//CREATE A REALTIME CONTROL SEQUENCE
-	FPGAns::RTcontrol RTcontrol(fpga, FG, nFramesCont, width_pix, height_pix);
-
-	//GALVO FOR RT
 	Galvo galvo(RTcontrol, RTGALVO1);
 	const double frameDuration(halfPeriodLineclock * RTcontrol.mHeightPerFrame_pix);		//= 62.5us * 400 pixels = 25 ms
 	galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);				//Linear ramp for the galvo
@@ -287,7 +282,7 @@ void testGalvo(const FPGAns::FPGA &fpga)
 		//Execute the realtime control sequence and acquire the image
 		Image image(RTcontrol);
 		image.acquire(); //Execute the RT control sequence and acquire the image
-		image.saveTiffSinglePage("Untitled", OVERRIDE);
+		//image.saveTiffSinglePage("Untitled", OVERRIDE);
 	}
 }
 

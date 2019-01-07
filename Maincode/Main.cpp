@@ -7,7 +7,7 @@ int main(int argc, char* argv[])
 		FPGAns::FPGA fpga;		//Create a FPGA session
 		try
 		{
-			discreteScanZ(fpga);
+			//discreteScanZ(fpga);
 			//continuousScanZ(fpga);
 			//testGalvo(fpga);
 			//testPixelclock(fpga);

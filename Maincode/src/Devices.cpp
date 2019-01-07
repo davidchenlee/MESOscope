@@ -485,6 +485,14 @@ void Galvo::positionLinearRamp(const double timeStep, const double rampLength, c
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
 }
 
+void Galvo::generateFrameScan(const double xi, const double xf) const
+{
+	const double fineTuneHalfPeriodLineclock = - 0.55 * us;
+	const double timeStep(8 * us);
+	const double frameDuration((halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix);
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
+}
+
 void Galvo::voltageToZero() const
 {
 	mRTcontrol.pushAnalogSinglet(mGalvoRTchannel, AO_tMIN, 0 * V);

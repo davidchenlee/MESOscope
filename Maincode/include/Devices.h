@@ -97,6 +97,7 @@ public:
 	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
 	void positionLinearRamp(const double timeStep, const double rampLength, const double xi, const double xf) const;
+	void generateFrameScan(const double xi, const double xf) const;
 	void voltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 };

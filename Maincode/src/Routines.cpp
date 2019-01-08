@@ -91,12 +91,9 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 	//std::vector<double> Pif{ 50. * mW, 50. * mW};		//Initial and final laser power for linear ramp
 	//VirtualLaser laser(RTcontrol, wavelength_nm, VISION);
 	const int wavelength_nm = 1040;
-	std::vector<double> Pif{ 25. * mW, 25. * mW };		//Initial and final laser power for linear ramp
 	VirtualLaser laser(RTcontrol, wavelength_nm, FIDELITY);
-
+	std::vector<double> Pif{ 25. * mW, 25. * mW };		//Initial and final laser power for linear ramp
 	double P = Pif.front();
-	//pockelsVision.voltageLinearRamp(galvoTimeStep, frameDuration, 0.5*V, 1*V);			//Ramp up the laser intensity in a frame and repeat for each frame
-	//pockelsVision.scalingLinearRamp(1.0, 2.0);											//Linearly scale the laser intensity across all the frames
 
 	//DATALOG
 	{
@@ -225,9 +222,9 @@ void MainRoutines::continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 750;
+	VirtualLaser laser(RTcontrol, wavelength_nm, AUTO);
 	std::vector<double> Pif{ 55. * mW, 55. * mW };		//Initial and final laser power for linear ramp
 	double P = Pif.front();
-	VirtualLaser laser(RTcontrol, wavelength_nm, AUTO);
 
 	//GALVO FOR RT
 	const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
@@ -604,6 +601,31 @@ void TestRoutines::pockels(const FPGAns::FPGA &fpga)
 	//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 	Image image(RTcontrol);
 	image.acquire();
+
+	std::cout << "Press any key to continue...\n";
+	getchar();
+}
+
+void TestRoutines::pockelsRamp(const FPGAns::FPGA &fpga)
+{
+	//ACQUISITION SETTINGS
+	const int widthPerFrame_pix(300);
+	const int heightPerFrame_pix(400);
+	const int nFramesCont(10);			//Number of frames for continuous XY acquisition
+
+	//CREATE A REALTIME CONTROL SEQUENCE
+	FPGAns::RTcontrol RTcontrol(fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
+
+	//POCKELS CELL
+	const int wavelength_nm = 750;
+	const double P(50. * mW);		//Laser power
+	PockelsCell pockels(RTcontrol, VISION, wavelength_nm);
+	pockels.pushPowerSinglet(8 * us, P, OVERRIDE);	//Set the laser power
+	//pockels.scalingLinearRamp(1.0, 2.0);		//Linearly scale the laser intensity from the first to the last frame
+
+	//EXECUTE THE RT CONTROL SEQUENCE
+	Image image(RTcontrol);
+	image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 
 	std::cout << "Press any key to continue...\n";
 	getchar();

@@ -33,6 +33,7 @@ namespace TestRoutines
 	void lasers(const FPGAns::FPGA &fpga);
 	void virtualLasers(const FPGAns::FPGA &fpga);
 	void pockels(const FPGAns::FPGA &fpga);
+	void pockelsRamp(const FPGAns::FPGA &fpga);
 	void resonantScanner(const FPGAns::FPGA &fpga);
 	void convertI16toVolt();
 	void tiffU8();

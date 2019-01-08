@@ -1170,7 +1170,7 @@ void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const 
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, laserpowerToVolt_(P), overrideFlag);
 }
 
-//Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
+//Ramp up or down the pockels cell within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
 void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi, const double Vf) const
 {
 	if (Vi < 0 || Vf < 0)
@@ -1179,7 +1179,7 @@ void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDura
 	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, Vi, Vf);
 }
 
-//Ramp the pockels cell modulation during a frame acquisition. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
+//Ramp up or down the pockels cell within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
 void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDuration, const double Pi, const double Pf) const
 {
 	if (Pi < 0 || Pf < 0)
@@ -1193,7 +1193,7 @@ void PockelsCell::voltageToZero() const
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, AO_tMIN, 0 * V);
 }
 
-//Linearly scale the pockels output across all the frames
+//Linearly scale the pockels output from the first to the last frame
 void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 {
 	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4)

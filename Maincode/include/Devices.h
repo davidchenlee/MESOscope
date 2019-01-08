@@ -132,7 +132,6 @@ public:
 
 class Filterwheel
 {
-
 	const std::vector<Filtercolor> mExcConfig{ BLUE, NONE, GREEN, NONE, RED, NONE };
 	const std::vector<Filtercolor> mDetConfig{ BLUE, GREEN, RED, NONE, NONE, NONE };
 		

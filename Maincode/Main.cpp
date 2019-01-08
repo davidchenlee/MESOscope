@@ -8,35 +8,35 @@ int main(int argc, char* argv[])
 		try
 		{
 			//MAIN SEQUENCES
-			//discreteScanZ(fpga);
-			//continuousScanZ(fpga);
-
-			//TESTS
-			//testGalvo(fpga);
-			//testPixelclock(fpga);
-			//testAODO(fpga);
-			//testAOramp(fpga);
-			//testDigitalTiming(fpga);
-			//testFilterwheel();
-			//testShutter(fpga);
-			//testStagePosition();
-			//testStageConfig();
-			//testPMT16X();
-			//testLasers(fpga);
-			//testVirtualLasers(fpga);
-			//testPockels(fpga);
-			//testRS(fpga);
-			//testConvertI16toVolt();
-			//testTiffU8();
-			//testEthernetSpeed();
-			//testVibratome(fpga);
-			//testSequencer();
-			//testThread();
+			MainRoutines::discreteScanZ(fpga);
+			//MainRoutines::continuousScanZ(fpga);
 
 			//CALIBRATION
-			//calibDigitalLatency(fpga);
-			//calibAnalogLatency(fpga);
-			//fineTuneGalvoScan(fpga);
+			//CalibrationRoutines::digitalLatency(fpga);
+			//CalibrationRoutines::analogLatency(fpga);
+			//CalibrationRoutines::fineTuneGalvoScan(fpga);
+
+			//TESTS
+			//TestRoutines::galvo(fpga);
+			//TestRoutines::pixelclock(fpga);
+			//TestRoutines::AODO(fpga);
+			//TestRoutines::AOramp(fpga);
+			//TestRoutines::digitalTiming(fpga);
+			//TestRoutines::filterwheel();
+			//TestRoutines::shutter(fpga);
+			//TestRoutines::stagePosition();
+			//TestRoutines::stageConfig();
+			//TestRoutines::PMT16Xconfig();
+			//TestRoutines::lasers(fpga);
+			//TestRoutines::virtualLasers(fpga);
+			//TestRoutines::pockels(fpga);
+			//TestRoutines::resonantScanner(fpga);
+			//TestRoutines::convertI16toVolt();
+			//TestRoutines::tiffU8();
+			//TestRoutines::ethernetSpeed();
+			//TestRoutines::vibratome(fpga);
+			//TestRoutines::sequencer();
+			//TestRoutines::multithread();
 		}
 		catch (const std::invalid_argument &e)
 		{

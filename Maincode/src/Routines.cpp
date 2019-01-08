@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 #pragma region "MAIN SEQUENCE"
-void discreteScanZ(const FPGAns::FPGA &fpga)
+void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 {
 	//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 	//forth on the same z plane. The images the can be averaged
@@ -198,7 +198,7 @@ I triggered the stack acquisition using DO2 for both scanning directions: top-do
 almost identical, with a difference of maybe 1 plane only (0.5 um)
 Remember that I do not use MACROS on the stages anymore
 */
-void continuousScanZ(const FPGAns::FPGA &fpga)
+void MainRoutines::continuousScanZ(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix(300);
@@ -269,7 +269,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 //Save the averages in different Tiff pages
 //Look at the vertical shift of the beads in the Tiff
 //Adjust fineTuneHalfPeriodLineclock
-void fineTuneGalvoScan(const FPGAns::FPGA &fpga)
+void CalibrationRoutines::fineTuneGalvoScan(const FPGAns::FPGA &fpga)
 {
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix(300);
@@ -320,7 +320,7 @@ void fineTuneGalvoScan(const FPGAns::FPGA &fpga)
 }
 
 //Generate many short digital pulses and check the overall frameDuration with the oscilloscope
-void calibDigitalLatency(const FPGAns::FPGA &fpga)
+void CalibrationRoutines::digitalLatency(const FPGAns::FPGA &fpga)
 {
 	const double step(4 * us);
 
@@ -337,7 +337,7 @@ void calibDigitalLatency(const FPGAns::FPGA &fpga)
 }
 
 //First calibrate the digital channels, then use it as a time reference
-void calibAnalogLatency(const FPGAns::FPGA &fpga)
+void CalibrationRoutines::analogLatency(const FPGAns::FPGA &fpga)
 {
 	const double delay(400 * us);
 	const double step(4 * us);
@@ -359,7 +359,7 @@ void calibAnalogLatency(const FPGAns::FPGA &fpga)
 #pragma endregion "CALIBRATION"
 
 #pragma region "TESTS"
-void testGalvo(const FPGAns::FPGA &fpga)
+void TestRoutines::galvo(const FPGAns::FPGA &fpga)
 {
 	const int width_pix(300);
 	const int height_pix(400);
@@ -388,7 +388,7 @@ void testGalvo(const FPGAns::FPGA &fpga)
 	}
 }
 
-void testPixelclock(const FPGAns::FPGA &fpga)
+void TestRoutines::pixelclock(const FPGAns::FPGA &fpga)
 {
 	std::vector<unsigned char> stackOfAverages;
 
@@ -402,7 +402,7 @@ void testPixelclock(const FPGAns::FPGA &fpga)
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock
-void testAODO(const FPGAns::FPGA &fpga)
+void TestRoutines::AODO(const FPGAns::FPGA &fpga)
 {
 	FPGAns::RTcontrol RTcontrol(fpga);
 
@@ -418,7 +418,7 @@ void testAODO(const FPGAns::FPGA &fpga)
 	RTcontrol.triggerRT();	//Execute the realtime control sequence
 }
 
-void testAOramp(const FPGAns::FPGA &fpga)
+void TestRoutines::AOramp(const FPGAns::FPGA &fpga)
 {
 	const double Vmax(5 * V);
 	const double step(4 * us);
@@ -434,7 +434,7 @@ void testAOramp(const FPGAns::FPGA &fpga)
 }
 
 //Generate a long digital pulse and check the frameDuration with the oscilloscope
-void testDigitalTiming(const FPGAns::FPGA &fpga)
+void TestRoutines::digitalTiming(const FPGAns::FPGA &fpga)
 {
 	const double step(400 * us);
 
@@ -443,7 +443,7 @@ void testDigitalTiming(const FPGAns::FPGA &fpga)
 	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
 }
 
-void testFilterwheel()
+void TestRoutines::filterwheel()
 {
 	Filterwheel FWexcitation(FWEXC);
 	Filterwheel FWdetection(FWDET);
@@ -465,7 +465,7 @@ void testFilterwheel()
 	getchar();
 }
 
-void testShutter(const FPGAns::FPGA &fpga)
+void TestRoutines::shutter(const FPGAns::FPGA &fpga)
 {
 	//CREATE A REALTIME CONTROL SEQUENCE
 	FPGAns::RTcontrol RTcontrol(fpga);
@@ -484,7 +484,7 @@ void testShutter(const FPGAns::FPGA &fpga)
 	getchar();
 }
 
-void testStagePosition()
+void TestRoutines::stagePosition()
 {
 	double duration;
 	const double3 stagePosition0{ 35.020 * mm, 19.808 * mm, 18.542 * mm };	//Stage initial position
@@ -522,7 +522,7 @@ void testStagePosition()
 }
 
 //Test configuring setDOtriggerEnabled and CTO for the stages
-void testStageConfig()
+void TestRoutines::stageConfig()
 {
 	Stage stage;
 	const int DOchan = 1;
@@ -541,7 +541,7 @@ void testStageConfig()
 	getchar();
 }
 
-void testPMT16X()
+void TestRoutines::PMT16Xconfig()
 {
 	PMT16X pmt;
 	pmt.readAllGain();
@@ -554,7 +554,7 @@ void testPMT16X()
 	getchar();
 }
 
-void testLasers(const FPGAns::FPGA &fpga)
+void TestRoutines::lasers(const FPGAns::FPGA &fpga)
 {
 	Laser laser(VISION);
 	//Laser laser(FIDELITY);
@@ -567,7 +567,7 @@ void testLasers(const FPGAns::FPGA &fpga)
 	getchar();
 }
 
-void testVirtualLasers(const FPGAns::FPGA &fpga)
+void TestRoutines::virtualLasers(const FPGAns::FPGA &fpga)
 {
 	//CREATE A REALTIME CONTROL SEQUENCE
 	FPGAns::RTcontrol RTcontrol(fpga);
@@ -586,7 +586,7 @@ void testVirtualLasers(const FPGAns::FPGA &fpga)
 //1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter automatically
 //2. Set pockelsAutoOff = DISABLE for holding the last value
 //3. Tune Vision's wavelength manually
-void testPockels(const FPGAns::FPGA &fpga)
+void TestRoutines::pockels(const FPGAns::FPGA &fpga)
 {
 	//CREATE A REALTIME CONTROL SEQUENCE
 	FPGAns::RTcontrol RTcontrol(fpga);
@@ -609,7 +609,7 @@ void testPockels(const FPGAns::FPGA &fpga)
 	getchar();
 }
 
-void testRS(const FPGAns::FPGA &fpga)
+void TestRoutines::resonantScanner(const FPGAns::FPGA &fpga)
 {
 	ResonantScanner RScanner(fpga);
 	std::cout << "aaa = " << RScanner.downloadControlVoltage() << "\n";
@@ -617,14 +617,14 @@ void testRS(const FPGAns::FPGA &fpga)
 	//RScanner.turnOff();
 }
 
-void testConvertI16toVolt()
+void TestRoutines::convertI16toVolt()
 {
 	std::cout << "volt to I16: " << FPGAns::voltageToI16(1) << "\n";
 	std::cout << "I16 to colt: " << FPGAns::I16toVoltage(32767) << "\n";
 	std::cout << "volt to I16 to volt: " << FPGAns::I16toVoltage(FPGAns::voltageToI16(0)) << "\n";
 }
 
-void testTiffU8()
+void TestRoutines::tiffU8()
 {
 	std::string inputFilename("Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610");
 	std::string outputFilename("test");
@@ -646,7 +646,7 @@ void testTiffU8()
 
 //To measure the saving speed of a Tiff file, either locally or remotely
 //Select a local or remote folder accordingly
-void testEthernetSpeed()
+void TestRoutines::ethernetSpeed()
 {
 	std::string filename = "testEthernetSpeed";
 
@@ -672,7 +672,7 @@ void testEthernetSpeed()
 
 }
 
-void testVibratome(const FPGAns::FPGA &fpga)
+void TestRoutines::vibratome(const FPGAns::FPGA &fpga)
 {
 	Vibratome vibratome(fpga);
 	//vibratome.retractDistance(20 * mm);
@@ -682,7 +682,7 @@ void testVibratome(const FPGAns::FPGA &fpga)
 	getchar();
 }
 
-void testSequencer()
+void TestRoutines::sequencer()
 {
 	//Generate the command list and keep it in memory.
 	//I prefer generating such list before execution because then I can inspect all the parameters offline
@@ -764,7 +764,7 @@ void testSequencer()
 	//getchar();
 }
 
-void testThread()
+void TestRoutines::multithread()
 {
 	class FUNC
 	{

@@ -36,7 +36,8 @@ public:
 	void startFIFOOUTpc();
 	void download();
 	void mirrorOddFrames();
-	void average();
+	void averageFrames();
+	void averageEvenOddFrames();
 	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDir stackScanDir = TOPDOWN) const;
 	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const StackScanDir stackScanDir = TOPDOWN) const;
 	unsigned char* const pointerToTiff() const;

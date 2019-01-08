@@ -247,8 +247,6 @@ void Image::download()
 	}
 }
 
-
-
 //The galvo (vectical axis of the image) performs bi-directional scanning
 //Divide the long vertical image in nFrames and vertically mirror the odd frames
 void Image::mirrorOddFrames()
@@ -257,9 +255,15 @@ void Image::mirrorOddFrames()
 }
 
 //Split the long vertical image into nFrames and calculate the average
-void Image::average()
+void Image::averageFrames()
 {
-	mTiff.average();
+	mTiff.averageFrames();
+}
+
+//Divide the long image in nFrames, average the even and odd frames separately, and return the averages in separate pages
+void Image::averageEvenOddFrames()
+{
+	mTiff.averageEvenOddFrames();
 }
 
 //Save each frame in mTiff in a single Tiff page

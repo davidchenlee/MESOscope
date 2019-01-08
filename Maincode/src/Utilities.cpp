@@ -312,8 +312,8 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	std::cout << "Tiff successfully saved\n";
 }
 
-//The galvo (vectical axis of the image) performs bi-directional scanning
-//Divide the long image (vertical stripe) in nFrames and vertically mirror the odd frames
+//The galvo (vectical axis of the image) performs bi-directional scanning and the data is saved in a long image (vertical stripe)
+//Divide the long image in nFrames and vertically mirror the odd frames
 void TiffU8::mirrorOddFrames()
 {
 	if (mNframes > 1)
@@ -340,7 +340,9 @@ void TiffU8::mirrorOddFrames()
 
 }
 
-void TiffU8::averageEvenOdd()
+//The galvo (vectical axis of the image) performs bi-directional scanning and the data is saved in a long image (vertical stripe)
+//Divide the long image in nFrames, average the even and odd frames separately, and return the averages in different pages
+void TiffU8::averageEvenOddFrames()
 {
 	if (mNframes > 2)
 	{
@@ -367,15 +369,14 @@ void TiffU8::averageEvenOdd()
 				mArray[pixIndex] = static_cast<unsigned char>(1. * avg[pixIndex] / nFramesHalf);
 		}
 
-		mHeightPerFrame = 2 * mHeightPerFrame;
-		mNframes = 1;	//Save both images as a single frame
+		mNframes = 2;	//Keep the averages in separate pages
 		delete[] avg;
 	}
 
 }
 
-//Split the vertically long image into nFrames and calculate the average
-void TiffU8::average()
+//Split the vertically long image into nFrames and return the average
+void TiffU8::averageFrames()
 {
 	if (mNframes > 1)
 	{
@@ -434,7 +435,7 @@ void Stack::pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff)
 
 void Stack::pushDiffZ(const int indexDiffZ)
 {
-	mSameZ.average();	//Average the images with the same Z
+	mSameZ.averageFrames();	//Average the images with the same Z
 	mDiffZ.pushImage(indexDiffZ, mSameZ.pointerToTiff());
 }
 

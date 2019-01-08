@@ -49,8 +49,8 @@ public:
 	unsigned char* const pointerToTiff() const;
 	void saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag = NOOVERRIDE, const StackScanDir stackScanDir = TOPDOWN) const;
 	void mirrorOddFrames();
-	void averageEvenOdd();
-	void average();
+	void averageEvenOddFrames();
+	void averageFrames();
 	void analyze() const;
 	void saveTxt(const std::string fileName) const;
 	void pushImage(const int frame, const unsigned char* inputArray) const;

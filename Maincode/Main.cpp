@@ -7,15 +7,16 @@ int main(int argc, char* argv[])
 		FPGAns::FPGA fpga;		//Create a FPGA session
 		try
 		{
+			//MAIN SEQUENCES
 			//discreteScanZ(fpga);
 			//continuousScanZ(fpga);
+
+			//TESTS
 			//testGalvo(fpga);
 			//testPixelclock(fpga);
 			//testAODO(fpga);
 			//testAOramp(fpga);
-			//checkDigitalTiming(fpga);
-			//calibDigitalLatency(fpga);
-			//calibAnalogLatency(fpga);
+			//testDigitalTiming(fpga);
 			//testFilterwheel();
 			//testShutter(fpga);
 			//testStagePosition();
@@ -31,7 +32,11 @@ int main(int argc, char* argv[])
 			//testVibratome(fpga);
 			//testSequencer();
 			//testThread();
-			fineTuneGalvoScan(fpga);
+
+			//CALIBRATION
+			//calibDigitalLatency(fpga);
+			//calibAnalogLatency(fpga);
+			//fineTuneGalvoScan(fpga);
 		}
 		catch (const std::invalid_argument &e)
 		{

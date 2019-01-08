@@ -1,5 +1,6 @@
 #include "Routines.h"
 
+#pragma region "MAIN SEQUENCE"
 void discreteScanZ(const FPGAns::FPGA &fpga)
 {
 	//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
@@ -207,7 +208,7 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//STAGES
 	const StackScanDir stackScanDirZ = TOPDOWN;																			//Scan direction in z
-	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.189 * mm };												//Center of x, y, z stack
+	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.204 * mm };												//Center of x, y, z stack
 	const double stackDepth(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ);
 	const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages
 	const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;											//TODO: combine this with the galvo's one
@@ -259,7 +260,105 @@ void continuousScanZ(const FPGAns::FPGA &fpga)
 	//std::cout << "Press any key to continue...\n";
 	//getchar();
 }
+#pragma endregion "MAIN SEQUENCES"
 
+#pragma region "CALIBRATION"
+//Set up fluorescent beads
+//Acquire the same plane under continuous mode
+//Average the odd and even frames separately corresponding to the forward and backward galvo scans
+//Save the averages in different Tiff pages
+//Look at the vertical shift of the beads in the Tiff
+//Adjust fineTuneHalfPeriodLineclock
+void fineTuneGalvoScan(const FPGAns::FPGA &fpga)
+{
+	//ACQUISITION SETTINGS
+	const int widthPerFrame_pix(300);
+	const int heightPerFrame_pix(400);
+	const int nFramesCont(30);												//Number of frames for continuous XY acquisition
+	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.204 * mm };	//Stage initial position
+
+	//RS
+	const ResonantScanner RScanner(fpga);
+	RScanner.isRunning();		//Make sure that the RS is running
+
+	//STAGES
+	Stage stage;
+
+	//CREATE A REALTIME CONTROL SEQUENCE
+	FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
+
+	//GALVO
+	const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
+	const double posMax(FFOVgalvo / 2);
+	Galvo galvo(RTcontrol, RTGALVO1);
+	galvo.generateFrameScan(posMax, -posMax);
+
+	//LASER
+	const int wavelength_nm = 1040;
+	const double P(25. * mW);		//Laser power
+	VirtualLaser laser(RTcontrol, wavelength_nm, FIDELITY);
+	laser.pushPowerSinglet(8 * us, P, OVERRIDE);	//Update the laser power
+
+	//ACQUIRE FRAMES AT DIFFERENT Zs
+	stage.moveAllStages(stagePosition0);
+	stage.waitForMotionToStopAllStages();
+
+	//OPEN THE UNIBLITZ SHUTTERS
+	laser.setShutter(true);
+
+	//EXECUTE THE RT CONTROL SEQUENCE
+	Image image(RTcontrol);
+	image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+	image.mirrorOddFrames();
+	image.averageEvenOddFrames();
+	image.saveTiffMultiPage("Untitled", NOOVERRIDE);
+
+	laser.setShutter(false);
+
+	std::cout << "Press any key to continue...\n";
+	getchar();
+}
+
+//Generate many short digital pulses and check the overall frameDuration with the oscilloscope
+void calibDigitalLatency(const FPGAns::FPGA &fpga)
+{
+	const double step(4 * us);
+
+	FPGAns::RTcontrol RTcontrol(fpga);
+
+	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
+
+	//Many short digital pulses to accumulate the error
+	for (U32 ii = 0; ii < 99; ii++)
+		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
+
+	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
+	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
+}
+
+//First calibrate the digital channels, then use it as a time reference
+void calibAnalogLatency(const FPGAns::FPGA &fpga)
+{
+	const double delay(400 * us);
+	const double step(4 * us);
+
+	FPGAns::RTcontrol RTcontrol(fpga);
+	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 10 * V);					//Initial pulse
+	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);
+	RTcontrol.pushLinearRamp(RTGALVO1, 4 * us, delay, 0, 5 * V);			//Linear ramp to accumulate the error
+	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 10 * V);					//Initial pulse
+	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);							//Final pulse
+
+	//DO0
+	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
+	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
+	RTcontrol.pushDigitalSinglet(RTDODEBUG, delay, 0);
+	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
+	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
+}
+#pragma endregion "CALIBRATION"
+
+#pragma region "TESTS"
 void testGalvo(const FPGAns::FPGA &fpga)
 {
 	const int width_pix(300);
@@ -335,7 +434,7 @@ void testAOramp(const FPGAns::FPGA &fpga)
 }
 
 //Generate a long digital pulse and check the frameDuration with the oscilloscope
-void checkDigitalTiming(const FPGAns::FPGA &fpga)
+void testDigitalTiming(const FPGAns::FPGA &fpga)
 {
 	const double step(400 * us);
 
@@ -698,97 +797,4 @@ void testThread()
 	std::cout << "Press any key to continue...\n";
 	getchar();
 }
-
-//Set up fluorescent beads
-//Acquire the same plane under continuous mode
-//Average the odd and even frames separately corresponding to the forward and backward galvo scans
-//Save the averages in different Tiff pages
-//Look at the vertical shift of the beads in the Tiff
-//Adjust fineTuneHalfPeriodLineclock
-void fineTuneGalvoScan(const FPGAns::FPGA &fpga)
-{
-	//ACQUISITION SETTINGS
-	const int widthPerFrame_pix(300);
-	const int heightPerFrame_pix(400);
-	const int nFramesCont(10);												//Number of frames for continuous XY acquisition
-	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.204 * mm };	//Stage initial position
-
-	//RS
-	const ResonantScanner RScanner(fpga);
-	RScanner.isRunning();		//Make sure that the RS is running
-
-	//STAGES
-	Stage stage;
-
-	//CREATE A REALTIME CONTROL SEQUENCE
-	FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
-
-	//GALVO
-	const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
-	const double posMax(FFOVgalvo / 2);
-	Galvo galvo(RTcontrol, RTGALVO1);
-	galvo.generateFrameScan(posMax, -posMax);
-
-	//LASER
-	const int wavelength_nm = 1040;
-	const double P(25. * mW);		//Laser power
-	VirtualLaser laser(RTcontrol, wavelength_nm, FIDELITY);
-	laser.pushPowerSinglet(8 * us, P, OVERRIDE);	//Update the laser power
-
-	//ACQUIRE FRAMES AT DIFFERENT Zs
-	stage.moveAllStages(stagePosition0);
-	stage.waitForMotionToStopAllStages();
-
-	//OPEN THE UNIBLITZ SHUTTERS
-	laser.setShutter(true);
-
-	//EXECUTE THE RT CONTROL SEQUENCE
-	Image image(RTcontrol);
-	image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
-	image.mirrorOddFrames();
-	image.averageEvenOddFrames();
-	image.saveTiffMultiPage("Untitled", NOOVERRIDE);
-
-	laser.setShutter(false);
-
-	std::cout << "Press any key to continue...\n";
-	getchar();
-}
-
-//Generate many short digital pulses and check the overall frameDuration with the oscilloscope
-void calibDigitalLatency(const FPGAns::FPGA &fpga)
-{
-	const double step(4 * us);
-
-	FPGAns::RTcontrol RTcontrol(fpga);
-
-	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
-
-	//Many short digital pulses to accumulate the error
-	for (U32 ii = 0; ii < 99; ii++)
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
-
-	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
-	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
-}
-
-//First calibrate the digital channels, then use it as a time reference
-void calibAnalogLatency(const FPGAns::FPGA &fpga)
-{
-	const double delay(400 * us);
-	const double step(4 * us);
-
-	FPGAns::RTcontrol RTcontrol(fpga);
-	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 10 * V);					//Initial pulse
-	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);
-	RTcontrol.pushLinearRamp(RTGALVO1, 4 * us, delay, 0, 5 * V);			//Linear ramp to accumulate the error
-	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 10 * V);					//Initial pulse
-	RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);							//Final pulse
-
-	//DO0
-	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
-	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
-	RTcontrol.pushDigitalSinglet(RTDODEBUG, delay, 0);
-	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
-	RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
-}
+#pragma endregion "TESTS"

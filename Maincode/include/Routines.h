@@ -2,15 +2,21 @@
 #include "Devices.h"
 #include "Sequencer.h"
 
+//MAIN SEQUENCES
 void discreteScanZ(const FPGAns::FPGA &fpga);
 void continuousScanZ(const FPGAns::FPGA &fpga);
+
+//CALIBRATION
+void calibDigitalLatency(const FPGAns::FPGA &fpga);
+void calibAnalogLatency(const FPGAns::FPGA &fpga);
+void fineTuneGalvoScan(const FPGAns::FPGA &fpga);
 
 //TESTS
 void testGalvo(const FPGAns::FPGA &fpga);
 void testPixelclock(const FPGAns::FPGA &fpga);
 void testAODO(const FPGAns::FPGA &fpga);
 void testAOramp(const FPGAns::FPGA &fpga);
-void checkDigitalTiming(const FPGAns::FPGA &fpga);
+void testDigitalTiming(const FPGAns::FPGA &fpga);
 void testFilterwheel();
 void testShutter(const FPGAns::FPGA &fpga);
 void testStagePosition();
@@ -26,10 +32,3 @@ void testEthernetSpeed();
 void testVibratome(const FPGAns::FPGA &fpga);
 void testSequencer();
 void testThread();
-
-//CALIBRATION
-void calibDigitalLatency(const FPGAns::FPGA &fpga);
-void calibAnalogLatency(const FPGAns::FPGA &fpga);
-void fineTuneGalvoScan(const FPGAns::FPGA &fpga);
-
-

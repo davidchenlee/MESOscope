@@ -28,9 +28,10 @@ namespace Constants
 	extern const double VISIONpulsePeriod = 0.0125 * us;	//The pulse repetition rate of VISION is 80 MHz
 
 	//PIXELCLOCK
-	extern const double halfPeriodLineclock = 63.05 * us;	//Half the period of the resonant scanner. I measure 25.220 ms for 400 half oscillations. Therefore, halfPeriodLineclock = 25200us/400 = 63.05 us
-															//There is a slight difference between the forward and backward oscillation time. Forward = 63.14 us, backwards = 62.99 us. Diff = 150 ns (i.e., ~ 1 pixel)
-															//(Measured using the oscilloscope by looking at RS SYNC through the FPGA)
+	extern const double halfPeriodLineclock = 63.05 * us;	//Half-period of the resonant scanner. I measure 25.220 ms over 400 half oscillations. Therefore, the average half-period is 25200us/400 = 63.05 us
+															//The forward and backward travel times differ slightly and the difference depends on the scanning amplitude
+															//For example, forward = 63.14 us, backwards = 62.99 us, diff = 150 ns (i.e., ~ 1 pixel)
+															//The measured RS period (126.1 us) seems to be independent of the scanning amplitude
 
 	//FPGA
 	extern const int AOmax = 10 * V;						//Max voltage of the AOs

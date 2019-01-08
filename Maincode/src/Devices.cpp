@@ -352,8 +352,6 @@ void Vibratome::retractDistance(const double distance) const
 	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
 	moveHead_(retractingTime, BACKWARD);
 }
-
-
 #pragma endregion "Vibratome"
 
 #pragma region "Resonant scanner"
@@ -461,12 +459,10 @@ void ResonantScanner::isRunning() const
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 	}
 }
-
 #pragma endregion "Resonant scanner"
 
 
 #pragma region "Galvo"
-
 Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel):
 	mRTcontrol(RTcontrol), mGalvoRTchannel(galvoChannel)
 {
@@ -493,7 +489,7 @@ void Galvo::positionLinearRamp(const double timeStep, const double rampLength, c
 void Galvo::generateFrameScan(const double xi, const double xf) const
 {
 	const double timeStep(8 * us);	//Time step of the linear ramp
-	const double fineTuneHalfPeriodLineclock = - 0.55 * us;	//Fine tune the RS period
+	const double fineTuneHalfPeriodLineclock = - 0.58 * us;	//Adjust the RS half-period to fine tune the galvo's frame-scan
 	const double frameDuration((halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix);	//Time to scan a frame = (time for the RS to travel from side to side) x (# height of the frame in pixels)
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
 }
@@ -1270,11 +1266,11 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	//mFWexcitation.setWavelength(ExcWavelength_nm);
 	//mFWdetection.setWavelength(wavelength_nm);
 
+	//Tune the filterwheels concurrently
 	std::thread th1(&Filterwheel::setWavelength, &mFWexcitation, ExcWavelength_nm);
 	std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
 	th1.join();
 	th2.join();
-
 }
 
 void VirtualLaser::setWavelength_(const int wavelength_nm)
@@ -1645,10 +1641,6 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 	std::cout << "Vel = " << vel / mmps << " mm/s\n\n";
 }
 #pragma endregion "Stages"
-
-
-
-
 
 /*
 [1] The stage Z has a virtual COM port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.

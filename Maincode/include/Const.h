@@ -39,6 +39,7 @@ namespace Constants
 	enum LaserSelector { VISION, FIDELITY, AUTO};
 	enum Filtercolor { BLUE, GREEN, RED, NONE };
 	enum ComSelector { COMVISION = 1, COMFIDELITY = 8, COMFWDET = 5, COMFWEXC = 9, COMPMT16X = 6};
+	enum Multiplexing { SINGLEBEAM = false, MULTIBEAM = true};
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;

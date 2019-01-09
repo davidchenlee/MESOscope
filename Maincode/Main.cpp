@@ -19,8 +19,8 @@ int main(int argc, char* argv[])
 			//TESTS
 			//TestRoutines::galvo(fpga);
 			//TestRoutines::pixelclock(fpga);
-			//TestRoutines::AODO(fpga);
-			//TestRoutines::AOramp(fpga);
+			//TestRoutines::analogAndDigitalOut(fpga);
+			//TestRoutines::analogRamp(fpga);
 			//TestRoutines::digitalTiming(fpga);
 			//TestRoutines::filterwheel();
 			//TestRoutines::shutter(fpga);
@@ -42,32 +42,27 @@ int main(int argc, char* argv[])
 		catch (const std::invalid_argument &e)
 		{
 			std::cout << "An invalid argument has occurred in " << e.what() << "\n";
-			std::cout << "Press any key to continue...\n";
-			getchar();
+			pressAnyKeyToCont();
 		}
 		catch (const std::overflow_error &e)
 		{
 			std::cout << "An overflow has occurred in " << e.what() << "\n";
-			std::cout << "Press any key to continue...\n";
-			getchar();
+			pressAnyKeyToCont();
 		}
 		catch (const FPGAns::FPGAexception &e)
 		{
 			std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
-			std::cout << "Press any key to continue...\n";
-			getchar();
+			pressAnyKeyToCont();
 		}
 		catch (const std::runtime_error &e)
 		{
 			std::cout << "A runtime error has occurred in " << e.what() << "\n";
-			std::cout << "Press any key to continue...\n";
-			getchar();
+			pressAnyKeyToCont();
 		}
 		catch (...)
 		{
 			std::cout << "An unknown error has occurred" << "\n";
-			std::cout << "Press any key to continue...\n";
-			getchar();
+			pressAnyKeyToCont();
 		}
 
 		fpga.close(NORESET);		//Close the FPGA connection
@@ -77,11 +72,9 @@ int main(int argc, char* argv[])
 	catch (const FPGAns::FPGAexception &e)
 	{
 		std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
-		std::cout << "Press any key to continue...\n";
-		getchar();
+		pressAnyKeyToCont();
 	}
-	//std::cout << "Press any key to continue...\n";
-	//getchar();
+	//pressAnyKeyToCont();
 
 	return 0;
 }

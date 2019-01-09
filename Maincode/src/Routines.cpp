@@ -5,17 +5,17 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 {
 	//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 	//forth on the same z plane. The images the can be averaged
-	const RunMode acqMode = SINGLEMODE;			//Single shot
+	//const RunMode acqMode = SINGLEMODE;			//Single shot
 	//const RunMode acqMode = LIVEMODE;				//Image the same z plane many times as single shots. Used it for adjusting the microscope live
 	//const RunMode acqMode = AVGMODE;				//Image the same z plane many times and average the images
 	//const RunMode acqMode = STACKMODE;			//Stack volume from the initial z position
-	//const RunMode acqMode = STACKCENTEREDMODE;		//Stack volume centered at the initial z position
+	const RunMode acqMode = STACKCENTEREDMODE;		//Stack volume centered at the initial z position
 
 	//ACQUISITION SETTINGS
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
-	const int nFramesCont(10);												//Number of frames for continuous XY acquisition
-	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.204 * mm };	//Stage initial position
+	const int nFramesCont(1);												//Number of frames for continuous XY acquisition
+	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.224 * mm };	//Stage initial position
 
 	//RS
 	const ResonantScanner RScanner(fpga);
@@ -129,7 +129,7 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 	Stack stack(widthPerFrame_pix, heightPerFrame_pix, nDiffZ, nSameZ);
 
 	//OPEN THE UNIBLITZ SHUTTERS
-	laser.setShutter(true);
+	laser.openShutter();
 
 	//ACQUIRE FRAMES AT DIFFERENT Zs
 	for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
@@ -145,7 +145,7 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 			std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
 				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << "\n";
 
-			laser.pushPowerSinglet(8 * us, P, OVERRIDE);	//Update the laser power
+			laser.setPower(8 * us, P);	//Update the laser power
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image(RTcontrol);
@@ -168,7 +168,7 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 		std::cout << "\n";
 		P += (Pif.back() - Pif.front()) / nDiffZ;
 	}
-	laser.setShutter(false);
+	laser.closeShutter();
 
 	if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
 	{
@@ -179,8 +179,7 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 		stack.saveToFile(stackFilename, overrideFlag);
 	}
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	pressAnyKeyToCont();
 }
 
 /*
@@ -222,9 +221,8 @@ void MainRoutines::continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 750;
-	VirtualLaser laser(RTcontrol, wavelength_nm, AUTO);
-	std::vector<double> Pif{ 55. * mW, 55. * mW };		//Initial and final laser power for linear ramp
-	double P = Pif.front();
+	const double P(55. * mW);		//Laser power
+	VirtualLaser laser(RTcontrol, wavelength_nm, P, AUTO);
 
 	//GALVO FOR RT
 	const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
@@ -233,8 +231,7 @@ void MainRoutines::continuousScanZ(const FPGAns::FPGA &fpga)
 	galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
 
 	//SET THE LASER POWER and OPEN THE SHUTTER
-	laser.pushPowerSinglet(8 * us, P);
-	laser.setShutter(true);
+	laser.openShutter();
 	Sleep(50);
 
 	//EXECUTE THE RT CONTROL SEQUENCE
@@ -248,14 +245,13 @@ void MainRoutines::continuousScanZ(const FPGAns::FPGA &fpga)
 	image.download();
 	image.mirrorOddFrames();	//For max optimization, do this when saving the data to Tiff
 
-	laser.setShutter(false);
+	laser.closeShutter();
 	image.saveTiffMultiPage("Untitled", NOOVERRIDE, stackScanDirZ);
 
 	//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence
 	//RTcontrol.setZstageTriggerEnabled(false);
 
-	//std::cout << "Press any key to continue...\n";
-	//getchar();
+	//pressAnyKeyToCont();
 }
 #pragma endregion "MAIN SEQUENCES"
 
@@ -293,15 +289,14 @@ void CalibrationRoutines::fineTuneGalvoScan(const FPGAns::FPGA &fpga)
 	//LASER
 	const int wavelength_nm = 1040;
 	const double P(25. * mW);		//Laser power
-	VirtualLaser laser(RTcontrol, wavelength_nm, FIDELITY);
-	laser.pushPowerSinglet(8 * us, P, OVERRIDE);	//Update the laser power
+	VirtualLaser laser(RTcontrol, wavelength_nm, P, FIDELITY);
 
 	//ACQUIRE FRAMES AT DIFFERENT Zs
 	stage.moveAllStages(stagePosition0);
 	stage.waitForMotionToStopAllStages();
 
 	//OPEN THE UNIBLITZ SHUTTERS
-	laser.setShutter(true);
+	laser.openShutter();
 
 	//EXECUTE THE RT CONTROL SEQUENCE
 	Image image(RTcontrol);
@@ -310,10 +305,9 @@ void CalibrationRoutines::fineTuneGalvoScan(const FPGAns::FPGA &fpga)
 	image.averageEvenOddFrames();
 	image.saveTiffMultiPage("Untitled", NOOVERRIDE);
 
-	laser.setShutter(false);
+	laser.closeShutter();
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	pressAnyKeyToCont();
 }
 
 //Generate many short digital pulses and check the overall frameDuration with the oscilloscope
@@ -399,7 +393,7 @@ void TestRoutines::pixelclock(const FPGAns::FPGA &fpga)
 }
 
 //Test the analog and digital output and the relative timing wrt the pixel clock
-void TestRoutines::AODO(const FPGAns::FPGA &fpga)
+void TestRoutines::analogAndDigitalOut(const FPGAns::FPGA &fpga)
 {
 	FPGAns::RTcontrol RTcontrol(fpga);
 
@@ -415,7 +409,7 @@ void TestRoutines::AODO(const FPGAns::FPGA &fpga)
 	RTcontrol.triggerRT();	//Execute the realtime control sequence
 }
 
-void TestRoutines::AOramp(const FPGAns::FPGA &fpga)
+void TestRoutines::analogRamp(const FPGAns::FPGA &fpga)
 {
 	const double Vmax(5 * V);
 	const double step(4 * us);
@@ -458,8 +452,7 @@ void TestRoutines::filterwheel()
 	th1.join();
 	th2.join();
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	pressAnyKeyToCont();
 }
 
 void TestRoutines::shutter(const FPGAns::FPGA &fpga)
@@ -467,7 +460,7 @@ void TestRoutines::shutter(const FPGAns::FPGA &fpga)
 	//CREATE A REALTIME CONTROL SEQUENCE
 	FPGAns::RTcontrol RTcontrol(fpga);
 
-	PockelsCell fidelity(RTcontrol, FIDELITY, 1040);
+	PockelsCell fidelity(RTcontrol, 1040, FIDELITY);
 	fidelity.setShutter(true);
 	Sleep(5000);
 	fidelity.setShutter(false);
@@ -477,8 +470,7 @@ void TestRoutines::shutter(const FPGAns::FPGA &fpga)
 	//Sleep(5000);
 	//shutterFidelity.close();
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	pressAnyKeyToCont();
 }
 
 void TestRoutines::stagePosition()
@@ -534,8 +526,7 @@ void TestRoutines::stageConfig()
 	std::cout << "z stage vel: " << stage.downloadSingleVelocity(ZZ) / mmps << " mm/s" << "\n";
 	//stage.printStageConfig(ZZ, DOchan);
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	pressAnyKeyToCont();
 }
 
 void TestRoutines::PMT16Xconfig()
@@ -547,8 +538,7 @@ void TestRoutines::PMT16Xconfig()
 	//pmt.readTemp();
 	//pmt.setAllGain({ 100,255,255,255,255,255,255,255,255,255,255,255,255,255,100,255});
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	pressAnyKeyToCont();
 }
 
 void TestRoutines::lasers(const FPGAns::FPGA &fpga)
@@ -560,22 +550,32 @@ void TestRoutines::lasers(const FPGAns::FPGA &fpga)
 	laser.setWavelength(1040);
 	//laser.printWavelength_nm();
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	pressAnyKeyToCont();
 }
 
 void TestRoutines::virtualLasers(const FPGAns::FPGA &fpga)
 {
+	//ACQUISITION SETTINGS
+	const int widthPerFrame_pix(300);
+	const int heightPerFrame_pix(400);
+	const int nFramesCont(10);			//Number of frames for continuous XY acquisition
+
 	//CREATE A REALTIME CONTROL SEQUENCE
-	FPGAns::RTcontrol RTcontrol(fpga);
+	FPGAns::RTcontrol RTcontrol(fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
 
-	VirtualLaser laser(RTcontrol, 1030);
-	laser.setShutter(true);
-	Sleep(3000);
-	laser.setShutter(false);
+	const int wavelength_nm(750);
+	const double P(50. * mW);		//Laser power
+	VirtualLaser laser(RTcontrol, wavelength_nm, P);
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	//EXECUTE THE RT CONTROL SEQUENCE
+	Image image(RTcontrol);
+	image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+
+	//laser.openShutter();
+	//Sleep(3000);
+	//laser.closeShutter();
+
+	pressAnyKeyToCont();
 }
 
 //For keeping the pockels on to check the the laser power
@@ -589,8 +589,8 @@ void TestRoutines::pockels(const FPGAns::FPGA &fpga)
 	FPGAns::RTcontrol RTcontrol(fpga);
 
 	//DEFINE THE POCKELS CELLS
-	PockelsCell pockelsVision(RTcontrol, VISION, 1040);			//Vision
-	PockelsCell pockelsFidelity(RTcontrol, FIDELITY, 1040);		//Fidelity
+	PockelsCell pockelsVision(RTcontrol, 1040, VISION);			//Vision
+	PockelsCell pockelsFidelity(RTcontrol, 1040, FIDELITY);		//Fidelity
 
 	PockelsCell pockels(pockelsVision);
 	//PockelsCell pockels(pockelsFidelity);
@@ -602,8 +602,7 @@ void TestRoutines::pockels(const FPGAns::FPGA &fpga)
 	Image image(RTcontrol);
 	image.acquire();
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	pressAnyKeyToCont();
 }
 
 void TestRoutines::pockelsRamp(const FPGAns::FPGA &fpga)
@@ -617,18 +616,16 @@ void TestRoutines::pockelsRamp(const FPGAns::FPGA &fpga)
 	FPGAns::RTcontrol RTcontrol(fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
 
 	//POCKELS CELL
-	const int wavelength_nm = 750;
+	const int wavelength_nm(750);
 	const double P(50. * mW);		//Laser power
-	PockelsCell pockels(RTcontrol, VISION, wavelength_nm);
-	pockels.pushPowerSinglet(8 * us, P, OVERRIDE);	//Set the laser power
-	//pockels.scalingLinearRamp(1.0, 2.0);		//Linearly scale the laser intensity from the first to the last frame
+	PockelsCell pockels(RTcontrol, wavelength_nm, VISION);
+	pockels.powerLinearRamp(P, 2 * P);		//Linearly scale the laser power from the first to the last frame
 
 	//EXECUTE THE RT CONTROL SEQUENCE
 	Image image(RTcontrol);
 	image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	pressAnyKeyToCont();
 }
 
 void TestRoutines::resonantScanner(const FPGAns::FPGA &fpga)
@@ -663,7 +660,6 @@ void TestRoutines::tiffU8()
 
 	//image.mirrorOddFrames(nFramesCont);
 	//image.averageEvenOddFrames(nFramesCont);
-	
 }
 
 //To measure the saving speed of a Tiff file, either locally or remotely
@@ -672,10 +668,10 @@ void TestRoutines::ethernetSpeed()
 {
 	std::string filename = "testEthernetSpeed";
 
-	//The goal is to stream a stackDiffZ composed of 200 z-planes (100 um in 0.5 um-steps), where each frame has 400x400 pixels. Therefore, the stackDiffZ has 400x400x200 = 32 Mega pixels
-	//The stackDiffZ size is 8 bits x 32M = 32 MB
-	const int width(400);
-	const int height(400);
+	//The goal is to stream a stackDiffZ composed of 200 z-planes (100 um in 0.5 um-steps), where each frame has 300x560 pixels. Therefore, the stackDiffZ has 300x560x200 = 33.6 Mega pixels
+	//The stackDiffZ size is 8 bits x 33.6M = 33.6 MB
+	const int width(300);
+	const int height(560);
 	const int nFramesCont(200);
 
 	TiffU8 image(width, height, nFramesCont);
@@ -686,12 +682,13 @@ void TestRoutines::ethernetSpeed()
 
 	//overriding the file saving has some overhead
 	//Splitting the stackDiffZ into a page structure (by assigning nFramesCont = 200 in saveToFile) gives a large overhead
-	image.saveToFile(filename, MULTIPAGE, OVERRIDE);
+	image.saveToFile(filename, SINGLEPAGE, OVERRIDE);
 	   	 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 	std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
+	pressAnyKeyToCont();
 }
 
 void TestRoutines::vibratome(const FPGAns::FPGA &fpga)
@@ -700,8 +697,7 @@ void TestRoutines::vibratome(const FPGAns::FPGA &fpga)
 	//vibratome.retractDistance(20 * mm);
 	vibratome.cutAndRetractDistance(20 * mm);
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	pressAnyKeyToCont();
 }
 
 void TestRoutines::sequencer()
@@ -782,8 +778,7 @@ void TestRoutines::sequencer()
 			}
 		}
 	}
-	//std::cout << "Press any key to continue...\n";
-	//getchar();
+	//pressAnyKeyToCont();
 }
 
 void TestRoutines::multithread()
@@ -806,6 +801,9 @@ void TestRoutines::multithread()
 		}
 	};
 
+	unsigned int n = std::thread::hardware_concurrency();
+	std::cout << n << " concurrent threads are supported.\n";
+
 	std::cout << "func1 and func2 will execute concurrently\n";
 
 	FUNC x(1);
@@ -816,7 +814,6 @@ void TestRoutines::multithread()
 	first.join();//pauses until first finishes
 	second.join();//pauses until second finishes
 
-	std::cout << "Press any key to continue...\n";
-	getchar();
+	pressAnyKeyToCont();
 }
 #pragma endregion "TESTS"

@@ -207,21 +207,23 @@ class PockelsCell
 	RTchannel mPockelsRTchannel;
 	RTchannel mScalingRTchannel;
 	int mWavelength_nm;							//Laser wavelength
+	const double timeStep = 8 * us;
 	const double maxPower = 250 * mW;			//Soft limit for the laser power
 	Shutter mShutter;
 
 	double laserpowerToVolt_(const double power) const;
+	void scalingFactorLinearRamp_(const double Si, const double Sf) const;
 public:
 	//Do not set the output to 0 through the destructor to allow latching the last value
-	PockelsCell(FPGAns::RTcontrol &RTcontrol, const LaserSelector laserSelector, const int wavelength_nm);
+	PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector);
 
 	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol itself
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi, const double Vf) const;
-	void powerLinearRamp(const double timeStep, const double rampDuration, const double Pi, const double Pf) const;
+	//void powerLinearRampInFrame(const double timeStep, const double rampDuration, const double Pi, const double Pf) const;
 	void voltageToZero() const;
-	void scalingLinearRamp(const double Si, const double Sf) const;
+	void powerLinearRamp(const double Pi, const double Pf) const;
 	void setShutter(const bool state) const;
 };
 
@@ -235,13 +237,18 @@ class VirtualLaser
 	PockelsCell mPockelsFidelity;
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
+	const double mPockelTimeStep = 8 * us;	//Time step for the RT pockels command
+
 	void setWavelength_(const int wavelength_nm);
 	std::string laserNameToString_(const LaserSelector whichLaser) const;
 	void checkShutterIsOpen_(const Laser &laser) const;
 public:
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector = AUTO);
-	void pushPowerSinglet(const double timeStep, const double power, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
-	void setShutter(const bool state) const;
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelector = AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double Pi, const double Pf, const LaserSelector laserSelector = AUTO);
+	void setPower(const double timeStep, const double power) const;
+	void openShutter() const;
+	void closeShutter() const;
 };
 
 class Stage

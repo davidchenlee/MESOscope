@@ -22,8 +22,8 @@ namespace TestRoutines
 {
 	void galvo(const FPGAns::FPGA &fpga);
 	void pixelclock(const FPGAns::FPGA &fpga);
-	void AODO(const FPGAns::FPGA &fpga);
-	void AOramp(const FPGAns::FPGA &fpga);
+	void analogAndDigitalOut(const FPGAns::FPGA &fpga);
+	void analogRamp(const FPGAns::FPGA &fpga);
 	void digitalTiming(const FPGAns::FPGA &fpga);
 	void filterwheel();
 	void shutter(const FPGAns::FPGA &fpga);

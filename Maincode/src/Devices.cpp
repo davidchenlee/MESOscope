@@ -961,7 +961,7 @@ void Laser::setWavelength(const int wavelength_nm)
 	}
 }
 
-//Open or close the internal shutter of the laser
+//Open or close the internal laser shutter
 void Laser::setShutter(const bool state) const
 {
 	std::string TxBuffer;		//Command to the laser
@@ -1042,6 +1042,7 @@ bool Laser::isShutterOpen() const
 
 
 #pragma region "Shutters"
+//To control the Uniblitz shutters
 Shutter::Shutter(const FPGAns::FPGA &fpga, const LaserSelector whichLaser) : mFpga(fpga)
 {
 	switch (whichLaser)
@@ -1068,7 +1069,6 @@ void Shutter::setShutter(const bool state) const
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mWhichShutter, state));
 }
 
-
 void Shutter::pulse(const double pulsewidth) const
 {
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), mWhichShutter, true));
@@ -1082,7 +1082,7 @@ void Shutter::pulse(const double pulsewidth) const
 #pragma region "Pockels cells"
 //Curently, output of the pockels cell is hardcoded on the FPGA side.  The pockels' output is HIGH when 'framegate' is HIGH
 //Each Uniblitz shutter goes with a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
-PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const LaserSelector laserSelector, const int wavelength_nm) :
+PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector) :
 	mRTcontrol(RTcontrol), mWavelength_nm(wavelength_nm), mShutter(mRTcontrol.mFpga, laserSelector)
 {
 	if (laserSelector != VISION && laserSelector != FIDELITY)
@@ -1179,22 +1179,24 @@ void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDura
 	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, Vi, Vf);
 }
 
+/*
 //Ramp up or down the pockels cell within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
-void  PockelsCell::powerLinearRamp(const double timeStep, const double rampDuration, const double Pi, const double Pf) const
+void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double rampDuration, const double Pi, const double Pf) const
 {
 	if (Pi < 0 || Pf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
 	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, laserpowerToVolt_(Pi), laserpowerToVolt_(Pf));
 }
+*/
 
 void PockelsCell::voltageToZero() const
 {
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, AO_tMIN, 0 * V);
 }
 
-//Linearly scale the pockels output from the first to the last frame
-void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
+//Linearly scale the laser power from Si to Sf across all the frames. Eg., Si = 1.0 and Sf = 2.0
+void PockelsCell::scalingFactorLinearRamp_(const double Si, const double Sf) const
 {
 	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor must be in the range 0-4");
@@ -1208,6 +1210,13 @@ void PockelsCell::scalingLinearRamp(const double Si, const double Sf) const
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, Si + (Sf - Si) / (mRTcontrol.mNframes - 1) * ii);
 }
 
+//Increase the laser power linearly from the first to the last frame
+void PockelsCell::powerLinearRamp(const double Pi, const double Pf) const
+{
+	pushPowerSinglet(timeStep, Pi, OVERRIDE);	//Set the laser power for the first frame
+	scalingFactorLinearRamp_(1.0, Pf / Pi);		//Increase the laser power linearly from the first to the last frame
+}
+
 void PockelsCell::setShutter(const bool state) const
 {
 	mShutter.setShutter(state);
@@ -1219,9 +1228,8 @@ void PockelsCell::setShutter(const bool state) const
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector) :
-	mWavelength_nm(wavelength_nm), mVision(VISION), mFidelity(FIDELITY), mPockelsVision(RTcontrol, VISION, wavelength_nm), mPockelsFidelity(RTcontrol, FIDELITY, 1040), mFWexcitation(FWEXC), mFWdetection(FWDET)
+	mWavelength_nm(wavelength_nm), mVision(VISION), mFidelity(FIDELITY), mPockelsVision(RTcontrol, wavelength_nm, VISION), mPockelsFidelity(RTcontrol, 1040, FIDELITY), mFWexcitation(FWEXC), mFWdetection(FWDET)
 {
-
 	switch (laserSelector)
 	{
 	case VISION:
@@ -1256,21 +1264,37 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 
 	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << mWavelength_nm << " nm\n";
 
-	//For the excitation filterwheel
-	int ExcWavelength_nm;
-	if (1)	//For a single beam, set the wavelength to 0, meaning that no beamsplitter is used
-		ExcWavelength_nm = 0;	
-	else	//Multiplexing
-		ExcWavelength_nm = wavelength_nm;
 
-	//mFWexcitation.setWavelength(ExcWavelength_nm);
-	//mFWdetection.setWavelength(wavelength_nm);
+	int ExcWavelength_nm(wavelength_nm);
+	const Multiplexing multiplexing = SINGLEBEAM;
 
-	//Tune the filterwheels concurrently
+	//For a single beam, Set the wavelength of the excitation filterwheel to 0, meaning that no beamsplitter is used
+	if (!multiplexing)
+		ExcWavelength_nm = 0;
+
+	//Tune both filterwheels concurrently
 	std::thread th1(&Filterwheel::setWavelength, &mFWexcitation, ExcWavelength_nm);
 	std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
 	th1.join();
 	th2.join();
+}
+
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelector) : VirtualLaser(RTcontrol, wavelength_nm, laserSelector)
+{
+	setPower(mPockelTimeStep, power);
+}
+
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double Pi, const double Pf, const LaserSelector laserSelector) : VirtualLaser(RTcontrol, wavelength_nm, laserSelector)
+{
+	switch (mWhichLaser)
+	{
+	case VISION:
+		mPockelsVision.powerLinearRamp(Pi, Pf);
+		break;
+	case FIDELITY:
+		mPockelsFidelity.powerLinearRamp(Pi, Pf);
+		break;
+	}	
 }
 
 void VirtualLaser::setWavelength_(const int wavelength_nm)
@@ -1311,28 +1335,41 @@ void VirtualLaser::checkShutterIsOpen_(const Laser &laser) const
 		throw std::runtime_error((std::string)__FUNCTION__ + ": The shutter of " + laser.laserName + " seems to be closed");
 }
 
-void VirtualLaser::pushPowerSinglet(const double timeStep, const double power, const OverrideFileSelector overrideFlag) const
+void VirtualLaser::setPower(const double timeStep, const double power) const
 {
 	switch (mWhichLaser)
 	{
 	case VISION:
-		mPockelsVision.pushPowerSinglet(timeStep, power, overrideFlag);
+		mPockelsVision.pushPowerSinglet(timeStep, power, OVERRIDE);
 		break;
 	case FIDELITY:
-		mPockelsFidelity.pushPowerSinglet(timeStep, power, overrideFlag);
+		mPockelsFidelity.pushPowerSinglet(timeStep, power, OVERRIDE);
 		break;
 	}
 }
 
-void VirtualLaser::setShutter(const bool state) const
+void VirtualLaser::openShutter() const
 {
 	switch (mWhichLaser)
 	{
 	case VISION:
-		mPockelsVision.setShutter(state);
+		mPockelsVision.setShutter(true);
 		break;
 	case FIDELITY:
-		mPockelsFidelity.setShutter(state);
+		mPockelsFidelity.setShutter(true);
+		break;
+	}
+}
+
+void VirtualLaser::closeShutter() const
+{
+	switch (mWhichLaser)
+	{
+	case VISION:
+		mPockelsVision.setShutter(false);
+		break;
+	case FIDELITY:
+		mPockelsFidelity.setShutter(false);
 		break;
 	}
 }

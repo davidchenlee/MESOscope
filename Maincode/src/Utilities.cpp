@@ -89,6 +89,12 @@ std::string axisToString(const Axis axis)
 	}
 }
 
+void pressAnyKeyToCont()
+{
+	std::cout << "Press any key to continue...\n";
+	getchar();
+}
+
 
 #pragma region "Logger"
 Logger::Logger(const std::string filename)
@@ -303,8 +309,6 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 		iterFrame += scanDirection;
 	}
 	while (true);
-
-
 
 	_TIFFfree(buffer);		//Destroy the buffer
 	TIFFClose(tiffHandle);	//Close the output tiff file

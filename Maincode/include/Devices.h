@@ -218,13 +218,14 @@ public:
 	PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector);
 
 	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol itself
-	void pushVoltageSinglet(const double timeStep, const double AO) const;
+	void pushVoltageSinglet(const double timeStep, const double AO, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
-	void voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi, const double Vf) const;
-	//void powerLinearRampInFrame(const double timeStep, const double rampDuration, const double Pi, const double Pf) const;
 	void voltageToZero() const;
+	void voltageLinearRamp(const double Vi, const double Vf) const;
 	void powerLinearRamp(const double Pi, const double Pf) const;
 	void setShutter(const bool state) const;
+	//void voltageLinearRampInFrame(const double timeStep, const double rampDuration, const double Vi, const double Vf) const;
+	//void powerLinearRampInFrame(const double timeStep, const double rampDuration, const double Pi, const double Pf) const;
 };
 
 class VirtualLaser
@@ -246,7 +247,7 @@ public:
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector = AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelector = AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double Pi, const double Pf, const LaserSelector laserSelector = AUTO);
-	void setPower(const double timeStep, const double power) const;
+	void updatePower(const double timeStep, const double power) const;
 	void openShutter() const;
 	void closeShutter() const;
 };

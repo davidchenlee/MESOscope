@@ -15,7 +15,7 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);												//Number of frames for continuous XY acquisition
-	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.224 * mm };	//Stage initial position
+	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.228 * mm };	//Stage initial position
 
 	//RS
 	const ResonantScanner RScanner(fpga);
@@ -87,12 +87,12 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 	galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
 
 	//LASER
-	//const int wavelength_nm = 750;
-	//std::vector<double> Pif{ 50. * mW, 50. * mW};		//Initial and final laser power for linear ramp
-	//VirtualLaser laser(RTcontrol, wavelength_nm, VISION);
-	const int wavelength_nm = 1040;
-	VirtualLaser laser(RTcontrol, wavelength_nm, FIDELITY);
-	std::vector<double> Pif{ 25. * mW, 25. * mW };		//Initial and final laser power for linear ramp
+	const int wavelength_nm = 750;
+	std::vector<double> Pif{ 50. * mW, 50. * mW};		//Initial and final laser power for linear ramp
+	VirtualLaser laser(RTcontrol, wavelength_nm, VISION);
+	//const int wavelength_nm = 1040;
+	//std::vector<double> Pif{ 25. * mW, 25. * mW };		//Initial and final laser power for linear ramp
+	//VirtualLaser laser(RTcontrol, wavelength_nm, FIDELITY);
 	double P = Pif.front();
 
 	//DATALOG
@@ -145,7 +145,7 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 			std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
 				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << "\n";
 
-			laser.setPower(8 * us, P);	//Update the laser power
+			laser.updatePower(8 * us, P);	//Update the laser power
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image(RTcontrol);
@@ -204,7 +204,7 @@ void MainRoutines::continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//STAGES
 	const StackScanDir stackScanDirZ = TOPDOWN;																			//Scan direction in z
-	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.204 * mm };												//Center of x, y, z stack
+	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.228 * mm };												//Center of x, y, z stack
 	const double stackDepth(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ);
 	const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages
 	const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;											//TODO: combine this with the galvo's one
@@ -221,8 +221,8 @@ void MainRoutines::continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 750;
-	const double P(55. * mW);		//Laser power
-	VirtualLaser laser(RTcontrol, wavelength_nm, P, AUTO);
+	const double P(25. * mW);		//Laser power
+	VirtualLaser laser(RTcontrol, wavelength_nm, P, 2*P, AUTO);
 
 	//GALVO FOR RT
 	const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
@@ -617,9 +617,16 @@ void TestRoutines::pockelsRamp(const FPGAns::FPGA &fpga)
 
 	//POCKELS CELL
 	const int wavelength_nm(750);
-	const double P(50. * mW);		//Laser power
+	const double P(25* mW);		//Laser power
 	PockelsCell pockels(RTcontrol, wavelength_nm, VISION);
-	pockels.powerLinearRamp(P, 2 * P);		//Linearly scale the laser power from the first to the last frame
+
+	//Test the voltage setpoint
+	//pockels.pushVoltageSinglet(8 * us, 0.375 * V);
+	//pockels.voltageLinearRamp(0.25 * V, 0.5 * V);		//Linearly scale the pockels voltage from the first to the last frame
+
+	//Test the laser power setpoint
+	//pockels.pushPowerSinglet(8 * us, P);
+	//pockels.powerLinearRamp(P, 2 * P);		//Linearly scale the laser power from the first to the last frame
 
 	//EXECUTE THE RT CONTROL SEQUENCE
 	Image image(RTcontrol);

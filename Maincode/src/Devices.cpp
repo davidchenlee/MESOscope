@@ -1154,12 +1154,12 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 }
 
 
-void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO) const
+void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, const OverrideFileSelector overrideFlag) const
 {
 	if (AO < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, AO);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, AO, overrideFlag);
 }
 
 void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag) const
@@ -1169,26 +1169,6 @@ void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const 
 
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, laserpowerToVolt_(P), overrideFlag);
 }
-
-//Ramp up or down the pockels cell within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
-void PockelsCell::voltageLinearRamp(const double timeStep, const double rampDuration, const double Vi, const double Vf) const
-{
-	if (Vi < 0 || Vf < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
-
-	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, Vi, Vf);
-}
-
-/*
-//Ramp up or down the pockels cell within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
-void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double rampDuration, const double Pi, const double Pf) const
-{
-	if (Pi < 0 || Pf < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
-
-	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, laserpowerToVolt_(Pi), laserpowerToVolt_(Pf));
-}
-*/
 
 void PockelsCell::voltageToZero() const
 {
@@ -1210,6 +1190,13 @@ void PockelsCell::scalingFactorLinearRamp_(const double Si, const double Sf) con
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, Si + (Sf - Si) / (mRTcontrol.mNframes - 1) * ii);
 }
 
+//Increase the pockels voltage linearly from the first to the last frame
+void PockelsCell::voltageLinearRamp(const double Vi, const double Vf) const
+{
+	pushVoltageSinglet(timeStep, Vi, OVERRIDE);	//Set the laser power for the first frame
+	scalingFactorLinearRamp_(1.0, Vf / Vi);		//Increase the laser power linearly from the first to the last frame
+}
+
 //Increase the laser power linearly from the first to the last frame
 void PockelsCell::powerLinearRamp(const double Pi, const double Pf) const
 {
@@ -1222,6 +1209,25 @@ void PockelsCell::setShutter(const bool state) const
 	mShutter.setShutter(state);
 }
 
+/*
+//Ramp up or down the pockels cell within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
+void PockelsCell::voltageLinearRampInFrame(const double timeStep, const double rampDuration, const double Vi, const double Vf) const
+{
+	if (Vi < 0 || Vf < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
+
+	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, Vi, Vf);
+}
+
+//Ramp up or down the pockels cell within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
+void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double rampDuration, const double Pi, const double Pf) const
+{
+	if (Pi < 0 || Pf < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
+
+	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, laserpowerToVolt_(Pi), laserpowerToVolt_(Pf));
+}
+*/
 #pragma endregion "Pockels cells"
 
 
@@ -1279,11 +1285,13 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	th2.join();
 }
 
+//Constructor with laser power
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelector) : VirtualLaser(RTcontrol, wavelength_nm, laserSelector)
 {
-	setPower(mPockelTimeStep, power);
+	updatePower(mPockelTimeStep, power);
 }
 
+//Constructor with laser power linear ramp
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double Pi, const double Pf, const LaserSelector laserSelector) : VirtualLaser(RTcontrol, wavelength_nm, laserSelector)
 {
 	switch (mWhichLaser)
@@ -1335,7 +1343,7 @@ void VirtualLaser::checkShutterIsOpen_(const Laser &laser) const
 		throw std::runtime_error((std::string)__FUNCTION__ + ": The shutter of " + laser.laserName + " seems to be closed");
 }
 
-void VirtualLaser::setPower(const double timeStep, const double power) const
+void VirtualLaser::updatePower(const double timeStep, const double power) const
 {
 	switch (mWhichLaser)
 	{

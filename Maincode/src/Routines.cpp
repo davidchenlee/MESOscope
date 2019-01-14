@@ -15,14 +15,14 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);												//Number of frames for continuous XY acquisition
-	const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.228 * mm };	//Stage initial position
+	const double3 stagePosition0{ 35.050 * mm, 10.350 * mm, 18.409 * mm };	//Stage initial position
 
 	//RS
 	const ResonantScanner RScanner(fpga);
 	RScanner.isRunning();					//Make sure that the RS is running
 
 	//STACK
-	const double stepSizeZ(0.5 * um);
+	const double stepSizeZ(1 * um);
 	double stackDepthZ(10 * um);			//Acquire a stack of this depth or thickness in Z
 
 	//SAMPLE
@@ -87,13 +87,27 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 	galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
 
 	//LASER
-	const int wavelength_nm = 750;
-	std::vector<double> Pif{ 50. * mW, 50. * mW};		//Initial and final laser power for linear ramp
-	VirtualLaser laser(RTcontrol, wavelength_nm, VISION);
-	//const int wavelength_nm = 1040;
-	//std::vector<double> Pif{ 25. * mW, 25. * mW };		//Initial and final laser power for linear ramp
-	//VirtualLaser laser(RTcontrol, wavelength_nm, FIDELITY);
+	LaserSelector whichLaser = VISION;
+	int wavelength_nm;
+	std::vector<double> Pif;
+	switch (whichLaser)
+	{
+	case VISION:
+		wavelength_nm = 750;
+		Pif.push_back(55. * mW);
+		Pif.push_back(55. * mW);
+		break;
+	case FIDELITY:
+		wavelength_nm = 1040;
+		Pif.push_back(25. * mW);
+		Pif.push_back(25. * mW);
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Select VISION OR FIDELITY");
+	}
+	VirtualLaser laser(RTcontrol, wavelength_nm, whichLaser);
 	double P = Pif.front();
+
 
 	//DATALOG
 	{
@@ -222,7 +236,7 @@ void MainRoutines::continuousScanZ(const FPGAns::FPGA &fpga)
 	//LASER
 	const int wavelength_nm = 750;
 	const double P(25. * mW);		//Laser power
-	VirtualLaser laser(RTcontrol, wavelength_nm, P, 2*P, AUTO);
+	VirtualLaser laser(RTcontrol, wavelength_nm, P, AUTO);
 
 	//GALVO FOR RT
 	const double FFOVgalvo(200 * um);			//Full FOV in the slow axis

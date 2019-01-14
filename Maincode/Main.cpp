@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//MAIN SEQUENCES
-			//MainRoutines::discreteScanZ(fpga);
+			MainRoutines::discreteScanZ(fpga);
 			//MainRoutines::continuousScanZ(fpga);
 
 			//CALIBRATION
@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
 			//TestRoutines::pockels(fpga);
-			TestRoutines::pockelsRamp(fpga);
+			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::resonantScanner(fpga);
 			//TestRoutines::convertI16toVolt();
 			//TestRoutines::tiffU8();

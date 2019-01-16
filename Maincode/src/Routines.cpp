@@ -15,14 +15,14 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);												//Number of frames for continuous XY acquisition
-	const double3 stagePosition0{ 35.050 * mm, 10.350 * mm, 18.409 * mm };	//Stage initial position
+	const double3 stagePosition0{ 34.750 * mm, 10.125 * mm, 18.479 * mm };	//Stage initial position
 
 	//RS
 	const ResonantScanner RScanner(fpga);
 	RScanner.isRunning();					//Make sure that the RS is running
 
 	//STACK
-	const double stepSizeZ(1 * um);
+	const double stepSizeZ(0.5 * um);
 	double stackDepthZ(10 * um);			//Acquire a stack of this depth or thickness in Z
 
 	//SAMPLE
@@ -87,27 +87,26 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 	galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
 
 	//LASER
-	LaserSelector whichLaser = VISION;
+	LaserSelector whichLaser = FIDELITY;
 	int wavelength_nm;
-	std::vector<double> Pif;
+	double laserPowerMin, laserPowerMax;
 	switch (whichLaser)
 	{
 	case VISION:
 		wavelength_nm = 750;
-		Pif.push_back(55. * mW);
-		Pif.push_back(55. * mW);
+		laserPowerMin = 55. * mW;
+		laserPowerMax = 55. * mW;
 		break;
 	case FIDELITY:
 		wavelength_nm = 1040;
-		Pif.push_back(25. * mW);
-		Pif.push_back(25. * mW);
+		laserPowerMin = 25. * mW;
+		laserPowerMax = 25. * mW;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + "Select VISION OR FIDELITY");
 	}
+	double laserPower = laserPowerMin;
 	VirtualLaser laser(RTcontrol, wavelength_nm, whichLaser);
-	double P = Pif.front();
-
 
 	//DATALOG
 	{
@@ -120,8 +119,8 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 		datalog.record("FPGA clock (MHz) = ", tickPerUs);
 		datalog.record("\nLASER--------------------------------------------------------");
 		datalog.record("Laser wavelength (nm) = ", wavelength_nm);
-		datalog.record("Laser power first frame (mW) = ", Pif.front() / mW);
-		datalog.record("Laser power last frame (mW) = ", Pif.back() / mW);
+		datalog.record("Laser power first frame (mW) = ", laserPowerMin / mW);
+		datalog.record("Laser power last frame (mW) = ", laserPowerMax / mW);
 		datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod / us);
 		datalog.record("\nSCAN---------------------------------------------------------");
 		datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
@@ -140,7 +139,7 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 	}
 
 	//CREATE A STACK FOR STORING THE TIFFS
-	Stack stack(widthPerFrame_pix, heightPerFrame_pix, nDiffZ, nSameZ);
+	TiffStack tiffStack(widthPerFrame_pix, heightPerFrame_pix, nDiffZ, nSameZ);
 
 	//OPEN THE UNIBLITZ SHUTTERS
 	laser.openShutter();
@@ -159,38 +158,38 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 			std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
 				"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << "\n";
 
-			laser.updatePower(8 * us, P);	//Update the laser power
+			laser.updatePower(8 * us, laserPower);	//Update the laser power
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image(RTcontrol);
 			image.acquire();			//Execute the RT control sequence and acquire the image
 			image.mirrorOddFrames();
 			image.averageFrames();		//Average the frames acquired via continuous XY acquisition
-			stack.pushSameZ(iterSameZ, image.pointerToTiff());
+			tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
 
 			if (acqMode == SINGLEMODE || acqMode == LIVEMODE)
 			{
 				//Save individual files
-				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(P / mW, 1) + "mW" +
+				std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower / mW, 1) + "mW" +
 					"_x=" + toString(stagePosition.at(iterDiffZ).at(XX) / mm, 3) + "_y=" + toString(stagePosition.at(iterDiffZ).at(YY) / mm, 3) + "_z=" + toString(stagePosition.at(iterDiffZ).at(ZZ) / mm, 4));
 				image.saveTiffSinglePage(singleFilename, overrideFlag);
 				Sleep(500);
 			}
 		}
-		stack.pushDiffZ(iterDiffZ);
+		tiffStack.pushDiffZ(iterDiffZ);
 
 		std::cout << "\n";
-		P += (Pif.back() - Pif.front()) / nDiffZ;
+		laserPower += (laserPowerMin - laserPowerMax) / nDiffZ;
 	}
 	laser.closeShutter();
 
 	if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
 	{
 		//Save the stackDiffZ to file
-		std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(Pif.front() / mW, 1) + "mW_Pf=" + toString(Pif.back() / mW, 1) + "mW" +
+		std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserPowerMin / mW, 1) + "mW_Pf=" + toString(laserPowerMax / mW, 1) + "mW" +
 			"_x=" + toString(stagePosition.front().at(XX) / mm, 3) + "_y=" + toString(stagePosition.front().at(YY) / mm, 3) +
 			"_zi=" + toString(stagePosition.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePosition.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4));
-		stack.saveToFile(stackFilename, overrideFlag);
+		tiffStack.saveToFile(stackFilename, overrideFlag);
 	}
 
 	pressAnyKeyToCont();
@@ -218,7 +217,7 @@ void MainRoutines::continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//STAGES
 	const StackScanDir stackScanDirZ = TOPDOWN;																			//Scan direction in z
-	const double3 stackCenterXYZ{ 35.05 * mm, 10.40 * mm, 18.228 * mm };												//Center of x, y, z stack
+	const double3 stackCenterXYZ{ 34.750 * mm, 10.180 * mm, 18.451 * mm };												//Center of x, y, z stack
 	const double stackDepth(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ);
 	const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages
 	const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;											//TODO: combine this with the galvo's one
@@ -235,8 +234,8 @@ void MainRoutines::continuousScanZ(const FPGAns::FPGA &fpga)
 
 	//LASER
 	const int wavelength_nm = 750;
-	const double P(25. * mW);		//Laser power
-	VirtualLaser laser(RTcontrol, wavelength_nm, P, AUTO);
+	const double laserPower(55. * mW);		//Laser power
+	VirtualLaser laser(RTcontrol, wavelength_nm, laserPower, AUTO);
 
 	//GALVO FOR RT
 	const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
@@ -721,7 +720,7 @@ void TestRoutines::vibratome(const FPGAns::FPGA &fpga)
 	pressAnyKeyToCont();
 }
 
-void TestRoutines::sequencer()
+void TestRoutines::sequencer(const FPGAns::FPGA &fpga)
 {
 	//Generate the command list and keep it in memory.
 	//I prefer generating such list before execution because then I can inspect all the parameters offline
@@ -729,13 +728,14 @@ void TestRoutines::sequencer()
 	//Configure the sample
 	const ROI roi{ 0, 10. * mm, 10. * mm, 0 };
 	const double sampleLengthZ(10. * mm);
-	SampleConfig sampleConfig("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ);
+	const double initialZ(10*mm);					//Initial position of the z stage
+	Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, initialZ);
 
 	//Configure the lasers {wavelength_nm, laser power mW, laser power incremental mW}
-	using SingleLaserConfig = LaserListConfig::SingleLaserConfig;
-	const SingleLaserConfig blueLaser{ 750, 10 * mW, 5 * mW };
-	const SingleLaserConfig greenLaser{ 940, 11 * mW, 6 * mW };
-	const SingleLaserConfig redLaser{ 1040, 12 * mW, 7 * mW };
+	using SingleLaserConfig = LaserList::SingleLaser; //alias
+	const SingleLaserConfig blueLaser{ 750, 10. * mW, 5. * mW };
+	const SingleLaserConfig greenLaser{ 940, 11. * mW, 6. * mW };
+	const SingleLaserConfig redLaser{ 1040, 12. * mW, 7. * mW };
 	const std::vector<SingleLaserConfig> laserList{ blueLaser, greenLaser, redLaser };
 	
 	//Configure the stacks
@@ -743,18 +743,14 @@ void TestRoutines::sequencer()
 	const double stepSizeZ(0.5 * um);						//Image resolution in z
 	const double stackDepth(100 * um);						//Stack depth or thickness
 	const double3 stackOverlap_frac{ 0.1, 0.1, 0.1 };		//Percentage of stack overlap in x, y, and z
-	StackConfig stackConfig(FOV, stepSizeZ, stackDepth, stackOverlap_frac);
+	Stack stack(FOV, stepSizeZ, stackDepth, stackOverlap_frac);
 
 	//Configure the vibratome
 	const double cutAboveBottomOfStack(15*um);			//Cut this much above the bottom of the stack
-	const VibratomeConfig vibratomeConfig(cutAboveBottomOfStack);
-
-	//Configure the stages
-	const double stageInitialZ(10*mm);					//Initial heightPerFrame_pix of the stage
-	StageConfig stageConfig(stageInitialZ);
+	const Vibratome vibratome(fpga, cutAboveBottomOfStack);
 
 	//Create a sequence
-	Sequencer sequence(sampleConfig, laserList, stackConfig, vibratomeConfig, stageConfig);
+	Sequencer sequence(sample, laserList, stack, vibratome);
 	sequence.generateCommandList();
 	sequence.printToFile("Commandlist");
 

@@ -287,7 +287,11 @@ unsigned char* const Image::pointerToTiff() const
 
 
 #pragma region "Vibratome"
-Vibratome::Vibratome(const FPGAns::FPGA &fpga): mFpga(fpga){}
+Vibratome::Vibratome(const FPGAns::FPGA &fpga, const double sliceOffset): mFpga(fpga), mCutAboveBottomOfStack(sliceOffset)
+{
+	if (sliceOffset < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be positive");
+}
 
 //Start or stop running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
 void Vibratome::pushStartStopButton() const
@@ -351,6 +355,17 @@ void Vibratome::retractDistance(const double distance) const
 	const double retractingTime = static_cast<int>(distance / mMovingSpeed);
 	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
 	moveHead_(retractingTime, BACKWARD);
+}
+
+void Vibratome::printParams(std::ofstream *fileHandle) const
+{
+	*fileHandle << "VIBRATOME ************************************************************\n";
+	*fileHandle << std::setprecision(4);
+	*fileHandle << "Blade position x,y (mm) = (" << mSamplePosition.at(XX) / mm << "," << mSamplePosition.at(YY) / mm << ")\n";
+	*fileHandle << std::setprecision(1);
+	*fileHandle << "Blade-focal plane vertical offset (um) = " << mBladeFocalplaneOffsetZ / um << "\n";
+	*fileHandle << "Cut above the bottom of the stack (um) = " << mCutAboveBottomOfStack / um << "\n";
+	*fileHandle << "\n";
 }
 #pragma endregion "Vibratome"
 
@@ -836,7 +851,7 @@ void Filterwheel::setWavelength(const int wavelength_nm)
 #pragma endregion "Filterwheel"
 
 #pragma region "Laser"
-Laser::Laser(const LaserSelector laserID): mWhichLaser(laserID)
+Laser::Laser(const LaserSelector whichLaser): mWhichLaser(whichLaser)
 {
 	switch (mWhichLaser)
 	{
@@ -955,7 +970,9 @@ void Laser::setWavelength(const int wavelength_nm)
 		}
 		break;
 	case FIDELITY:
-		std::cout << "WARNING: FIDELITY wavelength only supports 1040 nm\n";
+		if (wavelength_nm != 1040)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": FIDELITY only supports the wavelenfth 1040 nm\n");
+		break;
 	default:
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}
@@ -1233,40 +1250,42 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector) :
-	mWavelength_nm(wavelength_nm), mVision(VISION), mFidelity(FIDELITY), mPockelsVision(RTcontrol, wavelength_nm, VISION), mPockelsFidelity(RTcontrol, 1040, FIDELITY), mFWexcitation(FWEXC), mFWdetection(FWDET)
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelector) :
+	mWavelength_nm(wavelength_nm), mFWexcitation(FWEXC), mFWdetection(FWDET), mScanPi(initialPower), mStackPinc(powerIncrease)
 {
 	switch (laserSelector)
 	{
 	case VISION:
 		mWhichLaser = VISION;
-		mVision.setWavelength(wavelength_nm);
-		checkShutterIsOpen_(mVision);
 		break;
 	case FIDELITY:
-		if (wavelength_nm != 1040)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength of FIDELITY can not be different from 1040 nm");
-
 		mWhichLaser = FIDELITY;
-		checkShutterIsOpen_(mFidelity);
 		break;
 	case AUTO:	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
 		if (wavelength_nm < 1040)
-		{
 			mWhichLaser = VISION;
-			mVision.setWavelength(wavelength_nm);
-			checkShutterIsOpen_(mVision);
-		}
-		
 		else if (wavelength_nm == 1040)
-		{
 			mWhichLaser = FIDELITY;
-			checkShutterIsOpen_(mFidelity);
-		}
 		else
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 		break;
 	}
+
+	laserPtr = new Laser(mWhichLaser);
+	laserPtr->setWavelength(wavelength_nm);
+	checkShutterIsOpen_(*laserPtr);
+
+	pockelsPtr = new PockelsCell(RTcontrol, wavelength_nm, mWhichLaser);
+
+	//Set the initial laser power
+	if (initialPower != 0)
+		pockelsPtr->pushPowerSinglet(mPockelTimeStep, initialPower, OVERRIDE);
+
+	//Set the power increase
+	if (powerIncrease != 0)
+		pockelsPtr->powerLinearRamp(initialPower, initialPower + powerIncrease);	
+	
+
 
 	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << mWavelength_nm << " nm\n";
 
@@ -1285,40 +1304,29 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	th2.join();
 }
 
-//Constructor with laser power
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelector) : VirtualLaser(RTcontrol, wavelength_nm, laserSelector)
-{
-	updatePower(mPockelTimeStep, power);
-}
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelector) : VirtualLaser(RTcontrol, wavelength_nm, power, 0, laserSelector) {}
 
-//Constructor with laser power linear ramp
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double Pi, const double Pf, const LaserSelector laserSelector) : VirtualLaser(RTcontrol, wavelength_nm, laserSelector)
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector) : VirtualLaser(RTcontrol, wavelength_nm, 0, 0, laserSelector) {}
+
+VirtualLaser::~VirtualLaser()
 {
-	switch (mWhichLaser)
-	{
-	case VISION:
-		mPockelsVision.powerLinearRamp(Pi, Pf);
-		break;
-	case FIDELITY:
-		mPockelsFidelity.powerLinearRamp(Pi, Pf);
-		break;
-	}	
+	delete laserPtr;
+	delete pockelsPtr;
 }
 
 void VirtualLaser::setWavelength_(const int wavelength_nm)
 {
-	//Use VISION for everything below 1040 nm
-	if (wavelength_nm < 1040)
-	{
+	if (wavelength_nm < 1040)			//Use VISION for everything below 1040 nm
 		mWhichLaser = VISION;
-		mVision.setWavelength(wavelength_nm);
-	}
-	//Use FIDELITY for 1040 nm
-	else if (wavelength_nm == 1040)
+	else if (wavelength_nm == 1040)		//Use FIDELITY for 1040 nm
 		mWhichLaser = FIDELITY;
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 
+	laserPtr = new Laser(mWhichLaser);
+	laserPtr->setWavelength(wavelength_nm);
+
+	//TODO: switch to multithread
 	mFWexcitation.setWavelength(wavelength_nm);
 	mFWdetection.setWavelength(wavelength_nm);
 	mWavelength_nm = wavelength_nm;
@@ -1345,41 +1353,17 @@ void VirtualLaser::checkShutterIsOpen_(const Laser &laser) const
 
 void VirtualLaser::updatePower(const double timeStep, const double power) const
 {
-	switch (mWhichLaser)
-	{
-	case VISION:
-		mPockelsVision.pushPowerSinglet(timeStep, power, OVERRIDE);
-		break;
-	case FIDELITY:
-		mPockelsFidelity.pushPowerSinglet(timeStep, power, OVERRIDE);
-		break;
-	}
+	pockelsPtr->pushPowerSinglet(timeStep, power, OVERRIDE);
 }
 
 void VirtualLaser::openShutter() const
 {
-	switch (mWhichLaser)
-	{
-	case VISION:
-		mPockelsVision.setShutter(true);
-		break;
-	case FIDELITY:
-		mPockelsFidelity.setShutter(true);
-		break;
-	}
+	pockelsPtr->setShutter(true);
 }
 
 void VirtualLaser::closeShutter() const
 {
-	switch (mWhichLaser)
-	{
-	case VISION:
-		mPockelsVision.setShutter(false);
-		break;
-	case FIDELITY:
-		mPockelsFidelity.setShutter(false);
-		break;
-	}
+	pockelsPtr->setShutter(false);
 }
 
 #pragma endregion "VirtualLaser"
@@ -1686,6 +1670,91 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 	std::cout << "Vel = " << vel / mmps << " mm/s\n\n";
 }
 #pragma endregion "Stages"
+
+
+#pragma region "Sample"
+Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double initialZ) :
+	mName(sampleName), mImmersionMedium(immersionMedium), mObjectiveCollar(objectiveCollar), mROI(roi), mInitialZ(initialZ)
+{
+	//Convert input ROI = (xmin, ymax, xmax, ymin) to the equivalent sample length in X and Y
+	mLength.at(XX) = mROI.at(2) - mROI.at(0);
+	mLength.at(YY) = mROI.at(1) - mROI.at(3);
+	mLength.at(ZZ) = sampleLengthZ;
+
+	if (mLength.at(XX) <= 0 || mLength.at(YY) <= 0 || mLength.at(ZZ) <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
+
+	if (sampleLengthZ <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Z must be positive");
+}
+
+void Sample::printParams(std::ofstream *fileHandle) const
+{
+	*fileHandle << "SAMPLE ************************************************************\n";
+	*fileHandle << "Name = " << mName << "\n";
+	*fileHandle << "Immersion medium = " << mImmersionMedium << "\n";
+	*fileHandle << std::setprecision(3);
+	*fileHandle << "ROI (mm) = [" << mROI.at(0) / mm << "," << mROI.at(1) / mm << "," << mROI.at(2) / mm << "," << mROI.at(3) / mm << "]\n";
+	*fileHandle << "Length (mm) = (" << mLength.at(XX) / mm << "," << mLength.at(YY) / mm << "," << mLength.at(ZZ) / mm << ")\n";
+	*fileHandle << "\n";
+}
+#pragma endregion "Sample"
+
+
+#pragma region "Stack"
+Stack::Stack(const double2 FOV, const double stepSizeZ, const double stackDepth, const double3 stackOverlap_frac) :
+	mFOV(FOV), mStepSizeZ(stepSizeZ), mDepth(stackDepth), mOverlap_frac(stackOverlap_frac)
+{
+	if (FOV.at(XX) <= 0 || FOV.at(YY) <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
+
+	if (stepSizeZ <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The z-stage step size must be positive");
+
+	if (stackDepth <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth must be positive");
+
+	if (stackOverlap_frac.at(XX) < 0 || stackOverlap_frac.at(YY) < 0 || stackOverlap_frac.at(ZZ) < 0
+		|| stackOverlap_frac.at(XX) > 0.2 || stackOverlap_frac.at(YY) > 0.2 || stackOverlap_frac.at(ZZ) > 0.2)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range 0-0.2%");
+}
+
+void Stack::printParams(std::ofstream *fileHandle) const
+{
+	*fileHandle << "STACK ************************************************************\n";
+	*fileHandle << std::setprecision(1);
+	*fileHandle << "FOV (um) = (" << mFOV.at(XX) / um << "," << mFOV.at(YY) / um << ")\n";
+	*fileHandle << "Step size Z (um) = " << mStepSizeZ / um << "\n";
+	*fileHandle << "Stack depth (um) = " << mDepth / um << "\n";
+	*fileHandle << "Stack overlap (frac) = (" << mOverlap_frac.at(XX) << "," << mOverlap_frac.at(YY) << "," << mOverlap_frac.at(ZZ) << ")\n";
+	*fileHandle << "Stack overlap (um) = (" << mOverlap_frac.at(XX) * mFOV.at(XX) / um << "," << mOverlap_frac.at(YY) * mFOV.at(YY) / um << "," << mOverlap_frac.at(ZZ) * mDepth << ")\n";
+	*fileHandle << "\n";
+}
+#pragma endregion "Stack"
+
+
+#pragma region "LaserList"
+LaserList::LaserList(const std::vector <SingleLaser> laser) : mLaser(laser) {}
+
+std::size_t LaserList::listSize() const
+{
+	return mLaser.size();
+}
+
+void LaserList::printParams(std::ofstream *fileHandle) const
+{
+	*fileHandle << "LASER ************************************************************\n";
+
+	for (std::vector<int>::size_type iterWL = 0; iterWL != mLaser.size(); iterWL++)
+	{
+		*fileHandle << "Wavelength (nm) = " << mLaser.at(iterWL).mWavelength_nm <<
+			"\tLaser power (mW) = " << mLaser.at(iterWL).mScanPi / mW <<
+			"\tPower increase (mW) = " << mLaser.at(iterWL).mStackPinc / mW << "\n";
+	}
+	*fileHandle << "\n";
+}
+#pragma endregion "LaserList"
+
 
 /*
 [1] The stage Z has a virtual COM port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.

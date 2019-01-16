@@ -60,9 +60,14 @@ class Vibratome
 	void moveHead_(const double duration, const MotionDir motionDir) const;
 	void pushStartStopButton() const;
 public:
-	Vibratome(const FPGAns::FPGA &fpga);
+	const double2 mSamplePosition{ 0. * mm,0. * mm };	//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
+	const double mBladeFocalplaneOffsetZ = 0 * um;		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	double mCutAboveBottomOfStack;						//Cut this much above the bottom of the stack
+
+	Vibratome(const FPGAns::FPGA &fpga, const double sliceOffset = 0);
 	void cutAndRetractDistance(const double distance) const;
 	void retractDistance(const double distance) const;
+	void Vibratome::printParams(std::ofstream *fileHandle) const;
 };
 
 class ResonantScanner
@@ -177,7 +182,7 @@ class Laser
 	int downloadWavelength_nm_();
 public:
 	std::string laserName;
-	Laser(const LaserSelector laserID);
+	Laser(const LaserSelector whichLaser);
 	~Laser();
 	Laser(const Laser&) = delete;				//Disable copy-constructor
 	Laser& operator=(const Laser&) = delete;	//Disable assignment-constructor
@@ -230,12 +235,9 @@ public:
 
 class VirtualLaser
 {
-	LaserSelector mWhichLaser;		//Keep track of the current laser being used
-	int mWavelength_nm;				//Keep track of the current wavelength being used
-	Laser mVision;
-	Laser mFidelity;
-	PockelsCell mPockelsVision;
-	PockelsCell mPockelsFidelity;
+	LaserSelector mWhichLaser;		//laser being used
+	Laser *laserPtr;
+	PockelsCell *pockelsPtr;
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
 	const double mPockelTimeStep = 8 * us;	//Time step for the RT pockels command
@@ -244,9 +246,15 @@ class VirtualLaser
 	std::string laserNameToString_(const LaserSelector whichLaser) const;
 	void checkShutterIsOpen_(const Laser &laser) const;
 public:
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector = AUTO);
+	int mWavelength_nm;		//wavelength being used
+	double mScanPi;			//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
+	double mStackPinc;		//Laser power increase for a stack-scan
+
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelector = AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelector = AUTO);
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double Pi, const double Pf, const LaserSelector laserSelector = AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector);
+	~VirtualLaser();
+
 	void updatePower(const double timeStep, const double power) const;
 	void openShutter() const;
 	void closeShutter() const;
@@ -295,5 +303,51 @@ public:
 	bool isDOtriggerEnabled(const Axis axis, const int DOchan) const;
 	void setDOtriggerEnabled(const Axis axis, const int DOchan, const BOOL triggerState) const;
 	void printStageConfig(const Axis axis, const int DOchan) const;
+};
+
+class Sample
+{
+public:
+	std::string mName;
+	std::string mImmersionMedium;
+	std::string mObjectiveCollar;
+	ROI mROI;						//Region of interest across the entire sample
+	double3 mLength;				//Sample size in x, y, and z
+	const double mInitialZ;
+
+	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double initialZ);
+	void printParams(std::ofstream *fileHandle) const;
+};
+
+
+class Stack
+{
+public:
+	double2 mFOV;				//Field of view in x and y
+	double mStepSizeZ;			//Image resolution in z
+	double mDepth;				//Stack depth or thickness
+	double3 mOverlap_frac;		//Stack overlap in x, y, and z
+
+	Stack(const double2 FOV, const double stepSizeZ, const double stackDepth, const double3 stackOverlap_frac);
+	void printParams(std::ofstream *fileHandle) const;
+};
+
+//Collect single laser parameters to form a list. The body is defined here
+class LaserList
+{
+public:
+	//Parameters for a single laser
+	struct SingleLaser
+	{
+		int mWavelength_nm;	//Laser wavelength
+		double mScanPi;		//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
+		double mStackPinc;	//Laser power increase for a stack-scan
+	};
+
+	std::vector <SingleLaser> mLaser;
+
+	LaserList(const std::vector <SingleLaser> laser);
+	std::size_t listSize() const;
+	void printParams(std::ofstream *fileHandle) const;
 };
 

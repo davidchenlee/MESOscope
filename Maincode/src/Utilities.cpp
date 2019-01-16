@@ -429,21 +429,21 @@ void TiffU8::pushImage(const int frame, const unsigned char* inputArray) const
 
 
 #pragma region "Stack"
-Stack::Stack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ) :
+TiffStack::TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ) :
 	mDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ), mSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ) {}
 
-void Stack::pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff)
+void TiffStack::pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff)
 {
 	mSameZ.pushImage(indexSameZ, pointerToTiff);
 }
 
-void Stack::pushDiffZ(const int indexDiffZ)
+void TiffStack::pushDiffZ(const int indexDiffZ)
 {
 	mSameZ.averageFrames();	//Average the images with the same Z
 	mDiffZ.pushImage(indexDiffZ, mSameZ.pointerToTiff());
 }
 
-void Stack::saveToFile(const std::string filename, OverrideFileSelector overrideFlag) const
+void TiffStack::saveToFile(const std::string filename, OverrideFileSelector overrideFlag) const
 {
 	mDiffZ.saveToFile(filename, MULTIPAGE, overrideFlag);
 }

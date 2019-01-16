@@ -58,12 +58,12 @@ public:
 };
 
 
-class Stack
+class TiffStack
 {
 	TiffU8 mSameZ;		//For saving the same z plane many times and the compute the average image
 	TiffU8 mDiffZ;		//For saving different z planes
 public:
-	Stack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
+	TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
 	void pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff);
 	void pushDiffZ(const int indexDiffZ);
 	void saveToFile(const std::string filename, OverrideFileSelector overrideFlag) const;

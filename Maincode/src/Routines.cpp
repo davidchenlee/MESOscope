@@ -87,7 +87,7 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 	galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
 
 	//LASER
-	LaserSelector whichLaser = FIDELITY;
+	LaserSelector whichLaser = VISION;
 	int wavelength_nm;
 	double laserPowerMin, laserPowerMax;
 	switch (whichLaser)
@@ -732,11 +732,11 @@ void TestRoutines::sequencer(const FPGAns::FPGA &fpga)
 	Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, initialZ);
 
 	//Configure the lasers {wavelength_nm, laser power mW, laser power incremental mW}
-	using SingleLaserConfig = LaserList::SingleLaser; //alias
-	const SingleLaserConfig blueLaser{ 750, 10. * mW, 5. * mW };
-	const SingleLaserConfig greenLaser{ 940, 11. * mW, 6. * mW };
-	const SingleLaserConfig redLaser{ 1040, 12. * mW, 7. * mW };
-	const std::vector<SingleLaserConfig> laserList{ blueLaser, greenLaser, redLaser };
+	using SingleLaser = LaserList::SingleLaser; //alias
+	const SingleLaser blueLaser{ 750, 10. * mW, 5. * mW };
+	const SingleLaser greenLaser{ 940, 11. * mW, 6. * mW };
+	const SingleLaser redLaser{ 1040, 12. * mW, 7. * mW };
+	const std::vector<SingleLaser> laserList{ blueLaser, greenLaser, redLaser };
 	
 	//Configure the stacks
 	const double2 FOV{ 150. * um, 200. * um };

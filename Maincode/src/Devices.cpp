@@ -1251,7 +1251,7 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelector) :
-	mWavelength_nm(wavelength_nm), mFWexcitation(FWEXC), mFWdetection(FWDET), mScanPi(initialPower), mStackPinc(powerIncrease)
+	mWavelength_nm(wavelength_nm), mFWexcitation(FWEXC), mFWdetection(FWDET)
 {
 	switch (laserSelector)
 	{
@@ -1271,11 +1271,11 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 		break;
 	}
 
-	laserPtr = new Laser(mWhichLaser);
+	laserPtr = std::unique_ptr<Laser>(new Laser(mWhichLaser));
 	laserPtr->setWavelength(wavelength_nm);
 	checkShutterIsOpen_(*laserPtr);
 
-	pockelsPtr = new PockelsCell(RTcontrol, wavelength_nm, mWhichLaser);
+	pockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(RTcontrol, wavelength_nm, mWhichLaser));
 
 	//Set the initial laser power
 	if (initialPower != 0)
@@ -1308,12 +1308,6 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector) : VirtualLaser(RTcontrol, wavelength_nm, 0, 0, laserSelector) {}
 
-VirtualLaser::~VirtualLaser()
-{
-	delete laserPtr;
-	delete pockelsPtr;
-}
-
 void VirtualLaser::setWavelength_(const int wavelength_nm)
 {
 	if (wavelength_nm < 1040)			//Use VISION for everything below 1040 nm
@@ -1323,7 +1317,7 @@ void VirtualLaser::setWavelength_(const int wavelength_nm)
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 
-	laserPtr = new Laser(mWhichLaser);
+	laserPtr.reset(new Laser(mWhichLaser));
 	laserPtr->setWavelength(wavelength_nm);
 
 	//TODO: switch to multithread

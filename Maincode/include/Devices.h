@@ -6,6 +6,7 @@
 #include "FPGAapi.h"
 #include "PI_GCS2_DLL.h"
 #include "serial/serial.h"
+#include <memory>					//For smart pointers
 
 class Image
 {
@@ -235,25 +236,21 @@ public:
 
 class VirtualLaser
 {
-	LaserSelector mWhichLaser;		//laser being used
-	Laser *laserPtr;
-	PockelsCell *pockelsPtr;
+	LaserSelector mWhichLaser;					//laser being used
+	int mWavelength_nm;							//wavelength being used
+	std::unique_ptr<Laser> laserPtr;
+	std::unique_ptr <PockelsCell> pockelsPtr;
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
-	const double mPockelTimeStep = 8 * us;	//Time step for the RT pockels command
+	const double mPockelTimeStep = 8 * us;		//Time step for the RT pockels command
 
 	void setWavelength_(const int wavelength_nm);
 	std::string laserNameToString_(const LaserSelector whichLaser) const;
 	void checkShutterIsOpen_(const Laser &laser) const;
 public:
-	int mWavelength_nm;		//wavelength being used
-	double mScanPi;			//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
-	double mStackPinc;		//Laser power increase for a stack-scan
-
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelector = AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelector = AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector);
-	~VirtualLaser();
 
 	void updatePower(const double timeStep, const double power) const;
 	void openShutter() const;
@@ -319,7 +316,6 @@ public:
 	void printParams(std::ofstream *fileHandle) const;
 };
 
-
 class Stack
 {
 public:
@@ -332,7 +328,7 @@ public:
 	void printParams(std::ofstream *fileHandle) const;
 };
 
-//Collect single laser parameters to form a list. The body is defined here
+//Collect single laser parameters to form a list
 class LaserList
 {
 public:

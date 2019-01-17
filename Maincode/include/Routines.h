@@ -39,6 +39,6 @@ namespace TestRoutines
 	void tiffU8();
 	void ethernetSpeed();
 	void vibratome(const FPGAns::FPGA &fpga);
-	void sequencer(const FPGAns::FPGA &fpga);
+	void sequencer();
 	void multithread();
 }

@@ -61,8 +61,8 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << actionToString_(mAction);
 		*fileHandle << std::setprecision(3);
 		*fileHandle << "\t************Sample facing the vibratome at (mm) = ";
-		*fileHandle << "(" << mCommand.cutSlice.mSamplePosition.at(XX) / mm << "," << mCommand.cutSlice.mSamplePosition.at(YY) / mm << "," << mCommand.cutSlice.mSamplePosition.at(ZZ) / mm << ")";
-		*fileHandle << "*******************************\n";
+		*fileHandle << "(" << mCommand.cutSlice.mBladePosition.at(XX) / mm << "," << mCommand.cutSlice.mBladePosition.at(YY) / mm << "," << mCommand.cutSlice.mBladePosition.at(ZZ) / mm << ")";
+		*fileHandle << "**************************************************************\n";
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -99,14 +99,14 @@ void Commandline::printParameters() const
 #pragma endregion "Commandline"
 
 #pragma region "Sequencer"
-Sequencer::Sequencer(const Sample sample, const LaserList laserList, const Stack stack, const Vibratome vibratome) :
-	mSample(sample), mLaserList(laserList), mStack(stack), mVibratome(vibratome)
+Sequencer::Sequencer(const Sample sample, const LaserList laserList, const Stack stack) :
+	mSample(sample), mLaserList(laserList), mStack(stack)
 {
 	//Initialize the z-stage
 	mScanZi = mSample.mInitialZ;
 
 	//Initialize the height of the plane to sliced
-	mPlaneToSliceZ = mScanZi + mStack.mDepth - mVibratome.mCutAboveBottomOfStack;
+	mPlaneToSliceZ = mScanZi + mStack.mDepth - mSample.mCutAboveBottomOfStack;
 
 	//Calculate the total number of stacks in a vibratome slice and also in the entire sample
 	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV ( (1-a)*N + 1 )
@@ -127,7 +127,7 @@ Sequencer::Sequencer(const Sample sample, const LaserList laserList, const Stack
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
 
 	const double stackOverlap = mStack.mOverlap_frac.at(ZZ) * mStack.mDepth;
-	if (mVibratome.mCutAboveBottomOfStack < stackOverlap)
+	if (mSample.mCutAboveBottomOfStack < stackOverlap)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'cutAboveBottomOfStack' must be greater than the stitching length  " + toString(stackOverlap / um, 1) + " um");
 }
 
@@ -220,7 +220,7 @@ void Sequencer::saveStack_()
 void Sequencer::cutSlice_()
 {
 	//Move the sample to face the vibratome blade. Notice the additional offset in z
-	const double3 samplePosition = { mVibratome.mSamplePosition.at(XX), mVibratome.mSamplePosition.at(YY), mPlaneToSliceZ + mVibratome.mBladeFocalplaneOffsetZ };
+	const double3 samplePosition = { mSample.mBladePosition.at(XX), mSample.mBladePosition.at(YY), mPlaneToSliceZ + mSample.mBladeFocalplaneOffsetZ };
 
 	Commandline commandline;
 	commandline.mAction = CUT;
@@ -310,7 +310,6 @@ void Sequencer::printToFile(const std::string fileName) const
 	mLaserList.printParams(fileHandle);
 	printSequencerParams(fileHandle);
 	mStack.printParams(fileHandle);
-	mVibratome.printParams(fileHandle);
 
 	//Print out the header
 	if (!mCommandList.empty())

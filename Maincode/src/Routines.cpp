@@ -720,37 +720,21 @@ void TestRoutines::vibratome(const FPGAns::FPGA &fpga)
 	pressAnyKeyToCont();
 }
 
-void TestRoutines::sequencer(const FPGAns::FPGA &fpga)
+
+//Generate the command list before execution to be able to inspect the parameters offline
+void TestRoutines::sequencer()
 {
-	//Generate the command list and keep it in memory.
-	//I prefer generating such list before execution because then I can inspect all the parameters offline
+	//Configure the sample: sampleName, immersionMedium, objectiveCollar, ROI, sampleLengthZ, initialZ, height to cut above the bottom of the stack
+	Sample sample("Beads4um", "Grycerol", "1.47", { 0, 10. * mm, 10. * mm, 0 }, 10. * mm, 10 * mm, 15 * um);
 
-	//Configure the sample
-	const ROI roi{ 0, 10. * mm, 10. * mm, 0 };
-	const double sampleLengthZ(10. * mm);
-	const double initialZ(10*mm);					//Initial position of the z stage
-	Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, initialZ);
-
-	//Configure the lasers {wavelength_nm, laser power mW, laser power incremental mW}
-	using SingleLaser = LaserList::SingleLaser; //alias
-	const SingleLaser blueLaser{ 750, 10. * mW, 5. * mW };
-	const SingleLaser greenLaser{ 940, 11. * mW, 6. * mW };
-	const SingleLaser redLaser{ 1040, 12. * mW, 7. * mW };
-	const std::vector<SingleLaser> laserList{ blueLaser, greenLaser, redLaser };
+	//Configure the lasers {wavelength_nm, laser power, laser power increment}
+	const std::vector< LaserList::SingleLaser> laserList{ { 750, 10. * mW, 5. * mW }, { 940, 11. * mW, 6. * mW }, { 1040, 12. * mW, 7. * mW } };
 	
-	//Configure the stacks
-	const double2 FOV{ 150. * um, 200. * um };
-	const double stepSizeZ(0.5 * um);						//Image resolution in z
-	const double stackDepth(100 * um);						//Stack depth or thickness
-	const double3 stackOverlap_frac{ 0.1, 0.1, 0.1 };		//Percentage of stack overlap in x, y, and z
-	Stack stack(FOV, stepSizeZ, stackDepth, stackOverlap_frac);
-
-	//Configure the vibratome
-	const double cutAboveBottomOfStack(15*um);			//Cut this much above the bottom of the stack
-	const Vibratome vibratome(fpga, cutAboveBottomOfStack);
+	//Configure the stacks: FOV, stepSizeZ, stackDepth, stackOverlap_frac
+	Stack stack({ 150. * um, 200. * um }, 0.5 * um, 100 * um, { 0.1, 0.1, 0.1 });
 
 	//Create a sequence
-	Sequencer sequence(sample, laserList, stack, vibratome);
+	Sequencer sequence(sample, laserList, stack);
 	sequence.generateCommandList();
 	sequence.printToFile("Commandlist");
 
@@ -787,7 +771,7 @@ void TestRoutines::sequencer(const FPGAns::FPGA &fpga)
 				break;
 			case CUT:
 				//Move the stage to
-				double3 stagePosition = commandline.mCommand.cutSlice.mSamplePosition;
+				double3 stagePosition = commandline.mCommand.cutSlice.mBladePosition;
 				//and then cut a slice off
 				break;
 			default:

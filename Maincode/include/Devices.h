@@ -61,14 +61,9 @@ class Vibratome
 	void moveHead_(const double duration, const MotionDir motionDir) const;
 	void pushStartStopButton() const;
 public:
-	const double2 mSamplePosition{ 0. * mm,0. * mm };	//Location of the vibratome blade in x and y wrt the stages origin. Hard-coded parameter
-	const double mBladeFocalplaneOffsetZ = 0 * um;		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
-	double mCutAboveBottomOfStack;						//Cut this much above the bottom of the stack
-
 	Vibratome(const FPGAns::FPGA &fpga, const double sliceOffset = 0);
 	void cutAndRetractDistance(const double distance) const;
 	void retractDistance(const double distance) const;
-	void Vibratome::printParams(std::ofstream *fileHandle) const;
 };
 
 class ResonantScanner
@@ -313,7 +308,11 @@ public:
 	double3 mLength;				//Sample size in x, y, and z
 	const double mInitialZ;
 
-	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double initialZ);
+	const double2 mBladePosition{ 0. * mm, 0. * mm };	//Location of the vibratome blade in x and y wrt the stages origin
+	const double mBladeFocalplaneOffsetZ = 0 * um;		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	double mCutAboveBottomOfStack;
+
+	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double initialZ, const double sliceOffset);
 	void printParams(std::ofstream *fileHandle) const;
 };
 

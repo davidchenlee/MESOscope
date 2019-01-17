@@ -287,11 +287,7 @@ unsigned char* const Image::pointerToTiff() const
 
 
 #pragma region "Vibratome"
-Vibratome::Vibratome(const FPGAns::FPGA &fpga, const double sliceOffset): mFpga(fpga), mCutAboveBottomOfStack(sliceOffset)
-{
-	if (sliceOffset < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be positive");
-}
+Vibratome::Vibratome(const FPGAns::FPGA &fpga, const double sliceOffset): mFpga(fpga) {}
 
 //Start or stop running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
 void Vibratome::pushStartStopButton() const
@@ -355,17 +351,6 @@ void Vibratome::retractDistance(const double distance) const
 	const double retractingTime = static_cast<int>(distance / mMovingSpeed);
 	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
 	moveHead_(retractingTime, BACKWARD);
-}
-
-void Vibratome::printParams(std::ofstream *fileHandle) const
-{
-	*fileHandle << "VIBRATOME ************************************************************\n";
-	*fileHandle << std::setprecision(4);
-	*fileHandle << "Blade position x,y (mm) = (" << mSamplePosition.at(XX) / mm << "," << mSamplePosition.at(YY) / mm << ")\n";
-	*fileHandle << std::setprecision(1);
-	*fileHandle << "Blade-focal plane vertical offset (um) = " << mBladeFocalplaneOffsetZ / um << "\n";
-	*fileHandle << "Cut above the bottom of the stack (um) = " << mCutAboveBottomOfStack / um << "\n";
-	*fileHandle << "\n";
 }
 #pragma endregion "Vibratome"
 
@@ -1656,8 +1641,8 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 
 
 #pragma region "Sample"
-Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double initialZ) :
-	mName(sampleName), mImmersionMedium(immersionMedium), mObjectiveCollar(objectiveCollar), mROI(roi), mInitialZ(initialZ)
+Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double initialZ, const double sliceOffset) :
+	mName(sampleName), mImmersionMedium(immersionMedium), mObjectiveCollar(objectiveCollar), mROI(roi), mInitialZ(initialZ), mCutAboveBottomOfStack(sliceOffset)
 {
 	//Convert input ROI = (xmin, ymax, xmax, ymin) to the equivalent sample length in X and Y
 	mLength.at(XX) = mROI.at(2) - mROI.at(0);
@@ -1669,6 +1654,9 @@ Sample::Sample(const std::string sampleName, const std::string immersionMedium, 
 
 	if (sampleLengthZ <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Z must be positive");
+
+	if (mCutAboveBottomOfStack < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be positive");
 }
 
 void Sample::printParams(std::ofstream *fileHandle) const
@@ -1679,7 +1667,14 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
 	*fileHandle << std::setprecision(3);
 	*fileHandle << "ROI (mm) = [" << mROI.at(0) / mm << "," << mROI.at(1) / mm << "," << mROI.at(2) / mm << "," << mROI.at(3) / mm << "]\n";
-	*fileHandle << "Length (mm) = (" << mLength.at(XX) / mm << "," << mLength.at(YY) / mm << "," << mLength.at(ZZ) / mm << ")\n";
+	*fileHandle << "Length (mm) = (" << mLength.at(XX) / mm << "," << mLength.at(YY) / mm << "," << mLength.at(ZZ) / mm << ")\n\n";
+
+	*fileHandle << "SLICE ************************************************************\n";
+	*fileHandle << std::setprecision(4);
+	*fileHandle << "Blade position x,y (mm) = (" << mBladePosition.at(XX) / mm << "," << mBladePosition.at(YY) / mm << ")\n";
+	*fileHandle << std::setprecision(1);
+	*fileHandle << "Blade-focal plane vertical offset (um) = " << mBladeFocalplaneOffsetZ / um << "\n";
+	*fileHandle << "Cut above the bottom of the stack (um) = " << mCutAboveBottomOfStack / um << "\n";
 	*fileHandle << "\n";
 }
 #pragma endregion "Sample"
@@ -1715,7 +1710,6 @@ void Stack::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "\n";
 }
 #pragma endregion "Stack"
-
 
 #pragma region "LaserList"
 LaserList::LaserList(const std::vector <SingleLaser> laser) : mLaser(laser) {}

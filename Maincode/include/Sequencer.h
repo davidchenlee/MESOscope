@@ -21,7 +21,7 @@ class Commandline
 		double mStackPinc;	//Laser power increase for a stack-scan
 	};
 	struct CutSlice {
-		double3 mSamplePosition;		//Position the sample facing the vibratome blade
+		double3 mBladePosition;		//Position the sample facing the vibratome blade
 	};
 	std::string actionToString_(const Action action) const;
 public:
@@ -38,14 +38,13 @@ public:
 	void printParameters() const;
 };
 
-//A list of commands that form a sequence
+//A list of commands to form a full sequence
 class Sequencer
 {
 	//Parameters that are unchanged throughout the sequence
 	const Sample mSample;					//Sample
 	const Stack mStack;						//Stack
 	const LaserList mLaserList;				//Laser
-	const Vibratome mVibratome;				//Vibratome
 	const int3 mInitialScanDir{ 1,1,1 };	//Initial scan directions in x, y, and z
 
 	//Parameters that vary throughout the sequence
@@ -68,7 +67,7 @@ class Sequencer
 	void saveStack_();
 	void cutSlice_();
 public:
-	Sequencer(const Sample sample, const LaserList laserList, const Stack stack, const Vibratome vibratome);
+	Sequencer(const Sample sample, const LaserList laserList, const Stack stack);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor

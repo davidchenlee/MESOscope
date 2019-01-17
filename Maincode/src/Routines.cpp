@@ -36,8 +36,8 @@ namespace MainRoutines
 		Stage stage;
 		std::vector<double3> stagePosition;
 
-		int nDiffZ;				//Number of frames at different Zs
-		int nSameZ;				//Number of frames at the same Z
+		int nDiffZ;		//Number of frames at different Zs
+		int nSameZ;		//Number of frames at the same Z
 		OverrideFileSelector overrideFlag;
 		switch (acqMode)
 		{
@@ -159,7 +159,7 @@ namespace MainRoutines
 				std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
 					"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << "\n";
 
-				laser.updatePower(8 * us, laserPower);	//Update the laser power
+				laser.setPower(laserPower);	//Update the laser power
 
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image(RTcontrol);
@@ -251,11 +251,10 @@ namespace MainRoutines
 		image.initialize();
 
 		image.startFIFOOUTpc();
-		//Move the stage to trigger the control sequence and data acquisition
 		std::cout << "Scanning the stack...\n";
-		stage.moveSingleStage(ZZ, stageXYZi.at(ZZ) + stackDepth);
+		stage.moveSingleStage(ZZ, stageXYZi.at(ZZ) + stackDepth);	//Move the stage to trigger the control sequence and data acquisition
 		image.download();
-		image.mirrorOddFrames();	//For max optimization, do this when saving the data to Tiff
+		image.mirrorOddFrames();
 
 		laser.closeShutter();
 		image.saveTiffMultiPage("Untitled", NOOVERRIDE, stackScanDirZ);
@@ -784,14 +783,16 @@ namespace TestRoutines
 		const int heightPerFrame_pix(400);
 		const double2 FFOV{ 200. * um, 150. * um };
 		const int nFramesCont(160);											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ(0.5 * um);
+		const double stepSizeZ(0.5 * um);									//Step size in z
 		const ROI roi{ 34.850 * mm, 10.150 * mm, 35.050 * mm, 9.950 * mm }; //Region of interest
 		const double3 stackOverlap_frac{ 0.1, 0.1, 0.1 };					//Stack overlap
 		const double cutAboveBottomOfStack(15 * um);						//height to cut above the bottom of the stack
 		const double sampleLengthZ(0.01 * mm);								//Sample thickness
 		const double initialZ(18.451 * mm);
 
-		const std::vector<LaserList::SingleLaser> laserList{ { 750, 55. * mW, 0. * mW } };
+		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
+		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
+		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
 		Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, initialZ, cutAboveBottomOfStack);
 		Stack stack(FFOV, stepSizeZ, stepSizeZ * nFramesCont, stackOverlap_frac);
 
@@ -803,10 +804,9 @@ namespace TestRoutines
 
 		if (1)
 		{
-			//STAGES
-			const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;
-			Stage stage(5 * mmps, 5 * mmps, stepSizeZ / frameDurationTmp);
-			stage.moveSingleStage(ZZ, sample.mInitialZ);
+			//STAGES. Specify the velocity
+			Stage stage(5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix));
+			stage.moveSingleStage(ZZ, sample.mInitialZ);	//Move to the initial position
 
 			//RS
 			ResonantScanner RScanner(fpga);
@@ -816,21 +816,15 @@ namespace TestRoutines
 			FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
 
 			//LASER: wavelength_nm, laserPower, whichLaser
-			VirtualLaser laser(RTcontrol, 750, 55. * mW, AUTO);
+			VirtualLaser laser(RTcontrol, 750);
 
-			//GALVO FOR RT
-			const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
-			const double posMax(FFOVgalvo / 2);
+			//GALVO FOR RT		
+			const double posMax(FFOV.at(XX) / 2);		//Full FOV in the slow axis
 			Galvo galvo(RTcontrol, RTGALVO1);
 			galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
 
-			//OPEN THE SHUTTER
-			laser.openShutter();
-
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image(RTcontrol);
-			image.initialize();
-
 
 			//Read the commands line by line
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
@@ -847,10 +841,8 @@ namespace TestRoutines
 				case MOV:
 					//Move the x and y stages to mStackCenter
 					stackCenter = commandline.mCommand.moveStage.mStackCenter;
-
 					stage.moveXYstages(stackCenter);
 					stage.waitForMotionToStopAllStages();
-
 
 					break;
 				case ACQ:
@@ -864,33 +856,31 @@ namespace TestRoutines
 					stackPinc = commandline.mCommand.acqStack.mStackPinc;
 					scanPf = scanPi + scanDirZ * stackPinc;
 
-					std::cout << "scanDirZ = " << scanDirZ << "\n";
-					std::cout << "scanZi = " << scanZi / mm << " mm\n";
-					std::cout << "stackDepth = " << stackDepth / mm << " mm\n";
-					std::cout << "scanZf = " << scanZf / mm << " mm\n";
-					std::cout << "scanPi = " << scanPi / mW << " mW\n";
-					std::cout << "stackPinc = " << stackPinc / mW << " mW\n";
-					std::cout << "scanPf = " << scanPf / mW << " mW\n";
+					//Update the laser parameters
+					laser.setWavelength(wavelength_nm);
+					laser.setPower(scanPi, stackPinc);
 
-
+					//OPEN THE SHUTTER
+					laser.openShutter();
+					
+					image.initialize();
 					image.startFIFOOUTpc();
-					//Move the stage to trigger the control sequence and data acquisition
 					std::cout << "Scanning the stack...\n";
-					stage.moveSingleStage(ZZ, scanZf);
+					stage.moveSingleStage(ZZ, scanZf);		//Move the stage to trigger the control sequence and data acquisition
 					image.download();
 
 					filename = toString(wavelength_nm, 0) + "nm_Pi=" + toString(scanPi / mW, 1) + "mW_Pf=" + toString(scanPf / mW, 1) + "mW" +
 						"_x=" + toString(stackCenter.at(XX) / mm, 3) + "_y=" + toString(stackCenter.at(YY) / mm, 3) +
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
-					image.mirrorOddFrames();	//For max optimization, do this when saving the data to Tiff
+					image.mirrorOddFrames();
 					image.saveTiffMultiPage(filename, NOOVERRIDE, scanDirZ);
-
 
 					break;
 				case SAV:
 					//Save the stack to file and label it with the scan parameters:
 					wavelength_nm, scanZi, stackDepth, scanPi, stackPinc;
 					stackCenter;
+
 
 					break;
 				case CUT:
@@ -903,11 +893,11 @@ namespace TestRoutines
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
 				}//switch
 
-				//pressAnyKeyToCont();
 			}//for
-
 			laser.closeShutter();
-		}
+		}//if
+
+		pressAnyKeyToCont();
 	}
 
 	void multithread()

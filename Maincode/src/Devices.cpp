@@ -926,7 +926,7 @@ void Laser::setWavelength(const int wavelength_nm)
 		if (wavelength_nm < 680 || wavelength_nm > 1080)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": VISION wavelength must be in the range 680 - 1080 nm");
 
-		if (wavelength_nm != mWavelength_nm)
+		if (wavelength_nm != mWavelength_nm)	//Set the new wavelength only if it is different from the current value
 		{
 			const std::string TxBuffer("VW=" + std::to_string(wavelength_nm));		//Command to the laser
 			std::string RxBuffer;													//Reply from the laser
@@ -1186,7 +1186,7 @@ void PockelsCell::scalingFactorLinearRamp_(const double Si, const double Sf) con
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
-	mRTcontrol.clearQueue(mScalingRTchannel);	//Delete the default scaling factors of 1.0 created in the PockelsCell constructor
+	mRTcontrol.clearQueue(mScalingRTchannel);	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
 
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, Si + (Sf - Si) / (mRTcontrol.mNframes - 1) * ii);
@@ -1235,37 +1235,25 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector whichLaser) : mWhichLaser(whichLaser), mWavelength_nm(wavelength_nm), mFWexcitation(FWEXC), mFWdetection(FWDET)
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelect) :
+	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mFWexcitation(FWEXC), mFWdetection(FWDET)
 {
-	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
-	if (whichLaser == AUTO)
-		laserAutoSelect_();
+	mWhichLaser = autoSelectLaser_(wavelength_nm);
 
 	//Initialize the laser
-	laserPtr = std::unique_ptr<Laser>(new Laser(mWhichLaser));
-	laserPtr->setWavelength(wavelength_nm);
-	checkShutterIsOpen_(*laserPtr);
+	mLaserPtr = std::unique_ptr<Laser>(new Laser(mWhichLaser));
+	mLaserPtr->setWavelength(wavelength_nm);
+	checkShutterIsOpen_(*mLaserPtr);
 
-	//Initialize the pockels cell
-	pockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(RTcontrol, wavelength_nm, mWhichLaser));
+	//Initialize the pockels cell and set the laser power
+	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mWhichLaser));
+	setPower(initialPower, powerIncrease);
 
-	//Set the initial laser power
-	if (initialPower != 0)
-	{
-		pockelsPtr->pushPowerSinglet(mPockelTimeStep, initialPower, OVERRIDE);
-		//Set the power increase
-		if (powerIncrease != 0)
-			pockelsPtr->powerLinearRamp(initialPower, initialPower + powerIncrease);
-	}
+	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << wavelength_nm << " nm\n";
 
-	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << mWavelength_nm << " nm\n";
-
-
+	//THIS IS FOR MULTIPLEXING. For a single beam, Set the wavelength of the excitation filterwheel to 0, meaning that no beamsplitter is used
 	int ExcWavelength_nm(wavelength_nm);
-	const Multiplexing multiplexing = SINGLEBEAM;
-
-	//For a single beam, Set the wavelength of the excitation filterwheel to 0, meaning that no beamsplitter is used
-	if (!multiplexing)
+	if (!mMultiplexing)
 		ExcWavelength_nm = 0;
 
 	//Tune both filterwheels concurrently
@@ -1275,19 +1263,32 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	th2.join();
 }
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector whichLaser) : VirtualLaser(RTcontrol, wavelength_nm, power, 0, whichLaser) {}
-
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector whichLaser) : VirtualLaser(RTcontrol, wavelength_nm, 0, 0, whichLaser) {}
-
-void VirtualLaser::setWavelength_(const int wavelength_nm)
+void VirtualLaser::setWavelength(const int wavelength_nm)
 {
-	laserPtr->setWavelength(wavelength_nm);
+	const LaserSelector dummy = autoSelectLaser_(wavelength_nm);
 
-	//TODO: switch the filterwheels concurrently
-	mFWexcitation.setWavelength(wavelength_nm);
-	mFWdetection.setWavelength(wavelength_nm);
+	//Switch laser if necessary
+	if (mWhichLaser != dummy)
+	{
+		mWhichLaser = dummy;
+		mLaserPtr.reset(new Laser(mWhichLaser));										//Update the laser handler
+		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mWhichLaser));	//Update the pockels handler
+	}
 
-	mWavelength_nm = wavelength_nm;
+	mLaserPtr->setWavelength(wavelength_nm);											//Change the laser wavelength
+
+	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << wavelength_nm << " nm\n";
+
+	//THIS IS FOR MULTIPLEXING. For a single beam, Set the wavelength of the excitation filterwheel to 0, meaning that no beamsplitter is used
+	int ExcWavelength_nm(wavelength_nm);
+	if (!mMultiplexing)
+		ExcWavelength_nm = 0;
+
+	//Tune both filterwheels concurrently
+	std::thread th1(&Filterwheel::setWavelength, &mFWexcitation, ExcWavelength_nm);
+	std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
+	th1.join();
+	th2.join();
 }
 
 std::string VirtualLaser::laserNameToString_(const LaserSelector whichLaser) const
@@ -1309,29 +1310,42 @@ void VirtualLaser::checkShutterIsOpen_(const Laser &laser) const
 		throw std::runtime_error((std::string)__FUNCTION__ + ": The shutter of " + laser.laserName + " seems to be closed");
 }
 
-void VirtualLaser::laserAutoSelect_()
+//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
+LaserSelector VirtualLaser::autoSelectLaser_(const int wavelength_nm)
 {
-	if (mWavelength_nm < 1040)			//Use VISION for everything below 1040 nm
-		mWhichLaser = VISION;
-	else if (mWavelength_nm == 1040)		//Use FIDELITY for 1040 nm
-		mWhichLaser = FIDELITY;
-	else
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
+	mWavelength_nm = wavelength_nm;
+
+	if (mLaserSelect == AUTO)
+	{
+		if (wavelength_nm < 1040)
+			return VISION;
+		else if (wavelength_nm == 1040)
+			return FIDELITY;
+		else
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
+	}
+	else //If different from AUTO
+		return mLaserSelect;
 }
 
-void VirtualLaser::updatePower(const double timeStep, const double power) const
+void VirtualLaser::setPower(const double initialPower, const double powerIncrease) const
 {
-	pockelsPtr->pushPowerSinglet(timeStep, power, OVERRIDE);
+	//Set the initial laser power
+	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, initialPower, OVERRIDE);
+
+	//Set the power increase
+	if (powerIncrease != 0)
+		mPockelsPtr->powerLinearRamp(initialPower, initialPower + powerIncrease);
 }
 
 void VirtualLaser::openShutter() const
 {
-	pockelsPtr->setShutter(true);
+	mPockelsPtr->setShutter(true);
 }
 
 void VirtualLaser::closeShutter() const
 {
-	pockelsPtr->setShutter(false);
+	mPockelsPtr->setShutter(false);
 }
 
 #pragma endregion "VirtualLaser"

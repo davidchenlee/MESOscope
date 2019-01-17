@@ -231,24 +231,24 @@ public:
 
 class VirtualLaser
 {
-	LaserSelector mWhichLaser;					//laser being used
-	int mWavelength_nm;							//wavelength being used
-	std::unique_ptr<Laser> laserPtr;
-	std::unique_ptr <PockelsCell> pockelsPtr;
+	const Multiplexing mMultiplexing = SINGLEBEAM;
+	FPGAns::RTcontrol &mRTcontrol;
+	LaserSelector mLaserSelect;					//VISION, FIDELITY, or AUTO (autoselection)
+	LaserSelector mWhichLaser;					//Laser currently used: VISION or FIDELITY
+	int mWavelength_nm;							//Wavelength being used
+	std::unique_ptr<Laser> mLaserPtr;
+	std::unique_ptr <PockelsCell> mPockelsPtr;
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
 	const double mPockelTimeStep = 8 * us;		//Time step for the RT pockels command
 
-	void setWavelength_(const int wavelength_nm);
 	std::string laserNameToString_(const LaserSelector whichLaser) const;
 	void checkShutterIsOpen_(const Laser &laser) const;
-	void VirtualLaser::laserAutoSelect_();
+	LaserSelector autoSelectLaser_(const int wavelength_nm);
 public:
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector whichLaser = AUTO);
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector whichLaser = AUTO);
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector whichLaser = AUTO);
-
-	void updatePower(const double timeStep, const double power) const;
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower = 0, const double powerIncrease = 0, const LaserSelector laserSelect = AUTO);
+	void setWavelength(const int wavelength_nm);
+	void setPower(const double initialPower, const double powerIncrease = 0) const;
 	void openShutter() const;
 	void closeShutter() const;
 };

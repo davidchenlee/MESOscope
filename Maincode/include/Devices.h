@@ -39,8 +39,8 @@ public:
 	void mirrorOddFrames();
 	void averageFrames();
 	void averageEvenOddFrames();
-	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDir stackScanDir = TOPDOWN) const;
-	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const StackScanDir stackScanDir = TOPDOWN) const;
+	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const int stackScanDir = 1) const;
+	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const int stackScanDir = 1) const;
 	unsigned char* const pointerToTiff() const;
 };
 
@@ -246,7 +246,7 @@ class VirtualLaser
 public:
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector whichLaser = AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector whichLaser = AUTO);
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector whichLaser);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector whichLaser = AUTO);
 
 	void updatePower(const double timeStep, const double power) const;
 	void openShutter() const;
@@ -281,7 +281,8 @@ public:
 	double3 readPositionXYZ() const;
 	void printPositionXYZ() const;
 	void moveSingleStage(const Axis stage, const double position);
-	void moveAllStages(const double3 positionXYZ);
+	void moveXYstages(const double2 positionXY);
+	void moveXYZstages(const double3 positionXYZ);
 	double downloadPosition(const Axis axis);
 	bool isMoving(const Axis axis) const;
 	void waitForMotionToStopSingleStage(const Axis axis) const;

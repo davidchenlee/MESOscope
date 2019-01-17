@@ -267,13 +267,13 @@ void Image::averageEvenOddFrames()
 }
 
 //Save each frame in mTiff in a single Tiff page
-void Image::saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDir stackScanDir) const
+void Image::saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const int stackScanDir) const
 {
 	mTiff.saveToFile(filename, SINGLEPAGE, overrideFlag, stackScanDir);
 }
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag, const StackScanDir stackScanDir) const
+void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag, const int stackScanDir) const
 {
 	mTiff.saveToFile(filename, MULTIPAGE, overrideFlag, stackScanDir);
 }
@@ -1443,7 +1443,14 @@ void Stage::moveSingleStage(const Axis axis, const double position)
 }
 
 //Move the 3 stages to the requested position
-void Stage::moveAllStages(const double3 positionXYZ)
+void Stage::moveXYstages(const double2 positionXY)
+{
+	moveSingleStage(XX, positionXY.at(XX));
+	moveSingleStage(YY, positionXY.at(YY));
+}
+
+//Move the 3 stages to the requested position
+void Stage::moveXYZstages(const double3 positionXYZ)
 {
 	moveSingleStage(XX, positionXYZ.at(XX));
 	moveSingleStage(YY, positionXYZ.at(YY));

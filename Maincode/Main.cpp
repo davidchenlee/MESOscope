@@ -36,7 +36,8 @@ int main(int argc, char* argv[])
 			//TestRoutines::tiffU8();
 			//TestRoutines::ethernetSpeed();
 			//TestRoutines::vibratome(fpga);
-			TestRoutines::sequencer();
+			//TestRoutines::sequencer();
+			TestRoutines::sequencerLight(fpga);
 			//TestRoutines::multithread();
 		}
 		catch (const std::invalid_argument &e)

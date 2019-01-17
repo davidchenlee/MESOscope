@@ -20,7 +20,7 @@ std::string Commandline::actionToString_(const Action action) const
 
 std::string Commandline::printHeader() const
 {
-	return 	"Action\tSlice#\tStackIJ\tPosition\tStack#\tWavlen\tDirZ\tZi\tZf\tPi\tPf";
+	return 	"Action\tSlice#\tStackIJ\tStack Center\tStack#\tWavlen\tDirZ\tZi\tZf\tPi\tPf";
 }
 
 std::string Commandline::printHeaderUnits() const
@@ -87,10 +87,10 @@ void Commandline::printParameters() const
 		std::cout << "scanPi/stackPdiff (mW) = " << mCommand.acqStack.mScanPi / mW << "/" << mCommand.acqStack.mStackPinc / mW << "\n\n";
 		break;
 	case SAV:
-		std::cout << "The command is " << actionToString_(mAction) << " with no parameters\n";
+		std::cout << "The command is " << actionToString_(mAction) << "\n";
 		break;
 	case CUT:
-		std::cout << "The command is " << actionToString_(mAction) << " with no parameters\n";
+		std::cout << "The command is " << actionToString_(mAction) << "\n";
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -99,7 +99,7 @@ void Commandline::printParameters() const
 #pragma endregion "Commandline"
 
 #pragma region "Sequencer"
-Sequencer::Sequencer(const Sample sample, const LaserList laserList, const Stack stack) :
+Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack stack) :
 	mSample(sample), mLaserList(laserList), mStack(stack)
 {
 	//Initialize the z-stage

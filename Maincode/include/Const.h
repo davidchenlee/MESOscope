@@ -35,7 +35,6 @@ namespace Constants
 	enum Axis { XX, YY, ZZ };
 	enum RunMode { SINGLEMODE, LIVEMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
 	enum Action { CUT, ACQ, SAV, MOV };
-	enum StackScanDir { BOTTOMUP = -1, TOPDOWN = 1 };
 	enum LaserSelector { VISION, FIDELITY, AUTO};
 	enum Filtercolor { BLUE, GREEN, RED, NONE };
 	enum ComSelector { COMVISION = 1, COMFIDELITY = 8, COMFWDET = 5, COMFWEXC = 9, COMPMT16X = 6};

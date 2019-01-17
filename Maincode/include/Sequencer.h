@@ -49,7 +49,6 @@ class Sequencer
 
 	//Parameters that vary throughout the sequence
 	std::vector<Commandline> mCommandList;
-	int mCommandCounter = 0;
 	int mStackCounter = 0;				//Count the number of stacks
 	int mSliceCounter = 0;				//Count the number of the slices
 	int2 mStackArrayDim;				//Dimension of the array of stacks. Value computed dynamically
@@ -67,7 +66,9 @@ class Sequencer
 	void saveStack_();
 	void cutSlice_();
 public:
-	Sequencer(const Sample sample, const LaserList laserList, const Stack stack);
+	int mCommandCounter = 0;
+
+	Sequencer(const LaserList laserList, const Sample sample, const Stack stack);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor

@@ -15,7 +15,7 @@ void MainRoutines::discreteScanZ(const FPGAns::FPGA &fpga)
 	const int widthPerFrame_pix(300);
 	const int heightPerFrame_pix(400);
 	const int nFramesCont(1);												//Number of frames for continuous XY acquisition
-	const double3 stagePosition0{ 34.750 * mm, 10.125 * mm, 18.479 * mm };	//Stage initial position
+	const double3 stagePosition0{ 34.750 * mm, 10.110 * mm, 18.481 * mm };	//Stage initial position
 
 	//RS
 	const ResonantScanner RScanner(fpga);

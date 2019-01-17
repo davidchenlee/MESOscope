@@ -519,7 +519,7 @@ void Galvo::voltageToZero() const
 #pragma region "PMT16X"
 PMT16X::PMT16X()
 {
-	mSerial = new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout/ms));
+	mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout/ms)));
 }
 
 PMT16X::~PMT16X()
@@ -694,7 +694,7 @@ Filterwheel::Filterwheel(const FilterwheelSelector whichFilterwheel): mWhichFilt
 
 	try
 	{
-		mSerial = new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms));
+		mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms)));
 		downloadColor_();	//Download the current filter position
 	}
 	catch (const serial::IOException)
@@ -871,7 +871,7 @@ Laser::Laser(const LaserSelector whichLaser): mWhichLaser(whichLaser)
 
 	try
 	{
-		mSerial = new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms));
+		mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms)));
 	}
 	catch (const serial::IOException)
 	{
@@ -1250,42 +1250,28 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelector) :
-	mWavelength_nm(wavelength_nm), mFWexcitation(FWEXC), mFWdetection(FWDET)
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector whichLaser) : mWhichLaser(whichLaser), mWavelength_nm(wavelength_nm), mFWexcitation(FWEXC), mFWdetection(FWDET)
 {
-	switch (laserSelector)
-	{
-	case VISION:
-		mWhichLaser = VISION;
-		break;
-	case FIDELITY:
-		mWhichLaser = FIDELITY;
-		break;
-	case AUTO:	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
-		if (wavelength_nm < 1040)
-			mWhichLaser = VISION;
-		else if (wavelength_nm == 1040)
-			mWhichLaser = FIDELITY;
-		else
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
-		break;
-	}
+	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
+	if (whichLaser == AUTO)
+		laserAutoSelect_();
 
+	//Initialize the laser
 	laserPtr = std::unique_ptr<Laser>(new Laser(mWhichLaser));
 	laserPtr->setWavelength(wavelength_nm);
 	checkShutterIsOpen_(*laserPtr);
 
+	//Initialize the pockels cell
 	pockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(RTcontrol, wavelength_nm, mWhichLaser));
 
 	//Set the initial laser power
 	if (initialPower != 0)
+	{
 		pockelsPtr->pushPowerSinglet(mPockelTimeStep, initialPower, OVERRIDE);
-
-	//Set the power increase
-	if (powerIncrease != 0)
-		pockelsPtr->powerLinearRamp(initialPower, initialPower + powerIncrease);	
-	
-
+		//Set the power increase
+		if (powerIncrease != 0)
+			pockelsPtr->powerLinearRamp(initialPower, initialPower + powerIncrease);
+	}
 
 	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << mWavelength_nm << " nm\n";
 
@@ -1304,25 +1290,18 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	th2.join();
 }
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelector) : VirtualLaser(RTcontrol, wavelength_nm, power, 0, laserSelector) {}
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector whichLaser) : VirtualLaser(RTcontrol, wavelength_nm, power, 0, whichLaser) {}
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector) : VirtualLaser(RTcontrol, wavelength_nm, 0, 0, laserSelector) {}
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector whichLaser) : VirtualLaser(RTcontrol, wavelength_nm, 0, 0, whichLaser) {}
 
 void VirtualLaser::setWavelength_(const int wavelength_nm)
 {
-	if (wavelength_nm < 1040)			//Use VISION for everything below 1040 nm
-		mWhichLaser = VISION;
-	else if (wavelength_nm == 1040)		//Use FIDELITY for 1040 nm
-		mWhichLaser = FIDELITY;
-	else
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
-
-	laserPtr.reset(new Laser(mWhichLaser));
 	laserPtr->setWavelength(wavelength_nm);
 
-	//TODO: switch to multithread
+	//TODO: switch the filterwheels concurrently
 	mFWexcitation.setWavelength(wavelength_nm);
 	mFWdetection.setWavelength(wavelength_nm);
+
 	mWavelength_nm = wavelength_nm;
 }
 
@@ -1343,6 +1322,16 @@ void VirtualLaser::checkShutterIsOpen_(const Laser &laser) const
 {
 	if (!laser.isShutterOpen())
 		throw std::runtime_error((std::string)__FUNCTION__ + ": The shutter of " + laser.laserName + " seems to be closed");
+}
+
+void VirtualLaser::laserAutoSelect_()
+{
+	if (mWavelength_nm < 1040)			//Use VISION for everything below 1040 nm
+		mWhichLaser = VISION;
+	else if (mWavelength_nm == 1040)		//Use FIDELITY for 1040 nm
+		mWhichLaser = FIDELITY;
+	else
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 }
 
 void VirtualLaser::updatePower(const double timeStep, const double power) const
@@ -1687,6 +1676,7 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "SAMPLE ************************************************************\n";
 	*fileHandle << "Name = " << mName << "\n";
 	*fileHandle << "Immersion medium = " << mImmersionMedium << "\n";
+	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
 	*fileHandle << std::setprecision(3);
 	*fileHandle << "ROI (mm) = [" << mROI.at(0) / mm << "," << mROI.at(1) / mm << "," << mROI.at(2) / mm << "," << mROI.at(3) / mm << "]\n";
 	*fileHandle << "Length (mm) = (" << mLength.at(XX) / mm << "," << mLength.at(YY) / mm << "," << mLength.at(ZZ) / mm << ")\n";

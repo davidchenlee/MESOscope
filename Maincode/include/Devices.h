@@ -112,7 +112,7 @@ public:
 
 class PMT16X
 {
-	serial::Serial *mSerial;
+	std::unique_ptr<serial::Serial> mSerial;
 	int mPort = COMPMT16X;
 	const int mBaud = 9600;
 	const int mTimeout = 300 * ms;
@@ -146,7 +146,7 @@ class Filterwheel
 	std::vector<Filtercolor> mFWconfig;		//Store the filterwheel configuration for excitation or detection
 	Filtercolor mColor;						//Current filterwheel color
 	int mPosition;							//Current filterwheel position
-	serial::Serial *mSerial;
+	std::unique_ptr<serial::Serial> mSerial;
 	int mPort;
 	const int mBaud = 115200;
 	const int mTimeout = 150 * ms;
@@ -173,7 +173,7 @@ class Laser
 {
 	LaserSelector mWhichLaser;
 	int mWavelength_nm;
-	serial::Serial *mSerial;
+	std::unique_ptr<serial::Serial> mSerial;
 	int mPort;
 	int mBaud;
 	const int mTimeout = 100 * ms;
@@ -247,10 +247,11 @@ class VirtualLaser
 	void setWavelength_(const int wavelength_nm);
 	std::string laserNameToString_(const LaserSelector whichLaser) const;
 	void checkShutterIsOpen_(const Laser &laser) const;
+	void VirtualLaser::laserAutoSelect_();
 public:
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelector = AUTO);
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelector = AUTO);
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector whichLaser = AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector whichLaser = AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector whichLaser);
 
 	void updatePower(const double timeStep, const double power) const;
 	void openShutter() const;
@@ -328,7 +329,7 @@ public:
 	void printParams(std::ofstream *fileHandle) const;
 };
 
-//Collect single laser parameters to form a list
+//Create a list of single laser parameters
 class LaserList
 {
 public:

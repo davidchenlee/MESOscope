@@ -463,11 +463,15 @@ void ResonantScanner::isRunning() const
 
 
 #pragma region "Galvo"
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel):
-	mRTcontrol(RTcontrol), mGalvoRTchannel(galvoChannel)
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel): mRTcontrol(RTcontrol), mGalvoRTchannel(galvoChannel)
 {
 	if ( mGalvoRTchannel != RTGALVO1 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
+}
+
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax) : Galvo(RTcontrol, galvoChannel)
+{
+	generateFrameScan(posMax, -posMax);
 }
 
 void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
@@ -1238,20 +1242,17 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelect) :
 	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mFWexcitation(FWEXC), mFWdetection(FWDET)
 {
-	mWhichLaser = autoSelectLaser_(wavelength_nm);
 
-	//Initialize the laser
-	mLaserPtr = std::unique_ptr<Laser>(new Laser(mWhichLaser));
-	mLaserPtr->setWavelength(wavelength_nm);
-	checkShutterIsOpen_(*mLaserPtr);
-	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << wavelength_nm << " nm\n";
+	mCurrentLaser = autoselectLaser_(wavelength_nm);				//Select the laser to be used
+	mLaserPtr = std::unique_ptr<Laser>(new Laser(mCurrentLaser));	//Initialize the laser
+	mLaserPtr->setWavelength(wavelength_nm);						//Set the wavelength
+	checkShutterIsOpen_(*mLaserPtr);								//Check if the shutter of the laser is open
+	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 
-	//Initialize the pockels cell and set the laser power
-	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mWhichLaser));
-	setPower(initialPower, powerIncrease);
+	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Initialize the pockels cell
+	setPower(initialPower, powerIncrease);							//set the laser power
 
-	//Tune the filterwheels
-	tuneFilterwheels_(wavelength_nm);
+	tuneFilterwheels_(wavelength_nm);	//Tune the filterwheels
 }
 
 std::string VirtualLaser::laserNameToString_(const LaserSelector whichLaser) const
@@ -1273,11 +1274,13 @@ void VirtualLaser::checkShutterIsOpen_(const Laser &laser) const
 		throw std::runtime_error((std::string)__FUNCTION__ + ": The shutter of " + laser.laserName + " seems to be closed");
 }
 
-//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
-LaserSelector VirtualLaser::autoSelectLaser_(const int wavelength_nm)
+//Return VISION, FIDELITY, or AUTO (let the code to decide)
+LaserSelector VirtualLaser::autoselectLaser_(const int wavelength_nm)
 {
+	//Update the wavelength
 	mWavelength_nm = wavelength_nm;
 
+	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
 	if (mLaserSelect == AUTO)
 	{
 		if (wavelength_nm < 1040)
@@ -1287,7 +1290,7 @@ LaserSelector VirtualLaser::autoSelectLaser_(const int wavelength_nm)
 		else
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 	}
-	else //If different from AUTO
+	else //If mLaserSelect != AUTO, the mLaserSelect is VISION or FIDELITY
 		return mLaserSelect;
 }
 
@@ -1307,16 +1310,16 @@ void VirtualLaser::tuneFilterwheels_(const int wavelength_nm)
 
 void VirtualLaser::setWavelength(const int wavelength_nm)
 {
-	const LaserSelector dummy = autoSelectLaser_(wavelength_nm);
+	const LaserSelector dummy = autoselectLaser_(wavelength_nm);
 
-	//Switch laser if necessary
-	if (mWhichLaser != dummy)
+	//Update the laser in use
+	if (mCurrentLaser != dummy)
 	{
-		mWhichLaser = dummy;
-		mLaserPtr.reset(new Laser(mWhichLaser));									//Update the laser handler
-		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mWhichLaser));	//Update the pockels handler
+		mCurrentLaser = dummy;
+		mLaserPtr.reset(new Laser(mCurrentLaser));										//Laser handler
+		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Pockels handler
 	}
-	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << wavelength_nm << " nm\n";
+	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 
 	//Change the laser wavelength
 	mLaserPtr->setWavelength(wavelength_nm);	

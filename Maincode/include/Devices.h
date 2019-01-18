@@ -31,7 +31,6 @@ public:
 	Image(Image&&) = delete;					//Disable move constructor
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
-	//const methods do not change the class members. The variables referenced by mRTcontrol can be modifiede, but not mRTcontrol itself
 	void acquire();
 	void initialize();
 	void startFIFOOUTpc();
@@ -62,6 +61,7 @@ class Vibratome
 	void pushStartStopButton() const;
 public:
 	Vibratome(const FPGAns::FPGA &fpga, const double sliceOffset = 0);
+
 	void cutAndRetractDistance(const double distance) const;
 	void retractDistance(const double distance) const;
 };
@@ -82,6 +82,7 @@ public:
 	double mSampRes;									//Spatial sampling resolution (length/pixel)
 
 	ResonantScanner(const FPGAns::RTcontrol &RTcontrol);
+
 	void setFFOV(const double FFOV);
 	void turnOn(const double FFOV);
 	void turnOnUsingVoltage(const double controlVoltage);
@@ -97,7 +98,8 @@ class Galvo
 	const double mVoltagePerDistance = 0.02417210 * V/um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 public:
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel);
-	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol
+	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax);
+
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
 	void positionLinearRamp(const double timeStep, const double rampLength, const double xi, const double xf) const;
 	void generateFrameScan(const double xi, const double xf) const;
@@ -198,6 +200,7 @@ class Shutter
 public:
 	Shutter(const FPGAns::FPGA &fpga, const LaserSelector whichLaser);
 	~Shutter();
+
 	void setShutter(const bool state) const;
 	void pulse(const double pulsewidth) const;
 };
@@ -215,10 +218,8 @@ class PockelsCell
 	double laserpowerToVolt_(const double power) const;
 	void scalingFactorLinearRamp_(const double Si, const double Sf) const;
 public:
-	//Do not set the output to 0 through the destructor to allow latching the last value
-	PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector);
+	PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector);	//Do not set the output to 0 through the destructor to allow latching the last value
 
-	//const methods do not change the class members. The variables referenced by mRTcontrol could change, but not mRTcontrol itself
 	void pushVoltageSinglet(const double timeStep, const double AO, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
 	void voltageToZero() const;
@@ -233,8 +234,8 @@ class VirtualLaser
 {
 	const Multiplexing mMultiplexing = SINGLEBEAM;
 	FPGAns::RTcontrol &mRTcontrol;
-	LaserSelector mLaserSelect;					//VISION, FIDELITY, or AUTO (autoselection)
-	LaserSelector mWhichLaser;					//Laser currently used: VISION or FIDELITY
+	LaserSelector mLaserSelect;					//use VISION, FIDELITY, or AUTO (let the code decide)
+	LaserSelector mCurrentLaser;				//Laser currently in use: VISION or FIDELITY
 	int mWavelength_nm;							//Wavelength being used
 	std::unique_ptr<Laser> mLaserPtr;
 	std::unique_ptr <PockelsCell> mPockelsPtr;
@@ -244,10 +245,11 @@ class VirtualLaser
 
 	std::string laserNameToString_(const LaserSelector whichLaser) const;
 	void checkShutterIsOpen_(const Laser &laser) const;
-	LaserSelector autoSelectLaser_(const int wavelength_nm);
+	LaserSelector autoselectLaser_(const int wavelength_nm);
 	void tuneFilterwheels_(const int wavelength_nm);
 public:
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower = 0, const double powerIncrease = 0, const LaserSelector laserSelect = AUTO);
+
 	void setWavelength(const int wavelength_nm);
 	void setPower(const double initialPower, const double powerIncrease = 0) const;
 	void openShutter() const;
@@ -327,6 +329,7 @@ public:
 	double3 mOverlap_frac;		//Stack overlap in x, y, and z
 
 	Stack(const double2 FOV, const double stepSizeZ, const double stackDepth, const double3 stackOverlap_frac);
+
 	void printParams(std::ofstream *fileHandle) const;
 };
 
@@ -334,8 +337,7 @@ public:
 class LaserList
 {
 public:
-	//Parameters for a single laser
-	struct SingleLaser
+	struct SingleLaser	//Parameters for a single laser
 	{
 		int mWavelength_nm;	//Laser wavelength
 		double mScanPi;		//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
@@ -345,6 +347,7 @@ public:
 	std::vector <SingleLaser> mLaser;
 
 	LaserList(const std::vector <SingleLaser> laser);
+
 	std::size_t listSize() const;
 	void printParams(std::ofstream *fileHandle) const;
 };

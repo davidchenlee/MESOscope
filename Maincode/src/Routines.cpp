@@ -24,7 +24,7 @@ namespace MainRoutines
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
-		const double stepSizeZ(0.5 * um);
+		const double stepSizeZ(1 * um);
 		double stackDepthZ(80 * um);			//Acquire a stack of this depth or thickness in Z
 
 		//SAMPLE
@@ -82,11 +82,9 @@ namespace MainRoutines
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix);
 
-		//GALVO
+		//GALVO RT linear scan
 		const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
-		const double posMax(FFOVgalvo / 2);
-		Galvo galvo(RTcontrol, RTGALVO1);
-		galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
+		Galvo galvo(RTcontrol, RTGALVO1, FFOVgalvo / 2);
 
 		//LASER
 		LaserSelector whichLaser = VISION;
@@ -237,11 +235,9 @@ namespace MainRoutines
 		VirtualLaser laser(RTcontrol, 750, 60. * mW, AUTO);
 		//VirtualLaser laser(RTcontrol, 1040, 25. * mW, AUTO);
 
-		//GALVO FOR RT
-		const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
-		const double posMax(FFOVgalvo / 2);
-		Galvo galvo(RTcontrol, RTGALVO1);
-		galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
+		//GALVO RT linear scan
+		const double FFOVgalvo(200 * um);	//Full FOV in the slow axis
+		Galvo galvo(RTcontrol, RTGALVO1, FFOVgalvo / 2);
 
 		//OPEN THE SHUTTER
 		laser.openShutter();
@@ -716,79 +712,55 @@ namespace TestRoutines
 		pressAnyKeyToCont();
 	}
 
-
-	//Generate the command list before execution to be able to inspect the parameters offline
-	void sequencer()
+	void multithread()
 	{
-		//Configure the sample: sampleName, immersionMedium, objectiveCollar, ROI, sampleLengthZ, initialZ, height to cut above the bottom of the stack
-		Sample sample("Beads4um", "Grycerol", "1.47", { 0, 10. * mm, 10. * mm, 0 }, 10. * mm, 10 * mm, 15 * um);
-
-		//Configure the lasers {wavelength_nm, laser power, laser power increment}
-		const std::vector<LaserList::SingleLaser> laserList{ { 750, 10. * mW, 5. * mW }, { 940, 11. * mW, 6. * mW }, { 1040, 12. * mW, 7. * mW } };
-
-		//Configure the stacks: FOV, stepSizeZ, stackDepth, stackOverlap_frac
-		Stack stack({ 200. * um, 150. * um }, 0.5 * um, 100 * um, { 0.1, 0.1, 0.1 });
-
-		//Create a sequence
-		Sequencer sequence(laserList, sample, stack);
-		sequence.generateCommandList();
-		sequence.printToFile("Commandlist");
-
-		if (0)
+		class FUNC
 		{
-			//Read the commands line by line
-			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 10; iterCommandline++)
+			int dummy;
+		public:
+			FUNC(const int i) : dummy(i) {}
+			void func1(const int x)
 			{
-				Commandline commandline = sequence.getCommandline(iterCommandline); //Implement read-from-file?
-				commandline.printParameters();
+				Sleep(1000);
+				std::cout << "func1 " << x << "\n";
+				dummy = x;
+			}
+			void func2(const int x)
+			{
+				std::cout << "func2 " << x << "\n";
+				dummy = x;
+			}
+		};
 
-				double scanZi, stackDepth, scanPi, stackPinc;
-				double2 stackCenter;
-				int wavelength_nm;
-				switch (commandline.mAction)
-				{
-				case MOV:
-					//Move the x and y stages to mStackCenter
-					stackCenter = commandline.mCommand.moveStage.mStackCenter;
-					break;
-				case ACQ:
-					//Acquire a stack using the parameters:
-					wavelength_nm = commandline.mCommand.acqStack.mWavelength_nm;
-					scanZi = commandline.mCommand.acqStack.mScanZi;
-					stackDepth = commandline.mCommand.acqStack.mStackDepth;
-					scanPi = commandline.mCommand.acqStack.mScanPi;
-					stackPinc = commandline.mCommand.acqStack.mStackPinc;
-				case SAV:
-					//Save the stack to file and label it with the scan parameters:
-					wavelength_nm, scanZi, stackDepth, scanPi, stackPinc;
-					stackCenter;
-					break;
-				case CUT:
-					//Move the stage to
-					double3 stagePosition = commandline.mCommand.cutSlice.mBladePosition;
-					//and then cut a slice off
-					break;
-				default:
-					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
-				}
-			}//switch
-		}//for
-		//pressAnyKeyToCont();
+		unsigned int n = std::thread::hardware_concurrency();
+		std::cout << n << " concurrent threads are supported.\n";
+
+		std::cout << "func1 and func2 will execute concurrently\n";
+
+		FUNC x(1);
+
+		std::thread first(&FUNC::func1, &x, 123);
+		std::thread second(&FUNC::func2, &x, 314);
+
+		first.join();//pauses until first finishes
+		second.join();//pauses until second finishes
+
+		pressAnyKeyToCont();
 	}
 
-	void sequencerLight(const FPGAns::FPGA &fpga)
+	void sequencer(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix(300);
 		const int heightPerFrame_pix(400);
 		const double2 FFOV{ 200. * um, 150. * um };
-		const int nFramesCont(160);											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int nFramesCont(80);											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ(0.5 * um);									//Step size in z
 		const ROI roi{ 34.850 * mm, 10.150 * mm, 35.050 * mm, 9.950 * mm }; //Region of interest
-		const double3 stackOverlap_frac{ 0.1, 0.1, 0.1 };					//Stack overlap
+		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };					//Stack overlap
 		const double cutAboveBottomOfStack(15 * um);						//height to cut above the bottom of the stack
 		const double sampleLengthZ(0.01 * mm);								//Sample thickness
-		const double initialZ(18.451 * mm);
+		const double initialZ(18.471 * mm);
 
 		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
 		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
@@ -800,7 +772,6 @@ namespace TestRoutines
 		Sequencer sequence(laserList, sample, stack);
 		sequence.generateCommandList();
 		sequence.printToFile("CommandlistLight");
-
 
 		if (1)
 		{
@@ -818,16 +789,15 @@ namespace TestRoutines
 			//LASER: wavelength_nm, laserPower, whichLaser
 			VirtualLaser laser(RTcontrol, laserList.front().mWavelength_nm);
 
-			//GALVO FOR RT		
-			const double posMax(FFOV.at(XX) / 2);		//Full FOV in the slow axis
-			Galvo galvo(RTcontrol, RTGALVO1);
-			galvo.generateFrameScan(posMax, -posMax);	//Linear ramp for the galvo
+			//GALVO RT linear ramp	
+			Galvo galvo(RTcontrol, RTGALVO1, FFOV.at(XX) / 2);
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image(RTcontrol);
 
 			//Read the commands line by line
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
+			//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
 				Commandline commandline = sequence.getCommandline(iterCommandline); //Implement read-from-file?
 				commandline.printParameters();
@@ -896,42 +866,6 @@ namespace TestRoutines
 			}//for
 			laser.closeShutter();
 		}//if
-
-		pressAnyKeyToCont();
-	}
-
-	void multithread()
-	{
-		class FUNC
-		{
-			int dummy;
-		public:
-			FUNC(const int i) : dummy(i) {}
-			void func1(const int x)
-			{
-				Sleep(1000);
-				std::cout << "func1 " << x << "\n";
-				dummy = x;
-			}
-			void func2(const int x)
-			{
-				std::cout << "func2 " << x << "\n";
-				dummy = x;
-			}
-		};
-
-		unsigned int n = std::thread::hardware_concurrency();
-		std::cout << n << " concurrent threads are supported.\n";
-
-		std::cout << "func1 and func2 will execute concurrently\n";
-
-		FUNC x(1);
-
-		std::thread first(&FUNC::func1, &x, 123);
-		std::thread second(&FUNC::func2, &x, 314);
-
-		first.join();//pauses until first finishes
-		second.join();//pauses until second finishes
 
 		pressAnyKeyToCont();
 	}

@@ -142,7 +142,7 @@ namespace MainRoutines
 		TiffStack tiffStack(widthPerFrame_pix, heightPerFrame_pix, nDiffZ, nSameZ);
 
 		//OPEN THE UNIBLITZ SHUTTERS
-		laser.openShutter();
+		laser.openShutter();	//The shutter destructor will close the shutter
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
@@ -180,7 +180,6 @@ namespace MainRoutines
 			std::cout << "\n";
 			laserPower += (laserPowerMin - laserPowerMax) / nDiffZ;		//calculate the new laser power
 		}
-		laser.closeShutter();
 
 		if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
 		{
@@ -240,7 +239,7 @@ namespace MainRoutines
 		Galvo galvo(RTcontrol, RTGALVO1, FFOVgalvo / 2);
 
 		//OPEN THE SHUTTER
-		laser.openShutter();
+		laser.openShutter();	//The shutter destructor will close the shutter
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image(RTcontrol);
@@ -251,8 +250,6 @@ namespace MainRoutines
 		stage.moveSingleStage(ZZ, stageXYZi.at(ZZ) + stackDepth);	//Move the stage to trigger the control sequence and data acquisition
 		image.download();
 		image.mirrorOddFrames();
-
-		laser.closeShutter();
 		image.saveTiffMultiPage("Untitled", NOOVERRIDE, stackScanDirZ);
 
 		//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence
@@ -299,7 +296,7 @@ namespace CalibrationRoutines
 		stage.waitForMotionToStopAllStages();
 
 		//OPEN THE UNIBLITZ SHUTTERS
-		laser.openShutter();
+		laser.openShutter();	//The shutter destructor will close the shutter
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image(RTcontrol);
@@ -307,8 +304,6 @@ namespace CalibrationRoutines
 		image.mirrorOddFrames();
 		image.averageEvenOddFrames();
 		image.saveTiffMultiPage("Untitled", NOOVERRIDE);
-
-		laser.closeShutter();
 
 		pressAnyKeyToCont();
 	}
@@ -757,7 +752,7 @@ namespace TestRoutines
 		const int nFramesCont(80);											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ(0.5 * um);									//Step size in z
 		const ROI roi{ 34.850 * mm, 10.150 * mm, 35.050 * mm, 9.950 * mm }; //Region of interest
-		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };					//Stack overlap
+		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack(15 * um);						//height to cut above the bottom of the stack
 		const double sampleLengthZ(0.01 * mm);								//Sample thickness
 		const double initialZ(18.471 * mm);
@@ -800,7 +795,7 @@ namespace TestRoutines
 			//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
 				Commandline commandline = sequence.getCommandline(iterCommandline); //Implement read-from-file?
-				commandline.printParameters();
+				//commandline.printParameters();
 
 				double scanZi, scanZf, stackDepth, scanPi, scanPf, stackPinc;
 				double2 stackCenter;
@@ -831,7 +826,7 @@ namespace TestRoutines
 					laser.setPower(scanPi, stackPinc);
 
 					//OPEN THE SHUTTER
-					laser.openShutter();
+					laser.openShutter();	//The shutter destructor will close the shutter
 					
 					image.initialize();
 					image.startFIFOOUTpc();
@@ -862,9 +857,8 @@ namespace TestRoutines
 				default:
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
 				}//switch
-
+				//pressAnyKeyToCont();
 			}//for
-			laser.closeShutter();
 		}//if
 
 		pressAnyKeyToCont();

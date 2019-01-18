@@ -1240,13 +1240,16 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelect) :
-	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mFWexcitation(FWEXC), mFWdetection(FWDET)
+	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mVision(VISION), mFidelity(FIDELITY), mFWexcitation(FWEXC), mFWdetection(FWDET)
 {
+	//Select the laser to be used: VISION or FIDELITY
+	mCurrentLaser = autoselectLaser_(wavelength_nm);
 
-	mCurrentLaser = autoselectLaser_(wavelength_nm);				//Select the laser to be used
-	mLaserPtr = std::unique_ptr<Laser>(new Laser(mCurrentLaser));	//Initialize the laser
-	mLaserPtr->setWavelength(wavelength_nm);						//Set the wavelength
-	checkShutterIsOpen_(*mLaserPtr);								//Check if the shutter of the laser is open
+	//Update the laser wavelength if VISION was chosen
+	if (mCurrentLaser == VISION)
+		mVision.setWavelength(wavelength_nm);
+
+	checkShutterIsOpen_();
 	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 
 	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Initialize the pockels cell
@@ -1268,13 +1271,22 @@ std::string VirtualLaser::laserNameToString_(const LaserSelector whichLaser) con
 	}
 }
 
-void VirtualLaser::checkShutterIsOpen_(const Laser &laser) const
+void VirtualLaser::checkShutterIsOpen_() const
 {
-	if (!laser.isShutterOpen())
-		throw std::runtime_error((std::string)__FUNCTION__ + ": The shutter of " + laser.laserName + " seems to be closed");
+	switch (mCurrentLaser)
+	{
+	case VISION:
+		if (!mVision.isShutterOpen())
+			throw std::runtime_error((std::string)__FUNCTION__ + ": The shutter of VISION seems to be closed");
+		break;
+	case FIDELITY:
+		if (!mFidelity.isShutterOpen())
+			throw std::runtime_error((std::string)__FUNCTION__ + ": The shutter of FIDELITY seems to be closed");
+		break;
+	}
 }
 
-//Return VISION, FIDELITY, or AUTO (let the code to decide)
+//Return VISION, FIDELITY, or let the code to decide
 LaserSelector VirtualLaser::autoselectLaser_(const int wavelength_nm)
 {
 	//Update the wavelength
@@ -1316,13 +1328,15 @@ void VirtualLaser::setWavelength(const int wavelength_nm)
 	if (mCurrentLaser != dummy)
 	{
 		mCurrentLaser = dummy;
-		mLaserPtr.reset(new Laser(mCurrentLaser));										//Laser handler
+		checkShutterIsOpen_();
 		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Pockels handler
+
 	}
 	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 
-	//Change the laser wavelength
-	mLaserPtr->setWavelength(wavelength_nm);	
+	//Update the laser wavelength if VISION was chosen
+	if (mCurrentLaser == VISION)
+		mVision.setWavelength(wavelength_nm);	
 
 	//Tune the filterwheels
 	tuneFilterwheels_(wavelength_nm);

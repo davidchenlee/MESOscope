@@ -233,18 +233,19 @@ public:
 class VirtualLaser
 {
 	const Multiplexing mMultiplexing = SINGLEBEAM;
-	FPGAns::RTcontrol &mRTcontrol;
 	LaserSelector mLaserSelect;					//use VISION, FIDELITY, or AUTO (let the code decide)
 	LaserSelector mCurrentLaser;				//Laser currently in use: VISION or FIDELITY
+	FPGAns::RTcontrol &mRTcontrol;
 	int mWavelength_nm;							//Wavelength being used
-	std::unique_ptr<Laser> mLaserPtr;
-	std::unique_ptr <PockelsCell> mPockelsPtr;
+	Laser mVision;
+	Laser mFidelity;
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
+	std::unique_ptr <PockelsCell> mPockelsPtr;
 	const double mPockelTimeStep = 8 * us;		//Time step for the RT pockels command
 
 	std::string laserNameToString_(const LaserSelector whichLaser) const;
-	void checkShutterIsOpen_(const Laser &laser) const;
+	void checkShutterIsOpen_() const;
 	LaserSelector autoselectLaser_(const int wavelength_nm);
 	void tuneFilterwheels_(const int wavelength_nm);
 public:

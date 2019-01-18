@@ -816,7 +816,7 @@ namespace TestRoutines
 			FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
 
 			//LASER: wavelength_nm, laserPower, whichLaser
-			VirtualLaser laser(RTcontrol, 750);
+			VirtualLaser laser(RTcontrol, laserList.front().mWavelength_nm);
 
 			//GALVO FOR RT		
 			const double posMax(FFOV.at(XX) / 2);		//Full FOV in the slow axis

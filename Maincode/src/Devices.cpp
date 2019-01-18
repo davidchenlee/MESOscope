@@ -1244,51 +1244,14 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	mLaserPtr = std::unique_ptr<Laser>(new Laser(mWhichLaser));
 	mLaserPtr->setWavelength(wavelength_nm);
 	checkShutterIsOpen_(*mLaserPtr);
+	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << wavelength_nm << " nm\n";
 
 	//Initialize the pockels cell and set the laser power
 	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mWhichLaser));
 	setPower(initialPower, powerIncrease);
 
-	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << wavelength_nm << " nm\n";
-
-	//THIS IS FOR MULTIPLEXING. For a single beam, Set the wavelength of the excitation filterwheel to 0, meaning that no beamsplitter is used
-	int ExcWavelength_nm(wavelength_nm);
-	if (!mMultiplexing)
-		ExcWavelength_nm = 0;
-
-	//Tune both filterwheels concurrently
-	std::thread th1(&Filterwheel::setWavelength, &mFWexcitation, ExcWavelength_nm);
-	std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
-	th1.join();
-	th2.join();
-}
-
-void VirtualLaser::setWavelength(const int wavelength_nm)
-{
-	const LaserSelector dummy = autoSelectLaser_(wavelength_nm);
-
-	//Switch laser if necessary
-	if (mWhichLaser != dummy)
-	{
-		mWhichLaser = dummy;
-		mLaserPtr.reset(new Laser(mWhichLaser));										//Update the laser handler
-		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mWhichLaser));	//Update the pockels handler
-	}
-
-	mLaserPtr->setWavelength(wavelength_nm);											//Change the laser wavelength
-
-	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << wavelength_nm << " nm\n";
-
-	//THIS IS FOR MULTIPLEXING. For a single beam, Set the wavelength of the excitation filterwheel to 0, meaning that no beamsplitter is used
-	int ExcWavelength_nm(wavelength_nm);
-	if (!mMultiplexing)
-		ExcWavelength_nm = 0;
-
-	//Tune both filterwheels concurrently
-	std::thread th1(&Filterwheel::setWavelength, &mFWexcitation, ExcWavelength_nm);
-	std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
-	th1.join();
-	th2.join();
+	//Tune the filterwheels
+	tuneFilterwheels_(wavelength_nm);
 }
 
 std::string VirtualLaser::laserNameToString_(const LaserSelector whichLaser) const
@@ -1326,6 +1289,40 @@ LaserSelector VirtualLaser::autoSelectLaser_(const int wavelength_nm)
 	}
 	else //If different from AUTO
 		return mLaserSelect;
+}
+
+void VirtualLaser::tuneFilterwheels_(const int wavelength_nm)
+{
+	//TO ALLOW MULTIPLEXING. For a single beam, Set the wavelength of the excitation filterwheel to 0, meaning that no beamsplitter is used
+	int ExcWavelength_nm(wavelength_nm);
+	if (!mMultiplexing)
+		ExcWavelength_nm = 0;
+
+	//Tune both filterwheels concurrently
+	std::thread th1(&Filterwheel::setWavelength, &mFWexcitation, ExcWavelength_nm);
+	std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
+	th1.join();
+	th2.join();
+}
+
+void VirtualLaser::setWavelength(const int wavelength_nm)
+{
+	const LaserSelector dummy = autoSelectLaser_(wavelength_nm);
+
+	//Switch laser if necessary
+	if (mWhichLaser != dummy)
+	{
+		mWhichLaser = dummy;
+		mLaserPtr.reset(new Laser(mWhichLaser));									//Update the laser handler
+		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mWhichLaser));	//Update the pockels handler
+	}
+	std::cout << "Using " << laserNameToString_(mWhichLaser) << " at " << wavelength_nm << " nm\n";
+
+	//Change the laser wavelength
+	mLaserPtr->setWavelength(wavelength_nm);	
+
+	//Tune the filterwheels
+	tuneFilterwheels_(wavelength_nm);
 }
 
 void VirtualLaser::setPower(const double initialPower, const double powerIncrease) const

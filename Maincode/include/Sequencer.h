@@ -3,26 +3,29 @@
 #include "Devices.h"
 using namespace Constants;
 
+struct MoveStage {
+	int mSliceNumber;		//Slice number
+	int2 mStackIJ;			//Indices for the 2D array of stacks
+	double2 mStackCenter;	//X and Y positiosn of the center of the stack
+};
+
+struct AcqStack {
+	int mStackNumber;
+	int mWavelength_nm;
+	int mScanDirZ;		//Z-stage scan direction: +1 for positive, -1 for negative
+	double mScanZi;		//Initial z position of a stack-scan
+	double mStackDepth;	//Stack depth or thickness
+	double mScanPi;		//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
+	double mStackPinc;	//Laser power increase for a stack-scan
+};
+
+struct CutSlice {
+	double3 mBladePosition;		//Position the sample facing the vibratome blade
+};
+
 //Single commands
 class Commandline
 {
-	struct MoveStage {
-		int mSliceNumber;		//Slice number
-		int2 mStackIJ;			//Indices for the 2D array of stacks
-		double2 mStackCenter;	//X and Y positiosn of the center of the stack
-	};
-	struct AcqStack {
-		int mStackNumber;
-		int mWavelength_nm;
-		int mScanDirZ;		//Z-stage scan direction: +1 for positive, -1 for negative
-		double mScanZi;		//Initial z position of a stack-scan
-		double mStackDepth;	//Stack depth or thickness
-		double mScanPi;		//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mStackPinc;	//Laser power increase for a stack-scan
-	};
-	struct CutSlice {
-		double3 mBladePosition;		//Position the sample facing the vibratome blade
-	};
 	std::string actionToString_(const Action action) const;
 public:
 	Action mAction;

@@ -41,4 +41,5 @@ namespace TestRoutines
 	void vibratome(const FPGAns::FPGA &fpga);
 	void multithread();
 	void sequencer(const FPGAns::FPGA &fpga);
+	void sequencerSim();
 }

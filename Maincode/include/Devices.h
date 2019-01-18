@@ -34,7 +34,7 @@ public:
 
 	void acquire();
 	void initialize() const;
-	void download();
+	void downloadData();
 	void postprocess();
 	void averageFrames();
 	void averageEvenOddFrames();

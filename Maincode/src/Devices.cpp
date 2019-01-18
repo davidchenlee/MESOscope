@@ -224,7 +224,7 @@ void Image::initialize() const
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
 }
 
-void Image::download()
+void Image::downloadData()
 {
 	if (FIFOOUTfpga)
 	{

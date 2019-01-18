@@ -142,7 +142,7 @@ namespace MainRoutines
 		TiffStack tiffStack(widthPerFrame_pix, heightPerFrame_pix, nDiffZ, nSameZ);
 
 		//OPEN THE UNIBLITZ SHUTTERS
-		laser.openShutter();	//The shutter destructor will close the shutter
+		laser.openShutter();	//The destructor will close the shutter automatically
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
@@ -238,14 +238,14 @@ namespace MainRoutines
 		Galvo galvo(RTcontrol, RTGALVO1, FFOVgalvo / 2);
 
 		//OPEN THE SHUTTER
-		laser.openShutter();	//The shutter destructor will close the shutter
+		laser.openShutter();	//The destructor will close the shutter automatically
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image(RTcontrol);
 		image.initialize();
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingleStage(ZZ, stageXYZi.at(ZZ) + stackDepth);	//Move the stage to trigger the control sequence and data acquisition
-		image.download();
+		image.downloadData();
 		image.postprocess();
 		image.saveTiffMultiPage("Untitled", NOOVERRIDE, stackScanDirZ);
 
@@ -293,7 +293,7 @@ namespace CalibrationRoutines
 		stage.waitForMotionToStopAllStages();
 
 		//OPEN THE UNIBLITZ SHUTTERS
-		laser.openShutter();	//The shutter destructor will close the shutter
+		laser.openShutter();	//The destructor will close the shutter automatically
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image(RTcontrol);
@@ -786,13 +786,11 @@ namespace TestRoutines
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image(RTcontrol);
 
-
-			double scanZi, scanZf, stackDepth, scanPi, scanPf, stackPinc;
+			//Read the commands line by line
+			double scanZi, scanZf, scanPi, stackPinc;
 			double2 stackCenter;
 			int wavelength_nm, scanDirZ;
 			std::string filename;
-
-			//Read the commands line by line
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
 			//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
@@ -806,44 +804,41 @@ namespace TestRoutines
 					stackCenter = commandline.mCommand.moveStage.mStackCenter;
 					stage.moveXYstages(stackCenter);
 					stage.waitForMotionToStopAllStages();
-
 					break;
 				case ACQ:
 					//Acquire a stack using the parameters:
-					wavelength_nm = commandline.mCommand.acqStack.mWavelength_nm;
-					scanDirZ = commandline.mCommand.acqStack.mScanDirZ;
-					scanZi = commandline.mCommand.acqStack.mScanZi;
-					stackDepth = commandline.mCommand.acqStack.mStackDepth;
-					scanZf = scanZi + scanDirZ * stackDepth;
-					scanPi = commandline.mCommand.acqStack.mScanPi;
-					stackPinc = commandline.mCommand.acqStack.mStackPinc;
-					scanPf = scanPi + scanDirZ * stackPinc;
+					AcqStack acqStack = commandline.mCommand.acqStack;
+
+					wavelength_nm = acqStack.mWavelength_nm;
+					scanDirZ = acqStack.mScanDirZ;
+					scanZi = acqStack.mScanZi;
+					scanZf = scanZi + scanDirZ * acqStack.mStackDepth;
+					scanPi = acqStack.mScanPi;
+					stackPinc = acqStack.mStackPinc;
 
 					//Update the laser parameters
 					laser.setWavelength(wavelength_nm);
 					laser.setPower(scanPi, stackPinc);
 
 					//OPEN THE SHUTTER
-					laser.openShutter();	//The shutter destructor will close the shutter
+					laser.openShutter();	//The destructor will close the shutter automatically
 
 					image.initialize();	
 					std::cout << "Scanning the stack...\n";
 					stage.moveSingleStage(ZZ, scanZf);		//Move the stage to trigger the control sequence and data acquisition
-					image.download();
+					image.downloadData();
 					break;
 				case SAV:
-					image.postprocess();
-
-					filename = toString(wavelength_nm, 0) + "nm_Pi=" + toString(scanPi / mW, 1) + "mW_Pf=" + toString(scanPf / mW, 1) + "mW" +
+					filename = toString(wavelength_nm, 0) + "nm_Pi=" + toString(scanPi / mW, 1) + "mW_Pf=" + toString((scanPi + scanDirZ * stackPinc) / mW, 1) + "mW" +
 						"_x=" + toString(stackCenter.at(XX) / mm, 3) + "_y=" + toString(stackCenter.at(YY) / mm, 3) +
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
 
+					image.postprocess();
 					image.saveTiffMultiPage(filename, NOOVERRIDE, scanDirZ);
 					break;
 				case CUT:
-					//Move the stage to
+					//Move the stage to and then cut a slice off
 					double3 stagePosition = commandline.mCommand.cutSlice.mBladePosition;
-					//and then cut a slice off
 					break;
 				default:
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -852,6 +847,110 @@ namespace TestRoutines
 			}//for
 		}//if
 
+		pressAnyKeyToCont();
+	}
+
+	void sequencerSim()
+	{
+		class FUNC
+		{
+		public:
+			void func1(const int x)
+			{
+				Sleep(10000);
+				std::cout << "Thread saveFile finished\n";
+			}
+			void func2(const int x)
+			{
+				Sleep(5000);
+				std::cout << "Thread moveStage finished\n";
+			}
+		};
+
+		//ACQUISITION SETTINGS
+		const int widthPerFrame_pix(300);
+		const int heightPerFrame_pix(400);
+		const double2 FFOV{ 200. * um, 150. * um };
+		const int nFramesCont(80);											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const double stepSizeZ(0.5 * um);									//Step size in z
+		const ROI roi{ 34.850 * mm, 10.150 * mm, 35.050 * mm, 9.950 * mm }; //Region of interest
+		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
+		const double cutAboveBottomOfStack(15 * um);						//height to cut above the bottom of the stack
+		const double sampleLengthZ(0.01 * mm);								//Sample thickness
+		const double initialZ(18.471 * mm);
+
+		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
+		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
+		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
+		Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, initialZ, cutAboveBottomOfStack);
+		Stack stack(FFOV, stepSizeZ, stepSizeZ * nFramesCont, stackOverlap_frac);
+
+		//Create a sequence
+		Sequencer sequence(laserList, sample, stack);
+		sequence.generateCommandList();
+		sequence.printToFile("CommandlistLight");
+
+
+		if (1)
+		{
+
+			FUNC x;
+			std::thread saveFile, moveStage;
+	
+			//Read the commands line by line
+			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
+				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
+			{
+				Commandline commandline = sequence.getCommandline(iterCommandline); //Implement read-from-file?
+				//commandline.printParameters();
+
+				switch (commandline.mAction)
+				{
+				case MOV:
+					std::cout << "MOV " << "\n";
+
+					//Skip the first MOV to position the stage
+					if (iterCommandline != 0)
+						moveStage = std::thread(&FUNC::func2, &x, 314);
+
+					std::cout << "saveFile joinable? " << std::boolalpha << saveFile.joinable() << "\n";
+					std::cout << "moveStage joinable? " << std::boolalpha << moveStage.joinable() << "\n";
+
+					break;
+				case ACQ:
+					std::cout << "ACQ " << "\n";
+
+					if (saveFile.joinable() && moveStage.joinable())
+					{
+						saveFile.join();
+						moveStage.join();
+					}
+					break;
+				case SAV:
+					std::cout << "SAV" << "\n";
+					saveFile = std::thread(&FUNC::func1, &x, 123);
+					break;
+				case CUT:
+					std::cout << "CUT" << "\n";
+					saveFile.join();
+
+					break;
+				default:
+					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
+				}//switch
+				//pressAnyKeyToCont();
+			}//for
+
+			std::cout << "saveFile joinable? " << std::boolalpha << saveFile.joinable() << "\n";
+			std::cout << "moveStage joinable? " << std::boolalpha << moveStage.joinable() << "\n";
+
+			if (moveStage.joinable())
+				moveStage.join();
+
+			if (saveFile.joinable())
+				saveFile.join();
+
+		}//if
 		pressAnyKeyToCont();
 	}
 }//namespace

@@ -15,14 +15,15 @@ class Image
 	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
 	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB after demultiplexing
 
-	void startFIFOOUTpc_() const;
-	void configureFIFOOUTpc_(const U32 depth) const;	//Currently I don't use this function
-	void stopFIFOOUTpc_() const;
+	void FIFOOUTpcGarbageCollector_() const;
+
 	void readFIFOOUTpc_();
 	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);
 	void correctInterleaved_();
 	void demultiplex_();
-	void FIFOOUTpcGarbageCollector_() const;
+	void startFIFOOUTpc() const;
+	void configureFIFOOUTpc_(const U32 depth) const;
+	void stopFIFOOUTpc_() const;
 public:
 	Image(FPGAns::RTcontrol &RTcontrol);
 	~Image();
@@ -32,10 +33,9 @@ public:
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
 	void acquire();
-	void initialize();
-	void startFIFOOUTpc();
+	void initialize() const;
 	void download();
-	void mirrorOddFrames();
+	void postprocess();
 	void averageFrames();
 	void averageEvenOddFrames();
 	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const int stackScanDir = 1) const;

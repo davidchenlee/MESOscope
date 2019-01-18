@@ -19,16 +19,6 @@ Image::~Image()
 	//std::cout << "Image destructor called\n";
 }
 
-//Establish a connection between FIFOOUTpc and FIFOOUTfpga
-void Image::startFIFOOUTpc_() const
-{
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
-
-	//Flush any residual data in FIFOOUT from the previous run just in case
-	FIFOOUTpcGarbageCollector_();
-}
-
 //Flush the residual data in FIFOOUTpc from the previous run, if any
 void Image::FIFOOUTpcGarbageCollector_() const
 {
@@ -65,23 +55,6 @@ void Image::FIFOOUTpcGarbageCollector_() const
 	}
 	if (nElemTotalA > 0 || nElemTotalB > 0)
 		std::cout << "FIFOOUTpc garbage collector called. Number of elements cleaned up in FIFOOUTpc A/B: " << nElemTotalA << "/" << nElemTotalB << "\n";
-}
-
-//Configure FIFOOUTpc. According to NI, this step is optional
-void Image::configureFIFOOUTpc_(const U32 depth) const
-{
-	U32 actualDepth;
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
-	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << "\n";
-}
-
-//Stop the connection between FIFOOUTpc and FIFOOUTfpga
-void Image::stopFIFOOUTpc_() const
-{
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
-	//std::cout << "stopFIFO called\n";
 }
 
 //Read the data in FIFOOUTpc
@@ -197,11 +170,35 @@ void Image::demultiplex_()
 	}
 }
 
+//Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
+void Image::startFIFOOUTpc() const
+{
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+}
+
+//Configure FIFOOUTpc. Optional according to NI
+void Image::configureFIFOOUTpc_(const U32 depth) const
+{
+	U32 actualDepth;
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
+	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << "\n";
+}
+
+//Stop the connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI
+void Image::stopFIFOOUTpc_() const
+{
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	//std::cout << "stopFIFO called\n";
+}
+
 void Image::acquire()
 {
-	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
+	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from the previous run
+	mRTcontrol.presetFPGAoutput_();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
-	startFIFOOUTpc_();				//Establish the connection between FIFOOUTfpga and FIFOOUTpc and cleans up any residual data from the previous run
 	mRTcontrol.triggerRT();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 
 	if (FIFOOUTfpga)
@@ -211,6 +208,7 @@ void Image::acquire()
 			readFIFOOUTpc_();			//Read the data received in FIFOOUTpc
 			correctInterleaved_();
 			demultiplex_();				//Move the chuncks of data to the buffer array
+			mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning. Divide the long vertical image in nFrames and vertically mirror the odd frames
 		}
 		catch (const ImageException &e) //Notify the exception and continue with the next iteration
 		{
@@ -219,15 +217,11 @@ void Image::acquire()
 	}
 }
 
-void Image::initialize()
+void Image::initialize() const
 {
-	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
+	FIFOOUTpcGarbageCollector_();	//Cleans up any residual data from the previous run
+	mRTcontrol.presetFPGAoutput_();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
-}
-
-void Image::startFIFOOUTpc()
-{
-	startFIFOOUTpc_();				//Establish the connection between FIFOOUTfpga and FIFOOUTpc and cleans up any residual data from the previous run
 }
 
 void Image::download()
@@ -237,8 +231,7 @@ void Image::download()
 		try
 		{
 			readFIFOOUTpc_();			//Read the data received in FIFOOUTpc
-			correctInterleaved_();
-			demultiplex_();				//Move the chuncks of data to the buffer array
+
 		}
 		catch (const ImageException &e) //Notify the exception and continue with the next iteration
 		{
@@ -247,11 +240,11 @@ void Image::download()
 	}
 }
 
-//The galvo (vectical axis of the image) performs bi-directional scanning
-//Divide the long vertical image in nFrames and vertically mirror the odd frames
-void Image::mirrorOddFrames()
+void Image::postprocess()
 {
-	mTiff.mirrorOddFrames();
+	correctInterleaved_();
+	demultiplex_();				//Move the chuncks of data to the buffer array
+	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning. Divide the long vertical image in nFrames and vertically mirror the odd frames
 }
 
 //Split the long vertical image into nFrames and calculate the average

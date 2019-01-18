@@ -162,7 +162,6 @@ namespace MainRoutines
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image(RTcontrol);
 				image.acquire();			//Execute the RT control sequence and acquire the image
-				image.mirrorOddFrames();
 				image.averageFrames();		//Average the frames acquired via continuous XY acquisition
 				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
 
@@ -215,7 +214,7 @@ namespace MainRoutines
 
 		//STAGES
 		const int stackScanDirZ = 1;	//Scan direction in z: 1 for top-down, -1 for bottom-up
-		const double3 stackCenterXYZ{ 34.750 * mm, 10.110 * mm, 18.451 * mm };												//Center of x, y, z stack
+		const double3 stackCenterXYZ{ 34.925 * mm, 10.130 * mm, 18.483 * mm };												//Center of x, y, z stack
 		const double stackDepth(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ);
 		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages
 		const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;											//TODO: combine this with the galvo's one
@@ -244,12 +243,10 @@ namespace MainRoutines
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image(RTcontrol);
 		image.initialize();
-
-		image.startFIFOOUTpc();
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingleStage(ZZ, stageXYZi.at(ZZ) + stackDepth);	//Move the stage to trigger the control sequence and data acquisition
 		image.download();
-		image.mirrorOddFrames();
+		image.postprocess();
 		image.saveTiffMultiPage("Untitled", NOOVERRIDE, stackScanDirZ);
 
 		//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence
@@ -301,7 +298,6 @@ namespace CalibrationRoutines
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image(RTcontrol);
 		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
-		image.mirrorOddFrames();
 		image.averageEvenOddFrames();
 		image.saveTiffMultiPage("Untitled", NOOVERRIDE);
 
@@ -790,6 +786,12 @@ namespace TestRoutines
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image(RTcontrol);
 
+
+			double scanZi, scanZf, stackDepth, scanPi, scanPf, stackPinc;
+			double2 stackCenter;
+			int wavelength_nm, scanDirZ;
+			std::string filename;
+
 			//Read the commands line by line
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
 			//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
@@ -797,10 +799,6 @@ namespace TestRoutines
 				Commandline commandline = sequence.getCommandline(iterCommandline); //Implement read-from-file?
 				//commandline.printParameters();
 
-				double scanZi, scanZf, stackDepth, scanPi, scanPf, stackPinc;
-				double2 stackCenter;
-				int wavelength_nm, scanDirZ;
-				std::string filename;
 				switch (commandline.mAction)
 				{
 				case MOV:
@@ -827,32 +825,25 @@ namespace TestRoutines
 
 					//OPEN THE SHUTTER
 					laser.openShutter();	//The shutter destructor will close the shutter
-					
-					image.initialize();
-					image.startFIFOOUTpc();
+
+					image.initialize();	
 					std::cout << "Scanning the stack...\n";
 					stage.moveSingleStage(ZZ, scanZf);		//Move the stage to trigger the control sequence and data acquisition
 					image.download();
+					break;
+				case SAV:
+					image.postprocess();
 
 					filename = toString(wavelength_nm, 0) + "nm_Pi=" + toString(scanPi / mW, 1) + "mW_Pf=" + toString(scanPf / mW, 1) + "mW" +
 						"_x=" + toString(stackCenter.at(XX) / mm, 3) + "_y=" + toString(stackCenter.at(YY) / mm, 3) +
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
-					image.mirrorOddFrames();
+
 					image.saveTiffMultiPage(filename, NOOVERRIDE, scanDirZ);
-
-					break;
-				case SAV:
-					//Save the stack to file and label it with the scan parameters:
-					wavelength_nm, scanZi, stackDepth, scanPi, stackPinc;
-					stackCenter;
-
-
 					break;
 				case CUT:
 					//Move the stage to
 					double3 stagePosition = commandline.mCommand.cutSlice.mBladePosition;
 					//and then cut a slice off
-
 					break;
 				default:
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");

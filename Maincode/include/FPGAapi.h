@@ -83,7 +83,7 @@ namespace FPGAns
 		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO, const OverrideFileSelector overrideFlag = NOOVERRIDE);
 		void pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor);
 		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi, const double Vf);
-		void presetFPGAoutput() const;
+		void presetFPGAoutput_() const;
 		void uploadRT() const;
 		void triggerRT() const;
 		void setZstageTriggerEnabled(const bool state);

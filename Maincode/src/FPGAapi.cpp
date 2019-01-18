@@ -405,7 +405,7 @@ namespace FPGAns
 	}
 
 	//Preset the FPGA output with the first value in the RT control sequence to avoid discontinuities at the start of the sequence
-	void RTcontrol::presetFPGAoutput() const
+	void RTcontrol::presetFPGAoutput_() const
 	{
 		//Read from the FPGA the last voltage in the galvo AO. See the LV implementation
 		std::vector<I16> AOlastVoltage_I16(RTNCHAN, 0);
@@ -439,7 +439,6 @@ namespace FPGAns
 	{
 		uploadFIFOIN_(mVectorOfQueues);
 	}
-
 
 	//Trigger the RT control sequence on the FPGA
 	void RTcontrol::triggerRT() const

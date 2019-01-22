@@ -196,12 +196,13 @@ void Image::stopFIFOOUTpc_() const
 
 void Image::acquire()
 {
-	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from the previous run
+
 	mRTcontrol.presetFPGAoutput_();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
+	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from a previous run
 	mRTcontrol.triggerRT();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 
-	if (FIFOOUTfpga)
+	if (FIFOOUTfpgaEnable)
 	{
 		try
 		{
@@ -219,14 +220,14 @@ void Image::acquire()
 
 void Image::initialize() const
 {
-	FIFOOUTpcGarbageCollector_();	//Cleans up any residual data from the previous run
 	mRTcontrol.presetFPGAoutput_();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
+	FIFOOUTpcGarbageCollector_();	//Cleans up any residual data from the previous run
 }
 
 void Image::downloadData()
 {
-	if (FIFOOUTfpga)
+	if (FIFOOUTfpgaEnable)
 	{
 		try
 		{

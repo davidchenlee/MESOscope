@@ -174,7 +174,7 @@ class Laser
 	int mPort;
 	int mBaud;
 	const int mTimeout = 100 * ms;
-	const double mTuningSpeed = 35./sec;			//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
+	const double mTuningSpeed = 35./sec;		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
 	const int mRxBufSize = 256;					//Serial buffer size
 
 	int downloadWavelength_nm_();

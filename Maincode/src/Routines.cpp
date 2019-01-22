@@ -9,23 +9,23 @@ namespace MainRoutines
 		//const RunMode acqMode = SINGLEMODE;			//Single shot
 		//const RunMode acqMode = LIVEMODE;				//Image the same z plane many times as single shots. Used it for adjusting the microscope live
 		//const RunMode acqMode = AVGMODE;				//Image the same z plane many times and average the images
-		const RunMode acqMode = STACKMODE;			//Stack volume from the initial z position
-		//const RunMode acqMode = STACKCENTEREDMODE;		//Stack volume centered at the initial z position
+		//const RunMode acqMode = STACKMODE;			//Stack volume from the initial z position
+		const RunMode acqMode = STACKCENTEREDMODE;		//Stack volume centered at the initial z position
 
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix(300);
 		const int heightPerFrame_pix(400);
 		const int nFramesCont(1);												//Number of frames for continuous XY acquisition
 		//const double3 stagePosition0{ 34.750 * mm, 10.110 * mm, 18.481 * mm };	//Stage initial position
-		const double3 stagePosition0{ 34.925 * mm, 10.130 * mm, 18.451 * mm };	//Stage initial position
+		const double3 stagePosition0{ 34.925 * mm, 10.130 * mm, 18.483 * mm };	//Stage initial position
 
 		//RS
 		const ResonantScanner RScanner(fpga);
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
-		const double stepSizeZ(1 * um);
-		double stackDepthZ(80 * um);			//Acquire a stack of this depth or thickness in Z
+		const double stepSizeZ(0.5 * um);
+		double stackDepthZ(10 * um);			//Acquire a stack of this depth or thickness in Z
 
 		//SAMPLE
 		const std::string sampleName("Beads4um");
@@ -189,6 +189,7 @@ namespace MainRoutines
 			tiffStack.saveToFile(stackFilename, overrideFlag);
 		}
 
+		laser.closeShutter();
 		pressAnyKeyToCont();
 	}
 
@@ -252,6 +253,7 @@ namespace MainRoutines
 		//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence
 		//RTcontrol.setZstageTriggerEnabled(false);
 
+		laser.closeShutter();
 		//pressAnyKeyToCont();
 	}
 }//namespace
@@ -751,10 +753,10 @@ namespace TestRoutines
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack(15 * um);						//height to cut above the bottom of the stack
 		const double sampleLengthZ(0.01 * mm);								//Sample thickness
-		const double initialZ(18.471 * mm);
+		const double initialZ(18.483 * mm);
 
-		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
-		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
+		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
+		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
 		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
 		Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, initialZ, cutAboveBottomOfStack);
 		Stack stack(FFOV, stepSizeZ, stepSizeZ * nFramesCont, stackOverlap_frac);

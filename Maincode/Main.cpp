@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//MAIN SEQUENCES
-			MainRoutines::discreteScanZ(fpga);
+			//MainRoutines::discreteScanZ(fpga);
 			//MainRoutines::continuousScanZ(fpga);
 
 			//CALIBRATION
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::sequencer();
 			//TestRoutines::multithread();
-			//TestRoutines::sequencer(fpga);
+			TestRoutines::sequencer(fpga);
 			//TestRoutines::sequencerSim();
 		}
 		catch (const std::invalid_argument &e)

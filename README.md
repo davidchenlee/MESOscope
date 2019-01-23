@@ -3,8 +3,6 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- Make Tiff correction (mirror odd frames, average frames, etc) with multithread
-- save Tiff and move stages concurrently
 - Maybe install VTK to display tiff images
 
 ### LabView

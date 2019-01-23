@@ -309,15 +309,16 @@ public:
 	std::string mName;
 	std::string mImmersionMedium;
 	std::string mObjectiveCollar;
-	ROI mROI;						//Region of interest across the entire sample {ymin, xmin, ymax, xmax}
-	double3 mLength;				//Sample size in x, y, and z
-	const double mInitialZ;
+	ROI mROI = { 0, 0, 0, 0 };			//Region of interest across the entire sample {ymin, xmin, ymax, xmax}
+	double3 mLength = { 0, 0, 0 };		//Sample size in x, y, and z
+	double mSurfaceZ = -1;
 
 	const double2 mBladePosition{ 0. * mm, 0. * mm };	//Location of the vibratome blade in x and y wrt the stages origin
 	const double mBladeFocalplaneOffsetZ = 0 * um;		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack;
 
-	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double initialZ, const double sliceOffset);
+	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset);
+	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar);	//For debugging with beads
 	void printParams(std::ofstream *fileHandle) const;
 };
 
@@ -330,7 +331,6 @@ public:
 	double3 mOverlap_frac;		//Stack overlap in x, y, and z
 
 	Stack(const double2 FOV, const double stepSizeZ, const int nFrames, const double3 stackOverlap_frac);
-
 	void printParams(std::ofstream *fileHandle) const;
 };
 

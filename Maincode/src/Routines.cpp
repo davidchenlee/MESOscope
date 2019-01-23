@@ -16,7 +16,6 @@ namespace MainRoutines
 		const int widthPerFrame_pix(300);
 		const int heightPerFrame_pix(400);
 		const int nFramesCont(1);												//Number of frames for continuous XY acquisition
-		//const double3 stagePosition0{ 34.750 * mm, 10.110 * mm, 18.481 * mm };	//Stage initial position
 		const double3 stagePosition0{ 34.925 * mm, 11.217 * mm, 18.541 * mm };	//Stage initial position
 
 		//RS
@@ -84,10 +83,10 @@ namespace MainRoutines
 
 		//GALVO RT linear scan
 		const double FFOVgalvo(200 * um);			//Full FOV in the slow axis
-		Galvo galvo(RTcontrol, RTGALVO1, FFOVgalvo / 2);
+		const Galvo galvo(RTcontrol, RTGALVO1, FFOVgalvo / 2);
 
 		//LASER
-		LaserSelector whichLaser = VISION;
+		const LaserSelector whichLaser = VISION;
 		int wavelength_nm;
 		double laserPowerMin, laserPowerMax;
 		switch (whichLaser)
@@ -106,7 +105,7 @@ namespace MainRoutines
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Select VISION OR FIDELITY");
 		}
 		double laserPower = laserPowerMin;
-		VirtualLaser laser(RTcontrol, wavelength_nm, whichLaser);
+		const VirtualLaser laser(RTcontrol, wavelength_nm, whichLaser);
 
 		//DATALOG
 		{
@@ -224,19 +223,19 @@ namespace MainRoutines
 		stage.waitForMotionToStopAllStages();
 
 		//RS
-		ResonantScanner RScanner(fpga);
+		const ResonantScanner RScanner(fpga);
 		RScanner.isRunning();		//Make sure that the RS is running
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
 
 		//LASER: wavelength_nm, laserPower, whichLaser
-		VirtualLaser laser(RTcontrol, 750, 60. * mW, AUTO);
+		const VirtualLaser laser(RTcontrol, 750, 60. * mW, AUTO);
 		//VirtualLaser laser(RTcontrol, 1040, 25. * mW, AUTO);
 
 		//GALVO RT linear scan
 		const double FFOVgalvo(200 * um);	//Full FOV in the slow axis
-		Galvo galvo(RTcontrol, RTGALVO1, FFOVgalvo / 2);
+		const Galvo galvo(RTcontrol, RTGALVO1, FFOVgalvo / 2);
 
 		//OPEN THE SHUTTER
 		laser.openShutter();	//The destructor will close the shutter automatically
@@ -743,39 +742,42 @@ namespace TestRoutines
 
 		pressAnyKeyToCont();
 	}
+
+
 	void sequencer(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix(300);
 		const int heightPerFrame_pix(400);
 		const double2 FFOV{ 200. * um, 150. * um };
-		const int nFramesCont(80);											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ(0.5 * um);									//Step size in z
-		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.200 * mm, 35.025 * mm }; //Region of interest {ymin, xmin, ymax, xmax}
-		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
-		const double cutAboveBottomOfStack(15 * um);						//height to cut above the bottom of the stack
-		const double sampleLengthZ(0.01 * mm);								//Sample thickness
-		const double initialZ(18.516 * mm);
+		const int nFramesCont(80);												//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const double stepSizeZ(0.5 * um);										//Step size in z
+		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.200 * mm, 35.025 * mm };	//Region of interest {ymin, xmin, ymax, xmax}
+		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };					//Stack overlap
+		const double cutAboveBottomOfStack(15 * um);							//height to cut above the bottom of the stack
+		const double sampleLengthZ(0.01 * mm);									//Sample thickness
+		const double sampleSurfaceZ(18.521 * mm);
 
 		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
 		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
 		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
-		Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, initialZ, cutAboveBottomOfStack);
-		Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlap_frac);
+		const Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack);
+		const Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlap_frac);
 
 		//Create a sequence
-		Sequencer sequence(laserList, sample, stack);
+		//Sequencer sequence(laserList, sample, stack);
+		Sequencer sequence(laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, { 34.925 * mm, 11.217 * mm, 18.541 * mm } , { 2, 2 });
 		sequence.generateCommandList();
-		sequence.printToFile("CommandlistLight");
+		sequence.printToFile("Commandlist");
 
-		if (1)
+		if (0)
 		{
 			//STAGES. Specify the velocity
 			Stage stage(5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix));
-			stage.moveSingleStage(ZZ, sample.mInitialZ);	//Move to the initial position
+			stage.moveSingleStage(ZZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
 
 			//RS
-			ResonantScanner RScanner(fpga);
+			const ResonantScanner RScanner(fpga);
 			RScanner.isRunning();		//Make sure that the RS is running
 
 			//CREATE THE REALTIME CONTROL SEQUENCE
@@ -785,7 +787,7 @@ namespace TestRoutines
 			VirtualLaser laser(RTcontrol, laserList.front().mWavelength_nm);
 
 			//GALVO RT linear ramp	
-			Galvo galvo(RTcontrol, RTGALVO1, FFOV.at(XX) / 2);
+			const Galvo galvo(RTcontrol, RTGALVO1, FFOV.at(XX) / 2);
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image(RTcontrol);
@@ -881,12 +883,12 @@ namespace TestRoutines
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack(15 * um);						//height to cut above the bottom of the stack
 		const double sampleLengthZ(0.01 * mm);								//Sample thickness
-		const double initialZ(18.471 * mm);
+		const double sampleSurfaceZ(18.471 * mm);
 
 		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
 		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
 		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
-		Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, initialZ, cutAboveBottomOfStack);
+		Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack);
 		Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlap_frac);
 
 		//Create a sequence

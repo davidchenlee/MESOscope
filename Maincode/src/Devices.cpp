@@ -199,7 +199,7 @@ void Image::acquire()
 
 	mRTcontrol.presetFPGAoutput_();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
-	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI, but if not called, 
+	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI, but if not called, sometimes garbage is generated
 	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from a previous run
 	mRTcontrol.triggerRT();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 
@@ -223,7 +223,7 @@ void Image::initialize() const
 {
 	mRTcontrol.presetFPGAoutput_();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
-	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga
+	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI, but if not called, sometimes garbage is generated
 	FIFOOUTpcGarbageCollector_();	//Cleans up any residual data from the previous run
 }
 
@@ -1672,23 +1672,26 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 
 
 #pragma region "Sample"
-Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double initialZ, const double sliceOffset) :
-	mName(sampleName), mImmersionMedium(immersionMedium), mObjectiveCollar(objectiveCollar), mROI(roi), mInitialZ(initialZ), mCutAboveBottomOfStack(sliceOffset)
+Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :
+	mName(sampleName), mImmersionMedium(immersionMedium), mObjectiveCollar(objectiveCollar), mROI(roi), mSurfaceZ(sampleSurfaceZ), mCutAboveBottomOfStack(sliceOffset)
 {
 	//Convert input ROI = {ymin, xmin, ymax, xmax} to the equivalent sample length in X and Y
-	mLength.at(XX) = mROI.at(3) - mROI.at(1);
-	mLength.at(YY) = mROI.at(2) - mROI.at(0);
+	mLength.at(XX) = mROI.at(XMAX) - mROI.at(XMIN);
+	mLength.at(YY) = mROI.at(YMAX) - mROI.at(YMIN);
 	mLength.at(ZZ) = sampleLengthZ;
 
 	if (mLength.at(XX) <= 0 || mLength.at(YY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
 
-	if (sampleLengthZ <= 0)
+	if (mLength.at(ZZ) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Z must be positive");
 
 	if (mCutAboveBottomOfStack < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be positive");
 }
+
+Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar) :
+	mName(sampleName), mImmersionMedium(immersionMedium), mObjectiveCollar(objectiveCollar), mCutAboveBottomOfStack(0) {}
 
 void Sample::printParams(std::ofstream *fileHandle) const
 {
@@ -1697,7 +1700,7 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "Immersion medium = " << mImmersionMedium << "\n";
 	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
 	*fileHandle << std::setprecision(3);
-	*fileHandle << "ROI (mm) = [" << mROI.at(0) / mm << "," << mROI.at(1) / mm << "," << mROI.at(2) / mm << "," << mROI.at(3) / mm << "]\n";
+	*fileHandle << "ROI = [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROI.at(YMIN) / mm << "," << mROI.at(XMIN) / mm << "," << mROI.at(YMAX) / mm << "," << mROI.at(XMAX) / mm << "]\n";
 	*fileHandle << "Length (mm) = (" << mLength.at(XX) / mm << "," << mLength.at(YY) / mm << "," << mLength.at(ZZ) / mm << ")\n\n";
 
 	*fileHandle << "SLICE ************************************************************\n";

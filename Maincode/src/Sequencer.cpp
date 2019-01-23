@@ -37,8 +37,8 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 	case MOV:
 		*fileHandle << actionToString_(mAction) << "\t" << mCommand.moveStage.mSliceNumber;
 		*fileHandle << "\t(" << mCommand.moveStage.mStackIJ.at(XX) << "," << mCommand.moveStage.mStackIJ.at(YY) << ")\t";
-		*fileHandle << std::setprecision(3);
-		*fileHandle << "(" << mCommand.moveStage.mStackCenter.at(0) / mm << "," << mCommand.moveStage.mStackCenter.at(1) / mm << ")\n";
+		*fileHandle << std::setprecision(4);
+		*fileHandle << "(" << mCommand.moveStage.mStackCenter.at(XX) / mm << "," << mCommand.moveStage.mStackCenter.at(YY) / mm << ")\n";
 		break;
 	case ACQ:
 		scanZf = mCommand.acqStack.mScanZi + mCommand.acqStack.mScanDirZ * mCommand.acqStack.mStackDepth;
@@ -99,11 +99,10 @@ void Commandline::printParameters() const
 #pragma endregion "Commandline"
 
 #pragma region "Sequencer"
-Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack stack) :
-	mSample(sample), mLaserList(laserList), mStack(stack)
+Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack stack) : mSample(sample), mLaserList(laserList), mStack(stack)
 {
-	//Initialize the z-stage
-	mScanZi = mSample.mInitialZ;
+	//Initialize the z-stage with the position of the sample surface
+	mScanZi = mSample.mSurfaceZ;
 
 	//Initialize the height of the plane to slice
 	mPlaneToSliceZ = mScanZi + mStack.mDepth - mSample.mCutAboveBottomOfStack;
@@ -130,6 +129,32 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'cutAboveBottomOfStack' must be greater than the stack z-overlap " + toString(stackOverlapZ / um, 1) + " um");
 }
 
+Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 initialPosition, const int2 stackArrayDim) : mSample(sample), mLaserList(laserList), mStack(stack)
+{
+	mSample.mROI.at(XMIN) = initialPosition.at(XX) - mStack.mFOV.at(XX) / 2;
+	mSample.mROI.at(YMIN) = initialPosition.at(YY) - mStack.mFOV.at(YY) / 2;
+	mSample.mROI.at(XMAX) = mSample.mROI.at(XMIN) + mStack.mFOV.at(XX);
+	mSample.mROI.at(YMAX) = mSample.mROI.at(YMIN) + mStack.mFOV.at(YY);
+
+	//Initialize the z-stage
+	mScanZi = initialPosition.at(ZZ);
+
+	//Initialize the height of the plane to slice
+	mPlaneToSliceZ = 0;
+
+	if (stackArrayDim.at(XX) <= 0 || stackArrayDim.at(YY) <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack array dimension must be equal to 1 or greater");
+
+	mStackArrayDim = stackArrayDim;		//Number of stacks in x and y
+
+	mNtotalSlices = 1;
+	const int mNtotalStacksPerVibratomeSlice = mStackArrayDim.at(XX) * mStackArrayDim.at(YY);											//Total number of stacks in a vibratome slice
+	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserList.listSize()) * mNtotalStacksPerVibratomeSlice;		//Total number of stacks in the entire sample
+
+	//Pre-reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
+	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
+}
+
 //The initial laser power of a stack-scan depends on whether the stack is imaged from the top down or from the bottom up.
 //Give the laser power at the top of the stack scanPmin, the power increment stackPinc, and the scanning direction scanDirZ to return the initial laser power of the scan
 double Sequencer::calculateStackScanInitialPower_(const double scanPmin, const double stackPinc, const int scanDirZ)
@@ -140,15 +165,15 @@ double Sequencer::calculateStackScanInitialPower_(const double scanPmin, const d
 		return scanPmin + stackPinc;
 }
 
-//The first stack center is L/2 away from the ROI's edge. The next center is (1-a)*L away from the first center, where a*L is the stack overlap
+//The first stack center is L/2 away from the ROI's edge. The next center is at (1-a)*L away from the first center, where a*L is the stack overlap
 double2 Sequencer::stackIndicesToStackCenter_(const int2 stackArrayIndices) const
 {
 	const double overlapX_frac = mStack.mOverlap_frac.at(XX);
 	const double overlapY_frac = mStack.mOverlap_frac.at(YY);
 
 	double2 stagePosition;
-	stagePosition.at(XX) = mSample.mROI.at(1) + mStack.mFOV.at(XX)  * ((1 - overlapX_frac) * stackArrayIndices.at(XX) + 0.5);
-	stagePosition.at(YY) = mSample.mROI.at(0) + mStack.mFOV.at(YY)  * ((1 - overlapY_frac) * stackArrayIndices.at(YY) + 0.5);
+	stagePosition.at(XX) = mSample.mROI.at(XMIN) + mStack.mFOV.at(XX)  * ((1 - overlapX_frac) * stackArrayIndices.at(XX) + 0.5);
+	stagePosition.at(YY) = mSample.mROI.at(YMIN) + mStack.mFOV.at(YY)  * ((1 - overlapY_frac) * stackArrayIndices.at(YY) + 0.5);
 
 	return stagePosition;
 }
@@ -287,9 +312,9 @@ void Sequencer::printSequencerParams(std::ofstream *fileHandle) const
 	*fileHandle << "SEQUENCER ************************************************************\n";
 	*fileHandle << "Stages initial scan directions (x,y,z) = {" << mInitialScanDir.at(XX) << "," << mInitialScanDir.at(YY) << "," << mInitialScanDir.at(ZZ) << "}\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Z-stage initial position (mm) = " << mSample.mInitialZ / mm << "\n";
+	*fileHandle << "Sample surface z position (mm) = " << mSample.mSurfaceZ / mm << "\n";
 	*fileHandle << std::setprecision(0);
-	*fileHandle << "# vibratome slices = " << mNtotalSlices << "\n";
+	*fileHandle << "# tissue slices = " << mNtotalSlices << "\n";
 	*fileHandle << "StackArray dim (x,y) = (" << mStackArrayDim.at(XX) << "," << mStackArrayDim.at(YY) << ")\n";
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";

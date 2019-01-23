@@ -1369,18 +1369,18 @@ Stage::Stage(const double velX, const double velY, const double velZ)
 
 	//Open the connections to the stage controllers and assign the IDs
 	std::cout << "Establishing connection with the stages\n";
-	mID.at(XX) = PI_ConnectUSB(stageIDx.c_str());
-	mID.at(YY) = PI_ConnectUSB(stageIDy.c_str());
-	mID.at(ZZ) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
-	//mID.at(ZZ) = PI_ConnectUSB(stageIDz.c_str());
+	mID_XYZ.at(XX) = PI_ConnectUSB(stageIDx.c_str());
+	mID_XYZ.at(YY) = PI_ConnectUSB(stageIDy.c_str());
+	mID_XYZ.at(ZZ) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	//mID_XYZ.at(ZZ) = PI_ConnectUSB(stageIDz.c_str());
 
-	if (mID.at(XX) < 0)
+	if (mID_XYZ.at(XX) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
 
-	if (mID.at(YY) < 0)
+	if (mID_XYZ.at(YY) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
 
-	if (mID.at(ZZ) < 0)
+	if (mID_XYZ.at(ZZ) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
 
 	std::cout << "Connection with the stages successfully established\n";
@@ -1397,9 +1397,9 @@ Stage::Stage(const double velX, const double velY, const double velZ)
 Stage::~Stage()
 {
 	//Close the Connections
-	PI_CloseConnection(mID.at(XX));
-	PI_CloseConnection(mID.at(YY));
-	PI_CloseConnection(mID.at(ZZ));
+	PI_CloseConnection(mID_XYZ.at(XX));
+	PI_CloseConnection(mID_XYZ.at(YY));
+	PI_CloseConnection(mID_XYZ.at(ZZ));
 	std::cout << "Connection to the stages successfully closed\n";
 }
 
@@ -1442,7 +1442,7 @@ void Stage::printPositionXYZ() const
 double Stage::downloadPosition(const Axis axis)
 {
 	double position_mm;	//Position in mm
-	if (!PI_qPOS(mID.at(axis), mNstagesPerController, &position_mm))
+	if (!PI_qPOS(mID_XYZ.at(axis), mNstagesPerController, &position_mm))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query position for the stage " + axisToString(axis));
 
 	return position_mm * mm;	//Multiply by mm to convert from explicit to implicit units
@@ -1452,14 +1452,14 @@ double Stage::downloadPosition(const Axis axis)
 void Stage::moveSingleStage(const Axis axis, const double position)
 {
 	//Check if the requested position is within range
-	if (position < mSoftPosMinXYZ.at(axis) || position > mSoftPosMaxXYZ.at(axis))
+	if (position < mSoftPosLimXYZ.at(axis).at(0) || position > mSoftPosLimXYZ.at(axis).at(1))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position out of bounds for stage " + axisToString(axis));
 
 	//Move the stage
 	if (mPositionXYZ.at(axis) != position ) //Move only if the requested position is different from the current position
 	{
-		const double position_mm = position / mm;							//Divide by mm to convert from implicit to explicit units
-		if (!PI_MOV(mID.at(axis), mNstagesPerController, &position_mm) )	//~14 ms to execute this function
+		const double position_mm = position / mm;								//Divide by mm to convert from implicit to explicit units
+		if (!PI_MOV(mID_XYZ.at(axis), mNstagesPerController, &position_mm) )	//~14 ms to execute this function
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString(axis) + " to the target position");
 
 		mPositionXYZ.at(axis) = position;
@@ -1485,7 +1485,7 @@ bool Stage::isMoving(const Axis axis) const
 {
 	BOOL isMoving;
 
-	if (!PI_IsMoving(mID.at(axis), mNstagesPerController, &isMoving))	//~55 ms to execute this function
+	if (!PI_IsMoving(mID_XYZ.at(axis), mNstagesPerController, &isMoving))	//~55 ms to execute this function
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage " + axisToString(axis));
 
 	return isMoving;
@@ -1495,7 +1495,7 @@ void Stage::waitForMotionToStopSingleStage(const Axis axis) const
 {
 	BOOL isMoving;
 	do {
-		if (!PI_IsMoving(mID.at(axis), mNstagesPerController, &isMoving))
+		if (!PI_IsMoving(mID_XYZ.at(axis), mNstagesPerController, &isMoving))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage" + axisToString(axis));
 
 		std::cout << ".";
@@ -1510,13 +1510,13 @@ void Stage::waitForMotionToStopAllStages() const
 
 	BOOL isMoving_x, isMoving_y, isMoving_z;
 	do {
-		if (!PI_IsMoving(mID.at(XX), mNstagesPerController, &isMoving_x))
+		if (!PI_IsMoving(mID_XYZ.at(XX), mNstagesPerController, &isMoving_x))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage X");
 
-		if (!PI_IsMoving(mID.at(YY), mNstagesPerController, &isMoving_y))
+		if (!PI_IsMoving(mID_XYZ.at(YY), mNstagesPerController, &isMoving_y))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Y");
 
-		if (!PI_IsMoving(mID.at(ZZ), mNstagesPerController, &isMoving_z))
+		if (!PI_IsMoving(mID_XYZ.at(ZZ), mNstagesPerController, &isMoving_z))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Z");
 
 		std::cout << ".";
@@ -1527,9 +1527,9 @@ void Stage::waitForMotionToStopAllStages() const
 
 void Stage::stopAllstages() const
 {
-	PI_StopAll(mID.at(XX));
-	PI_StopAll(mID.at(YY));
-	PI_StopAll(mID.at(ZZ));
+	PI_StopAll(mID_XYZ.at(XX));
+	PI_StopAll(mID_XYZ.at(YY));
+	PI_StopAll(mID_XYZ.at(ZZ));
 
 	std::cout << "Stages stopped\n";
 }
@@ -1538,7 +1538,7 @@ void Stage::stopAllstages() const
 double Stage::downloadSingleVelocity(const Axis axis) const
 {
 	double vel_mmps;
-	if (!PI_qVEL(mID.at(axis), mNstagesPerController, &vel_mmps))
+	if (!PI_qVEL(mID_XYZ.at(axis), mNstagesPerController, &vel_mmps))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage " + axisToString(axis));
 
 	//std::cout << vel_mmps << " mm/s\n";
@@ -1552,7 +1552,7 @@ void Stage::setSingleVelocity(const Axis axis, const double vel) const
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be greater than zero for the stage " + axisToString(axis));
 
 	const double vel_mmps = vel / mmps;		//Divide by mmps to convert implicit to explicit units
-	if (!PI_VEL(mID.at(axis), mNstagesPerController, &vel_mmps))
+	if (!PI_VEL(mID_XYZ.at(axis), mNstagesPerController, &vel_mmps))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString(axis));
 }
 
@@ -1577,7 +1577,7 @@ double Stage::downloadDOtriggerSingleParam(const Axis axis, const int DOchan, co
 {
 	const int triggerParam = static_cast<int>(param);
 	double value;
-	if (!PI_qCTO(mID.at(axis), &DOchan, &triggerParam, &value, 1))
+	if (!PI_qCTO(mID_XYZ.at(axis), &DOchan, &triggerParam, &value, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger config for the stage " + axisToString(axis));
 
 	//std::cout << value << "\n";
@@ -1587,7 +1587,7 @@ double Stage::downloadDOtriggerSingleParam(const Axis axis, const int DOchan, co
 void Stage::setDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const
 {
 	const int triggerParam = static_cast<int>(paramId);
-	if (!PI_CTO(mID.at(axis), &DOchan, &triggerParam, &value, 1))
+	if (!PI_CTO(mID_XYZ.at(axis), &DOchan, &triggerParam, &value, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + axisToString(axis));
 }
 
@@ -1596,7 +1596,7 @@ void Stage::setDOtriggerAllParams(const Axis axis, const int DOchan, const doubl
 	if ( triggerStep <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be greater than zero");
 
-	if (startThreshold < mStagePosLimitXYZ.at(axis).at(0) || startThreshold > mStagePosLimitXYZ.at(axis).at(1))
+	if (startThreshold < mTravelRangeXYZ.at(axis).at(0) || startThreshold > mTravelRangeXYZ.at(axis).at(1))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'startThreshold is out of bound for the stage " + axisToString(axis));
 
 
@@ -1612,7 +1612,7 @@ void Stage::setDOtriggerAllParams(const Axis axis, const int DOchan, const doubl
 bool Stage::isDOtriggerEnabled(const Axis axis, const int DOchan) const
 {
 	BOOL triggerState;
-	if (!PI_qTRO(mID.at(axis), &DOchan, &triggerState, 1))
+	if (!PI_qTRO(mID_XYZ.at(axis), &DOchan, &triggerState, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger EN/DIS stage for the stage " + axisToString(axis));
 
 	//std::cout << triggerState << "\n";
@@ -1622,7 +1622,7 @@ bool Stage::isDOtriggerEnabled(const Axis axis, const int DOchan) const
 //Enable or disable the stage DO
 void Stage::setDOtriggerEnabled(const Axis axis, const int DOchan, const BOOL triggerState) const
 {
-	if (!PI_TRO(mID.at(axis), &DOchan, &triggerState, 1))
+	if (!PI_TRO(mID_XYZ.at(axis), &DOchan, &triggerState, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger EN/DIS state for the stage " + axisToString(axis));
 }
 
@@ -1705,7 +1705,7 @@ void Sample::printParams(std::ofstream *fileHandle) const
 
 	*fileHandle << "SLICE ************************************************************\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Blade position x,y (mm) = (" << mBladePosition.at(XX) / mm << "," << mBladePosition.at(YY) / mm << ")\n";
+	*fileHandle << "Blade position x,y (mm) = (" << mBladePositionXY.at(XX) / mm << "," << mBladePositionXY.at(YY) / mm << ")\n";
 	*fileHandle << std::setprecision(1);
 	*fileHandle << "Blade-focal plane vertical offset (um) = " << mBladeFocalplaneOffsetZ / um << "\n";
 	*fileHandle << "Cut above the bottom of the stack (um) = " << mCutAboveBottomOfStack / um << "\n";
@@ -1715,10 +1715,10 @@ void Sample::printParams(std::ofstream *fileHandle) const
 
 
 #pragma region "Stack"
-Stack::Stack(const double2 FOV, const double stepSizeZ, const int nFrames, const double3 overlapXYZ_frac) :
-	mFOV(FOV), mStepSizeZ(stepSizeZ), mDepth(stepSizeZ *  nFrames), mOverlapXYZ_frac(overlapXYZ_frac)
+Stack::Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, const double3 overlapXYZ_frac) :
+	mFFOV(FFOV), mStepSizeZ(stepSizeZ), mDepth(stepSizeZ *  nFrames), mOverlapXYZ_frac(overlapXYZ_frac)
 {
-	if (FOV.at(XX) <= 0 || FOV.at(YY) <= 0)
+	if (FFOV.at(XX) <= 0 || FFOV.at(YY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
 
 	if (mStepSizeZ <= 0)
@@ -1736,11 +1736,11 @@ void Stack::printParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "STACK ************************************************************\n";
 	*fileHandle << std::setprecision(1);
-	*fileHandle << "FOV (um) = (" << mFOV.at(XX) / um << "," << mFOV.at(YY) / um << ")\n";
+	*fileHandle << "FOV (um) = (" << mFFOV.at(XX) / um << "," << mFFOV.at(YY) / um << ")\n";
 	*fileHandle << "Step size Z (um) = " << mStepSizeZ / um << "\n";
 	*fileHandle << "Stack depth (um) = " << mDepth / um << "\n";
 	*fileHandle << "Stack overlap (frac) = (" << mOverlapXYZ_frac.at(XX) << "," << mOverlapXYZ_frac.at(YY) << "," << mOverlapXYZ_frac.at(ZZ) << ")\n";
-	*fileHandle << "Stack overlap (um) = (" << mOverlapXYZ_frac.at(XX) * mFOV.at(XX) / um << "," << mOverlapXYZ_frac.at(YY) * mFOV.at(YY) / um << "," << mOverlapXYZ_frac.at(ZZ) * mDepth << ")\n";
+	*fileHandle << "Stack overlap (um) = (" << mOverlapXYZ_frac.at(XX) * mFFOV.at(XX) / um << "," << mOverlapXYZ_frac.at(YY) * mFFOV.at(YY) / um << "," << mOverlapXYZ_frac.at(ZZ) * mDepth << ")\n";
 	*fileHandle << "\n";
 }
 #pragma endregion "Stack"

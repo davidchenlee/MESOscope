@@ -255,6 +255,119 @@ namespace MainRoutines
 		laser.closeShutter();
 		//pressAnyKeyToCont();
 	}
+
+	void sequencer(const FPGAns::FPGA &fpga)
+	{
+		//ACQUISITION SETTINGS
+		const int widthPerFrame_pix(300);
+		const int heightPerFrame_pix(400);
+		const double2 FFOV{ 200. * um, 150. * um };
+		const int nFramesCont(80);												//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const double stepSizeZ(0.5 * um);										//Step size in z
+		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.200 * mm, 35.025 * mm };	//Region of interest {ymin, xmin, ymax, xmax}
+		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };					//Stack overlap
+		const double cutAboveBottomOfStack(15 * um);							//height to cut above the bottom of the stack
+		const double sampleLengthZ(0.01 * mm);									//Sample thickness
+		const double sampleSurfaceZ(18.521 * mm);
+
+		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
+		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
+		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
+		const Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack);
+		const Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlap_frac);
+
+		//Create a sequence
+		//Sequencer sequence(laserList, sample, stack);
+		Sequencer sequence(laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, stackCenterXYZ, { 2, 2 }); //Last 2 parameters: stack center and number of stacks
+		sequence.generateCommandList();
+		sequence.printToFile("Commandlist");
+
+		if (1)
+		{
+			//STAGES. Specify the velocity
+			Stage stage(5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix));
+			stage.moveSingleStage(ZZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
+
+			//RS
+			const ResonantScanner RScanner(fpga);
+			RScanner.isRunning();		//Make sure that the RS is running
+
+			//CREATE THE REALTIME CONTROL SEQUENCE
+			FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
+
+			//LASER: wavelength_nm, laserPower, whichLaser
+			VirtualLaser laser(RTcontrol, laserList.front().mWavelength_nm);
+
+			//GALVO RT linear ramp	
+			const Galvo galvo(RTcontrol, RTGALVO1, FFOV.at(XX) / 2);
+
+			//EXECUTE THE RT CONTROL SEQUENCE
+			Image image(RTcontrol);
+
+			//Read the commands line by line
+			double scanZi, scanZf, scanPi, stackPinc;
+			double2 stackCenterXY;
+			int wavelength_nm, scanDirZ;
+			std::string filename;
+			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
+				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
+			{
+				Commandline commandline = sequence.readCommandline(iterCommandline); //Implement read-from-file?
+				//commandline.printParameters();
+
+				switch (commandline.mAction)
+				{
+				case MOV:
+					//Move the x and y stages to mStackCenterXY
+					stackCenterXY = commandline.mCommand.moveStage.mStackCenterXY;
+					stage.moveXYstages(stackCenterXY);
+					stage.waitForMotionToStopAllStages();
+					break;
+				case ACQ:
+					//Acquire a stack using the parameters:
+					AcqStack acqStack = commandline.mCommand.acqStack;
+
+					wavelength_nm = acqStack.mWavelength_nm;
+					scanDirZ = acqStack.mScanDirZ;
+					scanZi = acqStack.mScanZi;
+					scanZf = scanZi + scanDirZ * acqStack.mStackDepth;
+					scanPi = acqStack.mScanPi;
+					stackPinc = acqStack.mStackPinc;
+
+					//Update the laser parameters
+					laser.setWavelength(wavelength_nm);
+					laser.setPower(scanPi, stackPinc);
+
+					//OPEN THE SHUTTER
+					laser.openShutter();	//The destructor will close the shutter automatically
+
+					image.initialize();
+					std::cout << "Scanning the stack...\n";
+					stage.moveSingleStage(ZZ, scanZf);		//Move the stage to trigger the control sequence and data acquisition
+					image.downloadData();
+					break;
+				case SAV:
+					filename = toString(wavelength_nm, 0) + "nm_Pi=" + toString(scanPi / mW, 1) + "mW_Pf=" + toString((scanPi + scanDirZ * stackPinc) / mW, 1) + "mW" +
+						"_x=" + toString(stackCenterXY.at(XX) / mm, 3) + "_y=" + toString(stackCenterXY.at(YY) / mm, 3) +
+						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
+
+					image.postprocess();
+					image.saveTiffMultiPage(filename, NOOVERRIDE, scanDirZ);
+					break;
+				case CUT:
+					//Move the stage to and then cut a slice off
+					double3 stagePositionXYZ = commandline.mCommand.cutSlice.mBladePositionXY;
+					break;
+				default:
+					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
+				}//switch
+				//pressAnyKeyToCont();
+			}//for
+		}//if
+
+		pressAnyKeyToCont();
+	}
+
 }//namespace
 
 
@@ -739,119 +852,6 @@ namespace TestRoutines
 
 		first.join();//pauses until first finishes
 		second.join();//pauses until second finishes
-
-		pressAnyKeyToCont();
-	}
-
-
-	void sequencer(const FPGAns::FPGA &fpga)
-	{
-		//ACQUISITION SETTINGS
-		const int widthPerFrame_pix(300);
-		const int heightPerFrame_pix(400);
-		const double2 FFOV{ 200. * um, 150. * um };
-		const int nFramesCont(80);												//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ(0.5 * um);										//Step size in z
-		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.200 * mm, 35.025 * mm };	//Region of interest {ymin, xmin, ymax, xmax}
-		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };					//Stack overlap
-		const double cutAboveBottomOfStack(15 * um);							//height to cut above the bottom of the stack
-		const double sampleLengthZ(0.01 * mm);									//Sample thickness
-		const double sampleSurfaceZ(18.521 * mm);
-
-		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
-		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
-		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
-		const Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack);
-		const Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlap_frac);
-
-		//Create a sequence
-		//Sequencer sequence(laserList, sample, stack);
-		Sequencer sequence(laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, stackCenterXYZ, { 2, 2 }); //Last 2 parameters: stack center and number of stacks
-		sequence.generateCommandList();
-		sequence.printToFile("Commandlist");
-
-		if (1)
-		{
-			//STAGES. Specify the velocity
-			Stage stage(5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix));
-			stage.moveSingleStage(ZZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
-
-			//RS
-			const ResonantScanner RScanner(fpga);
-			RScanner.isRunning();		//Make sure that the RS is running
-
-			//CREATE THE REALTIME CONTROL SEQUENCE
-			FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
-
-			//LASER: wavelength_nm, laserPower, whichLaser
-			VirtualLaser laser(RTcontrol, laserList.front().mWavelength_nm);
-
-			//GALVO RT linear ramp	
-			const Galvo galvo(RTcontrol, RTGALVO1, FFOV.at(XX) / 2);
-
-			//EXECUTE THE RT CONTROL SEQUENCE
-			Image image(RTcontrol);
-
-			//Read the commands line by line
-			double scanZi, scanZf, scanPi, stackPinc;
-			double2 stackCenter;
-			int wavelength_nm, scanDirZ;
-			std::string filename;
-			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
-			//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
-			{
-				Commandline commandline = sequence.readCommandline(iterCommandline); //Implement read-from-file?
-				//commandline.printParameters();
-
-				switch (commandline.mAction)
-				{
-				case MOV:
-					//Move the x and y stages to mStackCenter
-					stackCenter = commandline.mCommand.moveStage.mStackCenter;
-					stage.moveXYstages(stackCenter);
-					stage.waitForMotionToStopAllStages();
-					break;
-				case ACQ:
-					//Acquire a stack using the parameters:
-					AcqStack acqStack = commandline.mCommand.acqStack;
-
-					wavelength_nm = acqStack.mWavelength_nm;
-					scanDirZ = acqStack.mScanDirZ;
-					scanZi = acqStack.mScanZi;
-					scanZf = scanZi + scanDirZ * acqStack.mStackDepth;
-					scanPi = acqStack.mScanPi;
-					stackPinc = acqStack.mStackPinc;
-
-					//Update the laser parameters
-					laser.setWavelength(wavelength_nm);
-					laser.setPower(scanPi, stackPinc);
-
-					//OPEN THE SHUTTER
-					laser.openShutter();	//The destructor will close the shutter automatically
-
-					image.initialize();	
-					std::cout << "Scanning the stack...\n";
-					stage.moveSingleStage(ZZ, scanZf);		//Move the stage to trigger the control sequence and data acquisition
-					image.downloadData();
-					break;
-				case SAV:
-					filename = toString(wavelength_nm, 0) + "nm_Pi=" + toString(scanPi / mW, 1) + "mW_Pf=" + toString((scanPi + scanDirZ * stackPinc) / mW, 1) + "mW" +
-						"_x=" + toString(stackCenter.at(XX) / mm, 3) + "_y=" + toString(stackCenter.at(YY) / mm, 3) +
-						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
-
-					image.postprocess();
-					image.saveTiffMultiPage(filename, NOOVERRIDE, scanDirZ);
-					break;
-				case CUT:
-					//Move the stage to and then cut a slice off
-					double3 stagePositionXYZ = commandline.mCommand.cutSlice.mBladePosition;
-					break;
-				default:
-					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
-				}//switch
-				//pressAnyKeyToCont();
-			}//for
-		}//if
 
 		pressAnyKeyToCont();
 	}

@@ -6,7 +6,7 @@ using namespace Constants;
 struct MoveStage {
 	int mSliceNumber;		//Slice number
 	int2 mStackIJ;			//Indices for the 2D array of stacks
-	double2 mStackCenter;	//X and Y positiosn of the center of the stack
+	double2 mStackCenterXY;	//X and Y positiosn of the center of the stack
 };
 
 struct AcqStack {
@@ -20,7 +20,7 @@ struct AcqStack {
 };
 
 struct CutSlice {
-	double3 mBladePosition;		//Position the sample facing the vibratome blade
+	double3 mBladePositionXY;		//Position the sample facing the vibratome blade
 };
 
 //Single commands
@@ -54,14 +54,14 @@ class Sequencer
 	std::vector<Commandline> mCommandList;
 	int mStackCounter = 0;				//Count the number of stacks
 	int mSliceCounter = 0;				//Count the number of the slices
-	int2 mStackArrayDim;				//Dimension of the array of stacks. Value computed dynamically
+	int2 mStackArrayDimIJ;				//Dimension of the array of stacks. Value computed dynamically
 	int3 mScanDir{ mInitialScanDir };	//Scan directions in x, y, and z
 	double mScanZi;						//Initial z-stage position for a stack-scan
 	double mPlaneToSliceZ;				//Height of the plane to cut	
 	int mNtotalSlices;					//Number of vibratome slices in the entire sample
 
 	double calculateStackScanInitialPower_(const double scanPmin, const double stackPinc, const int scanDirZ);
-	double2 stackIndicesToStackCenter_(const int2 stackArrayIndices) const;
+	double2 stackIndicesToStackCenter_(const int2 stackArrayIndicesIJ) const;
 	void reverseStageScanDirection_(const Axis axis);
 	void resetStageScanDirections_();
 	void moveStage_(const int2 stackIJ);
@@ -72,7 +72,7 @@ public:
 	int mCommandCounter = 0;
 
 	Sequencer(const LaserList laserList, const Sample sample, const Stack stack);
-	Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDim);
+	Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor

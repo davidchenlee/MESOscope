@@ -7,6 +7,7 @@ namespace MainRoutines
 {
 	void discreteScanZ(const FPGAns::FPGA &fpga);
 	void continuousScanZ(const FPGAns::FPGA &fpga);
+	void sequencer(const FPGAns::FPGA &fpga);
 }
 
 //CALIBRATION
@@ -40,6 +41,5 @@ namespace TestRoutines
 	void ethernetSpeed();
 	void vibratome(const FPGAns::FPGA &fpga);
 	void multithread();
-	void sequencer(const FPGAns::FPGA &fpga);
 	void sequencerSim();
 }

@@ -38,7 +38,7 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << actionToString_(mAction) << "\t" << mCommand.moveStage.mSliceNumber;
 		*fileHandle << "\t(" << mCommand.moveStage.mStackIJ.at(XX) << "," << mCommand.moveStage.mStackIJ.at(YY) << ")\t";
 		*fileHandle << std::setprecision(4);
-		*fileHandle << "(" << mCommand.moveStage.mStackCenter.at(XX) / mm << "," << mCommand.moveStage.mStackCenter.at(YY) / mm << ")\n";
+		*fileHandle << "(" << mCommand.moveStage.mStackCenterXY.at(XX) / mm << "," << mCommand.moveStage.mStackCenterXY.at(YY) / mm << ")\n";
 		break;
 	case ACQ:
 		scanZf = mCommand.acqStack.mScanZi + mCommand.acqStack.mScanDirZ * mCommand.acqStack.mStackDepth;
@@ -61,7 +61,7 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << actionToString_(mAction);
 		*fileHandle << std::setprecision(3);
 		*fileHandle << "\t************Sample facing the vibratome at (mm) = ";
-		*fileHandle << "(" << mCommand.cutSlice.mBladePosition.at(XX) / mm << "," << mCommand.cutSlice.mBladePosition.at(YY) / mm << "," << mCommand.cutSlice.mBladePosition.at(ZZ) / mm << ")";
+		*fileHandle << "(" << mCommand.cutSlice.mBladePositionXY.at(XX) / mm << "," << mCommand.cutSlice.mBladePositionXY.at(YY) / mm << "," << mCommand.cutSlice.mBladePositionXY.at(ZZ) / mm << ")";
 		*fileHandle << "**************************************************************\n";
 		break;
 	default:
@@ -77,7 +77,7 @@ void Commandline::printParameters() const
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
 		std::cout << "Vibratome slice number = " << mCommand.moveStage.mSliceNumber << "\n";
 		std::cout << "Stack ij = (" << mCommand.moveStage.mStackIJ.at(XX) << "," << mCommand.moveStage.mStackIJ.at(YY) << ")\n";
-		std::cout << "Stack center (mm,mm) = (" << mCommand.moveStage.mStackCenter.at(XX) / mm<< "," << mCommand.moveStage.mStackCenter.at(YY) / mm << ")\n\n";
+		std::cout << "Stack center (mm,mm) = (" << mCommand.moveStage.mStackCenterXY.at(XX) / mm<< "," << mCommand.moveStage.mStackCenterXY.at(YY) / mm << ")\n\n";
 		break;
 	case ACQ:
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
@@ -99,6 +99,7 @@ void Commandline::printParameters() const
 #pragma endregion "Commandline"
 
 #pragma region "Sequencer"
+//Constructor using the sample's ROI
 Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack stack) : mSample(sample), mLaserList(laserList), mStack(stack)
 {
 	//Initialize the z-stage with the position of the sample surface
@@ -112,12 +113,12 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 	//Therefore, the given L and FOV, then N =1/(1-a) * ( L/FOV - 1 )
 	const double overlapX_frac = mStack.mOverlapXYZ_frac.at(XX);		//Dummy local variable
 	const double overlapY_frac = mStack.mOverlapXYZ_frac.at(YY);		//Dummy local variable
-	mStackArrayDim.at(XX) = static_cast<int>(std::ceil( 1/(1-overlapX_frac) * (mSample.mLengthXYZ.at(XX) / mStack.mFOV.at(XX)) - overlapX_frac));		//Number of stacks in x
-	mStackArrayDim.at(YY) = static_cast<int>(std::ceil( 1/(1-overlapY_frac) * (mSample.mLengthXYZ.at(YY) / mStack.mFOV.at(YY)) - overlapY_frac));		//Number of stacks in y
+	mStackArrayDimIJ.at(XX) = static_cast<int>(std::ceil( 1/(1-overlapX_frac) * (mSample.mLengthXYZ.at(XX) / mStack.mFFOV.at(XX)) - overlapX_frac));		//Number of stacks in x
+	mStackArrayDimIJ.at(YY) = static_cast<int>(std::ceil( 1/(1-overlapY_frac) * (mSample.mLengthXYZ.at(YY) / mStack.mFFOV.at(YY)) - overlapY_frac));		//Number of stacks in y
 
 	const double overlapZ_frac = mStack.mOverlapXYZ_frac.at(ZZ);																		//Dummy local variable
 	mNtotalSlices = static_cast<int>(std::ceil(1 / (1 - overlapZ_frac) * (mSample.mLengthXYZ.at(ZZ) / mStack.mDepth) - overlapZ_frac));	//Total number of slices in the entire sample
-	const int mNtotalStacksPerVibratomeSlice = mStackArrayDim.at(XX) * mStackArrayDim.at(YY);											//Total number of stacks in a vibratome slice
+	const int mNtotalStacksPerVibratomeSlice = mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY);											//Total number of stacks in a vibratome slice
 	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserList.listSize()) * mNtotalStacksPerVibratomeSlice;		//Total number of stacks in the entire sample
 
 	//Pre-reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
@@ -129,13 +130,13 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'cutAboveBottomOfStack' must be greater than the stack z-overlap " + toString(stackOverlapZ / um, 1) + " um");
 }
 
-//To be used with the bead slide
-Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDim) : mSample(sample), mLaserList(laserList), mStack(stack)
+//Constructor using the initial stack center. To be used with the bead slide and therefore no slicing
+Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ) : mSample(sample), mLaserList(laserList), mStack(stack)
 {
-	mSample.mROI.at(XMIN) = stackCenterXYZ.at(XX) - mStack.mFOV.at(XX) / 2;
-	mSample.mROI.at(YMIN) = stackCenterXYZ.at(YY) - mStack.mFOV.at(YY) / 2;
-	mSample.mROI.at(XMAX) = mSample.mROI.at(XMIN) + mStack.mFOV.at(XX);
-	mSample.mROI.at(YMAX) = mSample.mROI.at(YMIN) + mStack.mFOV.at(YY);
+	mSample.mROI.at(XMIN) = stackCenterXYZ.at(XX) - mStack.mFFOV.at(XX) / 2;
+	mSample.mROI.at(YMIN) = stackCenterXYZ.at(YY) - mStack.mFFOV.at(YY) / 2;
+	mSample.mROI.at(XMAX) = mSample.mROI.at(XMIN) + mStack.mFFOV.at(XX);
+	mSample.mROI.at(YMAX) = mSample.mROI.at(YMIN) + mStack.mFFOV.at(YY);
 
 	//Initialize the z-stage
 	mScanZi = stackCenterXYZ.at(ZZ) - mStack.mDepth / 2;
@@ -143,13 +144,13 @@ Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack
 	//Initialize the height of the plane to slice
 	mPlaneToSliceZ = 0;
 
-	if (stackArrayDim.at(XX) <= 0 || stackArrayDim.at(YY) <= 0)
+	if (stackArrayDimIJ.at(XX) <= 0 || stackArrayDimIJ.at(YY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack array dimension must be equal to 1 or greater");
 
-	mStackArrayDim = stackArrayDim;		//Number of stacks in x and y
+	mStackArrayDimIJ = stackArrayDimIJ;		//Number of stacks in x and y
 
 	mNtotalSlices = 1;
-	const int mNtotalStacksPerVibratomeSlice = mStackArrayDim.at(XX) * mStackArrayDim.at(YY);											//Total number of stacks in a vibratome slice
+	const int mNtotalStacksPerVibratomeSlice = mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY);											//Total number of stacks in a vibratome slice
 	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserList.listSize()) * mNtotalStacksPerVibratomeSlice;		//Total number of stacks in the entire sample
 
 	//Pre-reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
@@ -167,16 +168,16 @@ double Sequencer::calculateStackScanInitialPower_(const double scanPmin, const d
 }
 
 //The first stack center is L/2 away from the ROI's edge. The next center is at (1-a)*L away from the first center, where a*L is the stack overlap
-double2 Sequencer::stackIndicesToStackCenter_(const int2 stackArrayIndices) const
+double2 Sequencer::stackIndicesToStackCenter_(const int2 stackArrayIndicesIJ) const
 {
 	const double overlapX_frac = mStack.mOverlapXYZ_frac.at(XX);
 	const double overlapY_frac = mStack.mOverlapXYZ_frac.at(YY);
 
-	double2 stagePosition;
-	stagePosition.at(XX) = mSample.mROI.at(XMIN) + mStack.mFOV.at(XX)  * ((1 - overlapX_frac) * stackArrayIndices.at(XX) + 0.5);
-	stagePosition.at(YY) = mSample.mROI.at(YMIN) + mStack.mFOV.at(YY)  * ((1 - overlapY_frac) * stackArrayIndices.at(YY) + 0.5);
+	double2 stagePositionXY;
+	stagePositionXY.at(XX) = mSample.mROI.at(XMIN) + mStack.mFFOV.at(XX)  * ((1 - overlapX_frac) * stackArrayIndicesIJ.at(XX) + 0.5);
+	stagePositionXY.at(YY) = mSample.mROI.at(YMIN) + mStack.mFFOV.at(YY)  * ((1 - overlapY_frac) * stackArrayIndicesIJ.at(YY) + 0.5);
 
-	return stagePosition;
+	return stagePositionXY;
 }
 
 void Sequencer::reverseStageScanDirection_(const Axis axis)
@@ -202,11 +203,11 @@ void Sequencer::resetStageScanDirections_()
 
 void Sequencer::moveStage_(const int2 stackIJ)
 {
-	const double2 stackCenter = stackIndicesToStackCenter_(stackIJ);
+	const double2 stackCenterXY = stackIndicesToStackCenter_(stackIJ);
 
 	Commandline commandline;
 	commandline.mAction = MOV;
-	commandline.mCommand.moveStage = { mSliceCounter, stackIJ, stackCenter };
+	commandline.mCommand.moveStage = { mSliceCounter, stackIJ, stackCenterXY };
 	mCommandList.push_back(commandline);
 
 	mCommandCounter++;	//Count the number of commands
@@ -245,7 +246,7 @@ void Sequencer::saveStack_()
 void Sequencer::cutSlice_()
 {
 	//Move the sample to face the vibratome blade. Notice the additional offset in z
-	const double3 samplePositionXYZ = { mSample.mBladePosition.at(XX), mSample.mBladePosition.at(YY), mPlaneToSliceZ + mSample.mBladeFocalplaneOffsetZ };
+	const double3 samplePositionXYZ = { mSample.mBladePositionXY.at(XX), mSample.mBladePositionXY.at(YY), mPlaneToSliceZ + mSample.mBladeFocalplaneOffsetZ };
 
 	Commandline commandline;
 	commandline.mAction = CUT;
@@ -277,9 +278,9 @@ void Sequencer::generateCommandList()
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mLaserList.listSize(); iterWL++)
 		{
 			//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over x often and over y less often
-			while (yy >= 0 && yy < mStackArrayDim.at(YY))			//y direction
+			while (yy >= 0 && yy < mStackArrayDimIJ.at(YY))			//y direction
 			{
-				while (xx >= 0 && xx < mStackArrayDim.at(XX))		//x direction
+				while (xx >= 0 && xx < mStackArrayDimIJ.at(XX))		//x direction
 				{
 					moveStage_({ xx,yy });
 					acqStack_(iterWL);
@@ -316,7 +317,7 @@ void Sequencer::printSequencerParams(std::ofstream *fileHandle) const
 	*fileHandle << "Sample surface z position (mm) = " << mSample.mSurfaceZ / mm << "\n";
 	*fileHandle << std::setprecision(0);
 	*fileHandle << "# tissue slices = " << mNtotalSlices << "\n";
-	*fileHandle << "StackArray dim (x,y) = (" << mStackArrayDim.at(XX) << "," << mStackArrayDim.at(YY) << ")\n";
+	*fileHandle << "StackArray dim (x,y) = (" << mStackArrayDimIJ.at(XX) << "," << mStackArrayDimIJ.at(YY) << ")\n";
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
 	*fileHandle << "\n";
@@ -342,7 +343,7 @@ void Sequencer::printToFile(const std::string fileName) const
 	}
 
 	for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != mCommandList.size(); iterCommandline++)
-	//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 3*(3 * 3 * mStackArrayDim.at(XX) * mStackArrayDim.at(YY)+1) + 2 ; iterCommandline++) //For debugging
+	//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 3*(3 * 3 * mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY)+1) + 2 ; iterCommandline++) //For debugging
 	{
 		*fileHandle << iterCommandline << "\t";		//Print out the iteration number
 		mCommandList.at(iterCommandline).printToFile(fileHandle);

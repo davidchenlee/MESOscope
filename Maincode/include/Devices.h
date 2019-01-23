@@ -264,14 +264,11 @@ class Stage
 
 	const int mPort_z = 4;											//COM port
 	const int mBaud_z = 38400;
-	int3 mID;														//Controller IDs
+	int3 mID_XYZ;													//Controller IDs
 	const char mNstagesPerController[2] = "1";						//Number of stages per controller (currently 1)
 	double3 mPositionXYZ;											//Absolute position of the stages (x, y, z)
-	const double3 mSoftPosMinXYZ{ -60. * mm, 0. * mm, 1. * mm };	//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
-	const double3 mSoftPosMaxXYZ{ 50. * mm, 30. * mm, 25. * mm };
-	const std::vector<double2> mStagePosLimitXYZ{ {-65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages
-	int3 mNtile;													//Tile number in x, y, z
-	int3 mNtileOverlap_pix;											//Tile overlap in x, y, z	
+	const std::vector<double2> mSoftPosLimXYZ{ { -60. * mm, 50. * mm}, { 0. * mm, 30. * mm}, { 1. * mm, 25. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
+	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages
 
 	void configVelAndDOtriggers_(const double3 velXYZ) const;
 public:
@@ -313,7 +310,7 @@ public:
 	double3 mLengthXYZ = { 0, 0, 0 };	//Sample size in x, y, and z
 	double mSurfaceZ = -1;
 
-	const double2 mBladePosition{ 0. * mm, 0. * mm };	//Location of the vibratome blade in x and y wrt the stages origin
+	const double2 mBladePositionXY{ 0. * mm, 0. * mm };	//Location of the vibratome blade in x and y wrt the stages origin
 	const double mBladeFocalplaneOffsetZ = 0 * um;		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack;
 
@@ -325,12 +322,12 @@ public:
 class Stack
 {
 public:
-	double2 mFOV;				//Field of view in x and y
+	double2 mFFOV;				//Full field of view in x and y
 	double mStepSizeZ;			//Image resolution in z
 	double mDepth;				//Stack depth or thickness
 	double3 mOverlapXYZ_frac;	//Stack overlap in x, y, and z
 
-	Stack(const double2 FOV, const double stepSizeZ, const int nFrames, const double3 stackOverlapXYZ_frac);
+	Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, const double3 stackOverlapXYZ_frac);
 	void printParams(std::ofstream *fileHandle) const;
 };
 

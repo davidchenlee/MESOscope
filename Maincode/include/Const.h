@@ -20,7 +20,7 @@ namespace Constants
 	typedef std::array<int, 3> int3;			//array of 3 ints
 	typedef std::array<int, 2> int2;			//array of 3 ints
 	typedef std::array<double, 2> double2;		//array of 2 doubles
-	typedef std::array <double, 4> ROI;			//ROI = (ymin, xmin, ymax, xmax)
+	typedef std::array <double, 4> ROI;			//ROI = {ymin, xmin, ymax, xmax}
 
 	enum PhotonCounterSelector { EXT, SIM };
 	enum LineclockSelector { RS = false, FG = true };

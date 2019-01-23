@@ -17,7 +17,7 @@ namespace MainRoutines
 		const int heightPerFrame_pix(400);
 		const int nFramesCont(1);												//Number of frames for continuous XY acquisition
 		//const double3 stagePosition0{ 34.750 * mm, 10.110 * mm, 18.481 * mm };	//Stage initial position
-		const double3 stagePosition0{ 34.925 * mm, 10.130 * mm, 18.483 * mm };	//Stage initial position
+		const double3 stagePosition0{ 34.925 * mm, 11.217 * mm, 18.541 * mm };	//Stage initial position
 
 		//RS
 		const ResonantScanner RScanner(fpga);
@@ -646,6 +646,7 @@ namespace TestRoutines
 		std::cout << "volt to I16: " << FPGAns::voltageToI16(1) << "\n";
 		std::cout << "I16 to colt: " << FPGAns::I16toVoltage(32767) << "\n";
 		std::cout << "volt to I16 to volt: " << FPGAns::I16toVoltage(FPGAns::voltageToI16(0)) << "\n";
+		pressAnyKeyToCont();
 	}
 
 	void tiffU8()
@@ -665,6 +666,8 @@ namespace TestRoutines
 
 		//image.mirrorOddFrames(nFramesCont);
 		//image.averageEvenOddFrames(nFramesCont);
+
+		pressAnyKeyToCont();
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely
@@ -740,7 +743,6 @@ namespace TestRoutines
 
 		pressAnyKeyToCont();
 	}
-
 	void sequencer(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -749,17 +751,17 @@ namespace TestRoutines
 		const double2 FFOV{ 200. * um, 150. * um };
 		const int nFramesCont(80);											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ(0.5 * um);									//Step size in z
-		const ROI roi{ 34.850 * mm, 10.150 * mm, 35.050 * mm, 9.950 * mm }; //Region of interest
+		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.200 * mm, 35.025 * mm }; //Region of interest {ymin, xmin, ymax, xmax}
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack(15 * um);						//height to cut above the bottom of the stack
 		const double sampleLengthZ(0.01 * mm);								//Sample thickness
-		const double initialZ(18.483 * mm);
+		const double initialZ(18.516 * mm);
 
 		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
 		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
 		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
 		Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, initialZ, cutAboveBottomOfStack);
-		Stack stack(FFOV, stepSizeZ, stepSizeZ * nFramesCont, stackOverlap_frac);
+		Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlap_frac);
 
 		//Create a sequence
 		Sequencer sequence(laserList, sample, stack);
@@ -796,7 +798,7 @@ namespace TestRoutines
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
 			//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
-				Commandline commandline = sequence.getCommandline(iterCommandline); //Implement read-from-file?
+				Commandline commandline = sequence.readCommandline(iterCommandline); //Implement read-from-file?
 				//commandline.printParameters();
 
 				switch (commandline.mAction)
@@ -875,7 +877,7 @@ namespace TestRoutines
 		const double2 FFOV{ 200. * um, 150. * um };
 		const int nFramesCont(80);											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ(0.5 * um);									//Step size in z
-		const ROI roi{ 34.850 * mm, 10.150 * mm, 35.050 * mm, 9.950 * mm }; //Region of interest
+		const ROI roi{ 9.950 * mm, 34.850 * mm, 10.150 * mm, 35.050 * mm }; //Region of interest {ymin, xmin, ymax, xmax}
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack(15 * um);						//height to cut above the bottom of the stack
 		const double sampleLengthZ(0.01 * mm);								//Sample thickness
@@ -885,7 +887,7 @@ namespace TestRoutines
 		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
 		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
 		Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, initialZ, cutAboveBottomOfStack);
-		Stack stack(FFOV, stepSizeZ, stepSizeZ * nFramesCont, stackOverlap_frac);
+		Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlap_frac);
 
 		//Create a sequence
 		Sequencer sequence(laserList, sample, stack);
@@ -895,7 +897,6 @@ namespace TestRoutines
 
 		if (1)
 		{
-
 			FUNC x;
 			std::thread saveFile, moveStage;
 	
@@ -903,7 +904,7 @@ namespace TestRoutines
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
 				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
-				Commandline commandline = sequence.getCommandline(iterCommandline); //Implement read-from-file?
+				Commandline commandline = sequence.readCommandline(iterCommandline); //Implement read-from-file?
 				//commandline.printParameters();
 
 				switch (commandline.mAction)

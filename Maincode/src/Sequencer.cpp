@@ -105,35 +105,34 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 	//Initialize the z-stage
 	mScanZi = mSample.mInitialZ;
 
-	//Initialize the height of the plane to sliced
+	//Initialize the height of the plane to slice
 	mPlaneToSliceZ = mScanZi + mStack.mDepth - mSample.mCutAboveBottomOfStack;
 
 	//Calculate the total number of stacks in a vibratome slice and also in the entire sample
 	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV ( (1-a)*N + 1 )
 	//Therefore, the given L and FOV, then N =1/(1-a) * ( L/FOV - 1 )
-	const double overlapX_frac = mStack.mOverlap_frac.at(XX);
-	const double overlapY_frac = mStack.mOverlap_frac.at(YY);
+	const double overlapX_frac = mStack.mOverlap_frac.at(XX);		//Dummy local variable
+	const double overlapY_frac = mStack.mOverlap_frac.at(YY);		//Dummy local variable
 	mStackArrayDim.at(XX) = static_cast<int>(std::ceil( 1/(1-overlapX_frac) * (mSample.mLength.at(XX) / mStack.mFOV.at(XX)) - overlapX_frac));		//Number of stacks in x
 	mStackArrayDim.at(YY) = static_cast<int>(std::ceil( 1/(1-overlapY_frac) * (mSample.mLength.at(YY) / mStack.mFOV.at(YY)) - overlapY_frac));		//Number of stacks in y
 
-	//Initialize the number of vibratome slices in the entire sample
-	const double overlapZ_frac = mStack.mOverlap_frac.at(ZZ);
-	mNtotalSlices = static_cast<int>(std::ceil(1 / (1 - overlapZ_frac) * (mSample.mLength.at(ZZ) / mStack.mDepth) - overlapZ_frac));
+	const double overlapZ_frac = mStack.mOverlap_frac.at(ZZ);																			//Dummy local variable
+	mNtotalSlices = static_cast<int>(std::ceil(1 / (1 - overlapZ_frac) * (mSample.mLength.at(ZZ) / mStack.mDepth) - overlapZ_frac));	//Total number of slices in the entire sample
+	const int mNtotalStacksPerVibratomeSlice = mStackArrayDim.at(XX) * mStackArrayDim.at(YY);											//Total number of stacks in a vibratome slice
+	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserList.listSize()) * mNtotalStacksPerVibratomeSlice;		//Total number of stacks in the entire sample
 
-	const int mNtotalStacksPerVibratomeSlice = mStackArrayDim.at(XX) * mStackArrayDim.at(YY);												//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserList.listSize()) * mNtotalStacksPerVibratomeSlice;	//Total number of stacks in the entire sample
-
-	//Pre-reserve a memory block assuming 3 actions for every stack in a vibratome slice (MOV, ACQ, and SAV); and then CUT
+	//Pre-reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
 
-	const double stackOverlap = mStack.mOverlap_frac.at(ZZ) * mStack.mDepth;
-	if (mSample.mCutAboveBottomOfStack < stackOverlap)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'cutAboveBottomOfStack' must be greater than the stitching length  " + toString(stackOverlap / um, 1) + " um");
+	//Check that cutAboveBottomOfStack is greater than the stack z-overlap
+	const double stackOverlapZ = mStack.mOverlap_frac.at(ZZ) * mStack.mDepth;	//Dummy local variable
+	if (mSample.mCutAboveBottomOfStack < stackOverlapZ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'cutAboveBottomOfStack' must be greater than the stack z-overlap " + toString(stackOverlapZ / um, 1) + " um");
 }
 
 //The initial laser power of a stack-scan depends on whether the stack is imaged from the top down or from the bottom up.
 //Give the laser power at the top of the stack scanPmin, the power increment stackPinc, and the scanning direction scanDirZ to return the initial laser power of the scan
-double Sequencer::calculateStackScanInitialP_(const double scanPmin, const double stackPinc, const int scanDirZ)
+double Sequencer::calculateStackScanInitialPower_(const double scanPmin, const double stackPinc, const int scanDirZ)
 {
 	if (scanDirZ > 0)	//z-stage scans upwards
 		return scanPmin;
@@ -148,8 +147,8 @@ double2 Sequencer::stackIndicesToStackCenter_(const int2 stackArrayIndices) cons
 	const double overlapY_frac = mStack.mOverlap_frac.at(YY);
 
 	double2 stagePosition;
-	stagePosition.at(XX) = mSample.mROI.at(0) + mStack.mFOV.at(XX)  * ((1 - overlapX_frac) * stackArrayIndices.at(XX) + 0.5);
-	stagePosition.at(YY) = mSample.mROI.at(3) + mStack.mFOV.at(YY)  * ((1 - overlapY_frac) * stackArrayIndices.at(YY) + 0.5);
+	stagePosition.at(XX) = mSample.mROI.at(1) + mStack.mFOV.at(XX)  * ((1 - overlapX_frac) * stackArrayIndices.at(XX) + 0.5);
+	stagePosition.at(YY) = mSample.mROI.at(0) + mStack.mFOV.at(YY)  * ((1 - overlapY_frac) * stackArrayIndices.at(YY) + 0.5);
 
 	return stagePosition;
 }
@@ -193,7 +192,7 @@ void Sequencer::acqStack_(const int iterWL)
 	const LaserList::SingleLaser singleLaser = mLaserList.mLaser.at(iterWL);
 
 	//Determine if the initial laser power is the lowest (top of the stack) or the highest (bottom of the stack)
-	const double scanPi = calculateStackScanInitialP_(singleLaser.mScanPi, singleLaser.mStackPinc, mScanDir.at(ZZ));
+	const double scanPi = calculateStackScanInitialPower_(singleLaser.mScanPi, singleLaser.mStackPinc, mScanDir.at(ZZ));
 
 	Commandline commandline;
 	commandline.mAction = ACQ;
@@ -247,11 +246,11 @@ void Sequencer::generateCommandList()
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
 		int xx = 0, yy = 0;				//Reset the stack indices after every cut
-		resetStageScanDirections_();	//Reset the scan directions of the stages
+		resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
 
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mLaserList.listSize(); iterWL++)
 		{
-			//The y-stage is the slowest stage to react because it sits under of other 2 stages. For the best performance, iterate over y fewer times
+			//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over x often and over y less often
 			while (yy >= 0 && yy < mStackArrayDim.at(YY))			//y direction
 			{
 				while (xx >= 0 && xx < mStackArrayDim.at(XX))		//x direction
@@ -259,14 +258,12 @@ void Sequencer::generateCommandList()
 					moveStage_({ xx,yy });
 					acqStack_(iterWL);
 					saveStack_();
-
 					xx += mScanDir.at(XX);		//Increase the iterator x
 				}
 
 				//Initialize the next cycle by going back in x one step and switching the scanning direction
 				xx -= mScanDir.at(XX);
 				reverseStageScanDirection_(XX);
-
 				yy += mScanDir.at(YY);	//Increase the iterator y
 			}
 			//Initialize the next cycle by going back in y one step and switching the scanning direction
@@ -280,7 +277,7 @@ void Sequencer::generateCommandList()
 	}
 }
 
-Commandline Sequencer::getCommandline(const int iterCommandLine) const
+Commandline Sequencer::readCommandline(const int iterCommandLine) const
 {
 	return mCommandList.at(iterCommandLine);
 }

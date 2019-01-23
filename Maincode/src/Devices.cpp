@@ -171,7 +171,7 @@ void Image::demultiplex_()
 }
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
-void Image::startFIFOOUTpc() const
+void Image::startFIFOOUTpc_() const
 {
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
@@ -199,6 +199,7 @@ void Image::acquire()
 
 	mRTcontrol.presetFPGAoutput_();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
+	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI, but if not called, 
 	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from a previous run
 	mRTcontrol.triggerRT();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 
@@ -222,6 +223,7 @@ void Image::initialize() const
 {
 	mRTcontrol.presetFPGAoutput_();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
+	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga
 	FIFOOUTpcGarbageCollector_();	//Cleans up any residual data from the previous run
 }
 
@@ -1673,12 +1675,12 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double initialZ, const double sliceOffset) :
 	mName(sampleName), mImmersionMedium(immersionMedium), mObjectiveCollar(objectiveCollar), mROI(roi), mInitialZ(initialZ), mCutAboveBottomOfStack(sliceOffset)
 {
-	//Convert input ROI = (xmin, ymax, xmax, ymin) to the equivalent sample length in X and Y
-	mLength.at(XX) = mROI.at(2) - mROI.at(0);
-	mLength.at(YY) = mROI.at(1) - mROI.at(3);
+	//Convert input ROI = {ymin, xmin, ymax, xmax} to the equivalent sample length in X and Y
+	mLength.at(XX) = mROI.at(3) - mROI.at(1);
+	mLength.at(YY) = mROI.at(2) - mROI.at(0);
 	mLength.at(ZZ) = sampleLengthZ;
 
-	if (mLength.at(XX) <= 0 || mLength.at(YY) <= 0 || mLength.at(ZZ) <= 0)
+	if (mLength.at(XX) <= 0 || mLength.at(YY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
 
 	if (sampleLengthZ <= 0)
@@ -1710,20 +1712,20 @@ void Sample::printParams(std::ofstream *fileHandle) const
 
 
 #pragma region "Stack"
-Stack::Stack(const double2 FOV, const double stepSizeZ, const double stackDepth, const double3 stackOverlap_frac) :
-	mFOV(FOV), mStepSizeZ(stepSizeZ), mDepth(stackDepth), mOverlap_frac(stackOverlap_frac)
+Stack::Stack(const double2 FOV, const double stepSizeZ, const int nFrames, const double3 overlap_frac) :
+	mFOV(FOV), mStepSizeZ(stepSizeZ), mDepth(stepSizeZ *  nFrames), mOverlap_frac(overlap_frac)
 {
 	if (FOV.at(XX) <= 0 || FOV.at(YY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
 
-	if (stepSizeZ <= 0)
+	if (mStepSizeZ <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The z-stage step size must be positive");
 
-	if (stackDepth <= 0)
+	if (mDepth <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth must be positive");
 
-	if (stackOverlap_frac.at(XX) < 0 || stackOverlap_frac.at(YY) < 0 || stackOverlap_frac.at(ZZ) < 0
-		|| stackOverlap_frac.at(XX) > 0.2 || stackOverlap_frac.at(YY) > 0.2 || stackOverlap_frac.at(ZZ) > 0.2)
+	if (mOverlap_frac.at(XX) < 0 || mOverlap_frac.at(YY) < 0 || mOverlap_frac.at(ZZ) < 0
+		|| mOverlap_frac.at(XX) > 0.2 || mOverlap_frac.at(YY) > 0.2 || mOverlap_frac.at(ZZ) > 0.2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range 0-0.2%");
 }
 

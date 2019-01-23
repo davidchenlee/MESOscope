@@ -60,7 +60,7 @@ class Sequencer
 	double mPlaneToSliceZ;				//Height of the plane to cut	
 	int mNtotalSlices;					//Number of vibratome slices in the entire sample
 
-	double calculateStackScanInitialP_(const double scanPmin, const double stackPinc, const int scanDirZ);
+	double calculateStackScanInitialPower_(const double scanPmin, const double stackPinc, const int scanDirZ);
 	double2 stackIndicesToStackCenter_(const int2 stackArrayIndices) const;
 	void reverseStageScanDirection_(const Axis axis);
 	void resetStageScanDirections_();
@@ -77,7 +77,7 @@ public:
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor
 	Sequencer& operator=(Sequencer&&) = delete;			//Disable move-assignment constructor
 
-	Commandline getCommandline(const int iterCommandline) const;
+	Commandline readCommandline(const int iterCommandline) const;
 	void generateCommandList();
 	void printSequencerParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;

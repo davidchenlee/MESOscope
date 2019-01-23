@@ -21,7 +21,7 @@ class Image
 	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);
 	void correctInterleaved_();
 	void demultiplex_();
-	void startFIFOOUTpc() const;
+	void startFIFOOUTpc_() const;
 	void configureFIFOOUTpc_(const U32 depth) const;
 	void stopFIFOOUTpc_() const;
 public:
@@ -309,7 +309,7 @@ public:
 	std::string mName;
 	std::string mImmersionMedium;
 	std::string mObjectiveCollar;
-	ROI mROI;						//Region of interest across the entire sample
+	ROI mROI;						//Region of interest across the entire sample {ymin, xmin, ymax, xmax}
 	double3 mLength;				//Sample size in x, y, and z
 	const double mInitialZ;
 
@@ -329,7 +329,7 @@ public:
 	double mDepth;				//Stack depth or thickness
 	double3 mOverlap_frac;		//Stack overlap in x, y, and z
 
-	Stack(const double2 FOV, const double stepSizeZ, const double stackDepth, const double3 stackOverlap_frac);
+	Stack(const double2 FOV, const double stepSizeZ, const int nFrames, const double3 stackOverlap_frac);
 
 	void printParams(std::ofstream *fileHandle) const;
 };

@@ -1557,11 +1557,11 @@ void Stage::setSingleVelocity(const Axis axis, const double vel) const
 }
 
 //Set the velocity of the stage 
-void Stage::setAllVelocities(const double3 vel) const
+void Stage::setAllVelocities(const double3 velXYZ) const
 {
-	setSingleVelocity(XX, vel.at(XX));
-	setSingleVelocity(YY, vel.at(YY));
-	setSingleVelocity(ZZ, vel.at(ZZ));
+	setSingleVelocity(XX, velXYZ.at(XX));
+	setSingleVelocity(YY, velXYZ.at(YY));
+	setSingleVelocity(ZZ, velXYZ.at(ZZ));
 }
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
@@ -1676,14 +1676,14 @@ Sample::Sample(const std::string sampleName, const std::string immersionMedium, 
 	mName(sampleName), mImmersionMedium(immersionMedium), mObjectiveCollar(objectiveCollar), mROI(roi), mSurfaceZ(sampleSurfaceZ), mCutAboveBottomOfStack(sliceOffset)
 {
 	//Convert input ROI = {ymin, xmin, ymax, xmax} to the equivalent sample length in X and Y
-	mLength.at(XX) = mROI.at(XMAX) - mROI.at(XMIN);
-	mLength.at(YY) = mROI.at(YMAX) - mROI.at(YMIN);
-	mLength.at(ZZ) = sampleLengthZ;
+	mLengthXYZ.at(XX) = mROI.at(XMAX) - mROI.at(XMIN);
+	mLengthXYZ.at(YY) = mROI.at(YMAX) - mROI.at(YMIN);
+	mLengthXYZ.at(ZZ) = sampleLengthZ;
 
-	if (mLength.at(XX) <= 0 || mLength.at(YY) <= 0)
+	if (mLengthXYZ.at(XX) <= 0 || mLengthXYZ.at(YY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
 
-	if (mLength.at(ZZ) <= 0)
+	if (mLengthXYZ.at(ZZ) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Z must be positive");
 
 	if (mCutAboveBottomOfStack < 0)
@@ -1701,7 +1701,7 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
 	*fileHandle << std::setprecision(3);
 	*fileHandle << "ROI = [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROI.at(YMIN) / mm << "," << mROI.at(XMIN) / mm << "," << mROI.at(YMAX) / mm << "," << mROI.at(XMAX) / mm << "]\n";
-	*fileHandle << "Length (mm) = (" << mLength.at(XX) / mm << "," << mLength.at(YY) / mm << "," << mLength.at(ZZ) / mm << ")\n\n";
+	*fileHandle << "Length (mm) = (" << mLengthXYZ.at(XX) / mm << "," << mLengthXYZ.at(YY) / mm << "," << mLengthXYZ.at(ZZ) / mm << ")\n\n";
 
 	*fileHandle << "SLICE ************************************************************\n";
 	*fileHandle << std::setprecision(4);
@@ -1715,8 +1715,8 @@ void Sample::printParams(std::ofstream *fileHandle) const
 
 
 #pragma region "Stack"
-Stack::Stack(const double2 FOV, const double stepSizeZ, const int nFrames, const double3 overlap_frac) :
-	mFOV(FOV), mStepSizeZ(stepSizeZ), mDepth(stepSizeZ *  nFrames), mOverlap_frac(overlap_frac)
+Stack::Stack(const double2 FOV, const double stepSizeZ, const int nFrames, const double3 overlapXYZ_frac) :
+	mFOV(FOV), mStepSizeZ(stepSizeZ), mDepth(stepSizeZ *  nFrames), mOverlapXYZ_frac(overlapXYZ_frac)
 {
 	if (FOV.at(XX) <= 0 || FOV.at(YY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
@@ -1727,8 +1727,8 @@ Stack::Stack(const double2 FOV, const double stepSizeZ, const int nFrames, const
 	if (mDepth <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth must be positive");
 
-	if (mOverlap_frac.at(XX) < 0 || mOverlap_frac.at(YY) < 0 || mOverlap_frac.at(ZZ) < 0
-		|| mOverlap_frac.at(XX) > 0.2 || mOverlap_frac.at(YY) > 0.2 || mOverlap_frac.at(ZZ) > 0.2)
+	if (mOverlapXYZ_frac.at(XX) < 0 || mOverlapXYZ_frac.at(YY) < 0 || mOverlapXYZ_frac.at(ZZ) < 0
+		|| mOverlapXYZ_frac.at(XX) > 0.2 || mOverlapXYZ_frac.at(YY) > 0.2 || mOverlapXYZ_frac.at(ZZ) > 0.2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range 0-0.2%");
 }
 
@@ -1739,8 +1739,8 @@ void Stack::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "FOV (um) = (" << mFOV.at(XX) / um << "," << mFOV.at(YY) / um << ")\n";
 	*fileHandle << "Step size Z (um) = " << mStepSizeZ / um << "\n";
 	*fileHandle << "Stack depth (um) = " << mDepth / um << "\n";
-	*fileHandle << "Stack overlap (frac) = (" << mOverlap_frac.at(XX) << "," << mOverlap_frac.at(YY) << "," << mOverlap_frac.at(ZZ) << ")\n";
-	*fileHandle << "Stack overlap (um) = (" << mOverlap_frac.at(XX) * mFOV.at(XX) / um << "," << mOverlap_frac.at(YY) * mFOV.at(YY) / um << "," << mOverlap_frac.at(ZZ) * mDepth << ")\n";
+	*fileHandle << "Stack overlap (frac) = (" << mOverlapXYZ_frac.at(XX) << "," << mOverlapXYZ_frac.at(YY) << "," << mOverlapXYZ_frac.at(ZZ) << ")\n";
+	*fileHandle << "Stack overlap (um) = (" << mOverlapXYZ_frac.at(XX) * mFOV.at(XX) / um << "," << mOverlapXYZ_frac.at(YY) * mFOV.at(YY) / um << "," << mOverlapXYZ_frac.at(ZZ) * mDepth << ")\n";
 	*fileHandle << "\n";
 }
 #pragma endregion "Stack"

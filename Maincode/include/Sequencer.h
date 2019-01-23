@@ -72,7 +72,7 @@ public:
 	int mCommandCounter = 0;
 
 	Sequencer(const LaserList laserList, const Sample sample, const Stack stack);
-	Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 initialPosition, const int2 stackArrayDim);
+	Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDim);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor

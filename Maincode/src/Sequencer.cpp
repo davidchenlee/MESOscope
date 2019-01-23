@@ -110,13 +110,13 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 	//Calculate the total number of stacks in a vibratome slice and also in the entire sample
 	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV ( (1-a)*N + 1 )
 	//Therefore, the given L and FOV, then N =1/(1-a) * ( L/FOV - 1 )
-	const double overlapX_frac = mStack.mOverlap_frac.at(XX);		//Dummy local variable
-	const double overlapY_frac = mStack.mOverlap_frac.at(YY);		//Dummy local variable
-	mStackArrayDim.at(XX) = static_cast<int>(std::ceil( 1/(1-overlapX_frac) * (mSample.mLength.at(XX) / mStack.mFOV.at(XX)) - overlapX_frac));		//Number of stacks in x
-	mStackArrayDim.at(YY) = static_cast<int>(std::ceil( 1/(1-overlapY_frac) * (mSample.mLength.at(YY) / mStack.mFOV.at(YY)) - overlapY_frac));		//Number of stacks in y
+	const double overlapX_frac = mStack.mOverlapXYZ_frac.at(XX);		//Dummy local variable
+	const double overlapY_frac = mStack.mOverlapXYZ_frac.at(YY);		//Dummy local variable
+	mStackArrayDim.at(XX) = static_cast<int>(std::ceil( 1/(1-overlapX_frac) * (mSample.mLengthXYZ.at(XX) / mStack.mFOV.at(XX)) - overlapX_frac));		//Number of stacks in x
+	mStackArrayDim.at(YY) = static_cast<int>(std::ceil( 1/(1-overlapY_frac) * (mSample.mLengthXYZ.at(YY) / mStack.mFOV.at(YY)) - overlapY_frac));		//Number of stacks in y
 
-	const double overlapZ_frac = mStack.mOverlap_frac.at(ZZ);																			//Dummy local variable
-	mNtotalSlices = static_cast<int>(std::ceil(1 / (1 - overlapZ_frac) * (mSample.mLength.at(ZZ) / mStack.mDepth) - overlapZ_frac));	//Total number of slices in the entire sample
+	const double overlapZ_frac = mStack.mOverlapXYZ_frac.at(ZZ);																		//Dummy local variable
+	mNtotalSlices = static_cast<int>(std::ceil(1 / (1 - overlapZ_frac) * (mSample.mLengthXYZ.at(ZZ) / mStack.mDepth) - overlapZ_frac));	//Total number of slices in the entire sample
 	const int mNtotalStacksPerVibratomeSlice = mStackArrayDim.at(XX) * mStackArrayDim.at(YY);											//Total number of stacks in a vibratome slice
 	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserList.listSize()) * mNtotalStacksPerVibratomeSlice;		//Total number of stacks in the entire sample
 
@@ -124,20 +124,21 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
 
 	//Check that cutAboveBottomOfStack is greater than the stack z-overlap
-	const double stackOverlapZ = mStack.mOverlap_frac.at(ZZ) * mStack.mDepth;	//Dummy local variable
+	const double stackOverlapZ = mStack.mOverlapXYZ_frac.at(ZZ) * mStack.mDepth;	//Dummy local variable
 	if (mSample.mCutAboveBottomOfStack < stackOverlapZ)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'cutAboveBottomOfStack' must be greater than the stack z-overlap " + toString(stackOverlapZ / um, 1) + " um");
 }
 
-Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 initialPosition, const int2 stackArrayDim) : mSample(sample), mLaserList(laserList), mStack(stack)
+//To be used with the bead slide
+Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDim) : mSample(sample), mLaserList(laserList), mStack(stack)
 {
-	mSample.mROI.at(XMIN) = initialPosition.at(XX) - mStack.mFOV.at(XX) / 2;
-	mSample.mROI.at(YMIN) = initialPosition.at(YY) - mStack.mFOV.at(YY) / 2;
+	mSample.mROI.at(XMIN) = stackCenterXYZ.at(XX) - mStack.mFOV.at(XX) / 2;
+	mSample.mROI.at(YMIN) = stackCenterXYZ.at(YY) - mStack.mFOV.at(YY) / 2;
 	mSample.mROI.at(XMAX) = mSample.mROI.at(XMIN) + mStack.mFOV.at(XX);
 	mSample.mROI.at(YMAX) = mSample.mROI.at(YMIN) + mStack.mFOV.at(YY);
 
 	//Initialize the z-stage
-	mScanZi = initialPosition.at(ZZ);
+	mScanZi = stackCenterXYZ.at(ZZ) - mStack.mDepth / 2;
 
 	//Initialize the height of the plane to slice
 	mPlaneToSliceZ = 0;
@@ -168,8 +169,8 @@ double Sequencer::calculateStackScanInitialPower_(const double scanPmin, const d
 //The first stack center is L/2 away from the ROI's edge. The next center is at (1-a)*L away from the first center, where a*L is the stack overlap
 double2 Sequencer::stackIndicesToStackCenter_(const int2 stackArrayIndices) const
 {
-	const double overlapX_frac = mStack.mOverlap_frac.at(XX);
-	const double overlapY_frac = mStack.mOverlap_frac.at(YY);
+	const double overlapX_frac = mStack.mOverlapXYZ_frac.at(XX);
+	const double overlapY_frac = mStack.mOverlapXYZ_frac.at(YY);
 
 	double2 stagePosition;
 	stagePosition.at(XX) = mSample.mROI.at(XMIN) + mStack.mFOV.at(XX)  * ((1 - overlapX_frac) * stackArrayIndices.at(XX) + 0.5);
@@ -244,11 +245,11 @@ void Sequencer::saveStack_()
 void Sequencer::cutSlice_()
 {
 	//Move the sample to face the vibratome blade. Notice the additional offset in z
-	const double3 samplePosition = { mSample.mBladePosition.at(XX), mSample.mBladePosition.at(YY), mPlaneToSliceZ + mSample.mBladeFocalplaneOffsetZ };
+	const double3 samplePositionXYZ = { mSample.mBladePosition.at(XX), mSample.mBladePosition.at(YY), mPlaneToSliceZ + mSample.mBladeFocalplaneOffsetZ };
 
 	Commandline commandline;
 	commandline.mAction = CUT;
-	commandline.mCommand.cutSlice = { samplePosition };
+	commandline.mCommand.cutSlice = { samplePositionXYZ };
 	mCommandList.push_back(commandline);
 
 	mSliceCounter++;	//Count the number of vibratome slices
@@ -256,11 +257,11 @@ void Sequencer::cutSlice_()
 
 	//Increase the height of the z-stage for the next iteration		
 	//Because of the overlap, the effective stack depth is (1-a)*stackDepth, where a*stackDepth is the overlap
-	mScanZi += (1 - mStack.mOverlap_frac.at(ZZ)) * mStack.mDepth;
+	mScanZi += (1 - mStack.mOverlapXYZ_frac.at(ZZ)) * mStack.mDepth;
 
 	//Increase the height of the plane to be cut for the next iteration
 	//Because of the overlap, the effective stack depth is (1-a)*stackDepth, where a*stackDepth is the overlap
-	mPlaneToSliceZ += (1 - mStack.mOverlap_frac.at(ZZ)) * mStack.mDepth;
+	mPlaneToSliceZ += (1 - mStack.mOverlapXYZ_frac.at(ZZ)) * mStack.mDepth;
 }
 
 //Snake scanning

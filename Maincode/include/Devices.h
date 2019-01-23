@@ -310,7 +310,7 @@ public:
 	std::string mImmersionMedium;
 	std::string mObjectiveCollar;
 	ROI mROI = { 0, 0, 0, 0 };			//Region of interest across the entire sample {ymin, xmin, ymax, xmax}
-	double3 mLength = { 0, 0, 0 };		//Sample size in x, y, and z
+	double3 mLengthXYZ = { 0, 0, 0 };	//Sample size in x, y, and z
 	double mSurfaceZ = -1;
 
 	const double2 mBladePosition{ 0. * mm, 0. * mm };	//Location of the vibratome blade in x and y wrt the stages origin
@@ -328,9 +328,9 @@ public:
 	double2 mFOV;				//Field of view in x and y
 	double mStepSizeZ;			//Image resolution in z
 	double mDepth;				//Stack depth or thickness
-	double3 mOverlap_frac;		//Stack overlap in x, y, and z
+	double3 mOverlapXYZ_frac;	//Stack overlap in x, y, and z
 
-	Stack(const double2 FOV, const double stepSizeZ, const int nFrames, const double3 stackOverlap_frac);
+	Stack(const double2 FOV, const double stepSizeZ, const int nFrames, const double3 stackOverlapXYZ_frac);
 	void printParams(std::ofstream *fileHandle) const;
 };
 

@@ -1,5 +1,7 @@
 #include "Routines.h"
 
+const double3 stackCenterXYZ{ 34.925 * mm, 11.217 * mm, 18.541 * mm };
+
 namespace MainRoutines
 {
 	void discreteScanZ(const FPGAns::FPGA &fpga)
@@ -15,8 +17,7 @@ namespace MainRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix(300);
 		const int heightPerFrame_pix(400);
-		const int nFramesCont(1);												//Number of frames for continuous XY acquisition
-		const double3 stagePosition0{ 34.925 * mm, 11.217 * mm, 18.541 * mm };	//Stage initial position
+		const int nFramesCont(1);				//Number of frames for continuous XY acquisition
 
 		//RS
 		const ResonantScanner RScanner(fpga);
@@ -33,7 +34,7 @@ namespace MainRoutines
 
 		//STAGES
 		Stage stage;
-		std::vector<double3> stagePosition;
+		std::vector<double3> stagePositionXYZ;
 
 		int nDiffZ;		//Number of frames at different Zs
 		int nSameZ;		//Number of frames at the same Z
@@ -44,19 +45,19 @@ namespace MainRoutines
 			nSameZ = 1;
 			nDiffZ = 1; //Do not change this
 			overrideFlag = NOOVERRIDE;
-			stagePosition.push_back(stagePosition0);
+			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case LIVEMODE:
 			nSameZ = 500;
 			nDiffZ = 1; //Do not change this
 			overrideFlag = OVERRIDE;
-			stagePosition.push_back(stagePosition0);
+			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case AVGMODE:
 			nSameZ = 10;
 			nDiffZ = 1; //Do not change this
 			overrideFlag = NOOVERRIDE;
-			stagePosition.push_back(stagePosition0);
+			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case STACKMODE:
 			nSameZ = 1;
@@ -64,7 +65,7 @@ namespace MainRoutines
 			overrideFlag = NOOVERRIDE;
 			//Generate the control sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-				stagePosition.push_back({ stagePosition0.at(XX), stagePosition0.at(YY), stagePosition0.at(ZZ) + iterDiffZ * stepSizeZ });
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
 			break;
 		case STACKCENTEREDMODE:
 			nSameZ = 1;
@@ -72,7 +73,7 @@ namespace MainRoutines
 			overrideFlag = NOOVERRIDE;
 			//Generate the control sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-				stagePosition.push_back({ stagePosition0.at(XX), stagePosition0.at(YY), stagePosition0.at(ZZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
@@ -146,7 +147,7 @@ namespace MainRoutines
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 		{
-			stage.moveXYZstages(stagePosition.at(iterDiffZ));
+			stage.moveXYZstages(stagePositionXYZ.at(iterDiffZ));
 			stage.waitForMotionToStopAllStages();
 			stage.printPositionXYZ();		//Print the stage position		
 
@@ -168,7 +169,7 @@ namespace MainRoutines
 				{
 					//Save individual files
 					std::string singleFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower / mW, 1) + "mW" +
-						"_x=" + toString(stagePosition.at(iterDiffZ).at(XX) / mm, 3) + "_y=" + toString(stagePosition.at(iterDiffZ).at(YY) / mm, 3) + "_z=" + toString(stagePosition.at(iterDiffZ).at(ZZ) / mm, 4));
+						"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(YY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(ZZ) / mm, 4));
 					image.saveTiffSinglePage(singleFilename, overrideFlag);
 					Sleep(500);
 				}
@@ -183,8 +184,8 @@ namespace MainRoutines
 		{
 			//Save the stackDiffZ to file
 			std::string stackFilename(sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserPowerMin / mW, 1) + "mW_Pf=" + toString(laserPowerMax / mW, 1) + "mW" +
-				"_x=" + toString(stagePosition.front().at(XX) / mm, 3) + "_y=" + toString(stagePosition.front().at(YY) / mm, 3) +
-				"_zi=" + toString(stagePosition.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePosition.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4));
+				"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
+				"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4));
 			tiffStack.saveToFile(stackFilename, overrideFlag);
 		}
 
@@ -213,9 +214,8 @@ namespace MainRoutines
 		const double stepSizeZ(0.5 * um);
 
 		//STAGES
-		const int stackScanDirZ = 1;	//Scan direction in z: 1 for top-down, -1 for bottom-up
-		const double3 stackCenterXYZ{ 34.925 * mm, 10.130 * mm, 18.483 * mm };												//Center of x, y, z stack
-		const double stackDepth(static_cast<int>(stackScanDirZ) * nFramesCont * stepSizeZ);
+		const int stackScanDirZ = 1;																						//Scan direction in z: 1 for top-down, -1 for bottom-up
+		const double stackDepth(stackScanDirZ * nFramesCont * stepSizeZ);
 		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages
 		const double frameDurationTmp = halfPeriodLineclock * heightPerFrame_pix;											//TODO: combine this with the galvo's one
 		Stage stage(5 * mmps, 5 * mmps, stepSizeZ / frameDurationTmp);
@@ -266,7 +266,7 @@ namespace CalibrationRoutines
 		const int widthPerFrame_pix(300);
 		const int heightPerFrame_pix(400);
 		const int nFramesCont(30);												//Number of frames for continuous XY acquisition
-		const double3 stagePosition0{ 35.05 * mm, 10.40 * mm, 18.204 * mm };	//Stage initial position
+		const double3 stagePositionXYZ{ 35.05 * mm, 10.40 * mm, 18.204 * mm };	//Stage initial position
 
 		//RS
 		const ResonantScanner RScanner(fpga);
@@ -290,7 +290,7 @@ namespace CalibrationRoutines
 		VirtualLaser laser(RTcontrol, wavelength_nm, P, FIDELITY);
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
-		stage.moveXYZstages(stagePosition0);
+		stage.moveXYZstages(stagePositionXYZ);
 		stage.waitForMotionToStopAllStages();
 
 		//OPEN THE UNIBLITZ SHUTTERS
@@ -329,11 +329,11 @@ namespace CalibrationRoutines
 		const double step(4 * us);
 
 		FPGAns::RTcontrol RTcontrol(fpga);
-		RTcontrol.pushAnalogSinglet(RTGALVO1, step, 10 * V);					//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTGALVO1, step, 10 * V);				//Initial pulse
 		RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);
-		RTcontrol.pushLinearRamp(RTGALVO1, 4 * us, delay, 0, 5 * V);			//Linear ramp to accumulate the error
-		RTcontrol.pushAnalogSinglet(RTGALVO1, step, 10 * V);					//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);							//Final pulse
+		RTcontrol.pushLinearRamp(RTGALVO1, 4 * us, delay, 0, 5 * V);		//Linear ramp to accumulate the error
+		RTcontrol.pushAnalogSinglet(RTGALVO1, step, 10 * V);				//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);						//Final pulse
 
 		//DO0
 		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
@@ -473,7 +473,7 @@ namespace TestRoutines
 	void stagePosition()
 	{
 		double duration;
-		const double3 stagePosition0{ 35.020 * mm, 19.808 * mm, 18.542 * mm };	//Stage initial position
+		const double3 stagePositionXYZ{ 35.020 * mm, 19.808 * mm, 18.542 * mm };	//Stage initial position
 		Stage stage;
 
 		std::cout << "Stages initial position:" << "\n";
@@ -481,7 +481,7 @@ namespace TestRoutines
 
 		auto t_start = std::chrono::high_resolution_clock::now();
 
-		stage.moveXYZstages(stagePosition0);
+		stage.moveXYZstages(stagePositionXYZ);
 
 		//Stop the stopwatch
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
@@ -758,19 +758,19 @@ namespace TestRoutines
 		const double sampleLengthZ(0.01 * mm);									//Sample thickness
 		const double sampleSurfaceZ(18.521 * mm);
 
-		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
-		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
+		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
+		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
 		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
 		const Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack);
 		const Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlap_frac);
 
 		//Create a sequence
 		//Sequencer sequence(laserList, sample, stack);
-		Sequencer sequence(laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, { 34.925 * mm, 11.217 * mm, 18.541 * mm } , { 2, 2 });
+		Sequencer sequence(laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, stackCenterXYZ, { 2, 2 }); //Last 2 parameters: stack center and number of stacks
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
-		if (0)
+		if (1)
 		{
 			//STAGES. Specify the velocity
 			Stage stage(5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix));
@@ -844,7 +844,7 @@ namespace TestRoutines
 					break;
 				case CUT:
 					//Move the stage to and then cut a slice off
-					double3 stagePosition = commandline.mCommand.cutSlice.mBladePosition;
+					double3 stagePositionXYZ = commandline.mCommand.cutSlice.mBladePosition;
 					break;
 				default:
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -880,7 +880,7 @@ namespace TestRoutines
 		const int nFramesCont(80);											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ(0.5 * um);									//Step size in z
 		const ROI roi{ 9.950 * mm, 34.850 * mm, 10.150 * mm, 35.050 * mm }; //Region of interest {ymin, xmin, ymax, xmax}
-		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
+		const double3 stackOverlapXYZ_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack(15 * um);						//height to cut above the bottom of the stack
 		const double sampleLengthZ(0.01 * mm);								//Sample thickness
 		const double sampleSurfaceZ(18.471 * mm);
@@ -889,7 +889,7 @@ namespace TestRoutines
 		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
 		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
 		Sample sample("Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack);
-		Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlap_frac);
+		Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlapXYZ_frac);
 
 		//Create a sequence
 		Sequencer sequence(laserList, sample, stack);

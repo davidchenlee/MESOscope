@@ -308,7 +308,7 @@ public:
 	std::string mObjectiveCollar;
 	ROI mROI = { 0, 0, 0, 0 };			//Region of interest across the entire sample {ymin, xmin, ymax, xmax}
 	double3 mLengthXYZ = { 0, 0, 0 };	//Sample size in x, y, and z
-	double mSurfaceZ = -1;
+	double mSurfaceZ = -1 * mm;
 
 	const double2 mBladePositionXY{ 0. * mm, 0. * mm };	//Location of the vibratome blade in x and y wrt the stages origin
 	const double mBladeFocalplaneOffsetZ = 0 * um;		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise

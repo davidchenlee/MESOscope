@@ -1700,7 +1700,7 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "Immersion medium = " << mImmersionMedium << "\n";
 	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "ROI = [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROI.at(YMIN) / mm << "," << mROI.at(XMIN) / mm << "," << mROI.at(YMAX) / mm << "," << mROI.at(XMAX) / mm << "]\n";
+	*fileHandle << "ROI [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROI.at(YMIN) / mm << "," << mROI.at(XMIN) / mm << "," << mROI.at(YMAX) / mm << "," << mROI.at(XMAX) / mm << "]\n";
 	*fileHandle << "Length (mm) = (" << mLengthXYZ.at(XX) / mm << "," << mLengthXYZ.at(YY) / mm << "," << mLengthXYZ.at(ZZ) / mm << ")\n\n";
 
 	*fileHandle << "SLICE ************************************************************\n";

@@ -282,8 +282,8 @@ namespace MainRoutines
 		const Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlap_frac);
 
 		//Create a sequence
-		Sequencer sequence(laserList, sample, stack);
-		//Sequencer sequence(laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, stackCenterXYZ, { 2, 2 }); //Last 2 parameters: stack center and number of stacks
+		//Sequencer sequence(laserList, sample, stack);
+		Sequencer sequence(laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, stackCenterXYZ, { 2, 2 }); //Last 2 parameters: stack center and number of stacks
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 

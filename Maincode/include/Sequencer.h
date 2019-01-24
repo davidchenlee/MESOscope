@@ -45,17 +45,18 @@ public:
 class Sequencer
 {
 	//Parameters that are unchanged throughout the sequence
-	Sample mSample;					//Sample
+	Sample mSample;							//Sample
 	const Stack mStack;						//Stack
 	const LaserList mLaserList;				//Laser
-	const int3 mInitialScanDir{ 1,1,1 };	//Initial scan directions in x, y, and z
+	const int3 mInitialScanDir{ 1, 1, 1 };	//Initial scan directions in x, y, and z
+	ROI mROIcovered;
 
 	//Parameters that vary throughout the sequence
 	std::vector<Commandline> mCommandList;
 	int mStackCounter = 0;				//Count the number of stacks
 	int mSliceCounter = 0;				//Count the number of the slices
 	int2 mStackArrayDimIJ;				//Dimension of the array of stacks. Value computed dynamically
-	int3 mScanDir{ mInitialScanDir };	//Scan directions in x, y, and z
+	int3 mScanDir{mInitialScanDir};		//Scan directions in x, y, and z
 	double mScanZi;						//Initial z-stage position for a stack-scan
 	double mPlaneToSliceZ;				//Height of the plane to cut	
 	int mNtotalSlices;					//Number of vibratome slices in the entire sample

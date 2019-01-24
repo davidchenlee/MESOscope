@@ -99,7 +99,7 @@ void Commandline::printParameters() const
 #pragma endregion "Commandline"
 
 #pragma region "Sequencer"
-//Constructor using the sample's ROI. The number of stacks is computed automatically based on the FFOV
+//Constructor using the sample's ROI. The number of stacks is calculated automatically based on the FFOV
 Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack stack) : mSample(sample), mLaserList(laserList), mStack(stack)
 {
 	//Initialize the z-stage with the position of the sample surface
@@ -108,17 +108,24 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 	//Initialize the height of the plane to slice
 	mPlaneToSliceZ = mScanZi + mStack.mDepth - mSample.mCutAboveBottomOfStack;
 
-	//Calculate the total number of stacks in a vibratome slice and also in the entire sample
+	//Calculate the number of stacks in X and Y based on the sample size and stack FFOV
 	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
 	const double overlapX_frac = mStack.mOverlapXYZ_frac.at(XX);		//Dummy local variable
 	const double overlapY_frac = mStack.mOverlapXYZ_frac.at(YY);		//Dummy local variable
 	mStackArrayDimIJ.at(XX) = static_cast<int>(std::ceil(  1/(1-overlapX_frac) * (mSample.mLengthXYZ.at(XX) / mStack.mFFOV.at(XX) - 1) + 1  ));		//Number of stacks in x
 	mStackArrayDimIJ.at(YY) = static_cast<int>(std::ceil(  1/(1-overlapY_frac) * (mSample.mLengthXYZ.at(YY) / mStack.mFFOV.at(YY) - 1) + 1  ));		//Number of stacks in y
 
+	//Calculate the total number of stacks in a vibratome slice and also in the entire sample
 	const double overlapZ_frac = mStack.mOverlapXYZ_frac.at(ZZ);																		//Dummy local variable
-	mNtotalSlices = static_cast<int>(std::ceil(1 / (1 - overlapZ_frac) * (mSample.mLengthXYZ.at(ZZ) / mStack.mDepth) - overlapZ_frac));	//Total number of slices in the entire sample
+	mNtotalSlices = static_cast<int>(std::ceil(  1 / (1 - overlapZ_frac) * (mSample.mLengthXYZ.at(ZZ) / mStack.mDepth - 1) + 1  ));		//Total number of slices in the entire sample
 	const int mNtotalStacksPerVibratomeSlice = mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY);										//Total number of stacks in a vibratome slice
 	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserList.listSize()) * mNtotalStacksPerVibratomeSlice;		//Total number of stacks in the entire sample
+
+	//Calculate the ROI effectively covered by the stacks, which might be slightly larger than the sample's ROI
+	mROIcovered.at(XMIN) = mSample.mROI.at(XMIN);
+	mROIcovered.at(YMIN) = mSample.mROI.at(YMIN);
+	mROIcovered.at(XMAX) = mSample.mROI.at(XMIN) + mStack.mFFOV.at(XX)  * ((1 - overlapX_frac) * mStackArrayDimIJ.at(XX) + 0.5);
+	mROIcovered.at(YMAX) = mSample.mROI.at(YMIN) + mStack.mFFOV.at(YY)  * ((1 - overlapY_frac) * mStackArrayDimIJ.at(YY) + 0.5);
 
 	//Pre-reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
@@ -132,13 +139,17 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 //Constructor using the initial stack center and number of stacks. To be used with the bead slide and therefore no slicing
 Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ) : mSample(sample), mLaserList(laserList), mStack(stack), mStackArrayDimIJ(stackArrayDimIJ)
 {
-	//Calculate the ROI. If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 )
+	//Calculate the ROI covered by the stacks
+	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 )
 	const double overlapX_frac = mStack.mOverlapXYZ_frac.at(XX);		//Dummy local variable
 	const double overlapY_frac = mStack.mOverlapXYZ_frac.at(YY);		//Dummy local variable
-	mSample.mROI.at(XMIN) = stackCenterXYZ.at(XX) - mStack.mFFOV.at(XX) / 2;
-	mSample.mROI.at(YMIN) = stackCenterXYZ.at(YY) - mStack.mFFOV.at(YY) / 2;
-	mSample.mROI.at(XMAX) = mSample.mROI.at(XMIN) + mStack.mFFOV.at(XX) * ((1 - overlapX_frac) * (mStackArrayDimIJ.at(XX) - 1) + 1);
-	mSample.mROI.at(YMAX) = mSample.mROI.at(YMIN) + mStack.mFFOV.at(YY) * ((1 - overlapY_frac) * (mStackArrayDimIJ.at(YY) - 1) + 1);
+	mROIcovered.at(XMIN) = stackCenterXYZ.at(XX) - mStack.mFFOV.at(XX) / 2;
+	mROIcovered.at(YMIN) = stackCenterXYZ.at(YY) - mStack.mFFOV.at(YY) / 2;
+	mROIcovered.at(XMAX) = mROIcovered.at(XMIN) + mStack.mFFOV.at(XX) * ((1 - overlapX_frac) * (mStackArrayDimIJ.at(XX) - 1) + 1);
+	mROIcovered.at(YMAX) = mROIcovered.at(YMIN) + mStack.mFFOV.at(YY) * ((1 - overlapY_frac) * (mStackArrayDimIJ.at(YY) - 1) + 1);
+
+	//Initialize the sample's ROI
+	mSample.mROI = mROIcovered;
 
 	//Initialize the z-stage
 	mScanZi = stackCenterXYZ.at(ZZ) - mStack.mDepth / 2;
@@ -314,6 +325,7 @@ void Sequencer::printSequencerParams(std::ofstream *fileHandle) const
 	*fileHandle << "SEQUENCER ************************************************************\n";
 	*fileHandle << "Stages initial scan directions (x,y,z) = {" << mInitialScanDir.at(XX) << "," << mInitialScanDir.at(YY) << "," << mInitialScanDir.at(ZZ) << "}\n";
 	*fileHandle << std::setprecision(4);
+	*fileHandle << "ROI covered [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROIcovered.at(YMIN) / mm << "," << mROIcovered.at(XMIN) / mm << "," << mROIcovered.at(YMAX) / mm << "," << mROIcovered.at(XMAX) / mm << "]\n";
 	*fileHandle << "Sample surface z position (mm) = " << mSample.mSurfaceZ / mm << "\n";
 	*fileHandle << std::setprecision(0);
 	*fileHandle << "# tissue slices = " << mNtotalSlices << "\n";

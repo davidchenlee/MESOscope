@@ -99,7 +99,7 @@ void Commandline::printParameters() const
 #pragma endregion "Commandline"
 
 #pragma region "Sequencer"
-//Constructor using the sample's ROI
+//Constructor using the sample's ROI. The number of stacks is computed automatically based on the FFOV
 Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack stack) : mSample(sample), mLaserList(laserList), mStack(stack)
 {
 	//Initialize the z-stage with the position of the sample surface
@@ -109,16 +109,15 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 	mPlaneToSliceZ = mScanZi + mStack.mDepth - mSample.mCutAboveBottomOfStack;
 
 	//Calculate the total number of stacks in a vibratome slice and also in the entire sample
-	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV ( (1-a)*N + 1 )
-	//Therefore, the given L and FOV, then N =1/(1-a) * ( L/FOV - 1 )
+	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
 	const double overlapX_frac = mStack.mOverlapXYZ_frac.at(XX);		//Dummy local variable
 	const double overlapY_frac = mStack.mOverlapXYZ_frac.at(YY);		//Dummy local variable
-	mStackArrayDimIJ.at(XX) = static_cast<int>(std::ceil( 1/(1-overlapX_frac) * (mSample.mLengthXYZ.at(XX) / mStack.mFFOV.at(XX)) - overlapX_frac));		//Number of stacks in x
-	mStackArrayDimIJ.at(YY) = static_cast<int>(std::ceil( 1/(1-overlapY_frac) * (mSample.mLengthXYZ.at(YY) / mStack.mFFOV.at(YY)) - overlapY_frac));		//Number of stacks in y
+	mStackArrayDimIJ.at(XX) = static_cast<int>(std::ceil(  1/(1-overlapX_frac) * (mSample.mLengthXYZ.at(XX) / mStack.mFFOV.at(XX) - 1) + 1  ));		//Number of stacks in x
+	mStackArrayDimIJ.at(YY) = static_cast<int>(std::ceil(  1/(1-overlapY_frac) * (mSample.mLengthXYZ.at(YY) / mStack.mFFOV.at(YY) - 1) + 1  ));		//Number of stacks in y
 
 	const double overlapZ_frac = mStack.mOverlapXYZ_frac.at(ZZ);																		//Dummy local variable
 	mNtotalSlices = static_cast<int>(std::ceil(1 / (1 - overlapZ_frac) * (mSample.mLengthXYZ.at(ZZ) / mStack.mDepth) - overlapZ_frac));	//Total number of slices in the entire sample
-	const int mNtotalStacksPerVibratomeSlice = mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY);											//Total number of stacks in a vibratome slice
+	const int mNtotalStacksPerVibratomeSlice = mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY);										//Total number of stacks in a vibratome slice
 	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserList.listSize()) * mNtotalStacksPerVibratomeSlice;		//Total number of stacks in the entire sample
 
 	//Pre-reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
@@ -130,13 +129,16 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'cutAboveBottomOfStack' must be greater than the stack z-overlap " + toString(stackOverlapZ / um, 1) + " um");
 }
 
-//Constructor using the initial stack center. To be used with the bead slide and therefore no slicing
-Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ) : mSample(sample), mLaserList(laserList), mStack(stack)
+//Constructor using the initial stack center and number of stacks. To be used with the bead slide and therefore no slicing
+Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ) : mSample(sample), mLaserList(laserList), mStack(stack), mStackArrayDimIJ(stackArrayDimIJ)
 {
+	//Calculate the ROI. If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 )
+	const double overlapX_frac = mStack.mOverlapXYZ_frac.at(XX);		//Dummy local variable
+	const double overlapY_frac = mStack.mOverlapXYZ_frac.at(YY);		//Dummy local variable
 	mSample.mROI.at(XMIN) = stackCenterXYZ.at(XX) - mStack.mFFOV.at(XX) / 2;
 	mSample.mROI.at(YMIN) = stackCenterXYZ.at(YY) - mStack.mFFOV.at(YY) / 2;
-	mSample.mROI.at(XMAX) = mSample.mROI.at(XMIN) + mStack.mFFOV.at(XX);
-	mSample.mROI.at(YMAX) = mSample.mROI.at(YMIN) + mStack.mFFOV.at(YY);
+	mSample.mROI.at(XMAX) = mSample.mROI.at(XMIN) + mStack.mFFOV.at(XX) * ((1 - overlapX_frac) * (mStackArrayDimIJ.at(XX) - 1) + 1);
+	mSample.mROI.at(YMAX) = mSample.mROI.at(YMIN) + mStack.mFFOV.at(YY) * ((1 - overlapY_frac) * (mStackArrayDimIJ.at(YY) - 1) + 1);
 
 	//Initialize the z-stage
 	mScanZi = stackCenterXYZ.at(ZZ) - mStack.mDepth / 2;
@@ -147,10 +149,8 @@ Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack
 	if (stackArrayDimIJ.at(XX) <= 0 || stackArrayDimIJ.at(YY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack array dimension must be equal to 1 or greater");
 
-	mStackArrayDimIJ = stackArrayDimIJ;		//Number of stacks in x and y
-
 	mNtotalSlices = 1;
-	const int mNtotalStacksPerVibratomeSlice = mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY);											//Total number of stacks in a vibratome slice
+	const int mNtotalStacksPerVibratomeSlice = mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY);										//Total number of stacks in a vibratome slice
 	const int mNtotalStackEntireSample = mNtotalSlices * static_cast<int>(mLaserList.listSize()) * mNtotalStacksPerVibratomeSlice;		//Total number of stacks in the entire sample
 
 	//Pre-reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice

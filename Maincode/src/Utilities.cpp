@@ -91,7 +91,7 @@ std::string axisToString(const Axis axis)
 
 void pressAnyKeyToCont()
 {
-	std::cout << "Press any key to continue...\n";
+	std::cout << "\nPress any key to continue...\n";
 	getchar();
 }
 

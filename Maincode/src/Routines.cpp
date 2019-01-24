@@ -230,7 +230,9 @@ namespace MainRoutines
 		FPGAns::RTcontrol RTcontrol(fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG);	//Notice the STAGETRIG flag
 
 		//LASER: wavelength_nm, laserPower, whichLaser
-		const VirtualLaser laser(RTcontrol, 750, 60. * mW, AUTO);
+		const int wavelength_nm = 750;
+		const double laserPower = 60. * mW;
+		const VirtualLaser laser(RTcontrol, wavelength_nm, laserPower, AUTO);
 		//VirtualLaser laser(RTcontrol, 1040, 25. * mW, AUTO);
 
 		//GALVO RT linear scan
@@ -247,7 +249,10 @@ namespace MainRoutines
 		stage.moveSingleStage(ZZ, stageXYZi.at(ZZ) + stackDepth);	//Move the stage to trigger the control sequence and data acquisition
 		image.downloadData();
 		image.postprocess();
-		image.saveTiffMultiPage("Untitled", NOOVERRIDE, stackScanDirZ);
+
+		const std::string filename = toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserPower / mW, 1) +
+			"_x=" + toString(stageXYZi.at(XX) / mm, 3) + "_y=" + toString(stageXYZi.at(YY) / mm, 3) + "_zi=" + toString(stageXYZi.at(ZZ) / mm, 4) + "_zf=" + toString((stageXYZi.at(ZZ) + stackDepth) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
+		image.saveTiffMultiPage(filename, NOOVERRIDE, stackScanDirZ);
 
 		//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence
 		//RTcontrol.setZstageTriggerEnabled(false);
@@ -264,7 +269,7 @@ namespace MainRoutines
 		const double2 FFOV{ 200. * um, 150. * um };
 		const int nFramesCont(80);												//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ(0.5 * um);										//Step size in z
-		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.200 * mm, 35.025 * mm };	//Region of interest {ymin, xmin, ymax, xmax}
+		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.180 * mm, 35.025 * mm };	//Region of interest {ymin, xmin, ymax, xmax}
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };					//Stack overlap
 		const double cutAboveBottomOfStack(15 * um);							//height to cut above the bottom of the stack
 		const double sampleLengthZ(0.01 * mm);									//Sample thickness
@@ -277,12 +282,12 @@ namespace MainRoutines
 		const Stack stack(FFOV, stepSizeZ, nFramesCont, stackOverlap_frac);
 
 		//Create a sequence
-		//Sequencer sequence(laserList, sample, stack);
-		Sequencer sequence(laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, stackCenterXYZ, { 2, 2 }); //Last 2 parameters: stack center and number of stacks
+		Sequencer sequence(laserList, sample, stack);
+		//Sequencer sequence(laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, stackCenterXYZ, { 2, 2 }); //Last 2 parameters: stack center and number of stacks
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
-		if (1)
+		if (0)
 		{
 			//STAGES. Specify the velocity
 			Stage stage(5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix));

@@ -159,6 +159,7 @@ void Image::demultiplex_()
 {
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
 	{
+		//TODO: pick up the corresponding 4-bit segment from mBufArrayA and mBufArrayB
 		unsigned char upscaled = mRTcontrol.mUpscaleU8 * mBufArrayB[pixIndex]; //Upscale the buffer to go from 4-bit to 8-bit
 
 		//If upscaled overflows
@@ -196,7 +197,6 @@ void Image::stopFIFOOUTpc_() const
 
 void Image::acquire()
 {
-
 	mRTcontrol.presetFPGAoutput_();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
 	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI, but if not called, sometimes garbage is generated
@@ -633,7 +633,7 @@ void PMT16X::setAllGain(std::vector<uint8_t> gains) const
 			throw std::invalid_argument((std::string)__FUNCTION__ + ":  PMT16X gain #" + std::to_string(ii) + " out of range (0-255)");
 
 	gains.insert(gains.begin(), 'G');	//Prepend the command
-	std::vector<uint8_t> parameters = sendCommand_({ gains });
+	std::vector<uint8_t> parameters{ sendCommand_({ gains }) };
 	//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
@@ -1332,7 +1332,7 @@ void VirtualLaser::tuneFilterwheels_(const int wavelength_nm)
 
 void VirtualLaser::setWavelength(const int wavelength_nm)
 {
-	const LaserSelector dummy = autoselectLaser_(wavelength_nm);
+	const LaserSelector dummy{ autoselectLaser_(wavelength_nm) };
 
 	//Update the laser in use
 	if (mCurrentLaser != dummy)
@@ -1472,7 +1472,7 @@ void Stage::moveSingle(const Axis axis, const double position)
 	//Move the stage
 	if (mPositionXYZ.at(axis) != position ) //Move only if the requested position is different from the current position
 	{
-		const double position_mm = position / mm;								//Divide by mm to convert from implicit to explicit units
+		const double position_mm{ position / mm };								//Divide by mm to convert from implicit to explicit units
 		if (!PI_MOV(mID_XYZ.at(axis), mNstagesPerController, &position_mm) )	//~14 ms to execute this function
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString(axis) + " to the target position");
 
@@ -1565,7 +1565,7 @@ void Stage::setVelocitySingle(const Axis axis, const double vel) const
 	if (vel <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be greater than zero for the stage " + axisToString(axis));
 
-	const double vel_mmps = vel / mmps;		//Divide by mmps to convert implicit to explicit units
+	const double vel_mmps{ vel / mmps };		//Divide by mmps to convert implicit to explicit units
 	if (!PI_VEL(mID_XYZ.at(axis), mNstagesPerController, &vel_mmps))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString(axis));
 }

@@ -283,7 +283,7 @@ void Sequencer::generateCommandList()
 
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
-		int xx = 0, yy = 0;				//Reset the stack indices after every cut
+		int xx{ 0 }, yy{ 0 };				//Reset the stack indices after every cut
 		resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
 
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mLaserList.listSize(); iterWL++)

@@ -233,7 +233,7 @@ namespace MainRoutines
 		const int wavelength_nm{ 750 };
 		const double laserPower{ 60. * mW };
 		const VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower, AUTO };
-		//VirtualLaser laser(RTcontrol, 1040, 25. * mW, AUTO);
+		//VirtualLaser laser{ RTcontrol, 1040, 25. * mW, AUTO };
 
 		//GALVO RT linear scan
 		const double FFOVgalvo{ 200. * um };	//Full FOV in the slow axis
@@ -275,14 +275,14 @@ namespace MainRoutines
 		const double sampleLengthZ{ 0.01 * mm };								//Sample thickness
 		const double sampleSurfaceZ{ 18.521 * mm };
 
-		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
-		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
+		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
+		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
 		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
 		const Sample sample{ "Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
 
 		//Create a sequence
-		//Sequencer sequence(laserList, sample, stack);
+		//Sequencer sequence{ laserList, sample, stack };
 		Sequencer sequence{ laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, stackCenterXYZ, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
@@ -375,7 +375,7 @@ namespace MainRoutines
 				double duration{ std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count() };
 				std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
-				pressAnyKeyToCont();
+				//pressAnyKeyToCont();
 			}//for
 		}//if
 
@@ -512,7 +512,7 @@ namespace TestRoutines
 		image.acquire();							//Execute the realtime control sequence and acquire the image
 		//image.pushToVector(stackOfAverages);
 		//std::cout << "size: " << stackOfAverages.size() << "\n";
-		//TiffU8 acqParam(stackOfAverages, 300, 400);
+		//TiffU8 acqParam{ stackOfAverages, 300, 400 };
 		//acqParam.saveTiff("Untitled");
 	}
 

@@ -110,7 +110,7 @@ public:
 class PMT16X
 {
 	std::unique_ptr<serial::Serial> mSerial;
-	int mPort = COMPMT16X;
+	int mPort{ COMPMT16X };
 	const int mBaud{ 9600 };
 	const int mTimeout{ 300 * ms };
 	const int mRxBufferSize{ 256 };				//Serial buffer size

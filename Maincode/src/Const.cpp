@@ -3,10 +3,10 @@
 //Constants that are never changed
 namespace Constants
 {
-	//extern const std::string folderPath("D:\\_output_D\\");
-	extern const std::string folderPath = "Z:\\_output_Z\\";
+	extern const std::string folderPath{ "D:\\_output_local\\" };
+	//extern const std::string folderPath{ "Z:\\_output_remote\\" };
 
-	extern const std::string bitfilePath("D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\");	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
+	extern const std::string bitfilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" };	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
 
 	extern const PhotonCounterSelector photoncounterInput{ EXT };		//Real PMT (EXT) or simulated PMT (SIM)
 	extern const PixelclockSelector pixelclockType{ UNIFORM };			//UNIFORM or NONUNIFORM dwell times

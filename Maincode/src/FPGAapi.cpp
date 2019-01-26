@@ -94,7 +94,7 @@ namespace FPGAns
 	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'
 	U32 packPixelclockSinglet(const double timeStep, const bool DO)
 	{
-		const U16 PixelclockLatency_tick = 1;//The pixel-clock is implemented using a SCTL. I think the latency comes from reading the LUT buffer
+		const U16 PixelclockLatency_tick{ 1 };//The pixel-clock is implemented using a SCTL. I think the latency comes from reading the LUT buffer
 		return packU32(timeToTick(timeStep) - PixelclockLatency_tick, static_cast<U16>(DO));
 	}
 
@@ -233,8 +233,7 @@ namespace FPGAns
 #pragma endregion "FPGA"
 
 #pragma region "RTcontrol"
-	RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell): 
-		mWidthPerFrame_pix(widthPerFrame_pix), mDwell(dwell)
+	RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell) : mWidthPerFrame_pix(widthPerFrame_pix), mDwell(dwell)
 	{
 		const int calibFine_tick{ -32 };
 		switch (pixelclockType)

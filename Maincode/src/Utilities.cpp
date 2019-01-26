@@ -19,7 +19,7 @@ void printHex(const std::vector<uint8_t>  input)
 //Convert a string to hex and print it out
 void printHex(const std::string input)
 {
-	const char *cstr = input.c_str();
+	const char *cstr{ input.c_str() };
 	for (size_t ii = 0; ii < input.size(); ii++)
 	{
 		std::cout << std::hex << std::uppercase << static_cast<int>(cstr[ii]);
@@ -36,8 +36,8 @@ void printBinary16(const int input)
 //Convert a double to a fixed 2p14
 U16 doubleToFx2p14(double n)
 {
-	const int FIXED_BIT = 14; //Number of decimal digits. It MUST match the LV implementation: currently fx2.14 (U16 is split into 2 integer digits + 14 decimal digits)
-	U16 int_part = 0, frac_part = 0;
+	const int FIXED_BIT{ 14 }; //Number of decimal digits. It MUST match the LV implementation: currently fx2.14 (U16 is split into 2 integer digits + 14 decimal digits)
+	U16 int_part{ 0 }, frac_part{ 0 };
 	double t;
 	int_part = static_cast<U16>(floor(n)) << FIXED_BIT;
 	n -= static_cast<U16>(floor(n));
@@ -66,7 +66,7 @@ std::string toString(const double number, const int nDecimalPlaces)
 //Check if the file already exists
 std::string doesFileExist(const std::string filename)
 {
-	std::string suffix("");
+	std::string suffix{ "" };
 
 	for (int ii = 1; std::experimental::filesystem::exists(folderPath + filename + suffix + ".tif"); ii++)
 		suffix = " (" + std::to_string(ii) + ")";
@@ -128,7 +128,7 @@ void Logger::record(const std::string description, const std::string input)
 //Construct a tiff from a file
 TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 {
-	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "r");
+	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "r") };
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Opening Tiff failed");
@@ -154,7 +154,7 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 	if (mBytesPerLine == NULL)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failed assigning mBytesPerLine");
 
-	unsigned char* buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);
+	unsigned char* buffer{ (unsigned char *)_TIFFmalloc(mBytesPerLine) };
 
 	if (buffer == NULL) //Check that the buffer memory was allocated
 	{
@@ -180,7 +180,7 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 TiffU8::TiffU8(const unsigned char* inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes) :
 	mWidthPerFrame(widthPerFrame), mHeightPerFrame(heightPerFrame), mNframes(nframes), mBytesPerLine(widthPerFrame * sizeof(unsigned char))
 {
-	const int nPixAllFrames = widthPerFrame * heightPerFrame * nframes;
+	const int nPixAllFrames{ widthPerFrame * heightPerFrame * nframes };
 	mArray = new unsigned char[nPixAllFrames];
 
 	//Copy input image onto mArray
@@ -191,7 +191,7 @@ TiffU8::TiffU8(const unsigned char* inputImage, const int widthPerFrame, const i
 TiffU8::TiffU8(const std::vector<unsigned char> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes) :
 	mWidthPerFrame(widthPerFrame), mHeightPerFrame(heightPerFrame), mNframes(nframes), mBytesPerLine(widthPerFrame * sizeof(unsigned char))
 {
-	const int nPixAllFrames = widthPerFrame * heightPerFrame * nframes;
+	const int nPixAllFrames{ widthPerFrame * heightPerFrame * nframes };
 	mArray = new unsigned char[nPixAllFrames];
 
 	//Copy input image onto mArray
@@ -246,12 +246,12 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	if (!overrideFlag)
 		filename = doesFileExist(filename);	//Check if the file exits. It gives some overhead
 	
-	TIFF *tiffHandle = TIFFOpen((folderPath + filename + ".tif").c_str(), "w");
+	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "w") };
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Saving Tiff failed");
 
-	unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);	//Buffer used to store the row of pixel information for writing to file
+	unsigned char *buffer{ (unsigned char *)_TIFFmalloc(mBytesPerLine) };	//Buffer used to store the row of pixel information for writing to file
 
 	if (buffer == NULL) //Check that the buffer memory was allocated
 	{
@@ -321,7 +321,7 @@ void TiffU8::mirrorOddFrames()
 {
 	if (mNframes > 1)
 	{
-		unsigned char *buffer = (unsigned char *)_TIFFmalloc(mBytesPerLine);		//Buffer used to store the row of pixel information for writing to file
+		unsigned char *buffer{ (unsigned char *)_TIFFmalloc(mBytesPerLine) };		//Buffer used to store the row of pixel information for writing to file
 
 		if (buffer == NULL) //Check that the buffer memory was allocated
 			std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory");
@@ -352,7 +352,7 @@ void TiffU8::averageEvenOddFrames()
 		const int nPixPerFrame = mWidthPerFrame * mHeightPerFrame;
 
 		//Calculate the average of the even and odd frames separately
-		unsigned int* avg = new unsigned int[2 * nPixPerFrame]();
+		unsigned int* avg{ new unsigned int[2 * nPixPerFrame]() };
 		for (int frame = 0; frame < mNframes; frame++)
 			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
 			{
@@ -363,7 +363,7 @@ void TiffU8::averageEvenOddFrames()
 			}
 
 		//Put 'evenImage' and 'oddImage' back into mArray. Concatenate 'oddImage' after 'evenImage'. Ignore the rest of the data in mArray
-		int	nFramesHalf = mNframes / 2;
+		int	nFramesHalf{ mNframes / 2 };
 		for (int pixIndex = 0; pixIndex < 2 * nPixPerFrame; pixIndex++)
 		{
 			if (mNframes % 2)	//Odd number of frames: 1, 3, 5, etc
@@ -383,9 +383,9 @@ void TiffU8::averageFrames()
 {
 	if (mNframes > 1)
 	{
-		const int nPixPerFrame = mWidthPerFrame * mHeightPerFrame;
+		const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };
 
-		unsigned int* avg = new unsigned int[nPixPerFrame]();
+		unsigned int* avg{ new unsigned int[nPixPerFrame]() };
 		for (int frame = 0; frame < mNframes; frame++)
 			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
 				avg[pixIndex] += mArray[frame * nPixPerFrame + pixIndex];
@@ -400,7 +400,7 @@ void TiffU8::averageFrames()
 
 void TiffU8::analyze() const
 {
-	double totalCount = 0;
+	double totalCount{ 0 };
 	for (int index = 0; index < mWidthPerFrame * mHeightPerFrame; index++)
 		totalCount += mArray[index];
 

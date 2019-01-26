@@ -22,13 +22,13 @@ Image::~Image()
 //Flush the residual data in FIFOOUTpc from the previous run, if any
 void Image::FIFOOUTpcGarbageCollector_() const
 {
-	const U32 timeout_ms = 100;
-	const int bufSize = 10000;
+	const U32 timeout_ms{ 100 };
+	const int bufSize{ 10000 };
 
 	U32 dummy;
 	U32* garbage = new U32[bufSize];
 	U32 nElemToReadA, nElemToReadB;					//Elements to read from FIFOOUTpc A and B
-	int nElemTotalA = 0, nElemTotalB = 0; 			//Total number of elements read from FIFOOUTpc A and B
+	int nElemTotalA{ 0 }, nElemTotalB{ 0 }; 			//Total number of elements read from FIFOOUTpc A and B
 	while (true)
 	{
 		//Check if there are elements in FIFOOUTpc
@@ -72,17 +72,17 @@ void Image::readFIFOOUTpc_()
 	auto t_start = std::chrono::high_resolution_clock::now();
 	*/
 	
-	const int readFifoWaitingTime_ms = 5;	//Waiting time between each iteration
-	const U32 timeout_ms = 100;				//FIFOOUTpc timeout
+	const int readFifoWaitingTime_ms{ 5 };	//Waiting time between each iteration
+	const U32 timeout_ms{ 100 };				//FIFOOUTpc timeout
 	
 	//Null reading timeout
-	int timeout_iter = 200;					//Timeout the whileloop if the data transfer fails
-	int nullReadCounterA = 0;
-	int nullReadCounterB = 0;
+	int timeout_iter{ 200 };					//Timeout the whileloop if the data transfer fails
+	int nullReadCounterA{ 0 };
+	int nullReadCounterB{ 0 };
 
 	//FIFOOUT
-	int nElemTotalA = 0; 					//Total number of elements read from FIFOOUTpc A
-	int nElemTotalB = 0; 					//Total number of elements read from FIFOOUTpc B
+	int nElemTotalA{ 0 }; 					//Total number of elements read from FIFOOUTpc A
+	int nElemTotalB{ 0 }; 					//Total number of elements read from FIFOOUTpc B
 	
 	while (nElemTotalA < mRTcontrol.mNpixAllFrames || nElemTotalB < mRTcontrol.mNpixAllFrames)
 	{
@@ -116,8 +116,8 @@ void Image::readFIFOOUTpc_()
 void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &nullReadCounter)
 {
 	U32 dummy;
-	U32 nElemToRead = 0;				//Elements remaining in FIFOOUTpc
-	const U32 timeout_ms = 100;			//FIFOOUTpc timeout
+	U32 nElemToRead{ 0 };				//Elements remaining in FIFOOUTpc
+	const U32 timeout_ms{ 100 };		//FIFOOUTpc timeout
 
 	if (nElemRead < mRTcontrol.mNpixAllFrames)		//Skip if all the data have already been transferred
 	{
@@ -245,9 +245,17 @@ void Image::downloadData()
 
 void Image::postprocess()
 {
+	//Stopwatch
+	//auto t_start = std::chrono::high_resolution_clock::now();
+
 	correctInterleaved_();
 	demultiplex_();				//Move the chuncks of data to the buffer array
 	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning. Divide the long vertical image in nFrames and vertically mirror the odd frames
+
+	//Stop the stopwatch
+	//double duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	//std::cout << "Post-processing elapsed time: " << duration << " ms" << "\n";
+
 }
 
 //Split the long vertical image into nFrames and calculate the average
@@ -288,7 +296,7 @@ Vibratome::Vibratome(const FPGAns::FPGA &fpga, const double sliceOffset): mFpga(
 //Start or stop running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
 void Vibratome::pushStartStopButton() const
 {
-	const double SleepTime = 20 * ms; //in ms. It has to be ~ 12 ms or longer otherwise the vibratome control pad does not read the signal
+	const double SleepTime{ 20. * ms }; //in ms. It has to be ~ 12 ms or longer otherwise the vibratome control pad does not read the signal
 	
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, true));
 
@@ -301,8 +309,8 @@ void Vibratome::pushStartStopButton() const
 void Vibratome::moveHead_(const double duration, const MotionDir motionDir) const
 {
 	NiFpga_FPGAvi_ControlBool selectedChannel;
-	const double minDuration = 10 * ms;
-	const double delay = 1 * ms;				//Used to roughly calibrate the pulse length
+	const double minDuration{ 10. * ms };
+	const double delay{ 1. * ms };				//Used to roughly calibrate the pulse length
 
 	switch (motionDir)
 	{
@@ -328,10 +336,11 @@ void Vibratome::moveHead_(const double duration, const MotionDir motionDir) cons
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, false));
 }
 
+/*//NO NEED OF TRACTING THE VIBRATOME'S HEAD ANYMORE
 void Vibratome::cutAndRetractDistance(const double distance) const
 {
-	const double cuttingTime = distance / mCuttingSpeed;
-	const double retractingTime = distance / mMovingSpeed;
+	const double cuttingTime{ distance / mCuttingSpeed };
+	const double retractingTime{ distance / mMovingSpeed };
 
 	pushStartStopButton();
 	std::cout << "The vibratome is cutting for " << cuttingTime / sec << " seconds" << "\n";
@@ -344,17 +353,18 @@ void Vibratome::cutAndRetractDistance(const double distance) const
 
 void Vibratome::retractDistance(const double distance) const
 {
-	const double retractingTime = static_cast<int>(distance / mMovingSpeed);
+	const double retractingTime{ static_cast<int>(distance / mMovingSpeed) };
 	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
 	moveHead_(retractingTime, BACKWARD);
 }
+*/
 #pragma endregion "Vibratome"
 
 #pragma region "Resonant scanner"
 ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol): mRTcontrol(RTcontrol)
 {	
 	//Calculate the spatial fill factor
-	const double temporalFillFactor = mRTcontrol.mWidthPerFrame_pix * mRTcontrol.mDwell / halfPeriodLineclock;
+	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * mRTcontrol.mDwell / halfPeriodLineclock };
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
@@ -488,9 +498,9 @@ void Galvo::positionLinearRamp(const double timeStep, const double rampLength, c
 //Generate a linear ramp to scan the galvo across a frame (a plane with fixed z)
 void Galvo::generateFrameScan(const double xi, const double xf) const
 {
-	const double timeStep(8 * us);	//Time step of the linear ramp
-	const double fineTuneHalfPeriodLineclock = - 0.58 * us;	//Adjust the RS half-period to fine tune the galvo's frame-scan
-	const double frameDuration((halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix);	//Time to scan a frame = (time for the RS to travel from side to side) x (# height of the frame in pixels)
+	const double timeStep{ 8. * us };	//Time step of the linear ramp
+	const double fineTuneHalfPeriodLineclock{ -0.58 * us };	//Adjust the RS half-period to fine tune the galvo's frame-scan
+	const double frameDuration{ (halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix };	//Time to scan a frame = (time for the RS to travel from side to side) x (# height of the frame in pixels)
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
 }
 
@@ -516,7 +526,7 @@ std::vector<uint8_t> PMT16X::sendCommand_(std::vector<uint8_t> command_array) co
 {
 	command_array.push_back(sumCheck_(command_array, command_array.size()));	//Append the sumcheck
 
-	std::string TxBuffer(command_array.begin(), command_array.end()); //Convert the vector<char> to string
+	std::string TxBuffer{ command_array.begin(), command_array.end() }; //Convert the vector<char> to string
 	TxBuffer += "\r";	//End the command line with CR
 	//printHex(TxBuffer); //For debugging
 
@@ -546,7 +556,7 @@ std::vector<uint8_t> PMT16X::sendCommand_(std::vector<uint8_t> command_array) co
 //Return the sumcheck of all the elements in the array
 uint8_t PMT16X::sumCheck_(const std::vector<uint8_t> charArray, const int nElements) const
 {
-	uint8_t sum = 0;
+	uint8_t sum{ 0 };
 	for (int ii = 0; ii < nElements; ii++)
 		sum += charArray.at(ii);
 
@@ -555,7 +565,7 @@ uint8_t PMT16X::sumCheck_(const std::vector<uint8_t> charArray, const int nEleme
 
 void PMT16X::readAllGain() const
 {
-	std::vector<uint8_t> parameters = sendCommand_({'I'});
+	std::vector<uint8_t> parameters{ sendCommand_({'I'})};
 
 	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) != 'I' || parameters.at(17) != sumCheck_(parameters, parameters.size() - 2))
@@ -577,7 +587,7 @@ void PMT16X::setSingleGain(const int channel, const int gain) const
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain out of range (0-255)");
 
 
-	std::vector<uint8_t> parameters = sendCommand_({'g', (uint8_t)channel, (uint8_t)gain});
+	std::vector<uint8_t> parameters{ sendCommand_({'g', (uint8_t)channel, (uint8_t)gain})};
 	//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
@@ -589,7 +599,7 @@ void PMT16X::setSingleGain(const int channel, const int gain) const
 
 void PMT16X::setAllGainToZero() const
 {
-	std::vector<uint8_t> parameters = sendCommand_({ 'R' }); //The manual says that this sets all the gains to 255, but it really does it to 0
+	std::vector<uint8_t> parameters{ sendCommand_({ 'R' }) }; //The manual says that this sets all the gains to 255, but it really does it to 0
 															//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the PMT16X are correct. The second char returned is the sumcheck
@@ -602,7 +612,7 @@ void PMT16X::setAllGain(const int gain) const
 	if (gain < 0 || gain > 255)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain must be in the range 0-255");
 
-	std::vector<uint8_t> parameters = sendCommand_({ 'S', (uint8_t)gain });
+	std::vector<uint8_t> parameters{ sendCommand_({ 'S', (uint8_t)gain }) };
 	//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
@@ -639,18 +649,18 @@ void PMT16X::setAllGain(std::vector<uint8_t> gains) const
 
 void PMT16X::readTemp() const
 {
-	std::vector<uint8_t> parameters = sendCommand_({ 'T' });
+	std::vector<uint8_t> parameters{ sendCommand_({ 'T' }) };
 	//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
 	if (parameters.at(0) != 'T' || parameters.at(4) != sumCheck_(parameters, parameters.size() - 2))
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch\n";
 
-	const int TEMPH = static_cast<int>(parameters.at(1));
-	const int TEMPL = static_cast<int>(parameters.at(2));
-	const double temp_C = TEMPH + 0.01 * TEMPL; //According to the manual
+	const int TEMPH{ static_cast<int>(parameters.at(1)) };
+	const int TEMPL{ static_cast<int>(parameters.at(2)) };
+	const double temp_C{ TEMPH + 0.01 * TEMPL }; //According to the manual
 
-	const int alertTemp_C = static_cast<int>(parameters.at(3));
+	const int alertTemp_C{ static_cast<int>(parameters.at(3)) };
 
 	std::cout << "PMT16X temperature = " << temp_C << " \370C\n";
 	std::cout << "PMT16X alert temperature = " << alertTemp_C <<  " \370C\n";
@@ -696,7 +706,7 @@ Filterwheel::~Filterwheel()
 //Download the current filter position
 void Filterwheel::downloadColor_()
 {
-	const std::string TxBuffer("pos?\r");	//Command to the filterwheel
+	const std::string TxBuffer{ "pos?\r" };	//Command to the filterwheel
 	std::string RxBuffer;					//Reply from the filterwheel
 
 	try
@@ -706,7 +716,7 @@ void Filterwheel::downloadColor_()
 		//std::cout << "Full RxBuffer: " << RxBuffer << "\n"; //For debugging
 
 		//Delete echoed command
-		std::string::size_type ii = RxBuffer.find(TxBuffer);
+		std::string::size_type ii{ RxBuffer.find(TxBuffer) };
 		if (ii != std::string::npos)
 			RxBuffer.erase(ii, TxBuffer.length());
 
@@ -737,10 +747,10 @@ void Filterwheel::setPosition_(const int position)
 			mSerial->write(TxBuffer);
 
 			//Find the shortest way to reach the targeted position
-			const int minPos = (std::min)(position, mPosition);
-			const int maxPos = (std::max)(position, mPosition);
-			const int diffPos = maxPos - minPos;
-			const int minSteps = (std::min)(diffPos, mNpos - diffPos);
+			const int minPos{ (std::min)(position, mPosition) };
+			const int maxPos{ (std::max)(position, mPosition) };
+			const int diffPos{ maxPos - minPos };
+			const int minSteps{ (std::min)(diffPos, mNpos - diffPos) };
 
 			//std::cout << "Tuning the " << mDeviceName << " to " + colorToString_(color) << "...\n";
 			Sleep(static_cast<DWORD>(1. * minSteps / mTuningSpeed / ms));	//Wait until the filterwheel stops turning the turret
@@ -878,14 +888,14 @@ int Laser::downloadWavelength_nm_()
 	case VISION:
 		try
 		{
-			const std::string TxBuffer("?VW");		//Command to the laser
+			const std::string TxBuffer{ "?VW" };	//Command to the laser
 			std::string RxBuffer;					//Reply from the laser
 			mSerial->write(TxBuffer + "\r");
 			mSerial->read(RxBuffer, mRxBufSize);
 
 			//Delete echoed command. Echoing could be disabled on the laser side but deleting it is safer and more general
-			std::string keyword("?VW ");
-			std::string::size_type i = RxBuffer.find(keyword);
+			std::string keyword{ "?VW " };
+			std::string::size_type i{ RxBuffer.find(keyword) };
 			if (i != std::string::npos)
 				RxBuffer.erase(i, keyword.length());
 
@@ -928,7 +938,7 @@ void Laser::setWavelength(const int wavelength_nm)
 
 		if (wavelength_nm != mWavelength_nm)	//Set the new wavelength only if it is different from the current value
 		{
-			const std::string TxBuffer("VW=" + std::to_string(wavelength_nm));		//Command to the laser
+			const std::string TxBuffer{ "VW=" + std::to_string(wavelength_nm) };	//Command to the laser
 			std::string RxBuffer;													//Reply from the laser
 
 			try
@@ -1023,7 +1033,7 @@ bool Laser::isShutterOpen() const
 		mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work
 
 		//Remove echoed command in the returned message
-		std::string::size_type i = RxBuffer.find(keyword);
+		std::string::size_type i{ RxBuffer.find(keyword) };
 		if (i != std::string::npos)
 			RxBuffer.erase(i, keyword.length());
 
@@ -1148,7 +1158,7 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
 	}
 
-	double arg = sqrt(power / a);
+	double arg{ sqrt(power / a) };
 	if (arg > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Arg of asin is greater than 1");
 
@@ -1254,6 +1264,10 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	tuneFilterwheels_(wavelength_nm);	//Tune the filterwheels
 }
 
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, power, 0, laserSelect) {}
+
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, 0, 0, laserSelect) {}
+
 std::string VirtualLaser::laserNameToString_(const LaserSelector whichLaser) const
 {
 	switch (whichLaser)
@@ -1305,13 +1319,13 @@ LaserSelector VirtualLaser::autoselectLaser_(const int wavelength_nm)
 void VirtualLaser::tuneFilterwheels_(const int wavelength_nm)
 {
 	//TO ALLOW MULTIPLEXING. For a single beam, Set the wavelength of the excitation filterwheel to 0, meaning that no beamsplitter is used
-	int ExcWavelength_nm(wavelength_nm);
+	int ExcWavelength_nm{ wavelength_nm };
 	if (!mMultiplexing)
 		ExcWavelength_nm = 0;
 
 	//Tune both filterwheels concurrently
-	std::thread th1(&Filterwheel::setWavelength, &mFWexcitation, ExcWavelength_nm);
-	std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
+	std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, ExcWavelength_nm };
+	std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
 	th1.join();
 	th2.join();
 }
@@ -1363,9 +1377,9 @@ void VirtualLaser::closeShutter() const
 #pragma region "Stages"
 Stage::Stage(const double velX, const double velY, const double velZ)
 {
-	const std::string stageIDx = "116049107";	//X-stage (V-551.4B)
-	const std::string stageIDy = "116049105";	//Y-stage (V-551.2B)
-	const std::string stageIDz = "0165500631";	//Z-stage (ES-100)
+	const std::string stageIDx{ "116049107" };	//X-stage (V-551.4B)
+	const std::string stageIDy{ "116049105" };	//Y-stage (V-551.2B)
+	const std::string stageIDz{ "0165500631" };	//Z-stage (ES-100)
 
 	//Open the connections to the stage controllers and assign the IDs
 	std::cout << "Establishing connection with the stages\n";
@@ -1386,9 +1400,9 @@ Stage::Stage(const double velX, const double velY, const double velZ)
 	std::cout << "Connection with the stages successfully established\n";
 
 	//Record the current position
-	mPositionXYZ.at(XX) = downloadPosition(XX);
-	mPositionXYZ.at(YY) = downloadPosition(YY);
-	mPositionXYZ.at(ZZ) = downloadPosition(ZZ);
+	mPositionXYZ.at(XX) = downloadPositionSingle(XX);
+	mPositionXYZ.at(YY) = downloadPositionSingle(YY);
+	mPositionXYZ.at(ZZ) = downloadPositionSingle(ZZ);
 
 	//Configure the stage velocities and DO triggers
 	configVelAndDOtriggers_({ velX, velY, velZ });
@@ -1408,21 +1422,21 @@ Stage::~Stage()
 void Stage::configVelAndDOtriggers_(const double3 velXYZ) const
 {
 	//DO1 TRIGGER: DO1 is set to output a pulse (fixed width = 50 us) whenever the stage covers a certain distance (e.g. 0.3 um)
-	const int DO1 = 1;
+	const int DO1{ 1 };
 	setDOtriggerEnabled(ZZ, DO1, true);	//Enable DO1 trigger
-	const double triggerStep = 0.3 * um;
-	const StageDOtriggerMode triggerMode = PositionDist;
-	const double startThreshold = 0 * mm;
-	const double stopThreshold = 0 * mm;
-	setDOtriggerAllParams(ZZ, DO1, triggerStep, triggerMode, startThreshold, stopThreshold);
+	const double triggerStep{ 0.3 * um };
+	const StageDOtriggerMode triggerMode{ PositionDist };
+	const double startThreshold{ 0. * mm };
+	const double stopThreshold{ 0. * mm };
+	setDOtriggerParamAll(ZZ, DO1, triggerStep, triggerMode, startThreshold, stopThreshold);
 
 	//DO2 TRIGGER: DO2 is set to output HIGH when the stage z is in motion
-	const int DO2 = 2;
+	const int DO2{ 2 };
 	setDOtriggerEnabled(ZZ, DO2, true);	//Enable DO2 trigger
-	setDOtriggerSingleParam(ZZ, DO2, TriggerMode, InMotion);
+	setDOtriggerParamSingle(ZZ, DO2, TriggerMode, InMotion);
 
 	//Set the stage velocities
-	setAllVelocities({ velXYZ.at(XX), velXYZ.at(YY), velXYZ.at(ZZ) });
+	setVelocityAll({ velXYZ.at(XX), velXYZ.at(YY), velXYZ.at(ZZ) });
 }
 
 //Recall the current position for the 3 stages
@@ -1439,7 +1453,7 @@ void Stage::printPositionXYZ() const
 }
 
 //Retrieve the stage position from the controller
-double Stage::downloadPosition(const Axis axis)
+double Stage::downloadPositionSingle(const Axis axis)
 {
 	double position_mm;	//Position in mm
 	if (!PI_qPOS(mID_XYZ.at(axis), mNstagesPerController, &position_mm))
@@ -1449,7 +1463,7 @@ double Stage::downloadPosition(const Axis axis)
 }
 
 //Move the stage to the requested position
-void Stage::moveSingleStage(const Axis axis, const double position)
+void Stage::moveSingle(const Axis axis, const double position)
 {
 	//Check if the requested position is within range
 	if (position < mSoftPosLimXYZ.at(axis).at(0) || position > mSoftPosLimXYZ.at(axis).at(1))
@@ -1467,18 +1481,18 @@ void Stage::moveSingleStage(const Axis axis, const double position)
 }
 
 //Move the 3 stages to the requested position
-void Stage::moveXYstages(const double2 positionXY)
+void Stage::moveXY(const double2 positionXY)
 {
-	moveSingleStage(XX, positionXY.at(XX));
-	moveSingleStage(YY, positionXY.at(YY));
+	moveSingle(XX, positionXY.at(XX));
+	moveSingle(YY, positionXY.at(YY));
 }
 
 //Move the 3 stages to the requested position
-void Stage::moveXYZstages(const double3 positionXYZ)
+void Stage::moveXYZ(const double3 positionXYZ)
 {
-	moveSingleStage(XX, positionXYZ.at(XX));
-	moveSingleStage(YY, positionXYZ.at(YY));
-	moveSingleStage(ZZ, positionXYZ.at(ZZ));
+	moveSingle(XX, positionXYZ.at(XX));
+	moveSingle(YY, positionXYZ.at(YY));
+	moveSingle(ZZ, positionXYZ.at(ZZ));
 }
 
 bool Stage::isMoving(const Axis axis) const
@@ -1491,7 +1505,7 @@ bool Stage::isMoving(const Axis axis) const
 	return isMoving;
 }
 
-void Stage::waitForMotionToStopSingleStage(const Axis axis) const
+void Stage::waitForMotionToStopSingle(const Axis axis) const
 {
 	BOOL isMoving;
 	do {
@@ -1504,7 +1518,7 @@ void Stage::waitForMotionToStopSingleStage(const Axis axis) const
 	std::cout << "\n";
 }
 
-void Stage::waitForMotionToStopAllStages() const
+void Stage::waitForMotionToStopAll() const
 {
 	std::cout << "Stages moving to the new position: ";
 
@@ -1525,7 +1539,7 @@ void Stage::waitForMotionToStopAllStages() const
 	std::cout << "\n";
 }
 
-void Stage::stopAllstages() const
+void Stage::stopAll() const
 {
 	PI_StopAll(mID_XYZ.at(XX));
 	PI_StopAll(mID_XYZ.at(YY));
@@ -1535,7 +1549,7 @@ void Stage::stopAllstages() const
 }
 
 //Request the velocity of the stage
-double Stage::downloadSingleVelocity(const Axis axis) const
+double Stage::downloadVelocitySingle(const Axis axis) const
 {
 	double vel_mmps;
 	if (!PI_qVEL(mID_XYZ.at(axis), mNstagesPerController, &vel_mmps))
@@ -1546,7 +1560,7 @@ double Stage::downloadSingleVelocity(const Axis axis) const
 }
 
 //Set the velocity of the stage
-void Stage::setSingleVelocity(const Axis axis, const double vel) const
+void Stage::setVelocitySingle(const Axis axis, const double vel) const
 {
 	if (vel <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be greater than zero for the stage " + axisToString(axis));
@@ -1557,11 +1571,11 @@ void Stage::setSingleVelocity(const Axis axis, const double vel) const
 }
 
 //Set the velocity of the stage 
-void Stage::setAllVelocities(const double3 velXYZ) const
+void Stage::setVelocityAll(const double3 velXYZ) const
 {
-	setSingleVelocity(XX, velXYZ.at(XX));
-	setSingleVelocity(YY, velXYZ.at(YY));
-	setSingleVelocity(ZZ, velXYZ.at(ZZ));
+	setVelocitySingle(XX, velXYZ.at(XX));
+	setVelocitySingle(YY, velXYZ.at(YY));
+	setVelocitySingle(ZZ, velXYZ.at(ZZ));
 }
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
@@ -1573,9 +1587,9 @@ void Stage::setAllVelocities(const double3 velXYZ) const
 //8: start threshold in mm
 //9: stop threshold in mm
 //10: trigger position in mm
-double Stage::downloadDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam param) const
+double Stage::downloadDOtriggerParamSingle(const Axis axis, const int DOchan, const StageDOparam param) const
 {
-	const int triggerParam = static_cast<int>(param);
+	const int triggerParam{ static_cast<int>(param) };
 	double value;
 	if (!PI_qCTO(mID_XYZ.at(axis), &DOchan, &triggerParam, &value, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger config for the stage " + axisToString(axis));
@@ -1584,14 +1598,14 @@ double Stage::downloadDOtriggerSingleParam(const Axis axis, const int DOchan, co
 	return value;
 }
 
-void Stage::setDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const
+void Stage::setDOtriggerParamSingle(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const
 {
-	const int triggerParam = static_cast<int>(paramId);
+	const int triggerParam{ static_cast<int>(paramId) };
 	if (!PI_CTO(mID_XYZ.at(axis), &DOchan, &triggerParam, &value, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + axisToString(axis));
 }
 
-void Stage::setDOtriggerAllParams(const Axis axis, const int DOchan, const double triggerStep, const StageDOtriggerMode triggerMode, const double startThreshold, const double stopThreshold) const
+void Stage::setDOtriggerParamAll(const Axis axis, const int DOchan, const double triggerStep, const StageDOtriggerMode triggerMode, const double startThreshold, const double stopThreshold) const
 {
 	if ( triggerStep <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be greater than zero");
@@ -1600,12 +1614,12 @@ void Stage::setDOtriggerAllParams(const Axis axis, const int DOchan, const doubl
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'startThreshold is out of bound for the stage " + axisToString(axis));
 
 
-	setDOtriggerSingleParam(axis, DOchan, TriggerStep, triggerStep / mm);					//Trigger step
-	setDOtriggerSingleParam(axis, DOchan, AxisNumber, 1);									//Axis of the controller (always 1 because each controller has only 1 stage)
-	setDOtriggerSingleParam(axis, DOchan, TriggerMode, static_cast<double>(triggerMode));	//Trigger mode
-	setDOtriggerSingleParam(axis, DOchan, Polarity, 1);										//Polarity (0 for active low, 1 for active high)
-	setDOtriggerSingleParam(axis, DOchan, StartThreshold, startThreshold / mm);				//Start threshold
-	setDOtriggerSingleParam(axis, DOchan, StopThreshold, stopThreshold / mm);				//Stop threshold
+	setDOtriggerParamSingle(axis, DOchan, TriggerStep, triggerStep / mm);					//Trigger step
+	setDOtriggerParamSingle(axis, DOchan, AxisNumber, 1);									//Axis of the controller (always 1 because each controller has only 1 stage)
+	setDOtriggerParamSingle(axis, DOchan, TriggerMode, static_cast<double>(triggerMode));	//Trigger mode
+	setDOtriggerParamSingle(axis, DOchan, Polarity, 1);										//Polarity (0 for active low, 1 for active high)
+	setDOtriggerParamSingle(axis, DOchan, StartThreshold, startThreshold / mm);				//Start threshold
+	setDOtriggerParamSingle(axis, DOchan, StopThreshold, stopThreshold / mm);				//Stop threshold
 }
 
 //Request the enable/disable status of the stage DO
@@ -1649,14 +1663,14 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 		break;
 	}
 
-	const double triggerStep_mm = downloadDOtriggerSingleParam(axis, chan, TriggerStep);
-	const int triggerMode = static_cast<int>(downloadDOtriggerSingleParam(axis, chan, TriggerMode));
-	const int polarity = static_cast<int>(downloadDOtriggerSingleParam(axis, chan, Polarity));
-	const double startThreshold_mm = downloadDOtriggerSingleParam(axis, chan, StartThreshold);
-	const double stopThreshold_mm = downloadDOtriggerSingleParam(axis, chan, StopThreshold);
-	const double triggerPosition_mm = downloadDOtriggerSingleParam(axis, chan, TriggerPosition);
-	const bool triggerState = isDOtriggerEnabled(axis, chan);
-	const double vel = downloadSingleVelocity(axis);
+	const double triggerStep_mm{ downloadDOtriggerParamSingle(axis, chan, TriggerStep) };
+	const int triggerMode{ static_cast<int>(downloadDOtriggerParamSingle(axis, chan, TriggerMode)) };
+	const int polarity{ static_cast<int>(downloadDOtriggerParamSingle(axis, chan, Polarity)) };
+	const double startThreshold_mm{ downloadDOtriggerParamSingle(axis, chan, StartThreshold) };
+	const double stopThreshold_mm{ downloadDOtriggerParamSingle(axis, chan, StopThreshold) };
+	const double triggerPosition_mm{ downloadDOtriggerParamSingle(axis, chan, TriggerPosition) };
+	const bool triggerState{ isDOtriggerEnabled(axis, chan) };
+	const double vel{ downloadVelocitySingle(axis) };
 
 	std::cout << "Configuration for the stage = " << axisToString(axis) << ", DOchan = " << chan << ":\n";
 	std::cout << "is DO trigger enabled? = " << triggerState << "\n";

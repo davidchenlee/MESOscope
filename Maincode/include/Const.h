@@ -74,6 +74,8 @@ namespace Constants
 	extern const int FIFOINmax;
 
 	extern const int stageTriggerPulse;
+	extern const double3 vibratomeInitialPosition;
+	extern const double3 vibratomeFinalPosition;
 
 	extern const int nPulses;
 	extern const U8 pulseArray[];

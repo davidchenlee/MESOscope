@@ -13,14 +13,14 @@ int main(int argc, char* argv[])
 		FPGAns::FPGA fpga;	//Open a FPGA connection
 		try
 		{
-			ResonantScanner RS(fpga);
-			Laser vision(VISION);
-			Laser fidelity(FIDELITY);
+			ResonantScanner RS{ fpga };
+			Laser vision{ VISION };
+			Laser fidelity{ FIDELITY };
 
 			//Set the FOV
-			std::string whichLaser(argv[1]);			//V for Vision, F for Fidelity VF for both
-			double FFOV(1.*std::stoi(argv[2]) / um);	//Field of view in um
-			std::string runCommand(argv[3]);			//1 for run RS, 0 for stop RS
+			std::string whichLaser{ argv[1] };			//V for Vision, F for Fidelity VF for both
+			double FFOV{ 1.*std::stoi(argv[2]) / um };	//Field of view in um
+			std::string runCommand{ argv[3] };			//1 for run RS, 0 for stop RS
 
 			if (FFOV < 0 || FFOV > 300)
 				throw std::invalid_argument((std::string)__FUNCTION__ + ": RS FFOV must be in the range 0-300 um");

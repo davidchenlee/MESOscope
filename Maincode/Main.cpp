@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 			//MAIN SEQUENCES
 			//MainRoutines::discreteScanZ(fpga);
 			//MainRoutines::continuousScanZ(fpga);
-			MainRoutines::sequencer(fpga);
+			//MainRoutines::sequencer(fpga);
 
 			//CALIBRATION
 			//CalibrationRoutines::digitalLatency(fpga);
@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::convertI16toVolt();
 			//TestRoutines::tiffU8();
 			//TestRoutines::ethernetSpeed();
-			//TestRoutines::vibratome(fpga);
+			TestRoutines::vibratome(fpga);
 			//TestRoutines::sequencer();
 			//TestRoutines::multithread();
 			//TestRoutines::sequencerSim();

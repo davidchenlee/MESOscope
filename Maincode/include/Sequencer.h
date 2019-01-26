@@ -53,8 +53,8 @@ class Sequencer
 
 	//Parameters that vary throughout the sequence
 	std::vector<Commandline> mCommandList;
-	int mStackCounter = 0;				//Count the number of stacks
-	int mSliceCounter = 0;				//Count the number of the slices
+	int mStackCounter{ 0 };				//Count the number of stacks
+	int mSliceCounter{ 0 };				//Count the number of the slices
 	int2 mStackArrayDimIJ;				//Dimension of the array of stacks. Value computed dynamically
 	int3 mScanDir{mInitialScanDir};		//Scan directions in x, y, and z
 	double mScanZi;						//Initial z-stage position for a stack-scan
@@ -70,7 +70,7 @@ class Sequencer
 	void saveStack_();
 	void cutSlice_();
 public:
-	int mCommandCounter = 0;
+	int mCommandCounter{ 0 };
 
 	Sequencer(const LaserList laserList, const Sample sample, const Stack stack);
 	Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ);

@@ -53,27 +53,27 @@ class Vibratome
 {
 	enum MotionDir { BACKWARD = -1, FORWARD = 1 };
 	const FPGAns::FPGA &mFpga;
-	double mCuttingSpeed = 0.5 * mmps;	//Speed of the vibratome for cutting (manual setting)
-	double mMovingSpeed = 2.495 * mmps;	//Forward and backward moving speed of the head. 52.4 mm in 21 seconds = 2.495 mm/s
-	//double mTravelRange = 52.4 * mm;	//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
+	double mCuttingSpeed{ 0.5 * mmps };		//Speed of the vibratome for cutting (manual setting)
+	double mMovingSpeed{ 2.495 * mmps };	//Forward and backward moving speed of the head. 52.4 mm in 21 seconds = 2.495 mm/s
+	//double mTravelRange{ 52.4 * mm };		//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
+
 
 	void moveHead_(const double duration, const MotionDir motionDir) const;
-	void pushStartStopButton() const;
 public:
 	Vibratome(const FPGAns::FPGA &fpga, const double sliceOffset = 0);
-
-	void cutAndRetractDistance(const double distance) const;
-	void retractDistance(const double distance) const;
+	void pushStartStopButton() const;
+	//void cutAndRetractDistance(const double distance) const;
+	//void retractDistance(const double distance) const;
 };
 
 class ResonantScanner
 {
-	const FPGAns::RTcontrol &mRTcontrol;				//Needed to retrieve 'mRTcontrol.mWidthPerFrame_pix' to calculate the fill factor
-	const double mVMAX = 5 * V;							//Max control voltage allowed
-	const double mDelay = 10 * ms;
-	const double mVoltagePerDistance = 0.00595 * V/um;	//Calibration factor. Last calibrated 
-	double mFullScan;									//Full scan = distance between turning points
-	double mControlVoltage;								//Control voltage 0-5V
+	const FPGAns::RTcontrol &mRTcontrol;					//Needed to retrieve 'mRTcontrol.mWidthPerFrame_pix' to calculate the fill factor
+	const double mVMAX{ 5. * V };							//Max control voltage allowed
+	const double mDelay{ 10. * ms };
+	const double mVoltagePerDistance{ 0.00595 * V / um };	//Calibration factor. Last calibrated 
+	double mFullScan;										//Full scan = distance between turning points
+	double mControlVoltage;									//Control voltage 0-5V
 
 	void setVoltage_(const double controlVoltage);
 public:
@@ -95,7 +95,7 @@ class Galvo
 {
 	FPGAns::RTcontrol &mRTcontrol;								//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
-	const double mVoltagePerDistance = 0.02417210 * V/um;		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
+	const double mVoltagePerDistance{ 0.02417210 * V / um };		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 public:
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel);
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax);
@@ -111,9 +111,9 @@ class PMT16X
 {
 	std::unique_ptr<serial::Serial> mSerial;
 	int mPort = COMPMT16X;
-	const int mBaud = 9600;
-	const int mTimeout = 300 * ms;
-	const int mRxBufferSize = 256;				//Serial buffer size
+	const int mBaud{ 9600 };
+	const int mTimeout{ 300 * ms };
+	const int mRxBufferSize{ 256 };				//Serial buffer size
 
 	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index) const;		//The PMT requires a sumcheck. Refer to the manual
 	std::vector<uint8_t> sendCommand_(std::vector<uint8_t> command) const;
@@ -145,11 +145,11 @@ class Filterwheel
 	int mPosition;							//Current filterwheel position
 	std::unique_ptr<serial::Serial> mSerial;
 	int mPort;
-	const int mBaud = 115200;
-	const int mTimeout = 150 * ms;
-	const int mNpos = 6;					//Number of filter positions
-	const double mTuningSpeed = 0.8/sec;	//The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
-	const int mRxBufSize = 256;				//Serial buffer size
+	const int mBaud{ 115200 };
+	const int mTimeout{ 150 * ms };
+	const int mNpos{ 6 };					//Number of filter positions
+	const double mTuningSpeed{ 0.8 / sec };	//The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
+	const int mRxBufSize{ 256 };				//Serial buffer size
 
 	void downloadColor_();
 	void setPosition_(const int position);
@@ -173,9 +173,9 @@ class Laser
 	std::unique_ptr<serial::Serial> mSerial;
 	int mPort;
 	int mBaud;
-	const int mTimeout = 100 * ms;
-	const double mTuningSpeed = 35./sec;		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
-	const int mRxBufSize = 256;					//Serial buffer size
+	const int mTimeout{ 100 * ms };
+	const double mTuningSpeed{ 35. / sec };		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
+	const int mRxBufSize{ 256 };				//Serial buffer size
 
 	int downloadWavelength_nm_();
 public:
@@ -211,8 +211,8 @@ class PockelsCell
 	RTchannel mPockelsRTchannel;
 	RTchannel mScalingRTchannel;
 	int mWavelength_nm;							//Laser wavelength
-	const double timeStep = 8 * us;
-	const double maxPower = 250 * mW;			//Soft limit for the laser power
+	const double timeStep{ 8. * us };
+	const double maxPower{ 250. * mW };			//Soft limit for the laser power
 	Shutter mShutter;
 
 	double laserpowerToVolt_(const double power) const;
@@ -232,7 +232,7 @@ public:
 
 class VirtualLaser
 {
-	const Multiplexing mMultiplexing = SINGLEBEAM;
+	const Multiplexing mMultiplexing{ SINGLEBEAM };
 	LaserSelector mLaserSelect;					//use VISION, FIDELITY, or AUTO (let the code decide)
 	LaserSelector mCurrentLaser;				//Laser currently in use: VISION or FIDELITY
 	FPGAns::RTcontrol &mRTcontrol;
@@ -242,14 +242,16 @@ class VirtualLaser
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
 	std::unique_ptr <PockelsCell> mPockelsPtr;
-	const double mPockelTimeStep = 8 * us;		//Time step for the RT pockels command
+	const double mPockelTimeStep{ 8. * us };		//Time step for the RT pockels command
 
 	std::string laserNameToString_(const LaserSelector whichLaser) const;
 	void checkShutterIsOpen_() const;
 	LaserSelector autoselectLaser_(const int wavelength_nm);
 	void tuneFilterwheels_(const int wavelength_nm);
 public:
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower = 0, const double powerIncrease = 0, const LaserSelector laserSelect = AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelect = AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelect = AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelect = AUTO);
 
 	void setWavelength(const int wavelength_nm);
 	void setPower(const double initialPower, const double powerIncrease = 0) const;
@@ -262,10 +264,10 @@ class Stage
 	enum StageDOparam { TriggerStep = 1, AxisNumber = 2, TriggerMode = 3, Polarity = 7, StartThreshold = 8, StopThreshold = 9, TriggerPosition = 10 };
 	enum StageDOtriggerMode { PositionDist = 0, OnTarget = 2, InMotion = 6, PositionOffset = 7 };
 
-	const int mPort_z = 4;											//COM port
-	const int mBaud_z = 38400;
+	const int mPort_z{ 4 };											//COM port
+	const int mBaud_z{ 38400 };
 	int3 mID_XYZ;													//Controller IDs
-	const char mNstagesPerController[2] = "1";						//Number of stages per controller (currently 1)
+	const char mNstagesPerController[2]{ "1" };						//Number of stages per controller (currently 1)
 	double3 mPositionXYZ;											//Absolute position of the stages (x, y, z)
 	const std::vector<double2> mSoftPosLimXYZ{ { -60. * mm, 50. * mm}, { 0. * mm, 30. * mm}, { 1. * mm, 25. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
 	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages
@@ -281,20 +283,20 @@ public:
 
 	double3 readPositionXYZ() const;
 	void printPositionXYZ() const;
-	void moveSingleStage(const Axis stage, const double position);
-	void moveXYstages(const double2 positionXY);
-	void moveXYZstages(const double3 positionXYZ);
-	double downloadPosition(const Axis axis);
+	void moveSingle(const Axis stage, const double position);
+	void moveXY(const double2 positionXY);
+	void moveXYZ(const double3 positionXYZ);
+	double downloadPositionSingle(const Axis axis);
 	bool isMoving(const Axis axis) const;
-	void waitForMotionToStopSingleStage(const Axis axis) const;
-	void waitForMotionToStopAllStages() const;
-	void stopAllstages() const;
-	double downloadSingleVelocity(const Axis axis) const;
-	void setSingleVelocity(const Axis axis, const double vel) const;
-	void setAllVelocities(const double3 vel) const;
-	void setDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const;
-	void setDOtriggerAllParams(const Axis axis, const int DOchan, const double triggerStep, const StageDOtriggerMode triggerMode, const double startThreshold, const double stopThreshold) const;
-	double downloadDOtriggerSingleParam(const Axis axis, const int DOchan, const StageDOparam paramId) const;
+	void waitForMotionToStopSingle(const Axis axis) const;
+	void waitForMotionToStopAll() const;
+	void stopAll() const;
+	double downloadVelocitySingle(const Axis axis) const;
+	void setVelocitySingle(const Axis axis, const double vel) const;
+	void setVelocityAll(const double3 vel) const;
+	void setDOtriggerParamSingle(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const;
+	void setDOtriggerParamAll(const Axis axis, const int DOchan, const double triggerStep, const StageDOtriggerMode triggerMode, const double startThreshold, const double stopThreshold) const;
+	double downloadDOtriggerParamSingle(const Axis axis, const int DOchan, const StageDOparam paramId) const;
 	bool isDOtriggerEnabled(const Axis axis, const int DOchan) const;
 	void setDOtriggerEnabled(const Axis axis, const int DOchan, const BOOL triggerState) const;
 	void printStageConfig(const Axis axis, const int DOchan) const;
@@ -306,12 +308,12 @@ public:
 	std::string mName;
 	std::string mImmersionMedium;
 	std::string mObjectiveCollar;
-	ROI mROI = { 0, 0, 0, 0 };			//Region of interest across the entire sample {ymin, xmin, ymax, xmax}
-	double3 mLengthXYZ = { 0, 0, 0 };	//Sample size in x, y, and z
-	double mSurfaceZ = -1 * mm;
+	ROI mROI{ 0, 0, 0, 0 };				//Region of interest across the entire sample {ymin, xmin, ymax, xmax}
+	double3 mLengthXYZ{ 0, 0, 0 };		//Sample size in x, y, and z
+	double mSurfaceZ{ -1. * mm };
 
 	const double2 mBladePositionXY{ 0. * mm, 0. * mm };	//Location of the vibratome blade in x and y wrt the stages origin
-	const double mBladeFocalplaneOffsetZ = 0 * um;		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	const double mBladeFocalplaneOffsetZ{ 0. * um };		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack;
 
 	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset);

@@ -5,7 +5,7 @@ namespace FPGAns
 	//Convert time to ticks
 	U16 timeToTick(const double t)
 	{
-		const double t_tick = t/us * tickPerUs;
+		const double t_tick{ t / us * tickPerUs };
 
 		if (static_cast<U32>(t_tick) > 0x0000FFFF)
 		{
@@ -80,14 +80,14 @@ namespace FPGAns
 	//Send out an analog instruction, where the analog output 'AO' is held for 'timeStep'
 	U32 packAnalogSinglet(const double timeStep, const double AO)
 	{
-		const U16 AOlatency_tick = 2;	//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
+		const U16 AOlatency_tick{ 2 };	//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 		return packU32(timeToTick(timeStep) - AOlatency_tick, voltageToI16(AO/V));
 	}
 
 	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 	U32 packDigitalSinglet(const double timeStep, const bool DO)
 	{
-		const U16 DOlatency_tick = 2;	//To calibrate, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
+		const U16 DOlatency_tick{ 2 };	//To calibrate, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 		return packU32(timeToTick(timeStep) - DOlatency_tick, static_cast<U16>(DO));
 	}
 
@@ -114,7 +114,7 @@ namespace FPGAns
 			timeStep = AO_tMIN;		//Analog Out time increment in us
 		}
 
-		const int nPoints = static_cast<int>(rampLength / timeStep);		//Number of points
+		const int nPoints{ static_cast<int>(rampLength / timeStep) };		//Number of points
 
 		if (nPoints <= 1)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Not enought points to generate a linear ramp");
@@ -125,7 +125,7 @@ namespace FPGAns
 
 		for (int ii = 0; ii < nPoints; ii++)
 		{
-			const double V = Vi + (Vf - Vi)*ii / (nPoints - 1);
+			const double V{ Vi + (Vf - Vi)*ii / (nPoints - 1) };
 			queue.push_back(FPGAns::packAnalogSinglet(timeStep, V));
 
 			//std::cout << (ii + 1) * timeStep << "\t" << (ii + 1) * timeToTick(timeStep) << "\t" << V << "\t\n";	//For debugging
@@ -236,7 +236,7 @@ namespace FPGAns
 	RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell): 
 		mWidthPerFrame_pix(widthPerFrame_pix), mDwell(dwell)
 	{
-		const int calibFine_tick = -32;
+		const int calibFine_tick{ -32 };
 		switch (pixelclockType)
 		{
 		case UNIFORM:
@@ -256,7 +256,7 @@ namespace FPGAns
 		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (halfPeriodLineclock-400*125ns)/2
 
-		const double initialWaitingTime = (halfPeriodLineclock - mWidthPerFrame_pix * mDwell) / 2; //Relative delay of the pixel clock wrt the line clock
+		const double initialWaitingTime{ (halfPeriodLineclock - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
 
 		//Check if the pixelclock overflows each Lineclock
 		if (initialWaitingTime <= 0)
@@ -320,24 +320,23 @@ namespace FPGAns
 					allQueues.push_back(vectorOfQueues.at(chan).at(iter));	//Push VectorOfQueues[i]
 			}
 
-			const int sizeFIFOINqueue = allQueues.size();				//Total number of elements in all the queues 
+			const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 
 
 			if (sizeFIFOINqueue > FIFOINmax)
 				throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
 
-			std::vector<U32> FIFOIN(sizeFIFOINqueue);					//Create a 1D array with the channels concatenated
+			std::vector<U32> FIFOIN(sizeFIFOINqueue);							//Create a 1D array with the channels concatenated
 			for (int ii = 0; ii < sizeFIFOINqueue; ii++)
 			{
-				FIFOIN.at(ii) = allQueues.front();							//Transfer the queue elements to the array
+				FIFOIN.at(ii) = allQueues.front();								//Transfer the queue elements to the array
 				allQueues.pop_front();
 			}
 			allQueues = {};					//Cleanup the queue C++11 style
 
-			const U32 timeout_ms = -1;		//A value -1 prevents FIFOIN from timing out
 			U32 r;							//Elements remaining
 
 			//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
-			checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, timeout_ms, &r));
+			checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.getFpgaHandle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
 
 			//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
 			//This boolean serves as the master trigger for the entire control sequence
@@ -417,7 +416,7 @@ namespace FPGAns
 		//std::cout << I16toVoltage((I16)mVectorOfQueues.at(RTGALVO1).front()) << "\n";
 
 		//Create a vector of queues
-		VQU32 vectorOfQueuesForRamp(RTNCHAN);
+		VQU32 vectorOfQueuesForRamp{ RTNCHAN };
 		for (int chan = 1; chan < RTNCHAN; chan++) //chan > 0 means that the pixelclock is kept empty
 		{
 			if (mVectorOfQueues.at(chan).size() != 0)

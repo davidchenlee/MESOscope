@@ -289,77 +289,6 @@ unsigned char* const Image::pointerToTiff() const
 }
 #pragma endregion "Image"
 
-
-#pragma region "Vibratome"
-Vibratome::Vibratome(const FPGAns::FPGA &fpga, const double sliceOffset): mFpga(fpga) {}
-
-//Start or stop running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
-void Vibratome::pushStartStopButton() const
-{
-	const double SleepTime{ 20. * ms }; //in ms. It has to be ~ 12 ms or longer otherwise the vibratome control pad does not read the signal
-	
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, true));
-
-	Sleep(static_cast<DWORD>(SleepTime/ms));
-
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
-}
-
-//Move the head of the vibratome forward or backward for 'duration'. The timing varies in approx 1 ms
-void Vibratome::moveHead_(const double duration, const MotionDir motionDir) const
-{
-	NiFpga_FPGAvi_ControlBool selectedChannel;
-	const double minDuration{ 10. * ms };
-	const double delay{ 1. * ms };				//Used to roughly calibrate the pulse length
-
-	switch (motionDir)
-	{
-	case BACKWARD:
-		selectedChannel = NiFpga_FPGAvi_ControlBool_VTback;
-		break;
-	case FORWARD:
-		selectedChannel = NiFpga_FPGAvi_ControlBool_VTforward;
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected vibratome channel unavailable");
-	}
-
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, true));
-
-	if (duration >= minDuration)
-		Sleep(static_cast<DWORD>((duration - delay)/ms));
-	else
-	{
-		Sleep(static_cast<DWORD>((minDuration - delay)/ms));
-		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << 1. * minDuration / ms << "ms" << "\n";
-	}
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, false));
-}
-
-/*//NO NEED OF TRACTING THE VIBRATOME'S HEAD ANYMORE
-void Vibratome::cutAndRetractDistance(const double distance) const
-{
-	const double cuttingTime{ distance / mCuttingSpeed };
-	const double retractingTime{ distance / mMovingSpeed };
-
-	pushStartStopButton();
-	std::cout << "The vibratome is cutting for " << cuttingTime / sec << " seconds" << "\n";
-	Sleep(static_cast<DWORD>(cuttingTime / ms));
-	Sleep(2000);
-	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
-	moveHead_(retractingTime, BACKWARD);
-}
-
-
-void Vibratome::retractDistance(const double distance) const
-{
-	const double retractingTime{ static_cast<int>(distance / mMovingSpeed) };
-	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
-	moveHead_(retractingTime, BACKWARD);
-}
-*/
-#pragma endregion "Vibratome"
-
 #pragma region "Resonant scanner"
 ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol): mRTcontrol(RTcontrol)
 {	
@@ -1400,12 +1329,12 @@ Stage::Stage(const double velX, const double velY, const double velZ)
 	std::cout << "Connection with the stages successfully established\n";
 
 	//Record the current position
-	mPositionXYZ.at(XX) = downloadPositionSingle(XX);
-	mPositionXYZ.at(YY) = downloadPositionSingle(YY);
-	mPositionXYZ.at(ZZ) = downloadPositionSingle(ZZ);
+	mPositionXYZ.at(XX) = downloadPositionSingle_(XX);
+	mPositionXYZ.at(YY) = downloadPositionSingle_(YY);
+	mPositionXYZ.at(ZZ) = downloadPositionSingle_(ZZ);
 
-	//Configure the stage velocities and DO triggers
-	configVelAndDOtriggers_({ velX, velY, velZ });
+	configDOtriggers_();				//Configure the stage velocities and DO triggers
+	setVelAll({ velX, velY, velZ });	//Set the stage velocities
 }
 
 Stage::~Stage()
@@ -1418,8 +1347,8 @@ Stage::~Stage()
 }
 
 
-//DO1 and DO2 are used to trigger the stack acquisition. Currently DO2 is used as the only trigger. See the implementation on LV
-void Stage::configVelAndDOtriggers_(const double3 velXYZ) const
+//DO1 and DO2 are used to trigger the stack acquisition. Currently only DO2 is used as trigger. See the implementation on LV
+void Stage::configDOtriggers_() const
 {
 	//DO1 TRIGGER: DO1 is set to output a pulse (fixed width = 50 us) whenever the stage covers a certain distance (e.g. 0.3 um)
 	const int DO1{ 1 };
@@ -1434,9 +1363,21 @@ void Stage::configVelAndDOtriggers_(const double3 velXYZ) const
 	const int DO2{ 2 };
 	setDOtriggerEnabled(ZZ, DO2, true);	//Enable DO2 trigger
 	setDOtriggerParamSingle(ZZ, DO2, TriggerMode, InMotion);
+}
 
-	//Set the stage velocities
-	setVelocityAll({ velXYZ.at(XX), velXYZ.at(YY), velXYZ.at(ZZ) });
+std::string Stage::axisToString(const Axis axis) const
+{
+	switch (axis)
+	{
+	case XX:
+		return "X";
+	case YY:
+		return "Y";
+	case ZZ:
+		return "Z";
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
+	}
 }
 
 //Recall the current position for the 3 stages
@@ -1453,7 +1394,7 @@ void Stage::printPositionXYZ() const
 }
 
 //Retrieve the stage position from the controller
-double Stage::downloadPositionSingle(const Axis axis)
+double Stage::downloadPositionSingle_(const Axis axis)
 {
 	double position_mm;	//Position in mm
 	if (!PI_qPOS(mID_XYZ.at(axis), mNstagesPerController, &position_mm))
@@ -1507,12 +1448,15 @@ bool Stage::isMoving(const Axis axis) const
 
 void Stage::waitForMotionToStopSingle(const Axis axis) const
 {
+	std::cout << "Stage " + axisToString(axis) +  " moving to the new position: ";
+
 	BOOL isMoving;
 	do {
 		if (!PI_IsMoving(mID_XYZ.at(axis), mNstagesPerController, &isMoving))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage" + axisToString(axis));
 
 		std::cout << ".";
+		Sleep(300);
 	} while (isMoving);
 
 	std::cout << "\n";
@@ -1549,7 +1493,7 @@ void Stage::stopAll() const
 }
 
 //Request the velocity of the stage
-double Stage::downloadVelocitySingle(const Axis axis) const
+double Stage::downloadVelSingle_(const Axis axis) const
 {
 	double vel_mmps;
 	if (!PI_qVEL(mID_XYZ.at(axis), mNstagesPerController, &vel_mmps))
@@ -1560,7 +1504,7 @@ double Stage::downloadVelocitySingle(const Axis axis) const
 }
 
 //Set the velocity of the stage
-void Stage::setVelocitySingle(const Axis axis, const double vel) const
+void Stage::setVelSingle(const Axis axis, const double vel) const
 {
 	if (vel <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be greater than zero for the stage " + axisToString(axis));
@@ -1571,11 +1515,11 @@ void Stage::setVelocitySingle(const Axis axis, const double vel) const
 }
 
 //Set the velocity of the stage 
-void Stage::setVelocityAll(const double3 velXYZ) const
+void Stage::setVelAll(const double3 velXYZ) const
 {
-	setVelocitySingle(XX, velXYZ.at(XX));
-	setVelocitySingle(YY, velXYZ.at(YY));
-	setVelocitySingle(ZZ, velXYZ.at(ZZ));
+	setVelSingle(XX, velXYZ.at(XX));
+	setVelSingle(YY, velXYZ.at(YY));
+	setVelSingle(ZZ, velXYZ.at(ZZ));
 }
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
@@ -1587,7 +1531,7 @@ void Stage::setVelocityAll(const double3 velXYZ) const
 //8: start threshold in mm
 //9: stop threshold in mm
 //10: trigger position in mm
-double Stage::downloadDOtriggerParamSingle(const Axis axis, const int DOchan, const StageDOparam param) const
+double Stage::downloadDOtriggerParamSingle_(const Axis axis, const int DOchan, const StageDOparam param) const
 {
 	const int triggerParam{ static_cast<int>(param) };
 	double value;
@@ -1663,14 +1607,14 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 		break;
 	}
 
-	const double triggerStep_mm{ downloadDOtriggerParamSingle(axis, chan, TriggerStep) };
-	const int triggerMode{ static_cast<int>(downloadDOtriggerParamSingle(axis, chan, TriggerMode)) };
-	const int polarity{ static_cast<int>(downloadDOtriggerParamSingle(axis, chan, Polarity)) };
-	const double startThreshold_mm{ downloadDOtriggerParamSingle(axis, chan, StartThreshold) };
-	const double stopThreshold_mm{ downloadDOtriggerParamSingle(axis, chan, StopThreshold) };
-	const double triggerPosition_mm{ downloadDOtriggerParamSingle(axis, chan, TriggerPosition) };
+	const double triggerStep_mm{ downloadDOtriggerParamSingle_(axis, chan, TriggerStep) };
+	const int triggerMode{ static_cast<int>(downloadDOtriggerParamSingle_(axis, chan, TriggerMode)) };
+	const int polarity{ static_cast<int>(downloadDOtriggerParamSingle_(axis, chan, Polarity)) };
+	const double startThreshold_mm{ downloadDOtriggerParamSingle_(axis, chan, StartThreshold) };
+	const double stopThreshold_mm{ downloadDOtriggerParamSingle_(axis, chan, StopThreshold) };
+	const double triggerPosition_mm{ downloadDOtriggerParamSingle_(axis, chan, TriggerPosition) };
 	const bool triggerState{ isDOtriggerEnabled(axis, chan) };
-	const double vel{ downloadVelocitySingle(axis) };
+	const double vel{ downloadVelSingle_(axis) };
 
 	std::cout << "Configuration for the stage = " << axisToString(axis) << ", DOchan = " << chan << ":\n";
 	std::cout << "is DO trigger enabled? = " << triggerState << "\n";
@@ -1683,6 +1627,90 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 	std::cout << "Vel = " << vel / mmps << " mm/s\n\n";
 }
 #pragma endregion "Stages"
+
+#pragma region "Vibratome"
+Vibratome::Vibratome(const FPGAns::FPGA &fpga, Stage &stage) : mFpga(fpga), mStage(stage) {}
+
+//Start or stop running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
+void Vibratome::pushStartStopButton() const
+{
+	const int pulsewidth{ 100 * ms }; //in ms. It has to be longer than~ 12 ms, otherwise the vibratome is not triggered
+
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, true));
+
+	Sleep(static_cast<DWORD>(pulsewidth / ms));
+
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
+}
+
+void Vibratome::slice(const double planeToCutZ)
+{
+	mStage.setVelAll(mStageConveyingVelXYZ);												//Change the velocity to move the sample to the vibratome
+	mStage.moveXYZ({ mStageInitialPosXY.at(XX), mStageInitialPosXY.at(YY), planeToCutZ });	//Position the sample in front of the vibratome's blade
+	mStage.waitForMotionToStopAll();
+
+	mStage.setVelSingle(YY, mSlicingVel);							//Change the y vel for slicing
+	pushStartStopButton();											//Turn on the vibratome
+	mStage.moveSingle(YY, mStageFinalPosY);							//Slice the sample: move the stage y towards the blade
+	mStage.waitForMotionToStopSingle(YY);							//Wait until the motion ends
+	pushStartStopButton();											//Turn off the vibratome
+	mStage.setVelSingle(YY, mStageConveyingVelXYZ.at(YY));			//Set back the y vel to move the sample back to the microscope
+}
+
+/*//NOT USING THESE FUNCTIONS ANYMORE
+//Move the head of the vibratome forward or backward for 'duration'. The timing varies in approx 1 ms
+void Vibratome::moveHead_(const double duration, const MotionDir motionDir) const
+{
+	NiFpga_FPGAvi_ControlBool selectedChannel;
+	const double minDuration{ 10. * ms };
+	const double delay{ 1. * ms };				//Used to roughly calibrate the pulse length
+
+	switch (motionDir)
+	{
+	case BACKWARD:
+		selectedChannel = NiFpga_FPGAvi_ControlBool_VTback;
+		break;
+	case FORWARD:
+		selectedChannel = NiFpga_FPGAvi_ControlBool_VTforward;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected vibratome channel unavailable");
+	}
+
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, true));
+
+	if (duration >= minDuration)
+		Sleep(static_cast<DWORD>((duration - delay)/ms));
+	else
+	{
+		Sleep(static_cast<DWORD>((minDuration - delay)/ms));
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << 1. * minDuration / ms << "ms" << "\n";
+	}
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getFpgaHandle(), selectedChannel, false));
+}
+
+void Vibratome::cutAndRetractDistance(const double distance) const
+{
+	const double cuttingTime{ distance / mCuttingSpeed };
+	const double retractingTime{ distance / mMovingSpeed };
+
+	pushStartStopButton();
+	std::cout << "The vibratome is cutting for " << cuttingTime / sec << " seconds" << "\n";
+	Sleep(static_cast<DWORD>(cuttingTime / ms));
+	Sleep(2000);
+	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
+	moveHead_(retractingTime, BACKWARD);
+}
+
+
+void Vibratome::retractDistance(const double distance) const
+{
+	const double retractingTime{ static_cast<int>(distance / mMovingSpeed) };
+	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
+	moveHead_(retractingTime, BACKWARD);
+}
+*/
+#pragma endregion "Vibratome"
 
 
 #pragma region "Sample"

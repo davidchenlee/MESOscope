@@ -55,8 +55,6 @@ namespace Constants
 	//STAGES
 	extern const int stageTriggerPulse{ 5 * ms };			//Pulsewidth for triggering the stages via the DI (the stage controller has a 20kHz clock = 50 us)
 															//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based.
-	extern const double3 vibratomeInitialPosition{ -55. * mm, 3. * mm, 15. * mm };
-	extern const double3 vibratomeFinalPosition{ -55. * mm, 30. * mm, 15. * mm };
 
 	//PMT
 	//Simulate the PMT pulses. When the array element is HIGH, the output of the subvi changes its state for the next clock cycle (currently, 160MHz = 6.25ns)

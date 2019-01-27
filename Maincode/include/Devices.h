@@ -49,23 +49,6 @@ public:
 	ImageException(const std::string& message) : std::runtime_error(message.c_str()) {}
 };
 
-class Vibratome
-{
-	enum MotionDir { BACKWARD = -1, FORWARD = 1 };
-	const FPGAns::FPGA &mFpga;
-	double mCuttingSpeed{ 0.5 * mmps };		//Speed of the vibratome for cutting (manual setting)
-	double mMovingSpeed{ 2.495 * mmps };	//Forward and backward moving speed of the head. 52.4 mm in 21 seconds = 2.495 mm/s
-	//double mTravelRange{ 52.4 * mm };		//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
-
-
-	void moveHead_(const double duration, const MotionDir motionDir) const;
-public:
-	Vibratome(const FPGAns::FPGA &fpga, const double sliceOffset = 0);
-	void pushStartStopButton() const;
-	//void cutAndRetractDistance(const double distance) const;
-	//void retractDistance(const double distance) const;
-};
-
 class ResonantScanner
 {
 	const FPGAns::RTcontrol &mRTcontrol;					//Needed to retrieve 'mRTcontrol.mWidthPerFrame_pix' to calculate the fill factor
@@ -269,10 +252,14 @@ class Stage
 	int3 mID_XYZ;													//Controller IDs
 	const char mNstagesPerController[2]{ "1" };						//Number of stages per controller (currently 1)
 	double3 mPositionXYZ;											//Absolute position of the stages (x, y, z)
-	const std::vector<double2> mSoftPosLimXYZ{ { -60. * mm, 50. * mm}, { 0. * mm, 30. * mm}, { 1. * mm, 25. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
-	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages
+	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages. Ca not be changed
+	const std::vector<double2> mSoftPosLimXYZ{ { -60. * mm, 50. * mm}, { 3. * mm, 30. * mm}, { 1. * mm, 25. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
 
-	void configVelAndDOtriggers_(const double3 velXYZ) const;
+	double downloadPositionSingle_(const Axis axis);
+	double downloadVelSingle_(const Axis axis) const;
+	double downloadDOtriggerParamSingle_(const Axis axis, const int DOchan, const StageDOparam paramId) const;
+	void configDOtriggers_() const;
+	std::string axisToString(const Axis axis) const;
 public:
 	Stage(const double velX = 5. * mmps, const double velY = 5. * mmps, const double velZ = 0.02 * mmps);
 	~Stage();
@@ -286,20 +273,39 @@ public:
 	void moveSingle(const Axis stage, const double position);
 	void moveXY(const double2 positionXY);
 	void moveXYZ(const double3 positionXYZ);
-	double downloadPositionSingle(const Axis axis);
 	bool isMoving(const Axis axis) const;
 	void waitForMotionToStopSingle(const Axis axis) const;
 	void waitForMotionToStopAll() const;
 	void stopAll() const;
-	double downloadVelocitySingle(const Axis axis) const;
-	void setVelocitySingle(const Axis axis, const double vel) const;
-	void setVelocityAll(const double3 vel) const;
+	void setVelSingle(const Axis axis, const double vel) const;
+	void setVelAll(const double3 vel) const;
 	void setDOtriggerParamSingle(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const;
 	void setDOtriggerParamAll(const Axis axis, const int DOchan, const double triggerStep, const StageDOtriggerMode triggerMode, const double startThreshold, const double stopThreshold) const;
-	double downloadDOtriggerParamSingle(const Axis axis, const int DOchan, const StageDOparam paramId) const;
 	bool isDOtriggerEnabled(const Axis axis, const int DOchan) const;
 	void setDOtriggerEnabled(const Axis axis, const int DOchan, const BOOL triggerState) const;
 	void printStageConfig(const Axis axis, const int DOchan) const;
+};
+
+class Vibratome
+{
+	const FPGAns::FPGA &mFpga;
+	Stage &mStage;
+
+	const double mSlicingVel{ 1. * mmps };											//Move the y stage at this velocity for slicing
+	const double3 mStageConveyingVelXYZ{ 10. * mmps, 10.  *mmps, 0.5 * mmps };		//Transport the sample between the objective and vibratome at this velocity
+	//enum MotionDir { BACKWARD = -1, FORWARD = 1 };
+	//double mCuttingSpeed{ 0.5 * mmps };		//Speed of the vibratome for cutting (manual setting)
+	//double mMovingSpeed{ 2.495 * mmps };	//Measured moving speed of the head: 52.4 mm in 21 seconds = 2.495 mm/s. It can not be changed
+	//double mTravelRange{ 52.4 * mm };		//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
+	//void moveHead_(const double duration, const MotionDir motionDir) const;
+	//void cutAndRetractDistance(const double distance) const;
+	//void retractDistance(const double distance) const;
+public:
+	const double2 mStageInitialPosXY{ -55. * mm, 3. * mm };							//Position the stages in front oh the vibratome's blade
+	const double mStageFinalPosY{ 30. * mm };										//Final position of the y stage after slicing
+	Vibratome(const FPGAns::FPGA &fpga, Stage &stage);
+	void pushStartStopButton() const;
+	void slice(const double planeToCutZ);
 };
 
 class Sample

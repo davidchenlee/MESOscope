@@ -623,9 +623,9 @@ namespace TestRoutines
 		int input = 1;
 		while (input)
 		{
-			std::cout << "Stage X position = " << stage.downloadPositionSingle(XX) << "\n";
-			std::cout << "Stage Y position = " << stage.downloadPositionSingle(YY) << "\n";
-			std::cout << "Stage X position = " << stage.downloadPositionSingle(ZZ) << "\n";
+			std::cout << "Stage X position = " << stage.downloadPositionSingle_(XX) << "\n";
+			std::cout << "Stage Y position = " << stage.downloadPositionSingle_(YY) << "\n";
+			std::cout << "Stage X position = " << stage.downloadPositionSingle_(ZZ) << "\n";
 
 			std::cout << "Enter command: ";
 			std::cin >> input;
@@ -644,10 +644,10 @@ namespace TestRoutines
 		//stage.isDOtriggerEnabled(ZZ, DOchannel);
 		//stage.setDOtriggerEnabled(ZZ, DOchannel , true);
 		//const int triggerParam = 1;
-		//stage.downloadDOtriggerParamSingle(ZZ, DOchannel , triggerParam);
-		std::cout << "x stage vel: " << stage.downloadVelocitySingle(XX) / mmps << " mm/s" << "\n";
-		std::cout << "y stage vel: " << stage.downloadVelocitySingle(YY) / mmps << " mm/s" << "\n";
-		std::cout << "z stage vel: " << stage.downloadVelocitySingle(ZZ) / mmps << " mm/s" << "\n";
+		//stage.downloadDOtriggerParamSingle_(ZZ, DOchannel , triggerParam);
+		//std::cout << "x stage vel: " << stage.downloadVelSingle_(XX) / mmps << " mm/s" << "\n";
+		//std::cout << "y stage vel: " << stage.downloadVelSingle_(YY) / mmps << " mm/s" << "\n";
+		//std::cout << "z stage vel: " << stage.downloadVelSingle_(ZZ) / mmps << " mm/s" << "\n";
 		//stage.printStageConfig(ZZ, DOchan);
 
 		pressAnyKeyToCont();
@@ -829,33 +829,15 @@ namespace TestRoutines
 	{
 
 		const double3 samplePosition{ 45. * mm, 11.3 * mm, 18.5 * mm };
-		const double3 vibratomeInitialPosition{ -55. * mm, 3. * mm, 15. * mm };
-		const double3 vibratomeFinalPosition{ -55. * mm, 30. * mm, 15. * mm };
 
-		Stage stage{ 10 * mmps, 10 * mmps, 0.5 * mmps };
+		Stage stage;
 
-		stage.moveXYZ(samplePosition);
+		Vibratome vibratome{ fpga, stage };
+		vibratome.slice(20 * mm);
+
+		//stage.moveXYZ(samplePosition);
+		stage.moveXY(vibratome.mStageInitialPosXY);	//Set the stage back to the initial position for slicing
 		stage.waitForMotionToStopAll();
-
-		Sleep(2000);
-
-		stage.moveXYZ(vibratomeInitialPosition);
-		stage.waitForMotionToStopAll();
-
-		Vibratome vibratome{ fpga };
-		vibratome.pushStartStopButton();
-
-		stage.setVelocitySingle(YY, 1 * mmps);
-		stage.moveXYZ(vibratomeFinalPosition);
-		stage.waitForMotionToStopAll();
-		vibratome.pushStartStopButton();
-
-		stage.setVelocitySingle(YY, 10 * mmps);
-		stage.moveXYZ(samplePosition);
-		stage.waitForMotionToStopAll();
-
-		//vibratome.retractDistance(20 * mm);
-		//vibratome.cutAndRetractDistance(20 * mm);
 
 		pressAnyKeyToCont();
 	}

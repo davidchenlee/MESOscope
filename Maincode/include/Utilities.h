@@ -16,7 +16,6 @@ void printHex(const std::vector<uint8_t>  input);
 void printHex(const std::string input);
 void printBinary16(const int input);
 U16 doubleToFx2p14(double n);
-std::string axisToString(const Axis axis);
 void pressAnyKeyToCont();
 
 

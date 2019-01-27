@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::shutter(fpga);
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();
-			TestRoutines::PMT16Xconfig();
+			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
 			//TestRoutines::pockels(fpga);
@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::convertI16toVolt();
 			//TestRoutines::tiffU8();
 			//TestRoutines::ethernetSpeed();
-			//TestRoutines::vibratome(fpga);
+			TestRoutines::vibratome(fpga);
 			//TestRoutines::sequencer();
 			//TestRoutines::multithread();
 			//TestRoutines::sequencerSim();

@@ -74,21 +74,6 @@ std::string doesFileExist(const std::string filename)
 	return filename + suffix;
 }
 
-std::string axisToString(const Axis axis)
-{
-	switch (axis)
-	{
-	case XX:
-		return "X";
-	case YY:
-		return "Y";
-	case ZZ:
-		return "Z";
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
-	}
-}
-
 void pressAnyKeyToCont()
 {
 	std::cout << "\nPress any key to continue...\n";

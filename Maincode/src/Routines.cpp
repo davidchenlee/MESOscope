@@ -1,6 +1,6 @@
 #include "Routines.h"
 
-const double3 stackCenterXYZ{ 34.925 * mm, 11.217 * mm, 18.541 * mm };
+const double3 stackCenterXYZ{ 39.950 * mm, 21.100 * mm, 18.551 * mm };
 
 namespace MainRoutines
 {
@@ -106,7 +106,7 @@ namespace MainRoutines
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Select VISION OR FIDELITY");
 		}
 		double laserPower{ laserPowerMin };
-		const VirtualLaser laser{ RTcontrol, wavelength_nm };
+		const VirtualLaser laser{ RTcontrol, wavelength_nm, whichLaser };
 
 		//DATALOG
 		{
@@ -499,7 +499,7 @@ namespace TestRoutines
 			//Execute the realtime control sequence and acquire the image
 			Image image{ RTcontrol };
 			image.acquire(); //Execute the RT control sequence and acquire the image
-			//image.saveTiffSinglePage("Untitled", OVERRIDE);
+			image.saveTiffSinglePage("Untitled", OVERRIDE);
 		}
 	}
 
@@ -827,17 +827,15 @@ namespace TestRoutines
 
 	void vibratome(const FPGAns::FPGA &fpga)
 	{
-
-		const double3 samplePosition{ 45. * mm, 11.3 * mm, 18.5 * mm };
-
 		Stage stage;
 
 		Vibratome vibratome{ fpga, stage };
-		vibratome.slice(20 * mm);
+		vibratome.slice(21.4 * mm);
 
-		//stage.moveXYZ(samplePosition);
-		stage.moveXY(vibratome.mStageInitialPosXY);	//Set the stage back to the initial position for slicing
-		stage.waitForMotionToStopAll();
+		const double3 samplePosition{ 45. * mm, 11.3 * mm, 18.5 * mm };
+		stage.moveXYZ(samplePosition);
+		//stage.moveXY(vibratome.mStageInitialSlicePosXY);	//Set the stage back to the initial position for slicing
+		//stage.waitForMotionToStopAll();
 
 		pressAnyKeyToCont();
 	}

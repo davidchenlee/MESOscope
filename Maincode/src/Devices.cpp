@@ -72,13 +72,9 @@ void Image::readFIFOOUTpc_()
 	auto t_start = std::chrono::high_resolution_clock::now();
 	*/
 	
-	const int readFifoWaitingTime_ms{ 5 };	//Waiting time between each iteration
-	const U32 timeout_ms{ 100 };				//FIFOOUTpc timeout
-	
-	//Null reading timeout
-	int timeout_iter{ 200 };					//Timeout the whileloop if the data transfer fails
-	int nullReadCounterA{ 0 };
-	int nullReadCounterB{ 0 };
+	const int readFifoWaitingTime_ms{ 5 };				//Waiting time between each iteration
+	int timeout_iter{ 200 };							//Timeout the whileloop if the data transfer fails
+	int nullReadCounterA{ 0 }, nullReadCounterB{ 0 };	//Null reading counters
 
 	//FIFOOUT
 	int nElemTotalA{ 0 }; 					//Total number of elements read from FIFOOUTpc A
@@ -160,7 +156,8 @@ void Image::demultiplex_()
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
 	{
 		//TODO: pick up the corresponding 4-bit segment from mBufArrayA and mBufArrayB
-		unsigned char upscaled = mRTcontrol.mUpscaleU8 * mBufArrayB[pixIndex]; //Upscale the buffer to go from 4-bit to 8-bit
+		//Upscale the buffer to go from 4-bit to 8-bit
+		unsigned char upscaled{ static_cast<unsigned char>(mRTcontrol.mUpscaleU8 * mBufArrayB[pixIndex]) };
 
 		//If upscaled overflows
 		if (upscaled > _UI8_MAX)
@@ -1645,16 +1642,21 @@ void Vibratome::pushStartStopButton() const
 
 void Vibratome::slice(const double planeToCutZ)
 {
-	mStage.setVelAll(mStageConveyingVelXYZ);												//Change the velocity to move the sample to the vibratome
-	mStage.moveXYZ({ mStageInitialPosXY.at(XX), mStageInitialPosXY.at(YY), planeToCutZ });	//Position the sample in front of the vibratome's blade
+	mStage.setVelAll(mStageConveyingVelXYZ);															//Change the velocity to move the sample to the vibratome
+	mStage.moveXYZ({ mStageInitialSlicePosXY.at(XX), mStageInitialSlicePosXY.at(YY), planeToCutZ });	//Position the sample in front of the vibratome's blade
 	mStage.waitForMotionToStopAll();
 
 	mStage.setVelSingle(YY, mSlicingVel);							//Change the y vel for slicing
 	pushStartStopButton();											//Turn on the vibratome
-	mStage.moveSingle(YY, mStageFinalPosY);							//Slice the sample: move the stage y towards the blade
+	mStage.moveSingle(YY, mStageFinalSlicePosY);					//Slice the sample: move the stage y towards the blade
 	mStage.waitForMotionToStopSingle(YY);							//Wait until the motion ends
-	pushStartStopButton();											//Turn off the vibratome
 	mStage.setVelSingle(YY, mStageConveyingVelXYZ.at(YY));			//Set back the y vel to move the sample back to the microscope
+
+	//mStage.moveSingle(YY, mStage.mTravelRangeXYZ.at(YY).at(1));	//Move the stage y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
+	//mStage.waitForMotionToStopSingle(YY);							//Wait until the motion ends
+
+	pushStartStopButton();											//Turn off the vibratome
+
 }
 
 /*//NOT USING THESE FUNCTIONS ANYMORE

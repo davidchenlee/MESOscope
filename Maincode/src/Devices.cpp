@@ -1347,6 +1347,7 @@ Stage::~Stage()
 //DO1 and DO2 are used to trigger the stack acquisition. Currently only DO2 is used as trigger. See the implementation on LV
 void Stage::configDOtriggers_() const
 {
+	/*
 	//DO1 TRIGGER: DO1 is set to output a pulse (fixed width = 50 us) whenever the stage covers a certain distance (e.g. 0.3 um)
 	const int DO1{ 1 };
 	setDOtriggerEnabled(ZZ, DO1, true);	//Enable DO1 trigger
@@ -1355,6 +1356,7 @@ void Stage::configDOtriggers_() const
 	const double startThreshold{ 0. * mm };
 	const double stopThreshold{ 0. * mm };
 	setDOtriggerParamAll(ZZ, DO1, triggerStep, triggerMode, startThreshold, stopThreshold);
+	*/
 
 	//DO2 TRIGGER: DO2 is set to output HIGH when the stage z is in motion
 	const int DO2{ 2 };

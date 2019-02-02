@@ -216,9 +216,8 @@ namespace MainRoutines
 		//STAGES
 		const ScanDirection stackScanDirZ{ BOTTOMUP};		//Scan direction in z
 		const double stackDepth{ stackScanDirZ * nFramesCont * stepSizeZ };
-		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages. The sign of stackDepth determines the scanning direction
-		const double frameDuration{ halfPeriodLineclock * heightPerFrame_pix };												//Duration of 1 frame = 1 galvo swing
-		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / frameDuration };
+		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages. The sign of stackDepth determines the scanning direction					
+		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };							//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
 		stage.moveXYZ(stageXYZi);
 		stage.waitForMotionToStopAll();
 

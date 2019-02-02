@@ -253,6 +253,7 @@ class Stage
 	const char mNstagesPerController[2]{ "1" };						//Number of stages per controller (currently 1)
 	double3 mPositionXYZ;											//Absolute position of the stages (x, y, z)
 
+
 	double downloadPositionSingle_(const Axis axis);
 	double downloadVelSingle_(const Axis axis) const;
 	double downloadDOtriggerParamSingle_(const Axis axis, const int DOchan, const StageDOparam paramId) const;

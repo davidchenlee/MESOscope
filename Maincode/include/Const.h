@@ -22,7 +22,7 @@ namespace Constants
 	typedef std::array<double, 2> double2;		//array of 2 doubles
 	typedef std::array <double, 4> ROI;			//ROI = {ymin, xmin, ymax, xmax}
 
-	enum PhotonCounterSelector { EXT, SIM };
+	enum PhotonCounterSelector { PMT, SIM };
 	enum LineclockSelector { RS = false, FG = true };
 	enum AcqTriggerSelector { PCTRIG = false, STAGETRIG = true};
 	enum ToggleSwitch { DISABLE = false, ENABLE = true};

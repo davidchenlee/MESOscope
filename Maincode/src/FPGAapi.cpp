@@ -243,8 +243,8 @@ namespace FPGAns
 			break;
 		//case nonuniform: pushCorrectedDwellTimes();
 			//break;
-		default: throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pixelclock type unavailable");
-			break;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pixelclock type unavailable");
 		}
 	}
 

@@ -144,7 +144,7 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 	if (buffer == NULL) //Check that the buffer memory was allocated
 	{
 		TIFFClose(tiffHandle);
-		std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
 	}
 
 	mArray = new unsigned char[mWidthPerFrame * heightAllFrames];	//Allocate memory for the image
@@ -241,7 +241,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	if (buffer == NULL) //Check that the buffer memory was allocated
 	{
 		TIFFClose(tiffHandle);
-		std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
 	}
 
 	//Choose whether to save the first frame at the top or bottom of the stack
@@ -257,7 +257,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 		lastFrame = 0;
 		break;
 	default:
-		std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
 	}
 
 	do
@@ -309,7 +309,7 @@ void TiffU8::mirrorOddFrames()
 		unsigned char *buffer{ (unsigned char *)_TIFFmalloc(mBytesPerLine) };		//Buffer used to store the row of pixel information for writing to file
 
 		if (buffer == NULL) //Check that the buffer memory was allocated
-			std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory");
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory");
 
 		for (int frame = 1; frame < mNframes; frame += 2)
 		{

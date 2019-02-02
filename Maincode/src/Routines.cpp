@@ -214,11 +214,11 @@ namespace MainRoutines
 		const double stepSizeZ{ 0.5 * um };
 
 		//STAGES
-		const int stackScanDirZ{ 1 };																						//Scan direction in z: 1 for top-down, -1 for bottom-up
+		const int stackScanDirZ{ -1 };		//Scan direction in z: 1 for top-down, -1 for bottom-up
 		const double stackDepth{ stackScanDirZ * nFramesCont * stepSizeZ };
-		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages
-		const double frameDurationTmp{ halfPeriodLineclock * heightPerFrame_pix };											//TODO: combine this with the galvo's one
-		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / frameDurationTmp };
+		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages. The sign of stackDepth determines the scanning direction
+		const double frameDuration{ halfPeriodLineclock * heightPerFrame_pix };												//Duration of 1 frame = 1 galvo swing
+		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / frameDuration };
 		stage.moveXYZ(stageXYZi);
 		stage.waitForMotionToStopAll();
 
@@ -226,8 +226,8 @@ namespace MainRoutines
 		const ResonantScanner RScanner{ fpga };
 		RScanner.isRunning();		//Make sure that the RS is running
 
-		//CREATE THE REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG };	//Notice the STAGETRIG flag
+		//CREATE THE REALTIME CONTROL SEQUENCE. Notice the STAGETRIG flag to enable triggering the RT sequence with the stage
+		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG };	
 
 		//LASER: wavelength_nm, laserPower, whichLaser
 		const int wavelength_nm{ 750 };

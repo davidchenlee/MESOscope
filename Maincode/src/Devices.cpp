@@ -268,13 +268,13 @@ void Image::averageEvenOddFrames()
 }
 
 //Save each frame in mTiff in a single Tiff page
-void Image::saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const int stackScanDir) const
+void Image::saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const ScanDirection stackScanDir) const
 {
 	mTiff.saveToFile(filename, SINGLEPAGE, overrideFlag, stackScanDir);
 }
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag, const int stackScanDir) const
+void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag, const ScanDirection stackScanDir) const
 {
 	mTiff.saveToFile(filename, MULTIPAGE, overrideFlag, stackScanDir);
 }

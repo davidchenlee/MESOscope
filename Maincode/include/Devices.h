@@ -38,8 +38,8 @@ public:
 	void postprocess();
 	void averageFrames();
 	void averageEvenOddFrames();
-	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const int stackScanDir = 1) const;
-	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const int stackScanDir = 1) const;
+	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const ScanDirection stackScanDir = TOPDOWN) const;
+	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const ScanDirection stackScanDir = TOPDOWN) const;
 	unsigned char* const pointerToTiff() const;
 };
 

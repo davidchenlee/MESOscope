@@ -214,7 +214,7 @@ namespace MainRoutines
 		const double stepSizeZ{ 0.5 * um };
 
 		//STAGES
-		const int stackScanDirZ{ -1 };		//Scan direction in z: 1 for top-down, -1 for bottom-up
+		const ScanDirection stackScanDirZ{ BOTTOMUP};		//Scan direction in z
 		const double stackDepth{ stackScanDirZ * nFramesCont * stepSizeZ };
 		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages. The sign of stackDepth determines the scanning direction
 		const double frameDuration{ halfPeriodLineclock * heightPerFrame_pix };												//Duration of 1 frame = 1 galvo swing
@@ -313,7 +313,8 @@ namespace MainRoutines
 			//Read the commands line by line
 			double scanZi, scanZf, scanPi, stackPinc;
 			double2 stackCenterXY;
-			int wavelength_nm, scanDirZ;
+			int wavelength_nm;
+			ScanDirection scanDirZ;
 			std::string filename;
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
 				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
@@ -337,7 +338,7 @@ namespace MainRoutines
 					AcqStack acqStack{ commandline.mCommand.acqStack };
 
 					wavelength_nm = acqStack.mWavelength_nm;
-					scanDirZ = acqStack.mScanDirZ;
+					scanDirZ = static_cast<ScanDirection>(acqStack.mScanDirZ);
 					scanZi = acqStack.mScanZi;
 					scanZf = scanZi + scanDirZ * acqStack.mStackDepth;
 					scanPi = acqStack.mScanPi;

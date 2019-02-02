@@ -40,6 +40,7 @@ namespace Constants
 	enum ComSelector { COMVISION = 1, COMFIDELITY = 8, COMFWDET = 5, COMFWEXC = 9, COMPMT16X = 6};
 	enum Multiplexing { SINGLEBEAM = false, MULTIBEAM = true};
 	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};
+	enum ScanDirection : int { BOTTOMUP = -1, TOPDOWN = 1};
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;

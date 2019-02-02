@@ -217,7 +217,6 @@ namespace FPGAns
 
 		//STAGES
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getFpgaHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stageTriggerPulse / us * tickPerUs)));	//Trigger pulse width
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getFpgaHandle(), NiFpga_FPGAvi_ControlBool_ScanDirection, false));															//Z-stage scan direction (1 for up, 0 for down)
 
 		/*
 		//SHUTTERS. Commented out to allow keeping the shutter on

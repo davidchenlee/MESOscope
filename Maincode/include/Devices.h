@@ -247,12 +247,12 @@ class Stage
 	enum StageDOparam { TriggerStep = 1, AxisNumber = 2, TriggerMode = 3, Polarity = 7, StartThreshold = 8, StopThreshold = 9, TriggerPosition = 10 };
 	enum StageDOtriggerMode { PositionDist = 0, OnTarget = 2, InMotion = 6, PositionOffset = 7 };
 
-	const int mPort_z{ 4 };											//COM port
+	const int mPort_z{ 4 };							//COM port
 	const int mBaud_z{ 38400 };
-	int3 mID_XYZ;													//Controller IDs
-	const char mNstagesPerController[2]{ "1" };						//Number of stages per controller (currently 1)
-	double3 mPositionXYZ;											//Absolute position of the stages (x, y, z)
-
+	int3 mID_XYZ;									//Controller IDs
+	const char mNstagesPerController[2]{ "1" };		//Number of stages per controller (currently 1)
+	double3 mPositionXYZ;							//Absolute position of the stages
+	double3 mVelXYZ;								//Velocity of the stages
 
 	double downloadPositionSingle_(const Axis axis);
 	double downloadVelSingle_(const Axis axis) const;
@@ -262,7 +262,7 @@ class Stage
 public:
 	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages set by hardware. Can not be changed
 	const std::vector<double2> mSoftPosLimXYZ{ { -60. * mm, 50. * mm}, { 3. * mm, 30. * mm}, { 1. * mm, 25. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
-	Stage(const double velX = 5. * mmps, const double velY = 5. * mmps, const double velZ = 0.02 * mmps);
+	Stage(const double velX, const double velY, const double velZ);
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor
 	Stage& operator=(const Stage&) = delete;	//Disable assignment-constructor
@@ -278,8 +278,9 @@ public:
 	void waitForMotionToStopSingle(const Axis axis) const;
 	void waitForMotionToStopAll() const;
 	void stopAll() const;
-	void setVelSingle(const Axis axis, const double vel) const;
-	void setVelAll(const double3 vel) const;
+	void setVelSingle(const Axis axis, const double vel);
+	void setVelXYZ(const double3 vel);
+	void printVelXYZ() const;
 	void setDOtriggerParamSingle(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const;
 	void setDOtriggerParamAll(const Axis axis, const int DOchan, const double triggerStep, const StageDOtriggerMode triggerMode, const double startThreshold, const double stopThreshold) const;
 	bool isDOtriggerEnabled(const Axis axis, const int DOchan) const;

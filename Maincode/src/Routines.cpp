@@ -33,7 +33,7 @@ namespace MainRoutines
 		const std::string collar{ "1.49" };
 
 		//STAGES
-		Stage stage;
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
 		std::vector<double3> stagePositionXYZ;
 
 		int nDiffZ;		//Number of frames at different Zs
@@ -322,7 +322,7 @@ namespace MainRoutines
 				//commandline.printParameters();
 
 				//Stopwatch
-				auto t_start{ std::chrono::high_resolution_clock::now() };
+				//auto t_start{ std::chrono::high_resolution_clock::now() };
 
 				switch (commandline.mAction)
 				{
@@ -372,8 +372,8 @@ namespace MainRoutines
 				}//switch
 
 				//Stop the stopwatch
-				double duration{ std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count() };
-				std::cout << "Elapsed time: " << duration << " ms" << "\n";
+				//double duration{ std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count() };
+				//std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
 				//pressAnyKeyToCont();
 			}//for
@@ -400,7 +400,7 @@ namespace CalibrationRoutines
 		RScanner.isRunning();		//Make sure that the RS is running
 
 		//STAGES
-		Stage stage;
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
@@ -601,7 +601,7 @@ namespace TestRoutines
 	{
 		double duration;
 		const double3 stagePositionXYZ{ 35.020 * mm, 19.808 * mm, 18.542 * mm };	//Stage initial position
-		Stage stage;
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
 		std::cout << "Stages initial position:" << "\n";
 		stage.printPositionXYZ();
@@ -637,12 +637,18 @@ namespace TestRoutines
 	//Test configuring setDOtriggerEnabled and CTO for the stages
 	void stageConfig()
 	{
-		Stage stage;
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 		const int DOchan{ 1 };
+
 		//std::cout << "Stages initial position:" << "\n";
 		//stage.printPositionXYZ();
+
+		std::cout << "Stages initial vel:" << "\n";
+		stage.printVelXYZ();
+
 		//stage.isDOtriggerEnabled(ZZ, DOchannel);
 		//stage.setDOtriggerEnabled(ZZ, DOchannel , true);
+
 		//const int triggerParam = 1;
 		//stage.downloadDOtriggerParamSingle_(ZZ, DOchannel , triggerParam);
 		//std::cout << "x stage vel: " << stage.downloadVelSingle_(XX) / mmps << " mm/s" << "\n";
@@ -827,7 +833,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGAns::FPGA &fpga)
 	{
-		Stage stage;
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
 		Vibratome vibratome{ fpga, stage };
 		vibratome.slice(21.4 * mm);

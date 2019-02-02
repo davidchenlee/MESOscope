@@ -1325,13 +1325,18 @@ Stage::Stage(const double velX, const double velY, const double velZ)
 
 	std::cout << "Connection with the stages successfully established\n";
 
-	//Record the current position
+	//Download the current position
 	mPositionXYZ.at(XX) = downloadPositionSingle_(XX);
 	mPositionXYZ.at(YY) = downloadPositionSingle_(YY);
 	mPositionXYZ.at(ZZ) = downloadPositionSingle_(ZZ);
 
+	//Download the current velocities
+	mVelXYZ.at(XX) = downloadVelSingle_(XX);
+	mVelXYZ.at(YY) = downloadVelSingle_(YY);
+	mVelXYZ.at(ZZ) = downloadVelSingle_(ZZ);
+
 	configDOtriggers_();				//Configure the stage velocities and DO triggers
-	setVelAll({ velX, velY, velZ });	//Set the stage velocities
+	setVelXYZ({ velX, velY, velZ });	//Set the stage velocities
 }
 
 Stage::~Stage()
@@ -1503,22 +1508,38 @@ double Stage::downloadVelSingle_(const Axis axis) const
 }
 
 //Set the velocity of the stage
-void Stage::setVelSingle(const Axis axis, const double vel) const
+void Stage::setVelSingle(const Axis axis, const double vel)
 {
+	//Check if the requested vel is valid
 	if (vel <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be greater than zero for the stage " + axisToString(axis));
 
-	const double vel_mmps{ vel / mmps };		//Divide by mmps to convert implicit to explicit units
-	if (!PI_VEL(mID_XYZ.at(axis), mNstagesPerController, &vel_mmps))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString(axis));
+	//Update the vel if different
+	if (mVelXYZ.at(axis) != vel)
+	{
+		const double vel_mmps{ vel / mmps };		//Divide by mmps to convert implicit to explicit units
+		if (!PI_VEL(mID_XYZ.at(axis), mNstagesPerController, &vel_mmps))
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString(axis));
+
+		mVelXYZ.at(axis) = vel;
+		//std::cout << "stage vel updated\n"; //For debugging
+	}
+
 }
 
 //Set the velocity of the stage 
-void Stage::setVelAll(const double3 velXYZ) const
+void Stage::setVelXYZ(const double3 velXYZ)
 {
 	setVelSingle(XX, velXYZ.at(XX));
 	setVelSingle(YY, velXYZ.at(YY));
 	setVelSingle(ZZ, velXYZ.at(ZZ));
+}
+
+void Stage::printVelXYZ() const
+{
+	std::cout << "Stage X vel = " << mVelXYZ.at(XX) / mmps << " mm/s\n";
+	std::cout << "Stage Y vel = " << mVelXYZ.at(YY) / mmps << " mm/s\n";
+	std::cout << "Stage Z vel = " << mVelXYZ.at(ZZ) / mmps << " mm/s\n";
 }
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
@@ -1644,7 +1665,7 @@ void Vibratome::pushStartStopButton() const
 
 void Vibratome::slice(const double planeToCutZ)
 {
-	mStage.setVelAll(mStageConveyingVelXYZ);															//Change the velocity to move the sample to the vibratome
+	mStage.setVelXYZ(mStageConveyingVelXYZ);															//Change the velocity to move the sample to the vibratome
 	mStage.moveXYZ({ mStageInitialSlicePosXY.at(XX), mStageInitialSlicePosXY.at(YY), planeToCutZ });	//Position the sample in front of the vibratome's blade
 	mStage.waitForMotionToStopAll();
 

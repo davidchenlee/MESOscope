@@ -1,6 +1,11 @@
 #include "Routines.h"
 
-const double3 stackCenterXYZ{ 39.950 * mm, 21.100 * mm, 18.551 * mm };
+//SAMPLE PARAMETERS
+const double3 stackCenterXYZ{ 30.100 * mm, 21.080 * mm, 18.517 * mm };
+const std::string sampleName{ "Beads1um" };
+const std::string immersionMedium{ "SiliconMineralOil5050" };
+const std::string collar{ "1.495" };
+
 
 namespace MainRoutines
 {
@@ -17,20 +22,15 @@ namespace MainRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 5 };				//Number of frames for continuous XY acquisition
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
-		const double stepSizeZ{ 0.5 * um };
-		double stackDepthZ{ 10. * um };			//Acquire a stack of this depth or thickness in Z
-
-		//SAMPLE
-		const std::string sampleName{ "Beads4um" };
-		const std::string immersionMedium{ "SiliconMineralOil5050" };
-		const std::string collar{ "1.49" };
+		const double stepSizeZ{ 0.2 * um };
+		double stackDepthZ{ 30. * um };			//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
@@ -87,20 +87,20 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
-		const LaserSelector whichLaser = VISION;
+		const LaserSelector whichLaser = FIDELITY;
 		int wavelength_nm;
 		double laserPowerMin, laserPowerMax;
 		switch (whichLaser)
 		{
 		case VISION:
 			wavelength_nm = 750;
-			laserPowerMin = 55. * mW;
-			laserPowerMax = 55. * mW;
+			laserPowerMin = 100. * mW;
+			laserPowerMax = laserPowerMin;
 			break;
 		case FIDELITY:
 			wavelength_nm = 1040;
-			laserPowerMin = 25. * mW;
-			laserPowerMax = 25. * mW;
+			laserPowerMin = 80. * mW;
+			laserPowerMax = laserPowerMin;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Select VISION OR FIDELITY");
@@ -190,7 +190,7 @@ namespace MainRoutines
 		}
 
 		laser.closeShutter();
-		pressAnyKeyToCont();
+		//pressAnyKeyToCont();
 	}
 
 	/*
@@ -214,7 +214,7 @@ namespace MainRoutines
 		const double stepSizeZ{ 0.5 * um };
 
 		//STAGES
-		const ScanDirection stackScanDirZ{ BOTTOMUP};		//Scan direction in z
+		const ScanDirection stackScanDirZ{ TOPDOWN };		//Scan direction in z
 		const double stackDepth{ stackScanDirZ * nFramesCont * stepSizeZ };
 		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages. The sign of stackDepth determines the scanning direction					
 		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };							//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
@@ -230,7 +230,7 @@ namespace MainRoutines
 
 		//LASER: wavelength_nm, laserPower, whichLaser
 		const int wavelength_nm{ 750 };
-		const double laserPower{ 60. * mW };
+		const double laserPower{ 80. * mW };
 		const VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower, AUTO };
 		//VirtualLaser laser{ RTcontrol, 1040, 25. * mW, AUTO };
 
@@ -249,7 +249,7 @@ namespace MainRoutines
 		image.downloadData();
 		image.postprocess();
 
-		const std::string filename{ toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserPower / mW, 1) +
+		const std::string filename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserPower / mW, 1) +
 			"_x=" + toString(stageXYZi.at(XX) / mm, 3) + "_y=" + toString(stageXYZi.at(YY) / mm, 3) + "_zi=" + toString(stageXYZi.at(ZZ) / mm, 4) + "_zf=" + toString((stageXYZi.at(ZZ) + stackDepth) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 		image.saveTiffMultiPage(filename, NOOVERRIDE, stackScanDirZ);
 
@@ -277,7 +277,7 @@ namespace MainRoutines
 		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
 		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
 		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
-		const Sample sample{ "Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
+		const Sample sample{ sampleName, immersionMedium, collar, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
 
 		//Create a sequence

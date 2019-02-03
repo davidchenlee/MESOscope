@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 30.100 * mm, 21.080 * mm, 18.517 * mm };
+const double3 stackCenterXYZ{ 30.350 * mm, 21.080 * mm, 18.509 * mm };
 const std::string sampleName{ "Beads1um" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
 const std::string collar{ "1.495" };
@@ -14,7 +14,7 @@ namespace MainRoutines
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
 		//const RunMode acqMode{ SINGLEMODE };			//Single shot
-		//const RunMode acqMode{ LIVEMODE };				//Image the same z plane many times as single shots. Used it for adjusting the microscope live
+		//const RunMode acqMode{ LIVEMODE };			//Image the same z plane many times as single shots. Used it for adjusting the microscope live
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane many times and average the images
 		//const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
 		const RunMode acqMode{ STACKCENTEREDMODE };		//Stack volume centered at the initial z position
@@ -29,8 +29,8 @@ namespace MainRoutines
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
-		const double stepSizeZ{ 0.2 * um };
-		double stackDepthZ{ 30. * um };			//Acquire a stack of this depth or thickness in Z
+		const double stepSizeZ{ 0.5 * um };
+		double stackDepthZ{ 10. * um };			//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
@@ -87,19 +87,19 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
-		const LaserSelector whichLaser = FIDELITY;
+		const LaserSelector whichLaser = VISION;
 		int wavelength_nm;
 		double laserPowerMin, laserPowerMax;
 		switch (whichLaser)
 		{
 		case VISION:
-			wavelength_nm = 750;
-			laserPowerMin = 100. * mW;
+			wavelength_nm = 920;
+			laserPowerMin = 45. * mW;
 			laserPowerMax = laserPowerMin;
 			break;
 		case FIDELITY:
 			wavelength_nm = 1040;
-			laserPowerMin = 80. * mW;
+			laserPowerMin = 45. * mW;
 			laserPowerMax = laserPowerMin;
 			break;
 		default:
@@ -190,7 +190,7 @@ namespace MainRoutines
 		}
 
 		laser.closeShutter();
-		//pressAnyKeyToCont();
+		pressAnyKeyToCont();
 	}
 
 	/*
@@ -229,8 +229,8 @@ namespace MainRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG };	
 
 		//LASER: wavelength_nm, laserPower, whichLaser
-		const int wavelength_nm{ 750 };
-		const double laserPower{ 80. * mW };
+		const int wavelength_nm{ 920 };
+		const double laserPower{ 45. * mW };
 		const VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower, AUTO };
 		//VirtualLaser laser{ RTcontrol, 1040, 25. * mW, AUTO };
 
@@ -469,6 +469,33 @@ namespace CalibrationRoutines
 		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
 		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
 	}
+
+//For keeping the pockels on to check the the laser power
+//0. Make sure that the function generator feeds the lineclock
+//1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter automatically
+//2. Set pockelsAutoOff = DISABLE for holding the last value
+//3. Tune Vision's wavelength manually
+	void pockels(const FPGAns::FPGA &fpga)
+	{
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga };
+
+		//DEFINE THE POCKELS CELLS
+		PockelsCell pockelsVision{ RTcontrol, 1040, VISION };			//Vision
+		PockelsCell pockelsFidelity{ RTcontrol, 1040, FIDELITY };		//Fidelity
+
+		PockelsCell pockels{ pockelsVision };
+		//PockelsCell pockels{ pockelsFidelity };
+		//pockels.pushPowerSinglet(8 * us, 100 * mW);
+		pockels.pushPowerSinglet(8 * us, 0 * mW);
+		//pockels.pushVoltageSinglet(8 * us, 1.0 * V);
+
+		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
+		Image image{ RTcontrol };
+		image.acquire();
+
+		//pressAnyKeyToCont();
+	}
 }//namespace
 
 
@@ -688,14 +715,14 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 10 };			//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 1 };			//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
-		const int wavelength_nm{ 750 };
-		const double P{ 50. * mW };		//Laser power
-		VirtualLaser laser{ RTcontrol, wavelength_nm, P };
+		const int wavelength_nm{ 920 };
+		const double laserPower{ 50. * mW };		//Laser power
+		VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower };
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
@@ -705,34 +732,7 @@ namespace TestRoutines
 		//Sleep(3000);
 		//laser.closeShutter();
 
-		pressAnyKeyToCont();
-	}
-
-	//For keeping the pockels on to check the the laser power
-	//0. Make sure that the function generator feeds the lineclock
-	//1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter automatically
-	//2. Set pockelsAutoOff = DISABLE for holding the last value
-	//3. Tune Vision's wavelength manually
-	void pockels(const FPGAns::FPGA &fpga)
-	{
-		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga };
-
-		//DEFINE THE POCKELS CELLS
-		PockelsCell pockelsVision{ RTcontrol, 1040, VISION };			//Vision
-		PockelsCell pockelsFidelity{ RTcontrol, 1040, FIDELITY };		//Fidelity
-
-		PockelsCell pockels{ pockelsVision };
-		//PockelsCell pockels{ pockelsFidelity };
-		pockels.pushPowerSinglet(400 * us, 30 * mW);
-		//pockels.pushPowerSinglet(8 * us, 0 * mW);
-		//pockels.pushVoltageSinglet(8 * us, 0.0 * V);
-
-		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
-		Image image{ RTcontrol };
-		image.acquire();
-
-		pressAnyKeyToCont();
+		//pressAnyKeyToCont();
 	}
 
 	void pockelsRamp(const FPGAns::FPGA &fpga)
@@ -747,7 +747,7 @@ namespace TestRoutines
 
 		//POCKELS CELL
 		const int wavelength_nm{ 750 };
-		const double P{ 25. * mW };		//Laser power
+		const double laserPower{ 25. * mW };		//Laser power
 		PockelsCell pockels{ RTcontrol, wavelength_nm, VISION };
 
 		//Test the voltage setpoint
@@ -755,8 +755,8 @@ namespace TestRoutines
 		//pockels.voltageLinearRamp(0.25 * V, 0.5 * V);		//Linearly scale the pockels voltage from the first to the last frame
 
 		//Test the laser power setpoint
-		//pockels.pushPowerSinglet(8 * us, P);
-		//pockels.powerLinearRamp(P, 2 * P);		//Linearly scale the laser power from the first to the last frame
+		//pockels.pushPowerSinglet(8 * us, laserPower);
+		//pockels.powerLinearRamp(P, 2 * laserPower);		//Linearly scale the laser power from the first to the last frame
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };

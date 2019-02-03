@@ -16,6 +16,7 @@ namespace CalibrationRoutines
 	void digitalLatency(const FPGAns::FPGA &fpga);
 	void analogLatency(const FPGAns::FPGA &fpga);
 	void fineTuneGalvoScan(const FPGAns::FPGA &fpga);
+	void pockels(const FPGAns::FPGA &fpga);
 }
 
 //TESTS
@@ -33,7 +34,6 @@ namespace TestRoutines
 	void PMT16Xconfig();
 	void lasers(const FPGAns::FPGA &fpga);
 	void virtualLasers(const FPGAns::FPGA &fpga);
-	void pockels(const FPGAns::FPGA &fpga);
 	void pockelsRamp(const FPGAns::FPGA &fpga);
 	void resonantScanner(const FPGAns::FPGA &fpga);
 	void convertI16toVolt();

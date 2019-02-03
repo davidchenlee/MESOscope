@@ -8,14 +8,15 @@ int main(int argc, char* argv[])
 		try
 		{
 			//MAIN SEQUENCES
-			MainRoutines::discreteScanZ(fpga);
-			//MainRoutines::continuousScanZ(fpga);
+			//MainRoutines::discreteScanZ(fpga);
+			MainRoutines::continuousScanZ(fpga);
 			//MainRoutines::sequencer(fpga);
 
 			//CALIBRATION
 			//CalibrationRoutines::digitalLatency(fpga);
 			//CalibrationRoutines::analogLatency(fpga);
 			//CalibrationRoutines::fineTuneGalvoScan(fpga);
+			//CalibrationRoutines::pockels(fpga);
 
 			//TESTS
 			//TestRoutines::galvo(fpga);
@@ -30,7 +31,6 @@ int main(int argc, char* argv[])
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
-			//TestRoutines::pockels(fpga);
 			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::resonantScanner(fpga);
 			//TestRoutines::convertI16toVolt();

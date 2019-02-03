@@ -1056,19 +1056,19 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 	{
 	case RTVISION:
 		if (mWavelength_nm == 750) {
-			a = 788 * mW;
-			b = 0.6152 / V;
-			c = -0.027 * V;
+			a = 301.1 * mW;
+			b = 0.624 / V;
+			c = 0.019 * V;
 		}
-		else if (mWavelength_nm == 940) {
-			a = 464 * mW;
-			b = 0.488 / V;
-			c = -0.087 * V;
+		else if (mWavelength_nm == 920) {
+			a = 200.1 * mW;
+			b = 0.507 / V;
+			c = -0.088 * V;
 		}
 		else if (mWavelength_nm == 1040) {
-			a = 200 * mW;
-			b = 0.441 / V;
-			c = 0.037 * V;
+			a = 75.19 * mW;
+			b = 0.447 / V;
+			c = 0.038 * V;
 		}
 		else
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");

@@ -93,8 +93,8 @@ namespace MainRoutines
 		switch (whichLaser)
 		{
 		case VISION:
-			wavelength_nm = 920;
-			laserPowerMin = 45. * mW;
+			wavelength_nm = 750;
+			laserPowerMin = 50. * mW;
 			laserPowerMax = laserPowerMin;
 			break;
 		case FIDELITY:
@@ -130,7 +130,7 @@ namespace MainRoutines
 			datalog.record("Galvo FFOV (um) = ", FFOVgalvo / um);
 			datalog.record("\nIMAGE--------------------------------------------------------");
 			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
-			datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleU8);
+			datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleFactorU8);
 			datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
 			datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
 			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
@@ -229,9 +229,9 @@ namespace MainRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG };	
 
 		//LASER: wavelength_nm, laserPower, whichLaser
-		const int wavelength_nm{ 920 };
+		const int wavelength_nm{ 750 };
 		const double laserPower{ 45. * mW };
-		const VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower, AUTO };
+		const VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower, VISION };
 		//VirtualLaser laser{ RTcontrol, 1040, 25. * mW, AUTO };
 
 		//GALVO RT linear scan
@@ -532,15 +532,17 @@ namespace TestRoutines
 
 	void pixelclock(const FPGAns::FPGA &fpga)
 	{
-		std::vector<unsigned char> stackOfAverages;
+		std::vector<U8> stackOfAverages;
 
-		FPGAns::RTcontrol RTcontrol{ fpga }; 			//Create a realtime control sequence
+		FPGAns::RTcontrol RTcontrol{ fpga }; 		//Create a realtime control sequence
 		Image image{ RTcontrol };
 		image.acquire();							//Execute the realtime control sequence and acquire the image
 		//image.pushToVector(stackOfAverages);
 		//std::cout << "size: " << stackOfAverages.size() << "\n";
 		//TiffU8 acqParam{ stackOfAverages, 300, 400 };
 		//acqParam.saveTiff("Untitled");
+
+		pressAnyKeyToCont();
 	}
 
 	//Test the analog and digital output and the relative timing wrt the pixel clock

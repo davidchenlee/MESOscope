@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 		{
 			//MAIN SEQUENCES
 			//MainRoutines::discreteScanZ(fpga);
-			MainRoutines::continuousScanZ(fpga);
+			//MainRoutines::continuousScanZ(fpga);
 			//MainRoutines::sequencer(fpga);
 
 			//CALIBRATION
@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
 
 			//TESTS
 			//TestRoutines::galvo(fpga);
-			//TestRoutines::pixelclock(fpga);
+			TestRoutines::pixelclock(fpga);
 			//TestRoutines::analogAndDigitalOut(fpga);
 			//TestRoutines::analogRamp(fpga);
 			//TestRoutines::digitalTiming(fpga);

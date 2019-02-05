@@ -40,7 +40,7 @@ public:
 	void averageEvenOddFrames();
 	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const ScanDirection stackScanDir = TOPDOWN) const;
 	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const ScanDirection stackScanDir = TOPDOWN) const;
-	unsigned char* const pointerToTiff() const;
+	U8* const pointerToTiff() const;
 };
 
 class ImageException : public std::runtime_error

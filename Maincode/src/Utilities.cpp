@@ -134,7 +134,7 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 	mWidthPerFrame = widthAllFrames;
 	mHeightPerFrame = heightAllFrames / nframes;
 	mBytesPerLine = mWidthPerFrame * sizeof(unsigned char);	//Length in memory of one row of pixel in the image. Targeting 'unsigned char' only
-																//alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
+															//alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
 
 	if (mBytesPerLine == NULL)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failed assigning mBytesPerLine");

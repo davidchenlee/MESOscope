@@ -62,7 +62,7 @@ namespace FPGAns
 		const double mDwell{ 0.1625 * us };															//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
 																									//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 		const double mPulsesPerPix = mDwell / VISIONpulsePeriod;									//Max number of laser pulses per pixel
-		const unsigned char mUpscaleU8{ static_cast<unsigned char>(255 / (mPulsesPerPix + 1)) };	//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
+		const U8 mUpscaleFactorU8{ static_cast<U8>(255 / (mPulsesPerPix + 1)) };					//Upscale the photoncount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
 		const int mNlinesSkip{ 0 };																	//Number of lines to skip beetween frames to reduce the acquisition bandwidt
 		int mWidthPerFrame_pix;																		//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
 		int mHeightPerFrame_pix;																	//Height in pixels of a single frame (galvo axis). This sets the number of "lines" in the image
@@ -71,7 +71,7 @@ namespace FPGAns
 		int mNpixAllFrames;																			//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
 		RTcontrol(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput = FG,
-			const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix = 400, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
+			const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
 		RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 		RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
 		RTcontrol(RTcontrol&&) = delete;					//Disable move constructor

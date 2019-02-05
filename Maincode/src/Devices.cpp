@@ -27,7 +27,7 @@ void Image::FIFOOUTpcGarbageCollector_() const
 
 	U32 dummy;
 	U32* garbage = new U32[bufSize];
-	U32 nElemToReadA, nElemToReadB;					//Elements to read from FIFOOUTpc A and B
+	U32 nElemToReadA{ 0 }, nElemToReadB{ 0 };			//Elements to read from FIFOOUTpc A and B
 	int nElemTotalA{ 0 }, nElemTotalB{ 0 }; 			//Total number of elements read from FIFOOUTpc A and B
 	while (true)
 	{
@@ -101,7 +101,6 @@ void Image::readFIFOOUTpc_()
 	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * mRTcontrol.mNpixAllFrames / duration / 1000 << " Mbps" << "\n"; //2 FIFOOUTs of 32 bits each
 	std::cout << "Total of elements read: " << nElemTotalA << "\t" << nElemTotalB << "\n"; //Print out the total number of elements read
 	*/
-	
 
 	//If all the expected data is NOT read successfully
 	if (nElemTotalA <mRTcontrol.mNpixAllFrames || nElemTotalB < mRTcontrol.mNpixAllFrames)
@@ -147,23 +146,30 @@ void Image::correctInterleaved_()
 {
 	//Within an odd line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
 	for (int lineIndex = 1; lineIndex < mRTcontrol.mHeightAllFrames_pix; lineIndex += 2)
+	{
+		std::reverse(mBufArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mBufArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix + mRTcontrol.mWidthPerFrame_pix);
 		std::reverse(mBufArrayB + lineIndex * mRTcontrol.mWidthPerFrame_pix, mBufArrayB + lineIndex * mRTcontrol.mWidthPerFrame_pix + mRTcontrol.mWidthPerFrame_pix);
+	}
 }
 
 //Once multiplexing is implemented, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
 void Image::demultiplex_()
 {
+	//Define masks
+	const U32 mask1 = 0x0000000F;
+
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
 	{
 		//TODO: pick up the corresponding 4-bit segment from mBufArrayA and mBufArrayB
 		//Upscale the buffer to go from 4-bit to 8-bit
-		unsigned char upscaled{ static_cast<unsigned char>(mRTcontrol.mUpscaleU8 * mBufArrayB[pixIndex]) };
+		U8 upscaled{ static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * mBufArrayA[pixIndex]) };
 
 		//If upscaled overflows
 		if (upscaled > _UI8_MAX)
 			upscaled = _UI8_MAX;
 
-		//Transfer the result to Tiff
+		//Transfer the result to a Tiff
+		//For MUX16, resconstruct the image by assigning the stripes in the image
 		(mTiff.pointerToTiff())[pixIndex] = upscaled;
 	}
 }
@@ -231,7 +237,6 @@ void Image::downloadData()
 		try
 		{
 			readFIFOOUTpc_();			//Read the data received in FIFOOUTpc
-
 		}
 		catch (const ImageException &e) //Notify the exception and continue with the next iteration
 		{
@@ -280,7 +285,7 @@ void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector o
 }
 
 //Access the Tiff data in the Image object
-unsigned char* const Image::pointerToTiff() const
+U8* const Image::pointerToTiff() const
 {
 	return mTiff.pointerToTiff();
 }
@@ -1049,26 +1054,26 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, 
 
 double PockelsCell::laserpowerToVolt_(const double power) const
 {
-	double a, b, c;		//Calibration parameters
+	double amplitude, angularFreq, phase;		//Calibration parameters
 
 	//VISION
 	switch (mPockelsRTchannel)
 	{
 	case RTVISION:
 		if (mWavelength_nm == 750) {
-			a = 301.1 * mW;
-			b = 0.624 / V;
-			c = 0.019 * V;
+			amplitude = 301.1 * mW;
+			angularFreq = 0.624 / V;
+			phase = 0.019 * V;
 		}
 		else if (mWavelength_nm == 920) {
-			a = 200.1 * mW;
-			b = 0.507 / V;
-			c = -0.088 * V;
+			amplitude = 200.1 * mW;
+			angularFreq = 0.507 / V;
+			phase = -0.088 * V;
 		}
 		else if (mWavelength_nm == 1040) {
-			a = 75.19 * mW;
-			b = 0.447 / V;
-			c = 0.038 * V;
+			amplitude = 75.19 * mW;
+			angularFreq = 0.447 / V;
+			phase = 0.038 * V;
 		}
 		else
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -1076,19 +1081,19 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 
 		//FIDELITY
 	case RTFIDELITY:
-		a = 101.20 * mW;
-		b = 0.276 / V;
-		c = -0.049 * V;
+		amplitude = 101.20 * mW;
+		angularFreq = 0.276 / V;
+		phase = -0.049 * V;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
 	}
 
-	double arg{ sqrt(power / a) };
+	double arg{ sqrt(power / amplitude) };
 	if (arg > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Arg of asin is greater than 1");
 
-	return asin(arg) / b + c;
+	return asin(arg) / angularFreq + phase;
 }
 
 

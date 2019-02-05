@@ -22,15 +22,15 @@ namespace MainRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 5 };				//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 10 };				//Number of frames for continuous XY acquisition
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
-		const double stepSizeZ{ 0.5 * um };
-		double stackDepthZ{ 10. * um };			//Acquire a stack of this depth or thickness in Z
+		const double stepSizeZ{ 0.2 * um };
+		double stackDepthZ{ 5. * um };			//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
@@ -94,7 +94,7 @@ namespace MainRoutines
 		{
 		case VISION:
 			wavelength_nm = 750;
-			laserPowerMin = 50. * mW;
+			laserPowerMin = 45. * mW;
 			laserPowerMax = laserPowerMin;
 			break;
 		case FIDELITY:
@@ -214,7 +214,7 @@ namespace MainRoutines
 		const double stepSizeZ{ 0.5 * um };
 
 		//STAGES
-		const ScanDirection stackScanDirZ{ TOPDOWN };		//Scan direction in z
+		const ScanDirection stackScanDirZ{ BOTTOMUP };		//Scan direction in z
 		const double stackDepth{ stackScanDirZ * nFramesCont * stepSizeZ };
 		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages. The sign of stackDepth determines the scanning direction					
 		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };							//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix

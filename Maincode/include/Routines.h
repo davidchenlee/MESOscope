@@ -5,8 +5,9 @@
 //MAIN SEQUENCES
 namespace MainRoutines
 {
-	void discreteScanZ(const FPGAns::FPGA &fpga);
-	void continuousScanZ(const FPGAns::FPGA &fpga);
+	void discreteZstageScan(const FPGAns::FPGA &fpga);
+	void liveScan(const FPGAns::FPGA &fpga);
+	void contZstageScan(const FPGAns::FPGA &fpga);
 	void sequencer(const FPGAns::FPGA &fpga);
 }
 

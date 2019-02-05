@@ -8,8 +8,9 @@ int main(int argc, char* argv[])
 		try
 		{
 			//MAIN SEQUENCES
-			//MainRoutines::discreteScanZ(fpga);
-			MainRoutines::continuousScanZ(fpga);
+			//MainRoutines::discreteZstageScan(fpga);
+			MainRoutines::liveScan(fpga);
+			//MainRoutines::contZstageScan(fpga);
 			//MainRoutines::sequencer(fpga);
 
 			//CALIBRATION

@@ -1,23 +1,23 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 30.350 * mm, 21.080 * mm, 18.509 * mm };
-const std::string sampleName{ "Beads1um" };
+const double3 stackCenterXYZ{ 43.000 * mm, 16.800 * mm, 20.180 * mm };
+const std::string sampleName{ "Liver" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
-const std::string collar{ "1.495" };
+const std::string collar{ "1.49" };
 
 
 namespace MainRoutines
 {
-	void discreteScanZ(const FPGAns::FPGA &fpga)
+	void discreteZstageScan(const FPGAns::FPGA &fpga)
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RunMode acqMode{ SINGLEMODE };			//Single shot
+		const RunMode acqMode{ SINGLEMODE };			//Single shot
 		//const RunMode acqMode{ LIVEMODE };			//Image the same z plane many times as single shots. Used it for adjusting the microscope live
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane many times and average the images
 		//const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
-		const RunMode acqMode{ STACKCENTEREDMODE };		//Stack volume centered at the initial z position
+		//const RunMode acqMode{ STACKCENTEREDMODE };		//Stack volume centered at the initial z position
 
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
@@ -29,8 +29,8 @@ namespace MainRoutines
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
-		const double stepSizeZ{ 0.2 * um };
-		double stackDepthZ{ 5. * um };			//Acquire a stack of this depth or thickness in Z
+		const double stepSizeZ{ 1.0 * um };
+		double stackDepthZ{ 50. * um };			//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
@@ -94,12 +94,12 @@ namespace MainRoutines
 		{
 		case VISION:
 			wavelength_nm = 750;
-			laserPowerMin = 45. * mW;
+			laserPowerMin = 30. * mW;
 			laserPowerMax = laserPowerMin;
 			break;
 		case FIDELITY:
 			wavelength_nm = 1040;
-			laserPowerMin = 45. * mW;
+			laserPowerMin = 100. * mW;
 			laserPowerMax = laserPowerMin;
 			break;
 		default:
@@ -190,7 +190,64 @@ namespace MainRoutines
 		}
 
 		laser.closeShutter();
-		pressAnyKeyToCont();
+		//pressAnyKeyToCont();
+	}
+
+	void liveScan(const FPGAns::FPGA &fpga)
+	{
+		//ACQUISITION SETTINGS
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 400 };
+		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
+
+		//RS
+		const ResonantScanner RScanner{ fpga };
+		RScanner.isRunning();					//Make sure that the RS is running
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
+
+		//GALVO RT linear scan
+		const double FFOVgalvo{ 200. * um };			//Full FOV in the slow axis
+		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
+
+		//LASER
+		const LaserSelector whichLaser = VISION;
+		int wavelength_nm;
+		double laserPower;
+		switch (whichLaser)
+		{
+		case VISION:
+			wavelength_nm = 750;
+			laserPower = 30. * mW;
+			break;
+		case FIDELITY:
+			wavelength_nm = 1040;
+			laserPower = 100. * mW;
+			break;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + "Select VISION OR FIDELITY");
+		}
+		const VirtualLaser laser{ RTcontrol, wavelength_nm, whichLaser };
+
+		//OPEN THE UNIBLITZ SHUTTERS
+		laser.openShutter();	//The destructor will close the shutter automatically
+
+		while (true)
+		{
+			laser.setPower(laserPower);	//Update the laser power
+
+			//EXECUTE THE RT CONTROL SEQUENCE
+			Image image{ RTcontrol };
+			image.acquire();								//Execute the RT control sequence and acquire the image
+			image.averageFrames();							//Average the frames acquired via continuous XY acquisition
+			image.saveTiffSinglePage("Untitled", OVERRIDE);	//Save individual files
+			Sleep(500);
+
+			if (GetAsyncKeyState(VK_ESCAPE) & 0x0001)		//Break if the ESC key is pressed
+				break;
+		}
+		laser.closeShutter();
 	}
 
 	/*
@@ -205,7 +262,7 @@ namespace MainRoutines
 	almost identical, with a difference of maybe 1 plane only (0.5 um)
 	Remember that I do not use MACROS on the stages anymore
 	*/
-	void continuousScanZ(const FPGAns::FPGA &fpga)
+	void contZstageScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
@@ -214,7 +271,7 @@ namespace MainRoutines
 		const double stepSizeZ{ 0.5 * um };
 
 		//STAGES
-		const ScanDirection stackScanDirZ{ BOTTOMUP };		//Scan direction in z
+		const ScanDirection stackScanDirZ{ TOPDOWN };		//Scan direction in z
 		const double stackDepth{ stackScanDirZ * nFramesCont * stepSizeZ };
 		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages. The sign of stackDepth determines the scanning direction					
 		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };							//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
@@ -230,7 +287,7 @@ namespace MainRoutines
 
 		//LASER: wavelength_nm, laserPower, whichLaser
 		const int wavelength_nm{ 750 };
-		const double laserPower{ 50. * mW };
+		const double laserPower{ 30. * mW };
 		const VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower, VISION };
 		//VirtualLaser laser{ RTcontrol, 1040, 25. * mW, AUTO };
 
@@ -835,15 +892,14 @@ namespace TestRoutines
 
 	void vibratome(const FPGAns::FPGA &fpga)
 	{
+		const double slicePlaneZ = 22.700 * mm;
+
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
-
 		Vibratome vibratome{ fpga, stage };
-		vibratome.slice(21.4 * mm);
+		vibratome.slice(slicePlaneZ);
 
-		const double3 samplePosition{ 45. * mm, 11.3 * mm, 18.5 * mm };
-		stage.moveXYZ(samplePosition);
-		//stage.moveXY(vibratome.mStageInitialSlicePosXY);	//Set the stage back to the initial position for slicing
-		//stage.waitForMotionToStopAll();
+		const double3 samplePosition{ 0. * mm, 0. * mm, slicePlaneZ };
+		stage.moveXYZ(stackCenterXYZ);
 
 		pressAnyKeyToCont();
 	}

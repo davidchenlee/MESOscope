@@ -261,7 +261,7 @@ class Stage
 	std::string axisToString(const Axis axis) const;
 public:
 	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages set by hardware. Can not be changed
-	const std::vector<double2> mSoftPosLimXYZ{ { -60. * mm, 50. * mm}, { 3. * mm, 30. * mm}, { 1. * mm, 25. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
+	const std::vector<double2> mSoftPosLimXYZ{ { -60. * mm, 50. * mm}, { 3. * mm, 30. * mm}, { 1. * mm, 24. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
 	Stage(const double velX, const double velY, const double velZ);
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor
@@ -303,8 +303,8 @@ class Vibratome
 	//void cutAndRetractDistance(const double distance) const;
 	//void retractDistance(const double distance) const;
 public:
-	const double2 mStageInitialSlicePosXY{ -55. * mm, 3. * mm };					//Position the stages in front oh the vibratome's blade
-	const double mStageFinalSlicePosY{ 30. * mm };									//Final position of the y stage after slicing
+	const double2 mStageInitialSlicePosXY{ -53. * mm, 8. * mm };					//Position the stages in front oh the vibratome's blade
+	const double mStageFinalSlicePosY{ 27. * mm };									//Final position of the y stage after slicing
 	Vibratome(const FPGAns::FPGA &fpga, Stage &stage);
 	void pushStartStopButton() const;
 	void slice(const double planeToCutZ);

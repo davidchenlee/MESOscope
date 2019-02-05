@@ -206,7 +206,7 @@ void Image::acquire()
 	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from a previous run
 	mRTcontrol.triggerRT();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 
-	if (FIFOOUTfpgaEnable)
+	if (FIFOOUTgateEnable)
 	{
 		try
 		{
@@ -232,7 +232,7 @@ void Image::initialize() const
 
 void Image::downloadData()
 {
-	if (FIFOOUTfpgaEnable)
+	if (FIFOOUTgateEnable)
 	{
 		try
 		{

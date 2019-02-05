@@ -47,7 +47,7 @@ namespace Constants
 
 	extern const PhotonCounterSelector photoncounterInput;
 	extern const PixelclockSelector pixelclockType;
-	extern const ToggleSwitch FIFOOUTfpgaEnable;
+	extern const ToggleSwitch FIFOOUTgateEnable;
 	extern const ToggleSwitch pockelsAutoOff;
 
 	extern const double PI;

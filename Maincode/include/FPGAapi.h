@@ -71,7 +71,7 @@ namespace FPGAns
 		int mNpixAllFrames;																			//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
 		RTcontrol(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput = FG,
-			const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
+			const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix = 400, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
 		RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 		RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
 		RTcontrol(RTcontrol&&) = delete;					//Disable move constructor

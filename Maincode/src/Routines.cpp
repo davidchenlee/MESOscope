@@ -230,7 +230,7 @@ namespace MainRoutines
 
 		//LASER: wavelength_nm, laserPower, whichLaser
 		const int wavelength_nm{ 750 };
-		const double laserPower{ 45. * mW };
+		const double laserPower{ 50. * mW };
 		const VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower, VISION };
 		//VirtualLaser laser{ RTcontrol, 1040, 25. * mW, AUTO };
 

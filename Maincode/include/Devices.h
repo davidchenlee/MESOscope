@@ -350,7 +350,7 @@ public:
 	{
 		int mWavelength_nm;	//Laser wavelength
 		double mScanPi;		//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mStackPinc;	//Laser power increase for a stack-scan
+		double mStackPinc;	//Laser power increase at the end of the stack
 	};
 
 	std::vector <SingleLaser> mLaser;

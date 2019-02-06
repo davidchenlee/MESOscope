@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 45.3 * mm, (16.725 ) * mm, 20.390 * mm };
+const double3 stackCenterXYZ{ 42.400 * mm, 17.100 * mm, 20.400 * mm };
 const std::string sampleName{ "Liver" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
 const std::string collar{ "1.49" };
@@ -13,10 +13,10 @@ namespace MainRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RunMode acqMode{ SINGLEMODE };			//Single shot
+		//const RunMode acqMode{ SINGLEMODE };			//Single shot
 		//const RunMode acqMode{ LIVEMODE };			//Image the same z plane many times as single shots. Used it for adjusting the microscope live
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane many times and average the images
-		//const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
+		const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
 		//const RunMode acqMode{ STACKCENTEREDMODE };		//Stack volume centered at the initial z position
 
 		//ACQUISITION SETTINGS
@@ -30,7 +30,7 @@ namespace MainRoutines
 
 		//STACK
 		const double stepSizeZ{ 0.5 * um };
-		double stackDepthZ{ 150. * um };			//Acquire a stack of this depth or thickness in Z
+		double stackDepthZ{ 50. * um };			//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
@@ -87,35 +87,10 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
-		const LaserSelector whichLaser = VISION;
-		int wavelength_nm;
-		double laserPowerMin, laserPowerMax;
-		switch (whichLaser)
-		{
-		case VISION:
-			if (1)
-			{
-			wavelength_nm = 750;
-			laserPowerMin = 25. * mW;
-			laserPowerMax = 50. * mW;
-			}
-			else
-			{
-			wavelength_nm = 920;
-			laserPowerMin = 80. * mW;
-			laserPowerMax = 120. * mW;
-			}
-			break;
-		case FIDELITY:
-			wavelength_nm = 1040;
-			laserPowerMin = 120. * mW;
-			laserPowerMax = 160. * mW;
-			break;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + "Select VISION OR FIDELITY");
-		}
-		double laserPower{ laserPowerMin };
-		const VirtualLaser laser{ RTcontrol, wavelength_nm, whichLaser };
+		const std::vector<LaserList::SingleLaser> laserParamList{ { 920, 80. * mW, 40. * mW } , { 750, 25. * mW, 25. * mW }, { 1040, 120. * mW, 40. * mW } };	//Define the wavelengths and laser powers
+		const LaserList::SingleLaser laserParams{ laserParamList.at(1) };	//Choose a particular wavelength
+		double laserPower{ laserParams.mScanPi };							//Initialize the laser power
+		const VirtualLaser laser{ RTcontrol, laserParams.mWavelength_nm, AUTO };
 
 		//DATALOG
 		{
@@ -127,9 +102,9 @@ namespace MainRoutines
 			datalog.record("\nFPGA---------------------------------------------------------");
 			datalog.record("FPGA clock (MHz) = ", tickPerUs);
 			datalog.record("\nLASER--------------------------------------------------------");
-			datalog.record("Laser wavelength (nm) = ", wavelength_nm);
-			datalog.record("Laser power first frame (mW) = ", laserPowerMin / mW);
-			datalog.record("Laser power last frame (mW) = ", laserPowerMax / mW);
+			datalog.record("Laser wavelength (nm) = ", laserParams.mWavelength_nm);
+			datalog.record("Laser power first frame (mW) = ", laserParams.mScanPi / mW);
+			datalog.record("Laser power last frame (mW) = ", (laserParams.mScanPi + laserParams.mStackPinc) / mW);
 			datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod / us);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
@@ -177,7 +152,7 @@ namespace MainRoutines
 				if (acqMode == SINGLEMODE || acqMode == LIVEMODE)
 				{
 					//Save individual files
-					std::string singleFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower / mW, 1) + "mW" +
+					std::string singleFilename{ sampleName + "_" + toString(laserParams.mWavelength_nm, 0) + "nm_" + toString(laserPower / mW, 1) + "mW" +
 						"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(YY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(ZZ) / mm, 4) };
 					image.saveTiffSinglePage(singleFilename, overrideFlag);
 					Sleep(700);
@@ -186,13 +161,13 @@ namespace MainRoutines
 			tiffStack.pushDiffZ(iterDiffZ);
 
 			std::cout << "\n";
-			laserPower += (laserPowerMax - laserPowerMin) / nDiffZ;		//calculate the new laser power
+			laserPower += laserParams.mStackPinc / nDiffZ;		//calculate the new laser power
 		}
 
 		if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
 		{
 			//Save the stackDiffZ to file
-			std::string stackFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserPowerMin / mW, 1) + "mW_Pf=" + toString(laserPowerMax / mW, 1) + "mW" +
+			std::string stackFilename{ sampleName + "_" + toString(laserParams.mWavelength_nm, 0) + "nm_Pi=" + toString(laserParams.mScanPi / mW, 1) + "mW_Pf=" + toString((laserParams.mScanPi + laserParams.mStackPinc) / mW, 1) + "mW" +
 				"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
 				"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 			tiffStack.saveToFile(stackFilename, overrideFlag);
@@ -202,12 +177,13 @@ namespace MainRoutines
 		//pressAnyKeyToCont();
 	}
 
+	//Specify a list of locations
 	void discreteZstageScanForCARE(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 10 };				//Number of frames for continuous XY acquisition
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
@@ -215,7 +191,7 @@ namespace MainRoutines
 
 		//STACK
 		const double stepSizeZ{ 0.5 * um };
-		double stackDepthZ{ 100. * um };			//Acquire a stack of this depth or thickness in Z
+		double stackDepthZ{ 100. * um };								//Acquire a stack of this depth or thickness in Z
 		int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
 
 		//CREATE A REALTIME CONTROL SEQUENCE
@@ -225,48 +201,40 @@ namespace MainRoutines
 		const double FFOVgalvo{ 200. * um };			//Full FOV in the slow axis
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
-
-		const std::vector<int> wavelengthList = { 920, 1040, 750 };
-
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
-		const std::vector<double3> locationList = { {45.3 * mm, 16.725 * mm, 20.390 * mm},
-													{45.3 * mm, 16.725 * mm + 146 * um, 20.390 * mm} };
+		//Location list
+		const std::vector<double3> locationList = {
+			{43.800 * mm, 17.300 * mm, 20.400 * mm},
+			{44.800 * mm, 17.100 * mm, 20.400 * mm},
+			{43.900 * mm, 17.100 * mm, 20.400 * mm},
+			{43.400 * mm, 17.100 * mm, 20.400 * mm},
+			{42.400 * mm, 17.100 * mm, 20.400 * mm},
+			{45.300 * mm, 17.000 * mm, 20.400 * mm},
+			{44.500 * mm, 16.900 * mm, 20.400 * mm},
+			{45.200 * mm, 16.800 * mm, 20.400 * mm},
+			{45.000 * mm, 16.800 * mm, 20.400 * mm},
+			{44.800 * mm, 16.800 * mm, 20.400 * mm} };
 
-		for (std::vector<int>::size_type loc_iter = 0; loc_iter < locationList.size(); loc_iter++)
+		//Laser list
+		const std::vector<LaserList::SingleLaser> laserParamList{ { 920, 80. * mW, 40. * mW } , { 750, 25. * mW, 25. * mW }, { 1040, 120. * mW, 40. * mW } };	//Define the wavelengths and laser powers
+
+		//Iterate over the wavelengths
+		for (std::vector<int>::size_type wv_iter = 0; wv_iter < laserParamList.size(); wv_iter++)
+			//for (std::vector<int>::size_type wv_iter = 2; wv_iter < wavelengthList.size(); wv_iter++)
 		{
-			std::vector<double3> stagePositionXYZ;
-
-			//Generate the control sequence for the stages
-			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-				stagePositionXYZ.push_back({ locationList.at(loc_iter).at(XX), locationList.at(loc_iter).at(YY), locationList.at(loc_iter).at(ZZ) + iterDiffZ * stepSizeZ });
-
-			//for (std::vector<int>::size_type wv_iter = 0; wv_iter < wavelengthList.size(); wv_iter++)
-			for (std::vector<int>::size_type wv_iter = 2; wv_iter < wavelengthList.size(); wv_iter++)
+			//Iterate over the locations
+			for (std::vector<int>::size_type loc_iter = 0; loc_iter < locationList.size(); loc_iter++)
 			{
-				//LASER
-				int wavelength_nm = wavelengthList.at(wv_iter);
-				double laserPowerMin, laserPowerMax;
-				switch (wavelength_nm)
-				{
-				case 750:
-					laserPowerMin = 25. * mW;
-					laserPowerMax = 50. * mW;
-					break;
-				case 920:
-					laserPowerMin = 80. * mW;
-					laserPowerMax = 120. * mW;
-					break;
-				case 1040:
-					laserPowerMin = 120. * mW;
-					laserPowerMax = 160. * mW;
-					break;
-				default:
-					throw std::invalid_argument((std::string)__FUNCTION__ + "Selected wavelength not available");
-				}
+				//Generate the control sequence for the stages
+				std::vector<double3> stagePositionXYZ;
+				for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+					stagePositionXYZ.push_back({ locationList.at(loc_iter).at(XX), locationList.at(loc_iter).at(YY), locationList.at(loc_iter).at(ZZ) + iterDiffZ * stepSizeZ });
 
-				double laserPower{ laserPowerMin };
+				//LASER
+				int wavelength_nm = laserParamList.at(wv_iter).mWavelength_nm;
+				double laserPower{ laserParamList.at(wv_iter).mScanPi };
 				const VirtualLaser laser{ RTcontrol, wavelength_nm, AUTO };
 
 				//CREATE A STACK FOR STORING THE TIFFS
@@ -278,13 +246,15 @@ namespace MainRoutines
 				//ACQUIRE FRAMES AT DIFFERENT Zs
 				for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 				{
+					//Update the stages position
 					stage.moveXYZ(stagePositionXYZ.at(iterDiffZ));
 					stage.waitForMotionToStopAll();
 					stage.printPositionXYZ();		//Print the stage position		
 
 					std::cout << "Total frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
 
-					laser.setPower(laserPower);	//Update the laser power
+					//Update the laser power
+					laser.setPower(laserPower);	
 
 					//EXECUTE THE RT CONTROL SEQUENCE
 					Image image{ RTcontrol };
@@ -293,27 +263,27 @@ namespace MainRoutines
 					tiffStack.pushSameZ(0, image.pointerToTiff());
 					tiffStack.pushDiffZ(iterDiffZ);
 					std::cout << "\n";
-					laserPower += (laserPowerMax - laserPowerMin) / nDiffZ;		//calculate the new laser power
+					laserPower += laserParamList.at(wv_iter).mStackPinc / nDiffZ;		//calculate the new laser power
 				}
 
 				//Save the stackDiffZ to file
-				std::string stackFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserPowerMin / mW, 1) + "mW_Pf=" + toString(laserPowerMax / mW, 1) + "mW" +
+				std::string stackFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserParamList.at(wv_iter).mScanPi / mW, 1) +
+					"mW_Pf=" + toString((laserParamList.at(wv_iter).mScanPi + laserParamList.at(wv_iter).mStackPinc) / mW, 1) + "mW" +
 					"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
 					"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 				tiffStack.saveToFile(stackFilename, NOOVERRIDE);
 
 				laser.closeShutter();
 
-				if (GetAsyncKeyState(VK_ESCAPE) & 0x0001)		//Break if the ESC key is pressed
+				//Break if the ESC is pressed for an early termination
+				if (GetAsyncKeyState(VK_ESCAPE) & 0x0001)
 					throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 
-			}//wv_iter
-		}//loc_iter
-
-		
+			}//loc_iter
+		}//wv_iter
 	}
 
-	//Take images of the sample plane non-stop. USe the PI program to move the stages manually
+	//Take images of the sample non-stop. Use the PI program to move the stages manually
 	void liveScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -333,23 +303,10 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
-		const LaserSelector whichLaser = VISION;
-		int wavelength_nm;
-		double laserPower;
-		switch (whichLaser)
-		{
-		case VISION:
-			wavelength_nm = 750;
-			laserPower = 30. * mW;
-			break;
-		case FIDELITY:
-			wavelength_nm = 1040;
-			laserPower = 120. * mW;
-			break;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + "Select VISION OR FIDELITY");
-		}
-		const VirtualLaser laser{ RTcontrol, wavelength_nm, whichLaser };
+		const std::vector<LaserList::SingleLaser> laserParamList{ { 920, 80. * mW, 0. * mW } , { 750, 25. * mW, 0. * mW }, { 1040, 120. * mW, 0. * mW } };	//Define the wavelengths and laser powers
+		const LaserList::SingleLaser laserParams{ laserParamList.at(1) };	//Choose a particular wavelength
+		double laserPower{ laserParams.mScanPi };							//Initialize the laser power
+		const VirtualLaser laser{ RTcontrol, laserParams.mWavelength_nm, AUTO };
 
 		//OPEN THE UNIBLITZ SHUTTERS
 		laser.openShutter();	//The destructor will close the shutter automatically
@@ -365,7 +322,8 @@ namespace MainRoutines
 			image.saveTiffSinglePage("Untitled", OVERRIDE);	//Save individual files
 			Sleep(500);
 
-			if (GetAsyncKeyState(VK_ESCAPE) & 0x0001)		//Break if the ESC key is pressed
+			//Break if the ESC is pressed for an early termination
+			if (GetAsyncKeyState(VK_ESCAPE) & 0x0001)
 				break;
 		}
 		laser.closeShutter();
@@ -397,7 +355,7 @@ namespace MainRoutines
 		const ScanDirection stackScanDirZ{ TOPDOWN };		//Scan direction in z
 		const double stackDepth{ stackScanDirZ * nFramesCont * stepSizeZ };
 		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - centeredStackFlag * stackDepth / 2 };	//Initial position of the stages. The sign of stackDepth determines the scanning direction					
-		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };							//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
+		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };												//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
 		stage.moveXYZ(stageXYZi);
 		stage.waitForMotionToStopAll();
 
@@ -430,7 +388,8 @@ namespace MainRoutines
 		image.postprocess();
 
 		const std::string filename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserPower / mW, 1) +
-			"_x=" + toString(stageXYZi.at(XX) / mm, 3) + "_y=" + toString(stageXYZi.at(YY) / mm, 3) + "_zi=" + toString(stageXYZi.at(ZZ) / mm, 4) + "_zf=" + toString((stageXYZi.at(ZZ) + stackDepth) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
+			"_x=" + toString(stageXYZi.at(XX) / mm, 3) + "_y=" + toString(stageXYZi.at(YY) / mm, 3) +
+			"_zi=" + toString(stageXYZi.at(ZZ) / mm, 4) + "_zf=" + toString((stageXYZi.at(ZZ) + stackDepth) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 		image.saveTiffMultiPage(filename, NOOVERRIDE, stackScanDirZ);
 
 		//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence

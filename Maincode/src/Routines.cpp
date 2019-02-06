@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 43.000 * mm, 16.800 * mm, 20.180 * mm };
+const double3 stackCenterXYZ{ 45.3 * mm, (16.575 + 1 * 0.146) * mm, 20.370 * mm };
 const std::string sampleName{ "Liver" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
 const std::string collar{ "1.49" };
@@ -13,24 +13,24 @@ namespace MainRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RunMode acqMode{ SINGLEMODE };			//Single shot
+		//const RunMode acqMode{ SINGLEMODE };			//Single shot
 		//const RunMode acqMode{ LIVEMODE };			//Image the same z plane many times as single shots. Used it for adjusting the microscope live
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane many times and average the images
-		//const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
+		const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
 		//const RunMode acqMode{ STACKCENTEREDMODE };		//Stack volume centered at the initial z position
 
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 10 };				//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
-		const double stepSizeZ{ 1.0 * um };
-		double stackDepthZ{ 50. * um };			//Acquire a stack of this depth or thickness in Z
+		const double stepSizeZ{ 0.5 * um };
+		double stackDepthZ{ 150. * um };			//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
@@ -93,14 +93,23 @@ namespace MainRoutines
 		switch (whichLaser)
 		{
 		case VISION:
+			if (1)
+			{
 			wavelength_nm = 750;
-			laserPowerMin = 30. * mW;
-			laserPowerMax = laserPowerMin;
+			laserPowerMin = 25. * mW;
+			laserPowerMax = 50. * mW;
+			}
+			else
+			{
+			wavelength_nm = 920;
+			laserPowerMin = 80. * mW;
+			laserPowerMax = 120. * mW;
+			}
 			break;
 		case FIDELITY:
 			wavelength_nm = 1040;
-			laserPowerMin = 100. * mW;
-			laserPowerMax = laserPowerMin;
+			laserPowerMin = 120. * mW;
+			laserPowerMax = 160. * mW;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Select VISION OR FIDELITY");
@@ -171,13 +180,13 @@ namespace MainRoutines
 					std::string singleFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_" + toString(laserPower / mW, 1) + "mW" +
 						"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(YY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(ZZ) / mm, 4) };
 					image.saveTiffSinglePage(singleFilename, overrideFlag);
-					Sleep(500);
+					Sleep(700);
 				}
 			}
 			tiffStack.pushDiffZ(iterDiffZ);
 
 			std::cout << "\n";
-			laserPower += (laserPowerMin - laserPowerMax) / nDiffZ;		//calculate the new laser power
+			laserPower += (laserPowerMax - laserPowerMin) / nDiffZ;		//calculate the new laser power
 		}
 
 		if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
@@ -193,6 +202,7 @@ namespace MainRoutines
 		//pressAnyKeyToCont();
 	}
 
+	//Take images of the sample plane non-stop. USe PI's program to move the stages manually
 	void liveScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -223,7 +233,7 @@ namespace MainRoutines
 			break;
 		case FIDELITY:
 			wavelength_nm = 1040;
-			laserPower = 100. * mW;
+			laserPower = 120. * mW;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Select VISION OR FIDELITY");
@@ -264,6 +274,8 @@ namespace MainRoutines
 	*/
 	void contZstageScan(const FPGAns::FPGA &fpga)
 	{
+		const int centeredStackFlag = 0; //0 for centered
+
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
@@ -273,7 +285,7 @@ namespace MainRoutines
 		//STAGES
 		const ScanDirection stackScanDirZ{ TOPDOWN };		//Scan direction in z
 		const double stackDepth{ stackScanDirZ * nFramesCont * stepSizeZ };
-		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - stackDepth / 2 };	//Initial position of the stages. The sign of stackDepth determines the scanning direction					
+		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - centeredStackFlag * stackDepth / 2 };	//Initial position of the stages. The sign of stackDepth determines the scanning direction					
 		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };							//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
 		stage.moveXYZ(stageXYZi);
 		stage.waitForMotionToStopAll();
@@ -541,8 +553,8 @@ namespace CalibrationRoutines
 		PockelsCell pockelsVision{ RTcontrol, 1040, VISION };			//Vision
 		PockelsCell pockelsFidelity{ RTcontrol, 1040, FIDELITY };		//Fidelity
 
-		PockelsCell pockels{ pockelsVision };
-		//PockelsCell pockels{ pockelsFidelity };
+		//PockelsCell pockels{ pockelsVision };
+		PockelsCell pockels{ pockelsFidelity };
 		//pockels.pushPowerSinglet(8 * us, 100 * mW);
 		pockels.pushPowerSinglet(8 * us, 0 * mW);
 		//pockels.pushVoltageSinglet(8 * us, 1.0 * V);
@@ -892,7 +904,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGAns::FPGA &fpga)
 	{
-		const double slicePlaneZ = 22.700 * mm;
+		const double slicePlaneZ = 22.900 * mm;
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 		Vibratome vibratome{ fpga, stage };

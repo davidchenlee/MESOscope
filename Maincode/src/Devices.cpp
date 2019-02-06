@@ -383,17 +383,23 @@ double ResonantScanner::downloadControlVoltage() const
 void ResonantScanner::isRunning() const
 {
 	//Retrieve the state of the RS from the FPGA (see the LabView implementation)
-	NiFpga_Bool isRunning;
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadBool((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorBool_RSisRunning, &isRunning));
+	NiFpga_Bool isRunning{ false };
 
 	char input_char;
-	while (!isRunning)
+	while (true)
 	{
-		std::cout << "RS seems OFF. Input 0 to exit or any other key to try again ";
-		std::cin >> input_char;
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadBool((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorBool_RSisRunning, &isRunning));
+		if (isRunning)
+			break;
+		else
+		{
+			std::cout << "RS seems OFF. Press ESC to exit or any other key to try again\n";
+			input_char = _getch();
 
-		if (input_char == '0')
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
+			if (input_char == 27)
+				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
+		}
+
 	}
 }
 #pragma endregion "Resonant scanner"
@@ -1081,7 +1087,7 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 
 		//FIDELITY
 	case RTFIDELITY:
-		amplitude = 101.20 * mW;
+		amplitude = 210 * mW;
 		angularFreq = 0.276 / V;
 		phase = -0.049 * V;
 		break;

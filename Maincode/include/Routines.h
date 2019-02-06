@@ -6,6 +6,7 @@
 namespace MainRoutines
 {
 	void discreteZstageScan(const FPGAns::FPGA &fpga);
+	void discreteZstageScanForCARE(const FPGAns::FPGA &fpga);
 	void liveScan(const FPGAns::FPGA &fpga);
 	void contZstageScan(const FPGAns::FPGA &fpga);
 	void sequencer(const FPGAns::FPGA &fpga);

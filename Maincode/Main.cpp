@@ -9,7 +9,8 @@ int main(int argc, char* argv[])
 		{
 			//MAIN SEQUENCES
 			//MainRoutines::discreteZstageScan(fpga);
-			MainRoutines::liveScan(fpga);
+			MainRoutines::discreteZstageScanForCARE(fpga);
+			//MainRoutines::liveScan(fpga);
 			//MainRoutines::contZstageScan(fpga);
 			//MainRoutines::sequencer(fpga);
 

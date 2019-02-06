@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 45.3 * mm, (16.575 + 1 * 0.146) * mm, 20.370 * mm };
+const double3 stackCenterXYZ{ 45.3 * mm, (16.725 ) * mm, 20.390 * mm };
 const std::string sampleName{ "Liver" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
 const std::string collar{ "1.49" };
@@ -13,10 +13,10 @@ namespace MainRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RunMode acqMode{ SINGLEMODE };			//Single shot
+		const RunMode acqMode{ SINGLEMODE };			//Single shot
 		//const RunMode acqMode{ LIVEMODE };			//Image the same z plane many times as single shots. Used it for adjusting the microscope live
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane many times and average the images
-		const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
+		//const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
 		//const RunMode acqMode{ STACKCENTEREDMODE };		//Stack volume centered at the initial z position
 
 		//ACQUISITION SETTINGS
@@ -202,7 +202,118 @@ namespace MainRoutines
 		//pressAnyKeyToCont();
 	}
 
-	//Take images of the sample plane non-stop. USe PI's program to move the stages manually
+	void discreteZstageScanForCARE(const FPGAns::FPGA &fpga)
+	{
+		//ACQUISITION SETTINGS
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 400 };
+		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
+
+		//RS
+		const ResonantScanner RScanner{ fpga };
+		RScanner.isRunning();					//Make sure that the RS is running
+
+		//STACK
+		const double stepSizeZ{ 0.5 * um };
+		double stackDepthZ{ 100. * um };			//Acquire a stack of this depth or thickness in Z
+		int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
+
+		//GALVO RT linear scan
+		const double FFOVgalvo{ 200. * um };			//Full FOV in the slow axis
+		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
+
+
+		const std::vector<int> wavelengthList = { 920, 1040, 750 };
+
+		//STAGES
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
+
+		const std::vector<double3> locationList = { {45.3 * mm, 16.725 * mm, 20.390 * mm},
+													{45.3 * mm, 16.725 * mm + 146 * um, 20.390 * mm} };
+
+		for (std::vector<int>::size_type loc_iter = 0; loc_iter < locationList.size(); loc_iter++)
+		{
+			std::vector<double3> stagePositionXYZ;
+
+			//Generate the control sequence for the stages
+			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+				stagePositionXYZ.push_back({ locationList.at(loc_iter).at(XX), locationList.at(loc_iter).at(YY), locationList.at(loc_iter).at(ZZ) + iterDiffZ * stepSizeZ });
+
+			//for (std::vector<int>::size_type wv_iter = 0; wv_iter < wavelengthList.size(); wv_iter++)
+			for (std::vector<int>::size_type wv_iter = 2; wv_iter < wavelengthList.size(); wv_iter++)
+			{
+				//LASER
+				int wavelength_nm = wavelengthList.at(wv_iter);
+				double laserPowerMin, laserPowerMax;
+				switch (wavelength_nm)
+				{
+				case 750:
+					laserPowerMin = 25. * mW;
+					laserPowerMax = 50. * mW;
+					break;
+				case 920:
+					laserPowerMin = 80. * mW;
+					laserPowerMax = 120. * mW;
+					break;
+				case 1040:
+					laserPowerMin = 120. * mW;
+					laserPowerMax = 160. * mW;
+					break;
+				default:
+					throw std::invalid_argument((std::string)__FUNCTION__ + "Selected wavelength not available");
+				}
+
+				double laserPower{ laserPowerMin };
+				const VirtualLaser laser{ RTcontrol, wavelength_nm, AUTO };
+
+				//CREATE A STACK FOR STORING THE TIFFS
+				TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nDiffZ, 1 };
+
+				//OPEN THE UNIBLITZ SHUTTERS
+				laser.openShutter();	//The destructor will close the shutter automatically
+
+				//ACQUIRE FRAMES AT DIFFERENT Zs
+				for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+				{
+					stage.moveXYZ(stagePositionXYZ.at(iterDiffZ));
+					stage.waitForMotionToStopAll();
+					stage.printPositionXYZ();		//Print the stage position		
+
+					std::cout << "Total frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
+
+					laser.setPower(laserPower);	//Update the laser power
+
+					//EXECUTE THE RT CONTROL SEQUENCE
+					Image image{ RTcontrol };
+					image.acquire();			//Execute the RT control sequence and acquire the image
+					image.averageFrames();		//Average the frames acquired via continuous XY acquisition
+					tiffStack.pushSameZ(0, image.pointerToTiff());
+					tiffStack.pushDiffZ(iterDiffZ);
+					std::cout << "\n";
+					laserPower += (laserPowerMax - laserPowerMin) / nDiffZ;		//calculate the new laser power
+				}
+
+				//Save the stackDiffZ to file
+				std::string stackFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserPowerMin / mW, 1) + "mW_Pf=" + toString(laserPowerMax / mW, 1) + "mW" +
+					"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
+					"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
+				tiffStack.saveToFile(stackFilename, NOOVERRIDE);
+
+				laser.closeShutter();
+
+				if (GetAsyncKeyState(VK_ESCAPE) & 0x0001)		//Break if the ESC key is pressed
+					throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
+
+			}//wv_iter
+		}//loc_iter
+
+		
+	}
+
+	//Take images of the sample plane non-stop. USe the PI program to move the stages manually
 	void liveScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS

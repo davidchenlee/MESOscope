@@ -200,7 +200,7 @@ void Image::stopFIFOOUTpc_() const
 
 void Image::acquire()
 {
-	mRTcontrol.presetFPGAoutput_();	//Preset the ouput of the FPGA
+	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
 	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI, but if not called, sometimes garbage is generated
 	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from a previous run
@@ -224,7 +224,7 @@ void Image::acquire()
 
 void Image::initialize() const
 {
-	mRTcontrol.presetFPGAoutput_();	//Preset the ouput of the FPGA
+	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
 	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI, but if not called, sometimes garbage is generated
 	FIFOOUTpcGarbageCollector_();	//Cleans up any residual data from the previous run
@@ -1114,7 +1114,7 @@ void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, con
 void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag) const
 {
 	if (P < 0 || P > maxPower)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(P/mW));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(maxPower/mW));
 
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, laserpowerToVolt_(P), overrideFlag);
 }

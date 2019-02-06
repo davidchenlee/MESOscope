@@ -184,8 +184,8 @@ namespace FPGAns
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 		//INPUT SELECTORS
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(getFpgaHandle(), NiFpga_FPGAvi_ControlU8_PhotoncounterInputSelector, photoncounterInput));										//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getFpgaHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));									//For debugging the photoncounters
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(getFpgaHandle(), NiFpga_FPGAvi_ControlU8_PhotocounterInputSelector, photocounterInput));										//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getFpgaHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));									//For debugging the photocounters
 
 		//FIFOIN
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getFpgaHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTNCHAN)));												//Number of input channels
@@ -402,16 +402,12 @@ namespace FPGAns
 	}
 
 	//Preset the FPGA output with the first value in the RT control sequence to avoid discontinuities at the start of the sequence
-	void RTcontrol::presetFPGAoutput_() const
+	void RTcontrol::presetFPGAoutput() const
 	{
 		//Read from the FPGA the last voltage in the galvo AO. See the LV implementation
 		std::vector<I16> AOlastVoltage_I16(RTNCHAN, 0);
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo1Mon, &AOlastVoltage_I16.at(RTGALVO1)));
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo2Mon, &AOlastVoltage_I16.at(RTGALVO2)));
-	
-		//For debugging
-		//std::cout << I16toVoltage(AOlastVoltage_I16.at(RTGALVO1)) << "\n";
-		//std::cout << I16toVoltage((I16)mVectorOfQueues.at(RTGALVO1).front()) << "\n";
+		checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo1Mon, &AOlastVoltage_I16.at(RTGALVO1)));
+		checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getFpgaHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo2Mon, &AOlastVoltage_I16.at(RTGALVO2)));
 
 		//Create a vector of queues
 		VQU32 vectorOfQueuesForRamp{ RTNCHAN };
@@ -424,6 +420,11 @@ namespace FPGAns
 				{
 					const double Vi = I16toVoltage(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
 					const double Vf = I16toVoltage((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT control sequence
+		
+					//For debugging
+					//std::cout << Vi << "\n";
+					//std::cout << Vf << "\n";
+
 					linearRamp(vectorOfQueuesForRamp.at(chan), 10 * us, 5 * ms, Vi, Vf);
 				}
 			}

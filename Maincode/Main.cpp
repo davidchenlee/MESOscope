@@ -8,19 +8,18 @@ int main(int argc, char* argv[])
 		try
 		{
 			//MAIN SEQUENCES
-			MainRoutines::discreteZstageScan(fpga);
+			//MainRoutines::discreteZstageScan(fpga);
 			//MainRoutines::discreteZstageScanForCARE(fpga);
 			//MainRoutines::liveScan(fpga);
 			//MainRoutines::contZstageScan(fpga);
 			//MainRoutines::sequencer(fpga);
 
-			//CALIBRATION
-			//CalibrationRoutines::digitalLatency(fpga);
-			//CalibrationRoutines::analogLatency(fpga);
-			//CalibrationRoutines::fineTuneGalvoScan(fpga);
-			//CalibrationRoutines::pockels(fpga);
-
 			//TESTS
+			TestRoutines::photobleach(fpga);
+			//TestRoutines::digitalLatency(fpga);
+			//TestRoutines::analogLatency(fpga);
+			//TestRoutines::fineTuneGalvoScan(fpga);
+			//TestRoutines::pockels(fpga);
 			//TestRoutines::galvo(fpga);
 			//TestRoutines::pixelclock(fpga);
 			//TestRoutines::analogAndDigitalOut(fpga);

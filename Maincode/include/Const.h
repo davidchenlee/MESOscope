@@ -22,7 +22,7 @@ namespace Constants
 	typedef std::array<double, 2> double2;		//array of 2 doubles
 	typedef std::array <double, 4> ROI;			//ROI = {ymin, xmin, ymax, xmax}
 
-	enum PhotonCounterSelector { PMT, SIM };
+	enum PhotocounterSelector { PMT, SIM };
 	enum LineclockSelector { RS = false, FG = true };
 	enum AcqTriggerSelector { PCTRIG = false, STAGETRIG = true};
 	enum ToggleSwitch { DISABLE = false, ENABLE = true};
@@ -45,7 +45,7 @@ namespace Constants
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;
 
-	extern const PhotonCounterSelector photoncounterInput;
+	extern const PhotocounterSelector photocounterInput;
 	extern const PixelclockSelector pixelclockType;
 	extern const ToggleSwitch FIFOOUTgateEnable;
 	extern const ToggleSwitch pockelsAutoOff;

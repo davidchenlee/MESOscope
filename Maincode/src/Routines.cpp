@@ -13,10 +13,10 @@ namespace MainRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RunMode acqMode{ SINGLEMODE };			//Single shot
+		const RunMode acqMode{ SINGLEMODE };			//Single shot
 		//const RunMode acqMode{ LIVEMODE };			//Image the same z plane many times as single shots. Used it for adjusting the microscope live
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane many times and average the images
-		const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
+		//const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
 		//const RunMode acqMode{ STACKCENTEREDMODE };		//Stack volume centered at the initial z position
 
 		//ACQUISITION SETTINGS
@@ -88,7 +88,7 @@ namespace MainRoutines
 
 		//LASER
 		const std::vector<LaserList::SingleLaser> laserParamList{ { 920, 80. * mW, 40. * mW } , { 750, 25. * mW, 25. * mW }, { 1040, 120. * mW, 40. * mW } };	//Define the wavelengths and laser powers
-		const LaserList::SingleLaser laserParams{ laserParamList.at(1) };	//Choose a particular wavelength
+		const LaserList::SingleLaser laserParams{ laserParamList.at(2) };	//Choose a particular wavelength
 		double laserPower{ laserParams.mScanPi };							//Initialize the laser power
 		const VirtualLaser laser{ RTcontrol, laserParams.mWavelength_nm, AUTO };
 
@@ -421,7 +421,7 @@ namespace MainRoutines
 
 		//Create a sequence
 		//Sequencer sequence{ laserList, sample, stack };
-		Sequencer sequence{ laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, stackCenterXYZ, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
+		Sequencer sequence{ laserList, Sample("Beads4um", "Grycerol", "1.47"), stack, stackCenterXYZ, { 2, 2 } }; //Last 2 parameters: stack center and nGavoSwings of stacks
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
@@ -524,7 +524,7 @@ namespace MainRoutines
 }//namespace
 
 
-namespace CalibrationRoutines
+namespace TestRoutines
 {
 	void fineTuneGalvoScan(const FPGAns::FPGA &fpga)
 	{
@@ -620,13 +620,13 @@ namespace CalibrationRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga };
 
 		//DEFINE THE POCKELS CELLS
-		PockelsCell pockelsVision{ RTcontrol, 1040, VISION };			//Vision
+		PockelsCell pockelsVision{ RTcontrol, 750, VISION };			//Vision
 		PockelsCell pockelsFidelity{ RTcontrol, 1040, FIDELITY };		//Fidelity
 
-		//PockelsCell pockels{ pockelsVision };
-		PockelsCell pockels{ pockelsFidelity };
-		//pockels.pushPowerSinglet(8 * us, 100 * mW);
-		pockels.pushPowerSinglet(8 * us, 0 * mW);
+		PockelsCell pockels{ pockelsVision };
+		//PockelsCell pockels{ pockelsFidelity };
+		pockels.pushPowerSinglet(8 * us, 20 * mW);
+		//pockels.pushPowerSinglet(8 * us, 0 * mW);
 		//pockels.pushVoltageSinglet(8 * us, 1.0 * V);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
@@ -635,17 +635,70 @@ namespace CalibrationRoutines
 
 		//pressAnyKeyToCont();
 	}
-}//namespace
+
+	void photobleach(const FPGAns::FPGA &fpga)
+	{
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, FG, 2 };
+
+		//GALVO
+		const double FFOVgalvo{ 200. * um };				//Full FOV in the slow axis
+		const double galvoTimeStep{ 100. * us };
+		const double posMax{ 1*FFOVgalvo / 2 };
+		Galvo galvo{ RTcontrol, RTGALVO1 };
+		const double frameDuration{ halfPeriodLineclock * RTcontrol.mHeightPerFrame_pix };		//= 62.5us * 400 pixels = 25 ms
+		galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);				//Linear ramp for the galvo
+
+		//POCKELS CELLS
+		PockelsCell pockels{ RTcontrol, 750, VISION };
+		pockels.pushPowerSinglet(8 * us, 250 * mW);
+		//pockels.setShutter(true);
+
+		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
+		Image image{ RTcontrol };
+		image.acquire();
+
+		//pockels.setShutter(false);
+		pressAnyKeyToCont();
+	}
+
+	void pockelsRamp(const FPGAns::FPGA &fpga)
+	{
+		//ACQUISITION SETTINGS
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 400 };
+		const int nFramesCont{ 10 };			//Number of frames for continuous XY acquisition
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
+
+		//POCKELS CELL
+		const int wavelength_nm{ 750 };
+		const double laserPower{ 25. * mW };		//Laser power
+		PockelsCell pockels{ RTcontrol, wavelength_nm, VISION };
+
+		//Test the voltage setpoint
+		//pockels.pushVoltageSinglet(8 * us, 0.375 * V);
+		//pockels.voltageLinearRamp(0.25 * V, 0.5 * V);		//Linearly scale the pockels voltage from the first to the last frame
+
+		//Test the laser power setpoint
+		//pockels.pushPowerSinglet(8 * us, laserPower);
+		//pockels.powerLinearRamp(P, 2 * laserPower);		//Linearly scale the laser power from the first to the last frame
+
+		//EXECUTE THE RT CONTROL SEQUENCE
+		Image image{ RTcontrol };
+		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+
+		pressAnyKeyToCont();
+	}
 
 
-namespace TestRoutines
-{
 	void galvo(const FPGAns::FPGA &fpga)
 	{
 		const int width_pix{ 300 };
 		const int height_pix{ 400 };
 		const int nFramesDiscont{ 1 };
-		const int nFramesCont{ 2 };
+		const int nFramesCont{ 1 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, width_pix, height_pix };
@@ -874,36 +927,6 @@ namespace TestRoutines
 		//laser.closeShutter();
 
 		//pressAnyKeyToCont();
-	}
-
-	void pockelsRamp(const FPGAns::FPGA &fpga)
-	{
-		//ACQUISITION SETTINGS
-		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 10 };			//Number of frames for continuous XY acquisition
-
-		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
-
-		//POCKELS CELL
-		const int wavelength_nm{ 750 };
-		const double laserPower{ 25. * mW };		//Laser power
-		PockelsCell pockels{ RTcontrol, wavelength_nm, VISION };
-
-		//Test the voltage setpoint
-		//pockels.pushVoltageSinglet(8 * us, 0.375 * V);
-		//pockels.voltageLinearRamp(0.25 * V, 0.5 * V);		//Linearly scale the pockels voltage from the first to the last frame
-
-		//Test the laser power setpoint
-		//pockels.pushPowerSinglet(8 * us, laserPower);
-		//pockels.powerLinearRamp(P, 2 * laserPower);		//Linearly scale the laser power from the first to the last frame
-
-		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{ RTcontrol };
-		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
-
-		pressAnyKeyToCont();
 	}
 
 	void resonantScanner(const FPGAns::FPGA &fpga)

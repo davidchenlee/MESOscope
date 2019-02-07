@@ -27,6 +27,7 @@ namespace Constants
 	enum AcqTriggerSelector { PCTRIG = false, STAGETRIG = true};
 	enum ToggleSwitch { DISABLE = false, ENABLE = true};
 	enum FPGAresetSelector { NORESET = false, RESET = true };
+	enum FIFOOUTenableSelector { FIFODISABLE = false, FIFOENABLE = true };
 	enum TiffPageStructSelector { SINGLEPAGE = false, MULTIPAGE = true};
 	enum OverrideFileSelector { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
@@ -47,7 +48,6 @@ namespace Constants
 
 	extern const PhotocounterSelector photocounterInput;
 	extern const PixelclockSelector pixelclockType;
-	extern const ToggleSwitch FIFOOUTgateEnable;
 	extern const ToggleSwitch pockelsAutoOff;
 
 	extern const double PI;

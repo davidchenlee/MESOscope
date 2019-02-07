@@ -10,7 +10,6 @@ namespace Constants
 
 	extern const PhotocounterSelector photocounterInput{ PMT };		//PMT (PMT) or simulated PMT (SIM)
 	extern const PixelclockSelector pixelclockType{ UNIFORM };			//UNIFORM or NONUNIFORM dwell times
-	extern const ToggleSwitch FIFOOUTgateEnable{ ENABLE };				//For debugging purposes. Enable to push data to FIFOOUTfpga
 	extern const ToggleSwitch pockelsAutoOff{ ENABLE };					//For debugging purposes. Enable to let 'framegate' set the pockels cell on and off
 
 	//GENERAL CONSTANTS

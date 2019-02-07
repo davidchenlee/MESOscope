@@ -7,7 +7,7 @@
 #include "PI_GCS2_DLL.h"
 #include "serial/serial.h"
 #include <memory>					//For smart pointers
-#include <conio.h>					//For using the ESC key
+#include <conio.h>					//For _getch()
 
 class Image
 {
@@ -33,9 +33,9 @@ public:
 	Image(Image&&) = delete;					//Disable move constructor
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
-	void acquire();
+	void acquire(const FIFOOUTenableSelector FIFOOUTenable = FIFOENABLE);
 	void initialize() const;
-	void downloadData();
+	void downloadData(const FIFOOUTenableSelector FIFOOUTenable = FIFOENABLE);
 	void postprocess();
 	void averageFrames();
 	void averageEvenOddFrames();

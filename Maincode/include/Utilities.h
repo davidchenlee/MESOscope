@@ -6,7 +6,8 @@
 #include <Const.h>
 #include <experimental/filesystem>	//standard method in C++14 but not C++11
 #include <bitset>					//For  std::bitset
-#include <tiffio.h>					//Tiff files
+#include <tiffio.h>					//Tiff files				
+#include <windows.h>				//For using the ESC key
 using namespace Constants;
 
 std::string doesFileExist(const std::string filename);
@@ -17,6 +18,7 @@ void printHex(const std::string input);
 void printBinary16(const int input);
 U16 doubleToFx2p14(double n);
 void pressAnyKeyToCont();
+void pressESCforEarlyTermination();
 
 
 //For saving the parameters to a text file

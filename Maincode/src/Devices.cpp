@@ -198,15 +198,18 @@ void Image::stopFIFOOUTpc_() const
 	//std::cout << "stopFIFO called\n";
 }
 
-void Image::acquire()
+void Image::acquire(const FIFOOUTenableSelector FIFOOUTenable)
 {
+	//Enable pushing data to FIFOOUTfpga. Disable for debugging
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, FIFOOUTenable));	
+
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
 	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI, but if not called, sometimes garbage is generated
 	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from a previous run
 	mRTcontrol.triggerRT();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 
-	if (FIFOOUTgateEnable)
+	if (FIFOOUTenable)
 	{
 		try
 		{
@@ -230,9 +233,12 @@ void Image::initialize() const
 	FIFOOUTpcGarbageCollector_();	//Cleans up any residual data from the previous run
 }
 
-void Image::downloadData()
+void Image::downloadData(const FIFOOUTenableSelector FIFOOUTenable)
 {
-	if (FIFOOUTgateEnable)
+	//Enable pushing data to FIFOOUTfpga. Disable for debugging
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, FIFOOUTenable));
+
+	if (FIFOOUTenable)
 	{
 		try
 		{

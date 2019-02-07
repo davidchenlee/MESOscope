@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 43.800 * mm, 17.300 * mm, 20.400 * mm };
+const double3 stackCenterXYZ{ 47.200 * mm, 17.850 * mm, 20.450 * mm };
 const std::string sampleName{ "Liver" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
 const std::string collar{ "1.49" };
@@ -32,7 +32,7 @@ namespace MainRoutines
 
 		//STACK
 		const double stepSizeZ{ 0.5 * um };
-		const double stackDepthZ{ 50. * um };			//Acquire a stack of this depth or thickness in Z
+		const double stackDepthZ{ 100. * um };			//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
@@ -89,7 +89,7 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
-		const LaserList::SingleLaser laserParams{ laserListLiver.at(1) };	//Choose a particular wavelength
+		const LaserList::SingleLaser laserParams{ laserListLiver.at(0) };	//Choose a particular wavelength
 		double laserPower{ laserParams.mScanPi };							//Initialize the laser power
 		const VirtualLaser laser{ RTcontrol, laserParams.mWavelength_nm, AUTO };
 
@@ -197,7 +197,7 @@ namespace MainRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 10 };				//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 10 };			//Number of frames for continuous XY acquisition
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
@@ -205,7 +205,7 @@ namespace MainRoutines
 
 		//STACK
 		const double stepSizeZ{ 0.5 * um };
-		double stackDepthZ{ 100. * um };									//Acquire a stack of this depth or thickness in Z
+		const double stackDepthZ{ 100. * um };								//Acquire a stack of this depth or thickness in Z
 		const int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
 
 		//CREATE A REALTIME CONTROL SEQUENCE
@@ -273,9 +273,7 @@ namespace MainRoutines
 
 				laser.closeShutter();
 
-				//Break if the ESC is pressed for an early termination
-				if (GetAsyncKeyState(VK_ESCAPE) & 0x0001)
-					throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
+				pressESCforEarlyTermination();		//Early termination if ESC is pressed
 
 			}//loc_iter
 		}//wv_iter
@@ -316,9 +314,9 @@ namespace MainRoutines
 			image.acquire();								//Execute the RT control sequence and acquire the image
 			image.averageFrames();							//Average the frames acquired via continuous XY acquisition
 			image.saveTiffSinglePage("Untitled", OVERRIDE);	//Save individual files
-			Sleep(500);
+			Sleep(700);
 
-			//Break if the ESC is pressed for an early termination
+			//Early loop termination if ESC is pressed
 			if (GetAsyncKeyState(VK_ESCAPE) & 0x0001)
 				break;
 		}
@@ -339,7 +337,7 @@ namespace MainRoutines
 	*/
 	void contZstageScan(const FPGAns::FPGA &fpga)
 	{
-		const int centeredStackFlag = 0; //0 for centered
+		const int centerStackFlag = 0;				//1 for starting measuring from the top stackCenterXYZ.at(ZZ); 0 from the center
 
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
@@ -350,7 +348,7 @@ namespace MainRoutines
 		//STAGES
 		const ScanDirection stackScanDirZ{ TOPDOWN };		//Scan direction in z
 		const double stackDepth{ stackScanDirZ * nFramesCont * stepSizeZ };
-		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - centeredStackFlag * stackDepth / 2 };	//Initial position of the stages. The sign of stackDepth determines the scanning direction					
+		const double3 stageXYZi{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - centerStackFlag * stackDepth / 2 };		//Initial position of the stages. The sign of stackDepth determines the scanning direction					
 		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };												//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
 		stage.moveXYZ(stageXYZi);
 		stage.waitForMotionToStopAll();
@@ -520,9 +518,38 @@ namespace MainRoutines
 
 }//namespace
 
-
+//Photobleach the sample with the resonant scanner to see how much the sample moves after slicing
+//Ideally,
 namespace TestRoutines
 {
+	void photobleach(const FPGAns::FPGA &fpga)
+	{
+		//RS
+		ResonantScanner RScanner{ fpga };
+		RScanner.isRunning();		//Make sure that the RS is running
+
+		Laser laser{ VISION };
+		laser.setWavelength(920);
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, FG, 50 };
+
+		//GALVO
+		Galvo galvo{ RTcontrol, RTGALVO1, 0 };	//Keep the galvo fixed to photobleach a line on the sample
+
+		//POCKELS CELLS
+		PockelsCell pockels{ RTcontrol, 920, VISION };
+		pockels.pushPowerSinglet(8 * us, 200 * mW);
+
+		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
+		pockels.setShutter(true);
+		Image image{ RTcontrol };
+		image.acquire(FIFODISABLE);
+		pockels.setShutter(false);
+
+		pressAnyKeyToCont();
+	}
+
 	void fineTuneGalvoScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -626,37 +653,9 @@ namespace TestRoutines
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		Image image{ RTcontrol };
-		image.acquire();
+		image.acquire(FIFODISABLE);
 
 		//pressAnyKeyToCont();
-	}
-
-	void photobleach(const FPGAns::FPGA &fpga)
-	{
-		//RS
-		ResonantScanner RScanner{ fpga };
-		RScanner.isRunning();		//Make sure that the RS is running
-
-		Laser laser{ VISION };
-		laser.setWavelength(920);
-
-		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, FG, 50 };
-
-		//GALVO
-		Galvo galvo{ RTcontrol, RTGALVO1, 0 };	//Keep the galvo fixed to photobleach a line on the sample
-
-		//POCKELS CELLS
-		PockelsCell pockels{ RTcontrol, 920, VISION };
-		pockels.pushPowerSinglet(8 * us, 200 * mW);
-
-		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
-		pockels.setShutter(true);
-		Image image{ RTcontrol };
-		image.acquire();
-		pockels.setShutter(false);
-
-		pressAnyKeyToCont();
 	}
 
 	void pockelsRamp(const FPGAns::FPGA &fpga)
@@ -684,7 +683,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+		image.acquire(FIFODISABLE);		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 
 		pressAnyKeyToCont();
 	}
@@ -710,9 +709,9 @@ namespace TestRoutines
 
 			//Execute the realtime control sequence and acquire the image
 			Image image{ RTcontrol };
-			image.acquire(); //Execute the RT control sequence and acquire the image
-			image.saveTiffSinglePage("Untitled", OVERRIDE);
+			image.acquire(FIFODISABLE); //Execute the RT control sequence
 		}
+		pressAnyKeyToCont();
 	}
 
 	void pixelclock(const FPGAns::FPGA &fpga)
@@ -721,7 +720,7 @@ namespace TestRoutines
 
 		FPGAns::RTcontrol RTcontrol{ fpga }; 		//Create a realtime control sequence
 		Image image{ RTcontrol };
-		image.acquire();							//Execute the realtime control sequence and acquire the image
+		image.acquire(FIFODISABLE);							//Execute the realtime control sequence and acquire the image
 		//image.pushToVector(stackOfAverages);
 		//std::cout << "size: " << stackOfAverages.size() << "\n";
 		//TiffU8 acqParam{ stackOfAverages, 300, 400 };
@@ -913,7 +912,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+		image.acquire(FIFODISABLE);		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 
 		//laser.openShutter();
 		//Sleep(3000);

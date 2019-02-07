@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//MAIN SEQUENCES
-			//MainRoutines::discreteZstageScan(fpga);
+			MainRoutines::discreteZstageScan(fpga);
 			//MainRoutines::discreteZstageScanForCARE(fpga);
 			//MainRoutines::liveScan(fpga);
 			//MainRoutines::contZstageScan(fpga);

@@ -74,10 +74,18 @@ std::string doesFileExist(const std::string filename)
 	return filename + suffix;
 }
 
+//Pause the sequence until any key is pressed
 void pressAnyKeyToCont()
 {
 	std::cout << "\nPress any key to continue...\n";
 	getchar();
+}
+
+//Early termination if ESC is pressed
+void pressESCforEarlyTermination()
+{
+	if (GetAsyncKeyState(VK_ESCAPE) & 0x0001)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 }
 
 

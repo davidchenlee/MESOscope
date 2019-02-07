@@ -1,14 +1,16 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 42.400 * mm, 17.100 * mm, 20.400 * mm };
+const double3 stackCenterXYZ{ 43.800 * mm, 17.300 * mm, 20.400 * mm };
 const std::string sampleName{ "Liver" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
 const std::string collar{ "1.49" };
+const std::vector<LaserList::SingleLaser> laserListLiver{ { 920, 80. * mW, 40. * mW } , { 750, 25. * mW, 25. * mW }, { 1040, 120. * mW, 40. * mW } };	//Define the wavelengths and laser powers for liver
 
 
 namespace MainRoutines
 {
+	//The "swiss knife" of my routines
 	void discreteZstageScan(const FPGAns::FPGA &fpga)
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
@@ -30,7 +32,7 @@ namespace MainRoutines
 
 		//STACK
 		const double stepSizeZ{ 0.5 * um };
-		double stackDepthZ{ 50. * um };			//Acquire a stack of this depth or thickness in Z
+		const double stackDepthZ{ 50. * um };			//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
@@ -87,8 +89,7 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
-		const std::vector<LaserList::SingleLaser> laserParamList{ { 920, 80. * mW, 40. * mW } , { 750, 25. * mW, 25. * mW }, { 1040, 120. * mW, 40. * mW } };	//Define the wavelengths and laser powers
-		const LaserList::SingleLaser laserParams{ laserParamList.at(2) };	//Choose a particular wavelength
+		const LaserList::SingleLaser laserParams{ laserListLiver.at(1) };	//Choose a particular wavelength
 		double laserPower{ laserParams.mScanPi };							//Initialize the laser power
 		const VirtualLaser laser{ RTcontrol, laserParams.mWavelength_nm, AUTO };
 
@@ -161,7 +162,7 @@ namespace MainRoutines
 			tiffStack.pushDiffZ(iterDiffZ);
 
 			std::cout << "\n";
-			laserPower += laserParams.mStackPinc / nDiffZ;		//calculate the new laser power
+			laserPower += laserParams.mStackPinc / nDiffZ;		//Increase the laser power for the next Z plane
 		}
 
 		if (acqMode == AVGMODE || acqMode == STACKMODE || acqMode == STACKCENTEREDMODE)
@@ -177,33 +178,9 @@ namespace MainRoutines
 		//pressAnyKeyToCont();
 	}
 
-	//Specify a list of locations
+	//Apply 'discreteZstageScan' on a list of locations
 	void discreteZstageScanForCARE(const FPGAns::FPGA &fpga)
 	{
-		//ACQUISITION SETTINGS
-		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 10 };				//Number of frames for continuous XY acquisition
-
-		//RS
-		const ResonantScanner RScanner{ fpga };
-		RScanner.isRunning();					//Make sure that the RS is running
-
-		//STACK
-		const double stepSizeZ{ 0.5 * um };
-		double stackDepthZ{ 100. * um };								//Acquire a stack of this depth or thickness in Z
-		int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
-
-		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
-
-		//GALVO RT linear scan
-		const double FFOVgalvo{ 200. * um };			//Full FOV in the slow axis
-		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
-
-		//STAGES
-		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
-
 		//Location list
 		const std::vector<double3> locationList = {
 			{43.800 * mm, 17.300 * mm, 20.400 * mm},
@@ -217,12 +194,33 @@ namespace MainRoutines
 			{45.000 * mm, 16.800 * mm, 20.400 * mm},
 			{44.800 * mm, 16.800 * mm, 20.400 * mm} };
 
-		//Laser list
-		const std::vector<LaserList::SingleLaser> laserParamList{ { 920, 80. * mW, 40. * mW } , { 750, 25. * mW, 25. * mW }, { 1040, 120. * mW, 40. * mW } };	//Define the wavelengths and laser powers
+		//ACQUISITION SETTINGS
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 400 };
+		const int nFramesCont{ 10 };				//Number of frames for continuous XY acquisition
+
+		//RS
+		const ResonantScanner RScanner{ fpga };
+		RScanner.isRunning();					//Make sure that the RS is running
+
+		//STACK
+		const double stepSizeZ{ 0.5 * um };
+		double stackDepthZ{ 100. * um };									//Acquire a stack of this depth or thickness in Z
+		const int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
+
+		//GALVO RT linear scan
+		const double FFOVgalvo{ 200. * um };			//Full FOV in the slow axis
+		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
+
+		//STAGES
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
 		//Iterate over the wavelengths
-		for (std::vector<int>::size_type wv_iter = 0; wv_iter < laserParamList.size(); wv_iter++)
-			//for (std::vector<int>::size_type wv_iter = 2; wv_iter < wavelengthList.size(); wv_iter++)
+		for (std::vector<int>::size_type wv_iter = 0; wv_iter < laserListLiver.size(); wv_iter++)
+			//for (std::vector<int>::size_type wv_iter = 2; wv_iter < wavelengthList.size(); wv_iter++)		//For debugging
 		{
 			//Iterate over the locations
 			for (std::vector<int>::size_type loc_iter = 0; loc_iter < locationList.size(); loc_iter++)
@@ -233,8 +231,8 @@ namespace MainRoutines
 					stagePositionXYZ.push_back({ locationList.at(loc_iter).at(XX), locationList.at(loc_iter).at(YY), locationList.at(loc_iter).at(ZZ) + iterDiffZ * stepSizeZ });
 
 				//LASER
-				int wavelength_nm = laserParamList.at(wv_iter).mWavelength_nm;
-				double laserPower{ laserParamList.at(wv_iter).mScanPi };
+				const int wavelength_nm = laserListLiver.at(wv_iter).mWavelength_nm;
+				double laserPower{ laserListLiver.at(wv_iter).mScanPi };
 				const VirtualLaser laser{ RTcontrol, wavelength_nm, AUTO };
 
 				//CREATE A STACK FOR STORING THE TIFFS
@@ -263,12 +261,12 @@ namespace MainRoutines
 					tiffStack.pushSameZ(0, image.pointerToTiff());
 					tiffStack.pushDiffZ(iterDiffZ);
 					std::cout << "\n";
-					laserPower += laserParamList.at(wv_iter).mStackPinc / nDiffZ;		//calculate the new laser power
+					laserPower += laserListLiver.at(wv_iter).mStackPinc / nDiffZ;		//calculate the new laser power
 				}
 
 				//Save the stackDiffZ to file
-				std::string stackFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserParamList.at(wv_iter).mScanPi / mW, 1) +
-					"mW_Pf=" + toString((laserParamList.at(wv_iter).mScanPi + laserParamList.at(wv_iter).mStackPinc) / mW, 1) + "mW" +
+				std::string stackFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserListLiver.at(wv_iter).mScanPi / mW, 1) +
+					"mW_Pf=" + toString((laserListLiver.at(wv_iter).mScanPi + laserListLiver.at(wv_iter).mStackPinc) / mW, 1) + "mW" +
 					"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
 					"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 				tiffStack.saveToFile(stackFilename, NOOVERRIDE);
@@ -283,7 +281,7 @@ namespace MainRoutines
 		}//wv_iter
 	}
 
-	//Take images of the sample non-stop. Use the PI program to move the stages manually
+	//Image the sample non-stop. Use the PI program to move the stages manually
 	void liveScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -303,9 +301,7 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
-		const std::vector<LaserList::SingleLaser> laserParamList{ { 920, 80. * mW, 0. * mW } , { 750, 25. * mW, 0. * mW }, { 1040, 120. * mW, 0. * mW } };	//Define the wavelengths and laser powers
-		const LaserList::SingleLaser laserParams{ laserParamList.at(1) };	//Choose a particular wavelength
-		double laserPower{ laserParams.mScanPi };							//Initialize the laser power
+		const LaserList::SingleLaser laserParams{ laserListLiver.at(0) };	//Choose a particular wavelength
 		const VirtualLaser laser{ RTcontrol, laserParams.mWavelength_nm, AUTO };
 
 		//OPEN THE UNIBLITZ SHUTTERS
@@ -313,7 +309,7 @@ namespace MainRoutines
 
 		while (true)
 		{
-			laser.setPower(laserPower);	//Update the laser power
+			laser.setPower(laserParams.mScanPi);	//Set the laser power
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
@@ -399,6 +395,7 @@ namespace MainRoutines
 		//pressAnyKeyToCont();
 	}
 
+	//Full sequence to image and cut an entire sample automatically
 	void sequencer(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -546,9 +543,7 @@ namespace TestRoutines
 
 		//GALVO
 		const double FFOVgalvo{ 200. * um };			//Full FOV in the slow axis
-		const double posMax{ FFOVgalvo / 2 };
-		Galvo galvo{ RTcontrol, RTGALVO1 };
-		galvo.generateFrameScan(posMax, -posMax);
+		Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
 		const int wavelength_nm{ 1040 };
@@ -638,27 +633,29 @@ namespace TestRoutines
 
 	void photobleach(const FPGAns::FPGA &fpga)
 	{
+		//RS
+		ResonantScanner RScanner{ fpga };
+		RScanner.isRunning();		//Make sure that the RS is running
+
+		Laser laser{ VISION };
+		laser.setWavelength(920);
+
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, FG, 2 };
+		FPGAns::RTcontrol RTcontrol{ fpga, FG, 50 };
 
 		//GALVO
-		const double FFOVgalvo{ 200. * um };				//Full FOV in the slow axis
-		const double galvoTimeStep{ 100. * us };
-		const double posMax{ 1*FFOVgalvo / 2 };
-		Galvo galvo{ RTcontrol, RTGALVO1 };
-		const double frameDuration{ halfPeriodLineclock * RTcontrol.mHeightPerFrame_pix };		//= 62.5us * 400 pixels = 25 ms
-		galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);				//Linear ramp for the galvo
+		Galvo galvo{ RTcontrol, RTGALVO1, 0 };	//Keep the galvo fixed to photobleach a line on the sample
 
 		//POCKELS CELLS
-		PockelsCell pockels{ RTcontrol, 750, VISION };
-		pockels.pushPowerSinglet(8 * us, 250 * mW);
-		//pockels.setShutter(true);
+		PockelsCell pockels{ RTcontrol, 920, VISION };
+		pockels.pushPowerSinglet(8 * us, 200 * mW);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
+		pockels.setShutter(true);
 		Image image{ RTcontrol };
 		image.acquire();
+		pockels.setShutter(false);
 
-		//pockels.setShutter(false);
 		pressAnyKeyToCont();
 	}
 
@@ -698,18 +695,14 @@ namespace TestRoutines
 		const int width_pix{ 300 };
 		const int height_pix{ 400 };
 		const int nFramesDiscont{ 1 };
-		const int nFramesCont{ 1 };
+		const int nFramesCont{ 10 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, width_pix, height_pix };
 
 		//GALVO
 		const double FFOVgalvo{ 200. * um };				//Full FOV in the slow axis
-		const double galvoTimeStep{ 8. * us };
-		const double posMax{ FFOVgalvo / 2 };
-		Galvo galvo{ RTcontrol, RTGALVO1 };
-		const double frameDuration{ halfPeriodLineclock * RTcontrol.mHeightPerFrame_pix };		//= 62.5us * 400 pixels = 25 ms
-		galvo.positionLinearRamp(galvoTimeStep, frameDuration, posMax, -posMax);				//Linear ramp for the galvo
+		Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		for (int iter = 0; iter < nFramesDiscont; iter++)
 		{

@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 			//MainRoutines::sequencer(fpga);
 
 			//TESTS
-			TestRoutines::photobleach(fpga);
+			//TestRoutines::photobleach(fpga);
 			//TestRoutines::digitalLatency(fpga);
 			//TestRoutines::analogLatency(fpga);
 			//TestRoutines::fineTuneGalvoScan(fpga);

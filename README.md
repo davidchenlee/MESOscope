@@ -7,7 +7,6 @@ Code in C++ for controlling the NI USB-7852R card
 
 ### LabView
 - Create a ramp generator. This is only necessary if I want to increase the memory of FIFOOUT at the expense of the input buffers
-- Maybe decrease the clock of the photon-counter from 160 MHz to 80 MHz for a faster/easier compilation
 - Check the delay of the internal FIFOs implemented in memory blocks
 - When FIFOOUT depth is set to 131071 elements, on the VS side the max # of readable elements is 160000
   - Read FIFO VS using the 'NiFpga_AcquireFifoReadElementsU32' function for higher bandwidth. The idea is to make the host FIFO extra large and read from it directly. This only works if the FIFO can be read and write simultaneosly

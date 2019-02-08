@@ -173,9 +173,6 @@ namespace MainRoutines
 				"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 			tiffStack.saveToFile(stackFilename, overrideFlag);
 		}
-
-		laser.closeShutter();
-		//pressAnyKeyToCont();
 	}
 
 	//Apply 'discreteZstageScan' on a list of locations. I don't use continuous z-scan because of its limited reach (160 planes)
@@ -254,15 +251,13 @@ namespace MainRoutines
 		datalog.record("Resolution Y (galvo) (um/pix) = ", (FFOV.at(XX) / um) / RTcontrol.mHeightPerFrame_pix);
 		datalog.record("\n");
 
-		//OPEN THE UNIBLITZ SHUTTERS
-		laser.openShutter();
-
 		//Iterate over the wavelengths
 		for (std::vector<int>::size_type wv_iter = 0; wv_iter < laserList.size(); wv_iter++)
 		{
 			//Update the laser wavelength
 			const int wavelength_nm = laserList.at(wv_iter).mWavelength_nm;
-			laser.setWavelength(wavelength_nm);
+			laser.setWavelength(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
+			laser.openShutter();				//Re-open the Uniblitz shutter
 
 			//Iterate over the locations
 			for (std::vector<int>::size_type loc_iter = 0; loc_iter < locationXYList.size(); loc_iter++)
@@ -313,10 +308,6 @@ namespace MainRoutines
 
 			}//loc_iter
 		}//wv_iter
-
-		laser.closeShutter();
-		pressAnyKeyToCont();
-
 	}
 
 	//Image the sample non-stop. Use the PI program to move the stages manually
@@ -358,7 +349,6 @@ namespace MainRoutines
 
 			pressESCforEarlyTermination();		//Early termination if ESC is pressed
 		}
-		laser.closeShutter();
 	}
 
 	/*
@@ -426,9 +416,6 @@ namespace MainRoutines
 
 		//Disable ZstageAsTrigger to be able to move the z-stage without triggering the acquisition sequence
 		//RTcontrol.setZstageTriggerEnabled(false);
-
-		laser.closeShutter();
-		//pressAnyKeyToCont();
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -550,8 +537,6 @@ namespace MainRoutines
 				//pressAnyKeyToCont();
 			}//for
 		}//if
-
-		pressAnyKeyToCont();
 	}
 
 
@@ -585,8 +570,9 @@ namespace TestRoutines
 		Image image{ RTcontrol };
 		image.acquire(FIFODISABLE);
 		
+		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the RT sequence
 		pressAnyKeyToCont();
-		pockels.setShutter(false); //Close the shutter here, otherwise it will close before the RT sequence is over
+		pockels.setShutter(false); 
 	}
 
 	void fineTuneGalvoScan(const FPGAns::FPGA &fpga)
@@ -628,8 +614,6 @@ namespace TestRoutines
 		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 		image.averageEvenOddFrames();
 		image.saveTiffMultiPage("Untitled", NOOVERRIDE);
-
-		pressAnyKeyToCont();
 	}
 
 	//Generate many short digital pulses and check the overall frameDuration with the oscilloscope
@@ -693,8 +677,6 @@ namespace TestRoutines
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		Image image{ RTcontrol };
 		image.acquire(FIFODISABLE);
-
-		//pressAnyKeyToCont();
 	}
 
 	void pockelsRamp(const FPGAns::FPGA &fpga)
@@ -723,8 +705,6 @@ namespace TestRoutines
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
 		image.acquire(FIFODISABLE);		//Execute the RT control sequence and acquire the image via continuous XY acquisition
-
-		pressAnyKeyToCont();
 	}
 
 
@@ -750,7 +730,6 @@ namespace TestRoutines
 			Image image{ RTcontrol };
 			image.acquire(FIFODISABLE); //Execute the RT control sequence
 		}
-		pressAnyKeyToCont();
 	}
 
 	void pixelclock(const FPGAns::FPGA &fpga)
@@ -764,8 +743,6 @@ namespace TestRoutines
 		//std::cout << "size: " << stackOfAverages.size() << "\n";
 		//TiffU8 acqParam{ stackOfAverages, 300, 400 };
 		//acqParam.saveTiff("Untitled");
-
-		pressAnyKeyToCont();
 	}
 
 	//Test the analog and digital output and the relative timing wrt the pixel clock
@@ -827,8 +804,6 @@ namespace TestRoutines
 		std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
 		th1.join();
 		th2.join();
-
-		pressAnyKeyToCont();
 	}
 
 	void shutter(const FPGAns::FPGA &fpga)
@@ -845,8 +820,6 @@ namespace TestRoutines
 		//shutterFidelity.open();
 		//Sleep(5000);
 		//shutterFidelity.close();
-
-		pressAnyKeyToCont();
 	}
 
 	void stagePosition()
@@ -907,8 +880,6 @@ namespace TestRoutines
 		//std::cout << "y stage vel: " << stage.downloadVelSingle_(YY) / mmps << " mm/s" << "\n";
 		//std::cout << "z stage vel: " << stage.downloadVelSingle_(ZZ) / mmps << " mm/s" << "\n";
 		//stage.printStageConfig(ZZ, DOchan);
-
-		pressAnyKeyToCont();
 	}
 
 	void PMT16Xconfig()
@@ -919,8 +890,6 @@ namespace TestRoutines
 		//pmt.setAllGain(255);
 		//pmt.readTemp();
 		//pmt.setAllGain({ 100,255,255,255,255,255,255,255,255,255,255,255,255,255,100,255});
-
-		pressAnyKeyToCont();
 	}
 
 	void lasers(const FPGAns::FPGA &fpga)
@@ -931,8 +900,6 @@ namespace TestRoutines
 		//laser.setShutter(false);
 		laser.setWavelength(1040);
 		//laser.printWavelength_nm();
-
-		pressAnyKeyToCont();
 	}
 
 	//Open the Uniblitz shutter manually
@@ -953,8 +920,6 @@ namespace TestRoutines
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
 		image.acquire(FIFODISABLE);		//Execute the RT control sequence
-
-		//pressAnyKeyToCont();
 	}
 
 	void resonantScanner(const FPGAns::FPGA &fpga)
@@ -970,7 +935,6 @@ namespace TestRoutines
 		std::cout << "volt to I16: " << FPGAns::voltageToI16(1) << "\n";
 		std::cout << "I16 to colt: " << FPGAns::I16toVoltage(32767) << "\n";
 		std::cout << "volt to I16 to volt: " << FPGAns::I16toVoltage(FPGAns::voltageToI16(0)) << "\n";
-		pressAnyKeyToCont();
 	}
 
 	void tiffU8()
@@ -990,8 +954,6 @@ namespace TestRoutines
 
 		//image.mirrorOddFrames(nFramesCont);
 		//image.averageEvenOddFrames(nFramesCont);
-
-		pressAnyKeyToCont();
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely
@@ -1019,8 +981,6 @@ namespace TestRoutines
 		//Stop the stopwatch
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
-
-		pressAnyKeyToCont();
 	}
 
 	void vibratome(const FPGAns::FPGA &fpga)
@@ -1033,8 +993,6 @@ namespace TestRoutines
 
 		const double3 samplePosition{ 0. * mm, 0. * mm, slicePlaneZ };
 		stage.moveXYZ(stackCenterXYZ);
-
-		pressAnyKeyToCont();
 	}
 
 	void multithread()
@@ -1069,11 +1027,9 @@ namespace TestRoutines
 
 		first.join();//pauses until first finishes
 		second.join();//pauses until second finishes
-
-		pressAnyKeyToCont();
 	}
 
-	void sequencerSim()
+	void sequencerConcurrentTest()
 	{
 		class FUNC
 		{
@@ -1173,7 +1129,6 @@ namespace TestRoutines
 				saveFile.join();
 
 		}//if
-		pressAnyKeyToCont();
 	}
 
 	void locationSequencer()
@@ -1193,8 +1148,6 @@ namespace TestRoutines
 		{
 			std::cout << "x = " << locationList.at(loc_iter).at(XX) / mm << "\ty = " << locationList.at(loc_iter).at(YY) / mm << "\n";	
 		}
-
-		pressAnyKeyToCont();
 	}
 
 }//namespace

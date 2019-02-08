@@ -39,6 +39,6 @@ namespace TestRoutines
 	void ethernetSpeed();
 	void vibratome(const FPGAns::FPGA &fpga);
 	void multithread();
-	void sequencerSim();
+	void sequencerConcurrentTest();
 	void locationSequencer();
 }

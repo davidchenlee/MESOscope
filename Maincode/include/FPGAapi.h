@@ -20,7 +20,7 @@ namespace FPGAns
 	//Establish a connection to the FPGA
 	class FPGA
 	{	
-		NiFpga_Session mFpgaHandle;											//FPGA handle. Non-const to let the FPGA API assign the handle
+		NiFpga_Session mHandle;												//FPGA handle. Non-const to let the FPGA API assign the handle
 		const std::string mBitfile{ bitfilePath + NiFpga_FPGAvi_Bitfile };	//FPGA bitfile location
 
 		void initializeFpga_() const;
@@ -28,7 +28,7 @@ namespace FPGAns
 		FPGA();
 		~FPGA();
 		void close(const FPGAresetSelector resetFlag = NORESET) const;
-		NiFpga_Session getFpgaHandle() const;								//Access the handle indirectly to avoid modifying it by mistake
+		NiFpga_Session getHandle() const;									//Access the handle indirectly to avoid modifying it by mistake
 
 	};
 

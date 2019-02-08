@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 		{
 			//MAIN SEQUENCES
 			//MainRoutines::discreteZstageScan(fpga);
-			MainRoutines::discreteZstageScanForLocationList(fpga);
+			//MainRoutines::discreteZstageScanForLocationList(fpga);
 			//MainRoutines::liveScan(fpga);
 			//MainRoutines::contZstageScan(fpga);
 			//MainRoutines::sequencer(fpga);
@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::analogRamp(fpga);
 			//TestRoutines::digitalTiming(fpga);
 			//TestRoutines::filterwheel();
-			//TestRoutines::shutter(fpga);
+			TestRoutines::shutter(fpga);
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();
 			//TestRoutines::PMT16Xconfig();
@@ -40,36 +40,32 @@ int main(int argc, char* argv[])
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::sequencer();
 			//TestRoutines::multithread();
-			//TestRoutines::sequencerSim();
+			//TestRoutines::sequencerConcurrentTest();
 			//TestRoutines::locationSequencer();
 		}
 		catch (const std::invalid_argument &e)
 		{
 			std::cout << "An invalid argument has occurred in " << e.what() << "\n";
-			pressAnyKeyToCont();
 		}
 		catch (const std::overflow_error &e)
 		{
 			std::cout << "An overflow has occurred in " << e.what() << "\n";
-			pressAnyKeyToCont();
 		}
 		catch (const FPGAns::FPGAexception &e)
 		{
 			std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
-			pressAnyKeyToCont();
 		}
 		catch (const std::runtime_error &e)
 		{
 			std::cout << "A runtime error has occurred in " << e.what() << "\n";
-			pressAnyKeyToCont();
 		}
 		catch (...)
 		{
 			std::cout << "An unknown error has occurred" << "\n";
-			pressAnyKeyToCont();
 		}
 
 		fpga.close(NORESET);		//Close the FPGA connection
+		pressAnyKeyToCont();
 
 	}
 	//Catch exceptions thrown by the constructor FPGAns::FPGA

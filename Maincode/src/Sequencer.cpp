@@ -276,36 +276,36 @@ void Sequencer::cutSlice_()
 	mPlaneToSliceZ += (1 - mStack.mOverlapXYZ_frac.at(ZZ)) * mStack.mDepth;
 }
 
-//Snake scanning
+//To generate a scan pattern with slicing
 void Sequencer::generateCommandList()
 {
 	std::cout << "Generating the command list..." << "\n";
 
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
-		int xx{ 0 }, yy{ 0 };				//Reset the stack indices after every cut
+		int II{ 0 }, JJ{ 0 };			//Reset the stack indices after every cut
 		resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
 
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mLaserList.listSize(); iterWL++)
 		{
 			//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over x often and over y less often
-			while (yy >= 0 && yy < mStackArrayDimIJ.at(YY))			//y direction
+			while (JJ >= 0 && JJ < mStackArrayDimIJ.at(YY))			//y direction
 			{
-				while (xx >= 0 && xx < mStackArrayDimIJ.at(XX))		//x direction
+				while (II >= 0 && II < mStackArrayDimIJ.at(XX))		//x direction
 				{
-					moveStage_({ xx,yy });
+					moveStage_({ II, JJ });
 					acqStack_(iterWL);
 					saveStack_();
-					xx += mScanDir.at(XX);		//Increase the iterator x
+					II += mScanDir.at(XX);		//Increase the iterator x
 				}
 
 				//Initialize the next cycle by going back in x one step and switching the scanning direction
-				xx -= mScanDir.at(XX);
+				II -= mScanDir.at(XX);
 				reverseStageScanDirection_(XX);
-				yy += mScanDir.at(YY);	//Increase the iterator y
+				JJ += mScanDir.at(YY);	//Increase the iterator y
 			}
 			//Initialize the next cycle by going back in y one step and switching the scanning direction
-			yy -= mScanDir.at(YY);
+			JJ -= mScanDir.at(YY);
 			reverseStageScanDirection_(YY);
 		}
 
@@ -314,6 +314,40 @@ void Sequencer::generateCommandList()
 			cutSlice_();
 	}
 }
+
+//To generate a scan pattern without slicing
+std::vector<double2> Sequencer::generateLocationList()
+{
+	std::vector<double2> locationList;
+	//std::cout << "Generating the location list..." << "\n";
+
+	int II{ 0 }, JJ{ 0 };			//Reset the stack indices after every cut
+	resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
+
+	//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over x often and over y less often
+	while (JJ >= 0 && JJ < mStackArrayDimIJ.at(YY))			//y direction
+	{
+		while (II >= 0 && II < mStackArrayDimIJ.at(XX))		//x direction
+		{
+			const double2 stackCenterXY = stackIndicesToStackCenter_({ II, JJ });
+			locationList.push_back(stackCenterXY);
+			
+			//std::cout << "x = " << stackCenterXY.at(XX) / mm << "\ty = " << stackCenterXY.at(YY) / mm << "\n";		//For debugging
+			II += mScanDir.at(XX);		//Increase the iterator x
+		}
+
+		//Initialize the next cycle by going back in x one step and switching the scanning direction
+		II -= mScanDir.at(XX);
+		reverseStageScanDirection_(XX);
+		JJ += mScanDir.at(YY);	//Increase the iterator y
+	}
+	//Initialize the next cycle by going back in y one step and switching the scanning direction
+	JJ -= mScanDir.at(YY);
+	reverseStageScanDirection_(YY);
+
+	return locationList;
+}
+
 
 Commandline Sequencer::readCommandline(const int iterCommandLine) const
 {

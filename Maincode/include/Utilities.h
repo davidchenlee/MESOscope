@@ -20,7 +20,6 @@ U16 doubleToFx2p14(double n);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
 
-
 //For saving the parameters to a text file
 class Logger
 {
@@ -61,8 +60,8 @@ public:
 
 class TiffStack
 {
-	TiffU8 mSameZ;		//For saving the same z plane many times and the compute the average image
-	TiffU8 mDiffZ;		//For saving different z planes
+	TiffU8 mSameZ;		//For imaging the same z plane many times and then compute the average image
+	TiffU8 mDiffZ;		//For imaging different z planes
 public:
 	TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
 	void pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff);

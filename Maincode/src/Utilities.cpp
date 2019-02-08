@@ -88,7 +88,6 @@ void pressESCforEarlyTermination()
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 }
 
-
 #pragma region "Logger"
 Logger::Logger(const std::string filename)
 {

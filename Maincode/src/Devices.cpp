@@ -395,9 +395,7 @@ void ResonantScanner::isRunning() const
 	while (true)
 	{
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadBool((mRTcontrol.mFpga).getFpgaHandle(), NiFpga_FPGAvi_IndicatorBool_RSisRunning, &isRunning));
-		if (isRunning)
-			break;
-		else
+		if (!isRunning)
 		{
 			std::cout << "RS seems OFF. Press ESC to exit or any other key to try again\n";
 			input_char = _getch();
@@ -405,6 +403,8 @@ void ResonantScanner::isRunning() const
 			if (input_char == 27)
 				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 		}
+		else
+			break; //break the whileloop
 
 	}
 }
@@ -1198,7 +1198,7 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	if (mCurrentLaser == VISION)
 		mVision.setWavelength(wavelength_nm);
 
-	checkShutterIsOpen_();
+	isLaserInternalShutterIsOpen_();
 	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 
 	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Initialize the pockels cell
@@ -1224,25 +1224,48 @@ std::string VirtualLaser::laserNameToString_(const LaserSelector whichLaser) con
 	}
 }
 
-void VirtualLaser::checkShutterIsOpen_() const
+void VirtualLaser::isLaserInternalShutterIsOpen_() const
 {
+	char input_char;
 	switch (mCurrentLaser)
 	{
 	case VISION:
-		if (!mVision.isShutterOpen())
-			throw std::runtime_error((std::string)__FUNCTION__ + ": The shutter of VISION seems to be closed");
-		break;
+		while (true)
+		{
+			if (!mVision.isShutterOpen())
+			{
+				std::cout << "The shutter of VISION seems to be closed. Press ESC to exit or any other key to try again\n";
+				input_char = _getch();
+
+				if (input_char == 27)
+					throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
+			}
+			else
+				break; //break the whileloop
+		}
+		break; //break the switch
 	case FIDELITY:
-		if (!mFidelity.isShutterOpen())
-			throw std::runtime_error((std::string)__FUNCTION__ + ": The shutter of FIDELITY seems to be closed");
-		break;
+		while (true)
+		{
+			if (!mFidelity.isShutterOpen())
+			{
+				std::cout << "The shutter of FIDELITY seems to be closed. Press ESC to exit or any other key to try again\n";
+				input_char = _getch();
+
+				if (input_char == 27)
+					throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
+			}
+			else
+				break; //break the whileloop
+		}
+		break;	//break the switch
 	}
 }
 
 //Return VISION, FIDELITY, or let the code to decide
 LaserSelector VirtualLaser::autoselectLaser_(const int wavelength_nm)
 {
-	//Update the wavelength
+	//Update the wavelength to be used
 	mWavelength_nm = wavelength_nm;
 
 	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
@@ -1275,21 +1298,19 @@ void VirtualLaser::tuneFilterwheels_(const int wavelength_nm)
 
 void VirtualLaser::setWavelength(const int wavelength_nm)
 {
-	const LaserSelector dummy{ autoselectLaser_(wavelength_nm) };
-
-	//Update the laser in use
-	if (mCurrentLaser != dummy)
+	//Update the laser and pockels to be used
+	if (wavelength_nm != mWavelength_nm)
 	{
-		mCurrentLaser = dummy;
-		checkShutterIsOpen_();
-		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Pockels handler
-
+		mCurrentLaser = autoselectLaser_(wavelength_nm);
+		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Update the Pockels handler
+		std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 	}
-	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 
 	//Update the laser wavelength if VISION was chosen
 	if (mCurrentLaser == VISION)
 		mVision.setWavelength(wavelength_nm);	
+
+	isLaserInternalShutterIsOpen_();
 
 	//Tune the filterwheels
 	tuneFilterwheels_(wavelength_nm);
@@ -1844,8 +1865,8 @@ void LaserList::printParams(std::ofstream *fileHandle) const
 	for (std::vector<int>::size_type iterWL = 0; iterWL != mLaser.size(); iterWL++)
 	{
 		*fileHandle << "Wavelength (nm) = " << mLaser.at(iterWL).mWavelength_nm <<
-			"\tLaser power (mW) = " << mLaser.at(iterWL).mScanPi / mW <<
-			"\tPower increase (mW) = " << mLaser.at(iterWL).mStackPinc / mW << "\n";
+			"\nLaser power (mW) = " << mLaser.at(iterWL).mScanPi / mW <<
+			"\nPower increase (mW) = " << mLaser.at(iterWL).mStackPinc / mW << "\n";
 	}
 	*fileHandle << "\n";
 }

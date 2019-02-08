@@ -56,7 +56,7 @@ class Sequencer
 	int mStackCounter{ 0 };				//Count the number of stacks
 	int mSliceCounter{ 0 };				//Count the number of the slices
 	int2 mStackArrayDimIJ;				//Dimension of the array of stacks. Value computed dynamically
-	int3 mScanDir{mInitialScanDir};		//Scan directions in x, y, and z
+	int3 mScanDir{ mInitialScanDir };	//Scan directions in x, y, and z
 	double mScanZi;						//Initial z-stage position for a stack-scan
 	double mPlaneToSliceZ;				//Height of the plane to cut	
 	int mNtotalSlices;					//Number of vibratome slices in the entire sample
@@ -81,6 +81,7 @@ public:
 
 	Commandline readCommandline(const int iterCommandline) const;
 	void generateCommandList();
+	std::vector<double2> generateLocationList();
 	void printSequencerParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
 };

@@ -8,8 +8,8 @@ int main(int argc, char* argv[])
 		try
 		{
 			//MAIN SEQUENCES
-			MainRoutines::discreteZstageScan(fpga);
-			//MainRoutines::discreteZstageScanForCARE(fpga);
+			//MainRoutines::discreteZstageScan(fpga);
+			MainRoutines::discreteZstageScanForLocationList(fpga);
 			//MainRoutines::liveScan(fpga);
 			//MainRoutines::contZstageScan(fpga);
 			//MainRoutines::sequencer(fpga);
@@ -41,6 +41,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::sequencer();
 			//TestRoutines::multithread();
 			//TestRoutines::sequencerSim();
+			//TestRoutines::locationSequencer();
 		}
 		catch (const std::invalid_argument &e)
 		{

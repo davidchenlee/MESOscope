@@ -229,7 +229,7 @@ class VirtualLaser
 	const double mPockelTimeStep{ 8. * us };		//Time step for the RT pockels command
 
 	std::string laserNameToString_(const LaserSelector whichLaser) const;
-	void isLaserInternalShutterIsOpen_() const;
+	void isLaserInternalShutterOpen_() const;
 	LaserSelector autoselectLaser_(const int wavelength_nm);
 	void turnFilterwheels_(const int wavelength_nm);
 public:

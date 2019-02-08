@@ -1202,7 +1202,7 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Initialize the pockels cell
 	setPower(initialPower, powerIncrease);																	//set the laser power
 
-	isLaserInternalShutterIsOpen_();	//Check if the laser internal shutter is open
+	isLaserInternalShutterOpen_();		//Check if the laser internal shutter is open
 	turnFilterwheels_(wavelength_nm);	//Turn the filterwheels
 }
 
@@ -1223,7 +1223,7 @@ std::string VirtualLaser::laserNameToString_(const LaserSelector whichLaser) con
 	}
 }
 
-void VirtualLaser::isLaserInternalShutterIsOpen_() const
+void VirtualLaser::isLaserInternalShutterOpen_() const
 {
 	while (true)
 	{
@@ -1248,7 +1248,9 @@ void VirtualLaser::isLaserInternalShutterIsOpen_() const
 			char input_char = _getch();
 			if (input_char == 27)
 				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
-		}//if
+		}
+		else
+			break; //break the whileloop
 	}//whileloop
 }
 
@@ -1286,22 +1288,25 @@ void VirtualLaser::turnFilterwheels_(const int wavelength_nm)
 	th2.join();
 }
 
+//Automatically select the laser for the requested wavelength. The pockels destructor closes the uniblitz shutter automatically to:
+//1. switch from VISION to FIDELITY or vice versa
+//2. avoid excessive photobleaching while tuning VISION
 void VirtualLaser::setWavelength(const int wavelength_nm)
 {
-	//Update the laser and pockels to be used
+	//Ignore if the requested wavelength is current
 	if (wavelength_nm != mWavelength_nm)
 	{
-		mCurrentLaser = autoselectLaser_(wavelength_nm);
-		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Update the Pockels handler
+		mCurrentLaser = autoselectLaser_(wavelength_nm);								//Update the selected laser
+		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Update the pockels handler. The pockels destructor closes the uniblitz shutter automatically
 		std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
+
+		//If VISION is chosen, update the laser wavelength
+		if (mCurrentLaser == VISION)
+			mVision.setWavelength(wavelength_nm);
+
+		isLaserInternalShutterOpen_();		//Check if the laser internal shutter is open
+		turnFilterwheels_(wavelength_nm);	//Turn the filterwheels
 	}
-
-	//Update the laser wavelength if VISION was chosen
-	if (mCurrentLaser == VISION)
-		mVision.setWavelength(wavelength_nm);	
-
-	isLaserInternalShutterIsOpen_();	//Check if the laser internal shutter is open
-	turnFilterwheels_(wavelength_nm);	//Turn the filterwheels
 }
 
 void VirtualLaser::setPower(const double initialPower, const double powerIncrease) const

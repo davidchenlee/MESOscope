@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//MAIN SEQUENCES
-			//MainRoutines::frameByFrameScan(fpga);
+			MainRoutines::frameByFrameScan(fpga);
 			//MainRoutines::frameByFrameScan_LocationList(fpga);
 			//MainRoutines::liveScan(fpga);
 			//MainRoutines::continuousSan(fpga);
@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::analogRamp(fpga);
 			//TestRoutines::digitalTiming(fpga);
 			//TestRoutines::filterwheel();
-			TestRoutines::shutter(fpga);
+			//TestRoutines::shutter(fpga);
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();
 			//TestRoutines::PMT16Xconfig();

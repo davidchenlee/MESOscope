@@ -1,12 +1,14 @@
 #include "Routines.h"
 
+
+
 //SAMPLE PARAMETERS
 const double3 stackCenterXYZ{ 46.500 * mm, 16.540 * mm, 20.500 * mm };
 const std::string sampleName{ "Liver" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
 const std::string collar{ "1.49" };
 const std::vector<LaserList::SingleLaser> laserListLiver{ { 920, 80. * mW, 40. * mW } , { 1040, 120. * mW, 40. * mW } , { 750, 25. * mW, 25. * mW },  };	//Define the wavelengths and laser powers for liver
-
+enum FluorChannel { GFP = 0, TDT = 1, DAPI = 2 };
 
 namespace MainRoutines
 {
@@ -15,10 +17,10 @@ namespace MainRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RunMode acqMode{ SINGLEMODE };			//Single shot
+		//const RunMode acqMode{ SINGLEMODE };			//Single shot
 		//const RunMode acqMode{ LIVEMODE };			//Image the same z plane many times as single shots. Used it for adjusting the microscope live
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane many times and average the images
-		//const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
+		const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
 		//const RunMode acqMode{ STACKCENTEREDMODE };		//Stack volume centered at the initial z position
 
 		//ACQUISITION SETTINGS
@@ -89,14 +91,14 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
-		const LaserList::SingleLaser laserParams{ laserListLiver.at(1) };	//Choose a particular wavelength
+		const LaserList::SingleLaser laserParams{ laserListLiver.at(DAPI) };	//Choose a particular wavelength
 		double laserPower{ laserParams.mScanPi };							//Initialize the laser power
 		const VirtualLaser laser{ RTcontrol, laserParams.mWavelength_nm, AUTO };
 
 		//DATALOG
 		{
 			Logger datalog("datalog_" + sampleName);
-			datalog.record("\nSAMPLE-------------------------------------------------------");
+			datalog.record("SAMPLE-------------------------------------------------------");
 			datalog.record("Sample = ", sampleName);
 			datalog.record("Immersion medium = ", immersionMedium);
 			datalog.record("Correction collar = ", collar);
@@ -218,7 +220,7 @@ namespace MainRoutines
 
 		//LASER
 		//const std::vector<LaserList::SingleLaser> laserList{ laserListLiver };
-		const std::vector<LaserList::SingleLaser> laserList{ laserListLiver.at(0), laserListLiver.at(2) };
+		const std::vector<LaserList::SingleLaser> laserList{ laserListLiver.at(GFP), laserListLiver.at(DAPI) };
 		VirtualLaser laser{ RTcontrol, laserList.front().mWavelength_nm };
 
 		//Create a location list
@@ -230,7 +232,7 @@ namespace MainRoutines
 
 		//DATALOG
 		Logger datalog("datalog_" + sampleName);
-		datalog.record("\nSAMPLE-------------------------------------------------------");
+		datalog.record("SAMPLE-------------------------------------------------------");
 		datalog.record("Sample = ", sampleName);
 		datalog.record("Immersion medium = ", immersionMedium);
 		datalog.record("Correction collar = ", collar);
@@ -330,7 +332,7 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
-		const LaserList::SingleLaser laserParams{ laserListLiver.at(0) };	//Choose a particular wavelength
+		const LaserList::SingleLaser laserParams{ laserListLiver.at(GFP) };	//Choose a particular wavelength
 		const VirtualLaser laser{ RTcontrol, laserParams.mWavelength_nm, AUTO };
 
 		//OPEN THE UNIBLITZ SHUTTERS
@@ -434,8 +436,8 @@ namespace MainRoutines
 		const double sampleSurfaceZ{ 18.521 * mm };
 
 		//const std::vector<LaserList::SingleLaser> laserList{ laserListLiver };
-		const std::vector<LaserList::SingleLaser> laserList{ laserListLiver.at(1) };
-		//const std::vector<LaserList::SingleLaser> laserList{ laserListLiver.at(2) };
+		const std::vector<LaserList::SingleLaser> laserList{ laserListLiver.at(DAPI) };
+		//const std::vector<LaserList::SingleLaser> laserList{ laserListLiver.at(GFP) };
 		const Sample sample{ sampleName, immersionMedium, collar, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
 
@@ -502,7 +504,7 @@ namespace MainRoutines
 					scanPi = acqStack.mScanPi;
 					stackPinc = acqStack.mStackPinc;
 
-					//Update the laser parameters
+					//Update the laser parameters if needed
 					laser.setWavelength(wavelength_nm);
 					laser.setPower(scanPi, stackPinc);
 

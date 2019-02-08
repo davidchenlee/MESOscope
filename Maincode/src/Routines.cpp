@@ -11,7 +11,7 @@ const std::vector<LaserList::SingleLaser> laserListLiver{ { 920, 80. * mW, 40. *
 namespace MainRoutines
 {
 	//The "Swiss knife" of my routines
-	void discreteZstageScan(const FPGAns::FPGA &fpga)
+	void frameByFrameScan(const FPGAns::FPGA &fpga)
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
@@ -175,8 +175,8 @@ namespace MainRoutines
 		}
 	}
 
-	//Apply 'discreteZstageScan' on a list of locations. I don't use continuous z-scan because of its limited reach (160 planes)
-	void discreteZstageScanForLocationList(const FPGAns::FPGA &fpga)
+	//Apply 'frameByFrameScan' on a list of locations. I don't use continuous z-scan because of its limited reach (160 planes)
+	void frameByFrameScan_LocationList(const FPGAns::FPGA &fpga)
 	{
 		/*
 		//Location list
@@ -363,7 +363,7 @@ namespace MainRoutines
 	almost identical, with a difference of maybe 1 plane only (0.5 um)
 	Remember that I do not use MACROS on the stages anymore
 	*/
-	void contZstageScan(const FPGAns::FPGA &fpga)
+	void continuousSan(const FPGAns::FPGA &fpga)
 	{
 		const int centerStackFlag = 0;				//1 for starting measuring from the top stackCenterXYZ.at(ZZ); 0 from the center
 

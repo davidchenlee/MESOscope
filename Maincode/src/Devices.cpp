@@ -1193,18 +1193,17 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 {
 	//Select the laser to be used: VISION or FIDELITY
 	mCurrentLaser = autoselectLaser_(wavelength_nm);
+	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 
 	//Update the laser wavelength if VISION was chosen
 	if (mCurrentLaser == VISION)
 		mVision.setWavelength(wavelength_nm);
 
-	isLaserInternalShutterIsOpen_();
-	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
-
 	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Initialize the pockels cell
-	setPower(initialPower, powerIncrease);							//set the laser power
+	setPower(initialPower, powerIncrease);																	//set the laser power
 
-	tuneFilterwheels_(wavelength_nm);	//Tune the filterwheels
+	isLaserInternalShutterIsOpen_();	//Check if the laser internal shutter is open
+	turnFilterwheels_(wavelength_nm);	//Turn the filterwheels
 }
 
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, power, 0, laserSelect) {}
@@ -1226,40 +1225,31 @@ std::string VirtualLaser::laserNameToString_(const LaserSelector whichLaser) con
 
 void VirtualLaser::isLaserInternalShutterIsOpen_() const
 {
-	char input_char;
-	switch (mCurrentLaser)
+	while (true)
 	{
-	case VISION:
-		while (true)
-		{
-			if (!mVision.isShutterOpen())
-			{
-				std::cout << "The shutter of VISION seems to be closed. Press ESC to exit or any other key to try again\n";
-				input_char = _getch();
+		bool isShutterOpen;
 
-				if (input_char == 27)
-					throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
-			}
-			else
-				break; //break the whileloop
-		}
-		break; //break the switch
-	case FIDELITY:
-		while (true)
+		//Check which laser is being used
+		switch (mCurrentLaser)
 		{
-			if (!mFidelity.isShutterOpen())
-			{
-				std::cout << "The shutter of FIDELITY seems to be closed. Press ESC to exit or any other key to try again\n";
-				input_char = _getch();
+		case VISION:
+			isShutterOpen = mVision.isShutterOpen();
+			break;
+		case FIDELITY:
+			isShutterOpen = mFidelity.isShutterOpen();
+			break;
+		}//switch
 
-				if (input_char == 27)
-					throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
-			}
-			else
-				break; //break the whileloop
-		}
-		break;	//break the switch
-	}
+		//Check if the corresponding internal shutter is open
+		if (!isShutterOpen)
+		{
+			std::cout << "The internal shutter of " + laserNameToString_(mCurrentLaser) + " seems to be closed. Press ESC to exit or any other key to try again\n";
+
+			char input_char = _getch();
+			if (input_char == 27)
+				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
+		}//if
+	}//whileloop
 }
 
 //Return VISION, FIDELITY, or let the code to decide
@@ -1282,14 +1272,14 @@ LaserSelector VirtualLaser::autoselectLaser_(const int wavelength_nm)
 		return mLaserSelect;
 }
 
-void VirtualLaser::tuneFilterwheels_(const int wavelength_nm)
+void VirtualLaser::turnFilterwheels_(const int wavelength_nm)
 {
 	//TO ALLOW MULTIPLEXING. For a single beam, Set the wavelength of the excitation filterwheel to 0, meaning that no beamsplitter is used
 	int ExcWavelength_nm{ wavelength_nm };
 	if (!mMultiplexing)
 		ExcWavelength_nm = 0;
 
-	//Tune both filterwheels concurrently
+	//Turn both filterwheels concurrently
 	std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, ExcWavelength_nm };
 	std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
 	th1.join();
@@ -1310,10 +1300,8 @@ void VirtualLaser::setWavelength(const int wavelength_nm)
 	if (mCurrentLaser == VISION)
 		mVision.setWavelength(wavelength_nm);	
 
-	isLaserInternalShutterIsOpen_();
-
-	//Tune the filterwheels
-	tuneFilterwheels_(wavelength_nm);
+	isLaserInternalShutterIsOpen_();	//Check if the laser internal shutter is open
+	turnFilterwheels_(wavelength_nm);	//Turn the filterwheels
 }
 
 void VirtualLaser::setPower(const double initialPower, const double powerIncrease) const

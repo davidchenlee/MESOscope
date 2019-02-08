@@ -8,10 +8,10 @@ int main(int argc, char* argv[])
 		try
 		{
 			//MAIN SEQUENCES
-			//MainRoutines::discreteZstageScan(fpga);
-			//MainRoutines::discreteZstageScanForLocationList(fpga);
+			//MainRoutines::frameByFrameScan(fpga);
+			//MainRoutines::frameByFrameScan_LocationList(fpga);
 			//MainRoutines::liveScan(fpga);
-			//MainRoutines::contZstageScan(fpga);
+			//MainRoutines::continuousSan(fpga);
 			//MainRoutines::sequencer(fpga);
 
 			//TESTS

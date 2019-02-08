@@ -231,7 +231,7 @@ class VirtualLaser
 	std::string laserNameToString_(const LaserSelector whichLaser) const;
 	void isLaserInternalShutterIsOpen_() const;
 	LaserSelector autoselectLaser_(const int wavelength_nm);
-	void tuneFilterwheels_(const int wavelength_nm);
+	void turnFilterwheels_(const int wavelength_nm);
 public:
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelect = AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelect = AUTO);

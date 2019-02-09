@@ -3,12 +3,11 @@
 
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 46.500 * mm, 16.540 * mm, 20.500 * mm };
+const double3 stackCenterXYZ{ 46.500 * mm, 16.690 * mm, 20.650 * mm };
 const std::string sampleName{ "Liver" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
 const std::string collar{ "1.49" };
-const std::vector<LaserList::SingleLaser> laserListLiver{ { 920, 80. * mW, 40. * mW } , { 1040, 120. * mW, 40. * mW } , { 750, 25. * mW, 25. * mW },  };	//Define the wavelengths and laser powers for liver
-enum FluorChannel { GFP = 0, TDT = 1, DAPI = 2 };
+const LaserList laserListLiver{ {{ "GFP", 920, 80. * mW, 40. * mW } , { "TDT", 1040, 120. * mW, 40. * mW } , { "DAPI", 750, 25. * mW, 25. * mW }} };	//Define the wavelengths and laser powers for liver
 
 namespace MainRoutines
 {
@@ -17,10 +16,10 @@ namespace MainRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RunMode acqMode{ SINGLEMODE };			//Single shot
+		const RunMode acqMode{ SINGLEMODE };			//Single shot
 		//const RunMode acqMode{ LIVEMODE };			//Image the same z plane many times as single shots. Used it for adjusting the microscope live
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane many times and average the images
-		const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
+		//const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
 		//const RunMode acqMode{ STACKCENTEREDMODE };		//Stack volume centered at the initial z position
 
 		//ACQUISITION SETTINGS
@@ -91,7 +90,7 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
-		const LaserList::SingleLaser laserParams{ laserListLiver.at(DAPI) };	//Choose a particular wavelength
+		const LaserList::SingleLaser laserParams{ laserListLiver.findChannel("GFP") };	//Select a particular fluorescence channel
 		double laserPower{ laserParams.mScanPi };							//Initialize the laser power
 		const VirtualLaser laser{ RTcontrol, laserParams.mWavelength_nm, AUTO };
 
@@ -178,7 +177,7 @@ namespace MainRoutines
 	}
 
 	//Apply 'frameByFrameScan' on a list of locations. I don't use continuous z-scan because of its limited reach (160 planes)
-	void frameByFrameScan_LocationList(const FPGAns::FPGA &fpga)
+	void frameByFrameScan_LocationList(const FPGAns::FPGA &fpga, const int nSlice)
 	{
 		/*
 		//Location list
@@ -219,8 +218,8 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOV.at(XX) / 2 };
 
 		//LASER
-		//const std::vector<LaserList::SingleLaser> laserList{ laserListLiver };
-		const std::vector<LaserList::SingleLaser> laserList{ laserListLiver.at(GFP), laserListLiver.at(DAPI) };
+		//const LaserList laserList{ laserListLiver };
+		const LaserList laserList{ {laserListLiver.findChannel("GFP")} };
 		VirtualLaser laser{ RTcontrol, laserList.front().mWavelength_nm };
 
 		//Create a location list
@@ -230,46 +229,46 @@ namespace MainRoutines
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
-		//DATALOG
-		Logger datalog("datalog_" + sampleName);
-		datalog.record("SAMPLE-------------------------------------------------------");
-		datalog.record("Sample = ", sampleName);
-		datalog.record("Immersion medium = ", immersionMedium);
-		datalog.record("Correction collar = ", collar);
-		datalog.record("\nFPGA---------------------------------------------------------");
-		datalog.record("FPGA clock (MHz) = ", tickPerUs);
-		datalog.record("\nSCAN---------------------------------------------------------");
-		datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
-		datalog.record("RS period (us) = ", 2 * halfPeriodLineclock / us);
-		datalog.record("Pixel dwell time (us) = ", RTcontrol.mDwell / us);
-		datalog.record("RS fill factor = ", RScanner.mFillFactor);
-		datalog.record("Galvo FFOV (um) = ", FFOV.at(XX) / um);
-		datalog.record("\nIMAGE--------------------------------------------------------");
-		datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
-		datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleFactorU8);
-		datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
-		datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
-		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
-		datalog.record("Resolution Y (galvo) (um/pix) = ", (FFOV.at(XX) / um) / RTcontrol.mHeightPerFrame_pix);
-		datalog.record("\n");
-
 		//Iterate over the wavelengths
-		for (std::vector<int>::size_type wv_iter = 0; wv_iter < laserList.size(); wv_iter++)
+		for (std::vector<int>::size_type iter_wv = 0; iter_wv < laserList.size(); iter_wv++)
 		{
+			//DATALOG
+			Logger datalog("datalog_Slice" + std::to_string(nSlice) + "_Ch" + std::to_string(iter_wv));
+			datalog.record("SAMPLE-------------------------------------------------------");
+			datalog.record("Sample = ", sampleName);
+			datalog.record("Immersion medium = ", immersionMedium);
+			datalog.record("Correction collar = ", collar);
+			datalog.record("\nFPGA---------------------------------------------------------");
+			datalog.record("FPGA clock (MHz) = ", tickPerUs);
+			datalog.record("\nSCAN---------------------------------------------------------");
+			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
+			datalog.record("RS period (us) = ", 2 * halfPeriodLineclock / us);
+			datalog.record("Pixel dwell time (us) = ", RTcontrol.mDwell / us);
+			datalog.record("RS fill factor = ", RScanner.mFillFactor);
+			datalog.record("Galvo FFOV (um) = ", FFOV.at(XX) / um);
+			datalog.record("\nIMAGE--------------------------------------------------------");
+			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
+			datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleFactorU8);
+			datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
+			datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
+			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
+			datalog.record("Resolution Y (galvo) (um/pix) = ", (FFOV.at(XX) / um) / RTcontrol.mHeightPerFrame_pix);
+			datalog.record("\n");
+
 			//Update the laser wavelength
-			const int wavelength_nm = laserList.at(wv_iter).mWavelength_nm;
+			const int wavelength_nm = laserList.at(iter_wv).mWavelength_nm;
 			laser.setWavelength(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
 			laser.openShutter();				//Re-open the Uniblitz shutter
 
 			//Iterate over the locations
-			for (std::vector<int>::size_type loc_iter = 0; loc_iter < locationXYList.size(); loc_iter++)
+			for (std::vector<int>::size_type iter_loc = 0; iter_loc < locationXYList.size(); iter_loc++)
 			{
 				//Generate the discrete scan sequence for the stages
 				std::vector<double3> stagePositionXYZ;
 				for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-					stagePositionXYZ.push_back({ locationXYList.at(loc_iter).at(XX), locationXYList.at(loc_iter).at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
+					stagePositionXYZ.push_back({ locationXYList.at(iter_loc).at(XX), locationXYList.at(iter_loc).at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
 
-				double laserPower{ laserList.at(wv_iter).mScanPi };	//Initialize laserPower. Non-constant to allow a power increase at each plane
+				double laserPower{ laserList.at(iter_wv).mScanPi };	//Initialize laserPower. Non-constant to allow a power increase at each plane
 				
 				//CREATE A STACK FOR STORING THE TIFFS
 				TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nDiffZ, 1 };
@@ -280,9 +279,9 @@ namespace MainRoutines
 					//Update the stages position
 					stage.moveXYZ(stagePositionXYZ.at(iterDiffZ));
 					stage.waitForMotionToStopAll();
-					stage.printPositionXYZ();		//Print the stage position		
+					//stage.printPositionXYZ();		//Print the stage position		
 
-					std::cout << "Total frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
+					std::cout << "Location: " << iter_loc + 1 << "\tTotal frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
 
 					//Update the laser power
 					laser.setPower(laserPower);	
@@ -294,22 +293,22 @@ namespace MainRoutines
 					tiffStack.pushSameZ(0, image.pointerToTiff());
 					tiffStack.pushDiffZ(iterDiffZ);
 					std::cout << "\n";
-					laserPower += laserList.at(wv_iter).mStackPinc / nDiffZ;		//update the laser power for the next iteration
+					laserPower += laserList.at(iter_wv).mStackPinc / nDiffZ;		//update the laser power for the next iteration
 					
 					pressESCforEarlyTermination();		//Early termination if ESC is pressed
 				}
 
 				//Save the stackDiffZ to file
-				std::string stackFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserList.at(wv_iter).mScanPi / mW, 1) +
-					"mW_Pf=" + toString((laserList.at(wv_iter).mScanPi + laserList.at(wv_iter).mStackPinc) / mW, 1) + "mW" +
+				std::string shortName{ "Slice" + std::to_string(nSlice) + "_" + laserList.at(iter_wv).mName + "_Tile" + std::to_string(iter_loc + 1) };
+				std::string stackLongName{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserList.at(iter_wv).mScanPi / mW, 1) +
+					"mW_Pf=" + toString((laserList.at(iter_wv).mScanPi + laserList.at(iter_wv).mStackPinc) / mW, 1) + "mW" +
 					"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
 					"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 
-				datalog.record("Slice1_Ch" + std::to_string(wv_iter) + "_Tile" + std::to_string(loc_iter+1) + "\t" + stackFilename);
-				tiffStack.saveToFile("Slice1_Ch" + std::to_string(wv_iter) + "_Tile" + std::to_string(loc_iter+1), NOOVERRIDE);
-
-			}//loc_iter
-		}//wv_iter
+				datalog.record(shortName + "\t" + stackLongName);
+				tiffStack.saveToFile(shortName, NOOVERRIDE);
+			}//iter_loc
+		}//iter_wv
 	}
 
 	//Image the sample non-stop. Use the PI program to move the stages manually
@@ -332,7 +331,7 @@ namespace MainRoutines
 		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
 
 		//LASER
-		const LaserList::SingleLaser laserParams{ laserListLiver.at(GFP) };	//Choose a particular wavelength
+		const LaserList::SingleLaser laserParams{ laserListLiver.findChannel("GFP") };	//Select a particular fluorescence channel
 		const VirtualLaser laser{ RTcontrol, laserParams.mWavelength_nm, AUTO };
 
 		//OPEN THE UNIBLITZ SHUTTERS
@@ -367,7 +366,7 @@ namespace MainRoutines
 	*/
 	void continuousSan(const FPGAns::FPGA &fpga)
 	{
-		const int centerStackFlag = 0;				//1 for starting measuring from the top stackCenterXYZ.at(ZZ); 0 from the center
+		const int centerStackFlag = 0;				//0 for starting measuring from the top of 'stackCenterXYZ.at(ZZ)', 1 from the center
 
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
@@ -390,11 +389,10 @@ namespace MainRoutines
 		//CREATE THE REALTIME CONTROL SEQUENCE. Notice the STAGETRIG flag to enable triggering the RT sequence with the stage
 		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, STAGETRIG };	
 
-		//LASER: wavelength_nm, laserPower, whichLaser
-		const int wavelength_nm{ 750 };
-		const double laserPower{ 30. * mW };
-		const VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower, VISION };
-		//VirtualLaser laser{ RTcontrol, 1040, 25. * mW, AUTO };
+		//LASER
+		const LaserList::SingleLaser laserParams{ laserListLiver.findChannel("GFP") };	//Select a particular laser
+		const double laserPower{ laserParams.mScanPi };
+		const VirtualLaser laser{ RTcontrol, laserParams.mWavelength_nm, laserPower, VISION };
 
 		//GALVO RT linear scan
 		const double FFOVgalvo{ 200. * um };	//Full FOV in the slow axis
@@ -411,8 +409,8 @@ namespace MainRoutines
 		image.downloadData();
 		image.postprocess();
 
-		const std::string filename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(laserPower / mW, 1) +
-			"_x=" + toString(stageXYZi.at(XX) / mm, 3) + "_y=" + toString(stageXYZi.at(YY) / mm, 3) +
+		const std::string filename{ sampleName + "_" + toString(laserParams.mWavelength_nm, 0) + "nm_Pi=" + toString(laserPower / mW, 1) +
+			"mW_x=" + toString(stageXYZi.at(XX) / mm, 3) + "_y=" + toString(stageXYZi.at(YY) / mm, 3) +
 			"_zi=" + toString(stageXYZi.at(ZZ) / mm, 4) + "_zf=" + toString((stageXYZi.at(ZZ) + stackDepth) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 		image.saveTiffMultiPage(filename, NOOVERRIDE, stackScanDirZ);
 
@@ -435,9 +433,8 @@ namespace MainRoutines
 		const double sampleLengthZ{ 0.01 * mm };								//Sample thickness
 		const double sampleSurfaceZ{ 18.521 * mm };
 
-		//const std::vector<LaserList::SingleLaser> laserList{ laserListLiver };
-		const std::vector<LaserList::SingleLaser> laserList{ laserListLiver.at(DAPI) };
-		//const std::vector<LaserList::SingleLaser> laserList{ laserListLiver.at(GFP) };
+		const LaserList laserList{ laserListLiver };
+		//const LaserList laserList{ laserListLiver.findChannel("DAPI") };
 		const Sample sample{ sampleName, immersionMedium, collar, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
 
@@ -987,7 +984,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGAns::FPGA &fpga)
 	{
-		const double slicePlaneZ = 22.980 * mm;
+		const double slicePlaneZ = 23.140 * mm;
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 		Vibratome vibratome{ fpga, stage };
@@ -1060,9 +1057,8 @@ namespace TestRoutines
 		const double sampleLengthZ{ 0.01 * mm };								//Sample thickness
 		const double sampleSurfaceZ{ 18.471 * mm };
 
-		//const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW }, { 1040, 30. * mW, 0. * mW } };
-		const std::vector<LaserList::SingleLaser> laserList{ { 750, 60. * mW, 0. * mW } };
-		//const std::vector<LaserList::SingleLaser> laserList{{ 1040, 25. * mW, 0. * mW } };
+		const LaserList laserList{ laserListLiver };
+		//const LaserList laserList{ laserListLiver.findChannel("DAPI") };
 		Sample sample{ "Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlapXYZ_frac };
 
@@ -1146,9 +1142,9 @@ namespace TestRoutines
 		Sequencer sequence{ laserListLiver, Sample(sampleName, immersionMedium, collar), stack, stackCenterXYZ, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
 		std::vector<double2> locationList{ sequence.generateLocationList() };
 		
-		for (std::vector<int>::size_type loc_iter = 0; loc_iter < locationList.size(); loc_iter++)
+		for (std::vector<int>::size_type iter_loc = 0; iter_loc < locationList.size(); iter_loc++)
 		{
-			std::cout << "x = " << locationList.at(loc_iter).at(XX) / mm << "\ty = " << locationList.at(loc_iter).at(YY) / mm << "\n";	
+			std::cout << "x = " << locationList.at(iter_loc).at(XX) / mm << "\ty = " << locationList.at(iter_loc).at(YY) / mm << "\n";	
 		}
 	}
 

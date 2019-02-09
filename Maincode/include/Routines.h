@@ -6,7 +6,7 @@
 namespace MainRoutines
 {
 	void frameByFrameScan(const FPGAns::FPGA &fpga);
-	void frameByFrameScan_LocationList(const FPGAns::FPGA &fpga);
+	void frameByFrameScan_LocationList(const FPGAns::FPGA &fpga, const int nSlice);
 	void liveScan(const FPGAns::FPGA &fpga);
 	void continuousSan(const FPGAns::FPGA &fpga);
 	void sequencer(const FPGAns::FPGA &fpga);

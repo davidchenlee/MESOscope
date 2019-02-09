@@ -1844,12 +1844,23 @@ void Stack::printParams(std::ofstream *fileHandle) const
 #pragma endregion "Stack"
 
 #pragma region "LaserList"
-LaserList::LaserList(const std::vector <SingleLaser> laser) : mLaser(laser) {}
+LaserList::LaserList(const std::vector<SingleLaser> laser) : mLaser(laser) {}
 
-std::size_t LaserList::listSize() const
+std::size_t LaserList::size() const
 {
 	return mLaser.size();
 }
+
+LaserList::SingleLaser LaserList::front() const
+{
+	return mLaser.front();
+}
+
+LaserList::SingleLaser LaserList::at(const int index) const
+{
+	return mLaser.at(index);
+}
+
 
 void LaserList::printParams(std::ofstream *fileHandle) const
 {
@@ -1862,6 +1873,17 @@ void LaserList::printParams(std::ofstream *fileHandle) const
 			"\nPower increase (mW) = " << mLaser.at(iterWL).mStackPinc / mW << "\n";
 	}
 	*fileHandle << "\n";
+}
+
+LaserList::SingleLaser LaserList::findChannel(const std::string channel) const
+{
+	for (std::vector<int>::size_type iter_laser = 0; iter_laser < mLaser.size(); iter_laser++)
+	{
+		if (!channel.compare(mLaser.at(iter_laser).mName)) //compare() returns 0 if the strings are identical
+			return mLaser.at(iter_laser);			
+	}
+	//If the requested channel is not found
+	throw std::runtime_error((std::string)__FUNCTION__ + ": Channel " + channel + " not found");
 }
 #pragma endregion "LaserList"
 

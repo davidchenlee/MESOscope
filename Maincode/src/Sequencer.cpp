@@ -119,7 +119,7 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 	const double overlapZ_frac{ mStack.mOverlapXYZ_frac.at(ZZ) };																		//Dummy local variable
 	mNtotalSlices = static_cast<int>(std::ceil(  1 / (1 - overlapZ_frac) * (mSample.mLengthXYZ.at(ZZ) / mStack.mDepth - 1) + 1  ));		//Total number of slices in the entire sample
 	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY) };										//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mLaserList.listSize()) * mNtotalStacksPerVibratomeSlice };		//Total number of stacks in the entire sample
+	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mLaserList.size()) * mNtotalStacksPerVibratomeSlice };		//Total number of stacks in the entire sample
 
 	//Calculate the ROI effectively covered by the stacks, which might be slightly larger than the sample's ROI
 	mROIcovered.at(XMIN) = mSample.mROI.at(XMIN);
@@ -162,7 +162,7 @@ Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack
 
 	mNtotalSlices = 1;
 	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY) };										//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mLaserList.listSize()) * mNtotalStacksPerVibratomeSlice };		//Total number of stacks in the entire sample
+	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mLaserList.size()) * mNtotalStacksPerVibratomeSlice };		//Total number of stacks in the entire sample
 
 	//Pre-reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
@@ -286,7 +286,7 @@ void Sequencer::generateCommandList()
 		int II{ 0 }, JJ{ 0 };			//Reset the stack indices after every cut
 		resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
 
-		for (std::vector<int>::size_type iterWL = 0; iterWL != mLaserList.listSize(); iterWL++)
+		for (std::vector<int>::size_type iterWL = 0; iterWL != mLaserList.size(); iterWL++)
 		{
 			//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over x often and over y less often
 			while (JJ >= 0 && JJ < mStackArrayDimIJ.at(YY))			//y direction

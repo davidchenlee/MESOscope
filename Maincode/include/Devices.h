@@ -348,16 +348,19 @@ class LaserList
 public:
 	struct SingleLaser	//Parameters for a single laser
 	{
-		int mWavelength_nm;	//Laser wavelength
-		double mScanPi;		//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mStackPinc;	//Laser power increase at the end of the stack
+		std::string mName{ "" };	//Channel name
+		int mWavelength_nm;			//Laser wavelength
+		double mScanPi;				//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
+		double mStackPinc;			//Laser power increase at the end of the stack
 	};
 
-	std::vector <SingleLaser> mLaser;
+	std::vector<SingleLaser> mLaser;
 
-	LaserList(const std::vector <SingleLaser> laser);
-
-	std::size_t listSize() const;
+	LaserList(const std::vector<SingleLaser> laser);
+	std::size_t size() const;
+	SingleLaser front() const;
+	SingleLaser at(const int index) const;
 	void printParams(std::ofstream *fileHandle) const;
+	SingleLaser findChannel(const std::string channel) const;
 };
 

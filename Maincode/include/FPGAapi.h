@@ -59,7 +59,6 @@ namespace FPGAns
 	public:
 		const FPGAns::FPGA &mFpga;
 		LineclockSelector mLineclockInput;															//Resonant scanner (RS) or Function generator (FG)
-		AcqTriggerSelector mStageAsTrigger;															//Trigger the acquisition with the z stage: enable (0), disable (1)
 		const double mDwell{ 0.1625 * us };															//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
 																									//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 		const double mPulsesPerPix = mDwell / VISIONpulsePeriod;									//Max number of laser pulses per pixel
@@ -72,7 +71,8 @@ namespace FPGAns
 		int mNpixAllFrames;																			//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
 		RTcontrol(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput = FG,
-			const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix = 400, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
+			const int nFrames = 1, const int widthPerFrame_pix = 300, const int heightPerFrame_pix = 400);
+		~RTcontrol();
 		RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 		RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
 		RTcontrol(RTcontrol&&) = delete;					//Disable move constructor
@@ -87,7 +87,6 @@ namespace FPGAns
 		void presetFPGAoutput() const;
 		void uploadRT() const;
 		void triggerRT() const;
-		void setZstageTriggerEnabled(const bool state);
 	};
 
 	class FPGAexception : public std::runtime_error

@@ -213,7 +213,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_VTforward, false));
 
 		//STAGES
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stageTriggerPulse / us * tickPerUs)));	//Trigger pulse width
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stageTriggerPulse / us * tickPerUs)));	//Trigger pulsewidth
 
 		/*
 		//SHUTTERS. Commented out to allow keeping the shutter on
@@ -270,8 +270,8 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, const AcqTriggerSelector stageAsTrigger) :
-		mFpga(fpga), mVectorOfQueues(RTNCHAN), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mStageAsTrigger(stageAsTrigger)
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix) :
+		mFpga(fpga), mVectorOfQueues(RTNCHAN), mLineclockInput(lineclockInput), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix)
 	{
 		//Set the imaging parameters
 		mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;
@@ -283,6 +283,11 @@ namespace FPGAns
 		mVectorOfQueues.at(RTPIXELCLOCK) = pixelclock.readPixelclock();
 	}
 
+	RTcontrol::~RTcontrol()
+	{
+
+	}
+
 	//Load the imaging parameters onto the FPGA
 	void RTcontrol::uploadImagingParameters_() const
 	{
@@ -291,14 +296,14 @@ namespace FPGAns
 
 		checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.getHandle(), NiFpga_FPGAvi_ControlU8_Nframes, static_cast<U8>(mNframes)));												//Number of frames to acquire
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(),
-			NiFpga_FPGAvi_ControlU16_NlinesAll, static_cast<U16>(mHeightAllFrames_pix + mNframes * mNlinesSkip - mNlinesSkip)));													//Total number of lines in all the frames, including the skipped lines, minus the very last skipped lines)
+			NiFpga_FPGAvi_ControlU16_NlinesAll, static_cast<U16>(mHeightAllFrames_pix + mNframes * mNlinesSkip - mNlinesSkip)));												//Total number of lines in all the frames, including the skipped lines, minus the very last skipped lines)
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlU16_NlinesPerFrame, static_cast<U16>(mHeightPerFrame_pix)));							//Number of lines in a frame, without including the skipped lines
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlU16_NlinesPerFramePlusSkips, static_cast<U16>(mHeightPerFrame_pix + mNlinesSkip)));	//Number of lines in a frame including the skipped lines
 	
 		//SELECTORS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, mLineclockInput));										//Lineclock: resonant scanner (RS) or function generator (FG)
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, mStageAsTrigger));										//Trigger the acquisition with the PC or the Z stage
 	}
+
 
 	//Send every single queue in 'vectorOfQueue' to the FPGA buffer
 	//For this, concatenate all the individual queues 'vectorOfQueuesForRamp.at(ii)' in the queue 'allQueues'.
@@ -440,12 +445,6 @@ namespace FPGAns
 	{
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, true));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));
-	}
-
-	//Disable ZstageAsTrigger to be able to move the stage without triggering the acquisition
-	void RTcontrol::setZstageTriggerEnabled(const bool state)
-	{
-		NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, state);
 	}
 
 #pragma endregion "RTcontrol"

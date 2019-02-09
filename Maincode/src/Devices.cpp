@@ -1,22 +1,31 @@
 #include "Devices.h"
 
 #pragma region "Image"
-Image::Image(FPGAns::RTcontrol &RTcontrol) :
-	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes)
+Image::Image(FPGAns::RTcontrol &RTcontrol, const AcqTriggerSelector stageAsTrigger) :
+	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes), mStageAsTrigger(stageAsTrigger)
 {
 	mBufArrayA = new U32[mRTcontrol.mNpixAllFrames];
 	mBufArrayB = new U32[mRTcontrol.mNpixAllFrames];
+
+	//Trigger the acquisition with the PC or the Z stage
+	if (mStageAsTrigger)
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, mStageAsTrigger));
 }
 
 Image::~Image()
 {
-	//Stop FIFOOUTpc. Before I implemented this function, the computer crashed if the code was executed right after an exceptional termination.
-	//(I think) this is because the access to FIFOOUT used to remain open and clashed with the next call
+	//Turn off the z-stage triggering the image acquisition to allow moving the z stage
+	if (mStageAsTrigger)
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));
+
+	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
+	//I think this is because FIFOOUT used to remain open and clashed with the following call
 	stopFIFOOUTpc_();
 
 	delete[] mBufArrayA;
 	delete[] mBufArrayB;
-	//std::cout << "Image destructor called\n";
+
+	//std::cout << "Image destructor called\n"; //For debugging
 }
 
 //Flush the residual data in FIFOOUTpc from the previous run, if any
@@ -1843,49 +1852,50 @@ void Stack::printParams(std::ofstream *fileHandle) const
 }
 #pragma endregion "Stack"
 
-#pragma region "LaserList"
-LaserList::LaserList(const std::vector<SingleLaser> laser) : mLaser(laser) {}
+#pragma region "ChannelList"
+ChannelList::ChannelList(const std::vector<SingleChannel> channelList) : mList(channelList) {}
 
-std::size_t LaserList::size() const
+std::size_t ChannelList::size() const
 {
-	return mLaser.size();
+	return mList.size();
 }
 
-LaserList::SingleLaser LaserList::front() const
+ChannelList::SingleChannel ChannelList::front() const
 {
-	return mLaser.front();
+	return mList.front();
 }
 
-LaserList::SingleLaser LaserList::at(const int index) const
+ChannelList::SingleChannel ChannelList::at(const int index) const
 {
-	return mLaser.at(index);
+	return mList.at(index);
 }
 
 
-void LaserList::printParams(std::ofstream *fileHandle) const
+void ChannelList::printParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "LASER ************************************************************\n";
 
-	for (std::vector<int>::size_type iterWL = 0; iterWL != mLaser.size(); iterWL++)
+	for (std::vector<int>::size_type iterWL = 0; iterWL != mList.size(); iterWL++)
 	{
-		*fileHandle << "Wavelength (nm) = " << mLaser.at(iterWL).mWavelength_nm <<
-			"\nLaser power (mW) = " << mLaser.at(iterWL).mScanPi / mW <<
-			"\nPower increase (mW) = " << mLaser.at(iterWL).mStackPinc / mW << "\n";
+		*fileHandle << "Wavelength (nm) = " << mList.at(iterWL).mWavelength_nm <<
+			"\nLaser power (mW) = " << mList.at(iterWL).mScanPi / mW <<
+			"\nPower increase (mW) = " << mList.at(iterWL).mStackPinc / mW << "\n";
 	}
 	*fileHandle << "\n";
 }
 
-LaserList::SingleLaser LaserList::findChannel(const std::string channel) const
+//Return the first instance of "channel" in mList
+ChannelList::SingleChannel ChannelList::findChannel(const std::string channel) const
 {
-	for (std::vector<int>::size_type iter_laser = 0; iter_laser < mLaser.size(); iter_laser++)
+	for (std::vector<int>::size_type iter_laser = 0; iter_laser < mList.size(); iter_laser++)
 	{
-		if (!channel.compare(mLaser.at(iter_laser).mName)) //compare() returns 0 if the strings are identical
-			return mLaser.at(iter_laser);			
+		if (!channel.compare(mList.at(iter_laser).mName)) //compare() returns 0 if the strings are identical
+			return mList.at(iter_laser);			
 	}
 	//If the requested channel is not found
 	throw std::runtime_error((std::string)__FUNCTION__ + ": Channel " + channel + " not found");
 }
-#pragma endregion "LaserList"
+#pragma endregion "ChannelList"
 
 
 /*

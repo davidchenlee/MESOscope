@@ -100,7 +100,7 @@ void Commandline::printParameters() const
 
 #pragma region "Sequencer"
 //Constructor using the sample's ROI. The number of stacks is calculated automatically based on the FFOV
-Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack stack) : mSample(sample), mLaserList(laserList), mStack(stack)
+Sequencer::Sequencer(const ChannelList channelList, const Sample sample, const Stack stack) : mSample(sample), mChannelList(channelList), mStack(stack)
 {
 	//Initialize the z-stage with the position of the sample surface
 	mScanZi = mSample.mSurfaceZ;
@@ -119,7 +119,7 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 	const double overlapZ_frac{ mStack.mOverlapXYZ_frac.at(ZZ) };																		//Dummy local variable
 	mNtotalSlices = static_cast<int>(std::ceil(  1 / (1 - overlapZ_frac) * (mSample.mLengthXYZ.at(ZZ) / mStack.mDepth - 1) + 1  ));		//Total number of slices in the entire sample
 	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY) };										//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mLaserList.size()) * mNtotalStacksPerVibratomeSlice };		//Total number of stacks in the entire sample
+	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mChannelList.size()) * mNtotalStacksPerVibratomeSlice };		//Total number of stacks in the entire sample
 
 	//Calculate the ROI effectively covered by the stacks, which might be slightly larger than the sample's ROI
 	mROIcovered.at(XMIN) = mSample.mROI.at(XMIN);
@@ -137,7 +137,7 @@ Sequencer::Sequencer(const LaserList laserList, const Sample sample, const Stack
 }
 
 //Constructor using the initial stack center and number of stacks. To be used with the bead slide and therefore no slicing
-Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ) : mSample(sample), mLaserList(laserList), mStack(stack), mStackArrayDimIJ(stackArrayDimIJ)
+Sequencer::Sequencer(const ChannelList channelList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ) : mSample(sample), mChannelList(channelList), mStack(stack), mStackArrayDimIJ(stackArrayDimIJ)
 {
 	//Calculate the ROI covered by the stacks
 	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 )
@@ -162,7 +162,7 @@ Sequencer::Sequencer(const LaserList laserList, Sample sample, const Stack stack
 
 	mNtotalSlices = 1;
 	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(XX) * mStackArrayDimIJ.at(YY) };										//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mLaserList.size()) * mNtotalStacksPerVibratomeSlice };		//Total number of stacks in the entire sample
+	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mChannelList.size()) * mNtotalStacksPerVibratomeSlice };		//Total number of stacks in the entire sample
 
 	//Pre-reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
@@ -227,7 +227,7 @@ void Sequencer::moveStage_(const int2 stackIJ)
 void Sequencer::acqStack_(const int iterWL)
 {
 	//Read the corresponding laser configuration
-	const LaserList::SingleLaser singleLaser{ mLaserList.mLaser.at(iterWL) };
+	const ChannelList::SingleChannel singleLaser{ mChannelList.at(iterWL) };
 
 	//Determine if the initial laser power is the lowest (top of the stack) or the highest (bottom of the stack)
 	const double scanPi{ calculateStackScanInitialPower_(singleLaser.mScanPi, singleLaser.mStackPinc, mScanDir.at(ZZ)) };
@@ -286,7 +286,7 @@ void Sequencer::generateCommandList()
 		int II{ 0 }, JJ{ 0 };			//Reset the stack indices after every cut
 		resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
 
-		for (std::vector<int>::size_type iterWL = 0; iterWL != mLaserList.size(); iterWL++)
+		for (std::vector<int>::size_type iterWL = 0; iterWL != mChannelList.size(); iterWL++)
 		{
 			//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over x often and over y less often
 			while (JJ >= 0 && JJ < mStackArrayDimIJ.at(YY))			//y direction
@@ -377,7 +377,7 @@ void Sequencer::printToFile(const std::string fileName) const
 	*fileHandle << std::fixed;	//Show a fixed number of digits
 
 	mSample.printParams(fileHandle);
-	mLaserList.printParams(fileHandle);
+	mChannelList.printParams(fileHandle);
 	printSequencerParams(fileHandle);
 	mStack.printParams(fileHandle);
 

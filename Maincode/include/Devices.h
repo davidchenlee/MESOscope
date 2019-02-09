@@ -12,6 +12,7 @@
 class Image
 {
 	FPGAns::RTcontrol &mRTcontrol;			//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
+	AcqTriggerSelector mStageAsTrigger;		//Trigger the acquisition with the z stage: enable (0), disable (1)
 	U32* mBufArrayA;						//Vector to read FIFOOUTpc A
 	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
 	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB after demultiplexing
@@ -26,7 +27,7 @@ class Image
 	void configureFIFOOUTpc_(const U32 depth) const;
 	void stopFIFOOUTpc_() const;
 public:
-	Image(FPGAns::RTcontrol &RTcontrol);
+	Image(FPGAns::RTcontrol &RTcontrol, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
 	~Image();
 	Image(const Image&) = delete;				//Disable copy-constructor
 	Image& operator=(const Image&) = delete;	//Disable assignment-constructor
@@ -342,11 +343,11 @@ public:
 	void printParams(std::ofstream *fileHandle) const;
 };
 
-//Create a list of single laser parameters
-class LaserList
+//Create a list of channels
+class ChannelList
 {
 public:
-	struct SingleLaser	//Parameters for a single laser
+	struct SingleChannel			//Parameters for a single channel
 	{
 		std::string mName{ "" };	//Channel name
 		int mWavelength_nm;			//Laser wavelength
@@ -354,13 +355,13 @@ public:
 		double mStackPinc;			//Laser power increase at the end of the stack
 	};
 
-	std::vector<SingleLaser> mLaser;
+	std::vector<SingleChannel> mList;
 
-	LaserList(const std::vector<SingleLaser> laser);
+	ChannelList(const std::vector<SingleChannel> channelList);
 	std::size_t size() const;
-	SingleLaser front() const;
-	SingleLaser at(const int index) const;
+	SingleChannel front() const;
+	SingleChannel at(const int index) const;
 	void printParams(std::ofstream *fileHandle) const;
-	SingleLaser findChannel(const std::string channel) const;
+	SingleChannel findChannel(const std::string channel) const;
 };
 

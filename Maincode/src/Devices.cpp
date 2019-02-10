@@ -768,8 +768,11 @@ std::string Filterwheel::colorToString_(const Filtercolor color) const
 	case RED:
 		colorStr = "RED";
 		break;
-	case NONE:
-		colorStr = "NONE";
+	case OPEN:
+		colorStr = "OPEN";
+		break;
+	case CLOSED:
+		colorStr = "CLOSED";
 		break;
 	default:
 		colorStr = "UNKNOWN";
@@ -789,7 +792,7 @@ void Filterwheel::setWavelength(const int wavelength_nm)
 	else if (wavelength_nm >= 680)
 		color = BLUE;
 	else if (wavelength_nm == 0)
-		color = NONE;
+		color = CLOSED;
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The filterwheel wavelength must be in the range 680 - 1080 nm");
 

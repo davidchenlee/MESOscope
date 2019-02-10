@@ -7,7 +7,7 @@ const double3 stackCenterXYZ{ 46.500 * mm, 16.690 * mm, 20.650 * mm };
 const std::string sampleName{ "Liver" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
 const std::string collar{ "1.49" };
-const ChannelList channelListLiver{ {{ "GFP", 920, 80. * mW, 0.4 * mWpum } , { "TDT", 1040, 120. * mW, 0.4 * mWpum } , { "DAPI", 750, 25. * mW, 0.25 * mWpum }} };	//Define the wavelengths and laser powers for liver
+const ChannelList channelListLiver{ {{ "GFP", 920, 80. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 25. * mW, 0.25 * mWpum }} };	//Define the wavelengths and laser powers for liver
 
 namespace MainRoutines
 {
@@ -16,10 +16,10 @@ namespace MainRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RunMode acqMode{ SINGLEMODE };			//Single shot
+		const RunMode acqMode{ SINGLEMODE };			//Single shot
 		//const RunMode acqMode{ LIVEMODE };			//Image the same z plane many times as single shots. Used it for adjusting the microscope live
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane many times and average the images
-		const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
+		//const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
 		//const RunMode acqMode{ STACKCENTEREDMODE };		//Stack volume centered at the initial z position
 
 		//ACQUISITION SETTINGS
@@ -795,8 +795,8 @@ namespace TestRoutines
 		Filterwheel FWdetection{ FWDET };
 
 		int wavelength_nm;
-		if (0)
-			wavelength_nm = 1040;
+		if (1)
+			wavelength_nm = 920;
 		else
 			wavelength_nm = 750;
 

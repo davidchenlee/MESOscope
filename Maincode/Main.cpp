@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 			//MAIN SEQUENCES
 			//MainRoutines::frameByFrameScan(fpga);
 			//MainRoutines::frameByFrameScan_LocationList(fpga, 1);
-			//MainRoutines::liveScan(fpga);
+			MainRoutines::liveScan(fpga);
 			//MainRoutines::continuousScan(fpga);
 			//MainRoutines::sequencer(fpga);
 

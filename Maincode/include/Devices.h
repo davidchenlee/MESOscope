@@ -120,8 +120,23 @@ public:
 
 class Filterwheel
 {
-	const std::vector<Filtercolor> mExcConfig{ BLUE, NONE, GREEN, NONE, RED, NONE };
-	const std::vector<Filtercolor> mDetConfig{ BLUE, GREEN, RED, NONE, NONE, NONE };
+	/* Beamsplitters in the excitation wheel as of Feb 2019
+	position #1, 750 nm beamsplitter
+	position #2, open (no beamsplitter)
+	position #3, open (no beamsplitter)
+	position #4, open (no beamsplitter)
+	position #5, open (no beamsplitter)
+	position #6, open (no beamsplitter) */
+	const std::vector<Filtercolor> mExcConfig{ BLUE, OPEN, GREEN, OPEN, RED, OPEN }; //GREEN and RED are not setu up yet. Just doing some tests
+
+	/* Filters in the detection wheel as of Feb 2019
+	position #1, FF01-492/sp-25
+	position #2, FF01-520/60-25
+	position #3, BLP01-532R-25
+	position #4, beam block
+	position #5, FF01-514/44-25
+	position #6, open (no filter) */
+	const std::vector<Filtercolor> mDetConfig{ BLUE, GREEN, RED, OPEN, CLOSED, OPEN };
 		
 	FilterwheelSelector mWhichFilterwheel;	//Device ID = 1, 2, ...
 	std::string mFilterwheelName;			//Device given name

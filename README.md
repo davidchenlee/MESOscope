@@ -4,6 +4,7 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 - Flush the RAMs at the beginning of each run
+- Maybe implement an automatic laser power increase depending on the imaging depth
 - Maybe install VTK to display tiff images
 
 ### LabView

@@ -687,8 +687,56 @@ void Filterwheel::downloadColor_()
 	}
 }
 
-void Filterwheel::setPosition_(const int position)
+int Filterwheel::colorToPosition_(const Filtercolor color) const
 {
+	for (std::vector<int>::size_type iter = 0; iter < mFWconfig.size(); iter++)
+	{
+		if (color == mFWconfig.at(iter))
+			return iter + 1;			//The index for mFWconfig starts from 0. The index for the filterwheel position start from 1
+	}
+	
+	throw std::runtime_error((std::string)__FUNCTION__ + ": Failure converting color to position");
+}
+
+Filtercolor Filterwheel::positionToColor_(const int position) const
+{
+	if (position < 1 || position > mNpos)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": the filterwheel position must be between 1 and " + std::to_string(mNpos));
+
+	return mFWconfig.at(position - 1);
+}
+
+//Convert from enum Filtercolor to string
+std::string Filterwheel::colorToString_(const Filtercolor color) const
+{
+	std::string colorStr;
+	switch (color)
+	{
+	case BLUE:
+		colorStr = "BLUE";
+		break;
+	case GREEN:
+		colorStr = "GREEN";
+		break;
+	case RED:
+		colorStr = "RED";
+		break;
+	case OPEN:
+		colorStr = "OPEN";
+		break;
+	case CLOSED:
+		colorStr = "CLOSED";
+		break;
+	default:
+		colorStr = "UNKNOWN";
+	}
+	return colorStr;
+}
+
+void Filterwheel::setPosition(const Filtercolor color)
+{
+	const int position = colorToPosition_(color);
+
 	if (position != mPosition)
 	{
 		std::string TxBuffer("pos=" + std::to_string(position) + "\r");
@@ -734,52 +782,6 @@ void Filterwheel::setPosition_(const int position)
 	}
 }
 
-int Filterwheel::colorToPosition_(const Filtercolor color) const
-{
-	for (std::vector<int>::size_type iter = 0; iter != mFWconfig.size(); iter++)
-	{
-		if (color == mFWconfig.at(iter))
-			return iter + 1;			//The index for mFWconfig starts from 0. The index for the filterwheel position start from 1
-	}
-	
-	throw std::runtime_error((std::string)__FUNCTION__ + ": Failure converting color to position");
-}
-
-Filtercolor Filterwheel::positionToColor_(const int position) const
-{
-	if (position < 1 || position > mNpos)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": the filterwheel position must be between 1 and " + std::to_string(mNpos));
-
-	return mFWconfig.at(position - 1);
-}
-
-//Convert from enum Filtercolor to string
-std::string Filterwheel::colorToString_(const Filtercolor color) const
-{
-	std::string colorStr;
-	switch (color)
-	{
-	case BLUE:
-		colorStr = "BLUE";
-		break;
-	case GREEN:
-		colorStr = "GREEN";
-		break;
-	case RED:
-		colorStr = "RED";
-		break;
-	case OPEN:
-		colorStr = "OPEN";
-		break;
-	case CLOSED:
-		colorStr = "CLOSED";
-		break;
-	default:
-		colorStr = "UNKNOWN";
-	}
-	return colorStr;
-}
-
 //Set the filter color using the laser wavelength
 void Filterwheel::setWavelength(const int wavelength_nm)
 {
@@ -791,12 +793,10 @@ void Filterwheel::setWavelength(const int wavelength_nm)
 		color = GREEN;
 	else if (wavelength_nm >= 680)
 		color = BLUE;
-	else if (wavelength_nm == 0)
-		color = CLOSED;
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The filterwheel wavelength must be in the range 680 - 1080 nm");
 
-	setPosition_(colorToPosition_(color));
+	setPosition(color);
 }
 #pragma endregion "Filterwheel"
 
@@ -1288,16 +1288,23 @@ LaserSelector VirtualLaser::autoselectLaser_(const int wavelength_nm)
 
 void VirtualLaser::turnFilterwheels_(const int wavelength_nm)
 {
-	//TO ALLOW MULTIPLEXING. For a single beam, Set the wavelength of the excitation filterwheel to 0, meaning that no beamsplitter is used
-	int ExcWavelength_nm{ wavelength_nm };
-	if (!mMultiplexing)
-		ExcWavelength_nm = 0;
+	if (multiplexing)	//Multiplexing
+	{
+		//Turn both filterwheels concurrently
+		std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };
+		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
+		th1.join();
+		th2.join();
+	}
+	else //Single beam
+	{
+		//Turn both filterwheels concurrently
+		std::thread th1{ &Filterwheel::setPosition, &mFWexcitation, OPEN };					//Leave the excitation filterwheel open
+		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
+		th1.join();
+		th2.join();
+	}
 
-	//Turn both filterwheels concurrently
-	std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, ExcWavelength_nm };
-	std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
-	th1.join();
-	th2.join();
 }
 
 //Automatically select the laser for the requested wavelength. The pockels destructor closes the uniblitz shutter automatically to:

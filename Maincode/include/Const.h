@@ -49,6 +49,7 @@ namespace Constants
 	extern const PhotocounterSelector photocounterInput;
 	extern const PixelclockSelector pixelclockType;
 	extern const ToggleSwitch pockelsAutoOff;
+	extern const ToggleSwitch multiplexing;
 
 	extern const double PI;
 	extern const int us;

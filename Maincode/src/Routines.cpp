@@ -3,11 +3,11 @@
 
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 46.500 * mm, 16.690 * mm, 20.650 * mm };
+const double3 stackCenterXYZ{ 46.500 * mm, 17.300 * mm, 20.900 * mm };
 const std::string sampleName{ "Liver" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
-const std::string collar{ "1.49" };
-const ChannelList channelListLiver{ {{ "GFP", 920, 80. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 25. * mW, 0.25 * mWpum }} };	//Define the wavelengths and laser powers for liver
+const std::string collar{ "1.495" };
+const ChannelList channelListLiver{ {{ "GFP", 920, 60. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 25. * mW, 0.25 * mWpum }} };	//Define the wavelengths and laser powers for liver
 
 namespace MainRoutines
 {
@@ -16,17 +16,16 @@ namespace MainRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RunMode acqMode{ SINGLEMODE };			//Single shot
-		//const RunMode acqMode{ LIVEMODE };			//Image the same z plane many times as single shots. Used it for adjusting the microscope live
-		//const RunMode acqMode{ AVGMODE };				//Image the same z plane many times and average the images
-		//const RunMode acqMode{ STACKMODE };			//Stack volume from the initial z position
-		//const RunMode acqMode{ STACKCENTEREDMODE };		//Stack volume centered at the initial z position
+		const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RunMode acqMode{ AVGMODE };				//Image the same z plane frame by frame 'nSameZ' times and average the images
+		//const RunMode acqMode{ STACKMODE };			//Image a stack frame by frame from the initial z position
+		//const RunMode acqMode{ STACKCENTEREDMODE };		//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
 		const ChannelList::SingleChannel singleChannel{ channelListLiver.findChannel("GFP") };	//Select a particular fluorescence channel
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 10 };				//Number of frames for continuous XY acquisition
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
@@ -49,12 +48,6 @@ namespace MainRoutines
 			nSameZ = 1;
 			nDiffZ = 1; //Do not change this
 			overrideFlag = NOOVERRIDE;
-			stagePositionXYZ.push_back(stackCenterXYZ);
-			break;
-		case LIVEMODE:
-			nSameZ = 500;
-			nDiffZ = 1; //Do not change this
-			overrideFlag = OVERRIDE;
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case AVGMODE:
@@ -150,7 +143,7 @@ namespace MainRoutines
 				image.averageFrames();		//Average the frames acquired via continuous XY acquisition
 				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
 
-				if (acqMode == SINGLEMODE || acqMode == LIVEMODE)
+				if (acqMode == SINGLEMODE)
 				{
 					//Save individual files
 					std::string singleFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString(singleChannel.mScanPi / mW, 1) + "mW" +
@@ -195,14 +188,15 @@ namespace MainRoutines
 		//ACQUISITION SETTINGS
 		//const ChannelList channelList{ channelListLiver };
 		const ChannelList channelList{ {channelListLiver.findChannel("GFP")} };
+		const int2 nStacksXY{ 3, 4 };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
 		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
 
 		//STACK
 		const double2 FFOV{ 200. * um, 150. * um };
-		const double stepSizeZ{ 0.5 * um };									//Step size in z
-		const double stackDepthZ{ 100. * um };								//Acquire a stack of this depth or thickness in Z
+		const double stepSizeZ{ 1.0 * um };									//Step size in z
+		const double stackDepthZ{ 50. * um };								//Acquire a stack of this depth or thickness in Z
 		const int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
 		const double3 stackOverlap_frac{ 0.03, 0.03, 0.03 };				//Stack overlap
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
@@ -221,7 +215,7 @@ namespace MainRoutines
 		VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm };
 
 		//Create a location list
-		Sequencer sequence{ channelList, Sample(sampleName, immersionMedium, collar), stack, stackCenterXYZ, { 1, 1 } }; //Last 2 parameters: stack center and number of stacks
+		Sequencer sequence{ channelList, Sample(sampleName, immersionMedium, collar), stack, stackCenterXYZ, nStacksXY };
 		std::vector<double2> locationXYList{ sequence.generateLocationList() };
 
 		//STAGES
@@ -305,7 +299,7 @@ namespace MainRoutines
 		}//iter_wv
 	}
 
-	//Image the sample non-stop. Use the PI program to move the stages manually
+	//Image the sample non-stop. Use the PI program to move the stages around manually
 	void liveScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -800,12 +794,26 @@ namespace TestRoutines
 		else
 			wavelength_nm = 750;
 
-		//FWexcitation.setWavelength(wavelength);
-		//FWdetection.setWavelength(wavelength);
-		std::thread th1{ &Filterwheel::setWavelength, &FWexcitation, wavelength_nm };
-		std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
-		th1.join();
-		th2.join();
+		//FWexcitation.setWavelength(wavelength_nm);
+		//FWdetection.setWavelength(wavelength_nm);
+		
+		if (multiplexing)	//Multiplexing
+		{
+			//Turn both filterwheels concurrently
+			std::thread th1{ &Filterwheel::setWavelength, &FWexcitation, wavelength_nm };
+			std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
+			th1.join();
+			th2.join();
+		}
+		else //Single beam
+		{
+			//Turn both filterwheels concurrently
+			std::thread th1{ &Filterwheel::setPosition, &FWexcitation, OPEN };				//Leave the excitation filterwheel open
+			std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
+			th1.join();
+			th2.join();
+		}
+		
 	}
 
 	void shutter(const FPGAns::FPGA &fpga)
@@ -987,7 +995,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGAns::FPGA &fpga)
 	{
-		const double slicePlaneZ = 23.140 * mm;
+		const double slicePlaneZ = 23.340 * mm;
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 		Vibratome vibratome{ fpga, stage };

@@ -127,16 +127,18 @@ class Filterwheel
 	position #4, open (no beamsplitter)
 	position #5, open (no beamsplitter)
 	position #6, open (no beamsplitter) */
-	const std::vector<Filtercolor> mExcConfig{ BLUE, OPEN, GREEN, OPEN, RED, OPEN }; //GREEN and RED are not setu up yet. Just doing some tests
+	const std::vector<Filtercolor> mExcConfig{ BLUE, OPEN, GREEN, OPEN, RED, OPEN }; //GREEN and RED are not set up yet. Just doing some tests
 
 	/* Filters in the detection wheel as of Feb 2019
-	position #1, FF01-492/sp-25
-	position #2, FF01-520/60-25
-	position #3, BLP01-532R-25
+	position #1, FF01-492/sp (blue)
+	position #2, FF01-520/60 (green)
+	position #3, BLP01-532R (red)
 	position #4, beam block
-	position #5, FF01-514/44-25
+	position #5, FF01-514/44 (green)
 	position #6, open (no filter) */
-	const std::vector<Filtercolor> mDetConfig{ BLUE, GREEN, RED, OPEN, CLOSED, OPEN };
+	const std::vector<Filtercolor> mDetConfig{ BLUE, GREEN, RED, CLOSED, OPEN, OPEN };	//Currently, there are 2 green filters set up in the wheel (pos #2 and #5)
+																						//The code looks for the GREEN entry in this vector and reads its position
+																						//For now, I write GREEN in the vector position of the filter to be used
 		
 	FilterwheelSelector mWhichFilterwheel;	//Device ID = 1, 2, ...
 	std::string mFilterwheelName;			//Device given name
@@ -152,7 +154,6 @@ class Filterwheel
 	const int mRxBufSize{ 256 };				//Serial buffer size
 
 	void downloadColor_();
-	void setPosition_(const int position);
 	int colorToPosition_(const Filtercolor color) const;
 	Filtercolor positionToColor_(const int position) const;
 	std::string colorToString_(const Filtercolor color) const;
@@ -163,6 +164,8 @@ public:
 	Filterwheel& operator=(const Filterwheel&) = delete;	//Disable assignment-constructor
 	Filterwheel(Filterwheel&&) = delete;					//Disable move constructor
 	Filterwheel& operator=(Filterwheel&&) = delete;			//Disable move-assignment constructor
+
+	void setPosition(const Filtercolor color);
 	void setWavelength(const int wavelength_nm);
 };
 
@@ -232,7 +235,7 @@ public:
 
 class VirtualLaser
 {
-	const Multiplexing mMultiplexing{ SINGLEBEAM };
+
 	LaserSelector mLaserSelect;					//use VISION, FIDELITY, or AUTO (let the code decide)
 	LaserSelector mCurrentLaser;				//Laser currently in use: VISION or FIDELITY
 	FPGAns::RTcontrol &mRTcontrol;
@@ -311,7 +314,7 @@ class Vibratome
 	const FPGAns::FPGA &mFpga;
 	Stage &mStage;
 
-	const double mSlicingVel{ 0.2 * mmps };											//Move the y stage at this velocity for slicing
+	const double mSlicingVel{ 0.5 * mmps };											//Move the y stage at this velocity for slicing
 	const double3 mStageConveyingVelXYZ{ 10. * mmps, 10.  *mmps, 0.5 * mmps };		//Transport the sample between the objective and vibratome at this velocity
 	//enum MotionDir { BACKWARD = -1, FORWARD = 1 };
 	//double mCuttingSpeed{ 0.5 * mmps };		//Speed of the vibratome for cutting (manual setting)

@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 			//MAIN SEQUENCES
 			//MainRoutines::frameByFrameScan(fpga);
 			//MainRoutines::frameByFrameScan_LocationList(fpga, 1);
-			MainRoutines::liveScan(fpga);
+			//MainRoutines::liveScan(fpga);
 			//MainRoutines::continuousScan(fpga);
 			//MainRoutines::sequencer(fpga);
 
@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::analogAndDigitalOut(fpga);
 			//TestRoutines::analogRamp(fpga);
 			//TestRoutines::digitalTiming(fpga);
-			//TestRoutines::filterwheel();
+			TestRoutines::filterwheel();
 			//TestRoutines::shutter(fpga);
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();

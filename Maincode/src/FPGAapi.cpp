@@ -154,10 +154,10 @@ namespace FPGAns
 	//The object has to be closed explicitly because of the exception catching
 	void FPGA::close(const FPGAresetSelector resetFlag) const
 	{
-		//Flush the RAM buffers on the FPGA as precaution. Make sure that the control sequence has already finished
-		Sleep(100);	//Do not flush too soon, otherwise the sequence will be cut off
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
+		//Flush the RAM buffers on the FPGA as precaution. 
+		//To flush correctly, the FPGA has to signal the pc that the sequence is over. Otherwise, the pc can possibly flush too early and cut the sequence short
+		//checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
+		//checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
 		//std::cout << "flushBRAMs called\n";	//For debugging
 
 		//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)

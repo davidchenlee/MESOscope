@@ -3,6 +3,7 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
+- Flush the RAMs at the beginning of each run
 - Maybe install VTK to display tiff images
 
 ### LabView

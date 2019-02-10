@@ -10,8 +10,8 @@ int main(int argc, char* argv[])
 			//MAIN SEQUENCES
 			//MainRoutines::frameByFrameScan(fpga);
 			//MainRoutines::frameByFrameScan_LocationList(fpga, 1);
-			MainRoutines::liveScan(fpga);
-			//MainRoutines::continuousSan(fpga);
+			//MainRoutines::liveScan(fpga);
+			//MainRoutines::continuousScan(fpga);
 			//MainRoutines::sequencer(fpga);
 
 			//TESTS
@@ -20,6 +20,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::analogLatency(fpga);
 			//TestRoutines::fineTuneGalvoScan(fpga);
 			//TestRoutines::pockels(fpga);
+			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::galvo(fpga);
 			//TestRoutines::pixelclock(fpga);
 			//TestRoutines::analogAndDigitalOut(fpga);
@@ -32,7 +33,6 @@ int main(int argc, char* argv[])
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
-			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::resonantScanner(fpga);
 			//TestRoutines::convertI16toVolt();
 			//TestRoutines::tiffU8();

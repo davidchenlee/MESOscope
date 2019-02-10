@@ -41,8 +41,8 @@ void Image::FIFOOUTpcGarbageCollector_() const
 	while (true)
 	{
 		//Check if there are elements in FIFOOUTpc
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nElemToReadA));
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nElemToReadB));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nElemToReadA));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nElemToReadB));
 		//std::cout << "FIFOOUTpc cleanup A/B: " << nElemToReadA << "/" << nElemToReadB << "\n";
 		//getchar();
 
@@ -52,13 +52,13 @@ void Image::FIFOOUTpcGarbageCollector_() const
 		if (nElemToReadA > 0)
 		{
 			nElemToReadA = min(bufSize, nElemToReadA);	//Min between bufSize and nElemToReadA
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, nElemToReadA, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, nElemToReadA, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
 			nElemTotalA += nElemToReadA;
 		}
 		if (nElemToReadB > 0)
 		{
 			nElemToReadB = min(bufSize, nElemToReadB);	//Min between bufSize and nElemToReadB
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, nElemToReadB, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, nElemToReadB, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
 			nElemTotalB += nElemToReadB;
 		}
 	}
@@ -126,7 +126,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	if (nElemRead < mRTcontrol.mNpixAllFrames)		//Skip if all the data have already been transferred
 	{
 		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTcontrol.mFpga).getHandle(), FIFOOUTpc, buffer, 0, timeout_ms, &nElemToRead));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), FIFOOUTpc, buffer, 0, timeout_ms, &nElemToRead));
 		//std::cout << "Number of elements remaining in FIFOOUT: " << nElemToRead << "\n";	//For debugging
 
 		//If data available in FIFOOUTpc, retrieve it
@@ -137,7 +137,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 				throw std::runtime_error((std::string)__FUNCTION__ + ": Received more FIFO elements than expected");
 
 			//Retrieve the elements in FIFOOUTpc
-			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32((mRTcontrol.mFpga).getHandle(), FIFOOUTpc, buffer + nElemRead, nElemToRead, timeout_ms, &dummy));
+			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), FIFOOUTpc, buffer + nElemRead, nElemToRead, timeout_ms, &dummy));
 
 			//Keep track of the total number of elements read
 			nElemRead += nElemToRead;
@@ -186,31 +186,31 @@ void Image::demultiplex_()
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
 void Image::startFIFOOUTpc_() const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StartFifo(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 }
 
 //Configure FIFOOUTpc. Optional according to NI
 void Image::configureFIFOOUTpc_(const U32 depth) const
 {
 	U32 actualDepth;
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
 	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << "\n";
 }
 
 //Stop the connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI
 void Image::stopFIFOOUTpc_() const
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_StopFifo(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 	//std::cout << "stopFIFO called\n";
 }
 
 void Image::acquire(const FIFOOUTenableSelector FIFOOUTenable)
 {
 	//Enable pushing data to FIFOOUTfpga. Disable for debugging
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, FIFOOUTenable));	
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, FIFOOUTenable));	
 
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
@@ -245,7 +245,7 @@ void Image::initialize() const
 void Image::downloadData(const FIFOOUTenableSelector FIFOOUTenable)
 {
 	//Enable pushing data to FIFOOUTfpga. Disable for debugging
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, FIFOOUTenable));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, FIFOOUTenable));
 
 	if (FIFOOUTenable)
 	{
@@ -338,7 +338,7 @@ void ResonantScanner::setVoltage_(const double controlVoltage)
 	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;					//Spatial sampling resolution (length/pixel)
 
 	//Upload the control voltage
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::voltageToI16(mControlVoltage)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::voltageToI16(mControlVoltage)));
 }
 
 //Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
@@ -355,7 +355,7 @@ void ResonantScanner::setFFOV(const double FFOV)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX/mVoltagePerDistance /um) + " um");
 
 	//Upload the control voltage
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::voltageToI16(mControlVoltage)));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::voltageToI16(mControlVoltage)));
 }
 
 //First set the FFOV, then set RSenable on
@@ -363,7 +363,7 @@ void ResonantScanner::turnOn(const double FFOV)
 {
 	setFFOV(FFOV);
 	Sleep(static_cast<DWORD>(mDelay/ms));
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
 	std::cout << "RS FFOV successfully set to: " << FFOV / um << " um\n";
 }
 
@@ -372,14 +372,14 @@ void ResonantScanner::turnOnUsingVoltage(const double controlVoltage)
 {
 	setVoltage_(controlVoltage);
 	Sleep(static_cast<DWORD>(mDelay/ms));
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
 	std::cout << "RS control voltage successfully set to: " << controlVoltage / V << " V\n";
 }
 
 //First set RSenable off, then set the control voltage to 0
 void ResonantScanner::turnOff()
 {
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_ControlBool_RSrun, false));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_RSrun, false));
 	Sleep(static_cast<DWORD>(mDelay/ms));
 	setVoltage_(0);
 	std::cout << "RS successfully turned off" << "\n";
@@ -389,7 +389,7 @@ void ResonantScanner::turnOff()
 double ResonantScanner::downloadControlVoltage() const
 {
 	I16 control_I16;
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
 
 	return FPGAns::I16toVoltage(control_I16);
 }
@@ -403,7 +403,7 @@ void ResonantScanner::isRunning() const
 	char input_char;
 	while (true)
 	{
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadBool((mRTcontrol.mFpga).getHandle(), NiFpga_FPGAvi_IndicatorBool_RSisRunning, &isRunning));
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_IndicatorBool_RSisRunning, &isRunning));
 		if (!isRunning)
 		{
 			std::cout << "RS seems OFF. Press ESC to exit or any other key to try again\n";
@@ -1197,7 +1197,7 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelect) :
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LaserSelector laserSelect) :
 	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mVision(VISION), mFidelity(FIDELITY), mFWexcitation(FWEXC), mFWdetection(FWDET)
 {
 	//Select the laser to be used: VISION or FIDELITY
@@ -1209,13 +1209,13 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 		mVision.setWavelength(wavelength_nm);
 
 	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Initialize the pockels cell
-	setPower(initialPower, powerIncrease);																	//set the laser power
+	setPower(initialPower, finalPower);																		//set the laser power
 
 	isLaserInternalShutterOpen_();		//Check if the laser internal shutter is open
 	turnFilterwheels_(wavelength_nm);	//Turn the filterwheels
 }
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, power, 0, laserSelect) {}
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LaserSelector laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, laserPower, laserPower, laserSelect) {}
 
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, 0, 0, laserSelect) {}
 
@@ -1318,14 +1318,20 @@ void VirtualLaser::setWavelength(const int wavelength_nm)
 	}
 }
 
-void VirtualLaser::setPower(const double initialPower, const double powerIncrease) const
+void VirtualLaser::setPower(const double laserPower) const
+{
+	//Set the initial laser power
+	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, laserPower, OVERRIDE);
+}
+
+void VirtualLaser::setPower(const double initialPower, const double finalPower) const
 {
 	//Set the initial laser power
 	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, initialPower, OVERRIDE);
 
 	//Set the power increase
-	if (powerIncrease != 0)
-		mPockelsPtr->powerLinearRamp(initialPower, initialPower + powerIncrease);
+	if (finalPower != initialPower)
+		mPockelsPtr->powerLinearRamp(initialPower, finalPower);
 }
 
 void VirtualLaser::openShutter() const

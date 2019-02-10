@@ -234,12 +234,13 @@ class VirtualLaser
 	LaserSelector autoselectLaser_(const int wavelength_nm);
 	void turnFilterwheels_(const int wavelength_nm);
 public:
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double powerIncrease, const LaserSelector laserSelect = AUTO);
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double power, const LaserSelector laserSelect = AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LaserSelector laserSelect = AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LaserSelector laserSelect = AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelect = AUTO);
 
 	void setWavelength(const int wavelength_nm);
-	void setPower(const double initialPower, const double powerIncrease = 0) const;
+	void setPower(const double laserPower) const;
+	void setPower(const double initialPower, const double finalPower) const;
 	void openShutter() const;
 	void closeShutter() const;
 };
@@ -352,7 +353,7 @@ public:
 		std::string mName{ "" };	//Channel name
 		int mWavelength_nm;			//Laser wavelength
 		double mScanPi;				//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mStackPinc;			//Laser power increase at the end of the stack
+		double mStackPinc;			//Laser power increase per z distance
 	};
 
 	std::vector<SingleChannel> mList;

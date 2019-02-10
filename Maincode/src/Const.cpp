@@ -22,6 +22,7 @@ namespace Constants
 	extern const double mmps{ 1. * mm / sec };				//Millimeters per second
 	extern const int V{ 1 };								//Volt
 	extern const int mW{ 1 };								//Milliwatt
+	extern const double mWpum{ 1. * mW / um };				//mW per micron
 
 	//VISION LASER
 	extern const double VISIONpulsePeriod{ 0.0125 * us };	//The pulse repetition rate of VISION is 80 MHz

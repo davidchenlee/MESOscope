@@ -136,7 +136,7 @@ Sequencer::Sequencer(const ChannelList channelList, const Sample sample, const S
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'cutAboveBottomOfStack' must be greater than the stack z-overlap " + toString(stackOverlapZ / um, 1) + " um");
 }
 
-//Constructor using the initial stack center and number of stacks. To be used with the bead slide and therefore no slicing
+//Constructor using the initial stack center and the number of stacks. To be used without slicing
 Sequencer::Sequencer(const ChannelList channelList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ) : mSample(sample), mChannelList(channelList), mStack(stack), mStackArrayDimIJ(stackArrayDimIJ)
 {
 	//Calculate the ROI covered by the stacks
@@ -152,7 +152,7 @@ Sequencer::Sequencer(const ChannelList channelList, Sample sample, const Stack s
 	mSample.mROI = mROIcovered;
 
 	//Initialize the z-stage
-	mScanZi = stackCenterXYZ.at(ZZ) - mStack.mDepth / 2;
+	mScanZi = stackCenterXYZ.at(ZZ);
 
 	//Initialize the height of the plane to slice
 	mPlaneToSliceZ = 0;

@@ -59,6 +59,7 @@ namespace Constants
 	extern const double mmps;
 	extern const int V;
 	extern const int mW;
+	extern const double mWpum;
 
 	extern const double halfPeriodLineclock;
 	extern const double VISIONpulsePeriod;

@@ -3,11 +3,11 @@
 
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 46.500 * mm, 17.300 * mm, 20.900 * mm };
+const double3 stackCenterXYZ{ 43.500 * mm, 17.700 * mm, 21.330 * mm };
 const std::string sampleName{ "Liver" };
 const std::string immersionMedium{ "SiliconMineralOil5050" };
 const std::string collar{ "1.495" };
-const ChannelList channelListLiver{ {{ "GFP", 920, 60. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 25. * mW, 0.25 * mWpum }} };	//Define the wavelengths and laser powers for liver
+const ChannelList channelListLiver{ {{ "GFP", 920, 60. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 20. * mW, 0.15 * mWpum }} };	//Define the wavelengths and laser powers for liver
 
 namespace MainRoutines
 {
@@ -22,10 +22,10 @@ namespace MainRoutines
 		//const RunMode acqMode{ STACKCENTEREDMODE };		//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelListLiver.findChannel("GFP") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelListLiver.findChannel("DAPI") };	//Select a particular fluorescence channel
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 10 };				//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
@@ -33,7 +33,7 @@ namespace MainRoutines
 
 		//STACK
 		const double stepSizeZ{ 0.5 * um };
-		const double stackDepthZ{ 100. * um };	//Acquire a stack of this depth or thickness in Z
+		const double stackDepthZ{ 20. * um };	//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
@@ -135,7 +135,7 @@ namespace MainRoutines
 				std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
 					"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << "\n";
 
-				laser.setPower(singleChannel.mScanPi + iterDiffZ * singleChannel.mStackPinc);	//Update the laser power
+				laser.setPower(singleChannel.mScanPi + iterDiffZ * stepSizeZ * singleChannel.mStackPinc);	//Update the laser power
 
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
@@ -186,8 +186,8 @@ namespace MainRoutines
 			*/
 
 		//ACQUISITION SETTINGS
-		//const ChannelList channelList{ channelListLiver };
-		const ChannelList channelList{ {channelListLiver.findChannel("GFP")} };
+		const ChannelList channelList{ channelListLiver };
+		//const ChannelList channelList{ {channelListLiver.findChannel("DAPI")} };
 		const int2 nStacksXY{ 3, 4 };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
@@ -195,8 +195,8 @@ namespace MainRoutines
 
 		//STACK
 		const double2 FFOV{ 200. * um, 150. * um };
-		const double stepSizeZ{ 1.0 * um };									//Step size in z
-		const double stackDepthZ{ 50. * um };								//Acquire a stack of this depth or thickness in Z
+		const double stepSizeZ{ 0.5 * um };									//Step size in z
+		const double stackDepthZ{ 100. * um };								//Acquire a stack of this depth or thickness in Z
 		const int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
 		const double3 stackOverlap_frac{ 0.03, 0.03, 0.03 };				//Stack overlap
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
@@ -225,7 +225,7 @@ namespace MainRoutines
 		for (std::vector<int>::size_type iter_wv = 0; iter_wv < channelList.size(); iter_wv++)
 		{
 			//DATALOG
-			Logger datalog("datalog_Slice" + std::to_string(nSlice) + "_Ch" + std::to_string(iter_wv));
+			Logger datalog("datalog_Slice" + std::to_string(nSlice) + "_" + channelList.at(iter_wv).mName);
 			datalog.record("SAMPLE-------------------------------------------------------");
 			datalog.record("Sample = ", sampleName);
 			datalog.record("Immersion medium = ", immersionMedium);
@@ -274,7 +274,7 @@ namespace MainRoutines
 					std::cout << "Location: " << iter_loc + 1 << "/" << locationXYList.size() << "\tTotal frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
 
 					//Update the laser power
-					laser.setPower(channelList.at(iter_wv).mScanPi + iterDiffZ * channelList.at(iter_wv).mStackPinc);
+					laser.setPower(channelList.at(iter_wv).mScanPi + iterDiffZ * stepSizeZ * channelList.at(iter_wv).mStackPinc);
 
 					//EXECUTE THE RT CONTROL SEQUENCE
 					Image image{ RTcontrol };
@@ -503,7 +503,7 @@ namespace MainRoutines
 
 					//Update the laser parameters if needed
 					laser.setWavelength(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
-					laser.setPower(scanPi, scanDirZ * stackPinc);
+					laser.setPower(scanPi, scanDirZ * stackPinc);																//FIX THIS: linear scaling in power is nonlinear in voltage!!!!!
 					laser.openShutter();	//Re-open the Uniblitz shutter if closed
 
 					image.initialize();
@@ -995,7 +995,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGAns::FPGA &fpga)
 	{
-		const double slicePlaneZ = 23.340 * mm;
+		const double slicePlaneZ = (23.640 + 0.050) * mm;
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 		Vibratome vibratome{ fpga, stage };

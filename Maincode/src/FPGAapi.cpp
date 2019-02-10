@@ -154,12 +154,6 @@ namespace FPGAns
 	//The object has to be closed explicitly because of the exception catching
 	void FPGA::close(const FPGAresetSelector resetFlag) const
 	{
-		//Flush the RAM buffers on the FPGA as precaution. 
-		//To flush correctly, the FPGA has to signal the pc that the sequence is over. Otherwise, the pc can possibly flush too early and cut the sequence short
-		//checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
-		//checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
-		//std::cout << "flushBRAMs called\n";	//For debugging
-
 		//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 		//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 		//0 resets, 1 does not reset
@@ -195,7 +189,6 @@ namespace FPGAns
 		//TRIGGERS AND DELAYS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));																//Pc trigger signal
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));													//Z-stage as tigger
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));															//Memory-flush trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_SyncDOtoAO_tick, static_cast<U16>(syncDOtoAO_tick)));								//DO and AO relative sync
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, static_cast<U16>(syncAODOtoLinegate_tick)));				//DO and AO sync to linegate
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));														//Trigger the FPGA outputs (non-RT trigger)
@@ -214,6 +207,12 @@ namespace FPGAns
 
 		//STAGES
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stageTriggerPulse / us * tickPerUs)));	//Trigger pulsewidth
+
+		//Flush the RAM buffers on the FPGA as precaution. 
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));															//Memory-flush trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
+		//std::cout << "flushBRAMs called\n";	//For debugging
 
 		/*
 		//SHUTTERS. Commented out to allow keeping the shutter on

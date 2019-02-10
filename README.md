@@ -3,9 +3,9 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- Flush the RAMs at the beginning of each run
+- Deal with multithread exception in the Filterwheel class!!!!
+- Do a post-sequence clean up routine to set the pockels outputs to 0
 - For the vibratome, show the progress of the slicing sequence as a percentage
-- Deal with multithread exception in the Filterwheel class
 - Maybe implement an automatic laser power increase depending on the imaging depth
 - Maybe install VTK to display tiff images
 

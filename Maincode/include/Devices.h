@@ -139,6 +139,7 @@ class Filterwheel
 	const std::vector<Filtercolor> mDetConfig{ BLUE, GREEN, RED, CLOSED, OPEN, OPEN };	//Currently, there are 2 green filters set up in the wheel (pos #2 and #5)
 																						//The code looks for the GREEN entry in this vector and reads its position
 																						//For now, I write GREEN in the vector position of the filter to be used
+																						//Place GREEN in the second position to use FF01-520/60, or in the fifth position to use FF01-514/44 (green)
 		
 	FilterwheelSelector mWhichFilterwheel;	//Device ID = 1, 2, ...
 	std::string mFilterwheelName;			//Device given name

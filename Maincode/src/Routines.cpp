@@ -3,11 +3,16 @@
 
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 43.500 * mm, 17.700 * mm, 21.330 * mm };
-const std::string sampleName{ "Liver" };
-const std::string immersionMedium{ "SiliconMineralOil5050" };
-const std::string collar{ "1.495" };
-const ChannelList channelListLiver{ {{ "GFP", 920, 60. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 20. * mW, 0.15 * mWpum }} };	//Define the wavelengths and laser powers for liver
+const double3 stackCenterXYZ{ 33.720 * mm, 19.355 * mm, 18.451 * mm };
+//const std::string sampleName{ "Liver" };
+//const std::string immersionMedium{ "SiliconMineralOil5050" };
+//const std::string collar{ "1.495" };
+//const ChannelList channelListLiver{ {{ "GFP", 920, 60. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 20. * mW, 0.15 * mWpum }} };	//Define the wavelengths and laser powers for liver
+const std::string sampleName{ "Beads4um" };
+const std::string immersionMedium{ "SiliconOil" };
+const std::string collar{ "1.51" };
+const ChannelList channelListBeads{ {{ "DAPI", 750, 25. * mW, 0. * mWpum }} };	//Define the wavelengths and laser powers for liver
+const ChannelList channelList{ channelListBeads };
 
 namespace MainRoutines
 {
@@ -16,23 +21,23 @@ namespace MainRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RunMode acqMode{ STACKMODE };			//Image a stack frame by frame from the initial z position
-		//const RunMode acqMode{ STACKCENTEREDMODE };		//Image a stack frame by frame centered at the initial z position
+		const RunMode acqMode{ STACKCENTEREDMODE };		//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelListLiver.findChannel("DAPI") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 10 };				//Number of frames for continuous XY acquisition
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
-		const double stepSizeZ{ 0.5 * um };
+		const double stepSizeZ{ 0.5* um };
 		const double stackDepthZ{ 20. * um };	//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
@@ -186,8 +191,8 @@ namespace MainRoutines
 			*/
 
 		//ACQUISITION SETTINGS
-		const ChannelList channelList{ channelListLiver };
-		//const ChannelList channelList{ {channelListLiver.findChannel("DAPI")} };
+		const ChannelList channelList{ channelList };
+		//const ChannelList channelList{ {channelList.findChannel("DAPI")} };
 		const int2 nStacksXY{ 3, 4 };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
@@ -303,7 +308,7 @@ namespace MainRoutines
 	void liveScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelListLiver.findChannel("GFP") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
 		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
@@ -355,7 +360,7 @@ namespace MainRoutines
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelListLiver.findChannel("GFP") };	//Select a particular laser
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("GFP") };	//Select a particular laser
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
 		const int nFramesCont{ 160 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
@@ -433,8 +438,8 @@ namespace MainRoutines
 		const double sampleLengthZ{ 0.01 * mm };								//Sample thickness
 		const double sampleSurfaceZ{ stackCenterXYZ.at(ZZ) };
 
-		//const ChannelList channelList{ channelListLiver };
-		const ChannelList channelList{ {channelListLiver.findChannel("GFP")} };
+		//const ChannelList channelList{ channelList };
+		const ChannelList channelList{ {channelList.findChannel("GFP")} };
 		const Sample sample{ sampleName, immersionMedium, collar, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
 
@@ -1068,8 +1073,8 @@ namespace TestRoutines
 		const double sampleLengthZ{ 0.01 * mm };							//Sample thickness
 		const double sampleSurfaceZ{ 18.471 * mm };
 
-		const ChannelList channelList{ channelListLiver };
-		//const ChannelList channelList{ channelListLiver.findChannel("DAPI") };
+		const ChannelList channelList{ channelList };
+		//const ChannelList channelList{ channelList.findChannel("DAPI") };
 		Sample sample{ "Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlapXYZ_frac };
 
@@ -1150,7 +1155,7 @@ namespace TestRoutines
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 		//Create a sequence
-		Sequencer sequence{ channelListLiver, Sample(sampleName, immersionMedium, collar), stack, stackCenterXYZ, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
+		Sequencer sequence{ channelList, Sample(sampleName, immersionMedium, collar), stack, stackCenterXYZ, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
 		std::vector<double2> locationList{ sequence.generateLocationList() };
 		
 		for (std::vector<int>::size_type iter_loc = 0; iter_loc < locationList.size(); iter_loc++)

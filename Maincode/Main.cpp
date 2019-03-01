@@ -8,11 +8,11 @@ int main(int argc, char* argv[])
 		try
 		{
 			//MAIN SEQUENCES
-			//MainRoutines::frameByFrameScan(fpga);
-			MainRoutines::frameByFrameScan_LocationList(fpga, 2);
-			//MainRoutines::liveScan(fpga);
-			//MainRoutines::continuousScan(fpga);
-			//MainRoutines::sequencer(fpga);
+			MainRoutines::frameByFrameScan(fpga);
+			//MainRoutines::frameByFrameScan_LocationList(fpga, 2);//scan frame by frame the specified set of locations
+			//MainRoutines::liveScan(fpga);//Image nonstop and move the stage manually thru the PI software
+			//MainRoutines::continuousScan(fpga);//Scan the z stage continuously. FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power
+			//MainRoutines::sequencer(fpga);FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power. Also I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
 
 			//TESTS
 			//TestRoutines::photobleach(fpga);

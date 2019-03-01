@@ -3,9 +3,10 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- Deal with multithread exception in the Filterwheel class!!!!
+- For scaling the pockels power, currently linear scaling for just the voltage is implemented. Implement linear scaling for the laser power as well (because the laser power depends nonlinearly of the voltage). 
+- Fix how to deal with multithread exception in the Filterwheel class!!!!
 - Do a post-sequence clean up routine to set the pockels outputs to 0
-- For the vibratome, show the progress of the slicing sequence as a percentage
+- For the vibratome, show a progress bar for the slicing sequence
 - Maybe implement an automatic laser power increase depending on the imaging depth
 - Maybe install VTK to display tiff images
 

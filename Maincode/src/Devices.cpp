@@ -423,8 +423,18 @@ void ResonantScanner::isRunning() const
 #pragma region "Galvo"
 Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel): mRTcontrol(RTcontrol), mGalvoRTchannel(galvoChannel)
 {
-	if ( mGalvoRTchannel != RTGALVO1 )
+	switch (galvoChannel)
+	{
+	case RTSCANGALVO:
+		mVoltagePerDistance = mScanCalib;
+		break;
+	case RTRESCANGALVO:
+		mVoltagePerDistance = mRescanCalib;
+		mVoltageOffset = mRescanVoltageOffset;
+		break;
+	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
+	}
 }
 
 Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax) : Galvo(RTcontrol, galvoChannel)
@@ -453,7 +463,9 @@ void Galvo::generateFrameScan(const double xi, const double xf) const
 	const double timeStep{ 8. * us };	//Time step of the linear ramp
 	const double fineTuneHalfPeriodLineclock{ -0.58 * us };	//Adjust the RS half-period to fine tune the galvo's frame-scan
 	const double frameDuration{ (halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix };	//Time to scan a frame = (time for the RS to travel from side to side) x (# height of the frame in pixels)
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
+
+	//The voltage offset is to allow to compasate for the slight axis misalignment of the rescan galvo
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi + mVoltageOffset, mVoltagePerDistance * xf + mVoltageOffset);
 }
 
 void Galvo::voltageToZero() const

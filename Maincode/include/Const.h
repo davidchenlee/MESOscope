@@ -31,7 +31,7 @@ namespace Constants
 	enum TiffPageStructSelector { SINGLEPAGE = false, MULTIPAGE = true};
 	enum OverrideFileSelector { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
-	enum RTchannel { RTPIXELCLOCK, RTGALVO1, RTGALVO2, RTDODEBUG, RTVISION, RTSCALINGVISION, RTFIDELITY, RTSCALINGFIDELITY, RTNCHAN };		//RTNCHAN = number of RT channels available, including the channel for the pixelclock
+	enum RTchannel { RTPIXELCLOCK, RTSCANGALVO, RTRESCANGALVO, RTDODEBUG, RTVISION, RTSCALINGVISION, RTFIDELITY, RTSCALINGFIDELITY, RTNCHAN };		//RTNCHAN = number of RT channels available, including the channel for the pixelclock
 	enum FilterwheelSelector { FWDET, FWEXC };
 	enum Axis { XX, YY, ZZ };
 	enum RunMode { SINGLEMODE, LIVEMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };

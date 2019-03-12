@@ -407,8 +407,8 @@ namespace FPGAns
 	{
 		//Read from the FPGA the last voltage in the galvo AO. See the LV implementation
 		std::vector<I16> AOlastVoltage_I16(RTNCHAN, 0);
-		checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo1Mon, &AOlastVoltage_I16.at(RTGALVO1)));
-		checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getHandle(), NiFpga_FPGAvi_IndicatorU16_Galvo2Mon, &AOlastVoltage_I16.at(RTGALVO2)));
+		checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getHandle(), NiFpga_FPGAvi_IndicatorU16_ScanGalvoMon, &AOlastVoltage_I16.at(RTSCANGALVO)));
+		checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getHandle(), NiFpga_FPGAvi_IndicatorU16_RescanGalvoMon, &AOlastVoltage_I16.at(RTRESCANGALVO)));
 
 		//Create a vector of queues
 		VQU32 vectorOfQueuesForRamp{ RTNCHAN };
@@ -417,7 +417,7 @@ namespace FPGAns
 			if (mVectorOfQueues.at(chan).size() != 0)
 			{
 				//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
-				if ((chan == RTGALVO1 || chan == RTGALVO2) )	//Only do GALVO1 and GALVO2 for now
+				if ((chan == RTSCANGALVO || chan == RTRESCANGALVO) )	//Only do GALVO1 and GALVO2 for now
 				{
 					const double Vi = I16toVoltage(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
 					const double Vf = I16toVoltage((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT control sequence

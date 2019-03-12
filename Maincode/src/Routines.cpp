@@ -86,7 +86,7 @@ namespace MainRoutines
 
 		//GALVO RT linear scan
 		const double FFOVgalvo{ 200. * um };			//Full FOV in the slow axis
-		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
+		const Galvo galvo{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
 
 		//LASER
 		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, AUTO };
@@ -214,7 +214,7 @@ namespace MainRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
 		//GALVO RT linear scan
-		const Galvo galvo{ RTcontrol, RTGALVO1, FFOV.at(XX) / 2 };
+		const Galvo galvo{ RTcontrol, RTSCANGALVO, FFOV.at(XX) / 2 };
 
 		//LASER
 		VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm };
@@ -322,7 +322,7 @@ namespace MainRoutines
 
 		//GALVO RT linear scan
 		const double FFOVgalvo{ 200. * um };	//Full FOV in the slow axis
-		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
+		const Galvo galvo{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
 
 		//LASER
 		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, AUTO };
@@ -403,7 +403,7 @@ namespace MainRoutines
 
 		//GALVO RT linear scan
 		const double FFOVgalvo{ 200. * um };	//Full FOV in the slow axis
-		const Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
+		const Galvo galvo{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
 
 		//OPEN THE SHUTTER
 		laser.openShutter();	//The destructor will close the shutter automatically
@@ -467,7 +467,7 @@ namespace MainRoutines
 			VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm };
 
 			//GALVO RT linear ramp	
-			const Galvo galvo{ RTcontrol, RTGALVO1, FFOV.at(XX) / 2 };
+			const Galvo galvo{ RTcontrol, RTSCANGALVO, FFOV.at(XX) / 2 };
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol, STAGETRIG }; //Note the STAGETRIG flag
@@ -561,7 +561,7 @@ namespace TestRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, 100 };
 
 		//GALVO. Keep the galvo fixed to bleach a line on the sample
-		Galvo galvo{ RTcontrol, RTGALVO1, 0 };
+		Galvo galvo{ RTcontrol, RTSCANGALVO, 0 };
 
 		//POCKELS CELLS
 		PockelsCell pockels{ RTcontrol, 920, VISION };
@@ -597,7 +597,7 @@ namespace TestRoutines
 
 		//GALVO
 		const double FFOVgalvo{ 200. * um };			//Full FOV in the slow axis
-		Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
+		Galvo galvo{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
 
 		//LASER
 		const int wavelength_nm{ 1040 };
@@ -642,11 +642,11 @@ namespace TestRoutines
 		const double step{ 4. * us };
 
 		FPGAns::RTcontrol RTcontrol(fpga);
-		RTcontrol.pushAnalogSinglet(RTGALVO1, step, 10 * V);				//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);
-		RTcontrol.pushLinearRamp(RTGALVO1, 4 * us, delay, 0, 5 * V);		//Linear ramp to accumulate the error
-		RTcontrol.pushAnalogSinglet(RTGALVO1, step, 10 * V);				//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTGALVO1, step, 0);						//Final pulse
+		RTcontrol.pushAnalogSinglet(RTSCANGALVO, step, 10 * V);				//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTSCANGALVO, step, 0);
+		RTcontrol.pushLinearRamp(RTSCANGALVO, 4 * us, delay, 0, 5 * V);		//Linear ramp to accumulate the error
+		RTcontrol.pushAnalogSinglet(RTSCANGALVO, step, 10 * V);				//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTSCANGALVO, step, 0);						//Final pulse
 
 		//DO0
 		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
@@ -709,7 +709,7 @@ namespace TestRoutines
 	}
 
 
-	void galvo(const FPGAns::FPGA &fpga)
+	void galvos(const FPGAns::FPGA &fpga)
 	{
 		const int width_pix{ 300 };
 		const int height_pix{ 400 };
@@ -721,7 +721,8 @@ namespace TestRoutines
 
 		//GALVO
 		const double FFOVgalvo{ 200. * um };				//Full FOV in the slow axis
-		Galvo galvo{ RTcontrol, RTGALVO1, FFOVgalvo / 2 };
+		Galvo scanGalvo{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
+		Galvo rescanGalvo{ RTcontrol, RTRESCANGALVO, FFOVgalvo / 2 };
 
 		for (int iter = 0; iter < nFramesDiscont; iter++)
 		{
@@ -756,9 +757,9 @@ namespace TestRoutines
 		RTcontrol.pushDigitalSinglet(RTDODEBUG, 4 * us, 0);
 
 		//AO
-		RTcontrol.pushAnalogSinglet(RTGALVO1, 8 * us, 4 * V);
-		RTcontrol.pushAnalogSinglet(RTGALVO1, 4 * us, 2 * V);
-		RTcontrol.pushAnalogSinglet(RTGALVO1, 4 * us, 1 * V);
+		RTcontrol.pushAnalogSinglet(RTSCANGALVO, 8 * us, 4 * V);
+		RTcontrol.pushAnalogSinglet(RTSCANGALVO, 4 * us, 2 * V);
+		RTcontrol.pushAnalogSinglet(RTSCANGALVO, 4 * us, 1 * V);
 
 		RTcontrol.triggerRT();	//Execute the realtime control sequence
 	}
@@ -769,9 +770,9 @@ namespace TestRoutines
 		const double step{ 4. * us };
 
 		FPGAns::RTcontrol RTcontrol{ fpga };
-		RTcontrol.pushLinearRamp(RTGALVO1, step, 2 * ms, 0, -Vmax);
-		RTcontrol.pushLinearRamp(RTGALVO1, step, 20 * ms, -Vmax, Vmax);
-		RTcontrol.pushLinearRamp(RTGALVO1, step, 2 * ms, Vmax, 0);
+		RTcontrol.pushLinearRamp(RTSCANGALVO, step, 2 * ms, 0, -Vmax);
+		RTcontrol.pushLinearRamp(RTSCANGALVO, step, 20 * ms, -Vmax, Vmax);
+		RTcontrol.pushLinearRamp(RTSCANGALVO, step, 2 * ms, Vmax, 0);
 
 		const double pulsewidth(300. * us);
 		RTcontrol.pushDigitalSinglet(RTDODEBUG, pulsewidth, 1);

@@ -78,9 +78,15 @@ public:
 
 class Galvo
 {
-	FPGAns::RTcontrol &mRTcontrol;								//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
+	const double mScanCalib{ 0.02417210 * V / um };			//volts per um. Calibration factor of the scan galvo. Last calib 31/7/2018
+	const double mRescanCalib{ -0.273743 * mScanCalib };	//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector.
+															//The minus sign indicates that the rescan galvo is 180 Deg out of phase wrt the scan galvo
+	const double mRescanVoltageOffset{ 0.00399 };			//To compensate for the slight axis misalignment of the rescan galvo in order to have the emission centered at the detector
+
+	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
-	const double mVoltagePerDistance{ 0.02417210 * V / um };	//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
+	double mVoltagePerDistance;	
+	double mVoltageOffset{ 0 };
 public:
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel);
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax);

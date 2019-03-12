@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::fineTuneGalvoScan(fpga);
 			//TestRoutines::pockels(fpga);
 			//TestRoutines::pockelsRamp(fpga);
-			TestRoutines::galvo(fpga);
+			TestRoutines::galvos(fpga);
 			//TestRoutines::pixelclock(fpga);
 			//TestRoutines::analogAndDigitalOut(fpga);
 			//TestRoutines::analogRamp(fpga);
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
 		std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
 		pressAnyKeyToCont();
 	}
-	//pressAnyKeyToCont();
 
+	pressAnyKeyToCont();
 	return 0;
 }

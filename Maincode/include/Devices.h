@@ -80,7 +80,7 @@ class Galvo
 {
 	FPGAns::RTcontrol &mRTcontrol;								//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
-	const double mVoltagePerDistance{ 0.02417210 * V / um };		//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
+	const double mVoltagePerDistance{ 0.02417210 * V / um };	//volts per um. Calibration factor of the galvo. Last calib 31/7/2018
 public:
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel);
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax);
@@ -123,7 +123,7 @@ class Filterwheel
 	/* Beamsplitters in the excitation wheel as of Feb 2019
 	position #1, 750 nm beamsplitter
 	position #2, open (no beamsplitter)
-	position #3, open (no beamsplitter)
+	position #3, 1040 nm beamsplitter
 	position #4, open (no beamsplitter)
 	position #5, open (no beamsplitter)
 	position #6, open (no beamsplitter) */

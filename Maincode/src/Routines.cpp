@@ -1,17 +1,17 @@
 #include "Routines.h"
 
-
-
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 33.720 * mm, 19.355 * mm, 18.451 * mm };
+const double3 stackCenterXYZ{ 46.000 * mm, 27.5 * mm, 18.750 * mm };
 //const std::string sampleName{ "Liver" };
-//const std::string immersionMedium{ "SiliconMineralOil5050" };
+//const std::string immersionMedium{ "SiliconeMineralOil5050" };
 //const std::string collar{ "1.495" };
 //const ChannelList channelListLiver{ {{ "GFP", 920, 60. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 20. * mW, 0.15 * mWpum }} };	//Define the wavelengths and laser powers for liver
-const std::string sampleName{ "Beads4um" };
-const std::string immersionMedium{ "SiliconOil" };
+const std::string sampleName{ "FluorSlide" };
+const std::string immersionMedium{ "Glycerol" };
 const std::string collar{ "1.51" };
-const ChannelList channelListBeads{ {{ "DAPI", 750, 25. * mW, 0. * mWpum }} };	//Define the wavelengths and laser powers for liver
+//const ChannelList channelListBeads{ {{ "DAPI", 750, 50. * mW, 0. * mWpum }, { "GFP", 920, 50. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//4um beads
+//const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//0.5um beads
+const ChannelList channelListBeads{ {{ "DAPI", 750, 15. * mW, 0. * mWpum }} };	//fluorescent slide
 const ChannelList channelList{ channelListBeads };
 
 namespace MainRoutines
@@ -30,15 +30,15 @@ namespace MainRoutines
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 10 };				//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 5 };				//Number of frames for continuous XY acquisition
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
-		const double stepSizeZ{ 0.5* um };
-		const double stackDepthZ{ 20. * um };	//Acquire a stack of this depth or thickness in Z
+		const double stepSizeZ{ 1.0 * um };
+		const double stackDepthZ{ 100. * um };	//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
@@ -714,7 +714,7 @@ namespace TestRoutines
 		const int width_pix{ 300 };
 		const int height_pix{ 400 };
 		const int nFramesDiscont{ 1 };
-		const int nFramesCont{ 20 };
+		const int nFramesCont{ 2 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, width_pix, height_pix };

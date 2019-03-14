@@ -174,7 +174,7 @@ namespace FPGAns
 	//Load the imaging parameters onto the FPGA. See 'Const.cpp' for the definition of each variable
 	void FPGA::initializeFpga_() const
 	{
-		if (RTNCHAN < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || syncAODOtoLinegate_tick < 0 || linegateTimeout < 0 || stageTriggerPulse < 0)
+		if (RTNCHAN < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || pockelsDelay_tick < 0 || rescanGalvoDelay_tick < 0 || linegateTimeout < 0 || stageTriggerPulse < 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 		//INPUT SELECTORS
@@ -190,7 +190,8 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));																//Pc trigger signal
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));													//Z-stage as tigger
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_SyncDOtoAO_tick, static_cast<U16>(syncDOtoAO_tick)));								//DO and AO relative sync
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_SyncAODOtoLinegate_tick, static_cast<U16>(syncAODOtoLinegate_tick)));				//DO and AO sync to linegate
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_PockelsDelay_tick, static_cast<U16>(pockelsDelay_tick)));							//Pockels cell delay the preframeclock trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_RescanGalvoDelay_tick, static_cast<U16>(rescanGalvoDelay_tick)));					//Rescan galvo delay the preframeclock trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));														//Trigger the FPGA outputs (non-RT trigger)
 
 		if (linegateTimeout <= 2 * halfPeriodLineclock)

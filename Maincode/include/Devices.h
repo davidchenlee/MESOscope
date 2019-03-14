@@ -79,23 +79,22 @@ public:
 class Galvo
 {
 	const double mScanCalib{ 0.02417210 * V / um };			//volts per um. Calibration factor of the scan galvo. Last calib 31/7/2018
-	const double mRescanCalib{ -0.273743 * mScanCalib };	//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector.
-															//The minus sign indicates that the rescan galvo is 180 Deg out of phase wrt the scan galvo
-	const double mRescanVoltageOffset{ 0.00399 };			//To compensate for the slight axis misalignment of the rescan galvo in order to have the emission centered at the detector
+	const double mRescanCalib{ -0.269775 * mScanCalib };	//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector. Note the minus sign
+	const double mRescanVoltageOffset{ 0.002 };				//To compensate for the slight axis misalignment of the rescan galvo in order to have the emission centered at the detector
 
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
 	double mVoltagePerDistance;	
-	double mVoltageOffset{ 0 };
 public:
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel);
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax);
 
+	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
 	void positionLinearRamp(const double timeStep, const double rampLength, const double xi, const double xf) const;
-	void generateFrameScan(const double xi, const double xf) const;
 	void voltageToZero() const;
-	void pushVoltageSinglet(const double timeStep, const double AO) const;
+	void generateFrameScan(const double xi, const double xf) const;
+	void generateFrameRescan(const double xi, const double xf) const;
 };
 
 class PMT16X

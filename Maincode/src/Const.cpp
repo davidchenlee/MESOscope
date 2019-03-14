@@ -41,9 +41,11 @@ namespace Constants
 	extern const U32 tMIN_tick{ 2 };						//Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
 	extern const int AO_tMIN{ 2 * us };						//Time step of the analog output. The AO channels has a delay of >1 us 
 	extern const int syncDOtoAO_tick{ 4 * 74 };				//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
-	extern const int syncAODOtoLinegate_tick{ 0 };			//Relative delay between AO/DO and 'Line gate' (the sync signal from the resonant scanner)
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
+	extern const int pockelsDelay_tick{ 0 };				//Delay of the Pockels AO after the preframeclock trigger
+	extern const int rescanGalvoDelay_tick{ 0 };			//Delay of the rescan galvo AO after the preframeclock trigger
+
 	
 	extern const double linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
 															//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered

@@ -712,15 +712,15 @@ namespace TestRoutines
 	void galvos(const FPGAns::FPGA &fpga)
 	{
 		const int width_pix{ 300 };
-		const int height_pix{ 400 };
+		const int height_pix{ 35 }; //For PMT16X, height_pix = 35
 		const int nFramesDiscont{ 1 };
 		const int nFramesCont{ 2 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, width_pix, height_pix };
 
-		//GALVO
-		const double FFOVgalvo{ 200. * um };				//Full FOV in the slow axis
+		//GALVOS
+		const double FFOVgalvo{ 17.5 * um };				//Full FOV in the slow axis. For PMT16X, 17.5 um
 		Galvo scanGalvo{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
 		Galvo rescanGalvo{ RTcontrol, RTRESCANGALVO, FFOVgalvo / 2 };
 

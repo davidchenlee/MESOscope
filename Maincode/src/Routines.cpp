@@ -901,11 +901,33 @@ namespace TestRoutines
 	void PMT16Xconfig()
 	{
 		PMT16X pmt;
-		pmt.readAllGain();
-		//pmt.setSingleGain(2, 300);
+		//pmt.readAllGain();
+		//pmt.setSingleGain(12, 170);
 		//pmt.setAllGain(255);
 		//pmt.readTemp();
-		//pmt.setAllGain({ 100,255,255,255,255,255,255,255,255,255,255,255,255,255,100,255});
+
+		//To make the response of all the channels even
+		//rescan with frequency = 100 Hz and amplitude = 1.5V, which is larger than the size of the PMT16X
+		//to use the linear part of the ramp
+		//Set the refresh rate to 10 or 20 ms
+		pmt.setAllGain({
+			170,	//1
+			165,	//2
+			255,	//3
+			170,	//4
+			170,	//5
+			200,	//6
+			180,	//7
+			165,	//8
+			200,	//9, this channel presents the lowest signal. For some reason 255 gives a lower signal than 200
+			170,	//10
+			170,	//11
+			165,	//12
+			185,	//13
+			205,	//14
+			200,	//15
+			190		//16
+			});
 	}
 
 	void lasers(const FPGAns::FPGA &fpga)

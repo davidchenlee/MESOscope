@@ -1,5 +1,5 @@
 #include "Routines.h"
-
+/*
 int main(int argc, char* argv[])
 {
 	try
@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::fineTuneGalvoScan(fpga);
 			//TestRoutines::pockels(fpga);
 			//TestRoutines::pockelsRamp(fpga);
-			TestRoutines::galvos(fpga);
+			//TestRoutines::galvos(fpga);
 			//TestRoutines::pixelclock(fpga);
 			//TestRoutines::analogAndDigitalOut(fpga);
 			//TestRoutines::analogRamp(fpga);
@@ -77,4 +77,20 @@ int main(int argc, char* argv[])
 
 	pressAnyKeyToCont();
 	return 0;
+}
+*/
+
+//Main without calling the fpga, because LV blocks the access to the fpga
+int main(int argc, char* argv[])
+{
+	try
+	{
+		//Make sure first that the power supply of the FPGA is up
+		TestRoutines::PMT16Xconfig();
+	}
+	catch (...)
+	{
+		std::cout << "An error has occurred" << "\n";
+	}
+	pressAnyKeyToCont();
 }

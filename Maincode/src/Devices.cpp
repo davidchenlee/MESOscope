@@ -164,14 +164,49 @@ void Image::correctInterleaved_()
 //Once multiplexing is implemented, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
 void Image::demultiplex_()
 {
-	//Define masks
-	const U32 mask1 = 0x0000000F;
+	//Upscale the buffer to go from 4-bit to 8-bit, to use the range 0-255 compatible with ImageJ's visualization
+	U8 upscaleFactorU8 = mRTcontrol.mUpscaleFactorU8;
+	//U8 upscaleFactorU8 = 1; //For ddebugging
 
+	U8* Count = new U8[16];		//Array storing the photocount in each channel (Ch1-Ch16)
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
 	{
-		//TODO: pick up the corresponding 4-bit segment from mBufArrayA and mBufArrayB
-		//Upscale the buffer to go from 4-bit to 8-bit
-		U8 upscaled{ static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * mBufArrayA[pixIndex]) };
+		//mBufArrayA (channels 1-8)
+		Count[0] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));	//Extract the first 4 bits
+		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;									//shift 4 places to the right
+		Count[1] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));	//Extract the first 4 bits
+		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;									//shift 4 places to the right
+		Count[2] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
+		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
+		Count[3] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
+		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
+		Count[4] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
+		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
+		Count[5] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
+		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
+		Count[6] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
+		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
+		Count[7] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
+
+		//mBufArrayB (channels 9-16)
+		Count[8] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
+		Count[9] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
+		Count[10] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
+		Count[11] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
+		Count[12] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
+		Count[13] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
+		Count[14] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
+		Count[15] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+
+
+		U8 upscaled{ Count[9] };
 
 		//If upscaled overflows
 		if (upscaled > _UI8_MAX)
@@ -181,6 +216,20 @@ void Image::demultiplex_()
 		//For MUX16, resconstruct the image by assigning the stripes in the image
 		(mTiff.pointerToTiff())[pixIndex] = upscaled;
 	}
+	/*
+	//For debugging
+	std::cout << (int)Count01 << "\n";
+	std::cout << (int)Count02 << "\n";
+	std::cout << (int)Count03 << "\n";
+	std::cout << (int)Count04 << "\n";
+	std::cout << (int)Count05 << "\n";
+	std::cout << (int)Count06 << "\n";
+	std::cout << (int)Count07 << "\n";
+	std::cout << (int)Count08 << "\n";
+	*/
+
+	//Clean uo
+	delete[] Count;
 }
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
@@ -444,7 +493,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const d
 		generateFrameScan(posMax, -posMax);
 		break;
 	case RTRESCANGALVO:
-		generateFrameRescan(posMax, -posMax);
+		generateFrameRescan(-posMax, posMax); //To keep the fluorescent spot fixed at the detector, swing the rescan galvo in the opposite direction to the scan galvo
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -479,6 +528,7 @@ void Galvo::generateFrameScan(const double xi, const double xf) const
 	const double fineTuneHalfPeriodLineclock{ -0.58 * us };	//Adjust the RS half-period to fine tune the galvo's frame-scan
 	const double frameDuration{ (halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix };	//Time to scan a frame = (time for the RS to travel from side to side) x (# height of the frame in pixels)
 
+	//mRTcontrol.pushAnalogSinglet(mGalvoRTchannel, 400. * us, mVoltagePerDistance * xi);//deleteme
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
 }
 
@@ -489,9 +539,9 @@ void Galvo::generateFrameRescan(const double xi, const double xf) const
 
 	//Dirty hack. The rescanner has some delay wrt the scan galvo because of the inertia of the mirror (compare the position of the scan and rescan galvos on the oscilloscope)
 	//To compensate for such delay, a shorter ramp is used for the rescanner 
-	//To optimize the ramp duration. look at a fluorescent slide on the camera and minimize the emission footprint during a scan
-	//const double frameDuration{ 1.9 * ms };		
-	const double frameDuration{ 24.8 * ms };
+	//To optimize the ramp duration, look at a fluorescent slide on the camera and minimize the emission footprint during a scan
+	//const double frameDuration{ 1.9 * ms }; //For 35 pixels		
+	const double frameDuration{ (halfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix };
 
 	//The voltage offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi + mRescanVoltageOffset, mVoltagePerDistance * xf + mRescanVoltageOffset);

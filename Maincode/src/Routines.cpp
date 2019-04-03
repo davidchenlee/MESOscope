@@ -548,74 +548,34 @@ namespace MainRoutines
 //I bleach with the RS and not the galvo or the stages because this way the RS is kept on the entire time while bleaching and imaging
 namespace TestRoutines
 {
-	void photobleach(const FPGAns::FPGA &fpga)
+	//Test reading different channels of the PMT16X
+	//Must manually open the laser and Uniblitz shutter
+	void demultiplexing(const FPGAns::FPGA &fpga)
 	{
-		//RS
-		ResonantScanner RScanner{ fpga };
-		RScanner.isRunning();		//Make sure that the RS is running
-
-		Laser laser{ VISION };
-		laser.setWavelength(920);
-
-		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, FG, 100 };
-
-		//GALVO. Keep the galvo fixed to bleach a line on the sample
-		Galvo galvo{ RTcontrol, RTSCANGALVO, 0 };
-
-		//POCKELS CELLS
-		PockelsCell pockels{ RTcontrol, 920, VISION };
-		pockels.pushPowerSinglet(8 * us, 200 * mW);
-
-		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
-		pockels.setShutter(true);
-		Image image{ RTcontrol };
-		image.acquire(FIFODISABLE);
-		
-		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the RT sequence
-		pressAnyKeyToCont();
-		pockels.setShutter(false); 
-	}
-
-	void fineTuneGalvoScan(const FPGAns::FPGA &fpga)
-	{
-		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 30 };											//Number of frames for continuous XY acquisition
-		const double3 stagePositionXYZ{ 35.05 * mm, 10.40 * mm, 18.204 * mm };	//Stage initial position
-
-		//RS
-		const ResonantScanner RScanner{ fpga };
-		RScanner.isRunning();		//Make sure that the RS is running
-
-		//STAGES
-		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
+		const int heightPerFrame_pix{ 560 };
+		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
+		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
-		//GALVO
-		const double FFOVgalvo{ 200. * um };			//Full FOV in the slow axis
-		Galvo galvo{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
+		const double FFOVgalvo{ 280. * um };				//Distance scanned in the slow axis
+		Galvo galvoScan{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
+		//galvoScan.pushVoltageSinglet(8. * us, 0 * V);
+		//galvoScan.voltageLinearRamp(8. * us, 35. * ms, 3.17 * V, -3.17 * V);
+
+		Galvo galvoRescan{ RTcontrol, RTRESCANGALVO, FFOVgalvo / 2 };
+		//double offset = 0.04 * V;
+		//galvoRescan.pushVoltageSinglet(8. * us, offset);
+		//galvoRescan.voltageLinearRamp(8. * us, 35. * ms, offset + 0.856 * V, offset - 0.856 * V);
 
 		//LASER
-		const int wavelength_nm{ 1040 };
-		const double P{ 25. * mW };		//Laser power
-		VirtualLaser laser{ RTcontrol, wavelength_nm, P, FIDELITY };
-
-		//ACQUIRE FRAMES AT DIFFERENT Zs
-		stage.moveXYZ(stagePositionXYZ);
-		stage.waitForMotionToStopAll();
-
-		//OPEN THE UNIBLITZ SHUTTERS
-		laser.openShutter();	//The destructor will close the shutter automatically
+		VirtualLaser laser{ RTcontrol, 750, 30. * mW, VISION };
 
 		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{RTcontrol};
-		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
-		image.averageEvenOddFrames();
-		image.saveTiffMultiPage("Untitled", NOOVERRIDE);
+		Image image{ RTcontrol };
+		image.acquire();			//Execute the RT control sequence and acquire the image
+		image.saveTiffSinglePage("Untitled", OVERRIDE);
 	}
 
 	//Generate many short digital pulses and check the overall frameDuration with the oscilloscope
@@ -708,6 +668,36 @@ namespace TestRoutines
 		image.acquire(FIFODISABLE);		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 	}
 
+	//Photobleach a line along the fast axis (RS) on the sample
+	void photobleach(const FPGAns::FPGA &fpga)
+	{
+		//RS
+		ResonantScanner RScanner{ fpga };
+		RScanner.isRunning();		//Make sure that the RS is running
+
+		Laser laser{ VISION };
+		laser.setWavelength(920);
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, FG, 100 };
+
+		//GALVO. Keep the galvo fixed to bleach a line on the sample
+		Galvo galvo{ RTcontrol, RTSCANGALVO, 0 };
+
+		//POCKELS CELLS
+		PockelsCell pockels{ RTcontrol, 920, VISION };
+		pockels.pushPowerSinglet(8 * us, 200 * mW);
+
+		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
+		pockels.setShutter(true);
+		Image image{ RTcontrol };
+		image.acquire(FIFODISABLE);
+
+		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the RT sequence
+		pressAnyKeyToCont();
+		pockels.setShutter(false);
+	}
+
 	//Use a single beamlet but with the rescan galvo sync'ed to the scan galvo
 	//The single beamlet scans the full frame
 	void galvosSyncFullFrame(const FPGAns::FPGA &fpga)
@@ -721,7 +711,7 @@ namespace TestRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, width_pix, height_pix };
 
 		//GALVOS
-		const double FFOVgalvo{ 200. * um };							//Distance scanned in the slow axis.
+		const double FFOVgalvo{ 200. * um };							//Distance scanned in the slow axis
 		Galvo scanGalvo{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
 		Galvo rescanGalvo{ RTcontrol, RTRESCANGALVO, FFOVgalvo / 2 };	//WARNING: the rescan frame duration is currently set manually!!!!!
 
@@ -759,6 +749,48 @@ namespace TestRoutines
 			Image image{ RTcontrol };
 			image.acquire(FIFODISABLE);									//Execute the RT control sequence
 		}
+	}
+
+	//I think this is for matching the galvo forward and backward scans via imaging beads
+	void fineTuneGalvoScan(const FPGAns::FPGA &fpga)
+	{
+		//ACQUISITION SETTINGS
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 400 };
+		const int nFramesCont{ 30 };											//Number of frames for continuous XY acquisition
+		const double3 stagePositionXYZ{ 35.05 * mm, 10.40 * mm, 18.204 * mm };	//Stage initial position
+
+		//RS
+		const ResonantScanner RScanner{ fpga };
+		RScanner.isRunning();		//Make sure that the RS is running
+
+		//STAGES
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
+
+		//GALVO
+		const double FFOVgalvo{ 200. * um };			//Full FOV in the slow axis
+		Galvo galvo{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
+
+		//LASER
+		const int wavelength_nm{ 1040 };
+		const double P{ 25. * mW };		//Laser power
+		VirtualLaser laser{ RTcontrol, wavelength_nm, P, FIDELITY };
+
+		//ACQUIRE FRAMES AT DIFFERENT Zs
+		stage.moveXYZ(stagePositionXYZ);
+		stage.waitForMotionToStopAll();
+
+		//OPEN THE UNIBLITZ SHUTTERS
+		laser.openShutter();	//The destructor will close the shutter automatically
+
+		//EXECUTE THE RT CONTROL SEQUENCE
+		Image image{ RTcontrol };
+		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+		image.averageEvenOddFrames();
+		image.saveTiffMultiPage("Untitled", NOOVERRIDE);
 	}
 
 	void pixelclock(const FPGAns::FPGA &fpga)
@@ -939,20 +971,20 @@ namespace TestRoutines
 		pmt.setAllGain({
 			175,	//1
 			170,	//2
-			175,	//3
-			175,	//4
-			175,	//5
-			200,	//6
-			180,	//7
-			165,	//8
-			200,	//9, this channel presents the lowest signal. For some reason 255 gives a lower signal than 200
-			170,	//10
-			170,	//11
-			165,	//12
-			200,	//13
-			210,	//14
-			230,	//15
-			210		//16
+			150,	//3
+			150,	//4
+			145,	//5
+			155,	//6
+			150,	//7
+			160,	//8
+			255,	//9, this channel presents the lowest signal. For some reason 255 gives a lower signal than 200
+			200,	//10
+			210,	//11
+			255,	//12
+			255,	//13
+			255,	//14
+			255,	//15
+			200		//16
 			});
 	}
 

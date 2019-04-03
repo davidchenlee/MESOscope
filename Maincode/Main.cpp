@@ -1,5 +1,5 @@
 #include "Routines.h"
-/*
+
 int main(int argc, char* argv[])
 {
 	try
@@ -14,15 +14,16 @@ int main(int argc, char* argv[])
 			//MainRoutines::continuousScan(fpga);//Scan the z stage continuously. FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power
 			//MainRoutines::sequencer(fpga);FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power. Also I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
 
-			//TESTS
-			//TestRoutines::photobleach(fpga);
+			//TESTS.
+			TestRoutines::demultiplexing(fpga);
 			//TestRoutines::digitalLatency(fpga);
 			//TestRoutines::analogLatency(fpga);
-			//TestRoutines::fineTuneGalvoScan(fpga);
 			//TestRoutines::pockels(fpga);
 			//TestRoutines::pockelsRamp(fpga);
+			//TestRoutines::photobleach(fpga);
 			//TestRoutines::galvosSyncPartialFrame(fpga);
-			TestRoutines::galvosSyncFullFrame(fpga);
+			//TestRoutines::galvosSyncFullFrame(fpga);
+			//TestRoutines::fineTuneGalvoScan(fpga);
 			//TestRoutines::pixelclock(fpga);
 			//TestRoutines::analogAndDigitalOut(fpga);
 			//TestRoutines::analogRamp(fpga);
@@ -79,9 +80,10 @@ int main(int argc, char* argv[])
 	pressAnyKeyToCont();
 	return 0;
 }
-*/
 
 
+
+/*
 //Main without calling the fpga, because LV blocks the access to the fpga
 int main(int argc, char* argv[])
 {
@@ -96,3 +98,4 @@ int main(int argc, char* argv[])
 	}
 	pressAnyKeyToCont();
 }
+*/

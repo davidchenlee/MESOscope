@@ -21,7 +21,8 @@ int main(int argc, char* argv[])
 			//TestRoutines::fineTuneGalvoScan(fpga);
 			//TestRoutines::pockels(fpga);
 			//TestRoutines::pockelsRamp(fpga);
-			//TestRoutines::galvos(fpga);
+			//TestRoutines::galvosSyncPartialFrame(fpga);
+			TestRoutines::galvosSyncFullFrame(fpga);
 			//TestRoutines::pixelclock(fpga);
 			//TestRoutines::analogAndDigitalOut(fpga);
 			//TestRoutines::analogRamp(fpga);
@@ -79,6 +80,7 @@ int main(int argc, char* argv[])
 	return 0;
 }
 */
+
 
 //Main without calling the fpga, because LV blocks the access to the fpga
 int main(int argc, char* argv[])

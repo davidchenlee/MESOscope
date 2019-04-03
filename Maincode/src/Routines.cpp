@@ -708,21 +708,22 @@ namespace TestRoutines
 		image.acquire(FIFODISABLE);		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 	}
 
-
-	void galvos(const FPGAns::FPGA &fpga)
+	//Use a single beamlet but with the rescan galvo sync'ed to the scan galvo
+	//The single beamlet scans the full frame
+	void galvosSyncFullFrame(const FPGAns::FPGA &fpga)
 	{
 		const int width_pix{ 300 };
-		const int height_pix{ 35 }; //For PMT16X, height_pix = 35
+		const int height_pix{ 400 };
 		const int nFramesDiscont{ 1 };
-		const int nFramesCont{ 2 };
+		const int nFramesCont{ 100 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, width_pix, height_pix };
 
 		//GALVOS
-		const double FFOVgalvo{ 17.5 * um };				//Full FOV in the slow axis. For PMT16X, 17.5 um
+		const double FFOVgalvo{ 200. * um };							//Distance scanned in the slow axis.
 		Galvo scanGalvo{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
-		Galvo rescanGalvo{ RTcontrol, RTRESCANGALVO, FFOVgalvo / 2 };
+		Galvo rescanGalvo{ RTcontrol, RTRESCANGALVO, FFOVgalvo / 2 };	//WARNING: the rescan frame duration is currently set manually!!!!!
 
 		for (int iter = 0; iter < nFramesDiscont; iter++)
 		{
@@ -730,7 +731,33 @@ namespace TestRoutines
 
 			//Execute the realtime control sequence and acquire the image
 			Image image{ RTcontrol };
-			image.acquire(FIFODISABLE); //Execute the RT control sequence
+			image.acquire(FIFODISABLE);									//Execute the RT control sequence
+		}
+	}
+
+	//Use 16 beamlets where each scans 1/16 of the full frame
+	void galvosSyncPartialFrame(const FPGAns::FPGA &fpga)
+	{
+		const int width_pix{ 300 };
+		const int height_pix{ 35 };					//For PMT16X, height_pix = 35
+		const int nFramesDiscont{ 1 };
+		const int nFramesCont{ 2 };
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, width_pix, height_pix };
+
+		//GALVOS
+		const double FFOVgalvo{ 17.5 * um };							//Distance scanned in the slow axis. For PMT16X, 17.5 um
+		Galvo scanGalvo{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
+		Galvo rescanGalvo{ RTcontrol, RTRESCANGALVO, FFOVgalvo / 2 };	//WARNING: the rescan frame duration is currently set manually!!!!!
+
+		for (int iter = 0; iter < nFramesDiscont; iter++)
+		{
+			std::cout << "Iteration: " << iter + 1 << "\n";
+
+			//Execute the realtime control sequence and acquire the image
+			Image image{ RTcontrol };
+			image.acquire(FIFODISABLE);									//Execute the RT control sequence
 		}
 	}
 
@@ -906,16 +933,15 @@ namespace TestRoutines
 		//pmt.setAllGain(255);
 		//pmt.readTemp();
 
-		//To make the response of all the channels even
-		//rescan with frequency = 100 Hz and amplitude = 1.5V, which is larger than the size of the PMT16X
-		//to use the linear part of the ramp
-		//Set the refresh rate to 10 or 20 ms
+		//To make the count from all the channels similar,
+		//rescan with frequency = 100 Hz and amplitude = 1.5V (which is larger than the size of the PMT16X
+		//to use the linear part of the ramp). Set the refresh rate to 10 or 20 ms
 		pmt.setAllGain({
-			170,	//1
-			165,	//2
-			255,	//3
-			170,	//4
-			170,	//5
+			175,	//1
+			170,	//2
+			175,	//3
+			175,	//4
+			175,	//5
 			200,	//6
 			180,	//7
 			165,	//8
@@ -923,10 +949,10 @@ namespace TestRoutines
 			170,	//10
 			170,	//11
 			165,	//12
-			185,	//13
-			205,	//14
-			200,	//15
-			190		//16
+			200,	//13
+			210,	//14
+			230,	//15
+			210		//16
 			});
 	}
 

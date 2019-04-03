@@ -487,10 +487,11 @@ void Galvo::generateFrameRescan(const double xi, const double xf) const
 {
 	const double timeStep{ 8. * us };			//Time step of the linear ramp
 
-	//Dirty hack. The rescanner presents some delay wrt the scan galvo because of the inertia of the mirror (compare the galvo positions on the oscilloscope)
+	//Dirty hack. The rescanner has some delay wrt the scan galvo because of the inertia of the mirror (compare the position of the scan and rescan galvos on the oscilloscope)
 	//To compensate for such delay, a shorter ramp is used for the rescanner 
-	//To optimize the ramp duration. look at a fluorescent slide and minimize the emission footprint during a scan
-	const double frameDuration{ 1.9 * ms };		
+	//To optimize the ramp duration. look at a fluorescent slide on the camera and minimize the emission footprint during a scan
+	//const double frameDuration{ 1.9 * ms };		
+	const double frameDuration{ 24.8 * ms };
 
 	//The voltage offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi + mRescanVoltageOffset, mVoltagePerDistance * xf + mRescanVoltageOffset);

@@ -63,10 +63,7 @@ namespace Constants
 	extern const U8 pulseArray[nPulses]{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 											0, 0, 0, 0, 0, 0, 0, 0, 1, 0 };		//@160MHz, one cycle through this array lasts 125ns
 
-	//For debugging
-	//Voltage to align the single laser beam (i.e., without using the beam splitter) to a channel of the PMT16X
-	//This voltage considers that the rescanner is perfectly centered at the PMT16X. Otherwise, adjust the offset of the rescanner
-	extern const std::vector<double>  rescanGalvoAlignSinglebeamToPMTchannel_V{ -0.856, -0.742, -0.628, -0.514, -0.399, -0.285, -0.171, -0.057, 0.057, 0.171, 0.285, 0.399, 0.514, 0.628, 0.742, 0.856 };
+
 }
 
 //Currently, each frames is 400x400 pixels = 160000 pixels

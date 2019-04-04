@@ -15,15 +15,15 @@ int main(int argc, char* argv[])
 			//MainRoutines::sequencer(fpga);FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power. Also I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
 
 			//TESTS.
+			//TestRoutines::PMT16Xconfig();
 			TestRoutines::demultiplexing(fpga);
 			//TestRoutines::digitalLatency(fpga);
 			//TestRoutines::analogLatency(fpga);
 			//TestRoutines::pockels(fpga);
 			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::photobleach(fpga);
-			//TestRoutines::galvosSyncPartialFrame(fpga);
-			//TestRoutines::galvosSyncFullFrame(fpga);
-			//TestRoutines::fineTuneGalvoScan(fpga);
+			//TestRoutines::galvosSync(fpga);
+			//TestRoutines::fineTuneScanGalvo(fpga);
 			//TestRoutines::pixelclock(fpga);
 			//TestRoutines::analogAndDigitalOut(fpga);
 			//TestRoutines::analogRamp(fpga);
@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::shutter(fpga);
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();
-			//TestRoutines::PMT16Xconfig();
+
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
 			//TestRoutines::resonantScanner(fpga);

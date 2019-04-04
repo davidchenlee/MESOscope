@@ -15,15 +15,14 @@ namespace MainRoutines
 //TESTS
 namespace TestRoutines
 {
-	void demultiplexing(const FPGAns::FPGA &fpga);
 	void digitalLatency(const FPGAns::FPGA &fpga);
 	void analogLatency(const FPGAns::FPGA &fpga);
 	void pockels(const FPGAns::FPGA &fpga);
 	void pockelsRamp(const FPGAns::FPGA &fpga);
 	void photobleach(const FPGAns::FPGA &fpga);
-	void galvosSyncFullFrame(const FPGAns::FPGA &fpga);
-	void galvosSyncPartialFrame(const FPGAns::FPGA &fpga);
-	void fineTuneGalvoScan(const FPGAns::FPGA &fpga);
+	void fineTuneScanGalvo(const FPGAns::FPGA &fpga);
+	void galvosSync(const FPGAns::FPGA &fpga);
+	void demultiplexing(const FPGAns::FPGA &fpga);
 	void pixelclock(const FPGAns::FPGA &fpga);
 	void analogAndDigitalOut(const FPGAns::FPGA &fpga);
 	void analogRamp(const FPGAns::FPGA &fpga);

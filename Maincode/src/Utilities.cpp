@@ -411,9 +411,19 @@ void TiffU8::saveTxt(const std::string filename) const
 	fileHandle.close();											//Close the txt file
 }
 
-void TiffU8::pushImage(const int frame, const unsigned char* inputArray) const
+//Specify the frame to push. The frame index starts from 0
+void TiffU8::pushImage(const int frameIndex, const unsigned char* inputArray) const
 {
-	std::memcpy(&mArray[frame * mHeightPerFrame * mBytesPerLine], inputArray, mHeightPerFrame * mBytesPerLine);
+	std::memcpy(&mArray[frameIndex * mHeightPerFrame * mBytesPerLine], inputArray, mHeightPerFrame * mBytesPerLine);
+}
+
+//Specify the frame interval to push. The frame index starts from 0
+void TiffU8::pushImage(const int firstFrameIndex, const int lastFrameIndex, const unsigned char* inputArray) const
+{
+	if (lastFrameIndex < firstFrameIndex)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": lastFrameIndex must be greater or equal than firstFrameIndex <");
+
+	std::memcpy(&mArray[firstFrameIndex * mHeightPerFrame * mBytesPerLine], inputArray, (lastFrameIndex - firstFrameIndex + 1) * mHeightPerFrame * mBytesPerLine);
 }
 
 #pragma endregion "TiffU8"

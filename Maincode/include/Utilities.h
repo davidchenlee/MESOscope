@@ -54,7 +54,8 @@ public:
 	void averageFrames();
 	void analyze() const;
 	void saveTxt(const std::string fileName) const;
-	void pushImage(const int frame, const unsigned char* inputArray) const;
+	void pushImage(const int frameIndex, const unsigned char* inputArray) const;
+	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const unsigned char* inputArray) const;
 };
 
 

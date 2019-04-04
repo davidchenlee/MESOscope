@@ -167,7 +167,7 @@ void Image::demultiplex_()
 	U8 upscaleFactorU8 = mRTcontrol.mUpscaleFactorU8;
 	//U8 upscaleFactorU8 = 1; //For debugging
 
-	//Using 2 separate arrays, CountA and CountB, for implementing parallelization in the future
+	//Using 2 separate arrays CountA and CountB to allow parallelization in the future
 	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix, 8 * mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch1-Ch8
 	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix, 8 * mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch9-Ch16
 
@@ -204,10 +204,17 @@ void Image::demultiplex_()
 		//(mTiff.pointerToTiff())[pixIndex] = (CountA.pointerToTiff())[pickAChannel * mNpixPerFrame + pixIndex];
 	}
 
-	//Concatenate the PMT16X channels starting from the bottom, i.e., Ch1 at the bottom of the Tiff, Ch2 next, etc
-	//If mRTcontrol.mNframes > 1, then all the frames are concatenated as well
-	CountA.saveToFile("Ch1-8", SINGLEPAGE, OVERRIDE);
-	CountB.saveToFile("Ch8-16", SINGLEPAGE, OVERRIDE);
+	//For debugging
+	//Save all the PMT16X channels concatenated in a Tiff starting from the bottom (i.e., Ch1 at the bottom of the Tiff, Ch2 next, etc...). If mRTcontrol.mNframes > 1, then there's also frame concatenation
+	//CountA.saveToFile("Ch1-8", SINGLEPAGE, OVERRIDE);
+	//CountB.saveToFile("Ch8-16", SINGLEPAGE, OVERRIDE);
+
+	//For debugging
+	//Save each PMT16X channel in a different Tiff page
+	TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix * mRTcontrol.mNframes, 16 };
+	stack.pushImage(CH1, CH8, CountA.pointerToTiff());
+	stack.pushImage(CH9, CH16, CountB.pointerToTiff());
+	stack.saveToFile("Untitled", MULTIPAGE, OVERRIDE);
 }
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
@@ -471,7 +478,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const d
 		generateFrameScan(posMax, -posMax);
 		break;
 	case RTRESCANGALVO:
-		generateFrameRescan(-posMax, posMax); //To keep the fluorescent spot fixed at the detector, swing the rescan galvo in the opposite direction to the scan galvo
+		generateFrameRescan(-posMax, posMax); //To keep the fluorescent spot fixed at the detector, swing the rescanner in the opposite direction to the scan galvo
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -518,8 +525,7 @@ void Galvo::generateFrameRescan(const double xi, const double xf) const
 	//To compensate for such delay, a shorter ramp is used for the rescanner 
 	//To optimize the ramp duration, look at a fluorescent slide on the camera and minimize the emission footprint during a scan
 	//const double frameDuration{ 1.9 * ms }; //For 35 pixels		
-	//const double frameDuration{ (halfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix };
-	const double frameDuration{ 35. * ms };
+	const double frameDuration{ halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix };
 
 	//The voltage offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi + mRescanVoltageOffset, mVoltagePerDistance * xf + mRescanVoltageOffset);

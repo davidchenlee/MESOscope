@@ -42,6 +42,7 @@ namespace Constants
 	enum Multiplexing { SINGLEBEAM = false, MULTIBEAM = true};
 	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};
 	enum ScanDirection : int { BOTTOMUP = -1, TOPDOWN = 1};
+	enum PMT16Xchannel { CH1, CH2, CH3, CH4, CH5, CH6, CH7, CH8, CH9, CH10, CH11, CH12, CH13, CH14, CH15, CH16 };
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;
@@ -81,6 +82,4 @@ namespace Constants
 
 	extern const int nPulses;
 	extern const U8 pulseArray[];
-
-	extern const std::vector<double> rescanGalvoAlignSinglebeamToPMTchannel_V;
 }

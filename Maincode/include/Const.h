@@ -81,4 +81,6 @@ namespace Constants
 
 	extern const int nPulses;
 	extern const U8 pulseArray[];
+
+	extern const std::vector<double> rescanGalvoAlignSinglebeamToPMTchannel_V;
 }

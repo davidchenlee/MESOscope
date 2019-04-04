@@ -561,6 +561,7 @@ namespace TestRoutines
 
 		const double FFOVgalvo{ 280. * um };				//Distance scanned in the slow axis
 		Galvo galvoScan{ RTcontrol, RTSCANGALVO, FFOVgalvo / 2 };
+		//Galvo galvoScan{ RTcontrol, RTSCANGALVO};
 		//galvoScan.pushVoltageSinglet(8. * us, 0 * V);
 		//galvoScan.voltageLinearRamp(8. * us, 35. * ms, 3.17 * V, -3.17 * V);
 
@@ -575,7 +576,6 @@ namespace TestRoutines
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
 		image.acquire();			//Execute the RT control sequence and acquire the image
-		image.saveTiffSinglePage("Untitled", OVERRIDE);
 	}
 
 	//Generate many short digital pulses and check the overall frameDuration with the oscilloscope

@@ -80,8 +80,11 @@ class Galvo
 {
 	const double mScanCalib{ 0.02417210 * V / um };			//volts per um. Calibration factor of the scan galvo. Last calib 31/7/2018
 	const double mRescanCalib{ 0.269775 * mScanCalib };		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector. Note the minus sign
-	const double mRescanVoltageOffset{ 0.285 };				//To compensate for the slight axis misalignment of the rescan galvo in order to have the emission centered at the detector
-															//A positive offset steers the fluorescence towards the 16th channel of the PMT16X
+	//const double mRescanVoltageOffset{ 0.05 };
+	const double mRescanVoltageOffset{0.05 + rescanGalvoAlignSinglebeamToPMTchannel_V.at(7) };		//The offset compensates for the slight axis misalignment of the rescan galvo in order to have the emission centered at the detector
+															//To find the offset, swing the Rescan across the PMT16X channels (keep the Scan centered at 0) and align the stripe to the correct position (e.g. the 8th stripe's center
+															//should be at 35 pixels below the center)
+															//A negative offset steers the fluorescence towards the 1st channel of the PMT16X
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
 	double mVoltagePerDistance;	

@@ -161,75 +161,53 @@ void Image::correctInterleaved_()
 	}
 }
 
-//Once multiplexing is implemented, each U32 element in bufArray_B must be deMux in 8 segments of 4-bits each
 void Image::demultiplex_()
 {
-	//Upscale the buffer to go from 4-bit to 8-bit, to use the range 0-255 compatible with ImageJ's visualization
+	//Upscale the buffer to go from 4-bit to 8-bit, to use the range 0-255 compatible with ImageJ's visualization standards
 	U8 upscaleFactorU8 = mRTcontrol.mUpscaleFactorU8;
-	//U8 upscaleFactorU8 = 1; //For ddebugging
+	//U8 upscaleFactorU8 = 1; //For debugging
 
-	U8* Count = new U8[16];		//Array storing the photocount in each channel (Ch1-Ch16)
+	//Using 2 separate arrays, CountA and CountB, for implementing parallelization in the future
+	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix, 8 * mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch1-Ch8
+	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix, 8 * mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch9-Ch16
+
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
 	{
-		//mBufArrayA (channels 1-8)
-		Count[0] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));	//Extract the first 4 bits
-		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;									//shift 4 places to the right
-		Count[1] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));	//Extract the first 4 bits
-		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;									//shift 4 places to the right
-		Count[2] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
-		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
-		Count[3] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
-		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
-		Count[4] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
-		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
-		Count[5] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
-		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
-		Count[6] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
-		mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
-		Count[7] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
+		//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
+		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
+		{
+			U8 upscaled{ upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F) };
 
-		//mBufArrayB (channels 9-16)
-		Count[8] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
-		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
-		Count[9] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
-		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
-		Count[10] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
-		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
-		Count[11] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
-		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
-		Count[12] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
-		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
-		Count[13] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
-		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
-		Count[14] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
-		mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
-		Count[15] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+			//If upscaled overflows
+			if (upscaled > _UI8_MAX)
+				upscaled = _UI8_MAX;
 
+			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaled);		//Extract the first 4 bits
+			mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;																//shift 4 places to the right
+		}
 
-		U8 upscaled{ Count[9] };
+		//Demultiplex mBufArrayB (channels 9-16). Each U32 element in  mBufArrayB =  | Ch16 | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch9 |
+		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
+		{
+			U8 upscaled{ upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F) };
 
-		//If upscaled overflows
-		if (upscaled > _UI8_MAX)
-			upscaled = _UI8_MAX;
+			//If upscaled overflows
+			if (upscaled > _UI8_MAX)
+				upscaled = _UI8_MAX;
 
-		//Transfer the result to a Tiff
-		//For MUX16, resconstruct the image by assigning the stripes in the image
-		(mTiff.pointerToTiff())[pixIndex] = upscaled;
+			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaled);		//Extract the first 4 bits
+			mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;																//shift 4 places to the right
+		}
+
+		//Transfer the result to a Tiff. This is how the image was handled for PMT1X
+		//const int pickAChannel = 13; //0-15
+		//(mTiff.pointerToTiff())[pixIndex] = (CountA.pointerToTiff())[pickAChannel * mNpixPerFrame + pixIndex];
 	}
-	/*
-	//For debugging
-	std::cout << (int)Count01 << "\n";
-	std::cout << (int)Count02 << "\n";
-	std::cout << (int)Count03 << "\n";
-	std::cout << (int)Count04 << "\n";
-	std::cout << (int)Count05 << "\n";
-	std::cout << (int)Count06 << "\n";
-	std::cout << (int)Count07 << "\n";
-	std::cout << (int)Count08 << "\n";
-	*/
 
-	//Clean uo
-	delete[] Count;
+	//Concatenate the PMT16X channels starting from the bottom, i.e., Ch1 at the bottom of the Tiff, Ch2 next, etc
+	//If mRTcontrol.mNframes > 1, then all the frames are concatenated as well
+	CountA.saveToFile("Ch1-8", SINGLEPAGE, OVERRIDE);
+	CountB.saveToFile("Ch8-16", SINGLEPAGE, OVERRIDE);
 }
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
@@ -528,7 +506,6 @@ void Galvo::generateFrameScan(const double xi, const double xf) const
 	const double fineTuneHalfPeriodLineclock{ -0.58 * us };	//Adjust the RS half-period to fine tune the galvo's frame-scan
 	const double frameDuration{ (halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix };	//Time to scan a frame = (time for the RS to travel from side to side) x (# height of the frame in pixels)
 
-	//mRTcontrol.pushAnalogSinglet(mGalvoRTchannel, 400. * us, mVoltagePerDistance * xi);//deleteme
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
 }
 
@@ -541,7 +518,8 @@ void Galvo::generateFrameRescan(const double xi, const double xf) const
 	//To compensate for such delay, a shorter ramp is used for the rescanner 
 	//To optimize the ramp duration, look at a fluorescent slide on the camera and minimize the emission footprint during a scan
 	//const double frameDuration{ 1.9 * ms }; //For 35 pixels		
-	const double frameDuration{ (halfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix };
+	//const double frameDuration{ (halfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix };
+	const double frameDuration{ 35. * ms };
 
 	//The voltage offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi + mRescanVoltageOffset, mVoltagePerDistance * xf + mRescanVoltageOffset);

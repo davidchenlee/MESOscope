@@ -33,7 +33,6 @@ namespace Constants
 															//The forward and backward travel times differ slightly and the difference depends on the scanning amplitude
 															//For example, forward = 63.14 us, backwards = 62.99 us, diff = 150 ns (i.e., ~ 1 pixel)
 															//The measured RS period (126.1 us) seems to be independent of the scanning amplitude
-
 	//FPGA
 	extern const int AOmax{ 10 * V };						//Max voltage of the AOs
 	extern const int tickPerUs{ 160 };						//Number of ticks in 1 us. It corresponds to the FPGA's clock
@@ -53,8 +52,6 @@ namespace Constants
 	extern const int FIFOINtimeout_tick{ 100 };				//Timeout of the host-to-target and target-to-host FIFOINs
 	extern const int FIFOINmax{ 32773 };					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
-
-
 	//STAGES
 	extern const int stageTriggerPulse{ 5 * ms };			//Pulsewidth for triggering the stages via the DI (the stage controller has a 20kHz clock = 50 us)
 															//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based.
@@ -65,6 +62,11 @@ namespace Constants
 	extern const int nPulses{ 20 };												//Number of pulses
 	extern const U8 pulseArray[nPulses]{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 											0, 0, 0, 0, 0, 0, 0, 0, 1, 0 };		//@160MHz, one cycle through this array lasts 125ns
+
+	//For debugging
+	//Voltage to align the single laser beam (i.e., without using the beam splitter) to a channel of the PMT16X
+	//This voltage considers that the rescanner is perfectly centered at the PMT16X. Otherwise, adjust the offset of the rescanner
+	extern const std::vector<double>  rescanGalvoAlignSinglebeamToPMTchannel_V{ -0.856, -0.742, -0.628, -0.514, -0.399, -0.285, -0.171, -0.057, 0.057, 0.171, 0.285, 0.399, 0.514, 0.628, 0.742, 0.856 };
 }
 
 //Currently, each frames is 400x400 pixels = 160000 pixels

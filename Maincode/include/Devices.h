@@ -79,19 +79,20 @@ public:
 class Galvo
 {
 	const double mScanCalib{ 0.02417210 * V / um };			//volts per um. Calibration factor of the scan galvo. Last calib 31/7/2018
-	const double mRescanCalib{ 0.269775 * mScanCalib };		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector. Note the minus sign
+	const double mRescanCalib{ 0.269775 * mScanCalib };		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector
+	
+	const double mRescanVoltageOffset{ 0.05 * V };			//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
+															//To find such offset, swing the rescanner across the PMT16X and keep the scanner centered at 0. Adjust the offset until
+															//the stripes on the Tiff are in the correct positions (e.g. the 8th stripe should be 35 pixels below the Tiff center)
+															//A negative offset steers the fluorescence towards the 1st channel of the PMT16X; positive towards the 16th channel
 
-	//For debugging. Voltage to align the single laser beam (i.e., without using the beam splitter) to a channel of the PMT16X
-	//This voltage considers that the rescanner is perfectly centered at the PMT16X. Otherwise, adjust the offset of the rescanner
-	const std::vector<double>  targetRescanToPMT16Xchannel{ -0.856 * V, -0.742 * V, -0.628 * V, -0.514 * V, -0.399 * V, -0.285 * V, -0.171 * V, -0.057 * V,
-																	   0.057 * V, 0.171 * V, 0.285 * V, 0.399 * V, 0.514 * V, 0.628 * V, 0.742 * V, 0.856 * V, 0. * V };
-
-	//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
-	//To find such offset, swing the rescanner across the PMT16X and keep the scanner centered at 0. Position the stripes on the Tiff to the correct location (e.g. the 8th stripe's center should be 35 pixels below the Tiff center)
-	//A negative offset steers the fluorescence towards the 1st channel of the PMT16X
-	const double mRescanVoltageOffset{0.05 + targetRescanToPMT16Xchannel.at(CH16) };		
-
-	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some of methods in this class change the variables referenced by mRTcontrol	
+	//For debugging
+	//Voltage to point the single laser beam (i.e., without using the beam splitter) at a specific channel of the PMT16X
+	//These voltages are for a rescanner perfectly centered at the PMT16X. Adjust mRescanVoltageOffset accordingly
+	const std::vector<double>  pointRescanToPMT16Xchannel{ -0.856 * V, -0.742 * V, -0.628 * V, -0.514 * V, -0.399 * V, -0.285 * V, -0.171 * V, -0.057 * V,
+														    0.057 * V,  0.171 * V,  0.285 * V,  0.399 * V,  0.514 * V,  0.628 * V,  0.742 * V,  0.856 * V, 0. * V }; //The last element of the array is for centering the rescanner
+	
+	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
 	double mVoltagePerDistance;	
 public:
@@ -100,10 +101,10 @@ public:
 
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
-	void positionLinearRamp(const double timeStep, const double rampLength, const double xi, const double xf) const;
+	void positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal) const;
 	void voltageToZero() const;
-	void generateFrameScan(const double xi, const double xf) const;
-	void generateFrameRescan(const double xi, const double xf) const;
+	void frameScan(const double posInitial, const double posFinal, const double posOffset = 0) const;
+	void frameRescan(const double posInitial, const double posFinal, const double posOffset = 0) const;
 };
 
 class PMT16X

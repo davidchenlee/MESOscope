@@ -241,7 +241,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "w") };
 
 	if (tiffHandle == nullptr)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Saving Tiff failed");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Saving " + filename + ".tif failed");
 
 	unsigned char *buffer{ (unsigned char *)_TIFFmalloc(mBytesPerLine) };	//Buffer used to store the row of pixel information for writing to file
 
@@ -304,7 +304,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	_TIFFfree(buffer);		//Destroy the buffer
 	TIFFClose(tiffHandle);	//Close the output tiff file
 
-	std::cout << "Tiff successfully saved\n";
+	std::cout << "Successfully saved " << filename << ".tif\n";
 }
 
 //The galvo (vectical axis of the image) performs bi-directional scanning and the data is saved in a long image (vertical stripe)

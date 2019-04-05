@@ -42,7 +42,7 @@ namespace Constants
 	enum Multiplexing { SINGLEBEAM = false, MULTIBEAM = true};
 	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};
 	enum ScanDirection : int { BOTTOMUP = -1, TOPDOWN = 1};
-	enum PMT16Xchannel { CH1, CH2, CH3, CH4, CH5, CH6, CH7, CH8, CH9, CH10, CH11, CH12, CH13, CH14, CH15, CH16 };
+	enum PMT16XchanSelector { CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CH16, CH00}; //CH00 centers the rescanner (i.e., offset + 0 V is sent to the scanner)
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;
@@ -51,6 +51,7 @@ namespace Constants
 	extern const PixelclockSelector pixelclockType;
 	extern const ToggleSwitch pockelsAutoOff;
 	extern const ToggleSwitch multiplexing;
+	extern const PMT16XchanSelector PMT16Xchan;
 
 	extern const double PI;
 	extern const int us;

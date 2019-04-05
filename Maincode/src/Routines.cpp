@@ -754,6 +754,7 @@ namespace TestRoutines
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
 		image.acquire();			//Execute the RT control sequence and acquire the image
+		image.saveTiffMultiPage("SingleChannel", OVERRIDE);
 	}
 
 	void pixelclock(const FPGAns::FPGA &fpga)

@@ -163,6 +163,8 @@ void Image::correctInterleaved_()
 
 void Image::demultiplex_()
 {
+	const int mBytesPerChannel = mRTcontrol.mNpixAllFrames * sizeof(unsigned char);
+
 	//Upscale the buffer to go from 4-bit to 8-bit, to use the range 0-255 compatible with ImageJ's visualization standards
 	U8 upscaleFactorU8 = mRTcontrol.mUpscaleFactorU8;
 	//U8 upscaleFactorU8 = 1; //For debugging
@@ -198,23 +200,25 @@ void Image::demultiplex_()
 			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaled);		//Extract the first 4 bits
 			mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;																//shift 4 places to the right
 		}
-
-		//Transfer the result to a Tiff. This is how the image was handled for PMT1X
-		//const int pickAChannel = 13; //0-15
-		//(mTiff.pointerToTiff())[pixIndex] = (CountA.pointerToTiff())[pickAChannel * mNpixPerFrame + pixIndex];
 	}
+
+	//Copy the counts from the selected channel 'PMT16Xchan' to a Tiff
+	if (PMT16Xchan >= CH01 && PMT16Xchan <= CH08)
+		std::memcpy(&mTiff.pointerToTiff()[0], CountA.pointerToTiff() + PMT16Xchan * mBytesPerChannel, mBytesPerChannel);
+	else if (PMT16Xchan >= CH09 && PMT16Xchan <= CH16)
+		std::memcpy(&mTiff.pointerToTiff()[0], CountB.pointerToTiff() + (PMT16Xchan - CH09) * mBytesPerChannel, mBytesPerChannel);
 
 	//For debugging
 	//Save all the PMT16X channels concatenated in a Tiff starting from the bottom (i.e., Ch1 at the bottom of the Tiff, Ch2 next, etc...). If mRTcontrol.mNframes > 1, then there's also frame concatenation
-	//CountA.saveToFile("Ch1-8", SINGLEPAGE, OVERRIDE);
-	//CountB.saveToFile("Ch8-16", SINGLEPAGE, OVERRIDE);
+	//CountA.saveToFile("CH1-8", SINGLEPAGE, OVERRIDE);
+	//CountB.saveToFile("CH8-16", SINGLEPAGE, OVERRIDE);
 
 	//For debugging
 	//Save each PMT16X channel in a different Tiff page
 	TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix * mRTcontrol.mNframes, 16 };
-	stack.pushImage(CH1, CH8, CountA.pointerToTiff());
-	stack.pushImage(CH9, CH16, CountB.pointerToTiff());
-	stack.saveToFile("Untitled", MULTIPAGE, OVERRIDE);
+	stack.pushImage(CH01, CH08, CountA.pointerToTiff());
+	stack.pushImage(CH09, CH16, CountB.pointerToTiff());
+	stack.saveToFile("AllChannels", SINGLEPAGE, OVERRIDE);
 }
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
@@ -475,15 +479,15 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const d
 	switch (galvoChannel)
 	{
 	case RTSCANGALVO:
-		generateFrameScan(posMax, -posMax);
+		frameScan(posMax, -posMax);
 		break;
 	case RTRESCANGALVO:
-		generateFrameRescan(-posMax, posMax); //To keep the fluorescent spot fixed at the detector, swing the rescanner in the opposite direction to the scan galvo
+		//Swing the rescanner in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
+		frameRescan(-posMax, posMax, mRescanVoltageOffset + pointRescanToPMT16Xchannel.at(PMT16Xchan));
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 	}
-
 }
 
 void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
@@ -496,9 +500,9 @@ void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, co
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, Vi, Vf);
 }
 
-void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double xi, const double xf) const
+void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal) const
 {
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, mVoltagePerDistance * posInitial, mVoltagePerDistance * posFinal);
 }
 
 void Galvo::voltageToZero() const
@@ -507,28 +511,28 @@ void Galvo::voltageToZero() const
 }
 
 //Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with fixed z)
-void Galvo::generateFrameScan(const double xi, const double xf) const
+void Galvo::frameScan(const double posInitial, const double posFinal, const double posOffset) const
 {
 	const double timeStep{ 8. * us };	//Time step of the linear ramp
 	const double fineTuneHalfPeriodLineclock{ -0.58 * us };	//Adjust the RS half-period to fine tune the galvo's frame-scan
 	const double frameDuration{ (halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix };	//Time to scan a frame = (time for the RS to travel from side to side) x (# height of the frame in pixels)
 
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi, mVoltagePerDistance * xf);
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);
 }
 
-//Generate a linear ramp for the rescanner sync'ed to scan galvo. Use a separate function from 'generateFrameScan' because of the hack for a shorter frameDuration
-void Galvo::generateFrameRescan(const double xi, const double xf) const
+//Generate a linear ramp for the rescanner sync'ed to scan galvo. Use a separate function from 'frameScan' because of the hack for a shorter frameDuration
+void Galvo::frameRescan(const double posInitial, const double posFinal, const double posOffset) const
 {
-	const double timeStep{ 8. * us };			//Time step of the linear ramp
+	const double timeStep{ 8. * us };	//Time step of the linear ramp
 
-	//Dirty hack. The rescanner has some delay wrt the scan galvo because of the inertia of the mirror (compare the position of the scan and rescan galvos on the oscilloscope)
-	//To compensate for such delay, a shorter ramp is used for the rescanner 
-	//To optimize the ramp duration, look at a fluorescent slide on the camera and minimize the emission footprint during a scan
+	//Dirty hack
+	//The rescanner has a delay wrt the scanner because of the mirror inertia (look at the position monitor of both galvos on the oscilloscope)
+	//A shorter rescanner ramp is used to compensate for such delay. To optimize the ramp duration, look at a fluorescent slide on camera and minimize the emission footprint during a scan
 	//const double frameDuration{ 1.9 * ms }; //For 35 pixels		
 	const double frameDuration{ halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix };
 
 	//The voltage offset allows to compensate for the slight axis misalignment of the rescanner
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, mVoltagePerDistance * xi + mRescanVoltageOffset, mVoltagePerDistance * xf + mRescanVoltageOffset);
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);
 }
 #pragma endregion "Galvo"
 

@@ -15,7 +15,7 @@ class Image
 	AcqTriggerSelector mStageAsTrigger;		//Trigger the acquisition with the z stage: enable (0), disable (1)
 	U32* mBufArrayA;						//Vector to read FIFOOUTpc A
 	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
-	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB after demultiplexing
+	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB after PMT16Xdemultiplexing
 
 	void FIFOOUTpcGarbageCollector_() const;
 
@@ -79,18 +79,18 @@ public:
 class Galvo
 {
 	const double mScanCalib{ 0.02417210 * V / um };			//volts per um. Calibration factor of the scan galvo. Last calib 31/7/2018
-	const double mRescanCalib{ 0.269775 * mScanCalib };		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector
+	const double mRescanCalib{ 0.58/3 * mScanCalib };		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector
 	
-	const double mRescanVoltageOffset{ 0.05 * V };			//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
+	const double mRescanVoltageOffset{ 0.07 * V };			//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
 															//To find such offset, swing the rescanner across the PMT16X and keep the scanner centered at 0. Adjust the offset until
 															//the stripes on the Tiff are in the correct positions (e.g. the 8th stripe should be 35 pixels below the Tiff center)
 															//A negative offset steers the fluorescence towards the 1st channel of the PMT16X; positive towards the 16th channel
 
 	//For debugging
-	//Voltage to point the single laser beam (i.e., without using the beam splitter) at a specific channel of the PMT16X
-	//These voltages are for a rescanner perfectly centered at the PMT16X. Adjust mRescanVoltageOffset accordingly
-	const std::vector<double>  pointRescanToPMT16Xchannel{ -0.856 * V, -0.742 * V, -0.628 * V, -0.514 * V, -0.399 * V, -0.285 * V, -0.171 * V, -0.057 * V,
-														    0.057 * V,  0.171 * V,  0.285 * V,  0.399 * V,  0.514 * V,  0.628 * V,  0.742 * V,  0.856 * V, 0. * V }; //The last element of the array is for centering the rescanner
+	//For the single laser beam (i.e., without using the beamsplitter) to point at a specific channel of the PMT16X
+	const double interBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
+	const std::vector<double> beamletOrder{ -7.5, -6.5, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 0.0 };		//The last element of the array is for centering the rescanner
+
 	
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
@@ -298,7 +298,7 @@ class Stage
 	std::string axisToString(const Axis axis) const;
 public:
 	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages set by hardware. Can not be changed
-	const std::vector<double2> mSoftPosLimXYZ{ { -60. * mm, 50. * mm}, { 3. * mm, 30. * mm}, { 1. * mm, 24. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
+	const std::vector<double2> mSoftPosLimXYZ{ { -60. * mm, 60. * mm}, { 3. * mm, 30. * mm}, { 1. * mm, 24. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
 	Stage(const double velX, const double velY, const double velZ);
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor
@@ -387,7 +387,7 @@ public:
 		std::string mName{ "" };	//Channel name
 		int mWavelength_nm;			//Laser wavelength
 		double mScanPi;				//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mStackPinc;			//Laser power increase per z distance
+		double mStackPinc;			//Laser power increase per unit of distance in Z
 	};
 
 	std::vector<SingleChannel> mList;

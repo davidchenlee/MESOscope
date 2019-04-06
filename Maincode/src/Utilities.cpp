@@ -304,7 +304,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	_TIFFfree(buffer);		//Destroy the buffer
 	TIFFClose(tiffHandle);	//Close the output tiff file
 
-	std::cout << "Successfully saved " << filename << ".tif\n";
+	std::cout << "Successfully saved: " << filename << ".tif\n";
 }
 
 //The galvo (vectical axis of the image) performs bi-directional scanning and the data is saved in a long image (vertical stripe)
@@ -414,17 +414,36 @@ void TiffU8::saveTxt(const std::string filename) const
 //Specify the frame to push. The frame index starts from 0
 void TiffU8::pushImage(const int frameIndex, const unsigned char* inputArray) const
 {
+	if (frameIndex > mNframes)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be smaller than or equal to the number of frames");
+
 	std::memcpy(&mArray[frameIndex * mHeightPerFrame * mBytesPerLine], inputArray, mHeightPerFrame * mBytesPerLine);
 }
 
 //Specify the frame interval to push. The frame index starts from 0
 void TiffU8::pushImage(const int firstFrameIndex, const int lastFrameIndex, const unsigned char* inputArray) const
 {
+	if (firstFrameIndex > mNframes || lastFrameIndex > mNframes)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be smaller than or equal to the number of frames");
+
 	if (lastFrameIndex < firstFrameIndex)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": lastFrameIndex must be greater or equal than firstFrameIndex <");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": lastFrameIndex must be greater than or equal to firstFrameIndex");
 
 	std::memcpy(&mArray[firstFrameIndex * mHeightPerFrame * mBytesPerLine], inputArray, (lastFrameIndex - firstFrameIndex + 1) * mHeightPerFrame * mBytesPerLine);
 }
+
+//Specify the frame interval to push. The frame index starts from 0
+void TiffU8::pushImageBottom(const int firstFrameIndex, const int lastFrameIndex, const unsigned char* inputArray) const
+{
+	if (lastFrameIndex < firstFrameIndex)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": lastFrameIndex must be greater than or equal to firstFrameIndex");
+
+	//Temporary. It's more efficient to copy all the data at once
+	for (int frameIndex = lastFrameIndex; frameIndex >= firstFrameIndex; frameIndex--)
+		pushImage(frameIndex, inputArray);
+}
+
+
 
 #pragma endregion "TiffU8"
 

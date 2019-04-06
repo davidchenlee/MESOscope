@@ -207,6 +207,9 @@ void Image::demultiplex_()
 		std::memcpy(&mTiff.pointerToTiff()[0], CountA.pointerToTiff() + PMT16Xchan * mBytesPerChannel, mBytesPerChannel);
 	else if (PMT16Xchan >= CH09 && PMT16Xchan <= CH16)
 		std::memcpy(&mTiff.pointerToTiff()[0], CountB.pointerToTiff() + (PMT16Xchan - CH09) * mBytesPerChannel, mBytesPerChannel);
+	else //If CH00
+		std::memcpy(&mTiff.pointerToTiff()[0], CountA.pointerToTiff() + CH06 * mBytesPerChannel, mBytesPerChannel);
+
 
 	//For debugging
 	//Save all the PMT16X channels concatenated in a Tiff starting from the bottom (i.e., Ch1 at the bottom of the Tiff, Ch2 next, etc...). If mRTcontrol.mNframes > 1, then there's also frame concatenation
@@ -218,7 +221,7 @@ void Image::demultiplex_()
 	TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix * mRTcontrol.mNframes, 16 };
 	stack.pushImage(CH01, CH08, CountA.pointerToTiff());
 	stack.pushImage(CH09, CH16, CountB.pointerToTiff());
-	stack.saveToFile("AllChannels", SINGLEPAGE, OVERRIDE);
+	stack.saveToFile("AllChannels", MULTIPAGE, NOOVERRIDE);
 }
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
@@ -483,7 +486,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const d
 		break;
 	case RTRESCANGALVO:
 		//Swing the rescanner in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
-		frameRescan(-posMax, posMax, mRescanVoltageOffset + pointRescanToPMT16Xchannel.at(PMT16Xchan));
+		frameRescan(-posMax, posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * interBeamletDistance * mRescanCalib);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -1969,7 +1972,7 @@ void ChannelList::printParams(std::ofstream *fileHandle) const
 	{
 		*fileHandle << "Wavelength (nm) = " << mList.at(iterWL).mWavelength_nm <<
 			"\nLaser power (mW) = " << mList.at(iterWL).mScanPi / mW <<
-			"\nPower increase (mW) = " << mList.at(iterWL).mStackPinc / mW << "\n";
+			"\nPower increase (mW/um) = " << mList.at(iterWL).mStackPinc / mWpum << "\n";
 	}
 	*fileHandle << "\n";
 }

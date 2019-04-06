@@ -16,7 +16,7 @@ struct AcqStack {
 	double mScanZi;		//Initial z position of a stack-scan
 	double mStackDepth;	//Stack depth or thickness
 	double mScanPi;		//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
-	double mStackPinc;	//Laser power increase for a stack-scan
+	double mStackPinc;	//Laser power increase per unit distance in z for a stack-scan
 };
 
 struct CutSlice {

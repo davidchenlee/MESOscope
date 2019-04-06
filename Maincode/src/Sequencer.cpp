@@ -83,8 +83,8 @@ void Commandline::printParameters() const
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
 		std::cout << "wavelength (nm) = " << mCommand.acqStack.mWavelength_nm << "\n";
 		std::cout << "scanDirZ = " << mCommand.acqStack.mScanDirZ << "\n";
-		std::cout << "scanZi/stackDepth (mm) = " << mCommand.acqStack.mScanZi / mm << "/" << mCommand.acqStack.mStackDepth << "\n";
-		std::cout << "scanPi/stackPdiff (mW) = " << mCommand.acqStack.mScanPi / mW << "/" << mCommand.acqStack.mStackPinc / mW << "\n\n";
+		std::cout << "scanZi (mm) / stackDepth (mm) = " << mCommand.acqStack.mScanZi / mm << "/" << mCommand.acqStack.mStackDepth << "\n";
+		std::cout << "scanPi (mW) / stackPdiff (mW/um) = " << mCommand.acqStack.mScanPi / mW << "/" << mCommand.acqStack.mStackPinc / mWpum << "\n\n";
 		break;
 	case SAV:
 		std::cout << "The command is " << actionToString_(mAction) << "\n";

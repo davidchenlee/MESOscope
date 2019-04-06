@@ -15,35 +15,41 @@ int main(int argc, char* argv[])
 			//MainRoutines::sequencer(fpga);FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power. Also I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
 
 			//TESTS.
-			//TestRoutines::PMT16Xconfig();
-			TestRoutines::demultiplexing(fpga);
 			//TestRoutines::digitalLatency(fpga);
 			//TestRoutines::analogLatency(fpga);
-			//TestRoutines::pockels(fpga);
-			//TestRoutines::pockelsRamp(fpga);
-			//TestRoutines::photobleach(fpga);
-			//TestRoutines::galvosSync(fpga);
-			//TestRoutines::fineTuneScanGalvo(fpga);
 			//TestRoutines::pixelclock(fpga);
+			//TestRoutines::digitalTiming(fpga);
 			//TestRoutines::analogAndDigitalOut(fpga);
 			//TestRoutines::analogRamp(fpga);
-			//TestRoutines::digitalTiming(fpga);
-			//TestRoutines::filterwheel();
-			//TestRoutines::shutter(fpga);
+
+			//TestRoutines::fineTuneScanGalvo(fpga);
+			//TestRoutines::resonantScanner(fpga);
+			//TestRoutines::galvosSync(fpga);
+
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();
 
+			//TestRoutines::shutter(fpga);
+			//TestRoutines::pockels(fpga);
+			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
-			//TestRoutines::resonantScanner(fpga);
+
 			//TestRoutines::convertI16toVolt();
 			//TestRoutines::tiffU8();
 			//TestRoutines::ethernetSpeed();
-			//TestRoutines::vibratome(fpga);
-			//TestRoutines::sequencer();
 			//TestRoutines::multithread();
+
 			//TestRoutines::sequencerConcurrentTest();
 			//TestRoutines::locationSequencer();
+
+			//TestRoutines::PMT16Xconfig();
+			//TestRoutines::PMT16Xdemultiplexing(fpga);
+			TestRoutines::PMT16XframeByFrameScan(fpga);
+
+			//TestRoutines::vibratome(fpga);
+			//TestRoutines::filterwheel();
+			//TestRoutines::photobleach(fpga);
 		}
 		catch (const std::invalid_argument &e)
 		{

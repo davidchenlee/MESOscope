@@ -56,6 +56,7 @@ public:
 	void saveTxt(const std::string fileName) const;
 	void pushImage(const int frameIndex, const unsigned char* inputArray) const;
 	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const unsigned char* inputArray) const;
+	void pushImageBottom(const int firstFrameIndex, const int lastFrameIndex, const unsigned char* inputArray) const;
 };
 
 

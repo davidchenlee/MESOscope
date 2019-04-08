@@ -51,7 +51,7 @@ namespace Constants
 	extern const PixelclockSelector pixelclockType;
 	extern const ToggleSwitch pockelsAutoOff;
 	extern const ToggleSwitch multiplexing;
-	extern const PMT16XchanSelector PMT16Xchan;
+	extern PMT16XchanSelector PMT16Xchan;
 
 	extern const double PI;
 	extern const int us;

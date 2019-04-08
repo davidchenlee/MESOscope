@@ -231,7 +231,7 @@ namespace FPGAns
 #pragma region "RTcontrol"
 	RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell) : mWidthPerFrame_pix(widthPerFrame_pix), mDwell(dwell)
 	{
-		const int calibFine_tick{ -32 };
+		const int calibFine_tick{ -40 };
 		switch (pixelclockType)
 		{
 		case UNIFORM:

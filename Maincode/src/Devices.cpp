@@ -218,10 +218,10 @@ void Image::demultiplex_()
 
 	//For debugging
 	//Save each PMT16X channel in a different Tiff page
-	TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix * mRTcontrol.mNframes, 16 };
+	TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix , 16 * mRTcontrol.mNframes };
 	stack.pushImage(CH01, CH08, CountA.pointerToTiff());
 	stack.pushImage(CH09, CH16, CountB.pointerToTiff());
-	stack.saveToFile("AllChannels", MULTIPAGE, NOOVERRIDE);
+	stack.saveToFile("AllChannels", SINGLEPAGE, NOOVERRIDE);
 }
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
@@ -482,11 +482,11 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const d
 	switch (galvoChannel)
 	{
 	case RTSCANGALVO:
-		frameScan(posMax, -posMax);
+		frameScan(-posMax, posMax);
 		break;
 	case RTRESCANGALVO:
 		//Swing the rescanner in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
-		frameRescan(-posMax, posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * interBeamletDistance * mRescanCalib);
+		frameRescan(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * interBeamletDistance * mRescanCalib);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");

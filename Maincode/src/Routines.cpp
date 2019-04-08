@@ -1,8 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 55.500 * mm, 24.000 * mm, 17.953 * mm };//beads
-//const double3 stackCenterXYZ{ 55.500 * mm, 3.000 * mm, 17.800 * mm };
+const double3 stackCenterXYZ{ 55.500 * mm, 3.300 * mm, 17.800 * mm };
 //const std::string sampleName{ "Liver" };
 //const std::string immersionMedium{ "SiliconeMineralOil5050" };
 //const std::string collar{ "1.495" };
@@ -1138,6 +1137,32 @@ namespace TestRoutines
 	//Copy of frameByFrameScan() with added rescan sync
 	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga)
 	{
+		const double FFOVslow{ 17.5 * um };			//Full FOV in the slow axis
+		double selectFFOV, selectPower;
+		double3 stackCenterXYZ;
+		if (1)//beads
+		{
+			selectFFOV = FFOVslow / 2;
+			stackCenterXYZ = { 55.580 * mm, 24.000 * mm, 17.952 * mm };
+			if (multiplexing)
+			{
+				PMT16Xchan = CH00;
+				selectPower = 300. * mW;
+			}
+			else
+			{
+				PMT16Xchan = CH08;
+				selectPower = 50. * mW;
+			}
+		}
+		else//fluorescent slide
+		{
+			selectFFOV = 0.0;			//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. Thee rescanner must be centered
+			selectPower = 10. * mW;
+			stackCenterXYZ = { 55.500 * mm, 3.300 * mm, 17.800 * mm };
+			PMT16Xchan = CH00;
+		}
+
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
 		const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
@@ -1147,7 +1172,7 @@ namespace TestRoutines
 
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
+		const int heightPerFrame_pix{ 35 };
 		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
 
 		//RS
@@ -1203,15 +1228,13 @@ namespace TestRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
 		//GALVO RT linear scan
-		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
-		const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
-		//Galvo scan{ RTcontrol, RTSCANGALVO, 0 };		//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. Thee rescanner must be centered
-		Galvo rescan{ RTcontrol, RTRESCANGALVO, FFOVslow / 2 };
-		//Galvo rescan{ RTcontrol, RTRESCANGALVO, 0 };
+		const Galvo scanner{ RTcontrol, RTSCANGALVO, selectFFOV };
+		const Galvo rescan{ RTcontrol, RTRESCANGALVO, FFOVslow / 2 };
+		//const Galvo rescan{ RTcontrol, RTRESCANGALVO, 0 };
 
 		//LASER
 		const int wavelength_nm = 750;
-		const double power = 40. * mW;
+		const double power = selectPower;
 		const double powerInc = 0. * mWpum;
 		const VirtualLaser laser{ RTcontrol, wavelength_nm, power, VISION };
 

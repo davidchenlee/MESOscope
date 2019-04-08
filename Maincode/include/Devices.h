@@ -79,14 +79,14 @@ public:
 class Galvo
 {
 	const double mScanCalib{ 0.02417210 * V / um };			//volts per um. Calibration factor of the scan galvo. Last calib 31/7/2018
-	const double mRescanCalib{ 0.58/3 * mScanCalib };		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector
+	const double mRescanCalib{ 0.201 * mScanCalib };		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector
 	
-	const double mRescanVoltageOffset{ 0.07 * V };			//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
+	const double mRescanVoltageOffset{ -0.00 * V };			//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
 															//To find such offset, swing the rescanner across the PMT16X and keep the scanner centered at 0. Adjust the offset until
 															//the stripes on the Tiff are in the correct positions (e.g. the 8th stripe should be 35 pixels below the Tiff center)
 															//A negative offset steers the fluorescence towards the 1st channel of the PMT16X; positive towards the 16th channel
 
-	//For debugging
+
 	//For the single laser beam (i.e., without using the beamsplitter) to point at a specific channel of the PMT16X
 	const double interBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
 	const std::vector<double> beamletOrder{ -7.5, -6.5, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 0.0 };		//The last element of the array is for centering the rescanner

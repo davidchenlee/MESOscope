@@ -209,7 +209,7 @@ unsigned char* const TiffU8::pointerToTiff() const
 }
 
 //Split mArray into sub-images (or "frames")
-//Purpose: the microscope concatenates each plane in a stack and hands over a vertically long image which has to be resized into sub-images
+//Purpose: the microscope concatenates all the planes in a scanned stack and hands over a vertically long image which has to be resized into sub-images
 void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag, const ScanDirection scanDir) const
 {
 	int width, height, nFrames;
@@ -228,7 +228,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 		width = mWidthPerFrame;
 		height = mHeightPerFrame * mNframes;
 	}
-	   	  
+
 	/*For debugging
 	std::cout << nFrames << "\n";
 	std::cout << width << "\n";
@@ -237,7 +237,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 
 	if (!overrideFlag)
 		filename = doesFileExist(filename);	//Check if the file exits. It gives some overhead
-	
+
 	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "w") };
 
 	if (tiffHandle == nullptr)
@@ -283,12 +283,13 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 
 		//IMAGEJ TAG FOR USING HYPERSTACKS
 		std::string TIFFTAG_ImageJ = "ImageJ=1.52e\nimages=" + std::to_string(nFrames) + "\nchannels=1\nslices=" + std::to_string(nFrames) + "\nhyperstack=true\nmode=grayscale\nunit=\\u00B5m\nloop=false ";
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, TIFFTAG_ImageJ);								
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, TIFFTAG_ImageJ);
 
 		//Write the sub-image to the file one strip at a time
+		//I think many readers ignore the 'TIFFTAG_ORIENTATION' tag and consider the origin of the image at the TOP-LEFT
 		for (int rowIndex = 0; rowIndex < height; rowIndex++)
-		{	
-			std::memcpy(buffer, &mArray[(iterFrame * height + height - rowIndex - 1)*mBytesPerLine], mBytesPerLine);
+		{
+			std::memcpy(buffer, &mArray[(iterFrame * height + rowIndex)*mBytesPerLine], mBytesPerLine);
 			if (TIFFWriteScanline(tiffHandle, buffer, rowIndex, 0) < 0)
 				break;
 		}
@@ -298,8 +299,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 			break;
 
 		iterFrame += scanDir; //Increasing iterator for TOPDOWN. Decreasing for BOTTOMUP
-	}
-	while (true);
+	} while (true);
 
 	_TIFFfree(buffer);		//Destroy the buffer
 	TIFFClose(tiffHandle);	//Close the output tiff file

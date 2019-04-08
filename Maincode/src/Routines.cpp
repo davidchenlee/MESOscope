@@ -1095,10 +1095,10 @@ namespace TestRoutines
 			255,	//CH04
 			255,	//CH05
 			255,	//CH06
-			255,	//CH07
-			255,	//CH08
-			255,	//CH09, this channel presents the lowest signal. For some reason 255 gives a lower signal than 200
-			255,	//CH10
+			120,	//CH07
+			120,	//CH08
+			120,	//CH09, this channel presents the lowest signal. For some reason 255 gives a lower signal than 200
+			120,	//CH10
 			255,	//CH11
 			255,	//CH12
 			255,	//CH13
@@ -1110,7 +1110,7 @@ namespace TestRoutines
 
 	//Test reading different channels of the PMT16X
 //Must manually open the laser and Uniblitz shutter
-	void PMT16Xdemultiplexing(const FPGAns::FPGA &fpga)
+	void PMT16Xdemultiplex(const FPGAns::FPGA &fpga)
 	{
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -1137,27 +1137,38 @@ namespace TestRoutines
 	//Copy of frameByFrameScan() with added rescan sync
 	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga)
 	{
-		const double FFOVslow{ 17.5 * um };			//Full FOV in the slow axis
-		double selectFFOV, selectPower;
+		//ACQUISITION SETTINGS
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 560 };
+		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
+		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
+
+		int selectHeightPerFrame_pix;
+		double selectScanFFOV, selectRescanFFOV, selectPower;
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			selectFFOV = FFOVslow / 2;
-			stackCenterXYZ = { 55.580 * mm, 24.000 * mm, 17.952 * mm };
-			if (multiplexing)
+			stackCenterXYZ = { 55.630 * mm, 24.000 * mm, 17.948 * mm };
+			if (multiplex)	//Multibeam
 			{
+				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
+				selectScanFFOV = FFOVslow / 16;
 				PMT16Xchan = CH00;
-				selectPower = 300. * mW;
+				selectPower = 1500. * mW;
 			}
-			else
+			else			//Singlebeam
 			{
-				PMT16Xchan = CH08;
+				selectHeightPerFrame_pix = heightPerFrame_pix;
+				selectScanFFOV = FFOVslow;
+				PMT16Xchan = CH02;
 				selectPower = 50. * mW;
 			}
+			selectRescanFFOV = selectScanFFOV;
 		}
 		else//fluorescent slide
 		{
-			selectFFOV = 0.0;			//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. Thee rescanner must be centered
+			selectScanFFOV = 0.0;			//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. Thee rescanner must be centered
+			selectRescanFFOV = FFOVslow;
 			selectPower = 10. * mW;
 			stackCenterXYZ = { 55.500 * mm, 3.300 * mm, 17.800 * mm };
 			PMT16Xchan = CH00;
@@ -1170,18 +1181,13 @@ namespace TestRoutines
 		//const RunMode acqMode{ STACKMODE };			//Image a stack frame by frame from the initial z position
 		//const RunMode acqMode{ STACKCENTEREDMODE };	//Image a stack frame by frame centered at the initial z position
 
-		//ACQUISITION SETTINGS
-		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 35 };
-		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
-
 		//RS
 		const ResonantScanner RScanner{ fpga };
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 100. * um };	//Acquire a stack of this depth or thickness in Z
+		const double stackDepthZ{ 20. * um };	//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
@@ -1225,11 +1231,11 @@ namespace TestRoutines
 		}
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
+		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, selectHeightPerFrame_pix };
 
 		//GALVO RT linear scan
-		const Galvo scanner{ RTcontrol, RTSCANGALVO, selectFFOV };
-		const Galvo rescan{ RTcontrol, RTRESCANGALVO, FFOVslow / 2 };
+		const Galvo scanner{ RTcontrol, RTSCANGALVO, selectScanFFOV / 2 };
+		const Galvo rescan{ RTcontrol, RTRESCANGALVO, selectRescanFFOV / 2 };
 		//const Galvo rescan{ RTcontrol, RTRESCANGALVO, 0 };
 
 		//LASER
@@ -1262,7 +1268,7 @@ namespace TestRoutines
 			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
 			datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleFactorU8);
 			datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
-			datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
+			datalog.record("Height Y (galvo) (pix) = ", selectHeightPerFrame_pix);
 			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
 			datalog.record("Resolution Y (galvo) (um/pix) = ", (FFOVslow / um) / RTcontrol.mHeightPerFrame_pix);
 			datalog.record("\nSTAGE--------------------------------------------------------");
@@ -1345,7 +1351,7 @@ namespace TestRoutines
 		//FWexcitation.setWavelength(wavelength_nm);
 		//FWdetection.setWavelength(wavelength_nm);
 
-		if (multiplexing)	//Multiplexing
+		if (multiplex)	//Multiplex
 		{
 			//Turn both filterwheels concurrently
 			std::thread th1{ &Filterwheel::setWavelength, &FWexcitation, wavelength_nm };

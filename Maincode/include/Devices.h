@@ -15,7 +15,7 @@ class Image
 	AcqTriggerSelector mStageAsTrigger;		//Trigger the acquisition with the z stage: enable (0), disable (1)
 	U32* mBufArrayA;						//Vector to read FIFOOUTpc A
 	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
-	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB after PMT16Xdemultiplexing
+	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB
 
 	void FIFOOUTpcGarbageCollector_() const;
 

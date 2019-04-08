@@ -51,7 +51,7 @@ namespace TestRoutines
 
 	//PMT16X
 	void PMT16Xconfig();
-	void PMT16Xdemultiplexing(const FPGAns::FPGA &fpga);
+	void PMT16Xdemultiplex(const FPGAns::FPGA &fpga);
 	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga);
 
 	//Others

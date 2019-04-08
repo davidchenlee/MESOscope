@@ -39,7 +39,6 @@ namespace Constants
 	enum LaserSelector { VISION, FIDELITY, AUTO};
 	enum Filtercolor { BLUE, GREEN, RED, OPEN, CLOSED };
 	enum ComSelector { COMVISION = 1, COMFIDELITY = 8, COMFWDET = 5, COMFWEXC = 9, COMPMT16X = 6};
-	enum Multiplexing { SINGLEBEAM = false, MULTIBEAM = true};
 	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};
 	enum ScanDirection : int { BOTTOMUP = -1, TOPDOWN = 1};
 	enum PMT16XchanSelector { CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CH16, CH00}; //CH00 centers the rescanner (i.e., offset + 0 V is sent to the scanner)
@@ -50,7 +49,7 @@ namespace Constants
 	extern const PhotocounterSelector photocounterInput;
 	extern const PixelclockSelector pixelclockType;
 	extern const ToggleSwitch pockelsAutoOff;
-	extern const ToggleSwitch multiplexing;
+	extern const ToggleSwitch multiplex;
 	extern PMT16XchanSelector PMT16Xchan;
 
 	extern const double PI;

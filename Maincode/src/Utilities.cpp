@@ -432,19 +432,11 @@ void TiffU8::pushImage(const int firstFrameIndex, const int lastFrameIndex, cons
 	std::memcpy(&mArray[firstFrameIndex * mHeightPerFrame * mBytesPerLine], inputArray, (lastFrameIndex - firstFrameIndex + 1) * mHeightPerFrame * mBytesPerLine);
 }
 
-//Specify the frame interval to push. The frame index starts from 0
-void TiffU8::pushImageBottom(const int firstFrameIndex, const int lastFrameIndex, const unsigned char* inputArray) const
+void TiffU8::mergePMT16Xchannels(const int heightPerFramePerChannel, const unsigned char* inputArrayA, const unsigned char* inputArrayB) const
 {
-	if (lastFrameIndex < firstFrameIndex)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": lastFrameIndex must be greater than or equal to firstFrameIndex");
-
-	//Temporary. It's more efficient to copy all the data at once
-	for (int frameIndex = lastFrameIndex; frameIndex >= firstFrameIndex; frameIndex--)
-		pushImage(frameIndex, inputArray);
+	std::memcpy(&mArray[0], inputArrayA, 8 * heightPerFramePerChannel * mBytesPerLine);
+	std::memcpy(&mArray[8 * heightPerFramePerChannel * mBytesPerLine], inputArrayB, 8 * heightPerFramePerChannel * mBytesPerLine);
 }
-
-
-
 #pragma endregion "TiffU8"
 
 

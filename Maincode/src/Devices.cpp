@@ -1,8 +1,10 @@
 #include "Devices.h"
 
 #pragma region "Image"
+
+//When multiplexing, create a mTiff to contain 16 stripes of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(FPGAns::RTcontrol &RTcontrol, const AcqTriggerSelector stageAsTrigger) :
-	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes), mStageAsTrigger(stageAsTrigger)
+	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multiplex) * 15 + 1) *  mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes), mStageAsTrigger(stageAsTrigger)
 {
 	mBufArrayA = new U32[mRTcontrol.mNpixAllFrames];
 	mBufArrayB = new U32[mRTcontrol.mNpixAllFrames];
@@ -163,8 +165,6 @@ void Image::correctInterleaved_()
 
 void Image::demultiplex_()
 {
-	const int mBytesPerChannel = mRTcontrol.mNpixAllFrames * sizeof(unsigned char);
-
 	//Upscale the buffer to go from 4-bit to 8-bit, to use the range 0-255 compatible with ImageJ's visualization standards
 	U8 upscaleFactorU8 = mRTcontrol.mUpscaleFactorU8;
 	//U8 upscaleFactorU8 = 1; //For debugging
@@ -202,26 +202,31 @@ void Image::demultiplex_()
 		}
 	}
 
+
+
+	const int mBytesPerChannel = mRTcontrol.mNpixAllFrames * sizeof(unsigned char);
+
 	//Copy the counts from the selected channel 'PMT16Xchan' to a Tiff
-	if (PMT16Xchan >= CH01 && PMT16Xchan <= CH08)
-		std::memcpy(&mTiff.pointerToTiff()[0], CountA.pointerToTiff() + PMT16Xchan * mBytesPerChannel, mBytesPerChannel);
-	else if (PMT16Xchan >= CH09 && PMT16Xchan <= CH16)
-		std::memcpy(&mTiff.pointerToTiff()[0], CountB.pointerToTiff() + (PMT16Xchan - CH09) * mBytesPerChannel, mBytesPerChannel);
-	else //If CH00
-		std::memcpy(&mTiff.pointerToTiff()[0], CountA.pointerToTiff() + CH06 * mBytesPerChannel, mBytesPerChannel);
+	if (multiplex)	//multibeam
+		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff());
+	else			//singlebeam. Select a particular channel as the detector
+	{
+		if (PMT16Xchan >= CH01 && PMT16Xchan <= CH08)
+			std::memcpy(&mTiff.pointerToTiff()[0], CountA.pointerToTiff() + PMT16Xchan * mBytesPerChannel, mBytesPerChannel);
+		else if (PMT16Xchan >= CH09 && PMT16Xchan <= CH16)
+			std::memcpy(&mTiff.pointerToTiff()[0], CountB.pointerToTiff() + (PMT16Xchan - CH09) * mBytesPerChannel, mBytesPerChannel);
+	}
+		//std::memcpy(&mTiff.pointerToTiff()[0], CountA.pointerToTiff() + CH08 * mBytesPerChannel, mBytesPerChannel);
 
-
-	//For debugging
-	//Save all the PMT16X channels concatenated in a Tiff starting from the bottom (i.e., Ch1 at the bottom of the Tiff, Ch2 next, etc...). If mRTcontrol.mNframes > 1, then there's also frame concatenation
-	//CountA.saveToFile("CH1-8", SINGLEPAGE, OVERRIDE);
-	//CountB.saveToFile("CH8-16", SINGLEPAGE, OVERRIDE);
-
-	//For debugging
+	/*
+	//For debugging. Save all the PMT16X channels
 	//Save each PMT16X channel in a different Tiff page
 	TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix , 16 * mRTcontrol.mNframes };
 	stack.pushImage(CH01, CH08, CountA.pointerToTiff());
 	stack.pushImage(CH09, CH16, CountB.pointerToTiff());
-	stack.saveToFile("AllChannels", SINGLEPAGE, NOOVERRIDE);
+	stack.saveToFile("AllChannels", MULTIPAGE, NOOVERRIDE);
+	*/
+		
 }
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
@@ -1149,7 +1154,7 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, 
 	}
 
 	//Initialize the power softlimit
-	if (multiplexing)			//Multibeam
+	if (multiplex)			//Multibeam
 		maxPower = 1600 * mW;
 	else						//Singlebeam
 		maxPower = 300 * mW;
@@ -1371,7 +1376,7 @@ LaserSelector VirtualLaser::autoselectLaser_(const int wavelength_nm)
 
 void VirtualLaser::turnFilterwheels_(const int wavelength_nm)
 {
-	if (multiplexing)	//Multiplexing
+	if (multiplex)	//Multiplex
 	{
 		//Turn both filterwheels concurrently
 		std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };

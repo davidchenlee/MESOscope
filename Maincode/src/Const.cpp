@@ -12,7 +12,7 @@ namespace Constants
 	extern const PixelclockSelector pixelclockType{ UNIFORM };		//UNIFORM or NONUNIFORM dwell times
 	extern const ToggleSwitch pockelsAutoOff{ ENABLE };				//For debugging purposes. Enable to let 'framegate' set the pockels cell on and off
 	extern const ToggleSwitch multiplex{ ENABLE };
-	extern PMT16XchanSelector PMT16Xchan{ CH00 }; //override it in Routines
+	extern PMT16XchanSelector PMT16Xchan{ CH00 }; //will be overridden in Routines
 
 	//GENERAL CONSTANTS
 	extern const double PI{ 3.1415926535897 };

@@ -1140,7 +1140,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 2 };
 		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 
 		int selectHeightPerFrame_pix;
@@ -1154,7 +1154,7 @@ namespace TestRoutines
 				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 				selectScanFFOV = FFOVslow / 16;
 				PMT16Xchan = CH00;
-				selectPower = 1500. * mW;
+				selectPower = 1400. * mW;
 			}
 			else			//Singlebeam
 			{
@@ -1298,7 +1298,7 @@ namespace TestRoutines
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
 				image.acquire();			//Execute the RT control sequence and acquire the image
-				image.averageFrames();		//Average the frames acquired via continuous XY acquisition
+				//image.averageFrames();		//Average the frames acquired via continuous XY acquisition
 				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
 
 				if (acqMode == SINGLEMODE)
@@ -1306,7 +1306,7 @@ namespace TestRoutines
 					//Save individual files
 					std::string singleFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_P=" + toString(power / mW, 1) + "mW" +
 						"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(YY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(ZZ) / mm, 4) };
-					image.saveTiffSinglePage(singleFilename, overrideFlag);
+					image.saveTiffMultiPage(singleFilename, overrideFlag);
 					Sleep(700);
 				}
 			}

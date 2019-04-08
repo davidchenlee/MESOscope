@@ -169,7 +169,7 @@ void Image::demultiplex_()
 	U8 upscaleFactorU8 = mRTcontrol.mUpscaleFactorU8;
 	//U8 upscaleFactorU8 = 1; //For debugging
 
-	//Using 2 separate arrays CountA and CountB to allow parallelization in the future
+	//Using 2 separate arrays to allow parallelization in the future
 	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix, 8 * mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch1-Ch8
 	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix, 8 * mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch9-Ch16
 
@@ -202,9 +202,8 @@ void Image::demultiplex_()
 		}
 	}
 
-
-
-	const int mBytesPerChannel = mRTcontrol.mNpixAllFrames * sizeof(unsigned char);
+	//Size in bytes of the data collected by each PMT16X channel (it could contain more than one frame)
+	const int mBytesPerPMT16Xchannel = mRTcontrol.mNpixAllFrames * sizeof(unsigned char);
 
 	//Copy the counts from the selected channel 'PMT16Xchan' to a Tiff
 	if (multiplex)	//multibeam
@@ -212,11 +211,11 @@ void Image::demultiplex_()
 	else			//singlebeam. Select a particular channel as the detector
 	{
 		if (PMT16Xchan >= CH01 && PMT16Xchan <= CH08)
-			std::memcpy(&mTiff.pointerToTiff()[0], CountA.pointerToTiff() + PMT16Xchan * mBytesPerChannel, mBytesPerChannel);
+			std::memcpy(mTiff.pointerToTiff(), CountA.pointerToTiff() + PMT16Xchan * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
 		else if (PMT16Xchan >= CH09 && PMT16Xchan <= CH16)
-			std::memcpy(&mTiff.pointerToTiff()[0], CountB.pointerToTiff() + (PMT16Xchan - CH09) * mBytesPerChannel, mBytesPerChannel);
+			std::memcpy(mTiff.pointerToTiff(), CountB.pointerToTiff() + (PMT16Xchan - CH09) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
 	}
-		//std::memcpy(&mTiff.pointerToTiff()[0], CountA.pointerToTiff() + CH08 * mBytesPerChannel, mBytesPerChannel);
+		//std::memcpy(mTiff.pointerToTiff(), CountA.pointerToTiff() + CH08 * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
 
 	/*
 	//For debugging. Save all the PMT16X channels
@@ -487,10 +486,10 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const d
 	switch (galvoChannel)
 	{
 	case RTSCANGALVO:
-		frameScan(-posMax, posMax);
+		frameScan(-posMax, posMax); //Scan from -x to +x (wrt the stage x)
 		break;
 	case RTRESCANGALVO:
-		//Swing the rescanner in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
+		//Rescan in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
 		frameRescan(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * interBeamletDistance * mRescanCalib);
 		break;
 	default:

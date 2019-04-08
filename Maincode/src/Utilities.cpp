@@ -320,7 +320,7 @@ void TiffU8::mirrorOddFrames()
 
 		for (int frame = 1; frame < mNframes; frame += 2)
 		{
-			//Swap the first and last rows of the sub-image, then do to the second first and second last rows, etc
+			//Swap the first and last rows of the sub-image, then do the second and second last rows, etc
 			for (int rowIndex = 0; rowIndex < mHeightPerFrame / 2; rowIndex++)
 			{
 				int eneTene = frame * mHeightPerFrame + rowIndex;				//Swap this row
@@ -370,22 +370,26 @@ void TiffU8::averageEvenOddFrames()
 
 }
 
-//Split the vertically long image into nFrames and return the average
+//Divide the vertically long image into 'nFrames' subimages and return the average
 void TiffU8::averageFrames()
 {
 	if (mNframes > 1)
 	{
 		const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };
-
 		unsigned int* avg{ new unsigned int[nPixPerFrame]() };
-		for (int frame = 0; frame < mNframes; frame++)
-			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-				avg[pixIndex] += mArray[frame * nPixPerFrame + pixIndex];
 
+		//For each pixel, calculate the sum intensity over all the frames
+		for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
+			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
+				avg[pixIndex] += mArray[frameIndex * nPixPerFrame + pixIndex];
+
+		//Calculate the average intensity and reassign  it to mArray
 		for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
 			mArray[pixIndex] = static_cast<unsigned char>(1. * avg[pixIndex] / mNframes);
 
+		//Update the number of frames to 1
 		mNframes = 1;
+
 		delete[] avg;
 	}
 }
@@ -434,8 +438,27 @@ void TiffU8::pushImage(const int firstFrameIndex, const int lastFrameIndex, cons
 
 void TiffU8::mergePMT16Xchannels(const int heightPerFramePerChannel, const unsigned char* inputArrayA, const unsigned char* inputArrayB) const
 {
-	std::memcpy(&mArray[0], inputArrayA, 8 * heightPerFramePerChannel * mBytesPerLine);
-	std::memcpy(&mArray[8 * heightPerFramePerChannel * mBytesPerLine], inputArrayB, 8 * heightPerFramePerChannel * mBytesPerLine);
+	//std::memcpy(mArray, inputArrayA, 8 * heightAllFramesPerChannel * mBytesPerLine);
+	//std::memcpy(&mArray[8 * heightAllFramesPerChannel * mBytesPerLine], inputArrayB, 8 * heightAllFramesPerChannel * mBytesPerLine);
+
+	const int heightAllChannels = 16 * heightPerFramePerChannel;
+	const int heightAllFramesPerChannel = heightPerFramePerChannel * mNframes;
+
+	//Even frameIndex
+	for (int frameIndex = 0; frameIndex < mNframes; frameIndex=+2)
+		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
+		{
+			std::memcpy(&mArray[(chanIndex * heightPerFramePerChannel + frameIndex * heightAllChannels) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerFramePerChannel + chanIndex * heightAllFramesPerChannel) * mBytesPerLine], heightPerFramePerChannel * mBytesPerLine);
+			std::memcpy(&mArray[((chanIndex + 8) * heightPerFramePerChannel + frameIndex * heightAllChannels) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerFramePerChannel + chanIndex * heightAllFramesPerChannel) * mBytesPerLine], heightPerFramePerChannel * mBytesPerLine);
+		}
+
+	//Odd frameIndex
+	for (int frameIndex = 1; frameIndex < mNframes; frameIndex = +2)
+		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
+		{
+			std::memcpy(&mArray[((15 - chanIndex) * heightPerFramePerChannel + frameIndex * heightAllChannels) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerFramePerChannel + chanIndex * heightAllFramesPerChannel) * mBytesPerLine], heightPerFramePerChannel * mBytesPerLine);
+			std::memcpy(&mArray[((7 - chanIndex) * heightPerFramePerChannel + frameIndex * heightAllChannels) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerFramePerChannel + chanIndex * heightAllFramesPerChannel) * mBytesPerLine], heightPerFramePerChannel * mBytesPerLine);
+		}
 }
 #pragma endregion "TiffU8"
 

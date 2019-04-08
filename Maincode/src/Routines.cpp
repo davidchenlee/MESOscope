@@ -804,7 +804,7 @@ namespace TestRoutines
 
 		PockelsCell pockels{ pockelsVision };
 		//PockelsCell pockels{ pockelsFidelity };
-		pockels.pushPowerSinglet(8 * us, 20 * mW);
+		pockels.pushPowerSinglet(8 * us, 0. * mW);
 		//pockels.pushPowerSinglet(8 * us, 0 * mW);
 		//pockels.pushVoltageSinglet(8 * us, 1.0 * V);
 

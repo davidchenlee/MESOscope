@@ -231,7 +231,7 @@ class PockelsCell
 	RTchannel mScalingRTchannel;
 	int mWavelength_nm;							//Laser wavelength
 	const double timeStep{ 8. * us };
-	const double maxPower{ 300. * mW };			//Soft limit for the laser power
+	double maxPower;							//Softlimit for the laser power
 	Shutter mShutter;
 
 	double laserpowerToVolt_(const double power) const;

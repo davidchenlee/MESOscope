@@ -436,28 +436,39 @@ void TiffU8::pushImage(const int firstFrameIndex, const int lastFrameIndex, cons
 	std::memcpy(&mArray[firstFrameIndex * mHeightPerFrame * mBytesPerLine], inputArray, (lastFrameIndex - firstFrameIndex + 1) * mHeightPerFrame * mBytesPerLine);
 }
 
-void TiffU8::mergePMT16Xchannels(const int heightPerFramePerChannel, const unsigned char* inputArrayA, const unsigned char* inputArrayB) const
+
+/*
+inputArrayA = ||CH01 f1|CH01 f2|...|CH01 fN||CH02 f1|CH02 f2|...|CH02 fN||CH08 f1|CH08 f2|...|CH08 fN||
+inputArrayB = ||CH09 f1|CH09 f2|...|CH09 fN||CH10 f1|CH10 f2|...|CH10 fN||CH16 f1|CH16 f2|...|CH08 fN||
+
+The idea is to put all the channels from the first frame together, then continue with the next frame, etc
+mArray = ||CH01 f1|CH02 f1|...|CH16 f1||CH16 f2|CH15 f2|...|CH01 f2||CH01 fN|CH02 fN|...|CH16 fN||		Note that the second, fifth, etc frames, the channels are in a reversed order. This is because of bidirectional scanning of the galvos
+*/
+void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const unsigned char* inputArrayA, const unsigned char* inputArrayB) const
 {
-	//std::memcpy(mArray, inputArrayA, 8 * heightAllFramesPerChannel * mBytesPerLine);
-	//std::memcpy(&mArray[8 * heightAllFramesPerChannel * mBytesPerLine], inputArrayB, 8 * heightAllFramesPerChannel * mBytesPerLine);
+	//old way
+	//std::memcpy(mArray, inputArrayA, 8 * heightPerChannelAllFrames * mBytesPerLine);
+	//std::memcpy(&mArray[8 * heightPerChannelAllFrames * mBytesPerLine], inputArrayB, 8 * heightPerChannelAllFrames * mBytesPerLine);
 
-	const int heightAllChannels = 16 * heightPerFramePerChannel;
-	const int heightAllFramesPerChannel = heightPerFramePerChannel * mNframes;
+	const int heightAllChannelsPerFrame = 16 * heightPerChannelPerFrame;
+	const int heightPerChannelAllFrames = heightPerChannelPerFrame * mNframes;
 
-	//Even frameIndex
-	for (int frameIndex = 0; frameIndex < mNframes; frameIndex=+2)
+	//Note that CH01 corresponds to frameIndex = 0,  CH02 corresponds to frameIndex = 1, etc
+	//Even 'frameIndex'
+
+	for (int frameIndex = 0; frameIndex < mNframes; frameIndex += 2)
 		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{
-			std::memcpy(&mArray[(chanIndex * heightPerFramePerChannel + frameIndex * heightAllChannels) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerFramePerChannel + chanIndex * heightAllFramesPerChannel) * mBytesPerLine], heightPerFramePerChannel * mBytesPerLine);
-			std::memcpy(&mArray[((chanIndex + 8) * heightPerFramePerChannel + frameIndex * heightAllChannels) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerFramePerChannel + chanIndex * heightAllFramesPerChannel) * mBytesPerLine], heightPerFramePerChannel * mBytesPerLine);
+			std::memcpy(&mArray[(chanIndex * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
+			std::memcpy(&mArray[((chanIndex + 8) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
 		}
 
-	//Odd frameIndex
-	for (int frameIndex = 1; frameIndex < mNframes; frameIndex = +2)
+	//Odd 'frameIndex'
+	for (int frameIndex = 1; frameIndex < mNframes; frameIndex += 2)
 		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{
-			std::memcpy(&mArray[((15 - chanIndex) * heightPerFramePerChannel + frameIndex * heightAllChannels) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerFramePerChannel + chanIndex * heightAllFramesPerChannel) * mBytesPerLine], heightPerFramePerChannel * mBytesPerLine);
-			std::memcpy(&mArray[((7 - chanIndex) * heightPerFramePerChannel + frameIndex * heightAllChannels) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerFramePerChannel + chanIndex * heightAllFramesPerChannel) * mBytesPerLine], heightPerFramePerChannel * mBytesPerLine);
+			std::memcpy(&mArray[((15 - chanIndex) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
+			std::memcpy(&mArray[((7 - chanIndex) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
 		}
 }
 #pragma endregion "TiffU8"

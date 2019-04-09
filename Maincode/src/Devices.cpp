@@ -170,8 +170,8 @@ void Image::demultiplex_()
 	//U8 upscaleFactorU8 = 1; //For debugging
 
 	//Using 2 separate arrays to allow parallelization in the future
-	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix, 8 * mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch1-Ch8
-	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix, 8 * mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch9-Ch16
+	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch1-Ch8
+	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch9-Ch16
 
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
 	{
@@ -207,7 +207,7 @@ void Image::demultiplex_()
 
 	//Copy the counts from the selected channel 'PMT16Xchan' to a Tiff
 	if (multiplex)	//multibeam
-		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff());
+		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is for a single PMT16X channel
 	else			//singlebeam. Select a particular channel as the detector
 	{
 		if (PMT16Xchan >= CH01 && PMT16Xchan <= CH08)
@@ -486,7 +486,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const d
 	switch (galvoChannel)
 	{
 	case RTSCANGALVO:
-		frameScan(-posMax, posMax); //Scan from -x to +x (wrt the stage x)
+		frameScan(-posMax, posMax); //Scan from -x to +x wrt the x-stage axis
 		break;
 	case RTRESCANGALVO:
 		//Rescan in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
@@ -521,7 +521,13 @@ void Galvo::voltageToZero() const
 void Galvo::frameScan(const double posInitial, const double posFinal, const double posOffset) const
 {
 	const double timeStep{ 8. * us };	//Time step of the linear ramp
-	const double fineTuneHalfPeriodLineclock{ -0.58 * us };	//Adjust the RS half-period to fine tune the galvo's frame-scan
+
+	double fineTuneHalfPeriodLineclock;	//Adjust the RS half-period to fine tune the galvo's frame-scan
+	if (multiplex)	//Multibeam
+		fineTuneHalfPeriodLineclock = -5.5 * us;
+	else            //Singlebeam
+		fineTuneHalfPeriodLineclock = -0.58 * us;
+
 	const double frameDuration{ (halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix };	//Time to scan a frame = (time for the RS to travel from side to side) x (# height of the frame in pixels)
 
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);
@@ -535,8 +541,12 @@ void Galvo::frameRescan(const double posInitial, const double posFinal, const do
 	//Dirty hack
 	//The rescanner has a delay wrt the scanner because of the mirror inertia (look at the position monitor of both galvos on the oscilloscope)
 	//A shorter rescanner ramp is used to compensate for such delay. To optimize the ramp duration, look at a fluorescent slide on camera and minimize the emission footprint during a scan
-	//const double frameDuration{ 1.9 * ms }; //For 35 pixels		
-	const double frameDuration{ halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix };
+
+	double frameDuration;
+	if (multiplex)	//Multibeam
+		frameDuration = 1.85 * ms ; //For 35 pixels	
+	else            //Singlebeam
+		frameDuration = halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix;
 
 	//The voltage offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);

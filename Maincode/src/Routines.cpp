@@ -1140,7 +1140,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 2 };
+		const int nFramesCont{ 4 };
 		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 
 		int selectHeightPerFrame_pix;
@@ -1148,7 +1148,7 @@ namespace TestRoutines
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			stackCenterXYZ = { 55.630 * mm, 24.000 * mm, 17.948 * mm };
+			stackCenterXYZ = { 55.630 * mm, 24.000 * mm, 17.946 * mm };
 			if (multiplex)	//Multibeam
 			{
 				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);

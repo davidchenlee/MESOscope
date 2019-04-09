@@ -56,7 +56,7 @@ public:
 	void saveTxt(const std::string fileName) const;
 	void pushImage(const int frameIndex, const unsigned char* inputArray) const;
 	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const unsigned char* inputArray) const;
-	void mergePMT16Xchannels(const int heightPerFramePerChannel, const unsigned char* inputArrayA, const unsigned char* inputArrayB) const;
+	void mergePMT16Xchannels(const int heightPerChannelPerFrame, const unsigned char* inputArrayA, const unsigned char* inputArrayB) const;
 };
 
 

@@ -208,6 +208,21 @@ unsigned char* const TiffU8::pointerToTiff() const
 	return mArray;
 }
 
+int TiffU8::widthPerFrame() const
+{
+	return mWidthPerFrame;
+}
+
+int TiffU8::heightPerFrame() const
+{
+	return mHeightPerFrame;
+}
+
+int TiffU8::nFrames() const
+{
+	return mNframes;
+}
+
 //Split mArray into sub-images (or "frames")
 //Purpose: the microscope concatenates all the planes in a scanned stack and hands over a vertically long image which has to be resized into sub-images
 void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag, const ScanDirection scanDir) const
@@ -485,8 +500,13 @@ void TiffStack::pushSameZ(const int indexSameZ, unsigned char* const pointerToTi
 
 void TiffStack::pushDiffZ(const int indexDiffZ)
 {
-	mSameZ.averageFrames();	//Average the images with the same Z
-	mDiffZ.pushImage(indexDiffZ, mSameZ.pointerToTiff());
+	//Temporary hack
+	//I want to average all the stacks in mSameZ and then move to the next plane and repeat
+	//However, averageFrames() collapses mSameZ to a single image containing the average
+	//Solution: make a temporary copy of mSameZ and calculate the average over it
+	TiffU8 auxTiff{ mSameZ.pointerToTiff(), mSameZ.widthPerFrame(), mSameZ.heightPerFrame(), mSameZ.nFrames() }; //Make a copy of mSameZ
+	auxTiff.averageFrames();	//Average the images with the same Z
+	mDiffZ.pushImage(indexDiffZ, auxTiff.pointerToTiff());
 }
 
 void TiffStack::saveToFile(const std::string filename, OverrideFileSelector overrideFlag) const

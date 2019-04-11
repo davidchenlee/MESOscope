@@ -63,7 +63,6 @@ namespace FPGAns
 																									//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 		const double mPulsesPerPix = mDwell / VISIONpulsePeriod;									//Max number of laser pulses per pixel
 		const U8 mUpscaleFactorU8{ static_cast<U8>(255 / (mPulsesPerPix + 1)) };					//Upscale the photocount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
-		const int mNlinesSkip{ 0 };																	//Number of lines to skip beetween frames to reduce the acquisition bandwidt
 		int mWidthPerFrame_pix;																		//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
 		int mHeightPerFrame_pix;																	//Height in pixels of a single frame (galvo axis). This sets the number of "lines" in the image
 		int mNframes;																				//Number of frames to acquire

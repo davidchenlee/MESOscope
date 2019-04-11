@@ -23,6 +23,7 @@
 			<Property Name="NI.LV.FPGA.CompileConfigString" Type="Str">USB-7856R/Clk40Derived4x1B60MHz/falsefalseFPGA_EXECUTION_MODEFPGA_TARGETFPGA_TARGET_CLASSUSB_7856RFPGA_TARGET_FAMILYKINTEX7TARGET_TYPEFPGA</Property>
 			<Property Name="NI.LV.FPGA.Version" Type="Int">6</Property>
 			<Property Name="NI.SortType" Type="Int">3</Property>
+			<Property Name="niFpga_TopLevelVIID" Type="Path">/D/OwnCloud/Codes/MESOscope/LabView/src/Subvi AO pockels.vi</Property>
 			<Property Name="Resource Name" Type="Str">RIO0</Property>
 			<Property Name="rseries.aio./Connector1/AI0" Type="Str">0</Property>
 			<Property Name="rseries.aio./Connector1/AI1" Type="Str">0</Property>

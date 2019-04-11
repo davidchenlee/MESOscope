@@ -11,7 +11,8 @@ namespace Constants
 	extern const PhotocounterSelector photocounterInput{ PMT };		//PMT (PMT) or simulated PMT (SIM)
 	extern const PixelclockSelector pixelclockType{ UNIFORM };		//UNIFORM or NONUNIFORM dwell times
 	extern const ToggleSwitch pockelsAutoOff{ ENABLE };				//For debugging purposes. Enable to let 'framegate' set the pockels cell on and off
-	extern const ToggleSwitch multiplex{ ENABLE };
+	extern const ToggleSwitch multibeam{ ENABLE };
+	//extern const ToggleSwitch multibeam{ DISABLE };
 	extern PMT16XchanSelector PMT16Xchan{ CH00 }; //will be overridden in Routines
 
 	//GENERAL CONSTANTS
@@ -43,7 +44,8 @@ namespace Constants
 	extern const int syncDOtoAO_tick{ 4 * 74 };				//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
-	extern const int pockelsDelay_tick{ 0 };				//Delay of the Pockels AO after the preframeclock trigger
+	extern const int pockelsDelay_tick{ 68600 };			//Delay of the Pockels AO after the preframeclock trigger
+	extern const int scanGalvoDelay_tick{ 48000 };			//Delay of the scan galvo AO after the preframeclock trigger to match
 	extern const int rescanGalvoDelay_tick{ 0 };			//Delay of the rescan galvo AO after the preframeclock trigger
 
 	

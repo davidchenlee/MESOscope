@@ -52,7 +52,9 @@ namespace TestRoutines
 	//PMT16X
 	void PMT16Xconfig();
 	void PMT16Xdemultiplex(const FPGAns::FPGA &fpga);
+	void PMT16XgavosSyncAndLaser(const FPGAns::FPGA &fpga);
 	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga);
+
 
 	//Others
 	void vibratome(const FPGAns::FPGA &fpga);

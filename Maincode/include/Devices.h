@@ -79,9 +79,9 @@ public:
 class Galvo
 {
 	const double mScanCalib{ 0.02417210 * V / um };			//volts per um. Calibration factor of the scan galvo. Last calib 31/7/2018
-	const double mRescanCalib{ 0.201 * mScanCalib };		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector
+	const double mRescanCalib{ 0.190 * mScanCalib };		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector
 	
-	const double mRescanVoltageOffset{ 0.03 * V };			//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
+	const double mRescanVoltageOffset{ 0.10 * V };			//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
 															//To find such offset, swing the rescanner across the PMT16X and keep the scanner centered at 0. Adjust the offset until
 															//the stripes on the Tiff are in the correct positions (e.g. the 8th stripe should be 35 pixels below the Tiff center)
 															//A negative offset steers the fluorescence towards the 1st channel of the PMT16X; positive towards the 16th channel
@@ -298,7 +298,7 @@ class Stage
 	std::string axisToString(const Axis axis) const;
 public:
 	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages set by hardware. Can not be changed
-	const std::vector<double2> mSoftPosLimXYZ{ { -60. * mm, 60. * mm}, { 3. * mm, 30. * mm}, { 1. * mm, 24. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
+	const std::vector<double2> mSoftPosLimXYZ{ { -65. * mm, 65. * mm}, { 3. * mm, 30. * mm}, { 1. * mm, 24. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
 	Stage(const double velX, const double velY, const double velZ);
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor

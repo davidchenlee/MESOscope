@@ -696,14 +696,14 @@ namespace TestRoutines
 	void galvosSync(const FPGAns::FPGA &fpga)
 	{
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };	//height_pix = 35 for PMT16X
+		const int heightPerFrame_pix{ 35 };	//height_pix = 35 for PMT16X
 		const int nFramesCont{ 1 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
 		//GALVOS
-		const double FFOVslow{ 280. * um };		//Length scanned in the slow axis. FFOVslow = 17.5 * um for PMT16X
+		const double FFOVslow{ 17.5 * um };		//Length scanned in the slow axis. FFOVslow = 17.5 * um for PMT16X
 		Galvo scan{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
 		Galvo rescan{ RTcontrol, RTRESCANGALVO, FFOVslow / 2 };
 
@@ -1095,10 +1095,10 @@ namespace TestRoutines
 			255,	//CH04
 			255,	//CH05
 			255,	//CH06
-			120,	//CH07
-			120,	//CH08
-			120,	//CH09, this channel presents the lowest signal. For some reason 255 gives a lower signal than 200
-			120,	//CH10
+			255,	//CH07
+			255,	//CH08
+			255,	//CH09, this channel presents the lowest signal. For some reason 255 gives a lower signal than 200
+			255,	//CH10
 			255,	//CH11
 			255,	//CH12
 			255,	//CH13
@@ -1109,7 +1109,7 @@ namespace TestRoutines
 	}
 
 	//Test reading different channels of the PMT16X
-//Must manually open the laser and Uniblitz shutter
+	//Must manually open the laser and Uniblitz shutter
 	void PMT16Xdemultiplex(const FPGAns::FPGA &fpga)
 	{
 		const int widthPerFrame_pix{ 300 };
@@ -1134,13 +1134,60 @@ namespace TestRoutines
 		image.saveTiffMultiPage("SingleChannel", OVERRIDE);
 	}
 
+	//Test the synchronization of the 2 galvos and laser
+	void PMT16XgavosSyncAndLaser(const FPGAns::FPGA &fpga)
+	{
+		//ACQUISITION SETTINGS
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 560 };
+		const int nFramesCont{ 1 };
+		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
+
+		int selectHeightPerFrame_pix;
+		double selectScanFFOV, selectPower;
+		if (multibeam)	//Multibeam
+		{
+			selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
+			selectScanFFOV = FFOVslow / 16;
+			PMT16Xchan = CH00;
+			selectPower = 1400. * mW;
+		}
+		else			//Singlebeam
+		{
+			selectHeightPerFrame_pix = heightPerFrame_pix;
+			selectScanFFOV = FFOVslow;
+			PMT16Xchan = CH02;
+			selectPower = 50. * mW;
+		}
+
+		//STACK
+		const double stepSizeZ{ 1.0 * um };
+		const double stackDepthZ{ 20. * um };	//Acquire a stack of this depth or thickness in Z
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, selectHeightPerFrame_pix };
+
+		//GALVO RT linear scan
+		const Galvo scanner{ RTcontrol, RTSCANGALVO, selectScanFFOV / 2 };
+		const Galvo rescan{ RTcontrol, RTRESCANGALVO, selectScanFFOV / 2 };
+		//const Galvo rescan{ RTcontrol, RTRESCANGALVO, 0 };
+
+		//LASER
+		const int wavelength_nm = 750;
+		const VirtualLaser laser{ RTcontrol, wavelength_nm, selectPower, VISION };
+
+		//EXECUTE THE RT CONTROL SEQUENCE
+		Image image{ RTcontrol };
+		image.acquire();			//Execute the RT control sequence and acquire the image
+	}
+
 	//Copy of frameByFrameScan() with added rescan sync
 	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 4 };
+		const int nFramesCont{ 1 };
 		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 
 		int selectHeightPerFrame_pix;
@@ -1148,25 +1195,27 @@ namespace TestRoutines
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			stackCenterXYZ = { 55.630 * mm, 24.000 * mm, 17.946 * mm };
-			if (multiplex)	//Multibeam
+			//stackCenterXYZ = { (55.450 + 1 * 0.0175) * mm, 23.900 * mm, 17.936 * mm };//beads4um
+			stackCenterXYZ = { (55.430 + 8.600 + 16 * 0.0175) * mm, 24.000 * mm, 17.905 * mm };//beads1um
+			if (multibeam)	//Multibeam
 			{
 				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 				selectScanFFOV = FFOVslow / 16;
 				PMT16Xchan = CH00;
-				selectPower = 1400. * mW;
+				selectPower = 1600. * mW;
 			}
 			else			//Singlebeam
 			{
 				selectHeightPerFrame_pix = heightPerFrame_pix;
 				selectScanFFOV = FFOVslow;
-				PMT16Xchan = CH02;
-				selectPower = 50. * mW;
+				PMT16Xchan = CH08;
+				selectPower = 60. * mW;
 			}
 			selectRescanFFOV = selectScanFFOV;
 		}
 		else//fluorescent slide
 		{
+			selectHeightPerFrame_pix = heightPerFrame_pix;
 			selectScanFFOV = 0.0;			//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. Thee rescanner must be centered
 			selectRescanFFOV = FFOVslow;
 			selectPower = 10. * mW;
@@ -1176,17 +1225,17 @@ namespace TestRoutines
 
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RunMode acqMode{ STACKMODE };			//Image a stack frame by frame from the initial z position
-		//const RunMode acqMode{ STACKCENTEREDMODE };	//Image a stack frame by frame centered at the initial z position
+		const RunMode acqMode{ STACKCENTEREDMODE };	//Image a stack frame by frame centered at the initial z position
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
-		const double stepSizeZ{ 1.0 * um };
+		const double stepSizeZ{ 0.5 * um };
 		const double stackDepthZ{ 20. * um };	//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
@@ -1205,7 +1254,7 @@ namespace TestRoutines
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case AVGMODE:
-			nSameZ = 10;
+			nSameZ = 20;
 			nDiffZ = 1; //Do not change this
 			overrideFlag = NOOVERRIDE;
 			stagePositionXYZ.push_back(stackCenterXYZ);
@@ -1219,7 +1268,7 @@ namespace TestRoutines
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
 			break;
 		case STACKCENTEREDMODE:
-			nSameZ = 1;
+			nSameZ = 10;
 			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
 			overrideFlag = NOOVERRIDE;
 			//Generate the discrete scan sequence for the stages
@@ -1270,7 +1319,7 @@ namespace TestRoutines
 			datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
 			datalog.record("Height Y (galvo) (pix) = ", selectHeightPerFrame_pix);
 			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
-			datalog.record("Resolution Y (galvo) (um/pix) = ", (FFOVslow / um) / RTcontrol.mHeightPerFrame_pix);
+			datalog.record("Resolution Y (galvo) (um/pix) = ", (selectScanFFOV / um) / selectHeightPerFrame_pix);
 			datalog.record("\nSTAGE--------------------------------------------------------");
 		}
 
@@ -1298,7 +1347,8 @@ namespace TestRoutines
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
 				image.acquire();			//Execute the RT control sequence and acquire the image
-				//image.averageFrames();		//Average the frames acquired via continuous XY acquisition
+				image.averageFrames();		//Average the frames acquired via continuous XY acquisition
+				//image.averageEvenOddFrames();
 				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
 
 				if (acqMode == SINGLEMODE)
@@ -1307,7 +1357,7 @@ namespace TestRoutines
 					std::string singleFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_P=" + toString(power / mW, 1) + "mW" +
 						"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(YY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(ZZ) / mm, 4) };
 					image.saveTiffMultiPage(singleFilename, overrideFlag);
-					Sleep(700);
+					Sleep(300);
 				}
 			}
 			tiffStack.pushDiffZ(iterDiffZ);
@@ -1351,7 +1401,7 @@ namespace TestRoutines
 		//FWexcitation.setWavelength(wavelength_nm);
 		//FWdetection.setWavelength(wavelength_nm);
 
-		if (multiplex)	//Multiplex
+		if (multibeam)	//Multiplex
 		{
 			//Turn both filterwheels concurrently
 			std::thread th1{ &Filterwheel::setWavelength, &FWexcitation, wavelength_nm };

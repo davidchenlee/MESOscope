@@ -46,6 +46,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);
 			TestRoutines::PMT16XframeByFrameScan(fpga);
+			//TestRoutines::PMT16XgavosSyncAndLaser(fpga);
 
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();

@@ -49,7 +49,7 @@ namespace Constants
 	extern const PhotocounterSelector photocounterInput;
 	extern const PixelclockSelector pixelclockType;
 	extern const ToggleSwitch pockelsAutoOff;
-	extern const ToggleSwitch multiplex;
+	extern const ToggleSwitch multibeam;
 	extern PMT16XchanSelector PMT16Xchan;
 
 	extern const double PI;
@@ -73,6 +73,7 @@ namespace Constants
 	extern const int AO_tMIN;
 	extern const int syncDOtoAO_tick;
 	extern const int pockelsDelay_tick;
+	extern const int scanGalvoDelay_tick;
 	extern const int rescanGalvoDelay_tick;
 	extern const double linegateTimeout;
 	extern const int FIFOINtimeout_tick;

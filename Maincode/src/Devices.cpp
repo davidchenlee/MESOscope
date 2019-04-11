@@ -4,7 +4,7 @@
 
 //When multiplexing, create a mTiff to contain 16 stripes of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(FPGAns::RTcontrol &RTcontrol, const AcqTriggerSelector stageAsTrigger) :
-	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multiplex) * 15 + 1) *  mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes), mStageAsTrigger(stageAsTrigger)
+	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * 15 + 1) *  mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes), mStageAsTrigger(stageAsTrigger)
 {
 	mBufArrayA = new U32[mRTcontrol.mNpixAllFrames];
 	mBufArrayB = new U32[mRTcontrol.mNpixAllFrames];
@@ -206,7 +206,7 @@ void Image::demultiplex_()
 	const int mBytesPerPMT16Xchannel = mRTcontrol.mNpixAllFrames * sizeof(unsigned char);
 
 	//Copy the counts from the selected channel 'PMT16Xchan' to a Tiff
-	if (multiplex)	//multibeam
+	if (multibeam)	//multibeam
 		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is for a single PMT16X channel
 	else			//singlebeam. Select a particular channel as the detector
 	{
@@ -217,15 +217,15 @@ void Image::demultiplex_()
 	}
 		//std::memcpy(mTiff.pointerToTiff(), CountA.pointerToTiff() + CH08 * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
 
-	/*
-	//For debugging. Save all the PMT16X channels
-	//Save each PMT16X channel in a different Tiff page
-	TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix , 16 * mRTcontrol.mNframes };
-	stack.pushImage(CH01, CH08, CountA.pointerToTiff());
-	stack.pushImage(CH09, CH16, CountB.pointerToTiff());
-	stack.saveToFile("AllChannels", MULTIPAGE, NOOVERRIDE);
-	*/
-		
+	if (0)
+	{
+		//For debugging. Save all the PMT16X channels
+		//Save each PMT16X channel in a different Tiff page
+		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix , 16 * mRTcontrol.mNframes };
+		stack.pushImage(CH01, CH08, CountA.pointerToTiff());
+		stack.pushImage(CH09, CH16, CountB.pointerToTiff());
+		stack.saveToFile("AllChannels", MULTIPAGE, NOOVERRIDE);
+	}
 }
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
@@ -523,8 +523,9 @@ void Galvo::frameScan(const double posInitial, const double posFinal, const doub
 	const double timeStep{ 8. * us };	//Time step of the linear ramp
 
 	double fineTuneHalfPeriodLineclock;	//Adjust the RS half-period to fine tune the galvo's frame-scan
-	if (multiplex)	//Multibeam
-		fineTuneHalfPeriodLineclock = -5.5 * us;
+										//Do a forward and backward scan and compare the bead position
+	if (multibeam)	//Multibeam
+		fineTuneHalfPeriodLineclock = -0.58 * us;
 	else            //Singlebeam
 		fineTuneHalfPeriodLineclock = -0.58 * us;
 
@@ -538,13 +539,12 @@ void Galvo::frameRescan(const double posInitial, const double posFinal, const do
 {
 	const double timeStep{ 8. * us };	//Time step of the linear ramp
 
-	//Dirty hack
-	//The rescanner has a delay wrt the scanner because of the mirror inertia (look at the position monitor of both galvos on the oscilloscope)
-	//A shorter rescanner ramp is used to compensate for such delay. To optimize the ramp duration, look at a fluorescent slide on camera and minimize the emission footprint during a scan
-
 	double frameDuration;
-	if (multiplex)	//Multibeam
-		frameDuration = 1.85 * ms ; //For 35 pixels	
+	if (multibeam)	//Multibeam
+	{
+		//frameDuration = 2.2 * ms; //For 35 pixels	
+		frameDuration = halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix;
+	}
 	else            //Singlebeam
 		frameDuration = halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix;
 
@@ -1163,7 +1163,7 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, 
 	}
 
 	//Initialize the power softlimit
-	if (multiplex)			//Multibeam
+	if (multibeam)			//Multibeam
 		maxPower = 1600 * mW;
 	else						//Singlebeam
 		maxPower = 300 * mW;
@@ -1385,7 +1385,7 @@ LaserSelector VirtualLaser::autoselectLaser_(const int wavelength_nm)
 
 void VirtualLaser::turnFilterwheels_(const int wavelength_nm)
 {
-	if (multiplex)	//Multiplex
+	if (multibeam)	//Multiplex
 	{
 		//Turn both filterwheels concurrently
 		std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };

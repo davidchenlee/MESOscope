@@ -1195,40 +1195,56 @@ namespace TestRoutines
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			//stackCenterXYZ = { (55.450 + 1 * 0.0175) * mm, 23.900 * mm, 17.936 * mm };//beads4um
-			stackCenterXYZ = { (55.430 + 8.600 + 16 * 0.0175) * mm, 24.000 * mm, 17.905 * mm };//beads1um
+			stackCenterXYZ = { (55.450 + 1 * 0.0175) * mm, 23.900 * mm, 17.927 * mm };//beads4um
+			//stackCenterXYZ = { (55.430 + 8.600 + 16 * 0.0175) * mm, 24.000 * mm, 17.905 * mm };//beads1um
 			if (multibeam)	//Multibeam
 			{
 				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 				selectScanFFOV = FFOVslow / 16;
+				selectRescanFFOV = FFOVslow / 16;
 				PMT16Xchan = CH00;
-				selectPower = 1600. * mW;
+				selectPower = 1400. * mW;
 			}
 			else			//Singlebeam
 			{
 				selectHeightPerFrame_pix = heightPerFrame_pix;
 				selectScanFFOV = FFOVslow;
+				selectRescanFFOV = FFOVslow;
 				PMT16Xchan = CH08;
-				selectPower = 60. * mW;
+				selectPower = 40. * mW;
 			}
-			selectRescanFFOV = selectScanFFOV;
+
 		}
 		else//fluorescent slide
 		{
-			selectHeightPerFrame_pix = heightPerFrame_pix;
-			selectScanFFOV = 0.0;			//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. Thee rescanner must be centered
-			selectRescanFFOV = FFOVslow;
-			selectPower = 10. * mW;
 			stackCenterXYZ = { 55.500 * mm, 3.300 * mm, 17.800 * mm };
-			PMT16Xchan = CH00;
+			if (multibeam)	//Multibeam to look at the signal intensity difference between channels
+			{
+				//To check the 
+				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
+				selectScanFFOV = FFOVslow / 16;
+				selectRescanFFOV = FFOVslow / 16;
+				PMT16Xchan = CH00;
+				selectPower = 160. * mW;
+			}
+			else			//Singlebeam to check the inter-beamlet distance
+			{
+				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered.
+				//Enable saving all the PMT16X channels as a stack in Image::demultiplex_()
+				selectHeightPerFrame_pix = heightPerFrame_pix;
+				selectScanFFOV = 0.0;			
+				selectRescanFFOV = FFOVslow;
+				PMT16Xchan = CH00;
+				selectPower = 10. * mW;
+			}
 		}
 
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RunMode acqMode{ STACKMODE };			//Image a stack frame by frame from the initial z position
-		const RunMode acqMode{ STACKCENTEREDMODE };	//Image a stack frame by frame centered at the initial z position
+		//const RunMode acqMode{ STACKCENTEREDMODE };	//Image a stack frame by frame centered at the initial z position
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
@@ -1268,7 +1284,7 @@ namespace TestRoutines
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
 			break;
 		case STACKCENTEREDMODE:
-			nSameZ = 10;
+			nSameZ = 1;
 			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
 			overrideFlag = NOOVERRIDE;
 			//Generate the discrete scan sequence for the stages

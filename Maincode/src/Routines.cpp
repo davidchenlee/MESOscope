@@ -1195,8 +1195,9 @@ namespace TestRoutines
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			stackCenterXYZ = { (55.450 + 1 * 0.0175) * mm, 23.900 * mm, 17.927 * mm };//beads4um
-			//stackCenterXYZ = { (55.430 + 8.600 + 16 * 0.0175) * mm, 24.000 * mm, 17.905 * mm };//beads1um
+			stackCenterXYZ = { (38.512) * mm, 9.870 * mm, 17.841 * mm };//beads4um
+			//stackCenterXYZ = { };//beads1um
+			//stackCenterXYZ = { };//beads0.5um
 			if (multibeam)	//Multibeam
 			{
 				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
@@ -1211,9 +1212,8 @@ namespace TestRoutines
 				selectScanFFOV = FFOVslow;
 				selectRescanFFOV = FFOVslow;
 				PMT16Xchan = CH08;
-				selectPower = 40. * mW;
+				selectPower = 50. * mW;
 			}
-
 		}
 		else//fluorescent slide
 		{
@@ -1241,17 +1241,17 @@ namespace TestRoutines
 
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RunMode acqMode{ AVGMODE };				//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RunMode acqMode{ STACKMODE };			//Image a stack frame by frame from the initial z position
-		//const RunMode acqMode{ STACKCENTEREDMODE };	//Image a stack frame by frame centered at the initial z position
+		const RunMode acqMode{ STACKCENTEREDMODE };	//Image a stack frame by frame centered at the initial z position
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//STACK
-		const double stepSizeZ{ 0.5 * um };
+		const double stepSizeZ{ 1.0 * um };
 		const double stackDepthZ{ 20. * um };	//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
@@ -1270,7 +1270,7 @@ namespace TestRoutines
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case AVGMODE:
-			nSameZ = 20;
+			nSameZ = 10;
 			nDiffZ = 1; //Do not change this
 			overrideFlag = NOOVERRIDE;
 			stagePositionXYZ.push_back(stackCenterXYZ);
@@ -1284,7 +1284,7 @@ namespace TestRoutines
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
 			break;
 		case STACKCENTEREDMODE:
-			nSameZ = 1;
+			nSameZ = 10;
 			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
 			overrideFlag = NOOVERRIDE;
 			//Generate the discrete scan sequence for the stages

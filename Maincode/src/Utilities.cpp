@@ -457,7 +457,8 @@ inputArrayA = ||CH01 f1|CH01 f2|...|CH01 fN||CH02 f1|CH02 f2|...|CH02 fN||CH08 f
 inputArrayB = ||CH09 f1|CH09 f2|...|CH09 fN||CH10 f1|CH10 f2|...|CH10 fN||CH16 f1|CH16 f2|...|CH08 fN||
 
 The idea is to put all the channels from the first frame together, then continue with the next frame, etc
-mArray = ||CH01 f1|CH02 f1|...|CH16 f1||CH16 f2|CH15 f2|...|CH01 f2||CH01 fN|CH02 fN|...|CH16 fN||		Note that the second, fifth, etc frames, the channels are in a reversed order. This is because of bidirectional scanning of the galvos
+mArray = ||CH01 f1|CH02 f1|...|CH16 f1||CH16 f2|CH15 f2|...|CH01 f2||CH01 fN|CH02 fN|...|CH16 fN||
+Note that the channels are in a reversed order in the second frame, fourth frame, sixth frame, etc. This is because of the bidirectional scanning of the galvos
 */
 void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const unsigned char* inputArrayA, const unsigned char* inputArrayB) const
 {
@@ -468,9 +469,8 @@ void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const unsig
 	const int heightAllChannelsPerFrame = 16 * heightPerChannelPerFrame;
 	const int heightPerChannelAllFrames = heightPerChannelPerFrame * mNframes;
 
-	//Note that CH01 corresponds to frameIndex = 0,  CH02 corresponds to frameIndex = 1, etc
+	//Note that CH01 corresponds to chanIndex = 0,  CH02 corresponds to chanIndex = 1, etc
 	//Even 'frameIndex'
-
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex += 2)
 		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{

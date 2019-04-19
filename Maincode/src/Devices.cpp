@@ -207,7 +207,7 @@ void Image::demultiplex_()
 
 	//Copy the counts from the selected channel 'PMT16Xchan' to a Tiff
 	if (multibeam)	//multibeam
-		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is for a single PMT16X channel
+		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is the height of a single PMT16X channel
 	else			//singlebeam. Select a particular channel as the detector
 	{
 		if (PMT16Xchan >= CH01 && PMT16Xchan <= CH08)

@@ -6,9 +6,9 @@ const double3 stackCenterXYZ{ 55.500 * mm, 3.300 * mm, 17.800 * mm };
 //const std::string immersionMedium{ "SiliconeMineralOil5050" };
 //const std::string collar{ "1.495" };
 //const ChannelList channelListLiver{ {{ "GFP", 920, 60. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 20. * mW, 0.15 * mWpum }} };	//Define the wavelengths and laser powers for liver
-const std::string sampleName{ "Beads4um" };
-const std::string immersionMedium{ "SiliconeOil" };
-const std::string collar{ "1.51" };
+const std::string sampleName{ "LiverDAPITdT" };
+const std::string immersionMedium{ "SiliconeMineralOil5050" };
+const std::string collar{ "1.48" };
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 50. * mW, 0. * mWpum }, { "GFP", 920, 50. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//4um beads
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//0.5um beads
 const ChannelList channelListBeads{ {{ "DAPI", 750, 15. * mW, 0. * mWpum }} };	//fluorescent slide
@@ -1195,16 +1195,17 @@ namespace TestRoutines
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			stackCenterXYZ = { (38.512) * mm, 9.870 * mm, 17.841 * mm };//beads4um
-			//stackCenterXYZ = { };//beads1um
-			//stackCenterXYZ = { };//beads0.5um
+			stackCenterXYZ = { 50.900 * mm, 17.500 * mm, 17.897 * mm };//with clearing
+			//stackCenterXYZ = { 31.000 * mm, 17.200 * mm, 17.620 * mm };//without clearing
+			//stackCenterXYZ = { };
+			//stackCenterXYZ = { };
 			if (multibeam)	//Multibeam
 			{
 				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 				selectScanFFOV = FFOVslow / 16;
 				selectRescanFFOV = FFOVslow / 16;
 				PMT16Xchan = CH00;
-				selectPower = 1400. * mW;
+				selectPower = 400. * mW;
 			}
 			else			//Singlebeam
 			{
@@ -1212,12 +1213,12 @@ namespace TestRoutines
 				selectScanFFOV = FFOVslow;
 				selectRescanFFOV = FFOVslow;
 				PMT16Xchan = CH08;
-				selectPower = 50. * mW;
+				selectPower = 15. * mW;
 			}
 		}
 		else//fluorescent slide
 		{
-			stackCenterXYZ = { 55.500 * mm, 3.300 * mm, 17.800 * mm };
+			stackCenterXYZ = { 55.500 * mm, 3.300 * mm, 17.700 * mm };
 			if (multibeam)	//Multibeam to look at the signal intensity difference between channels
 			{
 				//To check the 
@@ -1242,9 +1243,9 @@ namespace TestRoutines
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
 		//const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
-		//const RunMode acqMode{ AVGMODE };				//Image the same z plane frame by frame 'nSameZ' times and average the images
+		const RunMode acqMode{ AVGMODE };				//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RunMode acqMode{ STACKMODE };			//Image a stack frame by frame from the initial z position
-		const RunMode acqMode{ STACKCENTEREDMODE };	//Image a stack frame by frame centered at the initial z position
+		//const RunMode acqMode{ STACKCENTEREDMODE };	//Image a stack frame by frame centered at the initial z position
 
 		//RS
 		const ResonantScanner RScanner{ fpga };
@@ -1252,7 +1253,7 @@ namespace TestRoutines
 
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 20. * um };	//Acquire a stack of this depth or thickness in Z
+		const double stackDepthZ{ 50. * um };	//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
@@ -1284,7 +1285,7 @@ namespace TestRoutines
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
 			break;
 		case STACKCENTEREDMODE:
-			nSameZ = 10;
+			nSameZ = 1;
 			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
 			overrideFlag = NOOVERRIDE;
 			//Generate the discrete scan sequence for the stages
@@ -1306,8 +1307,8 @@ namespace TestRoutines
 		//LASER
 		const int wavelength_nm = 750;
 		const double power = selectPower;
-		const double powerInc = 0. * mWpum;
-		const VirtualLaser laser{ RTcontrol, wavelength_nm, power, VISION };
+		const double powerInc = 0.0 * mWpum;
+		const VirtualLaser laser{ RTcontrol, wavelength_nm, VISION };
 
 		//DATALOG
 		{

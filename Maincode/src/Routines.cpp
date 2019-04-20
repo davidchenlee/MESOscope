@@ -697,7 +697,7 @@ namespace TestRoutines
 	{
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };	//height_pix = 35 for PMT16X
-		const int nFramesCont{ 1 };
+		const int nFramesCont{ 2 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
@@ -1187,7 +1187,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 1 };
+		const int nFramesCont{ 10 };
 		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 
 		int selectHeightPerFrame_pix;
@@ -1242,8 +1242,8 @@ namespace TestRoutines
 
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
-		const RunMode acqMode{ AVGMODE };				//Image the same z plane frame by frame 'nSameZ' times and average the images
+		const RunMode acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RunMode acqMode{ AVGMODE };				//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RunMode acqMode{ STACKMODE };			//Image a stack frame by frame from the initial z position
 		//const RunMode acqMode{ STACKCENTEREDMODE };	//Image a stack frame by frame centered at the initial z position
 
@@ -1364,8 +1364,8 @@ namespace TestRoutines
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
 				image.acquire();			//Execute the RT control sequence and acquire the image
-				image.averageFrames();		//Average the frames acquired via continuous XY acquisition
-				//image.averageEvenOddFrames();
+				//image.averageFrames();		//Average the frames acquired via continuous XY acquisition
+				image.averageEvenOddFrames();
 				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
 
 				if (acqMode == SINGLEMODE)

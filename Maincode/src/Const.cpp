@@ -5,14 +5,10 @@ namespace Constants
 {
 	extern const std::string folderPath{ "D:\\_output_local\\" };
 	//extern const std::string folderPath{ "Z:\\_output_remote\\" };
-
 	extern const std::string bitfilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" };	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
 
 	extern const PhotocounterSelector photocounterInput{ PMT };		//PMT (PMT) or simulated PMT (SIM)
 	extern const PixelclockSelector pixelclockType{ UNIFORM };		//UNIFORM or NONUNIFORM dwell times
-	extern const ToggleSwitch pockelsAutoOff{ ENABLE };				//For debugging purposes. Enable to let 'framegate' set the pockels cell on and off
-	//extern const ToggleSwitch multibeam{ ENABLE };
-	extern const ToggleSwitch multibeam{ DISABLE };
 	extern PMT16XchanSelector PMT16Xchan{ CH00 }; //will be overridden in Routines
 
 	//GENERAL CONSTANTS
@@ -44,14 +40,19 @@ namespace Constants
 	extern const int syncDOtoAO_tick{ 4 * 74 };				//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
-	extern const int pockelsDelay_tick{ 46600 };			//Delay of the Pockels AO after the preframeclock trigger. For turning on the pockels earlier because it overshoots at high power
-	extern const int scanGalvoDelay_tick{ 48000 };			//Delay of the scan galvo AO after the preframeclock trigger to match
-	extern const int rescanGalvoDelay_tick{ 0 };			//Delay of the rescan galvo AO after the preframeclock trigger
 
-	
+#if multibeam
+	extern const int pockelsDelay_tick{ 46600 };			//Delay of the Pockels AO after the preframeclock trigger. For turning on the pockels earlier because it overshoots at high power
+	extern const int scanGalvoDelay_tick{ 55000 };			//Delay of the scan galvo AO after the preframeclock trigger
+	extern const int rescanGalvoDelay_tick{ 220000 };		//Delay of the rescan galvo AO after the preframeclock trigger
+#else
+	extern const int pockelsDelay_tick{ 46600 };			//Delay of the Pockels AO after the preframeclock trigger. For turning on the pockels earlier because it overshoots at high power
+	extern const int scanGalvoDelay_tick{ 40000 };			//Delay of the scan galvo AO after the preframeclock trigger
+	extern const int rescanGalvoDelay_tick{ 220000 };		//Delay of the rescan galvo AO after the preframeclock trigger
+#endif
+
 	extern const double linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
 															//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered
-
 	extern const int FIFOINtimeout_tick{ 100 };				//Timeout of the host-to-target and target-to-host FIFOINs
 	extern const int FIFOINmax{ 32773 };					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 

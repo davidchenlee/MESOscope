@@ -3,6 +3,9 @@
 #include <vector>
 #include <array>
 
+#define multibeam 1			//Multibeam or singlebeam
+#define pockelsAutoOff 1	//For debugging purposes. Enable to let 'framegate' set the pockels cell on and off
+
 namespace Constants
 {
 	//FPGA data types
@@ -25,7 +28,6 @@ namespace Constants
 	enum PhotocounterSelector { PMT, SIM };
 	enum LineclockSelector { RS = false, FG = true };
 	enum AcqTriggerSelector { PCTRIG = false, STAGETRIG = true};
-	enum ToggleSwitch { DISABLE = false, ENABLE = true};
 	enum FPGAresetSelector { NORESET = false, RESET = true };
 	enum FIFOOUTenableSelector { FIFODISABLE = false, FIFOENABLE = true };
 	enum TiffPageStructSelector { SINGLEPAGE = false, MULTIPAGE = true};
@@ -48,8 +50,6 @@ namespace Constants
 
 	extern const PhotocounterSelector photocounterInput;
 	extern const PixelclockSelector pixelclockType;
-	extern const ToggleSwitch pockelsAutoOff;
-	extern const ToggleSwitch multibeam;
 	extern PMT16XchanSelector PMT16Xchan;
 
 	extern const double PI;

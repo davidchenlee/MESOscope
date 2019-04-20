@@ -78,9 +78,14 @@ public:
 
 class Galvo
 {
+	const double mSinglebeamFrameScanFineTuning = 22.4 * us;
+	const double mMultibeamFrameScanFineTuning = -3.0 * us;
+
+	//Scanner
 	const double mScanCalib{ 0.02417210 * V / um };			//volts per um. Calibration factor of the scan galvo. Last calib 31/7/2018
+
+	//Rescanner
 	const double mRescanCalib{ 0.190 * mScanCalib };		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector
-	
 	const double mRescanVoltageOffset{ 0.10 * V };			//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
 															//To find such offset, swing the rescanner across the PMT16X and keep the scanner centered at 0. Adjust the offset until
 															//the stripes on the Tiff are in the correct positions (e.g. the 8th stripe should be 35 pixels below the Tiff center)
@@ -103,8 +108,8 @@ public:
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
 	void positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal) const;
 	void voltageToZero() const;
-	void frameScan(const double posInitial, const double posFinal, const double posOffset = 0) const;
-	void frameRescan(const double posInitial, const double posFinal, const double posOffset = 0) const;
+	void scanSingleFrame(const double posInitial, const double posFinal, const double posOffset = 0) const;
+	void rescanSingleFrame(const double posInitial, const double posFinal, const double posOffset = 0) const;
 };
 
 class PMT16X

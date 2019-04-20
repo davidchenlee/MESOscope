@@ -459,16 +459,15 @@ void ResonantScanner::isRunning() const
 		}
 		else
 			break; //break the whileloop
-
 	}
 }
 #pragma endregion "Resonant scanner"
 
 
 #pragma region "Galvo"
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel): mRTcontrol(RTcontrol), mGalvoRTchannel(galvoChannel)
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel): mRTcontrol(RTcontrol), mGalvoRTchannel(channel)
 {
-	switch (galvoChannel)
+	switch (channel)
 	{
 	case RTSCANGALVO:
 		mVoltagePerDistance = mScanCalib;
@@ -481,16 +480,16 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel): mRTcon
 	}
 }
 
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax) : Galvo(RTcontrol, galvoChannel)
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const double posMax) : Galvo(RTcontrol, channel)
 {
-	switch (galvoChannel)
+	switch (channel)
 	{
 	case RTSCANGALVO:
-		frameScan(-posMax, posMax); //Scan from -x to +x wrt the x-stage axis
+		scanSingleFrame(-posMax, posMax); //Scan from -x to +x wrt the x-stage axis
 		break;
 	case RTRESCANGALVO:
 		//Rescan in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
-		frameRescan(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * interBeamletDistance * mRescanCalib);
+		rescanSingleFrame(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * interBeamletDistance * mRescanCalib);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -518,35 +517,46 @@ void Galvo::voltageToZero() const
 }
 
 //Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with fixed z)
-void Galvo::frameScan(const double posInitial, const double posFinal, const double posOffset) const
+void Galvo::scanSingleFrame(const double posInitial, const double posFinal, const double posOffset) const
 {
-	const double timeStep{ 8. * us };	//Time step of the linear ramp
+	double timeStep, frameDuration;
 
-	double fineTuneHalfPeriodLineclock;	//Adjust the RS half-period to fine tune the galvo's frame-scan
-										//Do a forward and backward scan and compare the bead position
-	if (multibeam)	//Multibeam
-		fineTuneHalfPeriodLineclock = -0.58 * us;
-	else            //Singlebeam
-		fineTuneHalfPeriodLineclock = -0.58 * us;
-
-	const double frameDuration{ (halfPeriodLineclock + fineTuneHalfPeriodLineclock)  * mRTcontrol.mHeightPerFrame_pix };	//Time to scan a frame = (time for the RS to travel from side to side) x (# height of the frame in pixels)
+	//Multibeam
+	if (multibeam)
+	{
+		timeStep = 2. * us;
+		//Adjust the RS half-period to fine tune the galvo's frame-scan
+		//using beads: do a forward and backward scan and compare the bead position
+		//using the oscilloscope: match the scan duration across scan 100 frames
+		frameDuration = halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mMultibeamFrameScanFineTuning;
+	}
+	//Singlebeam
+	else
+	{
+		timeStep = 8. * us;
+		frameDuration = halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix + mSinglebeamFrameScanFineTuning;
+	}
 
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);
 }
 
-//Generate a linear ramp for the rescanner sync'ed to scan galvo. Use a separate function from 'frameScan' because of the hack for a shorter frameDuration
-void Galvo::frameRescan(const double posInitial, const double posFinal, const double posOffset) const
+//Generate a linear ramp for the rescanner sync'ed to scan galvo. Use a separate function from 'scanSingleFrame' because of the hack for a shorter frameDuration
+void Galvo::rescanSingleFrame(const double posInitial, const double posFinal, const double posOffset) const
 {
-	const double timeStep{ 8. * us };	//Time step of the linear ramp
+	double timeStep, frameDuration;	//Time step of the linear ramp
 
-	double frameDuration;
-	if (multibeam)	//Multibeam
+	//Multibeam
+	if (multibeam)
 	{
-		//frameDuration = 2.2 * ms; //For 35 pixels	
-		frameDuration = halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix;
+		timeStep = 2. * us;
+		frameDuration = halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mMultibeamFrameScanFineTuning;
 	}
-	else            //Singlebeam
-		frameDuration = halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix;
+	//Singlebeam
+	else
+	{
+		timeStep = 8. * us;
+		frameDuration = halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix + mSinglebeamFrameScanFineTuning;
+	}
 
 	//The voltage offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);

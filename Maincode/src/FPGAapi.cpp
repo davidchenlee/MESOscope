@@ -174,7 +174,7 @@ namespace FPGAns
 	//Load the imaging parameters onto the FPGA. See 'Const.cpp' for the definition of each variable
 	void FPGA::initializeFpga_() const
 	{
-		if (RTNCHAN < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || pockelsDelay_tick < 0 || scanGalvoDelay_tick < 0  || rescanGalvoDelay_tick < 0 || linegateTimeout < 0 || stageTriggerPulse < 0)
+		if (RTNCHAN < 0 || FIFOINtimeout_tick < 0 || syncDOtoAO_tick < 0 || pockelsDelay_tick < 0 || scanGalvoDelay_tick < 0 || rescanGalvoDelay_tick < 0 || linegateTimeout < 0 || stageTriggerPulse < 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 		//INPUT SELECTORS

@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 55.500 * mm, 3.300 * mm, 17.800 * mm };
+const double3 stackCenterXYZ = { 50.700 * mm, 17.500 * mm, 17.897 * mm };
 //const std::string sampleName{ "Liver" };
 //const std::string immersionMedium{ "SiliconeMineralOil5050" };
 //const std::string collar{ "1.495" };
@@ -14,7 +14,7 @@ const std::string collar{ "1.48" };
 const ChannelList channelListBeads{ {{ "DAPI", 750, 15. * mW, 0. * mWpum }} };	//fluorescent slide
 const ChannelList channelList{ channelListBeads };
 
-namespace MainRoutines
+namespace PMT1XRoutines
 {
 	//The "Swiss knife" of my routines
 	void frameByFrameScan(const FPGAns::FPGA &fpga)
@@ -173,23 +173,8 @@ namespace MainRoutines
 	}
 
 	//Apply 'frameByFrameScan' on a list of locations. I don't use continuous z-scan because of its limited reach (160 planes)
-	void frameByFrameScan_LocationList(const FPGAns::FPGA &fpga, const int nSlice)
+	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice)
 	{
-		/*
-		//Location list
-		const std::vector<double3> locationXYList = {
-			{43.800 * mm, 17.300 * mm},
-			{44.800 * mm, 17.100 * mm},
-			{43.900 * mm, 17.100 * mm},
-			{43.400 * mm, 17.100 * mm},
-			{42.400 * mm, 17.100 * mm},
-			{45.300 * mm, 17.000 * mm},
-			{44.500 * mm, 16.900 * mm},
-			{45.200 * mm, 16.800 * mm},
-			{45.000 * mm, 16.800 * mm},
-			{44.800 * mm, 16.800 * mm} };
-			*/
-
 		//ACQUISITION SETTINGS
 		const ChannelList channelList{ channelList };
 		//const ChannelList channelList{ {channelList.findChannel("DAPI")} };
@@ -541,6 +526,150 @@ namespace MainRoutines
 		}//if
 	}
 
+
+}//namespace
+
+
+namespace PMT16XRoutines
+{
+	//Apply 'frameByFrameScan' on a list of locations. I don't use continuous z-scan because of its limited reach (160 planes)
+	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice)
+	{
+		//ACQUISITION SETTINGS
+		//const ChannelList channelList{ {channelList.findChannel("DAPI")} };
+		const int2 nStacksXY{ 2, 2 };
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 560 };
+		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
+		const double FFOVfast{ 150. * um };			//Full FOV in the slow axis
+		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
+
+		int selectHeightPerFrame_pix;
+		double selectScanFFOV, selectRescanFFOV, selectPower;
+
+		if (multibeam)	//Multibeam
+		{
+			selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
+			selectScanFFOV = FFOVslow / 16;
+			selectRescanFFOV = FFOVslow / 16;
+			PMT16Xchan = CH00;
+			selectPower = 400. * mW;
+		}
+		else			//Singlebeam
+		{
+			selectHeightPerFrame_pix = heightPerFrame_pix;
+			selectScanFFOV = FFOVslow;
+			selectRescanFFOV = FFOVslow;
+			PMT16Xchan = CH08;
+			selectPower = 15. * mW;
+		}
+
+		//STACK
+		const double2 FFOV{ FFOVslow, FFOVfast };							//Full FOV in the (slow axis, fast axis)
+		const double stepSizeZ{ 1.0 * um };									//Step size in z
+		const double stackDepthZ{ 10. * um };								//Acquire a stack of this depth or thickness in Z
+		const int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
+		const double3 stackOverlap_frac{ 0.03, 0.03, 0.03 };				//Stack overlap
+		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
+
+		//RS
+		const ResonantScanner RScanner{ fpga };
+		RScanner.isRunning();					//Make sure that the RS is running
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
+
+		//GALVO RT linear scan
+		const Galvo scanner{ RTcontrol, RTSCANGALVO, selectScanFFOV / 2 };
+		const Galvo rescan{ RTcontrol, RTRESCANGALVO, selectRescanFFOV / 2 };
+
+		//LASER
+		VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm };
+
+		//Create a location list
+		Sequencer sequence{ channelList, Sample(sampleName, immersionMedium, collar), stack, stackCenterXYZ, nStacksXY };
+		std::vector<double2> locationXYList{ sequence.generateLocationList() };
+
+		//STAGES
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
+
+		//Iterate over the wavelengths
+		for (std::vector<int>::size_type iter_wv = 0; iter_wv < channelList.size(); iter_wv++)
+		{
+			//DATALOG
+			Logger datalog("datalog_Slice" + std::to_string(nSlice) + "_" + channelList.at(iter_wv).mName);
+			datalog.record("SAMPLE-------------------------------------------------------");
+			datalog.record("Sample = ", sampleName);
+			datalog.record("Immersion medium = ", immersionMedium);
+			datalog.record("Correction collar = ", collar);
+			datalog.record("\nFPGA---------------------------------------------------------");
+			datalog.record("FPGA clock (MHz) = ", tickPerUs);
+			datalog.record("\nSCAN---------------------------------------------------------");
+			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
+			datalog.record("RS period (us) = ", 2 * halfPeriodLineclock / us);
+			datalog.record("Pixel dwell time (us) = ", RTcontrol.mDwell / us);
+			datalog.record("RS fill factor = ", RScanner.mFillFactor);
+			datalog.record("Slow axis FFOV (um) = ", FFOV.at(XX) / um);
+			datalog.record("\nIMAGE--------------------------------------------------------");
+			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
+			datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleFactorU8);
+			datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
+			datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
+			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
+			datalog.record("Resolution Y (galvo) (um/pix) = ", (FFOV.at(XX) / um) / RTcontrol.mHeightPerFrame_pix);
+			datalog.record("\n");
+
+			//Update the laser wavelength
+			const int wavelength_nm = channelList.at(iter_wv).mWavelength_nm;
+			laser.setWavelength(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
+			laser.openShutter();				//Re-open the Uniblitz shutter if closed
+
+			//Iterate over the locations
+			for (std::vector<int>::size_type iter_loc = 0; iter_loc < locationXYList.size(); iter_loc++)
+			{
+				//Generate the discrete scan sequence for the stages
+				std::vector<double3> stagePositionXYZ;
+				for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+					stagePositionXYZ.push_back({ locationXYList.at(iter_loc).at(XX), locationXYList.at(iter_loc).at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
+
+				//CREATE A STACK FOR STORING THE TIFFS
+				TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nDiffZ, 1 };
+
+				//ACQUIRE FRAMES AT DIFFERENT Zs
+				for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+				{
+					//Update the stages position
+					stage.moveXYZ(stagePositionXYZ.at(iterDiffZ));
+					stage.waitForMotionToStopAll();
+					//stage.printPositionXYZ();		//Print the stage position		
+
+					std::cout << "Location: " << iter_loc + 1 << "/" << locationXYList.size() << "\tTotal frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
+
+					//Update the laser power
+					laser.setPower(channelList.at(iter_wv).mScanPi + iterDiffZ * stepSizeZ * channelList.at(iter_wv).mStackPinc);
+
+					//EXECUTE THE RT CONTROL SEQUENCE
+					Image image{ RTcontrol };
+					image.acquire();			//Execute the RT control sequence and acquire the image
+					image.averageFrames();		//Average the frames acquired via continuous XY acquisition
+					tiffStack.pushSameZ(0, image.pointerToTiff());
+					tiffStack.pushDiffZ(iterDiffZ);
+					std::cout << "\n";
+
+					pressESCforEarlyTermination();		//Early termination if ESC is pressed
+				}
+
+				//Save the stackDiffZ to file
+				std::string shortName{ "Slice" + std::to_string(nSlice) + "_" + channelList.at(iter_wv).mName + "_Tile" + std::to_string(iter_loc + 1) };
+				std::string longName{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(channelList.at(iter_wv).mScanPi / mW, 1) + "mW_Pinc=" + toString(channelList.at(iter_wv).mStackPinc / mWpum, 1) + "mWpum" +
+					"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
+					"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
+
+				datalog.record(shortName + "\t" + longName);
+				tiffStack.saveToFile(shortName, NOOVERRIDE);
+			}//iter_loc
+		}//iter_wv
+	}
 
 }//namespace
 
@@ -1133,7 +1262,7 @@ namespace TestRoutines
 		image.saveTiffMultiPage("SingleChannel", OVERRIDE);
 	}
 
-	//Test the synchronization of the 2 galvos and laser
+	//Test the synchronization of the 2 galvos and the laser
 	void PMT16XgavosSyncAndLaser(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -1186,7 +1315,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 10 };
+		const int nFramesCont{ 1 };
 		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 
 		int selectHeightPerFrame_pix;
@@ -1194,7 +1323,7 @@ namespace TestRoutines
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			stackCenterXYZ = { 50.900 * mm, 17.500 * mm, 17.897 * mm };//with clearing
+			stackCenterXYZ = { 50.700 * mm, 17.500 * mm, 17.897 * mm };//with clearing
 			//stackCenterXYZ = { 31.000 * mm, 17.200 * mm, 17.620 * mm };//without clearing
 			//stackCenterXYZ = { };
 			//stackCenterXYZ = { };
@@ -1363,8 +1492,8 @@ namespace TestRoutines
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
 				image.acquire();			//Execute the RT control sequence and acquire the image
-				//image.averageFrames();		//Average the frames acquired via continuous XY acquisition
-				image.averageEvenOddFrames();
+				image.averageFrames();		//Average the frames acquired via continuous XY acquisition
+				//image.averageEvenOddFrames();
 				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
 
 				if (acqMode == SINGLEMODE)

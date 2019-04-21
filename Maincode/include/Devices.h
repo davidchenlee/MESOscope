@@ -78,7 +78,7 @@ public:
 
 class Galvo
 {
-	const double mSinglebeamFrameScanFineTuning = 22.4 * us;
+	const double mSinglebeamFrameScanFineTuning = 0 * us;
 	const double mMultibeamFrameScanFineTuning = -3.0 * us;
 
 	//Scanner
@@ -90,7 +90,6 @@ class Galvo
 															//To find such offset, swing the rescanner across the PMT16X and keep the scanner centered at 0. Adjust the offset until
 															//the stripes on the Tiff are in the correct positions (e.g. the 8th stripe should be 35 pixels below the Tiff center)
 															//A negative offset steers the fluorescence towards the 1st channel of the PMT16X; positive towards the 16th channel
-
 
 	//For the single laser beam (i.e., without using the beamsplitter) to point at a specific channel of the PMT16X
 	const double interBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
@@ -236,7 +235,7 @@ class PockelsCell
 	RTchannel mScalingRTchannel;
 	int mWavelength_nm;							//Laser wavelength
 	const double timeStep{ 8. * us };
-	double maxPower;							//Softlimit for the laser power
+	double mMaxPower;							//Softlimit for the laser power
 	Shutter mShutter;
 
 	double laserpowerToVolt_(const double power) const;

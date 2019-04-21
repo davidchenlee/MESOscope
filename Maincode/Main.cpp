@@ -7,12 +7,15 @@ int main(int argc, char* argv[])
 		FPGAns::FPGA fpga;		//Create a FPGA session
 		try
 		{
-			//MAIN SEQUENCES
-			//MainRoutines::frameByFrameScan(fpga);
-			//MainRoutines::frameByFrameScan_LocationList(fpga, 2);//scan frame by frame the specified set of locations
-			//MainRoutines::liveScan(fpga);//Image nonstop and move the stage manually thru the PI software
-			//MainRoutines::continuousScan(fpga);//Scan the z stage continuously. FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power
-			//MainRoutines::sequencer(fpga);FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power. Also I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
+			//PMT1X SEQUENCES
+			//PMT1XRoutines::frameByFrameScan(fpga);
+			//PMT1XRoutines::frameByFrameScanTiling(fpga, 2);//scan frame by frame and tile by tile
+			//PMT1XRoutines::liveScan(fpga);//Image nonstop and move the stage manually thru the PI software
+			//PMT1XRoutines::continuousScan(fpga);//Scan the z stage continuously. FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power
+			//PMT1XRoutines::sequencer(fpga);FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power. Also I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
+
+			//PMT16X SEQUENCES
+			PMT16XRoutines::frameByFrameScanTiling(fpga, 1);//scan frame by frame and tile by tile
 
 			//TESTS.
 			//TestRoutines::digitalLatency(fpga);
@@ -24,7 +27,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::fineTuneScanGalvo(fpga);
 			//TestRoutines::resonantScanner(fpga);
-			TestRoutines::galvosSync(fpga);
+			//TestRoutines::galvosSync(fpga);
 
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();
@@ -45,8 +48,8 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);
-			//TestRoutines::PMT16XframeByFrameScan(fpga);
 			//TestRoutines::PMT16XgavosSyncAndLaser(fpga);
+			//TestRoutines::PMT16XframeByFrameScan(fpga);
 
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();
@@ -79,14 +82,12 @@ int main(int argc, char* argv[])
 		}
 
 		fpga.close(NORESET);		//Close the FPGA connection
-		pressAnyKeyToCont();
-
 	}
 	//Catch exceptions thrown by the constructor FPGAns::FPGA
 	catch (const FPGAns::FPGAexception &e)
 	{
 		std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
-		//pressAnyKeyToCont();
+		pressAnyKeyToCont();
 	}
 
 	//pressAnyKeyToCont();

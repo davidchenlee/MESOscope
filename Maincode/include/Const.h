@@ -3,7 +3,7 @@
 #include <vector>
 #include <array>
 
-#define multibeam 1			//Multibeam or singlebeam
+#define multibeam 0			//Multibeam or singlebeam
 #define pockelsAutoOff 1	//For debugging purposes. Enable to let 'framegate' set the pockels cell on and off
 
 namespace Constants

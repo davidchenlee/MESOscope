@@ -1173,10 +1173,12 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, 
 	}
 
 	//Initialize the power softlimit
-	if (multibeam)			//Multibeam
-		maxPower = 1600 * mW;
-	else						//Singlebeam
-		maxPower = 300 * mW;
+	//Multibeam
+	if (multibeam)			
+		mMaxPower = 1600 * mW;
+	//Singlebeam
+	else				
+		mMaxPower = 300 * mW;
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
@@ -1197,12 +1199,12 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 			phase = 0.019 * V;
 		}
 		else if (mWavelength_nm == 920) {
-			amplitude = 200.1 * mW;
+			amplitude = 1089.0 * mW;
 			angularFreq = 0.507 / V;
 			phase = -0.088 * V;
 		}
 		else if (mWavelength_nm == 1040) {
-			amplitude = 75.19 * mW;
+			amplitude = 388.0 * mW;
 			angularFreq = 0.447 / V;
 			phase = 0.038 * V;
 		}
@@ -1238,8 +1240,8 @@ void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, con
 
 void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag) const
 {
-	if (P < 0 || P > maxPower)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(static_cast<int>(maxPower/mW)) + " mW");
+	if (P < 0 || P > mMaxPower)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(static_cast<int>(mMaxPower/mW)) + " mW");
 
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, laserpowerToVolt_(P), overrideFlag);
 }

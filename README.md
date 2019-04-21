@@ -4,7 +4,6 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 - cont z scan
-- For scaling the pockels power, currently only linear scaling for voltage is implemented. Implement linear scaling for the laser power as well (because the laser power depends nonlinearly of the voltage). 
 - Fix how to deal with multithread exception in the Filterwheel class!!!!
 - Do a post-sequence clean up routine to set the pockels outputs to 0
 - For the vibratome, show a progress bar for the slicing sequence
@@ -12,7 +11,6 @@ Code in C++ for controlling the NI USB-7852R card
 - Maybe install VTK to display tiff images
 
 ### LabView
-- Get rid of the framecounter GV in the startstop subvi. Use the framecounter in the AO trigger instead
 - Create a ramp generator. This is only necessary if I want to increase the memory of FIFOOUT at the expense of the input buffers
 - Check the delay of the internal FIFOs implemented in memory blocks
 - When FIFOOUT depth is set to 131071 elements, on the VS side the max # of readable elements is 160000

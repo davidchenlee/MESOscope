@@ -1249,33 +1249,33 @@ void PockelsCell::voltageToZero() const
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, AO_tMIN, 0 * V);
 }
 
-//Linearly scale the laser power from Si to Sf across all the frames. Eg., Si = 1.0 and Sf = 2.0
-void PockelsCell::scalingFactorLinearRamp_(const double Si, const double Sf) const
+//Increase the pockels voltage linearly from the first to the last frame
+void PockelsCell::voltageLinearRamp(const double Vi, const double Vf) const
 {
-	if (Si < 0 || Sf < 0 || Si > 4 || Sf > 4)
+	const double Vratio = Vf / Vi;
+
+	//Make sure that Fx2p14 will not overflow
+	if (Vratio > 4)	
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor must be in the range 0-4");
 
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
-	mRTcontrol.clearQueue(mScalingRTchannel);	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
-
-	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
-		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, Si + (Sf - Si) / (mRTcontrol.mNframes - 1) * ii);
-}
-
-//Increase the pockels voltage linearly from the first to the last frame
-void PockelsCell::voltageLinearRamp(const double Vi, const double Vf) const
-{
 	pushVoltageSinglet(timeStep, Vi, OVERRIDE);	//Set the laser power for the first frame
-	scalingFactorLinearRamp_(1.0, Vf / Vi);		//Increase the laser power linearly from the first to the last frame
+
+	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor and generate the scaling factors
+	mRTcontrol.clearQueue(mScalingRTchannel);
+	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
+		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, 1 + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
 }
 
 //Increase the laser power linearly from the first to the last frame
 void PockelsCell::powerLinearRamp(const double Pi, const double Pf) const
 {
-	pushPowerSinglet(timeStep, Pi, OVERRIDE);	//Set the laser power for the first frame
-	scalingFactorLinearRamp_(1.0, Pf / Pi);		//Increase the laser power linearly from the first to the last frame
+	const double Vi = laserpowerToVolt_(Pi);
+	const double Vf = laserpowerToVolt_(Pf);
+
+	voltageLinearRamp(Vi, Vf);
 }
 
 void PockelsCell::setShutter(const bool state) const

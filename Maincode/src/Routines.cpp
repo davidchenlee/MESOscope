@@ -692,12 +692,12 @@ namespace TestRoutines
 	}
 
 	//Use a single beamlet with the rescanner sync'ed to the scan galvo to keep the beam position fixed at the detector plane
-//Must manually open the laser and Uniblitz shutter and adjust the pockels power
+	//Must manually open the laser and Uniblitz shutter and adjust the pockels power
 	void galvosSync(const FPGAns::FPGA &fpga)
 	{
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };	//height_pix = 35 for PMT16X
-		const int nFramesCont{ 2 };
+		const int nFramesCont{ 100 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
@@ -791,7 +791,7 @@ namespace TestRoutines
 //For keeping the pockels on to check the the laser power
 //0. Make sure that the function generator feeds the lineclock
 //1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter automatically
-//2. Set pockelsAutoOff = DISABLE for holding the last value
+//2. Set pockelsAutoOff to 0 for holding on the last value
 //3. Tune Vision's wavelength manually
 	void pockels(const FPGAns::FPGA &fpga)
 	{
@@ -804,7 +804,7 @@ namespace TestRoutines
 
 		PockelsCell pockels{ pockelsVision };
 		//PockelsCell pockels{ pockelsFidelity };
-		pockels.pushPowerSinglet(8 * us, 0. * mW);
+		pockels.pushPowerSinglet(8 * us, 300. * mW);
 		//pockels.pushPowerSinglet(8 * us, 0 * mW);
 		//pockels.pushVoltageSinglet(8 * us, 1.0 * V);
 
@@ -818,7 +818,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 2 };			//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 100 };			//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
@@ -826,13 +826,12 @@ namespace TestRoutines
 		//POCKELS CELL
 		const int wavelength_nm{ 750 };
 		PockelsCell pockels{ RTcontrol, wavelength_nm, VISION };
-		//const double laserPower{ 80. * mW };				//Laser power
-		//pockels.pushPowerSinglet(400 * us, laserPower, OVERRIDE);
-		//pockels.powerLinearRamp(500. * mW, 1000. * mW);		//Linearly scale the laser power from the first to the last frame
+		//pockels.pushPowerSinglet(400 * us, 50. * mW, OVERRIDE);
+		pockels.powerLinearRamp(400. * mW, 800. * mW);		//Linearly scale the laser power from the first to the last frame
 
 		//Test the voltage setpoint
 		//pockels.pushVoltageSinglet(8* us, 0.5 * V);
-		pockels.voltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
+		//pockels.voltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
 
 
 		//EXECUTE THE RT CONTROL SEQUENCE

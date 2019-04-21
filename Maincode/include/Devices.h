@@ -240,7 +240,6 @@ class PockelsCell
 	Shutter mShutter;
 
 	double laserpowerToVolt_(const double power) const;
-	void scalingFactorLinearRamp_(const double Si, const double Sf) const;
 public:
 	PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector);	//Do not set the output to 0 through the destructor to allow latching the last value
 

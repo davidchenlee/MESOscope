@@ -287,10 +287,7 @@ namespace FPGAns
 		mVectorOfQueues.at(RTPIXELCLOCK) = pixelclock.readPixelclock();
 	}
 
-	RTcontrol::~RTcontrol()
-	{
-
-	}
+	RTcontrol::~RTcontrol(){}
 
 	//Load the imaging parameters onto the FPGA
 	void RTcontrol::uploadImagingParameters_() const
@@ -299,8 +296,7 @@ namespace FPGAns
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 		checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(mNframes)));						//Number of frames to acquire
-		checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getHandle(),
-			NiFpga_FPGAvi_ControlI16_NlinesAll, static_cast<I16>(mHeightAllFrames_pix)));																	//Total number of lines in all the frames
+		checkStatus(__FUNCTION__, NiFpga_WriteI32(mFpga.getHandle(), NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(mHeightAllFrames_pix)));			//Total number of lines in all the frames
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerFrame_pix)));		//Number of lines in a frame
 	
 		//SELECTORS
@@ -434,7 +430,7 @@ namespace FPGAns
 				}
 			}
 		}
-		uploadFIFOIN_(vectorOfQueuesForRamp);		//Load the control sequence on the FPGA
+		uploadFIFOIN_(vectorOfQueuesForRamp);		//Load the ramp on the FPGA
 		triggerNRT_();								//Trigger the FPGA outputs (non-RT trigger)
 	}
 

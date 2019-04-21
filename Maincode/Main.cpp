@@ -24,14 +24,14 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::fineTuneScanGalvo(fpga);
 			//TestRoutines::resonantScanner(fpga);
-			//TestRoutines::galvosSync(fpga);
+			TestRoutines::galvosSync(fpga);
 
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();
 
 			//TestRoutines::shutter(fpga);
 			//TestRoutines::pockels(fpga);
-			TestRoutines::pockelsRamp(fpga);
+			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
 
@@ -55,33 +55,38 @@ int main(int argc, char* argv[])
 		catch (const std::invalid_argument &e)
 		{
 			std::cout << "An invalid argument has occurred in " << e.what() << "\n";
+			pressAnyKeyToCont();
 		}
 		catch (const std::overflow_error &e)
 		{
 			std::cout << "An overflow has occurred in " << e.what() << "\n";
+			pressAnyKeyToCont();
 		}
 		catch (const FPGAns::FPGAexception &e)
 		{
 			std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
+			pressAnyKeyToCont();
 		}
 		catch (const std::runtime_error &e)
 		{
 			std::cout << "A runtime error has occurred in " << e.what() << "\n";
+			pressAnyKeyToCont();
 		}
 		catch (...)
 		{
 			std::cout << "An unknown error has occurred" << "\n";
+			pressAnyKeyToCont();
 		}
 
 		fpga.close(NORESET);		//Close the FPGA connection
-		//pressAnyKeyToCont();
+		pressAnyKeyToCont();
 
 	}
 	//Catch exceptions thrown by the constructor FPGAns::FPGA
 	catch (const FPGAns::FPGAexception &e)
 	{
 		std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
-		pressAnyKeyToCont();
+		//pressAnyKeyToCont();
 	}
 
 	//pressAnyKeyToCont();

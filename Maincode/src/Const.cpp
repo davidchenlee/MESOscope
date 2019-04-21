@@ -42,11 +42,13 @@ namespace Constants
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
 
 #if multibeam
-	extern const int pockelsDelay_tick{ 46600 };			//Delay of the Pockels AO after the preframeclock trigger. For turning on the pockels earlier because it overshoots at high power
+	extern const int pockelsMainDelay_tick{ 46600 };		//Delay of the Pockels AO after the preframeclock trigger. Turn on the pockels early because it overshoots at high power
+	extern const int pockelsSecondaryDelay_tick{ 70000 };	//Delay of the Pockels AO after the preframeclock trigger for the subsequent frames
 	extern const int scanGalvoDelay_tick{ 55000 };			//Delay of the scan galvo AO after the preframeclock trigger
 	extern const int rescanGalvoDelay_tick{ 220000 };		//Delay of the rescan galvo AO after the preframeclock trigger
 #else
-	extern const int pockelsDelay_tick{ 46600 };			//Delay of the Pockels AO after the preframeclock trigger. For turning on the pockels earlier because it overshoots at high power
+	extern const int pockelsMainDelay_tick{ 46600 };		//Delay of the Pockels AO after the preframeclock trigger. For turning on the pockels earlier because it overshoots at high power
+	extern const int pockelsSecondaryDelay_tick{ 0 };
 	extern const int scanGalvoDelay_tick{ 40000 };			//Delay of the scan galvo AO after the preframeclock trigger
 	extern const int rescanGalvoDelay_tick{ 220000 };		//Delay of the rescan galvo AO after the preframeclock trigger
 #endif

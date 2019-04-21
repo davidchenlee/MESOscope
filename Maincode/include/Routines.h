@@ -55,7 +55,6 @@ namespace TestRoutines
 	void PMT16XgavosSyncAndLaser(const FPGAns::FPGA &fpga);
 	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga);
 
-
 	//Others
 	void vibratome(const FPGAns::FPGA &fpga);
 	void filterwheel();

@@ -818,7 +818,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 50 };			//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 2 };			//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
@@ -826,12 +826,12 @@ namespace TestRoutines
 		//POCKELS CELL
 		const int wavelength_nm{ 750 };
 		PockelsCell pockels{ RTcontrol, wavelength_nm, VISION };
-		const double laserPower{ 80. * mW };				//Laser power
-		//pockels.pushPowerSinglet(8 * us, laserPower, OVERRIDE);
-		pockels.powerLinearRamp(80. * mW, 120. * mW);		//Linearly scale the laser power from the first to the last frame
+		//const double laserPower{ 80. * mW };				//Laser power
+		//pockels.pushPowerSinglet(400 * us, laserPower, OVERRIDE);
+		//pockels.powerLinearRamp(500. * mW, 1000. * mW);		//Linearly scale the laser power from the first to the last frame
 
 		//Test the voltage setpoint
-		//pockels.pushVoltageSinglet(8 * us, 0.5 * V);
+		pockels.pushVoltageSinglet(8* us, 0.5 * V);
 		//pockels.voltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
 
 

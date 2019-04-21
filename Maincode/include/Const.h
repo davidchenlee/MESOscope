@@ -72,7 +72,8 @@ namespace Constants
 	extern const U32 tMIN_tick;
 	extern const int AO_tMIN;
 	extern const int syncDOtoAO_tick;
-	extern const int pockelsDelay_tick;
+	extern const int pockelsMainDelay_tick;
+	extern const int pockelsSecondaryDelay_tick;
 	extern const int scanGalvoDelay_tick;
 	extern const int rescanGalvoDelay_tick;
 	extern const double linegateTimeout;

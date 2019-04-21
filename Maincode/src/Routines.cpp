@@ -831,8 +831,8 @@ namespace TestRoutines
 		//pockels.powerLinearRamp(500. * mW, 1000. * mW);		//Linearly scale the laser power from the first to the last frame
 
 		//Test the voltage setpoint
-		pockels.pushVoltageSinglet(8* us, 0.5 * V);
-		//pockels.voltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
+		//pockels.pushVoltageSinglet(8* us, 0.5 * V);
+		pockels.voltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
 
 
 		//EXECUTE THE RT CONTROL SEQUENCE

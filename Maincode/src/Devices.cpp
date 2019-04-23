@@ -217,10 +217,9 @@ void Image::demultiplex_()
 	}
 		//std::memcpy(mTiff.pointerToTiff(), CountA.pointerToTiff() + CH08 * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
 
-	if (0)
+	//For debugging. Save all the PMT16X channels. Save each PMT16X channel in a different Tiff page
+	if (saveTiff16X)
 	{
-		//For debugging. Save all the PMT16X channels
-		//Save each PMT16X channel in a different Tiff page
 		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix , 16 * mRTcontrol.mNframes };
 		stack.pushImage(CH01, CH08, CountA.pointerToTiff());
 		stack.pushImage(CH09, CH16, CountB.pointerToTiff());
@@ -465,7 +464,7 @@ void ResonantScanner::isRunning() const
 
 
 #pragma region "Galvo"
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel): mRTcontrol(RTcontrol), mGalvoRTchannel(channel)
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const int wavelength_nm): mRTcontrol(RTcontrol), mGalvoRTchannel(channel), mWavelength_nm(wavelength_nm)
 {
 	switch (channel)
 	{
@@ -473,14 +472,30 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel): mRTcontrol(
 		mVoltagePerDistance = mScanCalib;
 		break;
 	case RTRESCANGALVO:
-		mVoltagePerDistance = mRescanCalib;
+		//To find such offset, swing the rescanner across the PMT16X and keep the scanner centered at 0. Adjust the offset until
+		//the stripes on the Tiff are in the correct positions (e.g. the 8th stripe should be 35 pixels below the Tiff center)
+		//A negative offset steers the fluorescence towards the 1st channel of the PMT16X; positive towards the 16th channel
+		if (mWavelength_nm == 750) {
+			mVoltagePerDistance = 0.210 * mScanCalib;		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector
+			mRescanVoltageOffset = -0.08 * V;
+		}
+		else if (mWavelength_nm == 920) {
+			mVoltagePerDistance = 0.210 * mScanCalib;
+			mRescanVoltageOffset = -0.08 * V;
+		}
+		else if (mWavelength_nm == 1040) {
+			mVoltagePerDistance = 0.220 * mScanCalib;
+			mRescanVoltageOffset = -0.06 * V;
+		}
+		else
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 	}
 }
 
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const double posMax) : Galvo(RTcontrol, channel)
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const double posMax, const int wavelength_nm) : Galvo(RTcontrol, channel, wavelength_nm)
 {
 	switch (channel)
 	{
@@ -489,7 +504,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const double
 		break;
 	case RTRESCANGALVO:
 		//Rescan in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
-		rescanSingleFrame(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * interBeamletDistance * mRescanCalib);
+		rescanSingleFrame(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * interBeamletDistance * mVoltagePerDistance);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");

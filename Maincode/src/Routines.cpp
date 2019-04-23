@@ -6,9 +6,9 @@ const double3 stackCenterXYZ = { 50.700 * mm, 17.500 * mm, 17.897 * mm };
 //const std::string immersionMedium{ "SiliconeMineralOil5050" };
 //const std::string collar{ "1.495" };
 //const ChannelList channelListLiver{ {{ "GFP", 920, 60. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 20. * mW, 0.15 * mWpum }} };	//Define the wavelengths and laser powers for liver
-const std::string sampleName{ "LiverDAPITdT" };
-const std::string immersionMedium{ "SiliconeMineralOil5050" };
-const std::string collar{ "1.48" };
+const std::string sampleName{ "Beads4um" };
+const std::string immersionMedium{ "SiliconeOil" };
+const std::string collar{ "1.51" };
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 50. * mW, 0. * mWpum }, { "GFP", 920, 50. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//4um beads
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//0.5um beads
 const ChannelList channelListBeads{ {{ "DAPI", 750, 15. * mW, 0. * mWpum }} };	//fluorescent slide
@@ -553,7 +553,7 @@ namespace PMT16XRoutines
 			selectScanFFOV = FFOVslow / 16;
 			selectRescanFFOV = FFOVslow / 16;
 			PMT16Xchan = CH00;
-			selectPower = 400. * mW;
+			selectPower = 400. * mW;//THIS BEAM POWER IS NOT BEING USED!!!!!!!!!!!!!!!!!!!!!!!!!
 		}
 		else			//Singlebeam
 		{
@@ -561,7 +561,7 @@ namespace PMT16XRoutines
 			selectScanFFOV = FFOVslow;
 			selectRescanFFOV = FFOVslow;
 			PMT16Xchan = CH08;
-			selectPower = 15. * mW;
+			selectPower = 15. * mW;//THIS BEAM POWER IS NOT BEING USED!!!!!!!!!!!!!!!!!!!!!!!!!
 		}
 
 		//STACK
@@ -1323,17 +1323,15 @@ namespace TestRoutines
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			stackCenterXYZ = { 50.700 * mm, 17.500 * mm, 17.897 * mm };//with clearing
-			//stackCenterXYZ = { 31.000 * mm, 17.200 * mm, 17.620 * mm };//without clearing
-			//stackCenterXYZ = { };
-			//stackCenterXYZ = { };
+			stackCenterXYZ = { 50.800 * mm, 16.520 * mm, 18.048 * mm };//750 and 1040 nm
+			//stackCenterXYZ = { 50.800 * mm, 16.520 * mm, 18.052 * mm };//920 nm
 			if (multibeam)	//Multibeam
 			{
 				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 				selectScanFFOV = FFOVslow / 16;
 				selectRescanFFOV = FFOVslow / 16;
 				PMT16Xchan = CH00;
-				selectPower = 400. * mW;
+				selectPower = 1000. * mW;
 			}
 			else			//Singlebeam
 			{
@@ -1341,12 +1339,13 @@ namespace TestRoutines
 				selectScanFFOV = FFOVslow;
 				selectRescanFFOV = FFOVslow;
 				PMT16Xchan = CH08;
-				selectPower = 15. * mW;
+				selectPower = 40. * mW;
 			}
 		}
+		
 		else//fluorescent slide
 		{
-			stackCenterXYZ = { 55.500 * mm, 3.300 * mm, 17.700 * mm };
+			stackCenterXYZ = { 52.460 * mm, -5.000 * mm, 17.583 * mm };
 			if (multibeam)	//Multibeam to look at the signal intensity difference between channels
 			{
 				//To check the 
@@ -1381,7 +1380,7 @@ namespace TestRoutines
 
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 50. * um };	//Acquire a stack of this depth or thickness in Z
+		const double stackDepthZ{ 20. * um };	//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
@@ -1427,16 +1426,16 @@ namespace TestRoutines
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, selectHeightPerFrame_pix };
 
-		//GALVO RT linear scan
-		const Galvo scanner{ RTcontrol, RTSCANGALVO, selectScanFFOV / 2 };
-		const Galvo rescan{ RTcontrol, RTRESCANGALVO, selectRescanFFOV / 2 };
-		//const Galvo rescan{ RTcontrol, RTRESCANGALVO, 0 };
-
 		//LASER
-		const int wavelength_nm = 750;
+		const int wavelength_nm = 1040;
 		const double power = selectPower;
 		const double powerInc = 0.0 * mWpum;
 		const VirtualLaser laser{ RTcontrol, wavelength_nm, VISION };
+
+		//GALVO RT linear scan
+		const Galvo scanner{ RTcontrol, RTSCANGALVO, selectScanFFOV / 2 };
+		const Galvo rescan{ RTcontrol, RTRESCANGALVO, selectRescanFFOV / 2, wavelength_nm };
+		//const Galvo rescan{ RTcontrol, RTRESCANGALVO, 0 };
 
 		//DATALOG
 		{

@@ -82,26 +82,22 @@ class Galvo
 	const double mMultibeamFrameScanFineTuning = -3.0 * us;
 
 	//Scanner
-	const double mScanCalib{ 0.02417210 * V / um };			//volts per um. Calibration factor of the scan galvo. Last calib 31/7/2018
+	const double mScanCalib{ 0.02417210 * V / um };		//volts per um. Calibration factor of the scan galvo. Last calib 31/7/2018
 
 	//Rescanner
-	const double mRescanCalib{ 0.190 * mScanCalib };		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector
-	const double mRescanVoltageOffset{ 0.10 * V };			//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
-															//To find such offset, swing the rescanner across the PMT16X and keep the scanner centered at 0. Adjust the offset until
-															//the stripes on the Tiff are in the correct positions (e.g. the 8th stripe should be 35 pixels below the Tiff center)
-															//A negative offset steers the fluorescence towards the 1st channel of the PMT16X; positive towards the 16th channel
+	double mRescanVoltageOffset{ 0 };	//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
 
-	//For the single laser beam (i.e., without using the beamsplitter) to point at a specific channel of the PMT16X
+	//For a single laser beam (i.e., without using the beamsplitter) to point at a specific channel of the PMT16X
 	const double interBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
 	const std::vector<double> beamletOrder{ -7.5, -6.5, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 0.0 };		//The last element of the array is for centering the rescanner
 
-	
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
-	double mVoltagePerDistance;	
+	double mVoltagePerDistance{ 0 };
+	int mWavelength_nm{ 0 };
 public:
-	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel);
-	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax);
+	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const int wavelength_nm = 750);
+	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax, const int wavelength_nm = 750);
 
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
@@ -301,7 +297,7 @@ class Stage
 	std::string axisToString(const Axis axis) const;
 public:
 	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages set by hardware. Can not be changed
-	const std::vector<double2> mSoftPosLimXYZ{ { -65. * mm, 65. * mm}, { 3. * mm, 30. * mm}, { 1. * mm, 24. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
+	const std::vector<double2> mSoftPosLimXYZ{ { -65. * mm, 65. * mm}, { -10. * mm, 30. * mm}, { 1. * mm, 24. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
 	Stage(const double velX, const double velY, const double velZ);
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor

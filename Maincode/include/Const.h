@@ -3,8 +3,9 @@
 #include <vector>
 #include <array>
 
-#define multibeam 0			//Multibeam or singlebeam
+#define multibeam 0		//Multibeam or singlebeam
 #define pockelsAutoOff 1	//For debugging purposes. Enable to let 'framegate' set the pockels cell on and off
+#define saveTiff16X 1		//Save each channel of PMT16X individually
 
 namespace Constants
 {

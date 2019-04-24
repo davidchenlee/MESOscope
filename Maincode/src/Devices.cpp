@@ -178,8 +178,7 @@ void Image::demultiplex_()
 		//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
-			/*
-			//If upscaled overflows
+			/*//If upscaled overflows
 			if (upscaled > _UI8_MAX)
 				upscaled = _UI8_MAX;
 			*/
@@ -209,7 +208,6 @@ void Image::demultiplex_()
 		else if (PMT16Xchan >= CH09 && PMT16Xchan <= CH16)
 			std::memcpy(mTiff.pointerToTiff(), CountB.pointerToTiff() + (PMT16Xchan - CH09) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
 	}
-		//std::memcpy(mTiff.pointerToTiff(), CountA.pointerToTiff() + CH08 * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
 
 	//For debugging. Save all the PMT16X channels. Save each PMT16X channel in a different Tiff page
 	if (saveTiff16X)
@@ -474,7 +472,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const int wa
 		{
 		case 750:
 			mVoltagePerDistance = 0.220 * mScanCalib;
-			mRescanVoltageOffset = -0.13 * V;
+			mRescanVoltageOffset = -0.12 * V;
 			break;
 		case 920:
 			mVoltagePerDistance = 0.210 * mScanCalib;
@@ -502,7 +500,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const double
 		break;
 	case RTRESCANGALVO:
 		//Rescan in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
-		rescanSingleFrame(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * interBeamletDistance * mVoltagePerDistance);
+		rescanSingleFrame(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * mInterBeamletDistance * mVoltagePerDistance);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -538,9 +536,6 @@ void Galvo::scanSingleFrame(const double posInitial, const double posFinal, cons
 	if (multibeam)
 	{
 		timeStep = 2. * us;
-		//Adjust the RS half-period to fine tune the galvo's frame-scan
-		//using beads: do a forward and backward scan and compare the bead position
-		//using the oscilloscope: match the scan duration across scan 100 frames
 		frameDuration = halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mMultibeamRampDurationFineTuning;
 	}
 	//Singlebeam
@@ -554,10 +549,10 @@ void Galvo::scanSingleFrame(const double posInitial, const double posFinal, cons
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);
 }
 
-//Generate a linear ramp for the rescanner sync'ed to scan galvo. Use a separate function from 'scanSingleFrame' because of the hack for a shorter frameDuration
+//Generate a linear ramp for the rescanner sync'ed to the scan galvo. Use a separate function from 'scanSingleFrame' because of the hack for a shorter frameDuration
 void Galvo::rescanSingleFrame(const double posInitial, const double posFinal, const double posOffset) const
 {
-	double timeStep, frameDuration;	//Time step of the linear ramp
+	double timeStep, frameDuration;
 
 	//Multibeam
 	if (multibeam)

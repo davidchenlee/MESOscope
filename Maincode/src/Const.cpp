@@ -41,21 +41,27 @@ namespace Constants
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
 
-#if multibeam
 	extern const int pockelsMainDelay_tick{ 46600 };		//Delay of the Pockels AO after the preframeclock trigger. Turn on the pockels early because it overshoots at high power
-	extern const int pockelsSecondaryDelay_tick{ 70000 };	//Delay of the Pockels AO after the preframeclock trigger for the subsequent frames
-	extern const int scanGalvoDelay_tick{ 55000 };			//Delay of the scan galvo AO after the preframeclock trigger
-	extern const int rescanGalvoDelay_tick{ 65536 };		//Delay of the rescan galvo AO after the preframeclock trigger
-#else
-	extern const int pockelsMainDelay_tick{ 46600 };		//Delay of the Pockels AO after the preframeclock trigger. For turning on the pockels earlier because it overshoots at high power
-	extern const int pockelsSecondaryDelay_tick{ 0 };
 
-	//Using beads
-	//1. Maximize the galvos rampduration by tuning 'mSinglebeamRampDurationFineTuning'.
-	//If the ramp is too long, the overshooting from each frame will accumulate over all the frames. The bead position will be different in different frames
-	//2. Adjust 'scanGalvoDelay_tick' until the bead position coincide for the forth and back scans
+#if multibeam
+	extern const int pockelsSecondaryDelay_tick{ 70000 };				//Delay of the Pockels AO after the preframeclock trigger for the subsequent frames
 	extern const int scanGalvoDelay_tick{ 115000 };						//Delay of the scan galvo AO after the preframeclock trigger
 	extern const int rescanGalvoDelay_tick{ scanGalvoDelay_tick };		//Delay of the rescan galvo AO after the preframeclock trigger
+#else
+
+	extern const int pockelsSecondaryDelay_tick{ 0 };
+
+	//Tu fine-tune the delays using beads
+	//1. First maximize rampduration of both galvos by tuning 'mSinglebeamRampDurationFineTuning'.
+	//If the ramp is too long, the overshooting from each frame will accumulate over all the frames. The bead position will be different in different frames
+	//2. Adjust 'scanGalvoDelay_tick' until the bead position coincide for the forth and back scans
+	//extern const int scanGalvoDelay_tick{ 30000 };						//Delay of the scan galvo AO after the preframeclock trigger
+	//extern const int rescanGalvoDelay_tick{ scanGalvoDelay_tick + 70720 };		//Delay of the rescan galvo AO after the preframeclock trigger
+
+	//Test reducing the slowFFOV
+	extern const int scanGalvoDelay_tick{ 1000 };						//Delay of the scan galvo AO after the preframeclock trigger
+																		//Increase if the bead position is lower in the second frame
+	extern const int rescanGalvoDelay_tick{ scanGalvoDelay_tick + 35000 };		//Delay of the rescan galvo AO after the preframeclock trigger
 #endif
 
 	extern const double linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition

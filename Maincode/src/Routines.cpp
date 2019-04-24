@@ -532,7 +532,7 @@ namespace PMT1XRoutines
 
 namespace PMT16XRoutines
 {
-	//Apply 'frameByFrameScan' on a list of locations. I don't use continuous z-scan because of its limited reach (160 planes)
+	//Copy of PMT1XRoutines::frameByFrameScanTiling() with sync'ed rescanner
 	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice)
 	{
 		//ACQUISITION SETTINGS
@@ -671,15 +671,20 @@ namespace PMT16XRoutines
 		}//iter_wv
 	}
 
+	//Copy of PMT1XRoutines::continuousScan() with sync'ed rescanner
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
+
+		//Override the global stage position
+		const double3 stackCenterXYZ = { 50.990 * mm, 16.460* mm, 18.032 * mm };
+
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular laser
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 80 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int nFramesCont{ 80 };						//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };
-		const ScanDirection stackScanDirZ{ TOPDOWN };		//Scan direction in z
+		const ScanDirection stackScanDirZ{ BOTTOMUP };		//Scan direction in z
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
 		double stageZi, stageZf, laserPi, laserPf;
@@ -700,7 +705,7 @@ namespace PMT16XRoutines
 		}
 
 		//STAGES
-		const double3 initialStageXYZ{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stageZi - stepSizeZ  * nFramesCont /2};		//Initial position of the stages. The sign of stackDepth determines the scanning direction					
+		const double3 initialStageXYZ{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stageZi};		//Initial position of the stages. The sign of stackDepth determines the scanning direction					
 		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };	//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
 		stage.moveXYZ(initialStageXYZ);
 		stage.waitForMotionToStopAll();
@@ -892,15 +897,15 @@ namespace TestRoutines
 	void galvosSync(const FPGAns::FPGA &fpga)
 	{
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };		//height_pix = 35 for PMT16X
-		const int nFramesCont{ 2 };
+		const int heightPerFrame_pix{ 35 };		//height_pix = 35 for PMT16X
+		const int nFramesCont{ 20 };
 		const int wavelength_nm = 750;			//The rescanner calib depends on the laser wavelength
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
 		//GALVOS
-		const double FFOVslow{ 280. * um };		//Length scanned in the slow axis. FFOVslow = 17.5 * um for PMT16X
+		const double FFOVslow{ 17.5 * um };		//Length scanned in the slow axis. FFOVslow = 17.5 * um for PMT16X
 		Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
 		Galvo rescanner{ RTcontrol, RTRESCANGALVO, FFOVslow / 2, wavelength_nm };
 
@@ -1378,14 +1383,14 @@ namespace TestRoutines
 		image.acquire();			//Execute the RT control sequence and acquire the image
 	}
 
-	//Copy of frameByFrameScan() with added rescan sync
+	//Copy of frameByFrameScan() with sync'ed rescanner
 	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
+		const int heightPerFrame_pix{ 35 };
 		const int nFramesCont{ 20 };
-		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
+		const double FFOVslow{ 17.5 * um };			//Full FOV in the slow axis
 		const int wavelength_nm = 750;
 
 		int selectHeightPerFrame_pix;
@@ -1393,7 +1398,7 @@ namespace TestRoutines
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			stackCenterXYZ = { 50.990 * mm, 16.460 * mm, 18.052 * mm };//750 and 1040 nm
+			stackCenterXYZ = { 50.988 * mm, 16.460 * mm, 18.052 * mm };//750 and 1040 nm
 			//stackCenterXYZ = { 50.800 * mm, 16.520 * mm, 18.052 * mm };//920 nm
 			if (multibeam)	//Multibeam
 			{

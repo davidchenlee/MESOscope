@@ -78,7 +78,11 @@ public:
 
 class Galvo
 {
-	const double mSinglebeamRampDurationFineTuning{ -800. * us };
+	//const double mSinglebeamRampDurationFineTuning{ -600. * us };
+	
+	//Test a small slowFFUV
+	const double mSinglebeamRampDurationFineTuning{ -200. * us };
+
 	const double mMultibeamRampDurationFineTuning{ -3.0 * us };
 
 	//Scanner
@@ -88,7 +92,7 @@ class Galvo
 	double mRescanVoltageOffset{ 0 };						//Overriden in the constructor.
 
 	//For a single laser beam (i.e., without using the beamsplitter) to point at a specific channel of the PMT16X
-	const double interBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
+	const double mInterBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
 	const std::vector<double> beamletOrder{ -7.5, -6.5, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 0.0 };		//The last entry of the array is for centering the rescanner
 
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	

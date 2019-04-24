@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 
 			//PMT16X SEQUENCES
 			//PMT16XRoutines::frameByFrameScanTiling(fpga, 1);//scan frame by frame and tile by tile
-			//PMT16XRoutines::continuousScan(fpga);
+			PMT16XRoutines::continuousScan(fpga);
 
 			//TESTS.
 			//TestRoutines::digitalLatency(fpga);
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);
 			//TestRoutines::PMT16XgavosSyncAndLaser(fpga);
-			TestRoutines::PMT16XframeByFrameScan(fpga);
+			//TestRoutines::PMT16XframeByFrameScan(fpga);
 
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();

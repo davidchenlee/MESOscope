@@ -78,8 +78,8 @@ public:
 
 class Galvo
 {
-	const double mSinglebeamFrameScanFineTuning = 60 * us;
-	const double mMultibeamFrameScanFineTuning = -3.0 * us;
+	const double mSinglebeamRampDurationFineTuning{ -800. * us };
+	const double mMultibeamRampDurationFineTuning{ -3.0 * us };
 
 	//Scanner
 	const double mScanCalib{ 0.02417210 * V / um };			//Calibration factor of the scan galvo. Last calib 31/7/2018

@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ = { 50.800 * mm, 16.520* mm, 18.048 * mm };
+const double3 stackCenterXYZ = { 50.990 * mm, 16.460* mm, 18.052 * mm };
 //const std::string sampleName{ "Liver" };
 //const std::string immersionMedium{ "SiliconeMineralOil5050" };
 //const std::string collar{ "1.495" };
@@ -893,7 +893,7 @@ namespace TestRoutines
 	{
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };		//height_pix = 35 for PMT16X
-		const int nFramesCont{ 100 };
+		const int nFramesCont{ 2 };
 		const int wavelength_nm = 750;			//The rescanner calib depends on the laser wavelength
 
 		//CREATE A REALTIME CONTROL SEQUENCE
@@ -1014,7 +1014,7 @@ namespace TestRoutines
 	{
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 400 };
+		const int heightPerFrame_pix{ 560 };
 		const int nFramesCont{ 100 };			//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
@@ -1337,7 +1337,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 1 };
+		const int nFramesCont{ 2 };
 		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 
 		int selectHeightPerFrame_pix;
@@ -1384,7 +1384,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 1 };
+		const int nFramesCont{ 20 };
 		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 		const int wavelength_nm = 750;
 

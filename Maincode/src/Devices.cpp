@@ -178,27 +178,21 @@ void Image::demultiplex_()
 		//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
-			U8 upscaled{ upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F) };
-
+			/*
 			//If upscaled overflows
 			if (upscaled > _UI8_MAX)
 				upscaled = _UI8_MAX;
+			*/
 
-			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaled);		//Extract the first 4 bits
-			mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;																//shift 4 places to the right
+			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));		//Extract the first 4 bits and upscale it
+			mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;																											//shift 4 places to the right
 		}
 
 		//Demultiplex mBufArrayB (channels 9-16). Each U32 element in  mBufArrayB =  | Ch16 | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch9 |
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
-			U8 upscaled{ upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F) };
-
-			//If upscaled overflows
-			if (upscaled > _UI8_MAX)
-				upscaled = _UI8_MAX;
-
-			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaled);		//Extract the first 4 bits
-			mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;																//shift 4 places to the right
+			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));		//Extract the first 4 bits and upscale it
+			mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;																											//shift 4 places to the right
 		}
 	}
 
@@ -547,15 +541,16 @@ void Galvo::scanSingleFrame(const double posInitial, const double posFinal, cons
 		//Adjust the RS half-period to fine tune the galvo's frame-scan
 		//using beads: do a forward and backward scan and compare the bead position
 		//using the oscilloscope: match the scan duration across scan 100 frames
-		frameDuration = halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mMultibeamFrameScanFineTuning;
+		frameDuration = halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mMultibeamRampDurationFineTuning;
 	}
 	//Singlebeam
 	else
 	{
 		timeStep = 8. * us;
-		frameDuration = halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix + mSinglebeamFrameScanFineTuning;
+		frameDuration = halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix + mSinglebeamRampDurationFineTuning;
 	}
 
+	//The position offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);
 }
 
@@ -568,16 +563,16 @@ void Galvo::rescanSingleFrame(const double posInitial, const double posFinal, co
 	if (multibeam)
 	{
 		timeStep = 2. * us;
-		frameDuration = halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mMultibeamFrameScanFineTuning;
+		frameDuration = halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mMultibeamRampDurationFineTuning;
 	}
 	//Singlebeam
 	else
 	{
 		timeStep = 8. * us;
-		frameDuration = halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix + mSinglebeamFrameScanFineTuning;
+		frameDuration = halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix + mSinglebeamRampDurationFineTuning;
 	}
 
-	//The voltage offset allows to compensate for the slight axis misalignment of the rescanner
+	//The position offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);
 }
 #pragma endregion "Galvo"

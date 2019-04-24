@@ -78,26 +78,26 @@ public:
 
 class Galvo
 {
-	const double mSinglebeamFrameScanFineTuning = 0 * us;
+	const double mSinglebeamFrameScanFineTuning = 60 * us;
 	const double mMultibeamFrameScanFineTuning = -3.0 * us;
 
 	//Scanner
-	const double mScanCalib{ 0.02417210 * V / um };		//volts per um. Calibration factor of the scan galvo. Last calib 31/7/2018
+	const double mScanCalib{ 0.02417210 * V / um };			//Calibration factor of the scan galvo. Last calib 31/7/2018
 
 	//Rescanner
-	double mRescanVoltageOffset{ 0 };	//The offset compensates for the slight axis misalignment of the rescan galvo wrt the symmetry plane of the detector
+	double mRescanVoltageOffset{ 0 };						//Overriden in the constructor.
 
 	//For a single laser beam (i.e., without using the beamsplitter) to point at a specific channel of the PMT16X
 	const double interBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
-	const std::vector<double> beamletOrder{ -7.5, -6.5, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 0.0 };		//The last element of the array is for centering the rescanner
+	const std::vector<double> beamletOrder{ -7.5, -6.5, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 0.0 };		//The last entry of the array is for centering the rescanner
 
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	
 	RTchannel mGalvoRTchannel;
 	double mVoltagePerDistance{ 0 };
 	int mWavelength_nm{ 0 };
 public:
-	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const int wavelength_nm = 750);
-	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax, const int wavelength_nm = 750);
+	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const int wavelength_nm = 0);
+	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax, const int wavelength_nm = 0);
 
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;

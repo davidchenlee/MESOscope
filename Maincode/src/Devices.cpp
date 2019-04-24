@@ -472,23 +472,27 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const int wa
 		mVoltagePerDistance = mScanCalib;
 		break;
 	case RTRESCANGALVO:
-		//To find such offset, swing the rescanner across the PMT16X and keep the scanner centered at 0. Adjust the offset until
-		//the stripes on the Tiff are in the correct positions (e.g. the 8th stripe should be 35 pixels below the Tiff center)
-		//A negative offset steers the fluorescence towards the 1st channel of the PMT16X; positive towards the 16th channel
-		if (mWavelength_nm == 750) {
-			mVoltagePerDistance = 0.210 * mScanCalib;		//volts per um. Calibration factor of the rescan galvo to keep the fluorescence emission fixed at the detector
-			mRescanVoltageOffset = -0.08 * V;
-		}
-		else if (mWavelength_nm == 920) {
+		//Calibration factor to sync the rescanner with the scanner and therefore keep the fluorescence emission fixed at the detector
+		//The offset compensates for the slight misalignment of the rescanner wrt the center of the detector
+		//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the counts tiffs for all the channels
+		//The beads should appear only in the channel selected
+		switch (mWavelength_nm)
+		{
+		case 750:
+			mVoltagePerDistance = 0.220 * mScanCalib;
+			mRescanVoltageOffset = -0.13 * V;
+			break;
+		case 920:
 			mVoltagePerDistance = 0.210 * mScanCalib;
 			mRescanVoltageOffset = -0.08 * V;
-		}
-		else if (mWavelength_nm == 1040) {
+			break;
+		case 1040:
 			mVoltagePerDistance = 0.220 * mScanCalib;
 			mRescanVoltageOffset = -0.06 * V;
-		}
-		else
+			break;
+		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
+		}
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -1208,23 +1212,26 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 	switch (mPockelsRTchannel)
 	{
 	case RTVISION:
-		if (mWavelength_nm == 750) {
+		switch (mWavelength_nm)
+		{
+		case 750:
 			amplitude = 1600.0 * mW;
 			angularFreq = 0.624 / V;
 			phase = 0.019 * V;
-		}
-		else if (mWavelength_nm == 920) {
+			break;
+		case 920:
 			amplitude = 1089.0 * mW;
 			angularFreq = 0.507 / V;
 			phase = -0.088 * V;
-		}
-		else if (mWavelength_nm == 1040) {
+			break;
+		case 1040:
 			amplitude = 388.0 * mW;
 			angularFreq = 0.447 / V;
 			phase = 0.038 * V;
-		}
-		else
+			break;
+		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
+		}			
 		break;
 
 		//FIDELITY

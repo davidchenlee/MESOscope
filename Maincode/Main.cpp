@@ -16,6 +16,7 @@ int main(int argc, char* argv[])
 
 			//PMT16X SEQUENCES
 			//PMT16XRoutines::frameByFrameScanTiling(fpga, 1);//scan frame by frame and tile by tile
+			//PMT16XRoutines::continuousScan(fpga);
 
 			//TESTS.
 			//TestRoutines::digitalLatency(fpga);

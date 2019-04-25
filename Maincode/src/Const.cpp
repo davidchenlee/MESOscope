@@ -40,7 +40,7 @@ namespace Constants
 	extern const int syncDOtoAO_tick{ 4 * 74 };				//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
-	extern const int nLineclockDelay{ 7 };					//Number of lineclocks delaying the frameclock (and framegate) wrt the preframeclock (and preframegate)
+	extern const int nPreframes{ 4 };						//Number of lineclocks delaying the frameclock (and framegate) wrt the preframeclock (and preframegate)
 															//This is for triggering the pockels and rescanner slightly earlier and adjusting the timing by via delay
 
 	extern const double linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
@@ -50,20 +50,20 @@ namespace Constants
 
 
 	//POCKELS
-	extern const double pockelsFirstFrameDelay{ 300. * us };		//Delay of the Pockels AO wrt the preframeclock. Turn on the pockels early to avoid the transient before imaging
-	extern const double pockelsSecondaryDelay{ 0 };					//Delay of the Pockels AO wrt the preframeclock. To increase the pockels power for the subsequent frames
+	extern const double pockelsFirstFrameDelay{ 112. * us };	//Delay of the Pockels wrt the preframeclock. Turn on the pockels early to avoid the transient before imaging
+	extern const double pockelsSecondaryDelay{ 0 };				//Delay of the Pockels wrt the preframeclock. To increase the pockels power for the subsequent frames
 
 	//GALVOS
 	//To fine tune the delays using beads
-	//1. First maximize rampduration of both galvos by tuning 'mSinglebeamRampDurationFineTuning'.
+	//1. First maximize rampduration of both galvos by tuning 'mRampDurationFineTuning'.
 	//If the ramp is too long, the overshooting from each frame will accumulate over all the frames. The bead position will be different in different frames
-	//2. Adjust 'scanGalvoDelay_tick' until the bead position coincide for the forth and back scans
-	extern const double scanGalvoDelay{ 0 };							//Delay of the scan galvo AO wrt the frameclock
-	extern const double rescanGalvoDelay{ scanGalvoDelay + 218 * us };	//Delay of the rescan galvo AO wrt the preframeclock. If too long, the overshoot of the ramp will accumulate over >100 frames
+	//2. Adjust 'galvosCommonDelay' until the bead position coincide for the forth and back scans
+	extern const double galvosCommonDelay{ 5 * us };			//Delay of both galvos together. The scanner is triggered by the frameclock. If too long, the ramp overshoot will accumulate over >100 frames
+	extern const double rescanGalvoDelay{ 30 * us };			//Delay of the rescan galvo wrt the preframeclock. If too long, the ramp overshoot will accumulate over >100 frames
 
 	//STAGES
 	extern const double stageTriggerPulse{ 5 * ms };			//Pulsewidth for triggering the stages via the DI (the stage controller has a 20kHz clock = 50 us)
-															//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based.
+																//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based.
 
 	//PMT
 	//Simulate the PMT pulses. When the array element is HIGH, the output of the subvi changes its state for the next clock cycle (currently, 160MHz = 6.25ns)

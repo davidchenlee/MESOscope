@@ -3,8 +3,8 @@
 #pragma region "Image"
 
 //When multiplexing, create a mTiff to contain 16 stripes of height 'mRTcontrol.mHeightPerFrame_pix' each
-Image::Image(FPGAns::RTcontrol &RTcontrol, const AcqTriggerSelector stageAsTrigger) :
-	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * 15 + 1) *  mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes), mStageAsTrigger(stageAsTrigger)
+Image::Image(FPGAns::RTcontrol &RTcontrol, FIFOOUTenableSelector FIFOOUTenable, const AcqTriggerSelector stageAsTrigger) :
+	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * 15 + 1) *  mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes), mFIFOOUTenable(FIFOOUTenable), mStageAsTrigger(stageAsTrigger)
 {
 	mBufArrayA = new U32[mRTcontrol.mNpixAllFrames];
 	mBufArrayB = new U32[mRTcontrol.mNpixAllFrames];
@@ -243,10 +243,10 @@ void Image::stopFIFOOUTpc_() const
 	//std::cout << "stopFIFO called\n";
 }
 
-void Image::acquire(const FIFOOUTenableSelector FIFOOUTenable)
+void Image::acquire()
 {
 	//Enable pushing data to FIFOOUTfpga. Disable for debugging
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, FIFOOUTenable));	
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, mFIFOOUTenable));	
 
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
@@ -254,7 +254,7 @@ void Image::acquire(const FIFOOUTenableSelector FIFOOUTenable)
 	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from a previous run
 	mRTcontrol.triggerRT();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 
-	if (FIFOOUTenable)
+	if (mFIFOOUTenable)
 	{
 		try
 		{
@@ -272,18 +272,18 @@ void Image::acquire(const FIFOOUTenableSelector FIFOOUTenable)
 
 void Image::initialize() const
 {
+	//Enable pushing data to FIFOOUTfpga. Disable for debugging
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, mFIFOOUTenable));
+
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
 	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI, but if not called, sometimes garbage is generated
 	FIFOOUTpcGarbageCollector_();	//Cleans up any residual data from the previous run
 }
 
-void Image::downloadData(const FIFOOUTenableSelector FIFOOUTenable)
+void Image::downloadData()
 {
-	//Enable pushing data to FIFOOUTfpga. Disable for debugging
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, FIFOOUTenable));
-
-	if (FIFOOUTenable)
+	if (mFIFOOUTenable)
 	{
 		try
 		{

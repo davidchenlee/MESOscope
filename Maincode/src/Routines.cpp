@@ -398,7 +398,7 @@ namespace PMT1XRoutines
 		laser.openShutter();	//The destructor will close the shutter automatically
 
 		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{ RTcontrol, STAGETRIG };	//Note the STAGETRIG flag
+		Image image{ RTcontrol, FIFOOUTenable, STAGETRIG };	//Note the STAGETRIG flag
 		image.initialize();
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(ZZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
@@ -460,7 +460,7 @@ namespace PMT1XRoutines
 			const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOV.at(XX) / 2 };
 
 			//EXECUTE THE RT CONTROL SEQUENCE
-			Image image{ RTcontrol, STAGETRIG }; //Note the STAGETRIG flag
+			Image image{ RTcontrol, FIFOOUTenable, STAGETRIG }; //Note the STAGETRIG flag
 
 			//Read the commands line by line
 			double scanZi, scanZf, scanPi, stackPinc;
@@ -686,6 +686,7 @@ namespace PMT16XRoutines
 		const double3 stackCenterXYZ = { 50.983 * mm, 16.460* mm, (18.054 - 0.020) * mm };
 
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular laser
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
 		const int nFramesCont{ 80 };						//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
@@ -727,7 +728,7 @@ namespace PMT16XRoutines
 		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, laserPi, VISION };
 
 		//GALVO RT linear scan
-		const double FFOVslow{ 17.5 * um };	//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
 		const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
 		const Galvo rescanner{ RTcontrol, RTRESCANGALVO, FFOVslow / 2, singleChannel.mWavelength_nm };
 		PMT16Xchan = CH08;
@@ -736,7 +737,7 @@ namespace PMT16XRoutines
 		laser.openShutter();	//The destructor will close the shutter automatically
 
 		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{ RTcontrol, STAGETRIG };	//Note the STAGETRIG flag
+		Image image{ RTcontrol, FIFOOUTenable, STAGETRIG };	//Notice the STAGETRIG flag
 		image.initialize();
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(ZZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
@@ -798,8 +799,8 @@ namespace TestRoutines
 		std::vector<U8> stackOfAverages;
 
 		FPGAns::RTcontrol RTcontrol{ fpga }; 		//Create a realtime control sequence
-		Image image{ RTcontrol };
-		image.acquire(FIFODISABLE);					//Execute the realtime control sequence and acquire the image
+		Image image{ RTcontrol, FIFOOUTdisable };
+		image.acquire();					//Execute the realtime control sequence and acquire the image
 		//image.pushToVector(stackOfAverages);
 		//std::cout << "size: " << stackOfAverages.size() << "\n";
 		//TiffU8 acqParam{ stackOfAverages, 300, 400 };
@@ -913,13 +914,13 @@ namespace TestRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
 		//GALVOS
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Length scanned in the slow axis. FFOVslow = 17.5 * um for PMT16X
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Length scanned in the slow axis
 		Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
 		Galvo rescanner{ RTcontrol, RTRESCANGALVO, FFOVslow / 2, wavelength_nm };
 
 		//Execute the realtime control sequence and acquire the image
-		Image image{ RTcontrol };
-		image.acquire(FIFODISABLE);		//Execute the RT control sequence
+		Image image{ RTcontrol, FIFOOUTdisable };
+		image.acquire();		//Execute the RT control sequence
 	}
 
 	void stagePosition()
@@ -1019,8 +1020,8 @@ namespace TestRoutines
 		//pockels.pushVoltageSinglet(8 * us, 1.0 * V);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
-		Image image{ RTcontrol };
-		image.acquire(FIFODISABLE);
+		Image image{ RTcontrol, FIFOOUTdisable };
+		image.acquire();
 	}
 
 	void pockelsRamp(const FPGAns::FPGA &fpga)
@@ -1045,8 +1046,8 @@ namespace TestRoutines
 
 
 		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{ RTcontrol };
-		image.acquire(FIFODISABLE);		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+		Image image{ RTcontrol, FIFOOUTdisable };
+		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 	}
 
 	void lasers(const FPGAns::FPGA &fpga)
@@ -1075,8 +1076,8 @@ namespace TestRoutines
 		VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower };
 
 		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{ RTcontrol };
-		image.acquire(FIFODISABLE);					//Execute the RT control sequence
+		Image image{ RTcontrol, FIFOOUTdisable };
+		image.acquire();					//Execute the RT control sequence
 	}
 
 	void convertI16toVolt()
@@ -1400,8 +1401,8 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY = 0.5 * um;
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
-		const int nFramesCont{ 10 };
+		const int heightPerFrame_pix{ 35 };	//35 for PMT16X
+		const int nFramesCont{ 100 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 		const int wavelength_nm = 750;
 
@@ -1672,8 +1673,8 @@ namespace TestRoutines
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		pockels.setShutter(true);
-		Image image{ RTcontrol };
-		image.acquire(FIFODISABLE);
+		Image image{ RTcontrol, FIFOOUTdisable };
+		image.acquire();
 
 		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the RT sequence
 		pressAnyKeyToCont();

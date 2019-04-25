@@ -17,6 +17,8 @@ class Image
 	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
 	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB
 
+	FIFOOUTenableSelector mFIFOOUTenable{ FIFOOUTenable };
+
 	void FIFOOUTpcGarbageCollector_() const;
 
 	void readFIFOOUTpc_();
@@ -27,16 +29,16 @@ class Image
 	void configureFIFOOUTpc_(const U32 depth) const;
 	void stopFIFOOUTpc_() const;
 public:
-	Image(FPGAns::RTcontrol &RTcontrol, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
+	Image(FPGAns::RTcontrol &RTcontrol, FIFOOUTenableSelector FIFOOUTenable = FIFOOUTenable, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
 	~Image();
 	Image(const Image&) = delete;				//Disable copy-constructor
 	Image& operator=(const Image&) = delete;	//Disable assignment-constructor
 	Image(Image&&) = delete;					//Disable move constructor
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
-	void acquire(const FIFOOUTenableSelector FIFOOUTenable = FIFOENABLE);
+	void acquire();
 	void initialize() const;
-	void downloadData(const FIFOOUTenableSelector FIFOOUTenable = FIFOENABLE);
+	void downloadData();
 	void postprocess();
 	void averageFrames();
 	void averageEvenOddFrames();

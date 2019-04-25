@@ -30,7 +30,7 @@ namespace Constants
 	enum LineclockSelector { RS = false, FG = true };
 	enum AcqTriggerSelector { PCTRIG = false, STAGETRIG = true};
 	enum FPGAresetSelector { NORESET = false, RESET = true };
-	enum FIFOOUTenableSelector { FIFODISABLE = false, FIFOENABLE = true };
+	enum FIFOOUTenableSelector { FIFOOUTdisable = false, FIFOOUTenable = true };
 	enum TiffPageStructSelector { SINGLEPAGE = false, MULTIPAGE = true};
 	enum OverrideFileSelector { NOOVERRIDE = false, OVERRIDE = true};
 	enum PixelclockSelector { UNIFORM, NONUNIFORM };
@@ -73,14 +73,14 @@ namespace Constants
 	extern const U32 tMIN_tick;
 	extern const int AO_tMIN;
 	extern const int syncDOtoAO_tick;
-	extern const int nLineclockDelay;
+	extern const int nPreframes;
 	extern const double linegateTimeout;
 	extern const int FIFOtimeout_tick;
 	extern const int FIFOINmax;
 
 	extern const double pockelsFirstFrameDelay;
 	extern const double pockelsSecondaryDelay;
-	extern const double scanGalvoDelay;
+	extern const double galvosCommonDelay;
 	extern const double rescanGalvoDelay;
 	extern const double stageTriggerPulse;
 

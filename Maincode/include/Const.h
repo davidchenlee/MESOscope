@@ -74,6 +74,7 @@ namespace Constants
 	extern const int AO_tMIN;
 	extern const int syncDOtoAO_tick;
 	extern const int nPreframes;
+	extern const double postsequenceTimer;
 	extern const double linegateTimeout;
 	extern const int FIFOtimeout_tick;
 	extern const int FIFOINmax;
@@ -83,6 +84,7 @@ namespace Constants
 	extern const double galvosCommonDelay;
 	extern const double rescanGalvoDelay;
 	extern const double stageTriggerPulse;
+	extern const double	ZstageTrigDelay;
 
 	extern const int nPulses;
 	extern const U8 pulseArray[];

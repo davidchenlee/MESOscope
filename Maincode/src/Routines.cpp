@@ -681,31 +681,29 @@ namespace PMT16XRoutines
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-
-		//Override the global stage position
-		const double3 stackCenterXYZ = { 50.983 * mm, 16.460* mm, (18.054 - 0.020) * mm };
-
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular laser
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
-		const int nFramesCont{ 80 };						//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int nFramesCont{ 200 };						//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };
 		const ScanDirection stackScanDirZ{ TOPDOWN };		//Scan direction in z
 		const double stackDepth{ nFramesCont * stepSizeZ };
+		//Override the global stage position
+		const double3 stackCenterXYZ = { 50.983 * mm, 16.460 * mm, 18.054 * mm - nFramesCont * stepSizeZ /2 };
 
 		double stageZi, stageZf, laserPi, laserPf;
 		switch (stackScanDirZ)
 		{
 		case TOPDOWN:
 			stageZi = stackCenterXYZ.at(ZZ);
-			stageZf = stackCenterXYZ.at(ZZ) + stackDepth;
+			stageZf = stackCenterXYZ.at(ZZ) + stackDepth + 20 * stepSizeZ;//longer range!!!!!!!!!!!!!!!!!!
 			laserPi = singleChannel.mScanPi;
 			laserPf = singleChannel.mScanPi + stackDepth * singleChannel.mStackPinc;
 			break;
 		case BOTTOMUP:
 			stageZi = stackCenterXYZ.at(ZZ) + stackDepth;
-			stageZf = stackCenterXYZ.at(ZZ);
+			stageZf = stackCenterXYZ.at(ZZ) - 20 * stepSizeZ;//longer range!!!!!!!!!!!!!!!!!!
 			laserPi = singleChannel.mScanPi + stackDepth * singleChannel.mStackPinc;
 			laserPf = singleChannel.mScanPi;
 			break;

@@ -197,7 +197,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_RescanGalvoDelay_tick, static_cast<U32>((galvosCommonDelay + rescanGalvoDelay) / us * tickPerUs)));	//Rescan galvo delay wrt the preframeclock
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																		//Trigger the FPGA outputs (non-RT trigger)
 		checkStatus(__FUNCTION__, NiFpga_WriteI16(getHandle(), NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));															//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(100 * ms / us * tickPerUs)));
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postsequenceTimer / us * tickPerUs)));
 
 		if (linegateTimeout <= 2 * halfPeriodLineclock)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
@@ -213,6 +213,7 @@ namespace FPGAns
 
 		//STAGES
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stageTriggerPulse / us * tickPerUs)));	//Trigger pulsewidth
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_ZstageTrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
 
 		//Flush the RAM buffers on the FPGA as precaution. 
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));															//Memory-flush trigger

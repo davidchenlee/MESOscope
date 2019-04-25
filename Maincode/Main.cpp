@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::fineTuneScanGalvo(fpga);
 			//TestRoutines::resonantScanner(fpga);
-			TestRoutines::galvosSync(fpga);
+			//TestRoutines::galvosSync(fpga);
 
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);
 			//TestRoutines::PMT16XgavosSyncAndLaser(fpga);
-			//TestRoutines::PMT16XframeByFrameScan(fpga);
+			TestRoutines::PMT16XframeByFrameScan(fpga);
 
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();

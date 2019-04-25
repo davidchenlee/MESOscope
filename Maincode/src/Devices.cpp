@@ -496,15 +496,20 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const double
 	switch (channel)
 	{
 	case RTSCANGALVO:
-		scanSingleFrame(-posMax, posMax); //Scan from -x to +x wrt the x-stage axis
+		positionLinearRamp(-posMax, posMax); //Scan from -x to +x wrt the x-stage axis
 		break;
 	case RTRESCANGALVO:
 		//Rescan in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
-		rescanSingleFrame(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * mInterBeamletDistance * mVoltagePerDistance);
+		positionLinearRamp(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * mInterBeamletDistance * mVoltagePerDistance);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 	}
+}
+
+void Galvo::voltageToZero() const
+{
+	mRTcontrol.pushAnalogSinglet(mGalvoRTchannel, AO_tMIN, 0 * V);
 }
 
 void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
@@ -522,53 +527,21 @@ void Galvo::positionLinearRamp(const double timeStep, const double rampLength, c
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, mVoltagePerDistance * posInitial, mVoltagePerDistance * posFinal);
 }
 
-void Galvo::voltageToZero() const
-{
-	mRTcontrol.pushAnalogSinglet(mGalvoRTchannel, AO_tMIN, 0 * V);
-}
-
 //Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with fixed z)
-void Galvo::scanSingleFrame(const double posInitial, const double posFinal, const double posOffset) const
+void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double posOffset) const
 {
-	double timeStep, frameDuration;
+	double timeStep;
 
 	//Multibeam
 	if (multibeam)
-	{
-		timeStep = 2. * us;
-		frameDuration = halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mMultibeamRampDurationFineTuning;
-	}
+		timeStep = 2. * us;	//The ramp is shorter for multibeams. Use smaller steps
 	//Singlebeam
 	else
-	{
 		timeStep = 8. * us;
-		frameDuration = halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix + mSinglebeamRampDurationFineTuning;
-	}
 
 	//The position offset allows to compensate for the slight axis misalignment of the rescanner
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);
-}
-
-//Generate a linear ramp for the rescanner sync'ed to the scan galvo. Use a separate function from 'scanSingleFrame' because of the hack for a shorter frameDuration
-void Galvo::rescanSingleFrame(const double posInitial, const double posFinal, const double posOffset) const
-{
-	double timeStep, frameDuration;
-
-	//Multibeam
-	if (multibeam)
-	{
-		timeStep = 2. * us;
-		frameDuration = halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mMultibeamRampDurationFineTuning;
-	}
-	//Singlebeam
-	else
-	{
-		timeStep = 8. * us;
-		frameDuration = halfPeriodLineclock  * mRTcontrol.mHeightPerFrame_pix + mSinglebeamRampDurationFineTuning;
-	}
-
-	//The position offset allows to compensate for the slight axis misalignment of the rescanner
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, frameDuration, posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mRampDurationFineTuning, 
+		posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);
 }
 #pragma endregion "Galvo"
 

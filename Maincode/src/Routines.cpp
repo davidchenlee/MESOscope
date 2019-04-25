@@ -758,39 +758,39 @@ namespace TestRoutines
 	//Generate many short digital pulses and check the overall frameDuration with the oscilloscope
 	void digitalLatency(const FPGAns::FPGA &fpga)
 	{
-		const double step{ 4. * us };
+		const double timeStep{ 4. * us };
 
 		FPGAns::RTcontrol RTcontrol{ fpga };
 
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
+		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 1);
 
 		//Many short digital pulses to accumulate the error
 		for (U32 ii = 0; ii < 99; ii++)
-			RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
+			RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 0);
 
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
+		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 0);
 	}
 
 	//First calibrate the digital channels, then use it as a time reference
 	void analogLatency(const FPGAns::FPGA &fpga)
 	{
 		const double delay{ 400. * us };
-		const double step{ 4. * us };
+		const double timeStep{ 4. * us };
 
 		FPGAns::RTcontrol RTcontrol(fpga);
-		RTcontrol.pushAnalogSinglet(RTSCANGALVO, step, 10 * V);				//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTSCANGALVO, step, 0);
+		RTcontrol.pushAnalogSinglet(RTSCANGALVO, timeStep, 10 * V);				//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTSCANGALVO, timeStep, 0);
 		RTcontrol.pushLinearRamp(RTSCANGALVO, 4 * us, delay, 0, 5 * V);		//Linear ramp to accumulate the error
-		RTcontrol.pushAnalogSinglet(RTSCANGALVO, step, 10 * V);				//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTSCANGALVO, step, 0);					//Final pulse
+		RTcontrol.pushAnalogSinglet(RTSCANGALVO, timeStep, 10 * V);				//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTSCANGALVO, timeStep, 0);					//Final pulse
 
 		//DO0
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
+		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 0);
 		RTcontrol.pushDigitalSinglet(RTDODEBUG, delay, 0);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
+		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 0);
 	}
 
 	void pixelclock(const FPGAns::FPGA &fpga)
@@ -809,11 +809,11 @@ namespace TestRoutines
 	//Generate a long digital pulse and check the frameDuration with the oscilloscope
 	void digitalTiming(const FPGAns::FPGA &fpga)
 	{
-		const double step{ 400. * us };
+		const double timeStep{ 400. * us };
 
 		FPGAns::RTcontrol RTcontrol{ fpga };
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 1);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, step, 0);
+		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 0);
 	}
 
 	//Test the analog and digital output and the relative timing wrt the pixel clock
@@ -905,8 +905,8 @@ namespace TestRoutines
 	{
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };		//height_pix = 35 for PMT16X
-		const int nFramesCont{ 100 };
+		const int heightPerFrame_pix{ 560 };
+		const int nFramesCont{ 2 };
 		const int wavelength_nm = 750;			//The rescanner calib depends on the laser wavelength
 
 		//CREATE A REALTIME CONTROL SEQUENCE
@@ -1400,8 +1400,8 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY = 0.5 * um;
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 100 };
+		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
+		const int nFramesCont{ 10 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 		const int wavelength_nm = 750;
 

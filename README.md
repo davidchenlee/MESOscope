@@ -3,7 +3,6 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- cont z scan
 - Fix how to deal with multithread exception in the Filterwheel class!!!!
 - Do a post-sequence clean up routine to set the pockels outputs to 0
 - For the vibratome, show a progress bar for the slicing sequence

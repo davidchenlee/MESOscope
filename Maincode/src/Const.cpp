@@ -40,37 +40,29 @@ namespace Constants
 	extern const int syncDOtoAO_tick{ 4 * 74 };				//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
-
-	extern const int pockelsMainDelay_tick{ 46600 };		//Delay of the Pockels AO after the preframeclock trigger. Turn on the pockels early because it overshoots at high power
-
-#if multibeam
-	extern const int pockelsSecondaryDelay_tick{ 70000 };				//Delay of the Pockels AO after the preframeclock trigger for the subsequent frames
-	extern const int scanGalvoDelay_tick{ 115000 };						//Delay of the scan galvo AO after the preframeclock trigger
-	extern const int rescanGalvoDelay_tick{ scanGalvoDelay_tick };		//Delay of the rescan galvo AO after the preframeclock trigger
-#else
-
-	extern const int pockelsSecondaryDelay_tick{ 0 };
-
-	//Tu fine-tune the delays using beads
-	//1. First maximize rampduration of both galvos by tuning 'mSinglebeamRampDurationFineTuning'.
-	//If the ramp is too long, the overshooting from each frame will accumulate over all the frames. The bead position will be different in different frames
-	//2. Adjust 'scanGalvoDelay_tick' until the bead position coincide for the forth and back scans
-	extern const int scanGalvoDelay_tick{ 0 };								//Delay of the scan galvo AO after the preframeclock trigger
-	extern const int rescanGalvoDelay_tick{ scanGalvoDelay_tick + 30000 };	//Delay of the rescan galvo AO after the preframeclock trigger. If too long, the overshoot over the ramp length will accumulate over >100 frames
-
-	//Test reducing the slowFFOV to 35 pix and 17.5 um
-	//extern const int scanGalvoDelay_tick{ 0 };						//Delay of the scan galvo AO after the preframeclock trigger
-																	//Increase if the bead position is lower in the second frame
-	//extern const int rescanGalvoDelay_tick{ scanGalvoDelay_tick + 35000 };		//Delay of the rescan galvo AO after the preframeclock trigger
-#endif
+	extern const int nLineclockDelay{ 7 };					//Number of lineclocks delaying the frameclock (and framegate) wrt the preframeclock (and preframegate)
+															//This is for triggering the pockels and rescanner slightly earlier and adjusting the timing by via delay
 
 	extern const double linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
 															//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered
-	extern const int FIFOINtimeout_tick{ 100 };				//Timeout of the host-to-target and target-to-host FIFOINs
+	extern const int FIFOtimeout_tick{ 100 };				//Timeout of the all the FIFOS on the FPGA
 	extern const int FIFOINmax{ 32773 };					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
 
+
+	//POCKELS
+	extern const double pockelsFirstFrameDelay{ 300. * us };		//Delay of the Pockels AO wrt the preframeclock. Turn on the pockels early to avoid the transient before imaging
+	extern const double pockelsSecondaryDelay{ 0 };					//Delay of the Pockels AO wrt the preframeclock. To increase the pockels power for the subsequent frames
+
+	//GALVOS
+	//To fine tune the delays using beads
+	//1. First maximize rampduration of both galvos by tuning 'mSinglebeamRampDurationFineTuning'.
+	//If the ramp is too long, the overshooting from each frame will accumulate over all the frames. The bead position will be different in different frames
+	//2. Adjust 'scanGalvoDelay_tick' until the bead position coincide for the forth and back scans
+	extern const double scanGalvoDelay{ 0 };							//Delay of the scan galvo AO wrt the frameclock
+	extern const double rescanGalvoDelay{ scanGalvoDelay + 218 * us };	//Delay of the rescan galvo AO wrt the preframeclock. If too long, the overshoot of the ramp will accumulate over >100 frames
+
 	//STAGES
-	extern const int stageTriggerPulse{ 5 * ms };			//Pulsewidth for triggering the stages via the DI (the stage controller has a 20kHz clock = 50 us)
+	extern const double stageTriggerPulse{ 5 * ms };			//Pulsewidth for triggering the stages via the DI (the stage controller has a 20kHz clock = 50 us)
 															//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based.
 
 	//PMT

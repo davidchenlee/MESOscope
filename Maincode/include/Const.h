@@ -73,15 +73,16 @@ namespace Constants
 	extern const U32 tMIN_tick;
 	extern const int AO_tMIN;
 	extern const int syncDOtoAO_tick;
-	extern const int pockelsMainDelay_tick;
-	extern const int pockelsSecondaryDelay_tick;
-	extern const int scanGalvoDelay_tick;
-	extern const int rescanGalvoDelay_tick;
+	extern const int nLineclockDelay;
 	extern const double linegateTimeout;
-	extern const int FIFOINtimeout_tick;
+	extern const int FIFOtimeout_tick;
 	extern const int FIFOINmax;
 
-	extern const int stageTriggerPulse;
+	extern const double pockelsFirstFrameDelay;
+	extern const double pockelsSecondaryDelay;
+	extern const double scanGalvoDelay;
+	extern const double rescanGalvoDelay;
+	extern const double stageTriggerPulse;
 
 	extern const int nPulses;
 	extern const U8 pulseArray[];

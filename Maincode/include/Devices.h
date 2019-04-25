@@ -78,18 +78,13 @@ public:
 
 class Galvo
 {
-	//const double mSinglebeamRampDurationFineTuning{ -600. * us };
-	
-	//Test a small slowFFOV to 35 pix and 17.5 um
-	const double mSinglebeamRampDurationFineTuning{ -250. * us };
-
-	const double mMultibeamRampDurationFineTuning{ -3.0 * us };
+	const double mRampDurationFineTuning{ -250. * us };
 
 	//Scanner
 	const double mScanCalib{ 0.02417210 * V / um };			//Calibration factor of the scan galvo. Last calib 31/7/2018
 
 	//Rescanner
-	double mRescanVoltageOffset{ 0 };						//Overriden in the constructor.
+	double mRescanVoltageOffset{ 0 };						//Overriden in the constructor because the laser alignment depends on the wavelength
 
 	//For a single laser beam (i.e., without using the beamsplitter) to point at a specific channel of the PMT16X
 	const double mInterBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
@@ -103,12 +98,11 @@ public:
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const int wavelength_nm = 0);
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax, const int wavelength_nm = 0);
 
+	void voltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
 	void positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal) const;
-	void voltageToZero() const;
-	void scanSingleFrame(const double posInitial, const double posFinal, const double posOffset = 0) const;
-	void rescanSingleFrame(const double posInitial, const double posFinal, const double posOffset = 0) const;
+	void positionLinearRamp(const double posInitial, const double posFinal, const double posOffset = 0) const;
 };
 
 class PMT16X

@@ -80,8 +80,8 @@ class Galvo
 {
 	//const double mSinglebeamRampDurationFineTuning{ -600. * us };
 	
-	//Test a small slowFFUV
-	const double mSinglebeamRampDurationFineTuning{ -200. * us };
+	//Test a small slowFFOV to 35 pix and 17.5 um
+	const double mSinglebeamRampDurationFineTuning{ -250. * us };
 
 	const double mMultibeamRampDurationFineTuning{ -3.0 * us };
 

@@ -28,6 +28,7 @@ namespace PMT1XRoutines
 
 		//ACQUISITION SETTINGS
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
 		const int nFramesCont{ 5 };				//Number of frames for continuous XY acquisition
@@ -85,7 +86,7 @@ namespace PMT1XRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
 		//GALVO RT linear scan
-		const double FFOVslow{ 200. * um };			//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 		const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
 
 		//LASER
@@ -179,12 +180,13 @@ namespace PMT1XRoutines
 		const ChannelList channelList{ channelList };
 		//const ChannelList channelList{ {channelList.findChannel("DAPI")} };
 		const int2 nStacksXY{ 3, 4 };
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
 		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
 
 		//STACK
-		const double2 FFOV{ 200. * um, 150. * um };							//Full FOV in the (slow axis, fast axis)
+		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY , widthPerFrame_pix * pixelSizeXY };							//Full FOV in the (slow axis, fast axis)
 		const double stepSizeZ{ 0.5 * um };									//Step size in z
 		const double stackDepthZ{ 100. * um };								//Acquire a stack of this depth or thickness in Z
 		const int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
@@ -294,6 +296,7 @@ namespace PMT1XRoutines
 	{
 		//ACQUISITION SETTINGS
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
 		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
@@ -306,7 +309,7 @@ namespace PMT1XRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
 		//GALVO RT linear scan
-		const double FFOVslow{ 200. * um };	//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
 		const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
 
 		//LASER
@@ -346,6 +349,7 @@ namespace PMT1XRoutines
 	{
 		//ACQUISITION SETTINGS
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("GFP") };	//Select a particular laser
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
 		const int nFramesCont{ 160 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
@@ -387,7 +391,7 @@ namespace PMT1XRoutines
 		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, laserPi, VISION };
 
 		//GALVO RT linear scan
-		const double FFOVslow{ 200. * um };	//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
 		const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
 
 		//OPEN THE SHUTTER
@@ -412,9 +416,10 @@ namespace PMT1XRoutines
 	void sequencer(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const double2 FFOV{ 200. * um, 150. * um };								//Full FOV in the (slow axis, fast axis)
+		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };								//Full FOV in the (slow axis, fast axis)
 		const int nFramesCont{ 160 };											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };										//Step size in z
 		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.180 * mm, 35.025 * mm };	//Region of interest {ymin, xmin, ymax, xmax}
@@ -538,11 +543,12 @@ namespace PMT16XRoutines
 		//ACQUISITION SETTINGS
 		//const ChannelList channelList{ {channelList.findChannel("DAPI")} };
 		const int2 nStacksXY{ 2, 2 };
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
-		const double FFOVfast{ 150. * um };			//Full FOV in the slow axis
-		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
+		const int nFramesCont{ 1 };											//Number of frames for continuous XY acquisition
+		const double FFOVfast{ widthPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
 		int selectHeightPerFrame_pix;
 		double selectScanFFOV, selectRescanFFOV, selectPower;
@@ -677,14 +683,14 @@ namespace PMT16XRoutines
 		//ACQUISITION SETTINGS
 
 		//Override the global stage position
-		const double3 stackCenterXYZ = { 50.990 * mm, 16.460* mm, 18.032 * mm };
+		const double3 stackCenterXYZ = { 50.983 * mm, 16.460* mm, (18.054 - 0.020) * mm };
 
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular laser
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
+		const int heightPerFrame_pix{ 35 };
 		const int nFramesCont{ 80 };						//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };
-		const ScanDirection stackScanDirZ{ BOTTOMUP };		//Scan direction in z
+		const ScanDirection stackScanDirZ{ TOPDOWN };		//Scan direction in z
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
 		double stageZi, stageZf, laserPi, laserPf;
@@ -721,7 +727,7 @@ namespace PMT16XRoutines
 		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, laserPi, VISION };
 
 		//GALVO RT linear scan
-		const double FFOVslow{ 280. * um };	//Full FOV in the slow axis
+		const double FFOVslow{ 17.5 * um };	//Full FOV in the slow axis
 		const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
 		const Galvo rescanner{ RTcontrol, RTRESCANGALVO, FFOVslow / 2, singleChannel.mWavelength_nm };
 		PMT16Xchan = CH08;
@@ -846,6 +852,7 @@ namespace TestRoutines
 	void fineTuneScanGalvo(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
 		const int nFramesCont{ 30 };											//Number of frames for continuous XY acquisition
@@ -862,7 +869,7 @@ namespace TestRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, RS, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
 		//GALVO
-		const double FFOVslow{ 200. * um };			//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 		Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
 
 		//LASER
@@ -896,16 +903,17 @@ namespace TestRoutines
 	//Must manually open the laser and Uniblitz shutter and adjust the pockels power
 	void galvosSync(const FPGAns::FPGA &fpga)
 	{
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 35 };		//height_pix = 35 for PMT16X
-		const int nFramesCont{ 20 };
+		const int heightPerFrame_pix{ 560 };		//height_pix = 35 for PMT16X
+		const int nFramesCont{ 100 };
 		const int wavelength_nm = 750;			//The rescanner calib depends on the laser wavelength
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
 		//GALVOS
-		const double FFOVslow{ 17.5 * um };		//Length scanned in the slow axis. FFOVslow = 17.5 * um for PMT16X
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Length scanned in the slow axis. FFOVslow = 17.5 * um for PMT16X
 		Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
 		Galvo rescanner{ RTcontrol, RTRESCANGALVO, FFOVslow / 2, wavelength_nm };
 
@@ -1176,9 +1184,10 @@ namespace TestRoutines
 		};
 
 		//ACQUISITION SETTINGS
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const double2 FFOV{ 200. * um, 150. * um };
+		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };
 		const int nFramesCont{ 80 };										//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };									//Step size in z
 		const ROI roi{ 9.950 * mm, 34.850 * mm, 10.150 * mm, 35.050 * mm }; //Region of interest {ymin, xmin, ymax, xmax}
@@ -1313,6 +1322,7 @@ namespace TestRoutines
 	//Must manually open the laser and Uniblitz shutter
 	void PMT16Xdemultiplex(const FPGAns::FPGA &fpga)
 	{
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const int nFramesCont{ 1 };						//Number of frames for continuous XY acquisition
@@ -1322,7 +1332,7 @@ namespace TestRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, FG, nFramesCont, widthPerFrame_pix, heightPerFrame_pix };
 
 		//GALVOS
-		const double FFOVslow{ 280. * um };				//Length scanned in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };				//Length scanned in the slow axis
 		Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
 		//Galvo scanner{ RTcontrol, RTSCANGALVO, 0 };		//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 		Galvo rescanner{ RTcontrol, RTRESCANGALVO, FFOVslow / 2, wavelength_nm };
@@ -1340,10 +1350,11 @@ namespace TestRoutines
 	void PMT16XgavosSyncAndLaser(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const int nFramesCont{ 2 };
-		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
 		int selectHeightPerFrame_pix;
 		double selectScanFFOV, selectPower;
@@ -1387,10 +1398,11 @@ namespace TestRoutines
 	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
+		const double pixelSizeXY = 0.5 * um;
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 35 };
-		const int nFramesCont{ 20 };
-		const double FFOVslow{ 17.5 * um };			//Full FOV in the slow axis
+		const int heightPerFrame_pix{ 560 };
+		const int nFramesCont{ 100 };
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 		const int wavelength_nm = 750;
 
 		int selectHeightPerFrame_pix;
@@ -1398,7 +1410,7 @@ namespace TestRoutines
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			stackCenterXYZ = { 50.988 * mm, 16.460 * mm, 18.052 * mm };//750 and 1040 nm
+			stackCenterXYZ = { 50.983 * mm, 16.460 * mm, 18.054 * mm };//750 and 1040 nm
 			//stackCenterXYZ = { 50.800 * mm, 16.520 * mm, 18.052 * mm };//920 nm
 			if (multibeam)	//Multibeam
 			{

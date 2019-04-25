@@ -55,13 +55,13 @@ namespace Constants
 	//1. First maximize rampduration of both galvos by tuning 'mSinglebeamRampDurationFineTuning'.
 	//If the ramp is too long, the overshooting from each frame will accumulate over all the frames. The bead position will be different in different frames
 	//2. Adjust 'scanGalvoDelay_tick' until the bead position coincide for the forth and back scans
-	//extern const int scanGalvoDelay_tick{ 30000 };						//Delay of the scan galvo AO after the preframeclock trigger
-	//extern const int rescanGalvoDelay_tick{ scanGalvoDelay_tick + 70720 };		//Delay of the rescan galvo AO after the preframeclock trigger
+	extern const int scanGalvoDelay_tick{ 0 };								//Delay of the scan galvo AO after the preframeclock trigger
+	extern const int rescanGalvoDelay_tick{ scanGalvoDelay_tick + 30000 };	//Delay of the rescan galvo AO after the preframeclock trigger. If too long, the overshoot over the ramp length will accumulate over >100 frames
 
-	//Test reducing the slowFFOV
-	extern const int scanGalvoDelay_tick{ 1000 };						//Delay of the scan galvo AO after the preframeclock trigger
-																		//Increase if the bead position is lower in the second frame
-	extern const int rescanGalvoDelay_tick{ scanGalvoDelay_tick + 35000 };		//Delay of the rescan galvo AO after the preframeclock trigger
+	//Test reducing the slowFFOV to 35 pix and 17.5 um
+	//extern const int scanGalvoDelay_tick{ 0 };						//Delay of the scan galvo AO after the preframeclock trigger
+																	//Increase if the bead position is lower in the second frame
+	//extern const int rescanGalvoDelay_tick{ scanGalvoDelay_tick + 35000 };		//Delay of the rescan galvo AO after the preframeclock trigger
 #endif
 
 	extern const double linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition

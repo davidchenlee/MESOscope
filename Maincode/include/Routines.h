@@ -18,7 +18,6 @@ namespace PMT16XRoutines
 	void continuousScan(const FPGAns::FPGA &fpga);
 }
 
-
 //TESTS
 namespace TestRoutines
 {

@@ -27,7 +27,7 @@ namespace FPGAns
 	public:
 		FPGA();
 		~FPGA();
-		void close(const FPGAresetSelector resetFlag = NORESET) const;
+		void close(const FPGARESET reset = FPGARESET::DIS) const;
 		NiFpga_Session getHandle() const;									//Access the handle indirectly to avoid modifying it by mistake
 
 	};
@@ -58,9 +58,9 @@ namespace FPGAns
 
 	public:
 		const FPGAns::FPGA &mFpga;
-		LineclockSelector mLineclockInput;															//Resonant scanner (RS) or Function generator (FG)
-		AcqTriggerSelector mStageAsTrigger;		//Trigger the acquisition with the z stage: enable (0), disable (1)
-		FIFOOUTselector mFIFOOUTstate;
+		LINECLOCK mLineclockInput;															//Resonant scanner (RS) or Function generator (FG)
+		MAINTRIG mStageAsTrigger;		//Trigger the acquisition with the z stage: enable (0), disable (1)
+		FIFOOUT mFIFOOUTstate;
 		const double mDwell{ 0.1625 * us };															//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
 																									//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 		const double mPulsesPerPix = mDwell / VISIONpulsePeriod;									//Max number of laser pulses per pixel
@@ -71,8 +71,8 @@ namespace FPGAns
 		int mHeightAllFrames_pix;																	//Total number of lines in all the frames without including the skipped lines
 		int mNpixAllFrames;																			//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
-		RTcontrol(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput , const AcqTriggerSelector stageAsTrigger,
-			const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUTselector FIFOOUTstate);
+		RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput , const MAINTRIG stageAsTrigger,
+			const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate);
 		~RTcontrol();
 		RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 		RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
@@ -82,7 +82,7 @@ namespace FPGAns
 		void pushQueue(const RTchannel chan, QU32& queue);
 		void clearQueue(const RTchannel chan);
 		void pushDigitalSinglet(const RTchannel chan, double timeStep, const bool DO);
-		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO, const OverrideFileSelector overrideFlag = NOOVERRIDE);
+		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO, const OVERRIDE override = OVERRIDE::DIS);
 		void pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor);
 		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi, const double Vf);
 		void presetFPGAoutput() const;

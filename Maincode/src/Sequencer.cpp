@@ -1,17 +1,17 @@
 #include "Sequencer.h"
 
 #pragma region "Commandline"
-std::string Commandline::actionToString_(const Action action) const
+std::string Commandline::actionToString_(const ACTION action) const
 {
 	switch (action)
 	{
-	case CUT:
+	case ACTION::CUT:
 		return "CUT";
-	case SAV:
+	case ACTION::SAV:
 		return "SAV";
-	case ACQ:
+	case ACTION::ACQ:
 		return "ACQ";
-	case MOV:
+	case ACTION::MOV:
 		return "MOV";
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -34,13 +34,13 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 
 	switch (mAction)
 	{
-	case MOV:
+	case ACTION::MOV:
 		*fileHandle << actionToString_(mAction) << "\t" << mCommand.moveStage.mSliceNumber;
 		*fileHandle << "\t(" << mCommand.moveStage.mStackIJ.at(XX) << "," << mCommand.moveStage.mStackIJ.at(YY) << ")\t";
 		*fileHandle << std::setprecision(4);
 		*fileHandle << "(" << mCommand.moveStage.mStackCenterXY.at(XX) / mm << "," << mCommand.moveStage.mStackCenterXY.at(YY) / mm << ")\n";
 		break;
-	case ACQ:
+	case ACTION::ACQ:
 		scanZf = mCommand.acqStack.mScanZi + mCommand.acqStack.mScanDirZ * mCommand.acqStack.mStackDepth;
 		scanPf = mCommand.acqStack.mScanPi + mCommand.acqStack.mScanDirZ * mCommand.acqStack.mStackPinc;
 		
@@ -54,10 +54,10 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << std::setprecision(0);
 		*fileHandle << mCommand.acqStack.mScanPi << "\t" << scanPf << "\n";
 		break;
-	case SAV:
+	case ACTION::SAV:
 		*fileHandle << actionToString_(mAction) + "\n";
 		break;
-	case CUT:
+	case ACTION::CUT:
 		*fileHandle << actionToString_(mAction);
 		*fileHandle << std::setprecision(3);
 		*fileHandle << "\t************Sample facing the vibratome at (mm) = ";
@@ -73,23 +73,23 @@ void Commandline::printParameters() const
 {
 	switch (mAction)
 	{
-	case MOV:
+	case ACTION::MOV:
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
 		std::cout << "Vibratome slice number = " << mCommand.moveStage.mSliceNumber << "\n";
 		std::cout << "Stack ij = (" << mCommand.moveStage.mStackIJ.at(XX) << "," << mCommand.moveStage.mStackIJ.at(YY) << ")\n";
 		std::cout << "Stack center (mm,mm) = (" << mCommand.moveStage.mStackCenterXY.at(XX) / mm<< "," << mCommand.moveStage.mStackCenterXY.at(YY) / mm << ")\n\n";
 		break;
-	case ACQ:
+	case ACTION::ACQ:
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
 		std::cout << "wavelength (nm) = " << mCommand.acqStack.mWavelength_nm << "\n";
 		std::cout << "scanDirZ = " << mCommand.acqStack.mScanDirZ << "\n";
 		std::cout << "scanZi (mm) / stackDepth (mm) = " << mCommand.acqStack.mScanZi / mm << "/" << mCommand.acqStack.mStackDepth << "\n";
 		std::cout << "scanPi (mW) / stackPdiff (mW/um) = " << mCommand.acqStack.mScanPi / mW << "/" << mCommand.acqStack.mStackPinc / mWpum << "\n\n";
 		break;
-	case SAV:
+	case ACTION::SAV:
 		std::cout << "The command is " << actionToString_(mAction) << "\n";
 		break;
-	case CUT:
+	case ACTION::CUT:
 		std::cout << "The command is " << actionToString_(mAction) << "\n";
 		break;
 	default:
@@ -217,7 +217,7 @@ void Sequencer::moveStage_(const int2 stackIJ)
 	const double2 stackCenterXY = stackIndicesToStackCenter_(stackIJ);
 
 	Commandline commandline;
-	commandline.mAction = MOV;
+	commandline.mAction = ACTION::MOV;
 	commandline.mCommand.moveStage = { mSliceCounter, stackIJ, stackCenterXY };
 	mCommandList.push_back(commandline);
 
@@ -233,7 +233,7 @@ void Sequencer::acqStack_(const int iterWL)
 	const double scanPi{ calculateStackScanInitialPower_(singleLaser.mScanPi, singleLaser.mStackPinc, mScanDir.at(ZZ)) };
 
 	Commandline commandline;
-	commandline.mAction = ACQ;
+	commandline.mAction = ACTION::ACQ;
 	commandline.mCommand.acqStack = { mStackCounter, singleLaser.mWavelength_nm, mScanDir.at(ZZ), mScanZi, mStack.mDepth, scanPi, singleLaser.mStackPinc };
 	mCommandList.push_back(commandline);
 
@@ -248,7 +248,7 @@ void Sequencer::acqStack_(const int iterWL)
 void Sequencer::saveStack_()
 {
 	Commandline commandline;
-	commandline.mAction = SAV;
+	commandline.mAction = ACTION::SAV;
 	mCommandList.push_back(commandline);
 
 	mCommandCounter++;	//Count the number of commands
@@ -260,7 +260,7 @@ void Sequencer::cutSlice_()
 	const double3 samplePositionXYZ{ mSample.mBladePositionXY.at(XX), mSample.mBladePositionXY.at(YY), mPlaneToSliceZ + mSample.mBladeFocalplaneOffsetZ };
 
 	Commandline commandline;
-	commandline.mAction = CUT;
+	commandline.mAction = ACTION::CUT;
 	commandline.mCommand.cutSlice = { samplePositionXYZ };
 	mCommandList.push_back(commandline);
 

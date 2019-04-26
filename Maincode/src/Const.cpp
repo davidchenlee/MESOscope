@@ -7,9 +7,9 @@ namespace Constants
 	//extern const std::string folderPath{ "Z:\\_output_remote\\" };
 	extern const std::string bitfilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" };	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
 
-	extern const PhotocounterSelector photocounterInput{ PMT };		//PMT (PMT) or simulated PMT (SIM)
-	extern const PixelclockSelector pixelclockType{ UNIFORM };		//UNIFORM or NONUNIFORM dwell times
-	extern PMT16XchanSelector PMT16Xchan{ CH00 }; //will be overridden in Routines
+	extern const INPUT photocounterInput{ INPUT::PMT };													//PMT (PMT) or simulated PMT (SIM)
+	extern const PIXELCLOCK pixelclockType{ PIXELCLOCK::UNIFORM };										//UNIFORM or NONUNIFORM dwell times
+	extern PMT16XCHAN PMT16Xchan{ PMT16XCHAN::CH00 };													//will be overridden in Routines
 
 	//GENERAL CONSTANTS
 	extern const double PI{ 3.1415926535897 };
@@ -62,7 +62,7 @@ namespace Constants
 
 	//STAGES
 	extern const double stagePulseStretcher{ 5 * ms };		//Stretch the pulsewidth from the stages (the stage controller has a 20kHz clock = 50 us) to trigger the aqc sequence
-	extern const double postsequenceTimer{ 0 * ms };		//Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
+	extern const double postsequenceTimer{ 100 * ms };		//Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
 
 #if multibeam
 	extern const double	ZstageTrigDelay{ 50 * ms };	//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based

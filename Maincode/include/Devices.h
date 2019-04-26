@@ -38,8 +38,8 @@ public:
 	void postprocess();
 	void averageFrames();
 	void averageEvenOddFrames();
-	void saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const ScanDirection stackScanDir = TOPDOWN) const;
-	void saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag = NOOVERRIDE, const ScanDirection stackScanDir = TOPDOWN) const;
+	void saveTiffSinglePage(std::string filename, const OVERRIDE override, const ZSCAN stackScanDir = ZSCAN::TOPDOWN) const;
+	void saveTiffMultiPage(std::string filename, const OVERRIDE override = OVERRIDE::DIS, const ZSCAN stackScanDir = ZSCAN::TOPDOWN) const;
 	U8* const pointerToTiff() const;
 };
 
@@ -106,7 +106,7 @@ public:
 class PMT16X
 {
 	std::unique_ptr<serial::Serial> mSerial;
-	int mPort{ COMPMT16X };
+	COM mPort{ COM::PMT16X };
 	const int mBaud{ 9600 };
 	const int mTimeout{ 300 * ms };
 	const int mRxBufferSize{ 256 };				//Serial buffer size
@@ -137,8 +137,9 @@ class Filterwheel
 	position #3, 1040 nm beamsplitter
 	position #4, open (no beamsplitter)
 	position #5, open (no beamsplitter)
-	position #6, open (no beamsplitter) */
-	const std::vector<Filtercolor> mExcConfig{ BLUE, OPEN, GREEN, OPEN, RED, OPEN }; //GREEN and RED are not set up yet. Just doing some tests
+	position #6, open (no beamsplitter)
+	GREEN and RED are not set up yet. Just doing some tests*/
+	const std::vector<FILTERCOLOR> mExcConfig{ FILTERCOLOR::BLUE, FILTERCOLOR::OPEN, FILTERCOLOR::GREEN, FILTERCOLOR::OPEN, FILTERCOLOR::RED, FILTERCOLOR::OPEN };
 
 	/* Filters in the detection wheel as of Feb 2019
 	position #1, FF01-492/sp (blue)
@@ -146,19 +147,21 @@ class Filterwheel
 	position #3, BLP01-532R (red)
 	position #4, beam block
 	position #5, FF01-514/44 (green)
-	position #6, open (no filter) */
-	const std::vector<Filtercolor> mDetConfig{ BLUE, GREEN, RED, CLOSED, OPEN, OPEN };	//Currently, there are 2 green filters set up in the wheel (pos #2 and #5)
-																						//The code looks for the GREEN entry in this vector and reads its position
-																						//For now, I write GREEN in the vector position of the filter to be used
-																						//Place GREEN in the second position to use FF01-520/60, or in the fifth position to use FF01-514/44 (green)
+	position #6, open (no filter)
+	Currently, there are 2 green filters set up in the wheel (pos #2 and #5)
+	The code looks for the GREEN entry in this vector and reads its position
+	For now, I write GREEN in the vector position of the filter to be used
+	Place GREEN in the second position to use FF01-520/60, or in the fifth position to use FF01-514/44 (green)*/
+	const std::vector<FILTERCOLOR> mDetConfig{ FILTERCOLOR::BLUE, FILTERCOLOR::GREEN, FILTERCOLOR::RED, FILTERCOLOR::CLOSED, FILTERCOLOR::OPEN, FILTERCOLOR::OPEN };
+
 		
-	FilterwheelSelector mWhichFilterwheel;	//Device ID = 1, 2, ...
+	FILTERWHEEL mWhichFilterwheel;	//Device ID = 1, 2, ...
 	std::string mFilterwheelName;			//Device given name
-	std::vector<Filtercolor> mFWconfig;		//Store the filterwheel configuration for excitation or detection
-	Filtercolor mColor;						//Current filterwheel color
+	std::vector<FILTERCOLOR> mFWconfig;		//Store the filterwheel configuration for excitation or detection
+	FILTERCOLOR mColor;						//Current filterwheel color
 	int mPosition;							//Current filterwheel position
 	std::unique_ptr<serial::Serial> mSerial;
-	int mPort;
+	COM mPort;
 	const int mBaud{ 115200 };
 	const int mTimeout{ 150 * ms };
 	const int mNpos{ 6 };					//Number of filter positions
@@ -166,27 +169,27 @@ class Filterwheel
 	const int mRxBufSize{ 256 };				//Serial buffer size
 
 	void downloadColor_();
-	int colorToPosition_(const Filtercolor color) const;
-	Filtercolor positionToColor_(const int position) const;
-	std::string colorToString_(const Filtercolor color) const;
+	int colorToPosition_(const FILTERCOLOR color) const;
+	FILTERCOLOR positionToColor_(const int position) const;
+	std::string colorToString_(const FILTERCOLOR color) const;
 public:
-	Filterwheel(const FilterwheelSelector whichFilterwheel);
+	Filterwheel(const FILTERWHEEL whichFilterwheel);
 	~Filterwheel();
 	Filterwheel(const Filterwheel&) = delete;				//Disable copy-constructor
 	Filterwheel& operator=(const Filterwheel&) = delete;	//Disable assignment-constructor
 	Filterwheel(Filterwheel&&) = delete;					//Disable move constructor
 	Filterwheel& operator=(Filterwheel&&) = delete;			//Disable move-assignment constructor
 
-	void setPosition(const Filtercolor color);
+	void setPosition(const FILTERCOLOR color);
 	void setWavelength(const int wavelength_nm);
 };
 
 class Laser
 {
-	LaserSelector mWhichLaser;
+	LASER mWhichLaser;
 	int mWavelength_nm;
 	std::unique_ptr<serial::Serial> mSerial;
-	int mPort;
+	COM  mPort;
 	int mBaud;
 	const int mTimeout{ 100 * ms };
 	const double mTuningSpeed{ 35. / sec };		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
@@ -195,7 +198,7 @@ class Laser
 	int downloadWavelength_nm_();
 public:
 	std::string laserName;
-	Laser(const LaserSelector whichLaser);
+	Laser(const LASER whichLaser);
 	~Laser();
 	Laser(const Laser&) = delete;				//Disable copy-constructor
 	Laser& operator=(const Laser&) = delete;	//Disable assignment-constructor
@@ -213,7 +216,7 @@ class Shutter
 	const FPGAns::FPGA &mFpga;
 	NiFpga_FPGAvi_ControlBool mWhichShutter;	//Device ID
 public:
-	Shutter(const FPGAns::FPGA &fpga, const LaserSelector whichLaser);
+	Shutter(const FPGAns::FPGA &fpga, const LASER whichLaser);
 	~Shutter();
 
 	void setShutter(const bool state) const;
@@ -232,10 +235,10 @@ class PockelsCell
 
 	double laserpowerToVolt_(const double power) const;
 public:
-	PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector);	//Do not set the output to 0 through the destructor to allow latching the last value
+	PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelector);	//Do not set the output to 0 through the destructor to allow latching the last value
 
-	void pushVoltageSinglet(const double timeStep, const double AO, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
-	void pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag = NOOVERRIDE) const;
+	void pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override = OVERRIDE::DIS) const;
+	void pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override = OVERRIDE::DIS) const;
 	void voltageToZero() const;
 	void voltageLinearRamp(const double Vi, const double Vf) const;
 	void powerLinearRamp(const double Pi, const double Pf) const;
@@ -247,8 +250,8 @@ public:
 class VirtualLaser
 {
 
-	LaserSelector mLaserSelect;					//use VISION, FIDELITY, or AUTO (let the code decide)
-	LaserSelector mCurrentLaser;				//Laser currently in use: VISION or FIDELITY
+	LASER mLaserSelect;					//use VISION, FIDELITY, or AUTO (let the code decide)
+	LASER mCurrentLaser;				//Laser currently in use: VISION or FIDELITY
 	FPGAns::RTcontrol &mRTcontrol;
 	int mWavelength_nm;							//Wavelength being used
 	Laser mVision;
@@ -258,14 +261,14 @@ class VirtualLaser
 	std::unique_ptr <PockelsCell> mPockelsPtr;
 	const double mPockelTimeStep{ 8. * us };		//Time step for the RT pockels command
 
-	std::string laserNameToString_(const LaserSelector whichLaser) const;
+	std::string laserNameToString_(const LASER whichLaser) const;
 	void isLaserInternalShutterOpen_() const;
-	LaserSelector autoselectLaser_(const int wavelength_nm);
+	LASER autoselectLaser_(const int wavelength_nm);
 	void turnFilterwheels_(const int wavelength_nm);
 public:
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LaserSelector laserSelect = AUTO);
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LaserSelector laserSelect = AUTO);
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelect = AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect = LASER::AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LASER laserSelect = LASER::AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelect = LASER::AUTO);
 
 	void setWavelength(const int wavelength_nm);
 	void setPower(const double laserPower) const;

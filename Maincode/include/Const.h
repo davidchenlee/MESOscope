@@ -26,32 +26,32 @@ namespace Constants
 	typedef std::array<double, 2> double2;		//array of 2 doubles
 	typedef std::array <double, 4> ROI;			//ROI = {ymin, xmin, ymax, xmax}
 
-	enum PhotocounterSelector { PMT, SIM };
-	enum LineclockSelector { RS = false, FG = true };
-	enum AcqTriggerSelector { PCTRIG = false, STAGETRIG = true};
-	enum FPGAresetSelector { NORESET = false, RESET = true };
-	enum class FIFOOUTselector { FIFOOUTdis = false, FIFOOUTen = true };
-	enum TiffPageStructSelector { SINGLEPAGE = false, MULTIPAGE = true};
-	enum OverrideFileSelector { NOOVERRIDE = false, OVERRIDE = true};
-	enum PixelclockSelector { UNIFORM, NONUNIFORM };
+	enum class INPUT { PMT, SIM };
+	enum class LINECLOCK { RS = false, FG = true };
+	enum class MAINTRIG { PC = false, ZSTAGE = true};
+	enum class FPGARESET { DIS = false, EN = true };
+	enum class FIFOOUT { DIS = false, EN = true };
+	enum class MULTIPAGE { DIS = false, EN = true};
+	enum class OVERRIDE { DIS = false, EN = true};
+	enum class PIXELCLOCK { UNIFORM, NONUNIFORM };
 	enum RTchannel { RTPIXELCLOCK, RTSCANGALVO, RTRESCANGALVO, RTDODEBUG, RTVISION, RTSCALINGVISION, RTFIDELITY, RTSCALINGFIDELITY, RTNCHAN };		//RTNCHAN = number of RT channels available, including the channel for the pixelclock
-	enum FilterwheelSelector { FWDET, FWEXC };
+	enum class FILTERWHEEL { DET, EXC };
 	enum Axis { XX, YY, ZZ };
-	enum RunMode { SINGLEMODE, LIVEMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
-	enum Action { CUT, ACQ, SAV, MOV };
-	enum LaserSelector { VISION, FIDELITY, AUTO};
-	enum Filtercolor { BLUE, GREEN, RED, OPEN, CLOSED };
-	enum ComSelector { COMVISION = 1, COMFIDELITY = 8, COMFWDET = 5, COMFWEXC = 9, COMPMT16X = 6};
+	enum class RUNMODE { SINGLEMODE, LIVEMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
+	enum class ACTION { CUT, ACQ, SAV, MOV };
+	enum class LASER { VISION, FIDELITY, AUTO};
+	enum class FILTERCOLOR { BLUE, GREEN, RED, OPEN, CLOSED };
+	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};
 	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};
-	enum ScanDirection : int { BOTTOMUP = -1, TOPDOWN = 1};
-	enum PMT16XchanSelector { CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CH16, CH00}; //CH00 centers the rescanner (i.e., offset + 0 V is sent to the scanner)
+	enum class ZSCAN { BOTTOMUP = -1, TOPDOWN = 1};
+	enum class PMT16XCHAN { CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CH16, CH00}; //CH00 centers the rescanner (i.e., offset + 0 V is sent to the scanner)
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;
 
-	extern const PhotocounterSelector photocounterInput;
-	extern const PixelclockSelector pixelclockType;
-	extern PMT16XchanSelector PMT16Xchan;
+	extern const INPUT photocounterInput;
+	extern const PIXELCLOCK pixelclockType;
+	extern PMT16XCHAN PMT16Xchan;
 
 	extern const double PI;
 	extern const int us;

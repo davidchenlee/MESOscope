@@ -26,9 +26,9 @@ struct CutSlice {
 //Single commands
 class Commandline
 {
-	std::string actionToString_(const Action action) const;
+	std::string actionToString_(const ACTION action) const;
 public:
-	Action mAction;
+	ACTION mAction;
 	union {
 		MoveStage moveStage;
 		AcqStack acqStack;

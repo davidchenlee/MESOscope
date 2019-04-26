@@ -152,14 +152,14 @@ namespace FPGAns
 	};
 
 	//The object has to be closed explicitly because of the exception catching
-	void FPGA::close(const FPGAresetSelector resetFlag) const
+	void FPGA::close(const FPGARESET reset) const
 	{
 		//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 		//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
 		//0 resets, 1 does not reset
-		checkStatus(__FUNCTION__, NiFpga_Close(mHandle, !resetFlag));
+		checkStatus(__FUNCTION__, NiFpga_Close(mHandle, !static_cast<bool>(reset)));
 
-		if (resetFlag)
+		if (static_cast<bool>(reset))
 			std::cout << "The FPGA has been successfully reset\n";
 
 		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
@@ -178,7 +178,7 @@ namespace FPGAns
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 		//INPUT SELECTORS
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(getHandle(), NiFpga_FPGAvi_ControlU8_PhotocounterInputSelector, photocounterInput));										//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(getHandle(), NiFpga_FPGAvi_ControlU8_PhotocounterInputSelector, static_cast<U8>(photocounterInput)));						//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));									//For debugging the photocounters
 
 		//FIFOIN
@@ -241,7 +241,7 @@ namespace FPGAns
 		const int calibFine_tick{ -40 };
 		switch (pixelclockType)
 		{
-		case UNIFORM:
+		case PIXELCLOCK::UNIFORM:
 			pushUniformDwellTimes(calibFine_tick);
 			break;
 		//case nonuniform: pushCorrectedDwellTimes();
@@ -277,7 +277,7 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LineclockSelector lineclockInput, const AcqTriggerSelector stageAsTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUTselector FIFOOUTstate) :
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG stageAsTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate) :
 		mVectorOfQueues(RTNCHAN), mFpga(fpga), mLineclockInput(lineclockInput), mStageAsTrigger(stageAsTrigger), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mFIFOOUTstate(FIFOOUTstate)
 	{
 		//Set the imaging parameters
@@ -303,7 +303,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerFrame_pix)));		//Number of lines in a frame
 	
 		//SELECTORS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, mLineclockInput));					//Lineclock: resonant scanner (RS) or function generator (FG)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));					//Lineclock: resonant scanner (RS) or function generator (FG)
 	}
 
 
@@ -379,7 +379,7 @@ namespace FPGAns
 		mVectorOfQueues.at(chan).push_back(FPGAns::packDigitalSinglet(timeStep, DO));
 	}
 
-	void RTcontrol::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO, const OverrideFileSelector overrideFlag)
+	void RTcontrol::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO, const OVERRIDE override)
 	{
 		if (timeStep < AO_tMIN)
 		{
@@ -388,7 +388,7 @@ namespace FPGAns
 		}
 
 		//Clear the current content
-		if (overrideFlag)
+		if (static_cast<bool>(override))
 			mVectorOfQueues.at(chan).clear();
 
 		mVectorOfQueues.at(chan).push_back(FPGAns::packAnalogSinglet(timeStep, AO));

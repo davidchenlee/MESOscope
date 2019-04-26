@@ -225,12 +225,12 @@ int TiffU8::nFrames() const
 
 //Split mArray into sub-images (or "frames")
 //Purpose: the microscope concatenates all the planes in a scanned stack and hands over a vertically long image which has to be resized into sub-images
-void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag, const ScanDirection scanDir) const
+void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const OVERRIDE override, const ZSCAN scanDir) const
 {
 	int width, height, nFrames;
 
 	//Multi page structure
-	if (pageStructFlag)
+	if (static_cast<bool>(multipage))
 	{
 		nFrames = mNframes;
 		width = mWidthPerFrame;
@@ -250,7 +250,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	std::cout << height << "\n";
 	*/
 
-	if (!overrideFlag)
+	if (!static_cast<bool>(override))
 		filename = doesFileExist(filename);	//Check if the file exits. It gives some overhead
 
 	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "w") };
@@ -270,11 +270,11 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 	int iterFrame, lastFrame;
 	switch (scanDir)
 	{
-	case TOPDOWN:		//Forward saving: first frame at the top of the stack
+	case ZSCAN::TOPDOWN:		//Forward saving: first frame at the top of the stack
 		iterFrame = 0;
 		lastFrame = nFrames - 1;
 		break;
-	case BOTTOMUP:	//Reverse saving: first frame at the bottom of the stack
+	case ZSCAN::BOTTOMUP:	//Reverse saving: first frame at the bottom of the stack
 		iterFrame = nFrames - 1;
 		lastFrame = 0;
 		break;
@@ -313,7 +313,7 @@ void TiffU8::saveToFile(std::string filename, const TiffPageStructSelector pageS
 		if (iterFrame == lastFrame)
 			break;
 
-		iterFrame += scanDir; //Increasing iterator for TOPDOWN. Decreasing for BOTTOMUP
+		iterFrame += static_cast<int>(scanDir); //Increasing iterator for TOPDOWN. Decreasing for BOTTOMUP
 	} while (true);
 
 	_TIFFfree(buffer);		//Destroy the buffer
@@ -509,8 +509,8 @@ void TiffStack::pushDiffZ(const int indexDiffZ)
 	mDiffZ.pushImage(indexDiffZ, auxTiff.pointerToTiff());
 }
 
-void TiffStack::saveToFile(const std::string filename, OverrideFileSelector overrideFlag) const
+void TiffStack::saveToFile(const std::string filename, OVERRIDE override) const
 {
-	mDiffZ.saveToFile(filename, MULTIPAGE, overrideFlag);
+	mDiffZ.saveToFile(filename, MULTIPAGE::EN, override);
 }
 #pragma endregion "Stack"

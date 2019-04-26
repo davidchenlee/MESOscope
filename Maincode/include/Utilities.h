@@ -51,7 +51,7 @@ public:
 	int widthPerFrame() const;
 	int heightPerFrame() const;
 	int nFrames() const;
-	void saveToFile(std::string filename, const TiffPageStructSelector pageStructFlag, const OverrideFileSelector overrideFlag = NOOVERRIDE, const ScanDirection scanDir = TOPDOWN) const;
+	void saveToFile(std::string filename, const MULTIPAGE multipage, const OVERRIDE override = OVERRIDE::DIS, const ZSCAN scanDir = ZSCAN::TOPDOWN) const;
 	void mirrorOddFrames();
 	void averageEvenOddFrames();
 	void averageFrames();
@@ -71,6 +71,6 @@ public:
 	TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
 	void pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff);
 	void pushDiffZ(const int indexDiffZ);
-	void saveToFile(const std::string filename, OverrideFileSelector overrideFlag) const;
+	void saveToFile(const std::string filename, OVERRIDE override) const;
 };
 

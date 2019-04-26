@@ -11,14 +11,14 @@ Image::Image(FPGAns::RTcontrol &RTcontrol) :
 
 	//Trigger the acquisition with the PC or the Z stage
 	//This switch has to be here and not in the RTcontrol class because the z-trigger has to be turned off in the destructor to allow moving the z-stage
-	if (mRTcontrol.mStageAsTrigger)
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, mRTcontrol.mStageAsTrigger));
+	if (static_cast<bool>(mRTcontrol.mStageAsTrigger))
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, static_cast<bool>(mRTcontrol.mStageAsTrigger)));
 }
 
 Image::~Image()
 {
 	//Turn off the z-stage triggering the image acquisition to allow moving the z stage
-	if (mRTcontrol.mStageAsTrigger)
+	if (static_cast<bool>(mRTcontrol.mStageAsTrigger))
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));
 
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
@@ -209,19 +209,19 @@ void Image::demultiplex_()
 		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is the height of a single PMT16X channel
 	else			//singlebeam. Select a particular channel as the detector
 	{
-		if (PMT16Xchan >= CH01 && PMT16Xchan <= CH08)
-			std::memcpy(mTiff.pointerToTiff(), CountA.pointerToTiff() + PMT16Xchan * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
-		else if (PMT16Xchan >= CH09 && PMT16Xchan <= CH16)
-			std::memcpy(mTiff.pointerToTiff(), CountB.pointerToTiff() + (PMT16Xchan - CH09) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
+		if (PMT16Xchan >= PMT16XCHAN::CH01 && PMT16Xchan <= PMT16XCHAN::CH08)
+			std::memcpy(mTiff.pointerToTiff(), CountA.pointerToTiff() + static_cast<int>(PMT16Xchan) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
+		else if (PMT16Xchan >= PMT16XCHAN::CH09 && PMT16Xchan <= PMT16XCHAN::CH16)
+			std::memcpy(mTiff.pointerToTiff(), CountB.pointerToTiff() + (static_cast<int>(PMT16Xchan) - static_cast<int>(PMT16XCHAN::CH09)) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
 	}
 	
 	//For debugging. Save all the PMT16X channels. Save each PMT16X channel in a different Tiff page
 	if (saveTiff16X)
 	{
 		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix , 16 * mRTcontrol.mNframes };
-		stack.pushImage(CH01, CH08, CountA.pointerToTiff());
-		stack.pushImage(CH09, CH16, CountB.pointerToTiff());
-		stack.saveToFile("AllChannels", MULTIPAGE, NOOVERRIDE);
+		stack.pushImage(static_cast<int>(PMT16XCHAN::CH01), static_cast<int>(PMT16XCHAN::CH08), CountA.pointerToTiff());
+		stack.pushImage(static_cast<int>(PMT16XCHAN::CH09), static_cast<int>(PMT16XCHAN::CH16), CountB.pointerToTiff());
+		stack.saveToFile("AllChannels", MULTIPAGE::EN, OVERRIDE::DIS);
 	}
 }
 
@@ -332,15 +332,15 @@ void Image::averageEvenOddFrames()
 }
 
 //Save each frame in mTiff in a single Tiff page
-void Image::saveTiffSinglePage(std::string filename, const OverrideFileSelector overrideFlag, const ScanDirection stackScanDir) const
+void Image::saveTiffSinglePage(std::string filename, const OVERRIDE override, const ZSCAN stackScanDir) const
 {
-	mTiff.saveToFile(filename, SINGLEPAGE, overrideFlag, stackScanDir);
+	mTiff.saveToFile(filename, MULTIPAGE::DIS, override, stackScanDir);
 }
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiffMultiPage(std::string filename, const OverrideFileSelector overrideFlag, const ScanDirection stackScanDir) const
+void Image::saveTiffMultiPage(std::string filename, const OVERRIDE override, const ZSCAN stackScanDir) const
 {
-	mTiff.saveToFile(filename, MULTIPAGE, overrideFlag, stackScanDir);
+	mTiff.saveToFile(filename, MULTIPAGE::EN, override, stackScanDir);
 }
 
 //Access the Tiff data in the Image object
@@ -508,7 +508,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const double
 		break;
 	case RTRESCANGALVO:
 		//Rescan in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
-		positionLinearRamp(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(PMT16Xchan) * mInterBeamletDistance * mVoltagePerDistance);
+		positionLinearRamp(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(static_cast<int>(PMT16Xchan)) * mInterBeamletDistance * mVoltagePerDistance);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -557,7 +557,7 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 #pragma region "PMT16X"
 PMT16X::PMT16X()
 {
-	mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout/ms)));
+	mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(static_cast<int>(mPort)), mBaud, serial::Timeout::simpleTimeout(mTimeout/ms)));
 }
 
 PMT16X::~PMT16X()
@@ -712,17 +712,17 @@ void PMT16X::readTemp() const
 
 
 #pragma region "Filterwheel"
-Filterwheel::Filterwheel(const FilterwheelSelector whichFilterwheel): mWhichFilterwheel(whichFilterwheel)
+Filterwheel::Filterwheel(const FILTERWHEEL whichFilterwheel): mWhichFilterwheel(whichFilterwheel)
 {
 	switch (whichFilterwheel)
 	{
-	case FWEXC:
-		mPort = COMFWEXC;
+	case FILTERWHEEL::EXC:
+		mPort = COM::FWEXC;
 		mFilterwheelName = "Excitation filterwheel";
 		mFWconfig = mExcConfig;								//Assign the filter positions
 		break;
-	case FWDET:
-		mPort = COMFWDET;
+	case FILTERWHEEL::DET:
+		mPort = COM::FWDET;
 		mFilterwheelName = "Detection filterwheel";
 		mFWconfig = mDetConfig;								//Assign the filter positions
 		break;
@@ -732,7 +732,7 @@ Filterwheel::Filterwheel(const FilterwheelSelector whichFilterwheel): mWhichFilt
 
 	try
 	{
-		mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms)));
+		mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(static_cast<int>(mPort)), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms)));
 		downloadColor_();	//Download the current filter position
 	}
 	catch (const serial::IOException)
@@ -778,7 +778,7 @@ void Filterwheel::downloadColor_()
 	}
 }
 
-int Filterwheel::colorToPosition_(const Filtercolor color) const
+int Filterwheel::colorToPosition_(const FILTERCOLOR color) const
 {
 	for (std::vector<int>::size_type iter = 0; iter < mFWconfig.size(); iter++)
 	{
@@ -789,7 +789,7 @@ int Filterwheel::colorToPosition_(const Filtercolor color) const
 	throw std::runtime_error((std::string)__FUNCTION__ + ": Failure converting color to position");
 }
 
-Filtercolor Filterwheel::positionToColor_(const int position) const
+FILTERCOLOR Filterwheel::positionToColor_(const int position) const
 {
 	if (position < 1 || position > mNpos)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": the filterwheel position must be between 1 and " + std::to_string(mNpos));
@@ -797,25 +797,25 @@ Filtercolor Filterwheel::positionToColor_(const int position) const
 	return mFWconfig.at(position - 1);
 }
 
-//Convert from enum Filtercolor to string
-std::string Filterwheel::colorToString_(const Filtercolor color) const
+//Convert from enum FILTERCOLOR to string
+std::string Filterwheel::colorToString_(const FILTERCOLOR color) const
 {
 	std::string colorStr;
 	switch (color)
 	{
-	case BLUE:
+	case FILTERCOLOR::BLUE:
 		colorStr = "BLUE";
 		break;
-	case GREEN:
+	case FILTERCOLOR::GREEN:
 		colorStr = "GREEN";
 		break;
-	case RED:
+	case FILTERCOLOR::RED:
 		colorStr = "RED";
 		break;
-	case OPEN:
+	case FILTERCOLOR::OPEN:
 		colorStr = "OPEN";
 		break;
-	case CLOSED:
+	case FILTERCOLOR::CLOSED:
 		colorStr = "CLOSED";
 		break;
 	default:
@@ -824,7 +824,7 @@ std::string Filterwheel::colorToString_(const Filtercolor color) const
 	return colorStr;
 }
 
-void Filterwheel::setPosition(const Filtercolor color)
+void Filterwheel::setPosition(const FILTERCOLOR color)
 {
 	const int position = colorToPosition_(color);
 
@@ -876,14 +876,14 @@ void Filterwheel::setPosition(const Filtercolor color)
 //Set the filter color using the laser wavelength
 void Filterwheel::setWavelength(const int wavelength_nm)
 {
-	Filtercolor color;
+	FILTERCOLOR color;
 	//Wavelength intervals chosen based on the 2p-excitation spectrum of the fluorescent labels (DAPI, GFP, and tdTomato)
 	if (wavelength_nm > 940 && wavelength_nm <= 1080)
-		color = RED;
+		color = FILTERCOLOR::RED;
 	else if (wavelength_nm > 790)
-		color = GREEN;
+		color = FILTERCOLOR::GREEN;
 	else if (wavelength_nm >= 680)
-		color = BLUE;
+		color = FILTERCOLOR::BLUE;
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The filterwheel wavelength must be in the range 680 - 1080 nm");
 
@@ -892,18 +892,18 @@ void Filterwheel::setWavelength(const int wavelength_nm)
 #pragma endregion "Filterwheel"
 
 #pragma region "Laser"
-Laser::Laser(const LaserSelector whichLaser): mWhichLaser(whichLaser)
+Laser::Laser(const LASER whichLaser): mWhichLaser(whichLaser)
 {
 	switch (mWhichLaser)
 	{
-	case VISION:
+	case LASER::VISION:
 		laserName = "VISION";
-		mPort = COMVISION;
+		mPort = COM::VISION;
 		mBaud = 19200;
 		break;
-	case FIDELITY:
+	case LASER::FIDELITY:
 		laserName = "FIDELITY";
-		mPort = COMFIDELITY;
+		mPort = COM::FIDELITY;
 		mBaud = 115200;
 		break;
 	default:
@@ -912,7 +912,7 @@ Laser::Laser(const LaserSelector whichLaser): mWhichLaser(whichLaser)
 
 	try
 	{
-		mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(mPort), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms)));
+		mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(static_cast<int>(mPort)), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms)));
 	}
 	catch (const serial::IOException)
 	{
@@ -931,7 +931,7 @@ int Laser::downloadWavelength_nm_()
 {
 	switch (mWhichLaser)
 	{
-	case VISION:
+	case LASER::VISION:
 		try
 		{
 			const std::string TxBuffer{ "?VW" };	//Command to the laser
@@ -962,7 +962,7 @@ int Laser::downloadWavelength_nm_()
 		{
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with VISION");
 		}
-	case FIDELITY:
+	case LASER::FIDELITY:
 		return 1040;
 	default:
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
@@ -978,7 +978,7 @@ void Laser::setWavelength(const int wavelength_nm)
 {
 	switch (mWhichLaser)
 	{
-	case VISION:
+	case LASER::VISION:
 		if (wavelength_nm < 680 || wavelength_nm > 1080)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": VISION wavelength must be in the range 680 - 1080 nm");
 
@@ -1010,7 +1010,7 @@ void Laser::setWavelength(const int wavelength_nm)
 			}
 		}
 		break;
-	case FIDELITY:
+	case LASER::FIDELITY:
 		if (wavelength_nm != 1040)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": FIDELITY only supports the wavelenfth 1040 nm\n");
 		break;
@@ -1027,10 +1027,10 @@ void Laser::setShutter(const bool state) const
 
 	switch (mWhichLaser)
 	{
-	case VISION:
+	case LASER::VISION:
 		TxBuffer = "S=" + std::to_string(state);
 		break;
-	case FIDELITY:
+	case LASER::FIDELITY:
 		TxBuffer = "SHUTTER=" + std::to_string(state);
 		break;
 	default:
@@ -1061,11 +1061,11 @@ bool Laser::isShutterOpen() const
 
 	switch (mWhichLaser)
 	{
-	case VISION:
+	case LASER::VISION:
 		TxBuffer = "?S";
 		keyword = "?S ";
 		break;
-	case FIDELITY:
+	case LASER::FIDELITY:
 		TxBuffer = "?SHUTTER";
 		keyword = "?SHUTTER\t";
 		break;
@@ -1101,14 +1101,14 @@ bool Laser::isShutterOpen() const
 
 #pragma region "Shutters"
 //To control the Uniblitz shutters
-Shutter::Shutter(const FPGAns::FPGA &fpga, const LaserSelector whichLaser) : mFpga(fpga)
+Shutter::Shutter(const FPGAns::FPGA &fpga, const LASER whichLaser) : mFpga(fpga)
 {
 	switch (whichLaser)
 	{
-	case VISION:
+	case LASER::VISION:
 		mWhichShutter = NiFpga_FPGAvi_ControlBool_ShutterVision;
 		break;
-	case FIDELITY:
+	case LASER::FIDELITY:
 		mWhichShutter = NiFpga_FPGAvi_ControlBool_ShutterFidelity;
 		break;
 	default:
@@ -1140,19 +1140,19 @@ void Shutter::pulse(const double pulsewidth) const
 #pragma region "Pockels cells"
 //Curently, output of the pockels cell is hardcoded on the FPGA side.  The pockels' output is HIGH when 'framegate' is HIGH
 //Each Uniblitz shutter goes with a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
-PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelector) :
+PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelector) :
 	mRTcontrol(RTcontrol), mWavelength_nm(wavelength_nm), mShutter(mRTcontrol.mFpga, laserSelector)
 {
-	if (laserSelector != VISION && laserSelector != FIDELITY)
+	if (laserSelector != LASER::VISION && laserSelector != LASER::FIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
 
 	switch (laserSelector)
 	{
-	case VISION:
+	case LASER::VISION:
 		mPockelsRTchannel = RTVISION;
 		mScalingRTchannel = RTSCALINGVISION;
 		break;
-	case FIDELITY:
+	case LASER::FIDELITY:
 		if (wavelength_nm != 1040)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength of FIDELITY can not be different from 1040 nm");
 		mPockelsRTchannel = RTFIDELITY;
@@ -1223,20 +1223,20 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 }
 
 
-void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, const OverrideFileSelector overrideFlag) const
+void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const
 {
 	if (AO < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, AO, overrideFlag);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, AO, override);
 }
 
-void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const OverrideFileSelector overrideFlag) const
+void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const
 {
 	if (P < 0 || P > mMaxPower)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(static_cast<int>(mMaxPower/mW)) + " mW");
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, laserpowerToVolt_(P), overrideFlag);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, laserpowerToVolt_(P), override);
 }
 
 void PockelsCell::voltageToZero() const
@@ -1256,7 +1256,7 @@ void PockelsCell::voltageLinearRamp(const double Vi, const double Vf) const
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
-	pushVoltageSinglet(timeStep, Vi, OVERRIDE);	//Set the laser power for the first frame
+	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
 
 	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor and generate the scaling factors
 	mRTcontrol.clearQueue(mScalingRTchannel);
@@ -1302,15 +1302,15 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LaserSelector laserSelect) :
-	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mVision(VISION), mFidelity(FIDELITY), mFWexcitation(FWEXC), mFWdetection(FWDET)
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect) :
+	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mVision(LASER::VISION), mFidelity(LASER::FIDELITY), mFWexcitation(FILTERWHEEL::EXC), mFWdetection(FILTERWHEEL::DET)
 {
 	//Select the laser to be used: VISION or FIDELITY
 	mCurrentLaser = autoselectLaser_(wavelength_nm);
 	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 
 	//Update the laser wavelength if VISION was chosen
-	if (mCurrentLaser == VISION)
+	if (mCurrentLaser == LASER::VISION)
 		mVision.setWavelength(wavelength_nm);
 
 	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Initialize the pockels cell
@@ -1320,17 +1320,17 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	turnFilterwheels_(wavelength_nm);	//Turn the filterwheels
 }
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LaserSelector laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, laserPower, laserPower, laserSelect) {}
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LASER laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, laserPower, laserPower, laserSelect) {}
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LaserSelector laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, 0, 0, laserSelect) {}
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, 0, 0, laserSelect) {}
 
-std::string VirtualLaser::laserNameToString_(const LaserSelector whichLaser) const
+std::string VirtualLaser::laserNameToString_(const LASER whichLaser) const
 {
 	switch (whichLaser)
 	{
-	case VISION:
+	case LASER::VISION:
 		return "VISION";
-	case FIDELITY:
+	case LASER::FIDELITY:
 		return "FIDELITY";
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
@@ -1346,10 +1346,10 @@ void VirtualLaser::isLaserInternalShutterOpen_() const
 		//Check which laser is being used
 		switch (mCurrentLaser)
 		{
-		case VISION:
+		case LASER::VISION:
 			isShutterOpen = mVision.isShutterOpen();
 			break;
-		case FIDELITY:
+		case LASER::FIDELITY:
 			isShutterOpen = mFidelity.isShutterOpen();
 			break;
 		}//switch
@@ -1369,18 +1369,18 @@ void VirtualLaser::isLaserInternalShutterOpen_() const
 }
 
 //Return VISION, FIDELITY, or let the code to decide
-LaserSelector VirtualLaser::autoselectLaser_(const int wavelength_nm)
+LASER VirtualLaser::autoselectLaser_(const int wavelength_nm)
 {
 	//Update the wavelength to be used
 	mWavelength_nm = wavelength_nm;
 
 	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
-	if (mLaserSelect == AUTO)
+	if (mLaserSelect == LASER::AUTO)
 	{
 		if (wavelength_nm < 1040)
-			return VISION;
+			return LASER::VISION;
 		else if (wavelength_nm == 1040)
-			return FIDELITY;
+			return LASER::FIDELITY;
 		else
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 	}
@@ -1401,7 +1401,7 @@ void VirtualLaser::turnFilterwheels_(const int wavelength_nm)
 	else //Single beam
 	{
 		//Turn both filterwheels concurrently
-		std::thread th1{ &Filterwheel::setPosition, &mFWexcitation, OPEN };					//Leave the excitation filterwheel open
+		std::thread th1{ &Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN };					//Leave the excitation filterwheel open
 		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
 		th1.join();
 		th2.join();
@@ -1422,7 +1422,7 @@ void VirtualLaser::setWavelength(const int wavelength_nm)
 		std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 
 		//If VISION is chosen, update the laser wavelength
-		if (mCurrentLaser == VISION)
+		if (mCurrentLaser == LASER::VISION)
 			mVision.setWavelength(wavelength_nm);
 
 		isLaserInternalShutterOpen_();		//Check if the laser internal shutter is open
@@ -1433,13 +1433,13 @@ void VirtualLaser::setWavelength(const int wavelength_nm)
 void VirtualLaser::setPower(const double laserPower) const
 {
 	//Set the initial laser power
-	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, laserPower, OVERRIDE);
+	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, laserPower, OVERRIDE::EN);
 }
 
 void VirtualLaser::setPower(const double initialPower, const double finalPower) const
 {
 	//Set the initial laser power
-	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, initialPower, OVERRIDE);
+	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, initialPower, OVERRIDE::EN);
 
 	//Set the power increase
 	if (finalPower != initialPower)

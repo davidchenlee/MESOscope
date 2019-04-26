@@ -3,21 +3,22 @@
 #pragma region "Image"
 
 //When multiplexing, create a mTiff to contain 16 stripes of height 'mRTcontrol.mHeightPerFrame_pix' each
-Image::Image(FPGAns::RTcontrol &RTcontrol, FIFOOUTenableSelector FIFOOUTenable, const AcqTriggerSelector stageAsTrigger) :
-	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * 15 + 1) *  mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes), mFIFOOUTenable(FIFOOUTenable), mStageAsTrigger(stageAsTrigger)
+Image::Image(FPGAns::RTcontrol &RTcontrol) :
+	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * 15 + 1) *  mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes)
 {
 	mBufArrayA = new U32[mRTcontrol.mNpixAllFrames];
 	mBufArrayB = new U32[mRTcontrol.mNpixAllFrames];
 
 	//Trigger the acquisition with the PC or the Z stage
-	if (mStageAsTrigger)
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, mStageAsTrigger));
+	//This switch has to be here and not in the RTcontrol class because the z-trigger has to be turned off in the destructor to allow moving the z-stage
+	if (mRTcontrol.mStageAsTrigger)
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, mRTcontrol.mStageAsTrigger));
 }
 
 Image::~Image()
 {
 	//Turn off the z-stage triggering the image acquisition to allow moving the z stage
-	if (mStageAsTrigger)
+	if (mRTcontrol.mStageAsTrigger)
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));
 
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
@@ -168,7 +169,7 @@ void Image::demultiplex_()
 	//Upscale the buffer to go from 4-bit to 8-bit, to use the range 0-255 compatible with ImageJ's visualization standards
 	U8 upscaleFactorU8 = mRTcontrol.mUpscaleFactorU8;
 	//U8 upscaleFactorU8 = 1; //For debugging
-
+	
 	//Using 2 separate arrays to allow parallelization in the future
 	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch1-Ch8
 	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch9-Ch16
@@ -176,24 +177,29 @@ void Image::demultiplex_()
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
 	{
 		//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
-		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
-		{
-			/*//If upscaled overflows
-			if (upscaled > _UI8_MAX)
-				upscaled = _UI8_MAX;
-			*/
-
-			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));		//Extract the first 4 bits and upscale it
-			mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;																											//shift 4 places to the right
-		}
-
 		//Demultiplex mBufArrayB (channels 9-16). Each U32 element in  mBufArrayB =  | Ch16 | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch9 |
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
-			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));		//Extract the first 4 bits and upscale it
-			mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;																											//shift 4 places to the right
+			//If upscaled overflows
+			//if (upscaled > _UI8_MAX)
+			//	upscaled = _UI8_MAX;
+
+			//Extract the first 4 bits and upscale it
+			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
+			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+
+			//shift 4 places to the right
+			mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
+			mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
 		}
 	}
+
+
+	//std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };
+	//std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
+	//th1.join();
+	//th2.join();
+
 
 	//Size in bytes of the data collected by each PMT16X channel (it could contain more than one frame)
 	const int mBytesPerPMT16Xchannel = mRTcontrol.mNpixAllFrames * sizeof(unsigned char);
@@ -208,7 +214,7 @@ void Image::demultiplex_()
 		else if (PMT16Xchan >= CH09 && PMT16Xchan <= CH16)
 			std::memcpy(mTiff.pointerToTiff(), CountB.pointerToTiff() + (PMT16Xchan - CH09) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
 	}
-
+	
 	//For debugging. Save all the PMT16X channels. Save each PMT16X channel in a different Tiff page
 	if (saveTiff16X)
 	{
@@ -246,7 +252,8 @@ void Image::stopFIFOOUTpc_() const
 void Image::acquire()
 {
 	//Enable pushing data to FIFOOUTfpga. Disable for debugging
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, mFIFOOUTenable));	
+	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, static_cast<bool>(mRTcontrol.mFIFOOUTstate)));
 
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
@@ -254,7 +261,7 @@ void Image::acquire()
 	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from a previous run
 	mRTcontrol.triggerRT();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 
-	if (mFIFOOUTenable)
+	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
 	{
 		try
 		{
@@ -273,7 +280,8 @@ void Image::acquire()
 void Image::initialize() const
 {
 	//Enable pushing data to FIFOOUTfpga. Disable for debugging
-	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, mFIFOOUTenable));
+	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, static_cast<bool>(mRTcontrol.mFIFOOUTstate)));
 
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
@@ -283,7 +291,7 @@ void Image::initialize() const
 
 void Image::downloadData()
 {
-	if (mFIFOOUTenable)
+	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
 	{
 		try
 		{

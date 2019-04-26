@@ -42,7 +42,6 @@ namespace Constants
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
 	extern const int nPreframes{ 4 };						//Number of lineclocks delaying the frameclock (and framegate) wrt the preframeclock (and preframegate)
 															//This is for triggering the pockels and rescanner slightly earlier and adjusting the timing by via delay
-	extern const double postsequenceTimer{ 200 * ms };		//Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the sequence
 	extern const double linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
 															//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered
 	extern const int FIFOtimeout_tick{ 100 };				//Timeout of the all the FIFOS on the FPGA
@@ -62,8 +61,8 @@ namespace Constants
 	extern const double rescanGalvoDelay{ 30 * us };		//Delay of the rescan galvo wrt the preframeclock. If too long, the ramp overshoot will accumulate over >100 frames
 
 	//STAGES
-	extern const double stageTriggerPulse{ 5 * ms };		//Pulsewidth for triggering the stages via the DI (the stage controller has a 20kHz clock = 50 us)
-	
+	extern const double stagePulseStretcher{ 5 * ms };		//Stretch the pulsewidth from the stages (the stage controller has a 20kHz clock = 50 us) to trigger the aqc sequence
+	extern const double postsequenceTimer{ 0 * ms };		//Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
 
 #if multibeam
 	extern const double	ZstageTrigDelay{ 50 * ms };	//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based
@@ -83,8 +82,3 @@ namespace Constants
 
 
 }
-
-//Currently, each frames is 400x400 pixels = 160000 pixels
-//For multiple beams, each frame has 400x35 pixels = 10000 pixels because each beam will be encoded in 2 long U32 numbers
-//The current buffer can do 448k pixels. For 400x560 multiplexed frames (16 stripes of 400x35), this is equivalent to 70 planes
-//By concatenating the FPGA FIFO, I hope to get ~ 90 planes

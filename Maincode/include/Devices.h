@@ -12,15 +12,11 @@
 class Image
 {
 	FPGAns::RTcontrol &mRTcontrol;			//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
-	AcqTriggerSelector mStageAsTrigger;		//Trigger the acquisition with the z stage: enable (0), disable (1)
 	U32* mBufArrayA;						//Vector to read FIFOOUTpc A
 	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
 	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB
 
-	FIFOOUTenableSelector mFIFOOUTenable{ FIFOOUTenable };
-
 	void FIFOOUTpcGarbageCollector_() const;
-
 	void readFIFOOUTpc_();
 	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);
 	void correctInterleaved_();
@@ -29,7 +25,7 @@ class Image
 	void configureFIFOOUTpc_(const U32 depth) const;
 	void stopFIFOOUTpc_() const;
 public:
-	Image(FPGAns::RTcontrol &RTcontrol, FIFOOUTenableSelector FIFOOUTenable = FIFOOUTenable, const AcqTriggerSelector mStageAsTrigger = PCTRIG);
+	Image(FPGAns::RTcontrol &RTcontrol);
 	~Image();
 	Image(const Image&) = delete;				//Disable copy-constructor
 	Image& operator=(const Image&) = delete;	//Disable assignment-constructor

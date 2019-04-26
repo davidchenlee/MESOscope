@@ -15,8 +15,9 @@ int main(int argc, char* argv[])
 			//PMT1XRoutines::sequencer(fpga);FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power. Also I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
 
 			//PMT16X SEQUENCES
+			PMT16XRoutines::PMT16XframeByFrameScan(fpga);
 			//PMT16XRoutines::frameByFrameScanTiling(fpga, 1);//scan frame by frame and tile by tile
-			PMT16XRoutines::continuousScan(fpga);
+			//PMT16XRoutines::continuousScan(fpga);
 
 			//TESTS.
 			//TestRoutines::digitalLatency(fpga);
@@ -50,7 +51,6 @@ int main(int argc, char* argv[])
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);
 			//TestRoutines::PMT16XgavosSyncAndLaser(fpga);
-			//TestRoutines::PMT16XframeByFrameScan(fpga);
 
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();

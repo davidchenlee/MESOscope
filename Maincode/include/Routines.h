@@ -14,6 +14,7 @@ namespace PMT1XRoutines
 
 namespace PMT16XRoutines
 {
+	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga);
 	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice);
 	void continuousScan(const FPGAns::FPGA &fpga);
 }
@@ -59,7 +60,6 @@ namespace TestRoutines
 	void PMT16Xconfig();
 	void PMT16Xdemultiplex(const FPGAns::FPGA &fpga);
 	void PMT16XgavosSyncAndLaser(const FPGAns::FPGA &fpga);
-	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga);
 
 	//Others
 	void vibratome(const FPGAns::FPGA &fpga);

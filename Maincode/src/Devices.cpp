@@ -11,14 +11,14 @@ Image::Image(FPGAns::RTcontrol &RTcontrol) :
 
 	//Trigger the acquisition with the PC or the Z stage
 	//This switch has to be here and not in the RTcontrol class because the z-trigger has to be turned off in the destructor to allow moving the z-stage
-	if (static_cast<bool>(mRTcontrol.mStageAsTrigger))
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, static_cast<bool>(mRTcontrol.mStageAsTrigger)));
+	if (static_cast<bool>(mRTcontrol.mMainTrigger))
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, static_cast<bool>(mRTcontrol.mMainTrigger)));
 }
 
 Image::~Image()
 {
 	//Turn off the z-stage triggering the image acquisition to allow moving the z stage
-	if (static_cast<bool>(mRTcontrol.mStageAsTrigger))
+	if (static_cast<bool>(mRTcontrol.mMainTrigger))
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));
 
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
@@ -170,6 +170,7 @@ void Image::demultiplex_()
 	U8 upscaleFactorU8 = mRTcontrol.mUpscaleFactorU8;
 	//U8 upscaleFactorU8 = 1; //For debugging
 	
+#if !singlePMT16X
 	//Using 2 separate arrays to allow parallelization in the future
 	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch1-Ch8
 	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch9-Ch16
@@ -193,36 +194,49 @@ void Image::demultiplex_()
 			mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
 		}
 	}
-
-
 	//std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };
 	//std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
 	//th1.join();
 	//th2.join();
 
-
 	//Size in bytes of the data collected by each PMT16X channel (it could contain more than one frame)
 	const int mBytesPerPMT16Xchannel = mRTcontrol.mNpixAllFrames * sizeof(unsigned char);
 
-	//Copy the counts from the selected channel 'PMT16Xchan' to a Tiff
-	if (multibeam)	//multibeam
-		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is the height of a single PMT16X channel
-	else			//singlebeam. Select a particular channel as the detector
-	{
-		if (PMT16Xchan >= PMT16XCHAN::CH01 && PMT16Xchan <= PMT16XCHAN::CH08)
-			std::memcpy(mTiff.pointerToTiff(), CountA.pointerToTiff() + static_cast<int>(PMT16Xchan) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
-		else if (PMT16Xchan >= PMT16XCHAN::CH09 && PMT16Xchan <= PMT16XCHAN::CH16)
-			std::memcpy(mTiff.pointerToTiff(), CountB.pointerToTiff() + (static_cast<int>(PMT16Xchan) - static_cast<int>(PMT16XCHAN::CH09)) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
-	}
+//Copy the counts from the selected channel 'PMT16Xchan' to a Tiff
+#if multibeam
+	//Multibeam
+	mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is the height of a single PMT16X channel
+#else
+	//Singlebeam. Select a particular channel as the detector
+	if (PMT16Xchan >= PMT16XCHAN::CH01 && PMT16Xchan <= PMT16XCHAN::CH08)
+		std::memcpy(mTiff.pointerToTiff(), CountA.pointerToTiff() + static_cast<int>(PMT16Xchan) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
+	else if (PMT16Xchan >= PMT16XCHAN::CH09 && PMT16Xchan <= PMT16XCHAN::CH16)
+		std::memcpy(mTiff.pointerToTiff(), CountB.pointerToTiff() + (static_cast<int>(PMT16Xchan) - static_cast<int>(PMT16XCHAN::CH09)) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
+#endif //multibeam
 	
+
+
 	//For debugging. Save all the PMT16X channels. Save each PMT16X channel in a different Tiff page
-	if (saveTiff16X)
-	{
-		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix , 16 * mRTcontrol.mNframes };
-		stack.pushImage(static_cast<int>(PMT16XCHAN::CH01), static_cast<int>(PMT16XCHAN::CH08), CountA.pointerToTiff());
-		stack.pushImage(static_cast<int>(PMT16XCHAN::CH09), static_cast<int>(PMT16XCHAN::CH16), CountB.pointerToTiff());
-		stack.saveToFile("AllChannels", MULTIPAGE::EN, OVERRIDE::DIS);
-	}
+#if saveTiff16X
+	TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix , 16 * mRTcontrol.mNframes };
+	stack.pushImage(static_cast<int>(PMT16XCHAN::CH01), static_cast<int>(PMT16XCHAN::CH08), CountA.pointerToTiff());
+	stack.pushImage(static_cast<int>(PMT16XCHAN::CH09), static_cast<int>(PMT16XCHAN::CH16), CountB.pointerToTiff());
+	stack.saveToFile("AllChannels", MULTIPAGE::EN, OVERRIDE::DIS);
+#endif //saveTiff16X
+
+#else
+
+	//Singlebeam. Select a particular channel as the detector
+	if (PMT16Xchan >= PMT16XCHAN::CH01 && PMT16Xchan <= PMT16XCHAN::CH08)
+		//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
+		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
+			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(upscaleFactorU8 * ((mBufArrayA[pixIndex] >> 4 * static_cast<unsigned char>(PMT16Xchan)) & 0x0000000F));	//Shift mBufArrayA to the right and extract the last 4 bits
+	else if (PMT16Xchan >= PMT16XCHAN::CH09 && PMT16Xchan <= PMT16XCHAN::CH16)
+		//Demultiplex mBufArrayB (channels 9-16). Each U32 element in  mBufArrayB =  | Ch16 | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch9 |
+		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
+			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(upscaleFactorU8 * ((mBufArrayB[pixIndex] >> 4 * static_cast<unsigned char>(PMT16Xchan)) & 0x0000000F));	//Shift mBufArrayB to the right and extract the last 4 bits
+
+#endif //!singlePMT16X
 }
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
@@ -277,11 +291,24 @@ void Image::acquire()
 	}
 }
 
-void Image::initialize() const
+void Image::initialize(const ZSCAN stackScanDir) const
 {
 	//Enable pushing data to FIFOOUTfpga. Disable for debugging
 	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, static_cast<bool>(mRTcontrol.mFIFOOUTstate)));
+
+	//Z STAGE. Fine tune the delay for the z-stage to trigger the acq sequence
+	double ZstageTrigDelay;
+	switch (mScanDir)
+	{
+	case ZSCAN::TOPDOWN :
+		ZstageTrigDelay = ZstageTrigDelayTopdown;
+		break;
+	case ZSCAN::BOTTOMUP:
+		ZstageTrigDelay = ZstageTrigDelayBottomup;
+		break;
+	}
+	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlU32_ZstageTrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
 
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
@@ -332,15 +359,15 @@ void Image::averageEvenOddFrames()
 }
 
 //Save each frame in mTiff in a single Tiff page
-void Image::saveTiffSinglePage(std::string filename, const OVERRIDE override, const ZSCAN stackScanDir) const
+void Image::saveTiffSinglePage(std::string filename, const OVERRIDE override) const
 {
-	mTiff.saveToFile(filename, MULTIPAGE::DIS, override, stackScanDir);
+	mTiff.saveToFile(filename, MULTIPAGE::DIS, override, mScanDir);
 }
 
 //Save each frame in mTiff in a different Tiff page
-void Image::saveTiffMultiPage(std::string filename, const OVERRIDE override, const ZSCAN stackScanDir) const
+void Image::saveTiffMultiPage(std::string filename, const OVERRIDE override) const
 {
-	mTiff.saveToFile(filename, MULTIPAGE::EN, override, stackScanDir);
+	mTiff.saveToFile(filename, MULTIPAGE::EN, override, mScanDir);
 }
 
 //Access the Tiff data in the Image object
@@ -540,12 +567,14 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 {
 	double timeStep;
 
+	
+#if multibeam
 	//Multibeam
-	if (multibeam)
-		timeStep = 2. * us;	//The ramp is shorter for multibeams. Use smaller steps
+	timeStep = 2. * us;	//The ramp is shorter for multibeams. Use smaller steps	
+#else
 	//Singlebeam
-	else
-		timeStep = 8. * us;
+	timeStep = 8. * us;
+#endif
 
 	//The position offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mRampDurationFineTuning, 
@@ -1163,12 +1192,13 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, 
 	}
 
 	//Initialize the power softlimit
-	//Multibeam
-	if (multibeam)			
-		mMaxPower = 1600 * mW;
-	//Singlebeam
-	else				
-		mMaxPower = 300 * mW;
+#if multibeam
+	//Multibeam		
+	mMaxPower = 1600 * mW;
+#else
+	//Singlebeam			
+	mMaxPower = 300 * mW;
+#endif
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
@@ -1390,23 +1420,21 @@ LASER VirtualLaser::autoselectLaser_(const int wavelength_nm)
 
 void VirtualLaser::turnFilterwheels_(const int wavelength_nm)
 {
-	if (multibeam)	//Multiplex
-	{
+#if multibeam
+		//Multiplex
 		//Turn both filterwheels concurrently
 		std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };
 		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
 		th1.join();
 		th2.join();
-	}
-	else //Single beam
-	{
+#else
+		//Single beam
 		//Turn both filterwheels concurrently
 		std::thread th1{ &Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN };					//Leave the excitation filterwheel open
 		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
 		th1.join();
 		th2.join();
-	}
-
+#endif
 }
 
 //Automatically select the laser for the requested wavelength. The pockels destructor closes the uniblitz shutter automatically to:

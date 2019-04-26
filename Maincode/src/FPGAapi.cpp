@@ -210,11 +210,8 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_VTforward, false));
 
 		//STAGES
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stagePulseStretcher / us * tickPerUs)));	//Stretch the pulsewidth from the stages
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_ZstageTrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
-
-
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postsequenceTimer / us * tickPerUs)));
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stagePulseStretcher / us * tickPerUs)));	//Stretch the pulsewidth from the stages. Currently not in use
+		
 
 		//Flush the RAM buffers on the FPGA as precaution. 
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));															//Memory-flush trigger
@@ -277,8 +274,8 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG stageAsTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate) :
-		mVectorOfQueues(RTNCHAN), mFpga(fpga), mLineclockInput(lineclockInput), mStageAsTrigger(stageAsTrigger), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mFIFOOUTstate(FIFOOUTstate)
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate) :
+		mVectorOfQueues(RTNCHAN), mFpga(fpga), mLineclockInput(lineclockInput), mMainTrigger(mainTrigger), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mFIFOOUTstate(FIFOOUTstate)
 	{
 		//Set the imaging parameters
 		mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;
@@ -288,6 +285,18 @@ namespace FPGAns
 		//Generate a pixelclock
 		const Pixelclock pixelclock(mWidthPerFrame_pix, mDwell);
 		mVectorOfQueues.at(RTPIXELCLOCK) = pixelclock.readPixelclock();
+
+		//If the z stage acts as the main trigger (for cont z scanning), add a timer after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
+		if (mMainTrigger == MAINTRIG::ZSTAGE)
+		{
+			checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.getHandle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postsequenceTimer / us * tickPerUs)));
+			//std::cout << "Z stage as the main trigger\n";
+		}
+		else
+		{
+			checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.getHandle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, 0));
+			//std::cout << "PC as the main trigger\n";
+		}
 	}
 
 	RTcontrol::~RTcontrol(){}

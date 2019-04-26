@@ -58,9 +58,9 @@ namespace FPGAns
 
 	public:
 		const FPGAns::FPGA &mFpga;
-		LINECLOCK mLineclockInput;															//Resonant scanner (RS) or Function generator (FG)
-		MAINTRIG mStageAsTrigger;		//Trigger the acquisition with the z stage: enable (0), disable (1)
-		FIFOOUT mFIFOOUTstate;
+		LINECLOCK mLineclockInput;																	//Resonant scanner (RS) or Function generator (FG)
+		MAINTRIG mMainTrigger;																		//Trigger the acquisition with the z stage: enable (0), disable (1)
+		FIFOOUT mFIFOOUTstate;																		//Enable or disable the fpga FIFOOUT
 		const double mDwell{ 0.1625 * us };															//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
 																									//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 		const double mPulsesPerPix = mDwell / VISIONpulsePeriod;									//Max number of laser pulses per pixel
@@ -71,7 +71,7 @@ namespace FPGAns
 		int mHeightAllFrames_pix;																	//Total number of lines in all the frames without including the skipped lines
 		int mNpixAllFrames;																			//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
 
-		RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput , const MAINTRIG stageAsTrigger,
+		RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput , const MAINTRIG mainTrigger,
 			const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate);
 		~RTcontrol();
 		RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor

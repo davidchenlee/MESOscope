@@ -61,24 +61,27 @@ namespace Constants
 	extern const double rescanGalvoDelay{ 30 * us };		//Delay of the rescan galvo wrt the preframeclock. If too long, the ramp overshoot will accumulate over >100 frames
 
 	//STAGES
-	extern const double stagePulseStretcher{ 5 * ms };		//Stretch the pulsewidth from the stages (the stage controller has a 20kHz clock = 50 us) to trigger the aqc sequence
-	extern const double postsequenceTimer{ 100 * ms };		//Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
+	extern const double stagePulseStretcher{ 5 * ms };		//Stretch the pulsewidth from the stages (the stage controller has a 20kHz clock = 50 us) to trigger the aqc sequence. Currently not in use
+	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if the z stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
 
+	//Fine tune the delay for the z-stage to trigger the acq sequence
 #if multibeam
-	extern const double	ZstageTrigDelay{ 50 * ms };	//The z stage needs a pulse >~ 2 ms because its response is limited by its DIs, which are ADC based
+	extern const double	ZstageTrigDelayTopdown{ 35 * ms };	//TOPDOWN
+	extern const double	ZstageTrigDelayBottomup{ 45 * ms };	//BOTTOMUP
 #else 
-	extern const double	ZstageTrigDelay{ 35 * ms };//TOPDOWN
-	//extern const double	ZstageTrigDelay{ 45 * ms };//BOTTOMUP
-#endif
+	#if singlePMT16X
+		extern const double	ZstageTrigDelayTopdown{ 35 * ms };	//TOPDOWN
+		extern const double	ZstageTrigDelayBottomup{ 45 * ms };	//BOTTOMUP
+	#else
+	extern const double	ZstageTrigDelayTopdown{ 0 * ms };	//TOPDOWN
+	extern const double	ZstageTrigDelayBottomup{ 0 * ms };	//BOTTOMUP
+	#endif // useSinglePMT16X
+#endif//multibeam
 																
-
-
 	//PMT
 	//Simulate the PMT pulses. When the array element is HIGH, the output of the subvi changes its state for the next clock cycle (currently, 160MHz = 6.25ns)
 	//Example, if I divide each line in 500 pixels, then the pix dwell time is 125 ns and each pixel could contain at most 10 laser pulses (laser pulses separated by 12.5ns = 80 MHz)
 	extern const int nPulses{ 20 };												//Number of pulses
 	extern const U8 pulseArray[nPulses]{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 											0, 0, 0, 0, 0, 0, 0, 0, 1, 0 };		//@160MHz, one cycle through this array lasts 125ns
-
-
 }

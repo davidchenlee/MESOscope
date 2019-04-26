@@ -21,10 +21,10 @@ namespace PMT1XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
-		//const RUNMODE acqMode{ RUNMODE::AVGMODE };				//Image the same z plane frame by frame 'nSameZ' times and average the images
-		//const RUNMODE acqMode{ RUNMODE::STACKMODE };			//Image a stack frame by frame from the initial z position
-		const RUNMODE acqMode{ RUNMODE::STACKCENTEREDMODE };		//Image a stack frame by frame centered at the initial z position
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::AVG };				//Image the same z plane frame by frame 'nSameZ' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
+		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };		//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
@@ -46,19 +46,19 @@ namespace PMT1XRoutines
 		OVERRIDE override;
 		switch (acqMode)
 		{
-		case RUNMODE::SINGLEMODE:
+		case RUNMODE::SINGLE:
 			nSameZ = 1;
 			nDiffZ = 1; //Do not change this
 			override = OVERRIDE::DIS;
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
-		case RUNMODE::AVGMODE:
+		case RUNMODE::AVG:
 			nSameZ = 10;
 			nDiffZ = 1; //Do not change this
 			override = OVERRIDE::DIS;
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
-		case RUNMODE::STACKMODE:
+		case RUNMODE::STACK:
 			nSameZ = 1;
 			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
 			override = OVERRIDE::DIS;
@@ -66,7 +66,7 @@ namespace PMT1XRoutines
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
 			break;
-		case RUNMODE::STACKCENTEREDMODE:
+		case RUNMODE::STACKCENTERED:
 			nSameZ = 1;
 			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
 			override = OVERRIDE::DIS;
@@ -149,7 +149,7 @@ namespace PMT1XRoutines
 				image.averageFrames();		//Average the frames acquired via continuous XY acquisition
 				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
 
-				if (acqMode == RUNMODE::SINGLEMODE)
+				if (acqMode == RUNMODE::SINGLE)
 				{
 					//Save individual files
 					std::string singleFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString(singleChannel.mScanPi / mW, 1) + "mW" +
@@ -163,7 +163,7 @@ namespace PMT1XRoutines
 			std::cout << "\n";
 		}
 
-		if (acqMode == RUNMODE::AVGMODE || acqMode == RUNMODE::STACKMODE || acqMode == RUNMODE::STACKCENTEREDMODE)
+		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::STACK || acqMode == RUNMODE::STACKCENTERED)
 		{
 			//Save the stackDiffZ to file
 			std::string stackFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_Pi=" + toString(singleChannel.mScanPi / mW, 1) + "mW_Pinc=" + toString(singleChannel.mStackPinc / mWpum, 1) + "mWpum" +
@@ -354,11 +354,11 @@ namespace PMT1XRoutines
 		const int heightPerFrame_pix{ 400 };
 		const int nFramesCont{ 160 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };
-		const ZSCAN stackScanDirZ{ ZSCAN::TOPDOWN };		//Scan direction in z
+		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };		//Scan direction in z
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
 		double stageZi, stageZf, laserPi, laserPf;
-		switch (stackScanDirZ)
+		switch (scanDirZ)
 		{
 		case ZSCAN::TOPDOWN:
 			stageZi = stackCenterXYZ.at(ZZ);
@@ -381,7 +381,7 @@ namespace PMT1XRoutines
 		stage.waitForMotionToStopAll();
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
 		//LASER
 		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, laserPi, LASER::VISION };
@@ -398,8 +398,8 @@ namespace PMT1XRoutines
 		laser.openShutter();	//The destructor will close the shutter automatically
 
 		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{ RTcontrol };	//Note the ZSTAGE flag
-		image.initialize();
+		Image image{ RTcontrol };
+		image.initialize(scanDirZ);
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(ZZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
 		image.downloadData();
@@ -408,7 +408,7 @@ namespace PMT1XRoutines
 		const std::string filename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(singleChannel.mStackPinc / mWpum, 1) +
 			"mWpum_x=" + toString(initialStageXYZ.at(XX) / mm, 3) + "_y=" + toString(initialStageXYZ.at(YY) / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
-		image.saveTiffMultiPage(filename, OVERRIDE::DIS, stackScanDirZ);
+		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -447,7 +447,7 @@ namespace PMT1XRoutines
 			stage.moveSingle(ZZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
 
 			//CREATE THE REALTIME CONTROL SEQUENCE
-			FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
+			FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
 			//LASER: wavelength_nm, laserPower, whichLaser
 			VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm };
@@ -460,7 +460,7 @@ namespace PMT1XRoutines
 			const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOV.at(XX) / 2 };
 
 			//EXECUTE THE RT CONTROL SEQUENCE
-			Image image{ RTcontrol }; //Note the ZSTAGE flag
+			Image image{ RTcontrol };
 
 			//Read the commands line by line
 			double scanZi, scanZf, scanPi, stackPinc;
@@ -501,7 +501,7 @@ namespace PMT1XRoutines
 					laser.setPower(scanPi, static_cast<int>(scanDirZ) * stackPinc);																//FIX THIS: linear scaling in power is nonlinear in voltage!!!!!
 					laser.openShutter();	//Re-open the Uniblitz shutter if closed
 
-					image.initialize();
+					image.initialize(scanDirZ);
 					std::cout << "Scanning the stack...\n";
 					stage.moveSingle(ZZ, scanZf);		//Move the stage to trigger the control sequence and data acquisition
 					image.downloadData();
@@ -512,7 +512,7 @@ namespace PMT1XRoutines
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
 
 					image.postprocess();
-					image.saveTiffMultiPage(longName, OVERRIDE::DIS, scanDirZ);
+					image.saveTiffMultiPage(longName, OVERRIDE::DIS);
 					break;
 				case ACTION::CUT:
 					//Move the stage to and then cut a slice off
@@ -555,38 +555,36 @@ namespace PMT16XRoutines
 		{
 			stackCenterXYZ = { 50.983 * mm, 16.460 * mm, 18.054 * mm };//750 and 1040 nm
 			//stackCenterXYZ = { 50.800 * mm, 16.520 * mm, 18.052 * mm };//920 nm
-			if (multibeam)	//Multibeam
-			{
-				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
-				selectScanFFOV = FFOVslow / 16;
-				selectRescanFFOV = FFOVslow / 16;
-				PMT16Xchan = PMT16XCHAN::CH00;
-				selectPower = 1000. * mW;
-			}
-			else			//Singlebeam
-			{
-				selectHeightPerFrame_pix = heightPerFrame_pix;
-				selectScanFFOV = FFOVslow;
-				selectRescanFFOV = FFOVslow;
-				PMT16Xchan = PMT16XCHAN::CH08;
-				selectPower = 40. * mW;
-			}
+#if multibeam
+			//Multibeam
+			selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
+			selectScanFFOV = FFOVslow / 16;
+			selectRescanFFOV = FFOVslow / 16;
+			PMT16Xchan = PMT16XCHAN::CH00;
+			selectPower = 1000. * mW;
+
+#else
+			//Singlebeam
+			selectHeightPerFrame_pix = heightPerFrame_pix;
+			selectScanFFOV = FFOVslow;
+			selectRescanFFOV = FFOVslow;
+			PMT16Xchan = PMT16XCHAN::CH08;
+			selectPower = 40. * mW;
+#endif
 		}
 
 		else//fluorescent slide
 		{
 			stackCenterXYZ = { 52.460 * mm, -5.000 * mm, 17.583 * mm };
-			if (multibeam)	//Multibeam to look at the signal intensity difference between channels
-			{
-				//To check the 
+#if multibeam
+				//Multibeam to look at the signal intensity difference between channels
 				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 				selectScanFFOV = FFOVslow / 16;
 				selectRescanFFOV = FFOVslow / 16;
 				PMT16Xchan = PMT16XCHAN::CH00;
 				selectPower = 160. * mW;
-			}
-			else			//Singlebeam to check the inter-beamlet distance
-			{
+#else
+				//Singlebeam to check the inter-beamlet distance
 				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered.
 				//Enable saving all the PMT16X channels as a stack in Image::demultiplex_()
 				selectHeightPerFrame_pix = heightPerFrame_pix;
@@ -594,15 +592,15 @@ namespace PMT16XRoutines
 				selectRescanFFOV = FFOVslow;
 				PMT16Xchan = PMT16XCHAN::CH00;
 				selectPower = 10. * mW;
-			}
+#endif
 		}
 
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ SINGLEMODE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
-		//const RUNMODE acqMode{ AVGMODE };				//Image the same z plane frame by frame 'nSameZ' times and average the images
-		//const RUNMODE acqMode{ STACKMODE };			//Image a stack frame by frame from the initial z position
-		const RUNMODE acqMode{ RUNMODE::STACKCENTEREDMODE };	//Image a stack frame by frame centered at the initial z position
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::AVG };				//Image the same z plane frame by frame 'nSameZ' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
+		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
@@ -617,19 +615,19 @@ namespace PMT16XRoutines
 		OVERRIDE override;
 		switch (acqMode)
 		{
-		case RUNMODE::SINGLEMODE:
+		case RUNMODE::SINGLE:
 			nSameZ = 1;
 			nDiffZ = 1; //Do not change this
 			override = OVERRIDE::DIS;
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
-		case RUNMODE::AVGMODE:
+		case RUNMODE::AVG:
 			nSameZ = 10;
 			nDiffZ = 1; //Do not change this
 			override = OVERRIDE::DIS;
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
-		case RUNMODE::STACKMODE:
+		case RUNMODE::STACK:
 			nSameZ = 1;
 			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
 			override = OVERRIDE::DIS;
@@ -637,7 +635,7 @@ namespace PMT16XRoutines
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
 			break;
-		case RUNMODE::STACKCENTEREDMODE:
+		case RUNMODE::STACKCENTERED:
 			nSameZ = 1;
 			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
 			override = OVERRIDE::DIS;
@@ -724,7 +722,7 @@ namespace PMT16XRoutines
 				//image.averageEvenOddFrames();
 				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
 
-				if (acqMode == RUNMODE::SINGLEMODE)
+				if (acqMode == RUNMODE::SINGLE)
 				{
 					//Save individual files
 					std::string singleFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_P=" + toString(power / mW, 1) + "mW" +
@@ -738,7 +736,7 @@ namespace PMT16XRoutines
 			std::cout << "\n";
 		}
 
-		if (acqMode == RUNMODE::AVGMODE || acqMode == RUNMODE::STACKMODE || acqMode == RUNMODE::STACKCENTEREDMODE)
+		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::STACK || acqMode == RUNMODE::STACKCENTERED)
 		{
 			//Save the stackDiffZ to file
 			std::string stackFilename{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(power / mW, 1) + "mW_Pinc=" + toString(powerInc / mWpum, 1) + "mWpum" +
@@ -764,22 +762,21 @@ namespace PMT16XRoutines
 		int selectHeightPerFrame_pix;
 		double selectScanFFOV, selectRescanFFOV, selectPower;
 
-		if (multibeam)	//Multibeam
-		{
+#if multibeam
+			//Multibeam
 			selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 			selectScanFFOV = FFOVslow / 16;
 			selectRescanFFOV = FFOVslow / 16;
 			PMT16Xchan = PMT16XCHAN::CH00;
 			selectPower = 400. * mW;//THIS BEAM POWER IS NOT BEING USED!!!!!!!!!!!!!!!!!!!!!!!!!
-		}
-		else			//Singlebeam
-		{
+#else
+			//Singlebeam
 			selectHeightPerFrame_pix = heightPerFrame_pix;
 			selectScanFFOV = FFOVslow;
 			selectRescanFFOV = FFOVslow;
 			PMT16Xchan = PMT16XCHAN::CH08;
 			selectPower = 15. * mW;//THIS BEAM POWER IS NOT BEING USED!!!!!!!!!!!!!!!!!!!!!!!!!
-		}
+#endif
 
 		//STACK
 		const double2 FFOV{ FFOVslow, FFOVfast };							//Full FOV in the (slow axis, fast axis)
@@ -898,13 +895,13 @@ namespace PMT16XRoutines
 		const int heightPerFrame_pix{ 35 };
 		const int nFramesCont{ 200 };						//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };
-		const ZSCAN stackScanDirZ{ ZSCAN::BOTTOMUP };		//Scan direction in z
+		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };		//Scan direction in z
 		const double stackDepth{ nFramesCont * stepSizeZ };
 		//Override the global stage position
 		const double3 stackCenterXYZ = { 50.983 * mm, 16.460 * mm, 18.054 * mm - nFramesCont * stepSizeZ /2 };
 
 		double stageZi, stageZf, laserPi, laserPf;
-		switch (stackScanDirZ)
+		switch (scanDirZ)
 		{
 		case ZSCAN::TOPDOWN:
 			stageZi = stackCenterXYZ.at(ZZ);
@@ -927,7 +924,7 @@ namespace PMT16XRoutines
 		stage.waitForMotionToStopAll();
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
 		//LASER
 		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, laserPi, LASER::VISION };
@@ -946,8 +943,8 @@ namespace PMT16XRoutines
 		laser.openShutter();	//The destructor will close the shutter automatically
 
 		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{ RTcontrol };	//Notice the ZSTAGE flag
-		image.initialize();
+		Image image{ RTcontrol };
+		image.initialize(scanDirZ);
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(ZZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
 		image.downloadData();
@@ -956,7 +953,7 @@ namespace PMT16XRoutines
 		const std::string filename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(singleChannel.mStackPinc / mWpum, 1) +
 			"mWpum_x=" + toString(initialStageXYZ.at(XX) / mm, 3) + "_y=" + toString(initialStageXYZ.at(YY) / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
-		image.saveTiffMultiPage(filename, OVERRIDE::DIS, stackScanDirZ);
+		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
 	}
 
 }//namespace
@@ -1571,21 +1568,19 @@ namespace TestRoutines
 
 		int selectHeightPerFrame_pix;
 		double selectScanFFOV, selectPower;
-		if (multibeam)	//Multibeam
-		{
+#if multibeam
+			//Multibeam
 			selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 			selectScanFFOV = FFOVslow / 16;
 			PMT16Xchan = PMT16XCHAN::CH00;
 			selectPower = 1400. * mW;
-		}
-		else			//Singlebeam
-		{
+#else
+			//Singlebeam
 			selectHeightPerFrame_pix = heightPerFrame_pix;
 			selectScanFFOV = FFOVslow;
 			PMT16Xchan = PMT16XCHAN::CH02;
 			selectPower = 50. * mW;
-		}
-
+#endif
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
 		const double stackDepthZ{ 20. * um };	//Acquire a stack of this depth or thickness in Z
@@ -1634,23 +1629,21 @@ namespace TestRoutines
 		//FWexcitation.setWavelength(wavelength_nm);
 		//FWdetection.setWavelength(wavelength_nm);
 
-		if (multibeam)	//Multiplex
-		{
-			//Turn both filterwheels concurrently
-			std::thread th1{ &Filterwheel::setWavelength, &FWexcitation, wavelength_nm };
-			std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
-			th1.join();
-			th2.join();
-		}
-		else //Single beam
-		{
-			//Turn both filterwheels concurrently
-			std::thread th1{ &Filterwheel::setPosition, &FWexcitation, FILTERCOLOR::OPEN };				//Leave the excitation filterwheel open
-			std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
-			th1.join();
-			th2.join();
-		}
-
+#if multibeam
+		//Multiplex
+		//Turn both filterwheels concurrently
+		std::thread th1{ &Filterwheel::setWavelength, &FWexcitation, wavelength_nm };
+		std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
+		th1.join();
+		th2.join();
+#else
+		//Single beam
+		//Turn both filterwheels concurrently
+		std::thread th1{ &Filterwheel::setPosition, &FWexcitation, FILTERCOLOR::OPEN };				//Leave the excitation filterwheel open
+		std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
+		th1.join();
+		th2.join();
+#endif
 	}
 
 	//Photobleach a line along the fast axis (RS) on the sample
@@ -1682,4 +1675,5 @@ namespace TestRoutines
 		pressAnyKeyToCont();
 		pockels.setShutter(false);
 	}
+
 }//namespace

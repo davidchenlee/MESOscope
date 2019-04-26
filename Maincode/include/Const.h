@@ -6,6 +6,7 @@
 #define multibeam 0			//Multibeam or singlebeam
 #define pockelsAutoOff 1	//For debugging purposes. Enable to let 'framegate' set the pockels cell on and off
 #define saveTiff16X 0		//Save each channel of PMT16X individually
+#define singlePMT16X 1
 
 namespace Constants
 {
@@ -37,7 +38,7 @@ namespace Constants
 	enum RTchannel { RTPIXELCLOCK, RTSCANGALVO, RTRESCANGALVO, RTDODEBUG, RTVISION, RTSCALINGVISION, RTFIDELITY, RTSCALINGFIDELITY, RTNCHAN };		//RTNCHAN = number of RT channels available, including the channel for the pixelclock
 	enum class FILTERWHEEL { DET, EXC };
 	enum Axis { XX, YY, ZZ };
-	enum class RUNMODE { SINGLEMODE, LIVEMODE, AVGMODE, STACKMODE, STACKCENTEREDMODE };
+	enum class RUNMODE { SINGLE, LIVE, AVG, STACK, STACKCENTERED };
 	enum class ACTION { CUT, ACQ, SAV, MOV };
 	enum class LASER { VISION, FIDELITY, AUTO};
 	enum class FILTERCOLOR { BLUE, GREEN, RED, OPEN, CLOSED };
@@ -83,9 +84,13 @@ namespace Constants
 	extern const double pockelsSecondaryDelay;
 	extern const double galvosCommonDelay;
 	extern const double rescanGalvoDelay;
+
 	extern const double stagePulseStretcher;
-	extern const double	ZstageTrigDelay;
+	extern const double	ZstageTrigDelayTopdown;
+	extern const double	ZstageTrigDelayBottomup;
 
 	extern const int nPulses;
 	extern const U8 pulseArray[];
+
+	extern const std::vector<U32> MASK;
 }

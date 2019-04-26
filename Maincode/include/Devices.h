@@ -15,6 +15,7 @@ class Image
 	U32* mBufArrayA;						//Vector to read FIFOOUTpc A
 	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
 	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB
+	ZSCAN mScanDir{ ZSCAN::TOPDOWN };
 
 	void FIFOOUTpcGarbageCollector_() const;
 	void readFIFOOUTpc_();
@@ -33,13 +34,13 @@ public:
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
 	void acquire();
-	void initialize() const;
+	void initialize(const ZSCAN scanDir = ZSCAN::TOPDOWN) const;
 	void downloadData();
 	void postprocess();
 	void averageFrames();
 	void averageEvenOddFrames();
-	void saveTiffSinglePage(std::string filename, const OVERRIDE override, const ZSCAN stackScanDir = ZSCAN::TOPDOWN) const;
-	void saveTiffMultiPage(std::string filename, const OVERRIDE override = OVERRIDE::DIS, const ZSCAN stackScanDir = ZSCAN::TOPDOWN) const;
+	void saveTiffSinglePage(std::string filename, const OVERRIDE override) const;
+	void saveTiffMultiPage(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 	U8* const pointerToTiff() const;
 };
 

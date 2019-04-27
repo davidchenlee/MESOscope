@@ -153,7 +153,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 }
 
 
-//The RS scans bidirectionally. The pixel order has to be reversed for every odd line.
+//The RS scans bi-directionally. The pixel order has to be reversed for the odd lines.
 void Image::correctInterleaved_()
 {
 	//Within an odd line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
@@ -317,17 +317,36 @@ void Image::initialize(const ZSCAN stackScanDir)
 	//Initialize mScanDir
 	mScanDir = stackScanDir;
 
-	//Z STAGE. Fine tune the delay for the z-stage to trigger the acq sequence
-	double ZstageTrigDelay;
-	switch (mScanDir)
+	//Z STAGE. Fine tune the delay of the z-stage trigger for the acq sequence
+	double ZstageTrigDelay{ 0 };
+
+	if (mRTcontrol.mMainTrigger == MAINTRIG::ZSTAGE)
 	{
-	case ZSCAN::TOPDOWN :
-		ZstageTrigDelay = ZstageTrigDelayTopdown;
-		break;
-	case ZSCAN::BOTTOMUP:
-		ZstageTrigDelay = ZstageTrigDelayBottomup;
-		break;
+		if (mRTcontrol.mHeightPerFrame_pix == 35)
+		{
+			switch (mScanDir)
+			{
+			case ZSCAN::TOPDOWN:
+				ZstageTrigDelay = ZstageTrigDelayTopdown;
+				break;
+			case ZSCAN::BOTTOMUP:
+				ZstageTrigDelay = ZstageTrigDelayBottomup;
+				break;
+			}
+		}
+		else if (mRTcontrol.mHeightPerFrame_pix >= 400) ; //Do nothing when mHeightPerFrame_pix is big enough
+		else //ZstageTrigDelay is uncalibrated
+		{
+			std::cerr << "WARNING in " << __FUNCTION__ << ": ZstageTrigDelay has not been calibrated for heightPerFrame = " << mRTcontrol.mHeightPerFrame_pix << " pix\n";
+			std::cerr << "Press any key to continue or ESC to exit\n";
+			
+			char input_char = _getch();
+			if (input_char == 27)
+				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
+		}
+
 	}
+
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlU32_ZstageTrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
 
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
@@ -358,7 +377,7 @@ void Image::postprocess()
 
 	correctInterleaved_();
 	demultiplex_();				//Move the chuncks of data to the buffer array
-	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning. Divide the long vertical image in nFrames and vertically mirror the odd frames
+	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning. Divide the long vertical image in nFrames and mirror the odd frames vertically
 
 	//Stop the stopwatch
 	//double duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
@@ -585,16 +604,14 @@ void Galvo::positionLinearRamp(const double timeStep, const double rampLength, c
 //Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with fixed z)
 void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double posOffset) const
 {
+	//Limit the number of steps for long ramps
+	//Currently, the bottleneck is the buffe of the galvoss on the fpga that only support 5000 elements
+	//For 2 us-steps, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned
 	double timeStep;
-
-	
-#if multibeam
-	//Multibeam
-	timeStep = 2. * us;	//The ramp is shorter for multibeams. Use smaller steps	
-#else
-	//Singlebeam
-	timeStep = 8. * us;
-#endif
+	if(mRTcontrol.mHeightPerFrame_pix <= 100)
+		timeStep = 2. * us;
+	else
+		timeStep = 8. * us;
 
 	//The position offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mRampDurationFineTuning, 

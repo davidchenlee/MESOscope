@@ -65,17 +65,9 @@ namespace Constants
 	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if the z stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
 
 	//Fine tune the delay for the z-stage to trigger the acq sequence
-#if multibeam
-	extern const double	ZstageTrigDelayTopdown{ 40 * ms };	//TOPDOWN
-	extern const double	ZstageTrigDelayBottomup{ 40 * ms };	//BOTTOMUP
-#else 
-	//35 pixels
-	extern const double	ZstageTrigDelayTopdown{ 40 * ms };	//TOPDOWN
-	extern const double	ZstageTrigDelayBottomup{ 40 * ms };	//BOTTOMUP
-	//560 pixels
-	//extern const double ZstageTrigDelayTopdown{ 0 * ms };	//TOPDOWN
-	//extern const double ZstageTrigDelayBottomup{ 0 * ms };	//BOTTOMUP
-#endif
+	extern const double	ZstageTrigDelayTopdown{ 40 * ms };
+	extern const double	ZstageTrigDelayBottomup{ 40 * ms };
+
 																
 	//PMT
 	//Simulate the PMT pulses. When the array element is HIGH, the output of the subvi changes its state for the next clock cycle (currently, 160MHz = 6.25ns)

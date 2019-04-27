@@ -892,11 +892,12 @@ namespace PMT16XRoutines
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular laser
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
+		const int heightPerFrame_pix{ 35 };
 		const int nFramesCont{ 200 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };
-		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };		//Scan direction in z
+		const ZSCAN scanDirZ{ ZSCAN::BOTTOMUP };		//Scan direction in z
 		const double stackDepth{ nFramesCont * stepSizeZ };
+
 		//Override the global stage position
 		const double3 stackCenterXYZ = { 50.983 * mm, 16.460 * mm, 18.054 * mm - nFramesCont * stepSizeZ /2 };
 
@@ -907,6 +908,7 @@ namespace PMT16XRoutines
 			stageZi = stackCenterXYZ.at(ZZ);
 			stageZf = stackCenterXYZ.at(ZZ) + stackDepth + 20 * stepSizeZ;//longer range!!!!!!!!!!!!!!!!!!
 			laserPi = singleChannel.mScanPi;
+			//laserPi = 600. * mW;
 			laserPf = singleChannel.mScanPi + stackDepth * singleChannel.mStackPinc;
 			break;
 		case ZSCAN::BOTTOMUP:

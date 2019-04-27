@@ -165,20 +165,62 @@ void Image::correctInterleaved_()
 }
 
 void Image::demultiplex_()
+{	
+	if (demuxAllPMTchan)
+		demuxAllChannels_();
+	else
+		demuxSingleChannel_();
+}
+
+//Singlebeam. For speed, only process the counts from a single channel
+void Image::demuxSingleChannel_()
 {
-	//Upscale the buffer to go from 4-bit to 8-bit, to use the range 0-255 compatible with ImageJ's visualization standards
-	U8 upscaleFactorU8 = mRTcontrol.mUpscaleFactorU8;
-	//U8 upscaleFactorU8 = 1; //For debugging
-	
-#if !singlePMT16X
+	switch (PMT16Xchan)
+	{
+	//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
+	case PMT16XCHAN::CH01:
+	case PMT16XCHAN::CH02:
+	case PMT16XCHAN::CH03:
+	case PMT16XCHAN::CH04:
+	case PMT16XCHAN::CH05:
+	case PMT16XCHAN::CH06:
+	case PMT16XCHAN::CH07:
+	case PMT16XCHAN::CH08:
+
+		//Shift mBufArrayA to the right and extract the last 4 bits
+		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
+			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mBufArrayA[pixIndex] >> 4 * static_cast<unsigned char>(PMT16Xchan)) & 0x0000000F));	
+		break;
+
+	//Demultiplex mBufArrayB (channels 9-16). Each U32 element in  mBufArrayB =  | Ch16 | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch9 |
+	case PMT16XCHAN::CH09:
+	case PMT16XCHAN::CH10:
+	case PMT16XCHAN::CH11:
+	case PMT16XCHAN::CH12:
+	case PMT16XCHAN::CH13:
+	case PMT16XCHAN::CH14:
+	case PMT16XCHAN::CH15:
+	case PMT16XCHAN::CH16:
+
+		//Shift mBufArrayB to the right and extract the last 4 bits
+		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
+			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mBufArrayB[pixIndex] >> 4 * static_cast<unsigned char>(PMT16Xchan)) & 0x0000000F));
+		break;
+
+	default:;//If CH00, don't do anything
+	}
+}
+
+void Image::demuxAllChannels_()
+{
 	//Using 2 separate arrays to allow parallelization in the future
 	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch1-Ch8
 	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch9-Ch16
 
+	//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
+	//Demultiplex mBufArrayB (channels 9-16). Each U32 element in  mBufArrayB =  | Ch16 | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch9 |
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
 	{
-		//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
-		//Demultiplex mBufArrayB (channels 9-16). Each U32 element in  mBufArrayB =  | Ch16 | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch9 |
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
 			//If upscaled overflows
@@ -186,8 +228,8 @@ void Image::demultiplex_()
 			//	upscaled = _UI8_MAX;
 
 			//Extract the first 4 bits and upscale it
-			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
-			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(upscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
+			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
 
 			//shift 4 places to the right
 			mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
@@ -199,44 +241,19 @@ void Image::demultiplex_()
 	//th1.join();
 	//th2.join();
 
-	//Size in bytes of the data collected by each PMT16X channel (it could contain more than one frame)
-	const int mBytesPerPMT16Xchannel = mRTcontrol.mNpixAllFrames * sizeof(unsigned char);
+	//Merge the different PMT16X channels. The order depends on the scanning direction of the galvos (forward or backwards) and transfer the result to mTiff
+	if (multibeam)
+		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is the height of a single PMT16X channel
 
-//Copy the counts from the selected channel 'PMT16Xchan' to a Tiff
-#if multibeam
-	//Multibeam
-	mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is the height of a single PMT16X channel
-#else
-	//Singlebeam. Select a particular channel as the detector
-	if (PMT16Xchan >= PMT16XCHAN::CH01 && PMT16Xchan <= PMT16XCHAN::CH08)
-		std::memcpy(mTiff.pointerToTiff(), CountA.pointerToTiff() + static_cast<int>(PMT16Xchan) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
-	else if (PMT16Xchan >= PMT16XCHAN::CH09 && PMT16Xchan <= PMT16XCHAN::CH16)
-		std::memcpy(mTiff.pointerToTiff(), CountB.pointerToTiff() + (static_cast<int>(PMT16Xchan) - static_cast<int>(PMT16XCHAN::CH09)) * mBytesPerPMT16Xchannel, mBytesPerPMT16Xchannel);
-#endif //multibeam
-	
-
-
-	//For debugging. Save all the PMT16X channels. Save each PMT16X channel in a different Tiff page
-#if saveTiff16X
-	TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix , 16 * mRTcontrol.mNframes };
-	stack.pushImage(static_cast<int>(PMT16XCHAN::CH01), static_cast<int>(PMT16XCHAN::CH08), CountA.pointerToTiff());
-	stack.pushImage(static_cast<int>(PMT16XCHAN::CH09), static_cast<int>(PMT16XCHAN::CH16), CountB.pointerToTiff());
-	stack.saveToFile("AllChannels", MULTIPAGE::EN, OVERRIDE::DIS);
-#endif //saveTiff16X
-
-#else
-
-	//Singlebeam. Select a particular channel as the detector
-	if (PMT16Xchan >= PMT16XCHAN::CH01 && PMT16Xchan <= PMT16XCHAN::CH08)
-		//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
-		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
-			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(upscaleFactorU8 * ((mBufArrayA[pixIndex] >> 4 * static_cast<unsigned char>(PMT16Xchan)) & 0x0000000F));	//Shift mBufArrayA to the right and extract the last 4 bits
-	else if (PMT16Xchan >= PMT16XCHAN::CH09 && PMT16Xchan <= PMT16XCHAN::CH16)
-		//Demultiplex mBufArrayB (channels 9-16). Each U32 element in  mBufArrayB =  | Ch16 | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch9 |
-		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
-			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(upscaleFactorU8 * ((mBufArrayB[pixIndex] >> 4 * static_cast<unsigned char>(PMT16Xchan)) & 0x0000000F));	//Shift mBufArrayB to the right and extract the last 4 bits
-
-#endif //!singlePMT16X
+	//For debugging
+	if (saveTiffAllPMTchan)
+	{
+		//Save all the PMT16X channels in a different page of a Tiff
+		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix , 16 * mRTcontrol.mNframes };
+		stack.pushImage(static_cast<int>(PMT16XCHAN::CH01), static_cast<int>(PMT16XCHAN::CH08), CountA.pointerToTiff());
+		stack.pushImage(static_cast<int>(PMT16XCHAN::CH09), static_cast<int>(PMT16XCHAN::CH16), CountB.pointerToTiff());
+		stack.saveToFile("AllChannels", MULTIPAGE::EN, OVERRIDE::DIS);
+	}
 }
 
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
@@ -291,11 +308,14 @@ void Image::acquire()
 	}
 }
 
-void Image::initialize(const ZSCAN stackScanDir) const
+void Image::initialize(const ZSCAN stackScanDir)
 {
 	//Enable pushing data to FIFOOUTfpga. Disable for debugging
 	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, static_cast<bool>(mRTcontrol.mFIFOOUTstate)));
+
+	//Initialize mScanDir
+	mScanDir = stackScanDir;
 
 	//Z STAGE. Fine tune the delay for the z-stage to trigger the acq sequence
 	double ZstageTrigDelay;
@@ -491,14 +511,14 @@ void ResonantScanner::isRunning() const
 
 
 #pragma region "Galvo"
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const int wavelength_nm): mRTcontrol(RTcontrol), mGalvoRTchannel(channel), mWavelength_nm(wavelength_nm)
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavelength_nm): mRTcontrol(RTcontrol), mGalvoRTchannel(channel), mWavelength_nm(wavelength_nm)
 {
 	switch (channel)
 	{
-	case RTSCANGALVO:
+	case RTCHAN::SCANGALVO:
 		mVoltagePerDistance = mScanCalib;
 		break;
-	case RTRESCANGALVO:
+	case RTCHAN::RESCANGALVO:
 		//Calibration factor to sync the rescanner with the scanner and therefore keep the fluorescence emission fixed at the detector
 		//The offset compensates for the slight misalignment of the rescanner wrt the center of the detector
 		//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the counts tiffs for all the channels
@@ -507,7 +527,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const int wa
 		{
 		case 750:
 			mVoltagePerDistance = 0.220 * mScanCalib;
-			mRescanVoltageOffset = -0.12 * V;
+			mRescanVoltageOffset = -0.05 * V;
 			break;
 		case 920:
 			mVoltagePerDistance = 0.210 * mScanCalib;
@@ -526,14 +546,14 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const int wa
 	}
 }
 
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel channel, const double posMax, const int wavelength_nm) : Galvo(RTcontrol, channel, wavelength_nm)
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double posMax, const int wavelength_nm) : Galvo(RTcontrol, channel, wavelength_nm)
 {
 	switch (channel)
 	{
-	case RTSCANGALVO:
+	case RTCHAN::SCANGALVO:
 		positionLinearRamp(-posMax, posMax); //Scan from -x to +x wrt the x-stage axis
 		break;
-	case RTRESCANGALVO:
+	case RTCHAN::RESCANGALVO:
 		//Rescan in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
 		positionLinearRamp(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(static_cast<int>(PMT16Xchan)) * mInterBeamletDistance * mVoltagePerDistance);
 		break;
@@ -1178,14 +1198,14 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, 
 	switch (laserSelector)
 	{
 	case LASER::VISION:
-		mPockelsRTchannel = RTVISION;
-		mScalingRTchannel = RTSCALINGVISION;
+		mPockelsRTchannel = RTCHAN::VISION;
+		mScalingRTchannel = RTCHAN::SCALINGVISION;
 		break;
 	case LASER::FIDELITY:
 		if (wavelength_nm != 1040)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength of FIDELITY can not be different from 1040 nm");
-		mPockelsRTchannel = RTFIDELITY;
-		mScalingRTchannel = RTSCALINGFIDELITY;
+		mPockelsRTchannel = RTCHAN::FIDELITY;
+		mScalingRTchannel = RTCHAN::SCALINGFIDELITY;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
@@ -1212,7 +1232,7 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 	//VISION
 	switch (mPockelsRTchannel)
 	{
-	case RTVISION:
+	case RTCHAN::VISION:
 		switch (mWavelength_nm)
 		{
 		case 750:
@@ -1236,7 +1256,7 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 		break;
 
 		//FIDELITY
-	case RTFIDELITY:
+	case RTCHAN::FIDELITY:
 		amplitude = 210 * mW;
 		angularFreq = 0.276 / V;
 		phase = -0.049 * V;

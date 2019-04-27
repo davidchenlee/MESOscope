@@ -64,7 +64,7 @@ namespace FPGAns
 		const double mDwell{ 0.1625 * us };															//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
 																									//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
 		const double mPulsesPerPix = mDwell / VISIONpulsePeriod;									//Max number of laser pulses per pixel
-		const U8 mUpscaleFactorU8{ static_cast<U8>(255 / (mPulsesPerPix + 1)) };					//Upscale the photocount to cover the full 0-255 range of a 8-bit number. Plus one to avoid overflow
+		const U8 mUpscaleFactorU8{ static_cast<U8>(255 / (mPulsesPerPix + 1)) };					//Upscale 4-bit counts to 8-bit (range 0-255) for compatibility with ImageJ's standards. Plus one to avoid overflow
 		int mWidthPerFrame_pix;																		//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
 		int mHeightPerFrame_pix;																	//Height in pixels of a single frame (galvo axis). This sets the number of "lines" in the image
 		int mNframes;																				//Number of frames to acquire
@@ -79,12 +79,12 @@ namespace FPGAns
 		RTcontrol(RTcontrol&&) = delete;					//Disable move constructor
 		RTcontrol& operator=(RTcontrol&&) = delete;			//Disable move-assignment constructor
 
-		void pushQueue(const RTchannel chan, QU32& queue);
-		void clearQueue(const RTchannel chan);
-		void pushDigitalSinglet(const RTchannel chan, double timeStep, const bool DO);
-		void pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO, const OVERRIDE override = OVERRIDE::DIS);
-		void pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor);
-		void pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi, const double Vf);
+		void pushQueue(const RTCHAN chan, QU32& queue);
+		void clearQueue(const RTCHAN chan);
+		void pushDigitalSinglet(const RTCHAN chan, double timeStep, const bool DO);
+		void pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override = OVERRIDE::DIS);
+		void pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor);
+		void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf);
 		void presetFPGAoutput() const;
 		void uploadRT() const;
 		void triggerRT() const;

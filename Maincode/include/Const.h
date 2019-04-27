@@ -3,10 +3,10 @@
 #include <vector>
 #include <array>
 
-#define multibeam 0			//Multibeam or singlebeam
-#define pockelsAutoOff 1	//For debugging purposes. Enable to let 'framegate' set the pockels cell on and off
-#define saveTiff16X 0		//Save each channel of PMT16X individually
-#define singlePMT16X 1
+#define multibeam 0				//Multibeam or singlebeam
+#define pockelsAutoOff 1		//For debugging purposes. Let 'framegate' gate the output of the pockels cell
+#define demuxAllPMTchan 0		//Process all the channels of the PMT16X. Disable to use a single channel
+#define saveTiffAllPMTchan 0	//If demuxAllPMTchan = 1, process and save all the channels of PMT16X
 
 namespace Constants
 {
@@ -28,14 +28,14 @@ namespace Constants
 	typedef std::array <double, 4> ROI;			//ROI = {ymin, xmin, ymax, xmax}
 
 	enum class INPUT { PMT, SIM };
-	enum class LINECLOCK { RS = false, FG = true };
-	enum class MAINTRIG { PC = false, ZSTAGE = true};
-	enum class FPGARESET { DIS = false, EN = true };
-	enum class FIFOOUT { DIS = false, EN = true };
-	enum class MULTIPAGE { DIS = false, EN = true};
-	enum class OVERRIDE { DIS = false, EN = true};
+	enum class LINECLOCK { RS, FG  };
+	enum class MAINTRIG { PC, ZSTAGE };
+	enum class FPGARESET { DIS, EN };
+	enum class FIFOOUT { DIS, EN  };
+	enum class MULTIPAGE { DIS, EN };
+	enum class OVERRIDE { DIS, EN };
 	enum class PIXELCLOCK { UNIFORM, NONUNIFORM };
-	enum RTchannel { RTPIXELCLOCK, RTSCANGALVO, RTRESCANGALVO, RTDODEBUG, RTVISION, RTSCALINGVISION, RTFIDELITY, RTSCALINGFIDELITY, RTNCHAN };		//RTNCHAN = number of RT channels available, including the channel for the pixelclock
+	enum class RTCHAN { PIXELCLOCK, SCANGALVO, RESCANGALVO, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };		//NCHAN = number of RT channels available including the channel for the pixelclock
 	enum class FILTERWHEEL { DET, EXC };
 	enum Axis { XX, YY, ZZ };
 	enum class RUNMODE { SINGLE, LIVE, AVG, STACK, STACKCENTERED };

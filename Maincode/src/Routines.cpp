@@ -87,7 +87,7 @@ namespace PMT1XRoutines
 
 		//GALVO RT linear scan
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
-		const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
 
 		//LASER
 		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, LASER::AUTO };
@@ -201,7 +201,7 @@ namespace PMT1XRoutines
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//GALVO RT linear scan
-		const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOV.at(XX) / 2 };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOV.at(XX) / 2 };
 
 		//LASER
 		VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm };
@@ -310,7 +310,7 @@ namespace PMT1XRoutines
 
 		//GALVO RT linear scan
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
 
 		//LASER
 		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, LASER::AUTO };
@@ -392,7 +392,7 @@ namespace PMT1XRoutines
 
 		//GALVO RT linear scan
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
 
 		//OPEN THE SHUTTER
 		laser.openShutter();	//The destructor will close the shutter automatically
@@ -457,7 +457,7 @@ namespace PMT1XRoutines
 			RScanner.isRunning();		//Make sure that the RS is running
 
 			//GALVO RT linear ramp	
-			const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOV.at(XX) / 2 };
+			const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOV.at(XX) / 2 };
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
@@ -543,7 +543,7 @@ namespace PMT16XRoutines
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY = 0.5 * um;
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 35 };	//35 for PMT16X
+		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
 		const int nFramesCont{ 1 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 		const int wavelength_nm = 750;
@@ -597,10 +597,10 @@ namespace PMT16XRoutines
 
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
-		//const RUNMODE acqMode{ RUNMODE::AVG };				//Image the same z plane frame by frame 'nSameZ' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
-		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
+		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
@@ -660,9 +660,9 @@ namespace PMT16XRoutines
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//GALVO RT linear scan
-		const Galvo scanner{ RTcontrol, RTSCANGALVO, selectScanFFOV / 2 };
-		const Galvo rescanner{ RTcontrol, RTRESCANGALVO, selectRescanFFOV / 2, wavelength_nm };
-		//const Galvo rescanner{ RTcontrol, RTRESCANGALVO, 0, wavelength_nm, wavelength_nm  };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, selectScanFFOV / 2 };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, selectRescanFFOV / 2, wavelength_nm };
+		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, wavelength_nm, wavelength_nm  };
 
 		//DATALOG
 		{
@@ -794,8 +794,8 @@ namespace PMT16XRoutines
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//GALVO RT linear scan
-		const Galvo scanner{ RTcontrol, RTSCANGALVO, selectScanFFOV / 2 };
-		const Galvo rescanner{ RTcontrol, RTRESCANGALVO, selectRescanFFOV / 2, channelList.front().mWavelength_nm };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, selectScanFFOV / 2 };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, selectRescanFFOV / 2, channelList.front().mWavelength_nm };
 
 		//LASER
 		VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm };
@@ -892,8 +892,8 @@ namespace PMT16XRoutines
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular laser
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 35 };
-		const int nFramesCont{ 200 };						//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int heightPerFrame_pix{ 560 };
+		const int nFramesCont{ 200 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };
 		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };		//Scan direction in z
 		const double stackDepth{ nFramesCont * stepSizeZ };
@@ -935,8 +935,8 @@ namespace PMT16XRoutines
 
 		//GALVO RT linear scan
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		const Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
-		const Galvo rescanner{ RTcontrol, RTRESCANGALVO, FFOVslow / 2, singleChannel.mWavelength_nm };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, singleChannel.mWavelength_nm };
 		PMT16Xchan = PMT16XCHAN::CH08;
 
 		//OPEN THE SHUTTER
@@ -969,14 +969,14 @@ namespace TestRoutines
 
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 1, 300, 400, FIFOOUT::DIS };
 
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 1);
 
 		//Many short digital pulses to accumulate the error
 		for (U32 ii = 0; ii < 99; ii++)
-			RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 0);
+			RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 0);
 
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 0);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 0);
 	}
 
 	//First calibrate the digital channels, then use it as a time reference
@@ -986,18 +986,18 @@ namespace TestRoutines
 		const double timeStep{ 4. * us };
 
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 1, 300, 400, FIFOOUT::DIS };
-		RTcontrol.pushAnalogSinglet(RTSCANGALVO, timeStep, 10 * V);				//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTSCANGALVO, timeStep, 0);
-		RTcontrol.pushLinearRamp(RTSCANGALVO, 4 * us, delay, 0, 5 * V);		//Linear ramp to accumulate the error
-		RTcontrol.pushAnalogSinglet(RTSCANGALVO, timeStep, 10 * V);				//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTSCANGALVO, timeStep, 0);					//Final pulse
+		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 10 * V);				//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 0);
+		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, 4 * us, delay, 0, 5 * V);		//Linear ramp to accumulate the error
+		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 10 * V);				//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 0);					//Final pulse
 
 		//DO0
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 0);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, delay, 0);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 0);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 0);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, delay, 0);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 0);
 	}
 
 	void pixelclock(const FPGAns::FPGA &fpga)
@@ -1019,8 +1019,8 @@ namespace TestRoutines
 		const double timeStep{ 400. * us };
 
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 1, 300, 400, FIFOOUT::DIS };
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, timeStep, 0);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 0);
 	}
 
 	//Test the analog and digital output and the relative timing wrt the pixel clock
@@ -1029,13 +1029,13 @@ namespace TestRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 1, 300, 400, FIFOOUT::DIS };
 
 		//DO
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, 4 * us, 1);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, 4 * us, 0);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, 4 * us, 1);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, 4 * us, 0);
 
 		//AO
-		RTcontrol.pushAnalogSinglet(RTSCANGALVO, 8 * us, 4 * V);
-		RTcontrol.pushAnalogSinglet(RTSCANGALVO, 4 * us, 2 * V);
-		RTcontrol.pushAnalogSinglet(RTSCANGALVO, 4 * us, 1 * V);
+		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, 8 * us, 4 * V);
+		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, 4 * us, 2 * V);
+		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, 4 * us, 1 * V);
 
 		RTcontrol.triggerRT();	//Execute the realtime control sequence
 	}
@@ -1046,13 +1046,13 @@ namespace TestRoutines
 		const double step{ 4. * us };
 
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 1, 300, 400, FIFOOUT::DIS };
-		RTcontrol.pushLinearRamp(RTSCANGALVO, step, 2 * ms, 0, -Vmax);
-		RTcontrol.pushLinearRamp(RTSCANGALVO, step, 20 * ms, -Vmax, Vmax);
-		RTcontrol.pushLinearRamp(RTSCANGALVO, step, 2 * ms, Vmax, 0);
+		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 2 * ms, 0, -Vmax);
+		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 20 * ms, -Vmax, Vmax);
+		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 2 * ms, Vmax, 0);
 
 		const double pulsewidth(300. * us);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, pulsewidth, 1);
-		RTcontrol.pushDigitalSinglet(RTDODEBUG, 4 * us, 0);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, pulsewidth, 1);
+		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, 4 * us, 0);
 	}
 
 	//I think this is for matching the galvo forward and backward scans via imaging beads
@@ -1077,7 +1077,7 @@ namespace TestRoutines
 
 		//GALVO
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
-		Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
+		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
 
 		//LASER
 		const int wavelength_nm{ 1040 };
@@ -1124,8 +1124,8 @@ namespace TestRoutines
 
 		//GALVOS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Length scanned in the slow axis
-		Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
-		Galvo rescanner{ RTcontrol, RTRESCANGALVO, FFOVslow / 2, wavelength_nm };
+		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
+		Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, wavelength_nm };
 
 		//Execute the realtime control sequence and acquire the image
 		Image image{ RTcontrol };
@@ -1543,9 +1543,9 @@ namespace TestRoutines
 
 		//GALVOS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };				//Length scanned in the slow axis
-		Galvo scanner{ RTcontrol, RTSCANGALVO, FFOVslow / 2 };
-		//Galvo scanner{ RTcontrol, RTSCANGALVO, 0 };		//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
-		Galvo rescanner{ RTcontrol, RTRESCANGALVO, FFOVslow / 2, wavelength_nm };
+		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
+		//Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, 0 };		//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
+		Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, wavelength_nm };
 
 		//LASER
 		VirtualLaser laser{ RTcontrol, 750, 30. * mW, LASER::VISION };
@@ -1593,9 +1593,9 @@ namespace TestRoutines
 		const VirtualLaser laser{ RTcontrol, wavelength_nm, selectPower, LASER::VISION };
 
 		//GALVO RT linear scan
-		const Galvo scanner{ RTcontrol, RTSCANGALVO, selectScanFFOV / 2 };
-		const Galvo rescanner{ RTcontrol, RTRESCANGALVO, selectScanFFOV / 2, wavelength_nm };
-		//const Galvo rescanner{ RTcontrol, RTRESCANGALVO, 0, wavelength_nm };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, selectScanFFOV / 2 };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, selectScanFFOV / 2, wavelength_nm };
+		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, wavelength_nm };
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
@@ -1660,7 +1660,7 @@ namespace TestRoutines
 		RScanner.isRunning();		//Make sure that the RS is running
 
 		//GALVO. Keep the galvo fixed to bleach a line on the sample
-		Galvo scanner{ RTcontrol, RTSCANGALVO, 0 };
+		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, 0 };
 
 		//POCKELS CELLS
 		PockelsCell pockels{ RTcontrol, 920, LASER::VISION };

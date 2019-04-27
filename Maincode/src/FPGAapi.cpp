@@ -174,7 +174,7 @@ namespace FPGAns
 	//Load the imaging parameters onto the FPGA. See 'Const.cpp' for the definition of each variable
 	void FPGA::initializeFpga_() const
 	{
-		if (RTNCHAN < 0 || FIFOtimeout_tick < 0 || syncDOtoAO_tick < 0 || pockelsFirstFrameDelay < 0 || pockelsSecondaryDelay < 0  || galvosCommonDelay < 0 || rescanGalvoDelay < 0 || linegateTimeout < 0 || stagePulseStretcher < 0)
+		if (FIFOtimeout_tick < 0 || syncDOtoAO_tick < 0 || pockelsFirstFrameDelay < 0 || pockelsSecondaryDelay < 0  || galvosCommonDelay < 0 || rescanGalvoDelay < 0 || linegateTimeout < 0 || stagePulseStretcher < 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 		//INPUT SELECTORS
@@ -182,7 +182,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));									//For debugging the photocounters
 
 		//FIFOIN
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTNCHAN)));												//Number of input channels
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTCHAN::NCHAN)));												//Number of input channels
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));															//Trigger of the control sequence
 		checkStatus(__FUNCTION__, NiFpga_WriteI32(getHandle(), NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(FIFOtimeout_tick)));								//FIFOIN timeout
 
@@ -212,7 +212,6 @@ namespace FPGAns
 		//STAGES
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stagePulseStretcher / us * tickPerUs)));	//Stretch the pulsewidth from the stages. Currently not in use
 		
-
 		//Flush the RAM buffers on the FPGA as precaution. 
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));															//Memory-flush trigger
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
@@ -229,7 +228,6 @@ namespace FPGAns
 		checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_RSenable, false));	//Turn on/off
 		*/
 	}
-
 #pragma endregion "FPGA"
 
 #pragma region "RTcontrol"
@@ -275,7 +273,7 @@ namespace FPGAns
 	}
 
 	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate) :
-		mVectorOfQueues(RTNCHAN), mFpga(fpga), mLineclockInput(lineclockInput), mMainTrigger(mainTrigger), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mFIFOOUTstate(FIFOOUTstate)
+		mVectorOfQueues(static_cast<U8>(RTCHAN::NCHAN)), mFpga(fpga), mLineclockInput(lineclockInput), mMainTrigger(mainTrigger), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mFIFOOUTstate(FIFOOUTstate)
 	{
 		//Set the imaging parameters
 		mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;
@@ -284,7 +282,7 @@ namespace FPGAns
 
 		//Generate a pixelclock
 		const Pixelclock pixelclock(mWidthPerFrame_pix, mDwell);
-		mVectorOfQueues.at(RTPIXELCLOCK) = pixelclock.readPixelclock();
+		mVectorOfQueues.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 
 		//If the z stage acts as the main trigger (for cont z scanning), add a timer after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
 		if (mMainTrigger == MAINTRIG::ZSTAGE)
@@ -324,7 +322,7 @@ namespace FPGAns
 	{
 		{
 			QU32 allQueues;		//Create a single long queue
-			for (int chan = 0; chan < RTNCHAN; chan++)
+			for (int chan = 0; chan < static_cast<U8>(RTCHAN::NCHAN); chan++)
 			{
 				allQueues.push_back(vectorOfQueues.at(chan).size());	//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'	
 				for (std::vector<int>::size_type iter = 0; iter != vectorOfQueues.at(chan).size(); iter++)
@@ -373,22 +371,22 @@ namespace FPGAns
 		}
 	}
 
-	void RTcontrol::pushQueue(const RTchannel chan, QU32& queue)
+	void RTcontrol::pushQueue(const RTCHAN chan, QU32& queue)
 	{
-		concatenateQueues_(mVectorOfQueues.at(chan), queue);
+		concatenateQueues_(mVectorOfQueues.at(static_cast<U8>(chan)), queue);
 	}
 
-	void RTcontrol::clearQueue(const RTchannel chan)
+	void RTcontrol::clearQueue(const RTCHAN chan)
 	{
-		mVectorOfQueues.at(chan).clear();
+		mVectorOfQueues.at(static_cast<U8>(chan)).clear();
 	}
 
-	void RTcontrol::pushDigitalSinglet(const RTchannel chan, double timeStep, const bool DO)
+	void RTcontrol::pushDigitalSinglet(const RTCHAN chan, double timeStep, const bool DO)
 	{
-		mVectorOfQueues.at(chan).push_back(FPGAns::packDigitalSinglet(timeStep, DO));
+		mVectorOfQueues.at(static_cast<U8>(chan)).push_back(FPGAns::packDigitalSinglet(timeStep, DO));
 	}
 
-	void RTcontrol::pushAnalogSinglet(const RTchannel chan, double timeStep, const double AO, const OVERRIDE override)
+	void RTcontrol::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override)
 	{
 		if (timeStep < AO_tMIN)
 		{
@@ -398,38 +396,38 @@ namespace FPGAns
 
 		//Clear the current content
 		if (static_cast<bool>(override))
-			mVectorOfQueues.at(chan).clear();
+			mVectorOfQueues.at(static_cast<U8>(chan)).clear();
 
-		mVectorOfQueues.at(chan).push_back(FPGAns::packAnalogSinglet(timeStep, AO));
+		mVectorOfQueues.at(static_cast<U8>(chan)).push_back(FPGAns::packAnalogSinglet(timeStep, AO));
 	}
 
 	//Push a fixed-point number. For scaling the pockels cell output
-	void RTcontrol::pushAnalogSingletFx2p14(const RTchannel chan, const double scalingFactor)
+	void RTcontrol::pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor)
 	{
-		mVectorOfQueues.at(chan).push_back(static_cast<U32>(doubleToFx2p14(scalingFactor)));
+		mVectorOfQueues.at(static_cast<U8>(chan)).push_back(static_cast<U32>(doubleToFx2p14(scalingFactor)));
 	}
 
-	void RTcontrol::pushLinearRamp(const RTchannel chan, double timeStep, const double rampLength, const double Vi, const double Vf)
+	void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf)
 	{
-		linearRamp(mVectorOfQueues.at(chan), timeStep, rampLength, Vi, Vf);
+		linearRamp(mVectorOfQueues.at(static_cast<U8>(chan)), timeStep, rampLength, Vi, Vf);
 	}
 
 	//Preset the FPGA output with the first value in the RT control sequence to avoid discontinuities at the start of the sequence
 	void RTcontrol::presetFPGAoutput() const
 	{
 		//Read from the FPGA the last voltage in the galvo AO. See the LV implementation
-		std::vector<I16> AOlastVoltage_I16(RTNCHAN, 0);
-		checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getHandle(), NiFpga_FPGAvi_IndicatorU16_ScanGalvoMon, &AOlastVoltage_I16.at(RTSCANGALVO)));
-		checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getHandle(), NiFpga_FPGAvi_IndicatorU16_RescanGalvoMon, &AOlastVoltage_I16.at(RTRESCANGALVO)));
+		std::vector<I16> AOlastVoltage_I16(static_cast<U8>(RTCHAN::NCHAN), 0);
+		checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getHandle(), NiFpga_FPGAvi_IndicatorU16_ScanGalvoMon, &AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::SCANGALVO))));
+		checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getHandle(), NiFpga_FPGAvi_IndicatorU16_RescanGalvoMon, &AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::RESCANGALVO))));
 
 		//Create a vector of queues
-		VQU32 vectorOfQueuesForRamp{ RTNCHAN };
-		for (int chan = 1; chan < RTNCHAN; chan++) //chan > 0 means that the pixelclock is kept empty
+		VQU32 vectorOfQueuesForRamp{ static_cast<U8>(RTCHAN::NCHAN) };
+		for (int chan = 1; chan < static_cast<U8>(RTCHAN::NCHAN); chan++) //chan > 0 means that the pixelclock is kept empty
 		{
 			if (mVectorOfQueues.at(chan).size() != 0)
 			{
 				//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
-				if ((chan == RTSCANGALVO || chan == RTRESCANGALVO) )	//Only do GALVO1 and GALVO2 for now
+				if ((chan == static_cast<U8>(RTCHAN::SCANGALVO) || chan == static_cast<U8>(RTCHAN::RESCANGALVO)) )	//Only do GALVO1 and GALVO2 for now
 				{
 					const double Vi = I16toVoltage(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
 					const double Vf = I16toVoltage((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT control sequence

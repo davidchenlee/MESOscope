@@ -15,13 +15,15 @@ class Image
 	U32* mBufArrayA;						//Vector to read FIFOOUTpc A
 	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
 	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB
-	ZSCAN mScanDir{ ZSCAN::TOPDOWN };
+	ZSCAN mScanDir;
 
 	void FIFOOUTpcGarbageCollector_() const;
 	void readFIFOOUTpc_();
 	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);
 	void correctInterleaved_();
 	void demultiplex_();
+	void demuxSingleChannel_();
+	void demuxAllChannels_();
 	void startFIFOOUTpc_() const;
 	void configureFIFOOUTpc_(const U32 depth) const;
 	void stopFIFOOUTpc_() const;
@@ -34,7 +36,7 @@ public:
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
 	void acquire();
-	void initialize(const ZSCAN scanDir = ZSCAN::TOPDOWN) const;
+	void initialize(const ZSCAN scanDir = ZSCAN::TOPDOWN);
 	void downloadData();
 	void postprocess();
 	void averageFrames();
@@ -90,12 +92,12 @@ class Galvo
 	const std::vector<double> beamletOrder{ -7.5, -6.5, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 0.0 };		//The last entry of the array is for centering the rescanner
 
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	
-	RTchannel mGalvoRTchannel;
+	RTCHAN mGalvoRTchannel;
 	double mVoltagePerDistance{ 0 };
 	int mWavelength_nm{ 0 };
 public:
-	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const int wavelength_nm = 0);
-	Galvo(FPGAns::RTcontrol &RTcontrol, const RTchannel galvoChannel, const double posMax, const int wavelength_nm = 0);
+	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN galvoChannel, const int wavelength_nm = 0);
+	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN galvoChannel, const double posMax, const int wavelength_nm = 0);
 
 	void voltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
@@ -227,8 +229,8 @@ public:
 class PockelsCell
 {
 	FPGAns::RTcontrol &mRTcontrol;				//Non-const because some methods in this class change the variables referenced by mRTcontrol						
-	RTchannel mPockelsRTchannel;
-	RTchannel mScalingRTchannel;
+	RTCHAN mPockelsRTchannel;
+	RTCHAN mScalingRTchannel;
 	int mWavelength_nm;							//Laser wavelength
 	const double timeStep{ 8. * us };
 	double mMaxPower;							//Softlimit for the laser power

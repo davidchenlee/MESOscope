@@ -236,10 +236,6 @@ void Image::demuxAllChannels_()
 			mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
 		}
 	}
-	//std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };
-	//std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
-	//th1.join();
-	//th2.join();
 
 	//Merge the different PMT16X channels. The order depends on the scanning direction of the galvos (forward or backwards) and transfer the result to mTiff
 	if (multibeam)
@@ -282,14 +278,7 @@ void Image::stopFIFOOUTpc_() const
 
 void Image::acquire()
 {
-	//Enable pushing data to FIFOOUTfpga. Disable for debugging
-	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, static_cast<bool>(mRTcontrol.mFIFOOUTstate)));
-
-	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
-	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
-	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI, but if not called, sometimes garbage is generated
-	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from a previous run
+	initialize();
 	mRTcontrol.triggerRT();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 
 	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
@@ -334,7 +323,7 @@ void Image::initialize(const ZSCAN stackScanDir)
 				break;
 			}
 		}
-		else if (mRTcontrol.mHeightPerFrame_pix >= 400) ; //Do nothing when mHeightPerFrame_pix is big enough
+		else if (mRTcontrol.mHeightPerFrame_pix >= 400) ; //Do nothing if mHeightPerFrame_pix is big enough
 		else //ZstageTrigDelay is uncalibrated
 		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": ZstageTrigDelay has not been calibrated for heightPerFrame = " << mRTcontrol.mHeightPerFrame_pix << " pix\n";

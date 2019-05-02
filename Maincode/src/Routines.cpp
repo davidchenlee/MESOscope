@@ -553,7 +553,7 @@ namespace PMT16XRoutines
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			stackCenterXYZ = { 50.983 * mm, 16.460 * mm, 18.054 * mm };//750 and 1040 nm
+			stackCenterXYZ = { 50.983 * mm, 16.460 * mm, 18.059 * mm };//750 and 1040 nm
 			//stackCenterXYZ = { 50.800 * mm, 16.520 * mm, 18.052 * mm };//920 nm
 #if multibeam
 			//Multibeam
@@ -569,7 +569,7 @@ namespace PMT16XRoutines
 			selectScanFFOV = FFOVslow;
 			selectRescanFFOV = FFOVslow;
 			PMT16Xchan = PMT16XCHAN::CH08;
-			selectPower = 40. * mW;
+			selectPower = 35. * mW;
 #endif
 		}
 
@@ -597,10 +597,10 @@ namespace PMT16XRoutines
 
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
-		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
+		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
@@ -892,14 +892,14 @@ namespace PMT16XRoutines
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular laser
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 35 };
-		const int nFramesCont{ 200 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int heightPerFrame_pix{ 560 };
+		const int nFramesCont{ 100 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };
-		const ZSCAN scanDirZ{ ZSCAN::BOTTOMUP };		//Scan direction in z
+		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };		//Scan direction in z
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
 		//Override the global stage position
-		const double3 stackCenterXYZ = { 50.983 * mm, 16.460 * mm, 18.054 * mm - nFramesCont * stepSizeZ /2 };
+		const double3 stackCenterXYZ = { 50.983 * mm, 16.460 * mm, 18.059 * mm - nFramesCont * stepSizeZ /2 };
 
 		double stageZi, stageZf, laserPi, laserPf;
 		switch (scanDirZ)

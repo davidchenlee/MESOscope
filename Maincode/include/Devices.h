@@ -246,8 +246,6 @@ public:
 	void voltageLinearRamp(const double Vi, const double Vf) const;
 	void powerLinearRamp(const double Pi, const double Pf) const;
 	void setShutter(const bool state) const;
-	//void voltageLinearRampInFrame(const double timeStep, const double rampDuration, const double Vi, const double Vf) const;
-	//void powerLinearRampInFrame(const double timeStep, const double rampDuration, const double Pi, const double Pf) const;
 };
 
 class VirtualLaser
@@ -276,6 +274,7 @@ public:
 	void setWavelength(const int wavelength_nm);
 	void setPower(const double laserPower) const;
 	void setPower(const double initialPower, const double finalPower) const;
+	void powerLinearRamp(const double Pi, const double Pf) const;
 	void openShutter() const;
 	void closeShutter() const;
 };

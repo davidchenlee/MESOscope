@@ -1314,8 +1314,10 @@ void PockelsCell::voltageLinearRamp(const double Vi, const double Vf) const
 
 	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
 
-	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor and generate the scaling factors
+	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
 	mRTcontrol.clearQueue(mScalingRTchannel);
+
+	//Push the scaling factors
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, 1 + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
 }
@@ -1498,6 +1500,12 @@ void VirtualLaser::setPower(const double initialPower, const double finalPower) 
 	//Set the power increase
 	if (finalPower != initialPower)
 		mPockelsPtr->powerLinearRamp(initialPower, finalPower);
+}
+
+//Increase the laser power linearly from the first to the last frame
+void VirtualLaser::powerLinearRamp(const double Pi, const double Pf) const
+{
+	mPockelsPtr->powerLinearRamp(Pi, Pf);
 }
 
 void VirtualLaser::openShutter() const

@@ -13,9 +13,10 @@ int main(int argc, char* argv[])
 		FPGAns::FPGA fpga;	//Open a FPGA connection
 		try
 		{
-			ResonantScanner RS{ fpga };
-			Laser vision{ VISION };
-			Laser fidelity{ FIDELITY };
+			FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS };
+			ResonantScanner RS{ RTcontrol };
+			Laser vision{ LASER::VISION };
+			Laser fidelity{ LASER::FIDELITY };
 
 			//Set the FOV
 			std::string whichLaser{ argv[1] };			//V for Vision, F for Fidelity VF for both

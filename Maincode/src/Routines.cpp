@@ -1,17 +1,14 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ = { 50.990 * mm, 16.460* mm, 18.052 * mm };
-//const std::string sampleName{ "Liver" };
-//const std::string immersionMedium{ "SiliconeMineralOil5050" };
-//const std::string collar{ "1.495" };
+const double3 stackCenterXYZ = { 30.300 * mm, 15.500 * mm, 17.825 * mm };
 //const ChannelList channelListLiver{ {{ "GFP", 920, 60. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 20. * mW, 0.15 * mWpum }} };	//Define the wavelengths and laser powers for liver
-const std::string sampleName{ "Beads4um" };
-const std::string immersionMedium{ "SiliconeOil" };
-const std::string collar{ "1.51" };
+const std::string sampleName{ "Liver180712" };
+const std::string immersionMedium{ "SiliconeMineralOil" };
+const std::string collar{ "1.49" };
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 50. * mW, 0. * mWpum }, { "GFP", 920, 50. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//4um beads
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//0.5um beads
-const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }} };
+const ChannelList channelListBeads{ {{ "DAPI", 750, 4. * mW, 0. * mWpum },  { "GFP", 920, 80. * mW, 0. * mWpum }} };
 const ChannelList channelList{ channelListBeads };
 
 namespace PMT1XRoutines
@@ -541,7 +538,7 @@ namespace PMT16XRoutines
 	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const double pixelSizeXY = 0.5 * um;
+		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
 		const int nFramesCont{ 1 };
@@ -553,14 +550,13 @@ namespace PMT16XRoutines
 		double3 stackCenterXYZ;
 		if (1)//beads
 		{
-			stackCenterXYZ = { 50.983 * mm, 16.460 * mm, 18.059 * mm };//750 and 1040 nm
-			//stackCenterXYZ = { 50.800 * mm, 16.520 * mm, 18.052 * mm };//920 nm
+			stackCenterXYZ = { 30.300 * mm, 15.500 * mm, 17.825 * mm };//Liver
 #if multibeam
 			//Multibeam
 			selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 			selectScanFFOV = FFOVslow / 16;
 			selectRescanFFOV = FFOVslow / 16;
-			PMT16Xchan = PMT16XCHAN::CH00;
+			PMT16Xchan = PMT16XCHAN::CH00;//FIX: make this selection transparent to the user
 			selectPower = 1000. * mW;
 
 #else
@@ -568,20 +564,21 @@ namespace PMT16XRoutines
 			selectHeightPerFrame_pix = heightPerFrame_pix;
 			selectScanFFOV = FFOVslow;
 			selectRescanFFOV = FFOVslow;
-			PMT16Xchan = PMT16XCHAN::CH08;
-			selectPower = 35. * mW;
+			PMT16Xchan = PMT16XCHAN::CH08;//FIX: make this selection transparent to the user
+			//selectPower = 35. * mW;//750 nm
+			selectPower = 10. * mW;
 #endif
 		}
 
 		else//fluorescent slide
 		{
-			stackCenterXYZ = { 52.460 * mm, -5.000 * mm, 17.583 * mm };
+			////stackCenterXYZ = { 52.460 * mm, -5.000 * mm, 17.582 * mm };
 #if multibeam
 				//Multibeam to look at the signal intensity difference between channels
 				selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 				selectScanFFOV = FFOVslow / 16;
 				selectRescanFFOV = FFOVslow / 16;
-				PMT16Xchan = PMT16XCHAN::CH00;
+				PMT16Xchan = PMT16XCHAN::CH00;//FIX: make this selection transparent to the user
 				selectPower = 160. * mW;
 #else
 				//Singlebeam to check the inter-beamlet distance
@@ -590,7 +587,7 @@ namespace PMT16XRoutines
 				selectHeightPerFrame_pix = heightPerFrame_pix;
 				selectScanFFOV = 0.0;
 				selectRescanFFOV = FFOVslow;
-				PMT16Xchan = PMT16XCHAN::CH00;
+				PMT16Xchan = PMT16XCHAN::CH00;//FIX: make this selection transparent to the user
 				selectPower = 10. * mW;
 #endif
 		}
@@ -604,7 +601,7 @@ namespace PMT16XRoutines
 
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 20. * um };	//Acquire a stack of this depth or thickness in Z
+		const double stackDepthZ{ 50. * um };	//Acquire a stack of this depth or thickness in Z
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
@@ -718,7 +715,7 @@ namespace PMT16XRoutines
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
 				image.acquire();			//Execute the RT control sequence and acquire the image
-				//image.averageFrames();		//Average the frames acquired via continuous XY acquisition
+				image.averageFrames();		//Average the frames acquired via continuous XY acquisition
 				//image.averageEvenOddFrames();
 				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
 
@@ -767,14 +764,14 @@ namespace PMT16XRoutines
 			selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 			selectScanFFOV = FFOVslow / 16;
 			selectRescanFFOV = FFOVslow / 16;
-			PMT16Xchan = PMT16XCHAN::CH00;
+			PMT16Xchan = PMT16XCHAN::CH00;//FIX: make this selection transparent to the user
 			selectPower = 400. * mW;//THIS BEAM POWER IS NOT BEING USED!!!!!!!!!!!!!!!!!!!!!!!!!
 #else
 			//Singlebeam
 			selectHeightPerFrame_pix = heightPerFrame_pix;
 			selectScanFFOV = FFOVslow;
 			selectRescanFFOV = FFOVslow;
-			PMT16Xchan = PMT16XCHAN::CH08;
+			PMT16Xchan = PMT16XCHAN::CH08;//FIX: make this selection transparent to the user
 			selectPower = 15. * mW;//THIS BEAM POWER IS NOT BEING USED!!!!!!!!!!!!!!!!!!!!!!!!!
 #endif
 
@@ -885,6 +882,50 @@ namespace PMT16XRoutines
 		}//iter_wv
 	}
 
+	//Image the sample non-stop. Use the PI program to move the stages around manually
+	void liveScan(const FPGAns::FPGA &fpga)
+	{
+		//ACQUISITION SETTINGS
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("GFP") };	//Select a particular fluorescence channel
+		const double pixelSizeXY{ 0.5 * um };
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 560 };
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
+		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
+		PMT16Xchan = PMT16XCHAN::CH08;		//FIX: make this selection transparent to the user
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
+
+		//LASER
+		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, LASER::VISION };
+
+		//RS
+		const ResonantScanner RScanner{ RTcontrol };
+		RScanner.isRunning();					//Make sure that the RS is running
+
+		//GALVO RT linear scan
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, singleChannel.mWavelength_nm };
+
+		//OPEN THE UNIBLITZ SHUTTERS
+		laser.openShutter();	//The destructor will close the shutter automatically
+
+		while (true)
+		{
+			laser.setPower(singleChannel.mScanPi);	//Set the laser power
+
+			//EXECUTE THE RT CONTROL SEQUENCE
+			Image image{ RTcontrol };
+			image.acquire();									//Execute the RT control sequence and acquire the image
+			image.averageFrames();								//Average the frames acquired via continuous XY acquisition
+			image.saveTiffSinglePage("Untitled", OVERRIDE::EN);	//Save individual files
+			Sleep(700);
+
+			pressESCforEarlyTermination();		//Early termination if ESC is pressed
+		}
+	}
+
 	//Copy of PMT1XRoutines::continuousScan() with sync'ed rescanner
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
@@ -939,7 +980,7 @@ namespace PMT16XRoutines
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
 		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, singleChannel.mWavelength_nm };
-		PMT16Xchan = PMT16XCHAN::CH08;
+		PMT16Xchan = PMT16XCHAN::CH08;//FIX: make this selection transparent to the user
 
 		//OPEN THE SHUTTER
 		laser.openShutter();	//The destructor will close the shutter automatically
@@ -1574,13 +1615,13 @@ namespace TestRoutines
 			//Multibeam
 			selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 			selectScanFFOV = FFOVslow / 16;
-			PMT16Xchan = PMT16XCHAN::CH00;
+			PMT16Xchan = PMT16XCHAN::CH00;//FIX: make this selection transparent to the user
 			selectPower = 1400. * mW;
 #else
 			//Singlebeam
 			selectHeightPerFrame_pix = heightPerFrame_pix;
 			selectScanFFOV = FFOVslow;
-			PMT16Xchan = PMT16XCHAN::CH02;
+			PMT16Xchan = PMT16XCHAN::CH02;//FIX: make this selection transparent to the user
 			selectPower = 50. * mW;
 #endif
 		//STACK

@@ -11,12 +11,13 @@ int main(int argc, char* argv[])
 			//PMT1XRoutines::frameByFrameScan(fpga);
 			//PMT1XRoutines::frameByFrameScanTiling(fpga, 2);//scan frame by frame and tile by tile
 			//PMT1XRoutines::liveScan(fpga);//Image nonstop and move the stage manually thru the PI software
-			//PMT1XRoutines::continuousScan(fpga);//Scan the z stage continuously. FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power
-			//PMT1XRoutines::sequencer(fpga);FIX: laser power scaling. Only linear scaling in voltage has been implemented, but not in laser power. Also I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
+			//PMT1XRoutines::continuousScan(fpga);//Scan the z stage continuously
+			//PMT1XRoutines::sequencer(fpga);//FIX: I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
 
 			//PMT16X SEQUENCES
-			PMT16XRoutines::PMT16XframeByFrameScan(fpga);
+			//PMT16XRoutines::PMT16XframeByFrameScan(fpga);
 			//PMT16XRoutines::frameByFrameScanTiling(fpga, 1);//scan frame by frame and tile by tile
+			PMT16XRoutines::liveScan(fpga);
 			//PMT16XRoutines::continuousScan(fpga);
 
 			//TESTS.

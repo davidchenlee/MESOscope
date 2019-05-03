@@ -153,10 +153,10 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 }
 
 
-//The RS scans bi-directionally. The pixel order has to be reversed for the odd lines.
+//The RS scans bi-directionally. The pixel order has to be reversed for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample
 void Image::correctInterleaved_()
 {
-	//Within an odd line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
+	//Within a line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
 	for (int lineIndex = 0; lineIndex < mRTcontrol.mHeightAllFrames_pix; lineIndex += 2)
 	{
 		std::reverse(mBufArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mBufArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix + mRTcontrol.mWidthPerFrame_pix);

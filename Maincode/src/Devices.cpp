@@ -175,7 +175,7 @@ void Image::demultiplex_()
 //Singlebeam. For speed, only process the counts from a single channel
 void Image::demuxSingleChannel_()
 {
-	switch (PMT16Xchan)
+	switch (mRTcontrol.mPMT16Xchan)
 	{
 	//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
 	case PMT16XCHAN::CH01:
@@ -189,7 +189,7 @@ void Image::demuxSingleChannel_()
 
 		//Shift mBufArrayA to the right and extract the last 4 bits
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
-			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mBufArrayA[pixIndex] >> 4 * static_cast<unsigned char>(PMT16Xchan)) & 0x0000000F));	
+			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mBufArrayA[pixIndex] >> 4 * static_cast<unsigned char>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
 		break;
 
 	//Demultiplex mBufArrayB (channels 9-16). Each U32 element in  mBufArrayB =  | Ch16 | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch9 |
@@ -204,7 +204,7 @@ void Image::demuxSingleChannel_()
 
 		//Shift mBufArrayB to the right and extract the last 4 bits
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
-			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mBufArrayB[pixIndex] >> 4 * static_cast<unsigned char>(PMT16Xchan)) & 0x0000000F));
+			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mBufArrayB[pixIndex] >> 4 * static_cast<unsigned char>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
 		break;
 
 	default:;//If CH00, don't do anything
@@ -564,7 +564,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double po
 		break;
 	case RTCHAN::RESCANGALVO:
 		//Rescan in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
-		positionLinearRamp(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(static_cast<int>(PMT16Xchan)) * mInterBeamletDistance * mVoltagePerDistance);
+		positionLinearRamp(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(static_cast<int>(mRTcontrol.mPMT16Xchan)) * mInterBeamletDistance * mVoltagePerDistance);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -1459,7 +1459,7 @@ void VirtualLaser::turnFilterwheels_(const int wavelength_nm)
 #else
 		//Single beam
 		//Turn both filterwheels concurrently
-		std::thread th1{ &Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN };	//Leave the excitation filterwheel open
+		std::thread th1{ &Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN };	//Set the excitation filterwheel open (no filter)
 		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
 		th1.join();
 		th2.join();

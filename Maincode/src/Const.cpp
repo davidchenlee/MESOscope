@@ -9,7 +9,6 @@ namespace Constants
 
 	extern const INPUT photocounterInput{ INPUT::PMT };													//PMT (PMT) or simulated PMT (SIM)
 	extern const PIXELCLOCK pixelclockType{ PIXELCLOCK::UNIFORM };										//UNIFORM or NONUNIFORM dwell times
-	extern PMT16XCHAN PMT16Xchan{ PMT16XCHAN::CH00 };													//will be overridden in Routines
 
 	//GENERAL CONSTANTS
 	extern const double PI{ 3.1415926535897 };

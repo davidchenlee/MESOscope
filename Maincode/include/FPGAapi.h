@@ -58,22 +58,23 @@ namespace FPGAns
 
 	public:
 		const FPGAns::FPGA &mFpga;
-		LINECLOCK mLineclockInput;																	//Resonant scanner (RS) or Function generator (FG)
-		MAINTRIG mMainTrigger;																		//Trigger the acquisition with the z stage: enable (0), disable (1)
-		FIFOOUT mFIFOOUTstate;																		//Enable or disable the fpga FIFOOUT
-		const double mDwell{ 0.1625 * us };															//Dwell time = 13 * 12.5 ns = 162.5 ns (85 Mvps for 16X), Npix = 340
-																									//Dwell time = 10 * 12.5 ns = 125 ns (128 Mvps for 16X), Npix = 400
-		const double mPulsesPerPix = mDwell / VISIONpulsePeriod;									//Max number of laser pulses per pixel
-		const U8 mUpscaleFactorU8{ static_cast<U8>(255 / (mPulsesPerPix + 1)) };					//Upscale 4-bit counts to 8-bit (range 0-255) for compatibility with ImageJ's standards. Plus one to avoid overflow
-		int mWidthPerFrame_pix;																		//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
-		int mHeightPerFrame_pix;																	//Height in pixels of a single frame (galvo axis). This sets the number of "lines" in the image
-		int mNframes;																				//Number of frames to acquire
-		int mHeightAllFrames_pix;																	//Total number of lines in all the frames without including the skipped lines
-		int mNpixAllFrames;																			//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
+		LINECLOCK mLineclockInput;														//Resonant scanner (RS) or Function generator (FG)
+		MAINTRIG mMainTrigger;															//Trigger the acquisition with the z stage: enable (0), disable (1)
+		FIFOOUT mFIFOOUTstate;															//Enable or disable the fpga FIFOOUT
+		const double mDwell{ 0.1625 * us };												//mDwell = 13 * 12.5 ns = 162.5 ns
+		const double mPulsesPerPix = mDwell / VISIONpulsePeriod;						//Max number of laser pulses per pixel
+		const U8 mUpscaleFactorU8{ static_cast<U8>(255 / (mPulsesPerPix + 1)) };		//Upscale 4-bit counts to 8-bit (range 0-255) for compatibility with ImageJ's standards. Plus one to avoid overflow
+		int mWidthPerFrame_pix;															//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
+		int mHeightPerFrame_pix;														//Height in pixels of a single frame (galvo axis). This sets the number of "lines" in the image
+		int mNframes;																	//Number of frames to acquire
+		int mHeightAllFrames_pix;														//Total number of lines in all the frames without including the skipped lines
+		int mNpixAllFrames;																//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
+
+		PMT16XCHAN mPMT16Xchan;
 
 		RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput , const MAINTRIG mainTrigger,
-			const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate);
-		~RTcontrol();
+			const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate, PMT16XCHAN PMT16Xchan);
+		RTcontrol(const FPGAns::FPGA &fpga);
 		RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 		RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
 		RTcontrol(RTcontrol&&) = delete;					//Disable move constructor

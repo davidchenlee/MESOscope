@@ -158,7 +158,7 @@ class Filterwheel
 	const std::vector<FILTERCOLOR> mDetConfig{ FILTERCOLOR::BLUE, FILTERCOLOR::GREEN, FILTERCOLOR::RED, FILTERCOLOR::CLOSED, FILTERCOLOR::OPEN, FILTERCOLOR::OPEN };
 
 		
-	FILTERWHEEL mWhichFilterwheel;	//Device ID = 1, 2, ...
+	FILTERWHEEL mWhichFilterwheel;			//Device ID = 1, 2, ...
 	std::string mFilterwheelName;			//Device given name
 	std::vector<FILTERCOLOR> mFWconfig;		//Store the filterwheel configuration for excitation or detection
 	FILTERCOLOR mColor;						//Current filterwheel color

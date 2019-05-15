@@ -272,8 +272,9 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate) :
-		mVectorOfQueues(static_cast<U8>(RTCHAN::NCHAN)), mFpga(fpga), mLineclockInput(lineclockInput), mMainTrigger(mainTrigger), mNframes(nFrames), mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mFIFOOUTstate(FIFOOUTstate)
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate, PMT16XCHAN PMT16Xchan) :
+		mVectorOfQueues(static_cast<U8>(RTCHAN::NCHAN)), mFpga(fpga), mLineclockInput(lineclockInput), mMainTrigger(mainTrigger), mNframes(nFrames),
+		mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mFIFOOUTstate(FIFOOUTstate), mPMT16Xchan(PMT16Xchan)
 	{
 		//Set the imaging parameters
 		mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;
@@ -297,7 +298,7 @@ namespace FPGAns
 		}
 	}
 
-	RTcontrol::~RTcontrol(){}
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga) : RTcontrol(fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS, PMT16XCHAN::CH08) {}
 
 	//Load the imaging parameters onto the FPGA
 	void RTcontrol::uploadImagingParameters_() const

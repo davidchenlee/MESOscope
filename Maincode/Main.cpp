@@ -9,14 +9,14 @@ int main(int argc, char* argv[])
 		{
 			//PMT1X SEQUENCES
 			//PMT1XRoutines::frameByFrameScan(fpga);
-			//PMT1XRoutines::frameByFrameScanTiling(fpga, 2);//scan frame by frame and tile by tile
-			//PMT1XRoutines::liveScan(fpga);//Image nonstop and move the stage manually thru the PI software
-			//PMT1XRoutines::continuousScan(fpga);//Scan the z stage continuously
+			//PMT1XRoutines::frameByFrameScanTiling(fpga, 2);
+			//PMT1XRoutines::liveScan(fpga);
+			//PMT1XRoutines::continuousScan(fpga);
 			//PMT1XRoutines::sequencer(fpga);//FIX: I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
 
 			//PMT16X SEQUENCES
-			//PMT16XRoutines::PMT16XframeByFrameScan(fpga);
-			PMT16XRoutines::frameByFrameScanTiling(fpga, 1);//scan frame by frame and tile by tile
+			PMT16XRoutines::PMT16XframeByFrameScan(fpga);
+			//PMT16XRoutines::frameByFrameScanTiling(fpga, 1);
 			//PMT16XRoutines::liveScan(fpga);
 			//PMT16XRoutines::continuousScan(fpga);
 
@@ -56,6 +56,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();
 			//TestRoutines::photobleach(fpga);
+			//TestRoutines::generateLocationsForBigStitcher();
 		}
 		catch (const std::invalid_argument &e)
 		{

@@ -527,10 +527,11 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		mVoltagePerDistance = mScanCalib;
 		break;
 	case RTCHAN::RESCANGALVO:
-		//Calibration factor to sync the rescanner with the scanner and therefore keep the fluorescence emission fixed at the detector
-		//The offset compensates for the slight misalignment of the rescanner wrt the center of the detector
-		//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the counts tiffs for all the channels
+		//Calibration factor to sync the rescanner with the scanner, and therefore, keep the fluorescence emission fixed at the detector
+		//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the tiffs for all the channels
 		//The beads should appear only in the channel selected
+		//Adjust 'mVoltagePerDistance' until beads at different parts of the FOV are "synchronized" as the PMT16X channels are scrolled over
+		//Adjust 'mRescanVoltageOffset' until the beads appear in the chosen PMT16X channel only
 		switch (mWavelength_nm)
 		{
 		case 750:
@@ -1458,7 +1459,7 @@ void VirtualLaser::turnFilterwheels_(const int wavelength_nm)
 #else
 		//Single beam
 		//Turn both filterwheels concurrently
-		std::thread th1{ &Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN };					//Leave the excitation filterwheel open
+		std::thread th1{ &Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN };	//Leave the excitation filterwheel open
 		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
 		th1.join();
 		th2.join();
@@ -2016,7 +2017,7 @@ Stack::Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, cons
 
 	if (mOverlapXYZ_frac.at(XX) < 0 || mOverlapXYZ_frac.at(YY) < 0 || mOverlapXYZ_frac.at(ZZ) < 0
 		|| mOverlapXYZ_frac.at(XX) > 0.2 || mOverlapXYZ_frac.at(YY) > 0.2 || mOverlapXYZ_frac.at(ZZ) > 0.2)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range 0-0.2%");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range 0-0.2");
 }
 
 void Stack::printParams(std::ofstream *fileHandle) const

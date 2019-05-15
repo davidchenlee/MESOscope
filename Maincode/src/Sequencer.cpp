@@ -242,7 +242,7 @@ void Sequencer::acqStack_(const int iterWL)
 
 	//Update the parameters for the next iteration
 	mScanZi += mScanDir.at(ZZ) * mStack.mDepth;		//Next initial z-scan position
-	reverseStageScanDirection_(ZZ);								//Switch the scanning direction in z
+	reverseStageScanDirection_(ZZ);					//Switch the scanning direction in z
 }
 
 void Sequencer::saveStack_()

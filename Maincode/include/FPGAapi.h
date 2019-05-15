@@ -17,7 +17,7 @@ namespace FPGAns
 	void checkStatus(char functionName[], NiFpga_Status status);
 	void linearRamp(QU32 &queue, double timeStep, const double rampLength, const double Vi, const double Vf);
 
-	//Establish a connection to the FPGA
+	//Establish communication to the FPGA
 	class FPGA
 	{	
 		NiFpga_Session mHandle;												//FPGA handle. Non-const to let the FPGA API assign the handle

@@ -1,15 +1,14 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ = { 30.300 * mm, 15.500 * mm, 17.825 * mm };
-//const ChannelList channelListLiver{ {{ "GFP", 920, 60. * mW, 0.4 * mWpum } , { "TDT", 1040, 100. * mW, 0.4 * mWpum } , { "DAPI", 750, 20. * mW, 0.15 * mWpum }} };	//Define the wavelengths and laser powers for liver
-const std::string sampleName{ "Liver180712" };
-const std::string immersionMedium{ "SiliconeMineralOil" };
-const std::string collar{ "1.49" };
-//const ChannelList channelListBeads{ {{ "DAPI", 750, 50. * mW, 0. * mWpum }, { "GFP", 920, 50. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//4um beads
+const double3 stackCenterXYZ = { 53.000 * mm, 17.000 * mm, 18.038 * mm };//With clearing
+const std::string sampleName{ "Beads4um" };
+const std::string immersionMedium{ "SiliconeOil" };
+const std::string collar{ "1.51" };
+const ChannelList channelListBeads{ {{ "DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 50. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//4um beads
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//0.5um beads
-const ChannelList channelListLiver{ {{ "TDT", 1040, 80. * mW, 0.4 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 10. * mW, 0.15 * mWpum }} };
-const ChannelList channelList{ channelListLiver };
+//const ChannelList channelListLiver{ {{ "TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }} };
+const ChannelList channelList{ channelListBeads };
 
 namespace PMT1XRoutines
 {
@@ -416,13 +415,13 @@ namespace PMT1XRoutines
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };								//Full FOV in the (slow axis, fast axis)
-		const int nFramesCont{ 160 };											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };										//Step size in z
-		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.180 * mm, 35.025 * mm };	//Region of interest {ymin, xmin, ymax, xmax}
-		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };					//Stack overlap
-		const double cutAboveBottomOfStack{ 15. * um };							//height to cut above the bottom of the stack
-		const double sampleLengthZ{ 0.01 * mm };								//Sample thickness
+		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };		//Full FOV in the (slow axis, fast axis)
+		const int nFramesCont{ 160 };																	//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const double stepSizeZ{ 0.5 * um };																//Step size in z
+		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.180 * mm, 35.025 * mm };							//Region of interest {ymin, xmin, ymax, xmax}
+		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };											//Stack overlap
+		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
+		const double sampleLengthZ{ 0.01 * mm };														//Sample thickness
 		const double sampleSurfaceZ{ stackCenterXYZ.at(ZZ) };
 
 		//const ChannelList channelList{ channelList };
@@ -539,13 +538,13 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
-		const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
+		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
 		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("TDT") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
@@ -573,10 +572,9 @@ namespace PMT16XRoutines
 			selectPower = singleChannel.mScanPi;
 			selectPowerInc = singleChannel.mStackPinc;
 #endif
-
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 10. * um };	//Acquire a stack this deep in Z
+		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in Z
 
 		//STAGES
 		std::vector<double3> stagePositionXYZ;		
@@ -675,7 +673,6 @@ namespace PMT16XRoutines
 		{
 			stage.moveXYZ(stagePositionXYZ.at(iterDiffZ));
 			stage.waitForMotionToStopAll();
-			Sleep(200); //Extra settle time for now
 			stage.printPositionXYZ();		//Print the stage position		
 
 			//Acquire many frames at the same Z via discontinuous acquisition
@@ -703,7 +700,6 @@ namespace PMT16XRoutines
 				}
 			}
 			tiffStack.pushDiffZ(iterDiffZ);
-
 			std::cout << "\n";
 		}
 
@@ -714,6 +710,8 @@ namespace PMT16XRoutines
 				"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
 				"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 			tiffStack.saveToFile(stackFilename, override);
+
+			pressESCforEarlyTermination();
 		}
 	}
 
@@ -721,9 +719,8 @@ namespace PMT16XRoutines
 	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice)
 	{
 		//ACQUISITION SETTINGS
-		const ChannelList channelList{ channelList };
-		//const ChannelList channelList{ {channelListLiver.findChannel("DAPI")} };
-		const int2 nStacksXY{ 2, 2 };
+		const ChannelList channelList{ {channelListBeads.findChannel("GFP")} }; //Override
+		const int2 nStacksXY{ 30, 28 };
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -768,7 +765,7 @@ namespace PMT16XRoutines
 		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, selectRescanFFOV / 2, channelList.front().mWavelength_nm };
 
 		//LASER
-		VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm };
+		VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm, LASER::VISION };
 
 		//Create a location list
 		Sequencer sequence{ channelList, Sample(sampleName, immersionMedium, collar), stack, stackCenterXYZ, nStacksXY };
@@ -859,7 +856,7 @@ namespace PMT16XRoutines
 	void liveScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("TDT") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -1692,4 +1689,42 @@ namespace TestRoutines
 		pockels.setShutter(false);
 	}
 
+	//Generate a text file with the tile location for the BigStitcher
+	void generateLocationsForBigStitcher()
+	{
+		// X is vertical and Y is horizontal, to match the directions of the XYZ stage
+		const int2 nStacksXY{ 30, 28 };	
+		const int2 tileShiftXY_pix{ 543, 291 };
+
+		Logger datalog(sampleName + "_locations");
+		datalog.record("dim=3"); //Needed in BigStitcher
+	
+		for (int nTile = 0; nTile < nStacksXY.at(XX) * nStacksXY.at(YY); nTile++)
+		//for (int nTile = 0; nTile < 180; nTile++)
+		{
+			int2 nXY = nTileToArrayIndices(nTile);
+			int tileShiftX{ -nXY.at(XX) * tileShiftXY_pix.at(XX) };
+			int tileShiftY{ -nXY.at(YY) * tileShiftXY_pix.at(YY) };
+			std::string line{ std::to_string(nTile) + ";;(" + std::to_string(tileShiftY) + "," + std::to_string(tileShiftX) + ",0)" };	//In BigStitcher, X is horizontal and Y is vertical
+			//std::string line{ std::to_string(nTile) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(XX)) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(YY)) }; //For debugging
+			datalog.record(line);
+		}
+
+	}
+
+	//Snake pattern starting from the bottom right of the sample and going up
+	int2 nTileToArrayIndices(const int nTile)
+	{
+		const int2 nStacksXY{ 30, 28 };
+
+		int nx;
+		int ny{ nTile / nStacksXY.at(XX) };
+
+		if (ny % 2)	//ny is odd
+			nx = nStacksXY.at(XX) - nTile % nStacksXY.at(XX) - 1;
+		else		//ny is even
+			nx = nTile % nStacksXY.at(XX);
+	
+		return {nx,ny};
+	}
 }//namespace

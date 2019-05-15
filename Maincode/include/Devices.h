@@ -87,9 +87,9 @@ class Galvo
 	//Rescanner
 	double mRescanVoltageOffset{ 0 };						//Overriden in the constructor because the laser alignment depends on the wavelength
 
-	//For a single laser beam (i.e., without using the beamsplitter) to point at a specific channel of the PMT16X
+	//To point a single laser beam (i.e., without using the beamsplitter) at a specific channel of the PMT16X
 	const double mInterBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
-	const std::vector<double> beamletOrder{ -7.5, -6.5, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 0.0 };		//The last entry of the array is for centering the rescanner
+	const std::vector<double> beamletOrder{ -7.5, -6.5, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 0.0 };		//The last entry in this array is for centering the rescanner
 
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	
 	RTCHAN mGalvoRTchannel;
@@ -169,7 +169,7 @@ class Filterwheel
 	const int mTimeout{ 150 * ms };
 	const int mNpos{ 6 };					//Number of filter positions
 	const double mTuningSpeed{ 0.8 / sec };	//The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
-	const int mRxBufSize{ 256 };				//Serial buffer size
+	const int mRxBufSize{ 256 };			//Serial buffer size
 
 	void downloadColor_();
 	int colorToPosition_(const FILTERCOLOR color) const;
@@ -250,11 +250,10 @@ public:
 
 class VirtualLaser
 {
-
 	LASER mLaserSelect;					//use VISION, FIDELITY, or AUTO (let the code decide)
 	LASER mCurrentLaser;				//Laser currently in use: VISION or FIDELITY
 	FPGAns::RTcontrol &mRTcontrol;
-	int mWavelength_nm;							//Wavelength being used
+	int mWavelength_nm;					//Wavelength being used
 	Laser mVision;
 	Laser mFidelity;
 	Filterwheel mFWexcitation;
@@ -357,7 +356,7 @@ public:
 	double3 mLengthXYZ{ 0, 0, 0 };		//Sample size in x, y, and z
 	double mSurfaceZ{ -1. * mm };
 
-	const double2 mBladePositionXY{ 0. * mm, 0. * mm };	//Location of the vibratome blade in x and y wrt the stages origin
+	const double2 mBladePositionXY{ 0. * mm, 0. * mm };		//Location of the vibratome blade in x and y wrt the stages origin
 	const double mBladeFocalplaneOffsetZ{ 0. * um };		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack;
 

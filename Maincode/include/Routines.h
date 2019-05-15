@@ -66,4 +66,6 @@ namespace TestRoutines
 	void vibratome(const FPGAns::FPGA &fpga);
 	void filterwheel();
 	void photobleach(const FPGAns::FPGA &fpga);
+	void generateLocationsForBigStitcher();
+	int2 nTileToArrayIndices(const int nTile);
 }

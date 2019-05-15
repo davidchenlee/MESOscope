@@ -178,13 +178,13 @@ namespace FPGAns
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 		//INPUT SELECTORS
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(getHandle(), NiFpga_FPGAvi_ControlU8_PhotocounterInputSelector, static_cast<U8>(photocounterInput)));						//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));									//For debugging the photocounters
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(getHandle(), NiFpga_FPGAvi_ControlU8_PhotocounterInputSelector, static_cast<U8>(photocounterInput)));		//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
+		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));					//For debugging the photocounters
 
 		//FIFOIN
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTCHAN::NCHAN)));												//Number of input channels
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));															//Trigger of the control sequence
-		checkStatus(__FUNCTION__, NiFpga_WriteI32(getHandle(), NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(FIFOtimeout_tick)));								//FIFOIN timeout
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTCHAN::NCHAN)));						//Number of input channels
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));											//Trigger of the control sequence
+		checkStatus(__FUNCTION__, NiFpga_WriteI32(getHandle(), NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(FIFOtimeout_tick)));				//FIFOIN timeout
 
 		//TRIGGERS AND DELAYS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));																				//Pc trigger signal
@@ -213,7 +213,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_StagePulseStretcher_tick, static_cast<U32>(stagePulseStretcher / us * tickPerUs)));	//Stretch the pulsewidth from the stages. Currently not in use
 		
 		//Flush the RAM buffers on the FPGA as precaution. 
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));															//Memory-flush trigger
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
 		//std::cout << "flushBRAMs called\n";	//For debugging
@@ -305,12 +305,12 @@ namespace FPGAns
 		if (mNframes < 0 || mHeightAllFrames_pix < 0 || mHeightPerFrame_pix < 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
-		checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(mNframes)));						//Number of frames to acquire
-		checkStatus(__FUNCTION__, NiFpga_WriteI32(mFpga.getHandle(), NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(mHeightAllFrames_pix)));			//Total number of lines in all the frames
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerFrame_pix)));		//Number of lines in a frame
+		checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(mNframes)));							//Number of frames to acquire
+		checkStatus(__FUNCTION__, NiFpga_WriteI32(mFpga.getHandle(), NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(mHeightAllFrames_pix)));				//Total number of lines in all the frames
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerFrame_pix)));			//Number of lines in a frame
 	
 		//SELECTORS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));					//Lineclock: resonant scanner (RS) or function generator (FG)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));	//Lineclock: resonant scanner (RS) or function generator (FG)
 	}
 
 

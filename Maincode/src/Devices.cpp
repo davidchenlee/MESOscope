@@ -177,7 +177,7 @@ void Image::demuxSingleChannel_()
 {
 	switch (mRTcontrol.mPMT16Xchan)
 	{
-	//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
+	//Demultiplex mBufArrayA (channels 1-8). Each U32 element in mBufArrayA has the multiplexed structure | Ch08 (MSB) | Ch07 | Ch06 | Ch05 | Ch04 | Ch03 | Ch02 | Ch01 (LSB) |
 	case PMT16XCHAN::CH01:
 	case PMT16XCHAN::CH02:
 	case PMT16XCHAN::CH03:
@@ -192,7 +192,7 @@ void Image::demuxSingleChannel_()
 			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mBufArrayA[pixIndex] >> 4 * static_cast<unsigned char>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
 		break;
 
-	//Demultiplex mBufArrayB (channels 9-16). Each U32 element in  mBufArrayB =  | Ch16 | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch9 |
+	//Demultiplex mBufArrayB (channels 9-16). Each U32 element in mBufArrayB has the multiplexed structure | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
 	case PMT16XCHAN::CH09:
 	case PMT16XCHAN::CH10:
 	case PMT16XCHAN::CH11:
@@ -211,14 +211,39 @@ void Image::demuxSingleChannel_()
 	}
 }
 
+
+//Each U32 element in mBufArrayA and mBufArrayB has the multiplexed structure:
+//mBufArrayA[i] =  | Ch08 (MSB) | Ch07 | Ch06 | Ch05 | Ch04 | Ch03 | Ch02 | Ch01 (LSB) |
+//mBufArrayB[i] =  | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
+
+
 void Image::demuxAllChannels_()
 {
-	//Using 2 separate arrays to allow parallelization in the future
-	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch1-Ch8
-	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch9-Ch16
+	//Use 2 separate arrays to allow parallelization in the future
+	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch01-Ch08
+	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch09-Ch16
 
-	//Demultiplex mBufArrayA (channels 1-8). Each U32 element in  mBufArrayA =  | Ch8 | Ch7 | Ch6 | Ch5 | Ch4 | Ch3 | Ch2 | Ch1 |
-	//Demultiplex mBufArrayB (channels 9-16). Each U32 element in  mBufArrayB =  | Ch16 | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch9 |
+	/*Iterate over all the pixels and frames (all the frames are concatenated in a single-long image), demultiplex the counts, and store them in CountA and CountB
+	CountA = |Ch01 f1|
+			 |  .	 |
+			 |Ch01 fN|
+			 |  .	 |
+			 |  .	 |
+			 |  .	 |
+			 |Ch08 f1|
+			 |  .	 |
+			 |Ch08 fN|
+
+	CountB = |Ch09 f1|
+			 |  .	 |
+			 |Ch09 fN|
+			 |  .	 |
+			 |  .	 |
+			 |  .	 |
+			 |Ch16 f1|
+			 |  .	 |
+			 |Ch16 fN|
+	*/
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
 	{
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
@@ -560,10 +585,10 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double po
 	switch (channel)
 	{
 	case RTCHAN::SCANGALVO:
-		positionLinearRamp(-posMax, posMax); //Scan from -x to +x wrt the x-stage axis
+		positionLinearRamp(-posMax, posMax); //Raster scan from +x to -x wrt the x-stage axis
 		break;
 	case RTCHAN::RESCANGALVO:
-		//Rescan in the opposite direction to the scan galvo to keep the fluorescent spot fixed at the detector
+		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector
 		positionLinearRamp(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(static_cast<int>(mRTcontrol.mPMT16Xchan)) * mInterBeamletDistance * mVoltagePerDistance);
 		break;
 	default:

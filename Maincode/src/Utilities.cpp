@@ -452,12 +452,40 @@ void TiffU8::pushImage(const int firstFrameIndex, const int lastFrameIndex, cons
 
 
 /*
-inputArrayA = ||CH01 f1|CH01 f2|...|CH01 fN||CH02 f1|CH02 f2|...|CH02 fN||CH08 f1|CH08 f2|...|CH08 fN||
-inputArrayB = ||CH09 f1|CH09 f2|...|CH09 fN||CH10 f1|CH10 f2|...|CH10 fN||CH16 f1|CH16 f2|...|CH08 fN||
+The input arrays have the structure:
+inputArrayA = |CH01 f1|
+			  |  .	  |
+			  |CH01 fN|
+			  |  .	  |
+			  |  .	  |
+			  |  .	  |
+			  |CH08 f1|
+			  |  .	  |
+			  |CH08 fN|
 
-The idea is to put all the channels from the first frame together, then continue with the next frame, etc
-mArray = ||CH01 f1|CH02 f1|...|CH16 f1||CH16 f2|CH15 f2|...|CH01 f2||CH01 fN|CH02 fN|...|CH16 fN||
-Note that the channels are in a reversed order in the second frame, fourth frame, sixth frame, etc. This is because of the bidirectional scanning of the galvos
+inputArrayB = |CH09 f1|
+			  |  .	  |
+			  |CH09 fN|
+			  |  .	  |
+			  |  .	  |
+			  |  .	  |
+			  |CH16 f1|
+			  |  .	  |
+			  |CH16 fN|
+
+"Merging" places channels belonging to the same frame together. The resulting structure is:
+mArray = |CH01 f1|
+		 |  .	 |
+		 |CH16 f1|
+		 |CH16 f2|
+		 |  .	 |
+		 |  .	 |
+		 |  .	 |
+		 |CH01 f2|
+		 |CH01 fN|
+		 |  .	 |
+		 |CH16 fN|
+Note in the figure above that the channel ordering within each frame is reversed wrt the next frame because of the bidirectionality of the scan galvo
 */
 void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const unsigned char* inputArrayA, const unsigned char* inputArrayB) const
 {
@@ -469,7 +497,7 @@ void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const unsig
 	const int heightPerChannelAllFrames = heightPerChannelPerFrame * mNframes;
 
 	//Note that CH01 corresponds to chanIndex = 0,  CH02 corresponds to chanIndex = 1, etc
-	//Even 'frameIndex'
+	//Even 'frameIndex' (forward scan)
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex += 2)
 		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{
@@ -477,7 +505,7 @@ void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const unsig
 			std::memcpy(&mArray[((chanIndex + 8) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
 		}
 
-	//Odd 'frameIndex'
+	//Odd 'frameIndex' (backward scan)
 	for (int frameIndex = 1; frameIndex < mNframes; frameIndex += 2)
 		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{

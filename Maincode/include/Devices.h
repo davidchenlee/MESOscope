@@ -77,17 +77,22 @@ public:
 	void isRunning() const;
 };
 
+
 class Galvo
 {
 	const double mRampDurationFineTuning{ -250. * us };
 
 	//Scanner
+	//A positive voltage steers the excitation beam towards -x wrt the x-stage axis
 	const double mScanCalib{ 0.02417210 * V / um };			//Calibration factor of the scan galvo. Last calib 31/7/2018
 
 	//Rescanner
+	//When looking at the multiple anodes with the fan facing up, channel 1 is on the left
+	//A positive voltage steers the emission beam towards +x wrt the x-stage axis
 	double mRescanVoltageOffset{ 0 };						//Overriden in the constructor because the laser alignment depends on the wavelength
 
-	//To point a single laser beam (i.e., without using the beamsplitter) at a specific channel of the PMT16X
+	//To aim a single beam (i.e., without using the beamsplitter) at a specific channel of the PMT16X
+
 	const double mInterBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
 	const std::vector<double> beamletOrder{ 7.5, 6.5, 5.5, 4.5, 3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5, -4.5, -5.5, -6.5, -7.5, 0.0 };		//The last entry in this array is for centering the rescanner
 

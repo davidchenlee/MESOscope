@@ -535,8 +535,8 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		switch (mWavelength_nm)
 		{
 		case 750:
-			mVoltagePerDistance = 0.220 * mScanCalib;
-			mRescanVoltageOffset = -0.05 * V;
+			mVoltagePerDistance = 0.310 * mScanCalib;
+			mRescanVoltageOffset = 0.0835876 * V;
 			break;
 		case 920:
 			mVoltagePerDistance = 0.210 * mScanCalib;
@@ -899,7 +899,7 @@ void Filterwheel::setPosition(const FILTERCOLOR color)
 			const int diffPos{ maxPos - minPos };
 			const int minSteps{ (std::min)(diffPos, mNpos - diffPos) };
 
-			//std::cout << "Tuning the " << mDeviceName << " to " + colorToString_(color) << "...\n";
+			std::cout << "Tuning " << mFilterwheelName << " to " + colorToString_(color) << "...\n";
 			Sleep(static_cast<DWORD>(1. * minSteps / mTuningSpeed / ms));	//Wait until the filterwheel stops turning the turret
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
@@ -911,7 +911,7 @@ void Filterwheel::setPosition(const FILTERCOLOR color)
 			{
 				//Thread-safe message
 				std::stringstream msg;
-				msg << mFilterwheelName << " successfully set to " + colorToString_(mColor) << " (position = " << mPosition << ")\n";
+				//msg << mFilterwheelName << " successfully set to " + colorToString_(mColor) << " (position = " << mPosition << ")\n";
 				std::cout << msg.str();
 			}
 			else

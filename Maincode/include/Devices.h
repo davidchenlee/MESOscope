@@ -89,7 +89,7 @@ class Galvo
 
 	//To point a single laser beam (i.e., without using the beamsplitter) at a specific channel of the PMT16X
 	const double mInterBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
-	const std::vector<double> beamletOrder{ -7.5, -6.5, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 0.0 };		//The last entry in this array is for centering the rescanner
+	const std::vector<double> beamletOrder{ 7.5, 6.5, 5.5, 4.5, 3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5, -4.5, -5.5, -6.5, -7.5, 0.0 };		//The last entry in this array is for centering the rescanner
 
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	
 	RTCHAN mGalvoRTchannel;
@@ -137,9 +137,9 @@ class Filterwheel
 	/* Beamsplitters in the excitation wheel as of Feb 2019
 	position #1, 750 nm beamsplitter
 	position #2, open (no beamsplitter)
-	position #3, 1040 nm beamsplitter
+	position #3, 920 nm beamsplitter
 	position #4, open (no beamsplitter)
-	position #5, open (no beamsplitter)
+	position #5, 1040 nm beamsplitter
 	position #6, open (no beamsplitter)
 	GREEN and RED are not set up yet. Just doing some tests*/
 	const std::vector<FILTERCOLOR> mExcConfig{ FILTERCOLOR::BLUE, FILTERCOLOR::OPEN, FILTERCOLOR::GREEN, FILTERCOLOR::OPEN, FILTERCOLOR::RED, FILTERCOLOR::OPEN };

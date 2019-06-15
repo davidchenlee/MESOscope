@@ -560,16 +560,16 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		switch (mWavelength_nm)
 		{
 		case 750:
-			mVoltagePerDistance = 0.310 * mScanCalib;
-			mRescanVoltageOffset = 0.0835876 * V;
+			mVoltagePerDistance = 0.33 * mScanCalib;//higher number, bottom beads shows up first
+			mRescanVoltageOffset = -0.18 * V;//A positive offset aims the beam towards channel 1
 			break;
 		case 920:
-			mVoltagePerDistance = 0.210 * mScanCalib;
-			mRescanVoltageOffset = -0.08 * V;
+			mVoltagePerDistance = 0.33 * mScanCalib;
+			mRescanVoltageOffset = -0.15 * V;
 			break;
 		case 1040:
-			mVoltagePerDistance = 0.220 * mScanCalib;
-			mRescanVoltageOffset = -0.06 * V;
+			mVoltagePerDistance = 0.36 * mScanCalib;
+			mRescanVoltageOffset = -0.03 * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");

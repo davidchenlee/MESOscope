@@ -96,7 +96,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;C:\Program Files %28x86%29\GnuWin32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>PI_GCS2_DLL.lib;PI_GCS2_DLL_x64.lib;libtiff.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>PI_GCS2_DLL.lib;PI_GCS2_DLL_x64.lib;libtiff.lib;Thorlabs.MotionControl.KCube.StepperMotor.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
@@ -177,6 +177,7 @@
     <ClInclude Include="include\Routines.h" />
     <ClInclude Include="include\serial\serial.h" />
     <ClInclude Include="include\serial\win.h" />
+    <ClInclude Include="include\Thorlabs.MotionControl.KCube.StepperMotor.h" />
     <ClInclude Include="include\Utilities.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

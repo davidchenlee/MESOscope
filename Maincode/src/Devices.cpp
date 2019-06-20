@@ -1984,6 +1984,113 @@ void Vibratome::retractDistance(const double distance) const
 */
 #pragma endregion "Vibratome"
 
+#pragma region "Stepper"
+Stepper::Stepper()
+{
+	//Build list of connected device
+	if (TLI_BuildDeviceList() == 0)
+	{
+		//Get device list size 
+		short n = TLI_GetDeviceListSize();
+		std::cout << "Device list size: " << n << "\n";
+		//Get BBD serial numbers
+		char serialNos[100];
+		TLI_GetDeviceListByTypeExt(serialNos, 100, 80);
+
+		//Output list of matching devices
+		{
+			char *searchContext = nullptr;
+			char *p = strtok_s(serialNos, ",", &searchContext);
+
+			while (p != nullptr)
+			{
+				TLI_DeviceInfo deviceInfo;
+				//Get device info from device
+				TLI_GetDeviceInfo(p, &deviceInfo);
+				//Get strings from device info structure
+				char desc[65];
+				strncpy_s(desc, deviceInfo.description, 64);
+				desc[64] = '\0';
+				char serialNo[9];
+				strncpy_s(serialNo, deviceInfo.serialNo, 8);
+				serialNo[8] = '\0';
+				//Output
+				printf("Found Device %s=%s : %s\r\n", p, serialNo, desc);
+				p = strtok_s(nullptr, ",", &searchContext);
+			}
+		}
+	}
+
+	SCC_Open(mSerialNumber);
+
+
+}
+
+Stepper::~Stepper()
+{
+	SCC_Close(mSerialNumber);	//Close device
+}
+
+void Stepper::move(const double position_mm) const
+{
+	int position = static_cast<int>(position_mm * mCalib);
+	//std::cout << "Target position: " << position << "\n";
+
+	//Start the device polling at 200ms intervals
+	SCC_StartPolling(mSerialNumber, 200);
+
+	//Move to position
+	SCC_ClearMessageQueue(mSerialNumber);
+	SCC_MoveToPosition(mSerialNumber, position);
+	std::cout << "Stepper " << mSerialNumber << " is moving...\n";
+
+	//Wait for completion
+	WORD messageType, messageId;
+	DWORD messageData;
+	SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
+	while (messageType != 2 || messageId != 1)
+	{
+		SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
+	}
+
+	//Get actual position
+	int pos = SCC_GetPosition(mSerialNumber);
+	std::cout << "Stepper " << mSerialNumber << " current position: " << pos << "\n";
+	//printf("Device %s moved to %d\r\n", testSerialNo, pos);
+
+	//Stop polling
+	SCC_StopPolling(mSerialNumber);
+}
+
+void Stepper::downloadPosition() const
+{
+
+}
+
+void Stepper::home() const
+{
+	//Start the device polling at 200ms intervals
+	SCC_StartPolling(mSerialNumber, 200);
+
+	Sleep(3000);
+	SCC_ClearMessageQueue(mSerialNumber);
+	SCC_Home(mSerialNumber);
+	std::cout << "Stepper " << mSerialNumber << " is homing...\n";
+
+	//Wait for completion
+	WORD messageType, messageId;
+	DWORD messageData;
+	SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
+	while (messageType != 2 || messageId != 0)
+	{
+		SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
+	}
+
+	//Stop polling
+	SCC_StopPolling(mSerialNumber);
+}
+#pragma endregion "Stepper"
+
 
 #pragma region "Sample"
 Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :

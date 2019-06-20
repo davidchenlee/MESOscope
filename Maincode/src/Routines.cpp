@@ -1658,6 +1658,16 @@ namespace TestRoutines
 #endif
 	}
 
+
+	void stepper()
+	{
+		Stepper lens1;
+		//lens1.move(6.5);
+		lens1.home();
+	}
+
+
+
 	//Photobleach a line along the fast axis (RS) on the sample
 	void photobleach(const FPGAns::FPGA &fpga)
 	{

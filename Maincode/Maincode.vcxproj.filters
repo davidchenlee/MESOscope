@@ -74,5 +74,8 @@
     <ClInclude Include="include\Routines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\Thorlabs.MotionControl.KCube.StepperMotor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -8,6 +8,7 @@
 #include "serial/serial.h"
 #include <memory>					//For smart pointers
 #include <conio.h>					//For _getch()
+#include "Thorlabs.MotionControl.KCube.StepperMotor.h"	//For the Thorlabs stepper
 
 class Image
 {
@@ -349,6 +350,19 @@ public:
 	Vibratome(const FPGAns::FPGA &fpga, Stage &stage);
 	void pushStartStopButton() const;
 	void slice(const double planeToCutZ);
+};
+
+class Stepper
+{
+	const char mSerialNumber[9]{ "26000299" };
+	const double mCalib{ 26000000/12.9442 };	//Thorlabs APT software
+
+public:
+	Stepper();
+	~Stepper();
+	void move(const double position_mm) const;
+	void downloadPosition() const;
+	void home() const;
 };
 
 class Sample

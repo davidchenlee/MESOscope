@@ -1987,21 +1987,23 @@ void Vibratome::retractDistance(const double distance) const
 #pragma region "Stepper"
 Stepper::Stepper()
 {
+	
 	//Build list of connected device
 	if (TLI_BuildDeviceList() == 0)
-	{
+	{/*
 		//Get device list size 
 		short n = TLI_GetDeviceListSize();
-		std::cout << "Device list size: " << n << "\n";
+		//std::cout << "Device list size: " << n << "\n";
+
 		//Get BBD serial numbers
 		char serialNos[100];
-		TLI_GetDeviceListByTypeExt(serialNos, 100, 80);
+		//TLI_GetDeviceListByTypeExt(serialNos, 100, 80);
 
 		//Output list of matching devices
 		{
 			char *searchContext = nullptr;
 			char *p = strtok_s(serialNos, ",", &searchContext);
-
+			
 			while (p != nullptr)
 			{
 				TLI_DeviceInfo deviceInfo;
@@ -2018,12 +2020,12 @@ Stepper::Stepper()
 				printf("Found Device %s=%s : %s\r\n", p, serialNo, desc);
 				p = strtok_s(nullptr, ",", &searchContext);
 			}
-		}
+		}*/
 	}
 
-	SCC_Open(mSerialNumber);
-
-
+	//Open device
+	if (SCC_Open(mSerialNumber))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Unable to open stepper " + mSerialNumber);
 }
 
 Stepper::~Stepper()
@@ -2031,9 +2033,8 @@ Stepper::~Stepper()
 	SCC_Close(mSerialNumber);	//Close device
 }
 
-void Stepper::move(const double position_mm) const
+void Stepper::move(const double position) const
 {
-	int position = static_cast<int>(position_mm * mCalib);
 	//std::cout << "Target position: " << position << "\n";
 
 	//Start the device polling at 200ms intervals
@@ -2041,8 +2042,8 @@ void Stepper::move(const double position_mm) const
 
 	//Move to position
 	SCC_ClearMessageQueue(mSerialNumber);
-	SCC_MoveToPosition(mSerialNumber, position);
-	std::cout << "Stepper " << mSerialNumber << " is moving...\n";
+	SCC_MoveToPosition(mSerialNumber, static_cast<int>(position * mCalib));
+	std::cout << "Stepper " << mSerialNumber << " is moving to " << position / mm << " mm...\n";
 
 	//Wait for completion
 	WORD messageType, messageId;
@@ -2054,9 +2055,7 @@ void Stepper::move(const double position_mm) const
 	}
 
 	//Get actual position
-	int pos = SCC_GetPosition(mSerialNumber);
-	std::cout << "Stepper " << mSerialNumber << " current position: " << pos << "\n";
-	//printf("Device %s moved to %d\r\n", testSerialNo, pos);
+	std::cout << "Stepper " << mSerialNumber << " current position: " << SCC_GetPosition(mSerialNumber) / mCalib /mm << " mm\n";
 
 	//Stop polling
 	SCC_StopPolling(mSerialNumber);
@@ -2064,7 +2063,14 @@ void Stepper::move(const double position_mm) const
 
 void Stepper::downloadPosition() const
 {
+	//Start the device polling at 200ms intervals
+	SCC_StartPolling(mSerialNumber, 200);
 
+	Sleep(3000);
+	std::cout << "Stepper " << mSerialNumber << " current position: " << SCC_GetPosition(mSerialNumber) / mCalib / mm << " mm\n";
+
+	//Stop polling
+	SCC_StopPolling(mSerialNumber);
 }
 
 void Stepper::home() const

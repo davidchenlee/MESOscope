@@ -1661,9 +1661,10 @@ namespace TestRoutines
 
 	void stepper()
 	{
-		Stepper lens1;
-		//lens1.move(6.5);
-		lens1.home();
+		Stepper CollectorLens1;
+		CollectorLens1.move(4.0 * mm);
+		//CollectorLens1.downloadPosition();
+		//CollectorLens1.home();
 	}
 
 

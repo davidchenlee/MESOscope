@@ -354,13 +354,13 @@ public:
 
 class Stepper
 {
-	const char mSerialNumber[9]{ "26000299" };
-	const double mCalib{ 26000000/12.9442 };	//Thorlabs APT software
+	const char mSerialNumber[9]{ "26000299" };	//Each Thorlabs actuator has a unique serial number
+	const double mCalib{ 26000000/(12.9442 * mm) };	//Calibrated by reading the actuator position via Thorlabs APT software
 
 public:
 	Stepper();
 	~Stepper();
-	void move(const double position_mm) const;
+	void move(const double position) const;
 	void downloadPosition() const;
 	void home() const;
 };

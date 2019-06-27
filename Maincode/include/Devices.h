@@ -352,14 +352,18 @@ public:
 	void slice(const double planeToCutZ);
 };
 
-class Stepper
+class MotorizedLens
 {
 	const char mSerialNumber[9]{ "26000299" };	//Each Thorlabs actuator has a unique serial number
-	const double mCalib{ 26000000/(12.9442 * mm) };	//Calibrated by reading the actuator position via Thorlabs APT software
+	const double mCalib{ 26000000/(12.9442 * mm) };	//Calibrated by using Thorlabs APT software to read the position of the actuator
+	const double mPosLimit{ 13. * mm };
+	const int mVel{ 323449856 };// 3 mm/s
+	const int mAcc{ 11041 };// 0.5 mm/s^2
+
 
 public:
-	Stepper();
-	~Stepper();
+	MotorizedLens();
+	~MotorizedLens();
 	void move(const double position) const;
 	void downloadPosition() const;
 	void home() const;

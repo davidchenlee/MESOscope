@@ -560,17 +560,17 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		switch (mWavelength_nm)
 		{
 		case 750:
-			mVoltagePerDistance = 0.32 * mScanCalib;//smaller number, bottom beads shows up first
-			mRescanVoltageOffset = 0.05 * V;//A positive offset aims the beam towards channel 1
+			mVoltagePerDistance = 0.32 * mScanCalib;//larger number, top beads shows up first
+			mRescanVoltageOffset = -0.00 * V;//A positive offset steers the beam towards channel 1
 
 			break;
 		case 920:
-			mVoltagePerDistance = 0.30 * mScanCalib;
-			mRescanVoltageOffset = 0.05 * V;
+			mVoltagePerDistance = 0.32 * mScanCalib;
+			mRescanVoltageOffset = 0.01 * V;
 			break;
 		case 1040:
-			mVoltagePerDistance = 0.34 * mScanCalib;
-			mRescanVoltageOffset = 0.07 * V;
+			mVoltagePerDistance = 0.33 * mScanCalib;
+			mRescanVoltageOffset = 0.03 * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -1984,10 +1984,9 @@ void Vibratome::retractDistance(const double distance) const
 */
 #pragma endregion "Vibratome"
 
-#pragma region "Stepper"
-Stepper::Stepper()
-{
-	
+#pragma region "MotorizedLens"
+MotorizedLens::MotorizedLens()
+{	
 	//Build list of connected device
 	if (TLI_BuildDeviceList() == 0)
 	{/*
@@ -2025,17 +2024,21 @@ Stepper::Stepper()
 
 	//Open device
 	if (SCC_Open(mSerialNumber))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Unable to open stepper " + mSerialNumber);
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Unable to establish connection with stepper " + mSerialNumber);
+
+	Sleep(100);
+	SCC_SetVelParams(mSerialNumber, mAcc, mVel);
 }
 
-Stepper::~Stepper()
+MotorizedLens::~MotorizedLens()
 {
 	SCC_Close(mSerialNumber);	//Close device
 }
 
-void Stepper::move(const double position) const
+void MotorizedLens::move(const double position) const
 {
-	//std::cout << "Target position: " << position << "\n";
+	if (position < 0 || position > mPosLimit)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position for " + mSerialNumber + " must be in the range 0-13 mm");
 
 	//Start the device polling at 200ms intervals
 	SCC_StartPolling(mSerialNumber, 200);
@@ -2043,7 +2046,7 @@ void Stepper::move(const double position) const
 	//Move to position
 	SCC_ClearMessageQueue(mSerialNumber);
 	SCC_MoveToPosition(mSerialNumber, static_cast<int>(position * mCalib));
-	std::cout << "Stepper " << mSerialNumber << " is moving to " << position / mm << " mm...\n";
+	std::cout << "The motorized lens " << mSerialNumber << " is moving to " << position / mm << " mm...\n";
 
 	//Wait for completion
 	WORD messageType, messageId;
@@ -2054,34 +2057,38 @@ void Stepper::move(const double position) const
 		SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
 	}
 
-	//Get actual position
-	std::cout << "Stepper " << mSerialNumber << " current position: " << SCC_GetPosition(mSerialNumber) / mCalib /mm << " mm\n";
+	//Get current position
+	std::cout << "Motorized lens " << mSerialNumber << " current position: " << SCC_GetPosition(mSerialNumber) / mCalib /mm << " mm\n";
 
 	//Stop polling
 	SCC_StopPolling(mSerialNumber);
 }
 
-void Stepper::downloadPosition() const
+void MotorizedLens::downloadPosition() const
 {
 	//Start the device polling at 200ms intervals
 	SCC_StartPolling(mSerialNumber, 200);
 
-	Sleep(3000);
-	std::cout << "Stepper " << mSerialNumber << " current position: " << SCC_GetPosition(mSerialNumber) / mCalib / mm << " mm\n";
+	Sleep(100);	//The code does not work without this sleep
+	std::cout << "Motorized lens " << mSerialNumber << " current position: " << SCC_GetPosition(mSerialNumber) / mCalib / mm << " mm\n";
+
+	int currentVelocity, currentAcceleration;
+	SCC_GetVelParams(mSerialNumber, &currentAcceleration, &currentVelocity);
+	std::cout << "Motorized lens " << mSerialNumber << " current acc: " << currentAcceleration << "\tcurrent vel: " << currentVelocity << "\n";
 
 	//Stop polling
 	SCC_StopPolling(mSerialNumber);
 }
 
-void Stepper::home() const
+void MotorizedLens::home() const
 {
 	//Start the device polling at 200ms intervals
 	SCC_StartPolling(mSerialNumber, 200);
 
-	Sleep(3000);
+	Sleep(100);	//The code does not work without this sleep
 	SCC_ClearMessageQueue(mSerialNumber);
 	SCC_Home(mSerialNumber);
-	std::cout << "Stepper " << mSerialNumber << " is homing...\n";
+	std::cout << "Motorized lens " << mSerialNumber << " is homing...\n";
 
 	//Wait for completion
 	WORD messageType, messageId;
@@ -2095,7 +2102,7 @@ void Stepper::home() const
 	//Stop polling
 	SCC_StopPolling(mSerialNumber);
 }
-#pragma endregion "Stepper"
+#pragma endregion "MotorizedLens"
 
 
 #pragma region "Sample"

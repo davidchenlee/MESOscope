@@ -1509,7 +1509,7 @@ void CollectorLens::home() const
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect) :
 	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mVision(LASER::VISION), mFidelity(LASER::FIDELITY), mFWexcitation(FILTERWHEEL::EXC), mFWdetection(FILTERWHEEL::DET)
 {
-	//Update the wavelength to be used
+	//Update the wavelength
 	mWavelength_nm = wavelength_nm;
 
 	//Tune the laser wavelength
@@ -1607,7 +1607,6 @@ void VirtualLaser::tuneLaserWavelength_()
 	//Update the pockels handler to initialize/update the laser power
 	//The pockels destructor is made to close the uniblitz shutter automatically to allow switching between VISION and FIDELITY or tuning VISION without photobleaching the sample
 	mPockelsPtr.reset(new PockelsCell(mRTcontrol, mWavelength_nm, mCurrentLaser));
-	//	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));
 }
 
 void VirtualLaser::turnFilterwheels_()

@@ -15,401 +15,6 @@ const ChannelList channelList{ channelListBeads };
 
 namespace PMT1XRoutines
 {
-	//The "Swiss knife" of my routines
-	void frameByFrameScan(const FPGAns::FPGA &fpga)
-	{
-		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
-		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
-		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
-		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
-		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
-
-		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
-		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 5 };				//Number of frames for continuous XY acquisition
-
-		//STACK
-		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 100. * um };	//Acquire a stack this deep in Z
-
-		//STAGES
-		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps};
-		std::vector<double3> stagePositionXYZ;
-
-		int nDiffZ;		//Number of frames at different Zs
-		int nSameZ;		//Number of frames at the same Z
-		OVERRIDE override;
-		switch (acqMode)
-		{
-		case RUNMODE::SINGLE:
-			nSameZ = 1;
-			nDiffZ = 1; //Do not change this
-			override = OVERRIDE::DIS;
-			stagePositionXYZ.push_back(stackCenterXYZ);
-			break;
-		case RUNMODE::AVG:
-			nSameZ = 10;
-			nDiffZ = 1; //Do not change this
-			override = OVERRIDE::DIS;
-			stagePositionXYZ.push_back(stackCenterXYZ);
-			break;
-		case RUNMODE::STACK:
-			nSameZ = 1;
-			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
-			override = OVERRIDE::DIS;
-			//Generate the control sequence for the stages
-			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
-			break;
-		case RUNMODE::STACKCENTERED:
-			nSameZ = 1;
-			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
-			override = OVERRIDE::DIS;
-			//Generate the discrete scan sequence for the stages
-			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
-			break;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
-		}
-
-		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH08 };
-
-		//RS
-		const ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();					//Make sure that the RS is running
-
-		//GALVO RT linear scan
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-
-		//LASER
-		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, LASER::AUTO };
-
-		//DATALOG
-		{
-			Logger datalog("datalog_" + sampleName);
-			datalog.record("SAMPLE-------------------------------------------------------");
-			datalog.record("Sample = ", sampleName);
-			datalog.record("Immersion medium = ", immersionMedium);
-			datalog.record("Correction collar = ", collar);
-			datalog.record("\nFPGA---------------------------------------------------------");
-			datalog.record("FPGA clock (MHz) = ", tickPerUs);
-			datalog.record("\nLASER--------------------------------------------------------");
-			datalog.record("Laser wavelength (nm) = ", singleChannel.mWavelength_nm);
-			datalog.record("Laser power first frame (mW) = ", singleChannel.mScanPi / mW);
-			datalog.record("Laser power increase (mW/um) = ", singleChannel.mStackPinc / mWpum);
-			datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod / us);
-			datalog.record("\nSCAN---------------------------------------------------------");
-			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
-			datalog.record("RS period (us) = ", 2 * halfPeriodLineclock / us);
-			datalog.record("Pixel dwell time (us) = ", RTcontrol.mDwell / us);
-			datalog.record("RS fill factor = ", RScanner.mFillFactor);
-			datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
-			datalog.record("\nIMAGE--------------------------------------------------------");
-			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
-			datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleFactorU8);
-			datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
-			datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
-			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
-			datalog.record("Resolution Y (galvo) (um/pix) = ", (FFOVslow / um) / RTcontrol.mHeightPerFrame_pix);
-			datalog.record("\nSTAGE--------------------------------------------------------");
-		}
-
-		//CREATE A STACK FOR STORING THE TIFFS
-		TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nDiffZ, nSameZ };
-
-		//OPEN THE UNIBLITZ SHUTTERS
-		laser.openShutter();	//The destructor will close the shutter automatically
-
-		//ACQUIRE FRAMES AT DIFFERENT Zs
-		for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-		{
-			stage.moveXYZ(stagePositionXYZ.at(iterDiffZ));
-			stage.waitForMotionToStopAll();
-			stage.printPositionXYZ();		//Print the stage position		
-
-			//Acquire many frames at the same Z via discontinuous acquisition
-			for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
-			{
-				std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
-					"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << "\n";
-
-				laser.setPower(singleChannel.mScanPi + iterDiffZ * stepSizeZ * singleChannel.mStackPinc);	//Update the laser power
-
-				//EXECUTE THE RT CONTROL SEQUENCE
-				Image image{ RTcontrol };
-				image.acquire();			//Execute the RT control sequence and acquire the image
-				image.averageFrames();		//Average the frames acquired via continuous XY acquisition
-				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
-
-				if (acqMode == RUNMODE::SINGLE)
-				{
-					//Save individual files
-					std::string singleFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString(singleChannel.mScanPi / mW, 1) + "mW" +
-						"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(YY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(ZZ) / mm, 4) };
-					image.saveTiffSinglePage(singleFilename, override);
-					Sleep(700);
-				}
-			}
-			tiffStack.pushDiffZ(iterDiffZ);
-
-			std::cout << "\n";
-		}
-
-		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::STACK || acqMode == RUNMODE::STACKCENTERED)
-		{
-			//Save the stackDiffZ to file
-			std::string stackFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_Pi=" + toString(singleChannel.mScanPi / mW, 1) + "mW_Pinc=" + toString(singleChannel.mStackPinc / mWpum, 1) + "mWpum" +
-				"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
-				"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
-			tiffStack.saveToFile(stackFilename, override);
-		}
-	}
-
-	//Apply 'frameByFrameScan' on a list of locations. I don't use continuous z-scan because of its limited reach (160 planes)
-	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice)
-	{
-		//ACQUISITION SETTINGS
-		const ChannelList channelList{ channelList };
-		//const ChannelList channelList{ {channelListLiver.findChannel("DAPI")} };
-		const int2 nStacksXY{ 3, 4 };
-		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
-
-		//STACK
-		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY , widthPerFrame_pix * pixelSizeXY };							//Full FOV in the (slow axis, fast axis)
-		const double stepSizeZ{ 0.5 * um };									//Step size in z
-		const double stackDepthZ{ 100. * um };								//Acquire a stack this deep in Z
-		const int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
-		const double3 stackOverlap_frac{ 0.03, 0.03, 0.03 };				//Stack overlap
-		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
-
-		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH08 };
-
-		//RS
-		const ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();					//Make sure that the RS is running
-
-		//GALVO RT linear scan
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOV.at(XX) / 2 };
-
-		//LASER
-		VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm };
-
-		//Create a location list
-		Sequencer sequence{ channelList, Sample(sampleName, immersionMedium, collar), stack, stackCenterXYZ, nStacksXY };
-		std::vector<double2> locationXYList{ sequence.generateLocationList() };
-
-		//STAGES
-		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
-
-		//Iterate over the wavelengths
-		for (std::vector<int>::size_type iter_wv = 0; iter_wv < channelList.size(); iter_wv++)
-		{
-			//DATALOG
-			Logger datalog("datalog_Slice" + std::to_string(nSlice) + "_" + channelList.at(iter_wv).mName);
-			datalog.record("SAMPLE-------------------------------------------------------");
-			datalog.record("Sample = ", sampleName);
-			datalog.record("Immersion medium = ", immersionMedium);
-			datalog.record("Correction collar = ", collar);
-			datalog.record("\nFPGA---------------------------------------------------------");
-			datalog.record("FPGA clock (MHz) = ", tickPerUs);
-			datalog.record("\nSCAN---------------------------------------------------------");
-			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
-			datalog.record("RS period (us) = ", 2 * halfPeriodLineclock / us);
-			datalog.record("Pixel dwell time (us) = ", RTcontrol.mDwell / us);
-			datalog.record("RS fill factor = ", RScanner.mFillFactor);
-			datalog.record("Slow axis FFOV (um) = ", FFOV.at(XX) / um);
-			datalog.record("\nIMAGE--------------------------------------------------------");
-			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
-			datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleFactorU8);
-			datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
-			datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
-			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
-			datalog.record("Resolution Y (galvo) (um/pix) = ", (FFOV.at(XX) / um) / RTcontrol.mHeightPerFrame_pix);
-			datalog.record("\n");
-
-			//Update the laser wavelength
-			const int wavelength_nm = channelList.at(iter_wv).mWavelength_nm;
-			laser.reconfigure(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
-			laser.openShutter();				//Re-open the Uniblitz shutter if closed
-
-			//Iterate over the locations
-			for (std::vector<int>::size_type iter_loc = 0; iter_loc < locationXYList.size(); iter_loc++)
-			{
-				//Generate the discrete scan sequence for the stages
-				std::vector<double3> stagePositionXYZ;
-				for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-					stagePositionXYZ.push_back({ locationXYList.at(iter_loc).at(XX), locationXYList.at(iter_loc).at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
-				
-				//CREATE A STACK FOR STORING THE TIFFS
-				TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nDiffZ, 1 };
-
-				//ACQUIRE FRAMES AT DIFFERENT Zs
-				for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-				{
-					//Update the stages position
-					stage.moveXYZ(stagePositionXYZ.at(iterDiffZ));
-					stage.waitForMotionToStopAll();
-					//stage.printPositionXYZ();		//Print the stage position		
-
-					std::cout << "Location: " << iter_loc + 1 << "/" << locationXYList.size() << "\tTotal frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
-
-					//Update the laser power
-					laser.setPower(channelList.at(iter_wv).mScanPi + iterDiffZ * stepSizeZ * channelList.at(iter_wv).mStackPinc);
-
-					//EXECUTE THE RT CONTROL SEQUENCE
-					Image image{ RTcontrol };
-					image.acquire();			//Execute the RT control sequence and acquire the image
-					image.averageFrames();		//Average the frames acquired via continuous XY acquisition
-					tiffStack.pushSameZ(0, image.pointerToTiff());
-					tiffStack.pushDiffZ(iterDiffZ);
-					std::cout << "\n";
-					
-					pressESCforEarlyTermination();		//Early termination if ESC is pressed
-				}
-
-				//Save the stackDiffZ to file
-				std::string shortName{ "Slice" + std::to_string(nSlice) + "_" + channelList.at(iter_wv).mName + "_Tile" + std::to_string(iter_loc + 1) };
-				std::string longName{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(channelList.at(iter_wv).mScanPi / mW, 1) + "mW_Pinc=" + toString(channelList.at(iter_wv).mStackPinc / mWpum, 1) + "mWpum" +
-					"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
-					"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
-
-				datalog.record(shortName + "\t" + longName);
-				tiffStack.saveToFile(shortName, OVERRIDE::DIS);
-			}//iter_loc
-		}//iter_wv
-	}
-
-	//Image the sample non-stop. Use the PI program to move the stages around manually
-	void liveScan(const FPGAns::FPGA &fpga)
-	{
-		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
-		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
-
-		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH08 };
-
-		//RS
-		const ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();					//Make sure that the RS is running
-
-		//GALVO RT linear scan
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-
-		//LASER
-		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, LASER::AUTO };
-
-		//OPEN THE UNIBLITZ SHUTTERS
-		laser.openShutter();	//The destructor will close the shutter automatically
-
-		while (true)
-		{
-			laser.setPower(singleChannel.mScanPi);	//Set the laser power
-
-			//EXECUTE THE RT CONTROL SEQUENCE
-			Image image{ RTcontrol };
-			image.acquire();								//Execute the RT control sequence and acquire the image
-			image.averageFrames();							//Average the frames acquired via continuous XY acquisition
-			image.saveTiffSinglePage("Untitled", OVERRIDE::EN);	//Save individual files
-			Sleep(700);
-
-			pressESCforEarlyTermination();		//Early termination if ESC is pressed
-		}
-	}
-
-	/*
-	The galvo scans the FOV back and forth continuously while the z-stage travels nonstop
-	The pc triggers the z-stage motion, then the position of the stage triggers the scanning routine
-	Using the PI step-response monitor, I observe that the motion of the stage is somewhat nonlinear (+/- 1 um off target) at the start or end.
-	I then thought that, due to such asymmetry, the forth and back z-scanning would generate slightly different registrations
-	I therefore set DO1 to output a 50us-pulse every time the stage travels 0.3 um and triggered the stack acquisition with such signal
-	(see the implementation on LV and also the DO config of the stage driver). Because the position of the stage is supposed to be absolute and precise,
-	I thought that the registration would perfect. However, the beads differed in 3 or more planes.
-	I triggered the stack acquisition using DO2 for both scanning directions: top-down and bottom-up. Under DO2 triggering, the beads' z-position in both cases looks
-	almost identical, with a difference of maybe 1 plane only (0.5 um)
-	Remember that I do not use MACROS on the stages anymore
-	*/
-	void continuousScan(const FPGAns::FPGA &fpga)
-	{
-		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("GFP") };	//Select a particular laser
-		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 160 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };
-		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };		//Scan direction in z
-		const double stackDepth{ nFramesCont * stepSizeZ };
-
-		double stageZi, stageZf, laserPi, laserPf;
-		switch (scanDirZ)
-		{
-		case ZSCAN::TOPDOWN:
-			stageZi = stackCenterXYZ.at(ZZ);
-			stageZf = stackCenterXYZ.at(ZZ) + stackDepth;
-			laserPi = singleChannel.mScanPi;
-			laserPf = singleChannel.mScanPi + stackDepth * singleChannel.mStackPinc;
-			break;
-		case ZSCAN::BOTTOMUP:
-			stageZi = stackCenterXYZ.at(ZZ) + stackDepth;
-			stageZf = stackCenterXYZ.at(ZZ);
-			laserPi = singleChannel.mScanPi + stackDepth * singleChannel.mStackPinc;
-			laserPf = singleChannel.mScanPi;
-			break;
-		}
-
-		//STAGES
-		const double3 initialStageXYZ{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stageZi };		//Initial position of the stages. The sign of stackDepth determines the scanning direction					
-		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };	//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
-		stage.moveXYZ(initialStageXYZ);
-		stage.waitForMotionToStopAll();
-
-		//CREATE THE REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH08 };	//Notice the ZSTAGE flag
-
-		//LASER
-		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, laserPi, LASER::VISION };
-
-		//RS
-		const ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();		//Make sure that the RS is running
-
-		//GALVO RT linear scan
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-
-		//OPEN THE SHUTTER
-		laser.openShutter();	//The destructor will close the shutter automatically
-
-		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{ RTcontrol };
-		image.initialize(scanDirZ);
-		std::cout << "Scanning the stack...\n";
-		stage.moveSingle(ZZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
-		image.downloadData();
-		image.postprocess();
-
-		const std::string filename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(singleChannel.mStackPinc / mWpum, 1) +
-			"mWpum_x=" + toString(initialStageXYZ.at(XX) / mm, 3) + "_y=" + toString(initialStageXYZ.at(YY) / mm, 3) +
-			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
-		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
-	}
-
 	//Full sequence to image and cut an entire sample automatically
 	//Note that the stack starts at stackCenterXYZ.at(ZZ). Therefore, the stack is not centered around stackCenterXYZ.at(ZZ).
 	void sequencer(const FPGAns::FPGA &fpga)
@@ -536,7 +141,7 @@ namespace PMT1XRoutines
 
 namespace PMT16XRoutines
 {
-	//Copy of frameByFrameScan() with sync'ed rescanner
+	//The "Swiss knife" of my routines
 	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga)
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
@@ -719,7 +324,7 @@ namespace PMT16XRoutines
 		}
 	}
 
-	//Copy of PMT1XRoutines::frameByFrameScanTiling() with sync'ed rescanner
+	//Apply 'frameByFrameScan' on a list of locations
 	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice)
 	{
 		//ACQUISITION SETTINGS
@@ -857,7 +462,7 @@ namespace PMT16XRoutines
 		}//iter_wv
 	}
 
-	//Image the sample non-stop. Use the PI program to move the stages around manually
+	//Image the sample non-stop. Use the PI program to move the stages manually
 	void liveScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -900,7 +505,18 @@ namespace PMT16XRoutines
 		}
 	}
 
-	//Copy of PMT1XRoutines::continuousScan() with sync'ed rescanner
+	/*
+	The galvo scans the FOV back and forth continuously while the z-stage travels nonstop
+	The pc triggers the z-stage motion, then the position of the stage triggers the scanning routine
+	Using the PI step-response monitor, I observe that the motion of the stage is somewhat nonlinear (+/- 1 um off target) at the start or end.
+	I then thought that, due to such asymmetry, the forth and back z-scanning would generate slightly different registrations
+	I therefore set DO1 to output a 50us-pulse every time the stage travels 0.3 um and triggered the stack acquisition with such signal
+	(see the implementation on LV and also the DO config of the stage driver). Because the position of the stage is supposed to be absolute and precise,
+	I thought that the registration would perfect. However, the beads differed in 3 or more planes.
+	I triggered the stack acquisition using DO2 for both scanning directions: top-down and bottom-up. Under DO2 triggering, the beads' z-position in both cases looks
+	almost identical, with a difference of maybe 1 plane only (0.5 um)
+	Remember that I do not use MACROS on the stages anymore
+	*/
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS

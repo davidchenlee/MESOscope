@@ -8,10 +8,6 @@ int main(int argc, char* argv[])
 		try
 		{
 			//PMT1X SEQUENCES
-			//PMT1XRoutines::frameByFrameScan(fpga);
-			//PMT1XRoutines::frameByFrameScanTiling(fpga, 2);
-			//PMT1XRoutines::liveScan(fpga);
-			//PMT1XRoutines::continuousScan(fpga);
 			//PMT1XRoutines::sequencer(fpga);//FIX: I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
 
 			//PMT16X SEQUENCES

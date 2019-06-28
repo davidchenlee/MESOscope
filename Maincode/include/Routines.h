@@ -5,10 +5,6 @@
 //MAIN SEQUENCES
 namespace PMT1XRoutines
 {
-	void frameByFrameScan(const FPGAns::FPGA &fpga);
-	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice);
-	void liveScan(const FPGAns::FPGA &fpga);
-	void continuousScan(const FPGAns::FPGA &fpga);
 	void sequencer(const FPGAns::FPGA &fpga);
 }
 

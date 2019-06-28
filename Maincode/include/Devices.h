@@ -252,6 +252,23 @@ public:
 	void setShutter(const bool state) const;
 };
 
+class CollectorLens
+{
+	const char mSerialNumber[9]{ "26000299" };	//Each Thorlabs actuator has a unique serial number
+	const double mCalib{ 26000000/(12.9442 * mm) };	//Calibrated by using Thorlabs APT software to read the position of the actuator
+	const double mPosLimit{ 13. * mm };
+	const int mVel{ 323449856 };// 3 mm/s
+	const int mAcc{ 11041 };// 0.5 mm/s^2
+
+
+public:
+	CollectorLens();
+	~CollectorLens();
+	void move(const double position) const;
+	void downloadPosition() const;
+	void home() const;
+};
+
 class VirtualLaser
 {
 	LASER mLaserSelect;					//use VISION, FIDELITY, or AUTO (let the code decide)
@@ -262,13 +279,15 @@ class VirtualLaser
 	Laser mFidelity;
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
+	CollectorLens mCollectorLens;
 	std::unique_ptr <PockelsCell> mPockelsPtr;
 	const double mPockelTimeStep{ 8. * us };		//Time step for the RT pockels command
 
 	std::string laserNameToString_(const LASER whichLaser) const;
 	void isLaserInternalShutterOpen_() const;
-	LASER autoselectLaser_(const int wavelength_nm);
-	void turnFilterwheels_(const int wavelength_nm);
+	LASER autoSelectLaser_(const int wavelength_nm);
+	void turnFilterwheels_();
+	void selectCollectorLensPos_() const;
 public:
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect = LASER::AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LASER laserSelect = LASER::AUTO);
@@ -348,23 +367,6 @@ public:
 	Vibratome(const FPGAns::FPGA &fpga, Stage &stage);
 	void pushStartStopButton() const;
 	void slice(const double planeToCutZ);
-};
-
-class MotorizedLens
-{
-	const char mSerialNumber[9]{ "26000299" };	//Each Thorlabs actuator has a unique serial number
-	const double mCalib{ 26000000/(12.9442 * mm) };	//Calibrated by using Thorlabs APT software to read the position of the actuator
-	const double mPosLimit{ 13. * mm };
-	const int mVel{ 323449856 };// 3 mm/s
-	const int mAcc{ 11041 };// 0.5 mm/s^2
-
-
-public:
-	MotorizedLens();
-	~MotorizedLens();
-	void move(const double position) const;
-	void downloadPosition() const;
-	void home() const;
 };
 
 class Sample

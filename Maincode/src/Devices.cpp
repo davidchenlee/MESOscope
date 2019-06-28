@@ -1384,6 +1384,125 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 */
 #pragma endregion "Pockels cells"
 
+#pragma region "CollectorLens"
+CollectorLens::CollectorLens()
+{	
+	//Build list of connected device
+	if (TLI_BuildDeviceList() == 0)
+	{/*
+		//Get device list size 
+		short n = TLI_GetDeviceListSize();
+		//std::cout << "Device list size: " << n << "\n";
+
+		//Get BBD serial numbers
+		char serialNos[100];
+		//TLI_GetDeviceListByTypeExt(serialNos, 100, 80);
+
+		//Output list of matching devices
+		{
+			char *searchContext = nullptr;
+			char *p = strtok_s(serialNos, ",", &searchContext);
+			
+			while (p != nullptr)
+			{
+				TLI_DeviceInfo deviceInfo;
+				//Get device info from device
+				TLI_GetDeviceInfo(p, &deviceInfo);
+				//Get strings from device info structure
+				char desc[65];
+				strncpy_s(desc, deviceInfo.description, 64);
+				desc[64] = '\0';
+				char serialNo[9];
+				strncpy_s(serialNo, deviceInfo.serialNo, 8);
+				serialNo[8] = '\0';
+				//Output
+				printf("Found Device %s=%s : %s\r\n", p, serialNo, desc);
+				p = strtok_s(nullptr, ",", &searchContext);
+			}
+		}*/
+	}
+
+	//Open device
+	if (SCC_Open(mSerialNumber))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Unable to establish connection with stepper " + mSerialNumber);
+
+	Sleep(100);
+	SCC_SetVelParams(mSerialNumber, mAcc, mVel);
+}
+
+CollectorLens::~CollectorLens()
+{
+	SCC_Close(mSerialNumber);	//Close device
+}
+
+void CollectorLens::move(const double position) const
+{
+	if (position < 0 || position > mPosLimit)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position for the collector lens must be in the range 0-13 mm");
+
+	//Start the device polling at 200ms intervals
+	SCC_StartPolling(mSerialNumber, 200);
+
+	//Move to position
+	SCC_ClearMessageQueue(mSerialNumber);
+	SCC_MoveToPosition(mSerialNumber, static_cast<int>(position * mCalib));
+	std::cout << "The collector lens is moving to " << position / mm << " mm...\n";
+
+	//Wait for completion
+	WORD messageType, messageId;
+	DWORD messageData;
+	SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
+	while (messageType != 2 || messageId != 1)
+	{
+		SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
+	}
+
+	//Get current position
+	//std::cout << "Collector lens current position: " << SCC_GetPosition(mSerialNumber) / mCalib /mm << " mm\n";
+
+	//Stop polling
+	SCC_StopPolling(mSerialNumber);
+}
+
+void CollectorLens::downloadPosition() const
+{
+	//Start the device polling at 200ms intervals
+	SCC_StartPolling(mSerialNumber, 200);
+
+	Sleep(100);	//The code does not work without this sleep
+	std::cout << "Collector lens current position: " << SCC_GetPosition(mSerialNumber) / mCalib / mm << " mm\n";
+
+	int currentVelocity, currentAcceleration;
+	SCC_GetVelParams(mSerialNumber, &currentAcceleration, &currentVelocity);
+	std::cout << "Collector lens current acceleration: " << currentAcceleration << "\tcurrent vel: " << currentVelocity << "\n";
+
+	//Stop polling
+	SCC_StopPolling(mSerialNumber);
+}
+
+void CollectorLens::home() const
+{
+	//Start the device polling at 200ms intervals
+	SCC_StartPolling(mSerialNumber, 200);
+
+	Sleep(100);	//The code does not work without this sleep
+	SCC_ClearMessageQueue(mSerialNumber);
+	SCC_Home(mSerialNumber);
+	std::cout << "Collector lens is homing...\n";
+
+	//Wait for completion
+	WORD messageType, messageId;
+	DWORD messageData;
+	SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
+	while (messageType != 2 || messageId != 0)
+	{
+		SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
+	}
+
+	//Stop polling
+	SCC_StopPolling(mSerialNumber);
+}
+#pragma endregion "CollectorLens"
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
@@ -1391,18 +1510,25 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mVision(LASER::VISION), mFidelity(LASER::FIDELITY), mFWexcitation(FILTERWHEEL::EXC), mFWdetection(FILTERWHEEL::DET)
 {
 	//Select the laser to be used: VISION or FIDELITY
-	mCurrentLaser = autoselectLaser_(wavelength_nm);
+	mCurrentLaser = autoSelectLaser_(wavelength_nm);
 	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 
-	//Update the laser wavelength if VISION was chosen
+	//Tune the laser wavelength if VISION was chosen
 	if (mCurrentLaser == LASER::VISION)
 		mVision.setWavelength(wavelength_nm);
+	
+	//Initialize the pockels cell and set the laser power
+	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));
+	setPower(initialPower, finalPower);																		
 
-	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Initialize the pockels cell
-	setPower(initialPower, finalPower);																		//set the laser power
+	//Check if the internal shutter of the laser is open
+	isLaserInternalShutterOpen_();
 
-	isLaserInternalShutterOpen_();		//Check if the internal shutter of the laser is open
-	turnFilterwheels_(wavelength_nm);	//Turn the filterwheels
+	//Set the filterwheels
+	turnFilterwheels_();	
+
+	//Set the collector lens position
+	selectCollectorLensPos_();
 }
 
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LASER laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, laserPower, laserPower, laserSelect) {}
@@ -1454,7 +1580,7 @@ void VirtualLaser::isLaserInternalShutterOpen_() const
 }
 
 //Return VISION, FIDELITY, or let the code to decide
-LASER VirtualLaser::autoselectLaser_(const int wavelength_nm)
+LASER VirtualLaser::autoSelectLaser_(const int wavelength_nm)
 {
 	//Update the wavelength to be used
 	mWavelength_nm = wavelength_nm;
@@ -1469,11 +1595,11 @@ LASER VirtualLaser::autoselectLaser_(const int wavelength_nm)
 		else
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 	}
-	else //If mLaserSelect != AUTO, the mLaserSelect is VISION or FIDELITY
+	else //If mLaserSelect != LASER::AUTO, the mLaserSelect is either LASER::VISION or LASER::FIDELITY
 		return mLaserSelect;
 }
 
-void VirtualLaser::turnFilterwheels_(const int wavelength_nm)
+void VirtualLaser::turnFilterwheels_()
 {
 #if multibeam
 		//Multiplex
@@ -1486,21 +1612,38 @@ void VirtualLaser::turnFilterwheels_(const int wavelength_nm)
 		//Single beam
 		//Turn both filterwheels concurrently
 		std::thread th1{ &Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN };	//Set the excitation filterwheel open (no filter)
-		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
+		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, mWavelength_nm };
 		th1.join();
 		th2.join();
 #endif
 }
 
-//Automatically select the laser for the requested wavelength. The pockels destructor closes the uniblitz shutter automatically to:
-//1. switch from VISION to FIDELITY or vice versa
-//2. avoid excessive photobleaching while tuning VISION
+void VirtualLaser::selectCollectorLensPos_() const
+{
+	switch (mWavelength_nm)
+	{
+	case 750:
+		mCollectorLens.move(8.0 * mm);
+		break;
+	case 920:
+		mCollectorLens.move(4.0 * mm);
+		break;
+	case 1040:
+		mCollectorLens.move(1.0 * mm);
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector lens position has not been calibrated for the wavelength " + std::to_string(mWavelength_nm));
+	}
+}
+
+//Automatically select a laser for the requested wavelength. The pockels destructor is made to close the uniblitz shutter automatically to
+//switch between VISION and FIDELITY and also to avoid excessive photobleaching while tuning VISION
 void VirtualLaser::setWavelength(const int wavelength_nm)
 {
 	//Ignore if the requested wavelength is current
 	if (wavelength_nm != mWavelength_nm)
 	{
-		mCurrentLaser = autoselectLaser_(wavelength_nm);								//Update the selected laser
+		mCurrentLaser = autoSelectLaser_(wavelength_nm);								//Update the selected laser
 		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Update the pockels handler. The pockels destructor closes the uniblitz shutter automatically
 		std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
 
@@ -1508,8 +1651,14 @@ void VirtualLaser::setWavelength(const int wavelength_nm)
 		if (mCurrentLaser == LASER::VISION)
 			mVision.setWavelength(wavelength_nm);
 
-		isLaserInternalShutterOpen_();		//Check if the laser internal shutter is open
-		turnFilterwheels_(wavelength_nm);	//Turn the filterwheels
+		//Check if the laser internal shutter is open
+		isLaserInternalShutterOpen_();
+
+		//Set the filterwheels
+		turnFilterwheels_();
+
+		//Set the collector lens position
+		selectCollectorLensPos_();
 	}
 }
 
@@ -1983,127 +2132,6 @@ void Vibratome::retractDistance(const double distance) const
 }
 */
 #pragma endregion "Vibratome"
-
-#pragma region "MotorizedLens"
-MotorizedLens::MotorizedLens()
-{	
-	//Build list of connected device
-	if (TLI_BuildDeviceList() == 0)
-	{/*
-		//Get device list size 
-		short n = TLI_GetDeviceListSize();
-		//std::cout << "Device list size: " << n << "\n";
-
-		//Get BBD serial numbers
-		char serialNos[100];
-		//TLI_GetDeviceListByTypeExt(serialNos, 100, 80);
-
-		//Output list of matching devices
-		{
-			char *searchContext = nullptr;
-			char *p = strtok_s(serialNos, ",", &searchContext);
-			
-			while (p != nullptr)
-			{
-				TLI_DeviceInfo deviceInfo;
-				//Get device info from device
-				TLI_GetDeviceInfo(p, &deviceInfo);
-				//Get strings from device info structure
-				char desc[65];
-				strncpy_s(desc, deviceInfo.description, 64);
-				desc[64] = '\0';
-				char serialNo[9];
-				strncpy_s(serialNo, deviceInfo.serialNo, 8);
-				serialNo[8] = '\0';
-				//Output
-				printf("Found Device %s=%s : %s\r\n", p, serialNo, desc);
-				p = strtok_s(nullptr, ",", &searchContext);
-			}
-		}*/
-	}
-
-	//Open device
-	if (SCC_Open(mSerialNumber))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Unable to establish connection with stepper " + mSerialNumber);
-
-	Sleep(100);
-	SCC_SetVelParams(mSerialNumber, mAcc, mVel);
-}
-
-MotorizedLens::~MotorizedLens()
-{
-	SCC_Close(mSerialNumber);	//Close device
-}
-
-void MotorizedLens::move(const double position) const
-{
-	if (position < 0 || position > mPosLimit)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position for " + mSerialNumber + " must be in the range 0-13 mm");
-
-	//Start the device polling at 200ms intervals
-	SCC_StartPolling(mSerialNumber, 200);
-
-	//Move to position
-	SCC_ClearMessageQueue(mSerialNumber);
-	SCC_MoveToPosition(mSerialNumber, static_cast<int>(position * mCalib));
-	std::cout << "The motorized lens " << mSerialNumber << " is moving to " << position / mm << " mm...\n";
-
-	//Wait for completion
-	WORD messageType, messageId;
-	DWORD messageData;
-	SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
-	while (messageType != 2 || messageId != 1)
-	{
-		SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
-	}
-
-	//Get current position
-	std::cout << "Motorized lens " << mSerialNumber << " current position: " << SCC_GetPosition(mSerialNumber) / mCalib /mm << " mm\n";
-
-	//Stop polling
-	SCC_StopPolling(mSerialNumber);
-}
-
-void MotorizedLens::downloadPosition() const
-{
-	//Start the device polling at 200ms intervals
-	SCC_StartPolling(mSerialNumber, 200);
-
-	Sleep(100);	//The code does not work without this sleep
-	std::cout << "Motorized lens " << mSerialNumber << " current position: " << SCC_GetPosition(mSerialNumber) / mCalib / mm << " mm\n";
-
-	int currentVelocity, currentAcceleration;
-	SCC_GetVelParams(mSerialNumber, &currentAcceleration, &currentVelocity);
-	std::cout << "Motorized lens " << mSerialNumber << " current acc: " << currentAcceleration << "\tcurrent vel: " << currentVelocity << "\n";
-
-	//Stop polling
-	SCC_StopPolling(mSerialNumber);
-}
-
-void MotorizedLens::home() const
-{
-	//Start the device polling at 200ms intervals
-	SCC_StartPolling(mSerialNumber, 200);
-
-	Sleep(100);	//The code does not work without this sleep
-	SCC_ClearMessageQueue(mSerialNumber);
-	SCC_Home(mSerialNumber);
-	std::cout << "Motorized lens " << mSerialNumber << " is homing...\n";
-
-	//Wait for completion
-	WORD messageType, messageId;
-	DWORD messageData;
-	SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
-	while (messageType != 2 || messageId != 0)
-	{
-		SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
-	}
-
-	//Stop polling
-	SCC_StopPolling(mSerialNumber);
-}
-#pragma endregion "MotorizedLens"
-
 
 #pragma region "Sample"
 Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :

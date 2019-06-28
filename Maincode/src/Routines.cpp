@@ -1296,8 +1296,8 @@ namespace TestRoutines
 		VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower };
 
 		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{ RTcontrol };
-		image.acquire();					//Execute the RT control sequence
+		//Image image{ RTcontrol };
+		//image.acquire();					//Execute the RT control sequence
 	}
 
 	void convertI16toVolt()
@@ -1664,10 +1664,10 @@ namespace TestRoutines
 
 	void motorizedLens()
 	{
-		MotorizedLens collectorLens1;
-		collectorLens1.move(0.0 * mm);
-		//collectorLens1.downloadPosition();
-		//collectorLens1.home();
+		CollectorLens collectorLens;
+		collectorLens.move(0.0 * mm);
+		//collectorLens.downloadPosition();
+		//collectorLens.home();
 	}
 
 

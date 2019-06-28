@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 		pressAnyKeyToCont();
 	}
 
-	//pressAnyKeyToCont();
+	pressAnyKeyToCont();
 	return 0;
 }
 

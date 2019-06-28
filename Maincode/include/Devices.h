@@ -175,7 +175,7 @@ class Filterwheel
 	const double mTuningSpeed{ 0.8 / sec };	//The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
 	const int mRxBufSize{ 256 };			//Serial buffer size
 
-	void downloadColor_();
+	int downloadPosition_() const;
 	int colorToPosition_(const FILTERCOLOR color) const;
 	FILTERCOLOR positionToColor_(const int position) const;
 	std::string colorToString_(const FILTERCOLOR color) const;
@@ -202,7 +202,7 @@ class Laser
 	const double mTuningSpeed{ 35. / sec };		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
 	const int mRxBufSize{ 256 };				//Serial buffer size
 
-	int downloadWavelength_nm_();
+	int downloadWavelength_nm_() const;
 public:
 	std::string laserName;
 	Laser(const LASER whichLaser);
@@ -259,8 +259,6 @@ class CollectorLens
 	const double mPosLimit{ 13. * mm };
 	const int mVel{ 323449856 };// 3 mm/s
 	const int mAcc{ 11041 };// 0.5 mm/s^2
-
-
 public:
 	CollectorLens();
 	~CollectorLens();
@@ -285,15 +283,16 @@ class VirtualLaser
 
 	std::string laserNameToString_(const LASER whichLaser) const;
 	void isLaserInternalShutterOpen_() const;
-	LASER autoSelectLaser_(const int wavelength_nm);
+	LASER autoSelectLaser_() const;
+	void tuneLaserWavelength_();
 	void turnFilterwheels_();
-	void selectCollectorLensPos_() const;
+	void positionCollectorLens_() const;
 public:
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect = LASER::AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LASER laserSelect = LASER::AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelect = LASER::AUTO);
 
-	void setWavelength(const int wavelength_nm);
+	void reconfigure(const int wavelength_nm);
 	void setPower(const double laserPower) const;
 	void setPower(const double initialPower, const double finalPower) const;
 	void powerLinearRamp(const double Pi, const double Pf) const;

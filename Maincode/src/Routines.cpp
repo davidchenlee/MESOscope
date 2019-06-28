@@ -240,7 +240,7 @@ namespace PMT1XRoutines
 
 			//Update the laser wavelength
 			const int wavelength_nm = channelList.at(iter_wv).mWavelength_nm;
-			laser.setWavelength(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
+			laser.reconfigure(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
 			laser.openShutter();				//Re-open the Uniblitz shutter if closed
 
 			//Iterate over the locations
@@ -496,7 +496,7 @@ namespace PMT1XRoutines
 					stackPinc = acqStack.mStackPinc;
 
 					//Update the laser parameters if needed
-					laser.setWavelength(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
+					laser.reconfigure(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
 					laser.setPower(scanPi, static_cast<int>(scanDirZ) * stackPinc);
 					laser.openShutter();	//Re-open the Uniblitz shutter if closed
 
@@ -807,7 +807,7 @@ namespace PMT16XRoutines
 
 			//Update the laser wavelength
 			const int wavelength_nm = channelList.at(iter_wv).mWavelength_nm;
-			laser.setWavelength(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
+			laser.reconfigure(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
 			laser.openShutter();				//Re-open the Uniblitz shutter if closed
 
 			//Iterate over the locations
@@ -1291,9 +1291,9 @@ namespace TestRoutines
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga };
 
-		const int wavelength_nm{ 920 };
+		const int wavelength_nm{ 1040 };
 		const double laserPower{ 50. * mW };		//Laser power
-		VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower };
+		VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower, LASER::VISION };
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		//Image image{ RTcontrol };

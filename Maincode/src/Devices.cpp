@@ -815,7 +815,8 @@ Filterwheel::Filterwheel(const FILTERWHEEL whichFilterwheel): mWhichFilterwheel(
 	try
 	{
 		mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(static_cast<int>(mPort)), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms)));
-		downloadColor_();	//Download the current filter position
+		mPosition = downloadPosition_();		//Download the current filter position
+		mColor = positionToColor_(mPosition);
 	}
 	catch (const serial::IOException)
 	{
@@ -829,7 +830,7 @@ Filterwheel::~Filterwheel()
 }
 
 //Download the current filter position
-void Filterwheel::downloadColor_()
+int Filterwheel::downloadPosition_() const
 {
 	const std::string TxBuffer{ "pos?\r" };	//Command to the filterwheel
 	std::string RxBuffer;					//Reply from the filterwheel
@@ -851,8 +852,7 @@ void Filterwheel::downloadColor_()
 		//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
 		//std::cout << "RxBuffer: " << RxBuffer << "\n";	//For debugging
-		mPosition = std::stoi(RxBuffer);					//convert string to int
-		mColor = positionToColor_(mPosition);
+		return std::stoi(RxBuffer);					//convert string to int
 	}
 	catch (const serial::IOException)
 	{
@@ -931,7 +931,9 @@ void Filterwheel::setPosition(const FILTERCOLOR color)
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
 														//std::cout << "setColor full RxBuffer: " << RxBuffer << "\n"; //For debugging
 
-			downloadColor_();	//Check if the filterwheel was set successfully 
+			//Update the configuration of the filterwheel
+			mPosition = downloadPosition_();  //Download the current filter position to check that the operation was successful
+			mColor = color;
 
 			if (position == mPosition)
 			{
@@ -1009,7 +1011,7 @@ Laser::~Laser()
 	mSerial->close();
 }
 
-int Laser::downloadWavelength_nm_()
+int Laser::downloadWavelength_nm_() const
 {
 	switch (mWhichLaser)
 	{
@@ -1077,14 +1079,12 @@ void Laser::setWavelength(const int wavelength_nm)
 				std::cout << "Tuning VISION to " << wavelength_nm << " nm...\n";
 				Sleep(static_cast<DWORD>( std::abs( 1.*(mWavelength_nm - wavelength_nm) / mTuningSpeed / ms )) );	//Wait till the laser stops tuning
 
-				mSerial->read(RxBuffer, mRxBufSize);	//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
+				mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
 
-				downloadWavelength_nm_();				//Check if the laser was set successfully 
+				mWavelength_nm = downloadWavelength_nm_();	//Check if the laser was set successfully 
 
-				if (mWavelength_nm = wavelength_nm)
-					std::cout << "VISION wavelength successfully set to " << wavelength_nm << " nm\n";
-				else
-					std::cout << "WARNING: VISION might not be in the correct wavelength " << wavelength_nm << " nm\n";
+				if (mWavelength_nm != wavelength_nm)
+					std::cout << "WARNING: VISION might not be at the correct wavelength " << wavelength_nm << " nm\n";
 			}
 			catch (const serial::IOException)
 			{
@@ -1446,7 +1446,7 @@ void CollectorLens::move(const double position) const
 	//Move to position
 	SCC_ClearMessageQueue(mSerialNumber);
 	SCC_MoveToPosition(mSerialNumber, static_cast<int>(position * mCalib));
-	std::cout << "The collector lens is moving to " << position / mm << " mm...\n";
+	std::cout << "Positioning the collector lens at " << position / mm << " mm\n";
 
 	//Wait for completion
 	WORD messageType, messageId;
@@ -1470,11 +1470,11 @@ void CollectorLens::downloadPosition() const
 	SCC_StartPolling(mSerialNumber, 200);
 
 	Sleep(100);	//The code does not work without this sleep
-	std::cout << "Collector lens current position: " << SCC_GetPosition(mSerialNumber) / mCalib / mm << " mm\n";
+	std::cout << "Collector lens position: " << SCC_GetPosition(mSerialNumber) / mCalib / mm << " mm\n";
 
 	int currentVelocity, currentAcceleration;
 	SCC_GetVelParams(mSerialNumber, &currentAcceleration, &currentVelocity);
-	std::cout << "Collector lens current acceleration: " << currentAcceleration << "\tcurrent vel: " << currentVelocity << "\n";
+	std::cout << "Collector lens acceleration: " << currentAcceleration << "\tvelocity " << currentVelocity << "\n";
 
 	//Stop polling
 	SCC_StopPolling(mSerialNumber);
@@ -1488,7 +1488,7 @@ void CollectorLens::home() const
 	Sleep(100);	//The code does not work without this sleep
 	SCC_ClearMessageQueue(mSerialNumber);
 	SCC_Home(mSerialNumber);
-	std::cout << "Collector lens is homing...\n";
+	std::cout << "Homing the collector lens\n";
 
 	//Wait for completion
 	WORD messageType, messageId;
@@ -1509,26 +1509,23 @@ void CollectorLens::home() const
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect) :
 	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mVision(LASER::VISION), mFidelity(LASER::FIDELITY), mFWexcitation(FILTERWHEEL::EXC), mFWdetection(FILTERWHEEL::DET)
 {
-	//Select the laser to be used: VISION or FIDELITY
-	mCurrentLaser = autoSelectLaser_(wavelength_nm);
-	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
+	//Update the wavelength to be used
+	mWavelength_nm = wavelength_nm;
 
-	//Tune the laser wavelength if VISION was chosen
-	if (mCurrentLaser == LASER::VISION)
-		mVision.setWavelength(wavelength_nm);
-	
-	//Initialize the pockels cell and set the laser power
-	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));
-	setPower(initialPower, finalPower);																		
-
-	//Check if the internal shutter of the laser is open
-	isLaserInternalShutterOpen_();
+	//Tune the laser wavelength
+	tuneLaserWavelength_();														
 
 	//Set the filterwheels
 	turnFilterwheels_();	
 
 	//Set the collector lens position
-	selectCollectorLensPos_();
+	positionCollectorLens_();
+
+	//Check if the internal shutter of the laser is open
+	isLaserInternalShutterOpen_();
+
+	//Set the laser power
+	setPower(initialPower, finalPower);
 }
 
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LASER laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, laserPower, laserPower, laserSelect) {}
@@ -1579,24 +1576,38 @@ void VirtualLaser::isLaserInternalShutterOpen_() const
 	}//whileloop
 }
 
-//Return VISION, FIDELITY, or let the code to decide
-LASER VirtualLaser::autoSelectLaser_(const int wavelength_nm)
+//Automatically select a laser. Return VISION, FIDELITY, or let the code to decide based on the requested wavelength
+LASER VirtualLaser::autoSelectLaser_() const
 {
-	//Update the wavelength to be used
-	mWavelength_nm = wavelength_nm;
-
 	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
 	if (mLaserSelect == LASER::AUTO)
 	{
-		if (wavelength_nm < 1040)
+		if (mWavelength_nm < 1040)
 			return LASER::VISION;
-		else if (wavelength_nm == 1040)
+		else if (mWavelength_nm == 1040)
 			return LASER::FIDELITY;
 		else
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the VirtualLaser class");
 	}
 	else //If mLaserSelect != LASER::AUTO, the mLaserSelect is either LASER::VISION or LASER::FIDELITY
 		return mLaserSelect;
+}
+
+//Tune the laser wavelength (for VISION only)
+void VirtualLaser::tuneLaserWavelength_()
+{
+	//Select the laser to be used: VISION or FIDELITY
+	mCurrentLaser = autoSelectLaser_();
+	std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << mWavelength_nm << " nm\n";
+
+	//If VISION is selected, update its wavelength
+	if (mCurrentLaser == LASER::VISION)
+		mVision.setWavelength(mWavelength_nm);
+
+	//Update the pockels handler to initialize/update the laser power
+	//The pockels destructor is made to close the uniblitz shutter automatically to allow switching between VISION and FIDELITY or tuning VISION without photobleaching the sample
+	mPockelsPtr.reset(new PockelsCell(mRTcontrol, mWavelength_nm, mCurrentLaser));
+	//	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));
 }
 
 void VirtualLaser::turnFilterwheels_()
@@ -1618,7 +1629,7 @@ void VirtualLaser::turnFilterwheels_()
 #endif
 }
 
-void VirtualLaser::selectCollectorLensPos_() const
+void VirtualLaser::positionCollectorLens_() const
 {
 	switch (mWavelength_nm)
 	{
@@ -1636,29 +1647,25 @@ void VirtualLaser::selectCollectorLensPos_() const
 	}
 }
 
-//Automatically select a laser for the requested wavelength. The pockels destructor is made to close the uniblitz shutter automatically to
-//switch between VISION and FIDELITY and also to avoid excessive photobleaching while tuning VISION
-void VirtualLaser::setWavelength(const int wavelength_nm)
+void VirtualLaser::reconfigure(const int wavelength_nm)
 {
 	//Ignore if the requested wavelength is current
 	if (wavelength_nm != mWavelength_nm)
 	{
-		mCurrentLaser = autoSelectLaser_(wavelength_nm);								//Update the selected laser
-		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Update the pockels handler. The pockels destructor closes the uniblitz shutter automatically
-		std::cout << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
+		//Update the wavelength to be used
+		mWavelength_nm = wavelength_nm;
 
-		//If VISION is chosen, update the laser wavelength
-		if (mCurrentLaser == LASER::VISION)
-			mVision.setWavelength(wavelength_nm);
-
-		//Check if the laser internal shutter is open
-		isLaserInternalShutterOpen_();
+		//Tune the laser wavelength
+		tuneLaserWavelength_();
 
 		//Set the filterwheels
 		turnFilterwheels_();
 
 		//Set the collector lens position
-		selectCollectorLensPos_();
+		positionCollectorLens_();
+
+		//Check if the laser internal shutter is open
+		isLaserInternalShutterOpen_();
 	}
 }
 

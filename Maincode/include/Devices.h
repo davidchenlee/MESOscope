@@ -140,29 +140,27 @@ public:
 
 class Filterwheel
 {
-	/* Beamsplitters in the excitation wheel as of Feb 2019
+	/* Excitation wheel with the beamsplitters (as of Feb 2019)
 	position #1, 750 nm beamsplitter
 	position #2, open (no beamsplitter)
 	position #3, 920 nm beamsplitter
 	position #4, open (no beamsplitter)
 	position #5, 1040 nm beamsplitter
 	position #6, open (no beamsplitter)
-	GREEN and RED are not set up yet. Just doing some tests*/
+	*/
 	const std::vector<FILTERCOLOR> mExcConfig{ FILTERCOLOR::BLUE, FILTERCOLOR::OPEN, FILTERCOLOR::GREEN, FILTERCOLOR::OPEN, FILTERCOLOR::RED, FILTERCOLOR::OPEN };
 
-	/* Filters in the detection wheel as of Feb 2019
+	/* Detection wheel with the emission filters (as of Feb 2019)
 	position #1, FF01-492/sp (blue)
 	position #2, FF01-520/60 (green)
 	position #3, BLP01-532R (red)
 	position #4, beam block
 	position #5, FF01-514/44 (green)
 	position #6, open (no filter)
-	Currently, there are 2 green filters set up in the wheel (pos #2 and #5)
-	The code looks for the GREEN entry in this vector and reads its position
-	For now, I write GREEN in the vector position of the filter to be used
-	Place GREEN in the second position to use FF01-520/60, or in the fifth position to use FF01-514/44 (green)*/
-	const std::vector<FILTERCOLOR> mDetConfig{ FILTERCOLOR::BLUE, FILTERCOLOR::GREEN, FILTERCOLOR::RED, FILTERCOLOR::CLOSED, FILTERCOLOR::OPEN, FILTERCOLOR::OPEN };
-
+	*/
+	const std::vector<FILTERCOLOR> mDetConfig{ FILTERCOLOR::BLUE, FILTERCOLOR::OPEN, FILTERCOLOR::RED, FILTERCOLOR::CLOSED, FILTERCOLOR::GREEN, FILTERCOLOR::OPEN };
+	//Currently, there are 2 green filters set up in the wheel (pos #2 and #5). I write  FILTERCOLOR::GREEN at the second position to use FF01-520/60 or at the fifth position to use FF01-514/44
+	//Leave the unused filter as FILTERCOLOR::OPEN
 		
 	FILTERWHEEL mWhichFilterwheel;			//Device ID = 1, 2, ...
 	std::string mFilterwheelName;			//Device given name

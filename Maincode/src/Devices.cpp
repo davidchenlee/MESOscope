@@ -1401,7 +1401,7 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	mPockelsPtr = std::unique_ptr<PockelsCell>(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));	//Initialize the pockels cell
 	setPower(initialPower, finalPower);																		//set the laser power
 
-	isLaserInternalShutterOpen_();		//Check if the laser internal shutter is open
+	isLaserInternalShutterOpen_();		//Check if the internal shutter of the laser is open
 	turnFilterwheels_(wavelength_nm);	//Turn the filterwheels
 }
 

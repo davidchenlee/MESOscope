@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 52.870 * mm, 17.000 * mm, 18.078 * mm };//Beads 72, 76
+const double3 stackCenterXYZ{ 52.870 * mm, 17.000 * mm, 18.077 * mm };//Beads 72, 78
 //const double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
@@ -573,7 +573,7 @@ namespace PMT16XRoutines
 			selectHeightPerFrame_pix = heightPerFrame_pix;
 			selectScanFFOV = FFOVslow;
 			selectRescanFFOV = FFOVslow;
-			PMT16Xchan = PMT16XCHAN::CH02;
+			PMT16Xchan = PMT16XCHAN::CH15;
 			selectPower = singleChannel.mScanPi;
 			selectPowerInc = singleChannel.mStackPinc;
 #endif
@@ -904,7 +904,7 @@ namespace PMT16XRoutines
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular laser
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("TDT") };	//Select a particular laser
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -1511,11 +1511,12 @@ namespace TestRoutines
 	void PMT16Xconfig()
 	{
 		PMT16X pmt;
-		//pmt.readAllGain();
+		pmt.readAllGain();
 		//pmt.setSingleGain(12, 170);
 		//pmt.setAllGain(255);
 		//pmt.readTemp();
 
+		/*
 		//To make the count from all the channels similar,
 		//rescan with frequency = 100 Hz and amplitude = 1.5V (which is larger than the size of the PMT16X
 		//to use the linear part of the ramp). Set the refresh rate to 10 or 20 ms
@@ -1537,6 +1538,7 @@ namespace TestRoutines
 			255,	//CH15
 			255		//CH16
 			});
+			*/
 	}
 
 	//Test reading different channels of the PMT16X

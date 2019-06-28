@@ -54,10 +54,10 @@ namespace Constants
 	//GALVOS
 	//To fine tune the delay using beads
 	//1. First maximize the ramp duration of both galvos by tuning 'mRampDurationFineTuning'.
-	//If the ramp is too long, the overshooting from each individual frame will accumulate over all the frames. The bead position will shift around as a z-stack is scrolled over
+	//If the ramp is too long, the overshooting of each individual frame will accumulate over all the frames. As a result, the bead position will drift as a z-stack is scrolled over
 	//2. Adjust 'galvosCommonDelay' until the bead position coincide for the forth and back scans
-	extern const double galvosCommonDelay{ 5 * us };		//Delay of both galvos together. The scanner is triggered by the frameclock. If too long, the ramp overshoot will accumulate over >100 frames
-	extern const double rescanGalvoDelay{ 30 * us };		//Delay of the rescan galvo wrt the preframeclock. If too long, the ramp overshoot will accumulate over >100 frames
+	extern const double galvosCommonDelay{ 5 * us };		//Delay of both galvos together. The scanner is triggered by the frameclock. If too long, the overshoot of the scanner will accumulate over >100 frames
+	extern const double rescanGalvoDelay{ 30 * us };		//Delay of the rescan galvo wrt the preframeclock. If too long, the overshoot of the rescanner will accumulate over >100 frames
 
 	//STAGES
 	extern const double stagePulseStretcher{ 5 * ms };		//Stretch the pulsewidth from the stages (the stage controller has a 20kHz clock = 50 us) to trigger the aqc sequence. Currently not in use

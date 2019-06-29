@@ -4,7 +4,7 @@ int main(int argc, char* argv[])
 {
 	try
 	{
-		Stage stage;
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 		stage.stopAll();
 	}
 

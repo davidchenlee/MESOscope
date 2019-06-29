@@ -1446,7 +1446,7 @@ void CollectorLens::move(const double position) const
 	//Move to position
 	SCC_ClearMessageQueue(mSerialNumber);
 	SCC_MoveToPosition(mSerialNumber, static_cast<int>(position * mCalib));
-	std::cout << "Positioning the collector lens at " << position / mm << " mm\n";
+	std::cout << "Positioning the collector lens at " << position / mm << " mm...\n";
 
 	//Wait for completion
 	WORD messageType, messageId;
@@ -1614,8 +1614,8 @@ void VirtualLaser::turnFilterwheels_()
 #if multibeam
 		//Multiplex
 		//Turn both filterwheels concurrently
-		std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };
-		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
+		std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, mWavelength_nm };
+		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, mWavelength_nm };
 		th1.join();
 		th2.join();
 #else
@@ -1633,7 +1633,7 @@ void VirtualLaser::positionCollectorLens_() const
 	switch (mWavelength_nm)
 	{
 	case 750:
-		mCollectorLens.move(8.0 * mm);
+		mCollectorLens.move(10.0 * mm);
 		break;
 	case 920:
 		mCollectorLens.move(4.0 * mm);
@@ -1747,7 +1747,7 @@ Stage::~Stage()
 	PI_CloseConnection(mID_XYZ.at(XX));
 	PI_CloseConnection(mID_XYZ.at(YY));
 	PI_CloseConnection(mID_XYZ.at(ZZ));
-	std::cout << "Connection to the stages successfully closed\n";
+	//std::cout << "Connection with the stages successfully closed\n";
 }
 
 

@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const double3 stackCenterXYZ{ 52.870 * mm, 17.000 * mm, 18.077 * mm };//Beads 72, 78
+double3 stackCenterXYZ{ 52.800 * mm, 17.000 * mm, 18.081 * mm };//Beads 76, 81
 //const double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
@@ -146,14 +146,13 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
-		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
+		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
-		//set collectorLens to 1 mm for TDT and 8 mm for DAPI
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("GFP") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
@@ -178,7 +177,7 @@ namespace PMT16XRoutines
 			selectHeightPerFrame_pix = heightPerFrame_pix;
 			selectScanFFOV = FFOVslow;
 			selectRescanFFOV = FFOVslow;
-			PMT16Xchan = PMT16XCHAN::CH15;
+			PMT16Xchan = PMT16XCHAN::CH02;
 			selectPower = singleChannel.mScanPi;
 			selectPowerInc = singleChannel.mStackPinc;
 #endif
@@ -524,13 +523,13 @@ namespace PMT16XRoutines
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 200 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int nFramesCont{ 100 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };
 		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };		//Scan direction in z
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
-		//Override the global stage position
-		//const double3 stackCenterXYZ = { 50.983 * mm, 16.460 * mm, 18.059 * mm - nFramesCont * stepSizeZ /2 };
+		//Override the stage position
+		stackCenterXYZ.at(ZZ) -= nFramesCont * stepSizeZ /2;
 
 		double stageZi, stageZf, laserPi, laserPf;
 		switch (scanDirZ)

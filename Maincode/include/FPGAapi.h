@@ -69,7 +69,6 @@ namespace FPGAns
 		int mNframes;																	//Number of frames to acquire
 		int mHeightAllFrames_pix;														//Total number of lines in all the frames without including the skipped lines
 		int mNpixAllFrames;																//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
-
 		PMT16XCHAN mPMT16Xchan;
 
 		RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput , const MAINTRIG mainTrigger,

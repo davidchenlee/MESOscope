@@ -131,7 +131,7 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>PI_GCS2_DLL.lib;PI_GCS2_DLL_x64.lib;libtiff.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>PI_GCS2_DLL.lib;PI_GCS2_DLL_x64.lib;libtiff.lib;Thorlabs.MotionControl.KCube.StepperMotor.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;C:\Program Files %28x86%29\GnuWin32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>

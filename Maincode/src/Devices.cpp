@@ -1220,7 +1220,7 @@ void Shutter::pulse(const double pulsewidth) const
 #pragma endregion "Shutters"
 
 #pragma region "Pockels cells"
-//Curently, output of the pockels cell is hardcoded on the FPGA side.  The pockels' output is HIGH when 'framegate' is HIGH
+//Curently, the output of the pockels cell is gated on the FPGA side: the output is HIGH when 'framegate' is HIGH
 //Each Uniblitz shutter goes with a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
 PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelector) :
 	mRTcontrol(RTcontrol), mWavelength_nm(wavelength_nm), mShutter(mRTcontrol.mFpga, laserSelector)
@@ -1427,7 +1427,7 @@ CollectorLens::CollectorLens()
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Unable to establish connection with stepper " + mSerialNumber);
 
 	Sleep(100);
-	SCC_SetVelParams(mSerialNumber, mAcc, mVel);
+	SCC_SetVelParams(mSerialNumber, mAcc_au, mVel_au);
 }
 
 CollectorLens::~CollectorLens()
@@ -1464,7 +1464,7 @@ void CollectorLens::move(const double position) const
 	SCC_StopPolling(mSerialNumber);
 }
 
-void CollectorLens::downloadPosition() const
+void CollectorLens::downloadConfig() const
 {
 	//Start the device polling at 200ms intervals
 	SCC_StartPolling(mSerialNumber, 200);
@@ -1506,23 +1506,32 @@ void CollectorLens::home() const
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect) :
-	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mVision(LASER::VISION), mFidelity(LASER::FIDELITY), mFWexcitation(FILTERWHEEL::EXC), mFWdetection(FILTERWHEEL::DET)
+VirtualLaser::VirtualFilterWheel::VirtualFilterWheel() : mFWexcitation(FILTERWHEEL::EXC), mFWdetection(FILTERWHEEL::DET) {}
+
+void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm)
 {
-	//Update the wavelength
-	mWavelength_nm = wavelength_nm;
+#if multibeam
+	//Multiplex
+	//Turn both filterwheels concurrently
+	std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };
+	std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
+	th1.join();
+	th2.join();
+#else
+	//Single beam
+	//Turn both filterwheels concurrently
+	std::thread th1(&Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN);	//Set the excitation filterwheel open (no filter)
+	std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
+	th1.join();
+	th2.join();
+#endif
+}
 
-	//Tune the laser wavelength
-	tuneLaserWavelength_();														
-
-	//Set the filterwheels
-	turnFilterwheels_();	
-
-	//Set the collector lens position
-	positionCollectorLens_();
-
-	//Check if the internal shutter of the laser is open
-	isLaserInternalShutterOpen_();
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect) :
+	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mVision(LASER::VISION), mFidelity(LASER::FIDELITY)
+{
+	//Tune the laser wavelength, set the excitation and emission filterwheels, and position the collector lens
+	reconfigure(wavelength_nm);
 
 	//Set the laser power
 	setPower(initialPower, finalPower);
@@ -1576,7 +1585,7 @@ void VirtualLaser::isLaserInternalShutterOpen_() const
 	}//whileloop
 }
 
-//Automatically select a laser. Return VISION, FIDELITY, or let the code to decide based on the requested wavelength
+//Automatically select a laser: VISION, FIDELITY, or let the code to decide based on the requested wavelength
 LASER VirtualLaser::autoSelectLaser_() const
 {
 	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
@@ -1604,28 +1613,9 @@ void VirtualLaser::tuneLaserWavelength_()
 	if (mCurrentLaser == LASER::VISION)
 		mVision.setWavelength(mWavelength_nm);
 
-	//Update the pockels handler to initialize/update the laser power
-	//The pockels destructor is made to close the uniblitz shutter automatically to allow switching between VISION and FIDELITY or tuning VISION without photobleaching the sample
+	//Update the pockels handler to initialize or update the laser power
+	//The pockels destructor is made to close the uniblitz shutter automatically to allow switching between VISION and FIDELITY and also tuning VISION without photobleaching the sample
 	mPockelsPtr.reset(new PockelsCell(mRTcontrol, mWavelength_nm, mCurrentLaser));
-}
-
-void VirtualLaser::turnFilterwheels_()
-{
-#if multibeam
-		//Multiplex
-		//Turn both filterwheels concurrently
-		std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, mWavelength_nm };
-		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, mWavelength_nm };
-		th1.join();
-		th2.join();
-#else
-		//Single beam
-		//Turn both filterwheels concurrently
-		std::thread th1{ &Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN };	//Set the excitation filterwheel open (no filter)
-		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, mWavelength_nm };
-		th1.join();
-		th2.join();
-#endif
 }
 
 void VirtualLaser::positionCollectorLens_() const
@@ -1646,6 +1636,7 @@ void VirtualLaser::positionCollectorLens_() const
 	}
 }
 
+//Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
 void VirtualLaser::reconfigure(const int wavelength_nm)
 {
 	//Ignore if the requested wavelength is current
@@ -1656,9 +1647,10 @@ void VirtualLaser::reconfigure(const int wavelength_nm)
 
 		//Tune the laser wavelength
 		tuneLaserWavelength_();
+		//std::thread th1(tuneLaserWavelength_);
 
 		//Set the filterwheels
-		turnFilterwheels_();
+		mVirtualFilterWheel.turnFilterwheels_(wavelength_nm);
 
 		//Set the collector lens position
 		positionCollectorLens_();

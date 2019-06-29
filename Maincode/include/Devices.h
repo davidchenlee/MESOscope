@@ -254,38 +254,51 @@ public:
 
 class CollectorLens
 {
-	const char mSerialNumber[9]{ "26000299" };	//Each Thorlabs actuator has a unique serial number
-	const double mCalib{ 26000000/(12.9442 * mm) };	//Calibrated by using Thorlabs APT software to read the position of the actuator
+	//To obtain the calibration, use Thorlabs APT software to set the position in mm, then read the position in internal-units via downloadConfig() implemented in this class
+	//
+	const char mSerialNumber[9]{ "26000299" };		//Each Thorlabs actuator has a unique serial number
+	const double mCalib{ 26000000/(12.9442 * mm) };	//Calibration factor to convert mm to the actuator's internal units
 	const double mPosLimit{ 13. * mm };
-	const int mVel{ 323449856 };// 3 mm/s
-	const int mAcc{ 11041 };// 0.5 mm/s^2
+	const int mVel_au{ 323449856 };					//Equivalent to 3 mm/s
+	const int mAcc_au{ 11041 };						//Equivalent to 0.5 mm/s^2
 public:
 	CollectorLens();
 	~CollectorLens();
 	void move(const double position) const;
-	void downloadPosition() const;
+	void downloadConfig() const;
 	void home() const;
 };
 
 class VirtualLaser
 {
-	LASER mLaserSelect;					//use VISION, FIDELITY, or AUTO (let the code decide)
-	LASER mCurrentLaser;				//Laser currently in use: VISION or FIDELITY
+	class VirtualFilterWheel
+	{
+		Filterwheel mFWexcitation;
+		Filterwheel mFWdetection;
+	public:
+		VirtualFilterWheel();
+		void turnFilterwheels_(const int wavelength_nm);
+	};
+
 	FPGAns::RTcontrol &mRTcontrol;
-	int mWavelength_nm;					//Wavelength being used
+	int mWavelength_nm;								//Wavelength being used
+	VirtualFilterWheel mVirtualFilterWheel;
+	CollectorLens mCollectorLens;
+
+	LASER mLaserSelect;								//use VISION, FIDELITY, or AUTO (let the code decide)
+	LASER mCurrentLaser;							//Laser currently in use: VISION or FIDELITY
 	Laser mVision;
 	Laser mFidelity;
-	Filterwheel mFWexcitation;
-	Filterwheel mFWdetection;
-	CollectorLens mCollectorLens;
-	std::unique_ptr <PockelsCell> mPockelsPtr;
+
+	std::unique_ptr <PockelsCell> mPockelsPtr;		//Create a pockels handle dynamically. Alternatively, I could've created a fixed handle for each laser wavelength to be used
 	const double mPockelTimeStep{ 8. * us };		//Time step for the RT pockels command
 
 	std::string laserNameToString_(const LASER whichLaser) const;
 	void isLaserInternalShutterOpen_() const;
 	LASER autoSelectLaser_() const;
 	void tuneLaserWavelength_();
-	void turnFilterwheels_();
+
+
 	void positionCollectorLens_() const;
 public:
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect = LASER::AUTO);

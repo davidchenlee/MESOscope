@@ -101,7 +101,7 @@ namespace PMT1XRoutines
 					stackPinc = acqStack.mStackPinc;
 
 					//Update the laser parameters if needed
-					laser.reconfigure(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
+					laser.reconfigure(wavelength_nm);	//When switching pockels, the class destructor closes the uniblitz shutter
 					laser.setPower(scanPi, static_cast<int>(scanDirZ) * stackPinc);
 					laser.openShutter();	//Re-open the Uniblitz shutter if closed
 
@@ -411,7 +411,7 @@ namespace PMT16XRoutines
 
 			//Update the laser wavelength
 			const int wavelength_nm = channelList.at(iter_wv).mWavelength_nm;
-			laser.reconfigure(wavelength_nm);	//When switching pockels, the pockels destructor closes the uniblitz shutter
+			laser.reconfigure(wavelength_nm);	//When switching pockels, the class destructor closes the uniblitz shutter
 			laser.openShutter();				//Re-open the Uniblitz shutter if closed
 
 			//Iterate over the locations
@@ -1281,7 +1281,7 @@ namespace TestRoutines
 	{
 		CollectorLens collectorLens;
 		collectorLens.move(0.0 * mm);
-		//collectorLens.downloadPosition();
+		//collectorLens.downloadConfig();
 		//collectorLens.home();
 	}
 

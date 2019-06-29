@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 52.800 * mm, 17.000 * mm, 18.081 * mm };//Beads 76, 81
+double3 stackCenterXYZ{ 52.800 * mm, 17.000 * mm, 18.081 * mm };//Beads 75, 81
 //const double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
@@ -152,7 +152,7 @@ namespace PMT16XRoutines
 		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("TDT") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
@@ -906,7 +906,7 @@ namespace TestRoutines
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga };
 
-		const int wavelength_nm{ 1040 };
+		const int wavelength_nm{ 750 };
 		const double laserPower{ 50. * mW };		//Laser power
 		VirtualLaser laser{ RTcontrol, wavelength_nm, laserPower, LASER::VISION };
 
@@ -1277,10 +1277,10 @@ namespace TestRoutines
 	}
 
 
-	void motorizedLens()
+	void collectorLens()
 	{
 		CollectorLens collectorLens;
-		collectorLens.move(0.0 * mm);
+		collectorLens.move(5.0 * mm);
 		//collectorLens.downloadConfig();
 		//collectorLens.home();
 	}

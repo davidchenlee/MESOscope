@@ -61,7 +61,7 @@ namespace TestRoutines
 	//Others
 	void vibratome(const FPGAns::FPGA &fpga);
 	void filterwheel();
-	void motorizedLens();
+	void collectorLens();
 	void photobleach(const FPGAns::FPGA &fpga);
 	void generateLocationsForBigStitcher();
 	int2 nTileToArrayIndices(const int nTile);

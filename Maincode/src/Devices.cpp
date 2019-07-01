@@ -2,7 +2,7 @@
 
 #pragma region "Image"
 
-//When multiplexing, create a mTiff to contain 16 stripes of height 'mRTcontrol.mHeightPerFrame_pix' each
+//When multiplexing, create a mTiff to store 16 stripes of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(FPGAns::RTcontrol &RTcontrol) :
 	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * 15 + 1) *  mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes)
 {
@@ -10,14 +10,14 @@ Image::Image(FPGAns::RTcontrol &RTcontrol) :
 	mBufArrayB = new U32[mRTcontrol.mNpixAllFrames];
 
 	//Trigger the acquisition with the PC or the Z stage
-	//This switch has to be here and not in the RTcontrol class because the z-trigger has to be turned off in the destructor to allow moving the z-stage
+	//This needs to be here and not in the RTcontrol class because the z-trigger has to be turned off in the destructor to allow moving the z-stage
 	if (static_cast<bool>(mRTcontrol.mMainTrigger))
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, static_cast<bool>(mRTcontrol.mMainTrigger)));
 }
 
 Image::~Image()
 {
-	//Turn off the z-stage triggering the image acquisition to allow moving the z stage
+	//Turn off the acq trigger by the z stage to allow moving the z stage
 	if (static_cast<bool>(mRTcontrol.mMainTrigger))
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));
 
@@ -172,7 +172,7 @@ void Image::demultiplex_()
 		demuxSingleChannel_();
 }
 
-//Singlebeam. For speed, only process the counts from a single channel
+//Singlebeam. For speed, only process the data from a single channel
 void Image::demuxSingleChannel_()
 {
 	switch (mRTcontrol.mPMT16Xchan)
@@ -187,7 +187,7 @@ void Image::demuxSingleChannel_()
 	case PMT16XCHAN::CH07:
 	case PMT16XCHAN::CH08:
 
-		//Shift mBufArrayA to the right and extract the last 4 bits
+		//Shift mBufArrayA to the right '4 * mRTcontrol.mPMT16Xchan' times and extract the last 4 bits
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
 			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mBufArrayA[pixIndex] >> 4 * static_cast<unsigned char>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
 		break;
@@ -202,7 +202,7 @@ void Image::demuxSingleChannel_()
 	case PMT16XCHAN::CH15:
 	case PMT16XCHAN::CH16:
 
-		//Shift mBufArrayB to the right and extract the last 4 bits
+		//Shift mBufArrayB to the right '4 * mRTcontrol.mPMT16Xchan' times and extract the last 4 bits
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
 			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mBufArrayB[pixIndex] >> 4 * static_cast<unsigned char>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
 		break;
@@ -215,8 +215,6 @@ void Image::demuxSingleChannel_()
 //Each U32 element in mBufArrayA and mBufArrayB has the multiplexed structure:
 //mBufArrayA[i] =  | Ch08 (MSB) | Ch07 | Ch06 | Ch05 | Ch04 | Ch03 | Ch02 | Ch01 (LSB) |
 //mBufArrayB[i] =  | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
-
-
 void Image::demuxAllChannels_()
 {
 	//Use 2 separate arrays to allow parallelization in the future
@@ -542,35 +540,37 @@ void ResonantScanner::isRunning() const
 }
 #pragma endregion "Resonant scanner"
 
-
 #pragma region "Galvo"
 Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavelength_nm): mRTcontrol(RTcontrol), mGalvoRTchannel(channel), mWavelength_nm(wavelength_nm)
 {
+	//Calibration factor of the scan galvo. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
+	const double scanCalib{ 0.02417210 * V / um };			
+
 	switch (channel)
 	{
 	case RTCHAN::SCANGALVO:
-		mVoltagePerDistance = mScanCalib;
+		mVoltagePerDistance = scanCalib;
+		mVoltageOffset = 0;
 		break;
 	case RTCHAN::RESCANGALVO:
-		//Calibration factor to sync the rescanner with the scanner, and therefore, keep the fluorescence emission fixed at the detector
+		//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission fixed at the detector
 		//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the tiffs for all the channels
-		//The beads should appear only in the channel selected
-		//Adjust 'mVoltagePerDistance' until beads at different parts of the FOV are "synchronized" as the PMT16X channels are scrolled over
-		//Adjust 'mRescanVoltageOffset' until the beads appear in the chosen PMT16X channel only
+		//The beads should show up in the selected channel only
+		//Adjust 'mVoltagePerDistance' until all the beads show up simultaneously in the selected PMT16X channel
+		//Adjust 'mRescanVoltageOffset' to center the beads on the selected PMT16X channel
 		switch (mWavelength_nm)
 		{
 		case 750:
-			mVoltagePerDistance = 0.32 * mScanCalib;//larger number, top beads shows up first
-			mRescanVoltageOffset = -0.00 * V;//A positive offset steers the beam towards channel 1
-
+			mVoltagePerDistance = 0.32 * scanCalib;		//By increasing the voltage, the top beads in a Tiff appear before the bottom ones.
+			mVoltageOffset = -0.00 * V;					//A positive offset steers the beam towards channel 1 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, channel 1 is on the left
 			break;
 		case 920:
-			mVoltagePerDistance = 0.32 * mScanCalib;
-			mRescanVoltageOffset = 0.01 * V;
+			mVoltagePerDistance = 0.32 * scanCalib;
+			mVoltageOffset = 0.05 * V;
 			break;
 		case 1040:
-			mVoltagePerDistance = 0.33 * mScanCalib;
-			mRescanVoltageOffset = 0.03 * V;
+			mVoltagePerDistance = 0.33 * scanCalib;
+			mVoltageOffset = 0.03 * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -583,14 +583,16 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 
 Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double posMax, const int wavelength_nm) : Galvo(RTcontrol, channel, wavelength_nm)
 {
+	const double rescanVoltageSetpoint{ mVoltageOffset + beamletOrder.at(static_cast<int>(mRTcontrol.mPMT16Xchan)) * mInterBeamletDistance * mVoltagePerDistance };
+
 	switch (channel)
 	{
 	case RTCHAN::SCANGALVO:
-		positionLinearRamp(-posMax, posMax); //Raster scan from +x to -x wrt the x-stage axis
+		positionLinearRamp(-posMax, posMax); //Raster scan from positive to negative direction of the x-stage
 		break;
 	case RTCHAN::RESCANGALVO:
 		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector
-		positionLinearRamp(posMax, -posMax, mRescanVoltageOffset + beamletOrder.at(static_cast<int>(mRTcontrol.mPMT16Xchan)) * mInterBeamletDistance * mVoltagePerDistance);
+		positionLinearRamp(posMax, -posMax, rescanVoltageSetpoint );
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -618,7 +620,7 @@ void Galvo::positionLinearRamp(const double timeStep, const double rampLength, c
 }
 
 //Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with fixed z)
-void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double posOffset) const
+void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset) const
 {
 	//Limit the number of steps for long ramps
 	//Currently, the bottleneck is the buffe of the galvoss on the fpga that only support 5000 elements
@@ -631,7 +633,7 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 
 	//The position offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mRampDurationFineTuning, 
-		posOffset + mVoltagePerDistance * posInitial, posOffset + mVoltagePerDistance * posFinal);
+		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal);
 }
 #pragma endregion "Galvo"
 
@@ -925,7 +927,11 @@ void Filterwheel::setPosition(const FILTERCOLOR color)
 			const int diffPos{ maxPos - minPos };
 			const int minSteps{ (std::min)(diffPos, mNpos - diffPos) };
 
-			std::cout << "Tuning " << mFilterwheelName << " to " + colorToString_(color) << "...\n";
+			//Thread-safe message
+			std::stringstream msg;
+			msg << "Tuning " << mFilterwheelName << " to " + colorToString_(color) << "...\n";
+			std::cout << msg.str();
+
 			Sleep(static_cast<DWORD>(1. * minSteps / mTuningSpeed / ms));	//Wait until the filterwheel stops turning the turret
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
@@ -1481,7 +1487,6 @@ void CollectorLens::move(const double position) const
 		{
 			SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
 		}
-
 		//For debugging. Get current position
 		//std::cout << "Collector lens current position: " << SCC_GetPosition(mSerialNumber) / mCalib /mm << " mm\n";
 	}

@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 52.800 * mm, 17.000 * mm, 18.081 * mm };//Beads 75, 81
+double3 stackCenterXYZ{ 52.792 * mm, 17.000 * mm, 18.079 * mm };//Beads 74, 79
 //const double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
@@ -146,37 +146,35 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
-		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
+		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("TDT") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("GFP") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
 		const int nFramesCont{ 1 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
-		int selectHeightPerFrame_pix;
-		double selectScanFFOV, selectRescanFFOV, selectPower, selectPowerInc;
+		int heightPerFramePerbeamlet_pix;
+		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
 		PMT16XCHAN PMT16Xchan;
 
 #if multibeam
 			//Multibeam
-			selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
-			selectScanFFOV = FFOVslow / 16;
-			selectRescanFFOV = FFOVslow / 16;
+			heightPerFramePerbeamlet_pix = static_cast<int>(heightPerFrame_pix / 16);
+			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / 16);
 			PMT16Xchan = PMT16XCHAN::CH00;
 			selectPower = 1000. * mW;
 			selectPowerInc = 0;
 #else
 			//Singlebeam
-			//For fluorescent slide, set selectScanFFOV = 0.0 and PMT16Xchan = PMT16XCHAN::CH00 to let the laser scan through the PMT16X channels
-			selectHeightPerFrame_pix = heightPerFrame_pix;
-			selectScanFFOV = FFOVslow;
-			selectRescanFFOV = FFOVslow;
+			//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CH00 to let the laser scan through the PMT16X channels
+			heightPerFramePerbeamlet_pix = heightPerFrame_pix;
+			FFOVslowPerBeamlet = FFOVslow;
 			PMT16Xchan = PMT16XCHAN::CH02;
 			selectPower = singleChannel.mScanPi;
 			selectPowerInc = singleChannel.mStackPinc;
@@ -227,7 +225,7 @@ namespace PMT16XRoutines
 		}
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, selectHeightPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFramePerbeamlet_pix, FIFOOUT::EN, PMT16Xchan };
 
 		//LASER
 		const VirtualLaser laser{ RTcontrol,  singleChannel.mWavelength_nm, LASER::VISION };
@@ -237,8 +235,8 @@ namespace PMT16XRoutines
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//GALVO RT linear scan
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, selectScanFFOV / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, selectRescanFFOV / 2, singleChannel.mWavelength_nm };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, singleChannel.mWavelength_nm };
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, singleChannel.mWavelength_nm };
 
 		//DATALOG
@@ -264,10 +262,10 @@ namespace PMT16XRoutines
 			datalog.record("\nIMAGE--------------------------------------------------------");
 			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
 			datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleFactorU8);
-			datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
-			datalog.record("Height Y (galvo) (pix) = ", selectHeightPerFrame_pix);
+			datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
+			datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
 			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
-			datalog.record("Resolution Y (galvo) (um/pix) = ", (selectScanFFOV / um) / selectHeightPerFrame_pix);
+			datalog.record("Resolution Y (galvo) (um/pix) = ", pixelSizeXY / um);
 			datalog.record("\nSTAGE--------------------------------------------------------");
 		}
 
@@ -336,21 +334,19 @@ namespace PMT16XRoutines
 		const double FFOVfast{ widthPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
-		int selectHeightPerFrame_pix;
-		double selectScanFFOV, selectRescanFFOV;
+		int heightPerFramePerBeamlet_pix;
+		double FFOVslowPerBeamlet;
 		PMT16XCHAN PMT16Xchan;
 
 #if multibeam
 			//Multibeam
-			selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
-			selectScanFFOV = FFOVslow / 16;
-			selectRescanFFOV = FFOVslow / 16;
+			heightPerFramePerBeamlet_pix = static_cast<int>(heightPerFrame_pix / 16);
+			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / 16);
 			PMT16Xchan = PMT16XCHAN::CH00;
 #else
 			//Singlebeam
-			selectHeightPerFrame_pix = heightPerFrame_pix;
-			selectScanFFOV = FFOVslow;
-			selectRescanFFOV = FFOVslow;
+			heightPerFramePerBeamlet_pix = heightPerFrame_pix;
+			FFOVslowPerBeamlet = FFOVslow;
 			PMT16Xchan = PMT16XCHAN::CH08;
 #endif
 
@@ -363,15 +359,15 @@ namespace PMT16XRoutines
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFramePerBeamlet_pix, FIFOOUT::EN, PMT16Xchan };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//GALVO RT linear scan
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, selectScanFFOV / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, selectRescanFFOV / 2, channelList.front().mWavelength_nm };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, channelList.front().mWavelength_nm };
 
 		//LASER
 		VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm, LASER::VISION };
@@ -399,14 +395,14 @@ namespace PMT16XRoutines
 			datalog.record("RS period (us) = ", 2 * halfPeriodLineclock / us);
 			datalog.record("Pixel dwell time (us) = ", RTcontrol.mDwell / us);
 			datalog.record("RS fill factor = ", RScanner.mFillFactor);
-			datalog.record("Slow axis FFOV (um) = ", FFOV.at(XX) / um);
+			datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
 			datalog.record("\nIMAGE--------------------------------------------------------");
 			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
 			datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleFactorU8);
-			datalog.record("Width X (RS) (pix) = ", RTcontrol.mWidthPerFrame_pix);
-			datalog.record("Height Y (galvo) (pix) = ", RTcontrol.mHeightPerFrame_pix);
+			datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
+			datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
 			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
-			datalog.record("Resolution Y (galvo) (um/pix) = ", (FFOV.at(XX) / um) / RTcontrol.mHeightPerFrame_pix);
+			datalog.record("Resolution Y (galvo) (um/pix) = ", pixelSizeXY / um);
 			datalog.record("\n");
 
 			//Update the laser wavelength
@@ -505,15 +501,8 @@ namespace PMT16XRoutines
 	}
 
 	/*
-	The galvo scans the FOV back and forth continuously while the z-stage travels nonstop
-	The pc triggers the z-stage motion, then the position of the stage triggers the scanning routine
-	Using the PI step-response monitor, I observe that the motion of the stage is somewhat nonlinear (+/- 1 um off target) at the start or end.
-	I then thought that, due to such asymmetry, the forth and back z-scanning would generate slightly different registrations
-	I therefore set DO1 to output a 50us-pulse every time the stage travels 0.3 um and triggered the stack acquisition with such signal
-	(see the implementation on LV and also the DO config of the stage driver). Because the position of the stage is supposed to be absolute and precise,
-	I thought that the registration would perfect. However, the beads differed in 3 or more planes.
-	I triggered the stack acquisition using DO2 for both scanning directions: top-down and bottom-up. Under DO2 triggering, the beads' z-position in both cases looks
-	almost identical, with a difference of maybe 1 plane only (0.5 um)
+	I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the beads' z-position looks
+	almost identical with a difference of maybe only 1 plane (0.5 um)
 	Remember that I do not use MACROS on the stages anymore
 	*/
 	void continuousScan(const FPGAns::FPGA &fpga)
@@ -1194,20 +1183,20 @@ namespace TestRoutines
 		const int nFramesCont{ 2 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
-		int selectHeightPerFrame_pix;
-		double selectScanFFOV, selectPower;
+		int heightPerFramePerBeamlet_pix;
+		double FFOVslowPerBeamlet, selectPower;
 		PMT16XCHAN PMT16Xchan;
 
 #if multibeam
 			//Multibeam
-			selectHeightPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
-			selectScanFFOV = FFOVslow / 16;
+			heightPerFramePerBeamlet_pix = static_cast<int>(heightPerFrame_pix / 16);
+			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / 16);
 			PMT16Xchan = PMT16XCHAN::CH00;
 			selectPower = 1400. * mW;
 #else
 			//Singlebeam
-			selectHeightPerFrame_pix = heightPerFrame_pix;
-			selectScanFFOV = FFOVslow;
+			heightPerFramePerBeamlet_pix = heightPerFrame_pix;
+			FFOVslowPerBeamlet = FFOVslow;
 			PMT16Xchan = PMT16XCHAN::CH02;
 			selectPower = 50. * mW;
 #endif
@@ -1216,15 +1205,15 @@ namespace TestRoutines
 		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in Z
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, selectHeightPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFramePerBeamlet_pix, FIFOOUT::EN, PMT16Xchan };
 
 		//LASER
 		const int wavelength_nm = 750;
 		const VirtualLaser laser{ RTcontrol, wavelength_nm, selectPower, LASER::VISION };
 
 		//GALVO RT linear scan
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, selectScanFFOV / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, selectScanFFOV / 2, wavelength_nm };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, wavelength_nm };
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, wavelength_nm };
 
 		//EXECUTE THE RT CONTROL SEQUENCE

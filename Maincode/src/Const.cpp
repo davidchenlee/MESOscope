@@ -70,8 +70,7 @@ namespace Constants
 	//3. Adjust the delay until the beads appear in the middle of the z-stack
 	extern const double	ZstageTrigDelayTopdown{ 40 * ms };
 	extern const double	ZstageTrigDelayBottomup{ 40 * ms };
-
-																
+													
 	//PMT
 	//Simulate the PMT pulses. When the array element is HIGH, the output of the subvi changes its state for the next clock cycle (currently, 160MHz = 6.25ns)
 	//Example, if I divide each line in 500 pixels, then the pix dwell time is 125 ns and each pixel could contain at most 10 laser pulses (laser pulses separated by 12.5ns = 80 MHz)

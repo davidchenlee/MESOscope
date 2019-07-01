@@ -272,13 +272,13 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate, PMT16XCHAN PMT16Xchan) :
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, FIFOOUT FIFOOUTstate, PMT16XCHAN PMT16Xchan) :
 		mVectorOfQueues(static_cast<U8>(RTCHAN::NCHAN)), mFpga(fpga), mLineclockInput(lineclockInput), mMainTrigger(mainTrigger), mNframes(nFrames),
-		mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mFIFOOUTstate(FIFOOUTstate), mPMT16Xchan(PMT16Xchan)
+		mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerBeamletPerFrame_pix(heightPerBeamletPerFrame_pix), mFIFOOUTstate(FIFOOUTstate), mPMT16Xchan(PMT16Xchan)
 	{
 		//Set the imaging parameters
-		mHeightAllFrames_pix = mHeightPerFrame_pix * mNframes;
-		mNpixAllFrames = mWidthPerFrame_pix * mHeightAllFrames_pix;
+		mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
+		mNpixPerBeamletAllFrames = mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix;
 		uploadImagingParameters_();
 
 		//Generate a pixelclock
@@ -303,12 +303,12 @@ namespace FPGAns
 	//Load the imaging parameters onto the FPGA
 	void RTcontrol::uploadImagingParameters_() const
 	{
-		if (mNframes < 0 || mHeightAllFrames_pix < 0 || mHeightPerFrame_pix < 0)
+		if (mNframes < 0 || mHeightPerBeamletAllFrames_pix < 0 || mHeightPerBeamletPerFrame_pix < 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
-		checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(mNframes)));							//Number of frames to acquire
-		checkStatus(__FUNCTION__, NiFpga_WriteI32(mFpga.getHandle(), NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(mHeightAllFrames_pix)));				//Total number of lines in all the frames
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerFrame_pix)));			//Number of lines in a frame
+		checkStatus(__FUNCTION__, NiFpga_WriteI32(mFpga.getHandle(), NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(mHeightPerBeamletAllFrames_pix)));		//Total number of lines per beamlet in all the frames
+		checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(mNframes)));								//Number of frames to acquire
+		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerBeamletPerFrame_pix)));	//Number of lines per beamlet in a frame
 	
 		//SELECTORS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));	//Lineclock: resonant scanner (RS) or function generator (FG)

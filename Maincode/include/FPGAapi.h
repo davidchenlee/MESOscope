@@ -65,14 +65,14 @@ namespace FPGAns
 		const double mPulsesPerPix = mDwell / VISIONpulsePeriod;						//Max number of laser pulses per pixel
 		const U8 mUpscaleFactorU8{ static_cast<U8>(255 / (mPulsesPerPix + 1)) };		//Upscale 4-bit counts to 8-bit (range 0-255) for compatibility with ImageJ's standards. Plus one to avoid overflow
 		int mWidthPerFrame_pix;															//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
-		int mHeightPerFrame_pix;														//Height in pixels of a single frame (galvo axis). This sets the number of "lines" in the image
+		int mHeightPerBeamletPerFrame_pix;												//Height in pixels of a single beamlet in a single frame (galvo axis)
 		int mNframes;																	//Number of frames to acquire
-		int mHeightAllFrames_pix;														//Total number of lines in all the frames without including the skipped lines
-		int mNpixAllFrames;																//Total number of pixels in all the frames (the skipped lines don't acquire pixels)
+		int mHeightPerBeamletAllFrames_pix;												//Total number of lines per beamlet in all the frames
+		int mNpixPerBeamletAllFrames;													//Total number of pixels per beamlet in all the frames
 		PMT16XCHAN mPMT16Xchan;															//PMT16X channel to be used
 
 		RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput , const MAINTRIG mainTrigger,
-			const int nFrames, const int widthPerFrame_pix, const int heightPerFrame_pix, FIFOOUT FIFOOUTstate, PMT16XCHAN PMT16Xchan);
+			const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, FIFOOUT FIFOOUTstate, PMT16XCHAN PMT16Xchan);
 		RTcontrol(const FPGAns::FPGA &fpga);
 		RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 		RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor

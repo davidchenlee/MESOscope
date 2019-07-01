@@ -13,9 +13,9 @@
 class Image
 {
 	FPGAns::RTcontrol &mRTcontrol;			//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
-	U32* mBufArrayA;						//Vector to read FIFOOUTpc A
-	U32* mBufArrayB;						//Vector to read FIFOOUTpc B
-	TiffU8 mTiff;							//Tiff that store the content of mBufArrayA and mBufArrayB
+	U32* mMultiplexedArrayA;				//Array to read FIFOOUTpc A
+	U32* mMultiplexedArrayB;				//Array to read FIFOOUTpc B
+	TiffU8 mTiff;							//Tiff that store the content of mMultiplexedArrayA and mMultiplexedArrayB
 	ZSCAN mScanDir;
 
 	void FIFOOUTpcGarbageCollector_() const;
@@ -162,9 +162,9 @@ class Filterwheel
 	COM mPort;
 	const int mBaud{ 115200 };
 	const int mTimeout{ 150 * ms };
-	const int mNpos{ 6 };					//Number of filter positions
-	const double mTuningSpeed{ 0.8 / sec };	//The measured filterwheel tuning speed is ~ 1 position/s. Choose a slightly smaller value
-	const int mRxBufSize{ 256 };			//Serial buffer size
+	const int mNpos{ 6 };						//Number of filter positions
+	const double mTurningSpeed{ 0.8 / sec };	//The measured filterwheel turning speed is ~ 1 position/s. Choose a slightly smaller value
+	const int mRxBufSize{ 256 };				//Serial buffer size
 
 	int downloadPosition_() const;
 	int colorToPosition_(const FILTERCOLOR color) const;
@@ -248,22 +248,23 @@ class CollectorLens
 	//To obtain the calibration, use Thorlabs APT software to set the position in mm, then read the position in internal-units via downloadConfig() implemented in this class
 	
 	double mPosition;
-	const char mSerialNumber[9]{ "26000299" };		//Each Thorlabs actuator has a unique serial number
-	const double mCalib{ 26000000/(12.9442 * mm) };	//Calibration factor to convert mm to the actuator's internal units
-	const double mPosLimit{ 13. * mm };
-	const int mVel_au{ 323449856 };					//Equivalent to 3 mm/s
-	const int mAcc_au{ 11041 };						//Equivalent to 0.5 mm/s^2
+	const char mSerialNumber[9]{ "26000299" };					//Each Thorlabs actuator has a unique serial number
+	const double mCalib{ 26000000/(12.9442 * mm) };				//Calibration factor to convert mm to the actuator's internal units
+	const std::vector<double> mPosLimit{ 0. * mm, 13. * mm };
+	const int mVel_au{ 323449856 };								//Equivalent to 3 mm/s
+	const int mAcc_au{ 11041 };									//Equivalent to 0.5 mm/s^2
 public:
 	CollectorLens();
 	~CollectorLens();
-	void move(const double position) const;
+	void move(const double position);
 	void downloadConfig() const;
-	void home() const;
-	void positionCollectorLens(const int wavelength_nm) const;
+	void home();
+	void positionCollectorLens(const int wavelength_nm);
 };
 
 class VirtualLaser
 {
+	//Define separate classes to allow concurrent calls
 	class CombinedLasers
 	{
 		LASER mLaserSelect;								//use VISION, FIDELITY, or AUTO (let the code decide)
@@ -430,4 +431,3 @@ public:
 	void printParams(std::ofstream *fileHandle) const;
 	SingleChannel findChannel(const std::string channel) const;
 };
-

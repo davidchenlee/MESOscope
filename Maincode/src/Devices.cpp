@@ -4,10 +4,10 @@
 
 //When multiplexing, create a mTiff to store 16 stripes of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(FPGAns::RTcontrol &RTcontrol) :
-	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * 15 + 1) *  mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes)
+	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * 15 + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes)
 {
-	mBufArrayA = new U32[mRTcontrol.mNpixAllFrames];
-	mBufArrayB = new U32[mRTcontrol.mNpixAllFrames];
+	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
+	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 
 	//Trigger the acquisition with the PC or the Z stage
 	//This needs to be here and not in the RTcontrol class because the z-trigger has to be turned off in the destructor to allow moving the z-stage
@@ -25,8 +25,8 @@ Image::~Image()
 	//I think this is because FIFOOUT used to remain open and clashed with the following call
 	stopFIFOOUTpc_();
 
-	delete[] mBufArrayA;
-	delete[] mBufArrayB;
+	delete[] mMultiplexedArrayA;
+	delete[] mMultiplexedArrayB;
 
 	//std::cout << "Image destructor called\n"; //For debugging
 }
@@ -92,12 +92,12 @@ void Image::readFIFOOUTpc_()
 	int nElemTotalA{ 0 }; 					//Total number of elements read from FIFOOUTpc A
 	int nElemTotalB{ 0 }; 					//Total number of elements read from FIFOOUTpc B
 	
-	while (nElemTotalA < mRTcontrol.mNpixAllFrames || nElemTotalB < mRTcontrol.mNpixAllFrames)
+	while (nElemTotalA < mRTcontrol.mNpixPerBeamletAllFrames || nElemTotalB < mRTcontrol.mNpixPerBeamletAllFrames)
 	{
 		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
 
-		readChunk_(nElemTotalA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufArrayA, nullReadCounterA);	//FIFOOUTpc A
-		readChunk_(nElemTotalB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufArrayB, nullReadCounterB);	//FIFOOUTpc B
+		readChunk_(nElemTotalA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mMultiplexedArrayA, nullReadCounterA);	//FIFOOUTpc A
+		readChunk_(nElemTotalB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mMultiplexedArrayB, nullReadCounterB);	//FIFOOUTpc B
 
 		if (nullReadCounterA > timeout_iter && nullReadCounterB > timeout_iter)
 			throw ImageException((std::string)__FUNCTION__ + ": FIFO null-reading timeout");
@@ -115,7 +115,7 @@ void Image::readFIFOOUTpc_()
 	*/
 
 	//If all the expected data is NOT read successfully
-	if (nElemTotalA <mRTcontrol.mNpixAllFrames || nElemTotalB < mRTcontrol.mNpixAllFrames)
+	if (nElemTotalA <mRTcontrol.mNpixPerBeamletAllFrames || nElemTotalB < mRTcontrol.mNpixPerBeamletAllFrames)
 		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFO elements than expected");
 }
 
@@ -126,7 +126,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	U32 nElemToRead{ 0 };				//Elements remaining in FIFOOUTpc
 	const U32 timeout_ms{ 100 };		//FIFOOUTpc timeout
 
-	if (nElemRead < mRTcontrol.mNpixAllFrames)		//Skip if all the data have already been transferred
+	if (nElemRead < mRTcontrol.mNpixPerBeamletAllFrames)		//Skip if all the data have already been transferred
 	{
 		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), FIFOOUTpc, buffer, 0, timeout_ms, &nElemToRead));
@@ -136,7 +136,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 		if (nElemToRead > 0)
 		{
 			//If more data than expected
-			if (static_cast<int>(nElemRead + nElemToRead) > mRTcontrol.mNpixAllFrames)
+			if (static_cast<int>(nElemRead + nElemToRead) > mRTcontrol.mNpixPerBeamletAllFrames)
 				throw std::runtime_error((std::string)__FUNCTION__ + ": Received more FIFO elements than expected");
 
 			//Retrieve the elements in FIFOOUTpc
@@ -152,15 +152,14 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	}
 }
 
-
 //The RS scans bi-directionally. The pixel order has to be reversed for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample
 void Image::correctInterleaved_()
 {
 	//Within a line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
-	for (int lineIndex = 0; lineIndex < mRTcontrol.mHeightAllFrames_pix; lineIndex += 2)
+	for (int lineIndex = 0; lineIndex < mRTcontrol.mHeightPerBeamletAllFrames_pix; lineIndex += 2)
 	{
-		std::reverse(mBufArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mBufArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix + mRTcontrol.mWidthPerFrame_pix);
-		std::reverse(mBufArrayB + lineIndex * mRTcontrol.mWidthPerFrame_pix, mBufArrayB + lineIndex * mRTcontrol.mWidthPerFrame_pix + mRTcontrol.mWidthPerFrame_pix);
+		std::reverse(mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix + mRTcontrol.mWidthPerFrame_pix);
+		std::reverse(mMultiplexedArrayB + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayB + lineIndex * mRTcontrol.mWidthPerFrame_pix + mRTcontrol.mWidthPerFrame_pix);
 	}
 }
 
@@ -175,51 +174,33 @@ void Image::demultiplex_()
 //Singlebeam. For speed, only process the data from a single channel
 void Image::demuxSingleChannel_()
 {
-	switch (mRTcontrol.mPMT16Xchan)
+	//Demultiplex mMultiplexedArrayA (channels 1-8). Each U32 element in mMultiplexedArrayA has the multiplexed structure | Ch08 (MSB) | Ch07 | Ch06 | Ch05 | Ch04 | Ch03 | Ch02 | Ch01 (LSB) |
+	if (mRTcontrol.mPMT16Xchan >= PMT16XCHAN::CH01 && mRTcontrol.mPMT16Xchan <= PMT16XCHAN::CH08)
 	{
-	//Demultiplex mBufArrayA (channels 1-8). Each U32 element in mBufArrayA has the multiplexed structure | Ch08 (MSB) | Ch07 | Ch06 | Ch05 | Ch04 | Ch03 | Ch02 | Ch01 (LSB) |
-	case PMT16XCHAN::CH01:
-	case PMT16XCHAN::CH02:
-	case PMT16XCHAN::CH03:
-	case PMT16XCHAN::CH04:
-	case PMT16XCHAN::CH05:
-	case PMT16XCHAN::CH06:
-	case PMT16XCHAN::CH07:
-	case PMT16XCHAN::CH08:
-
-		//Shift mBufArrayA to the right '4 * mRTcontrol.mPMT16Xchan' times and extract the last 4 bits
-		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
-			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mBufArrayA[pixIndex] >> 4 * static_cast<unsigned char>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
-		break;
-
-	//Demultiplex mBufArrayB (channels 9-16). Each U32 element in mBufArrayB has the multiplexed structure | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
-	case PMT16XCHAN::CH09:
-	case PMT16XCHAN::CH10:
-	case PMT16XCHAN::CH11:
-	case PMT16XCHAN::CH12:
-	case PMT16XCHAN::CH13:
-	case PMT16XCHAN::CH14:
-	case PMT16XCHAN::CH15:
-	case PMT16XCHAN::CH16:
-
-		//Shift mBufArrayB to the right '4 * mRTcontrol.mPMT16Xchan' times and extract the last 4 bits
-		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
-			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mBufArrayB[pixIndex] >> 4 * static_cast<unsigned char>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
-		break;
-
-	default:;//If CH00, don't do anything
+		//Shift mMultiplexedArrayA to the right '4 * mRTcontrol.mPMT16Xchan' places, extract the count from the last 4 bits, and upscale it
+		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
+			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mMultiplexedArrayA[pixIndex] >> 4 * static_cast<unsigned char>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
 	}
+	//Demultiplex mMultiplexedArrayB (channels 9-16). Each U32 element in mMultiplexedArrayB has the multiplexed structure | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
+	else if (mRTcontrol.mPMT16Xchan >= PMT16XCHAN::CH09 && mRTcontrol.mPMT16Xchan <= PMT16XCHAN::CH16)
+	{
+		//Shift mMultiplexedArrayB to the right '4 * mRTcontrol.mPMT16Xchan' places, extract the count from the last 4 bits, and upscale it
+		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
+			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mMultiplexedArrayB[pixIndex] >> 4 * static_cast<unsigned char>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
+	}
+	else
+		;//If CH00, don't do anything
 }
 
 
-//Each U32 element in mBufArrayA and mBufArrayB has the multiplexed structure:
-//mBufArrayA[i] =  | Ch08 (MSB) | Ch07 | Ch06 | Ch05 | Ch04 | Ch03 | Ch02 | Ch01 (LSB) |
-//mBufArrayB[i] =  | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
+//Each U32 element in mMultiplexedArrayA and mMultiplexedArrayB has the multiplexed structure:
+//mMultiplexedArrayA[i] =  | Ch08 (MSB) | Ch07 | Ch06 | Ch05 | Ch04 | Ch03 | Ch02 | Ch01 (LSB) |
+//mMultiplexedArrayB[i] =  | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
 void Image::demuxAllChannels_()
 {
 	//Use 2 separate arrays to allow parallelization in the future
-	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch01-Ch08
-	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch09-Ch16
+	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch01-Ch08
+	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch09-Ch16
 
 	/*Iterate over all the pixels and frames (all the frames are concatenated in a single-long image), demultiplex the counts, and store them in CountA and CountB
 	CountA = |Ch01 f1|
@@ -242,7 +223,7 @@ void Image::demuxAllChannels_()
 			 |  .	 |
 			 |Ch16 fN|
 	*/
-	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixAllFrames; pixIndex++)
+	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 	{
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
@@ -250,25 +231,25 @@ void Image::demuxAllChannels_()
 			//if (upscaled > _UI8_MAX)
 			//	upscaled = _UI8_MAX;
 
-			//Extract the first 4 bits and upscale it
-			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * (mBufArrayA[pixIndex] & 0x0000000F));
-			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * (mBufArrayB[pixIndex] & 0x0000000F));
+			//Extract the count from the first 4 bits and upscale it
+			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * (mMultiplexedArrayA[pixIndex] & 0x0000000F));
+			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * (mMultiplexedArrayB[pixIndex] & 0x0000000F));
 
 			//shift 4 places to the right
-			mBufArrayA[pixIndex] = mBufArrayA[pixIndex] >> 4;
-			mBufArrayB[pixIndex] = mBufArrayB[pixIndex] >> 4;
+			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;
+			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;
 		}
 	}
 
 	//Merge the different PMT16X channels. The order depends on the scanning direction of the galvos (forward or backwards) and transfer the result to mTiff
 	if (multibeam)
-		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is the height of a single PMT16X channel
+		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is the height of a single PMT16X channel
 
 	//For debugging
 	if (saveTiffAllPMTchan)
 	{
 		//Save all the PMT16X channels in a different page of a Tiff
-		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerFrame_pix , 16 * mRTcontrol.mNframes };
+		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, 16 * mRTcontrol.mHeightPerBeamletPerFrame_pix , mRTcontrol.mNframes };
 		stack.pushImage(static_cast<int>(PMT16XCHAN::CH01), static_cast<int>(PMT16XCHAN::CH08), CountA.pointerToTiff());
 		stack.pushImage(static_cast<int>(PMT16XCHAN::CH09), static_cast<int>(PMT16XCHAN::CH16), CountB.pointerToTiff());
 		stack.saveToFile("AllChannels", MULTIPAGE::EN, OVERRIDE::DIS);
@@ -334,7 +315,7 @@ void Image::initialize(const ZSCAN stackScanDir)
 
 	if (mRTcontrol.mMainTrigger == MAINTRIG::ZSTAGE)
 	{
-		if (mRTcontrol.mHeightPerFrame_pix == 35)
+		if (mRTcontrol.mHeightPerBeamletPerFrame_pix == 35)
 		{
 			switch (mScanDir)
 			{
@@ -346,10 +327,10 @@ void Image::initialize(const ZSCAN stackScanDir)
 				break;
 			}
 		}
-		else if (mRTcontrol.mHeightPerFrame_pix >= 400) ; //Do nothing if mHeightPerFrame_pix is big enough
+		else if (mRTcontrol.mHeightPerBeamletPerFrame_pix >= 400) ; //Do nothing if mHeightPerFrame_pix is big enough
 		else //ZstageTrigDelay is uncalibrated
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": ZstageTrigDelay has not been calibrated for heightPerFrame = " << mRTcontrol.mHeightPerFrame_pix << " pix\n";
+			std::cerr << "WARNING in " << __FUNCTION__ << ": ZstageTrigDelay has not been calibrated for heightPerFrame = " << mRTcontrol.mHeightPerBeamletPerFrame_pix << " pix\n";
 			std::cerr << "Press any key to continue or ESC to exit\n";
 			
 			char input_char = _getch();
@@ -626,13 +607,13 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 	//Currently, the bottleneck is the buffe of the galvoss on the fpga that only support 5000 elements
 	//For 2 us-steps, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned
 	double timeStep;
-	if(mRTcontrol.mHeightPerFrame_pix <= 100)
+	if(mRTcontrol.mHeightPerBeamletPerFrame_pix <= 100)
 		timeStep = 2. * us;
 	else
 		timeStep = 8. * us;
 
 	//The position offset allows to compensate for the slight axis misalignment of the rescanner
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, halfPeriodLineclock * mRTcontrol.mHeightPerFrame_pix + mRampDurationFineTuning, 
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, halfPeriodLineclock * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
 		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal);
 }
 #pragma endregion "Galvo"
@@ -929,10 +910,10 @@ void Filterwheel::setPosition(const FILTERCOLOR color)
 
 			//Thread-safe message
 			std::stringstream msg;
-			msg << "Tuning " << mFilterwheelName << " to " + colorToString_(color) << "...\n";
+			msg << "Turning " << mFilterwheelName << " to " + colorToString_(color) << "...\n";
 			std::cout << msg.str();
 
-			Sleep(static_cast<DWORD>(1. * minSteps / mTuningSpeed / ms));	//Wait until the filterwheel stops turning the turret
+			Sleep(static_cast<DWORD>(1. * minSteps / mTurningSpeed / ms));	//Wait until the filterwheel stops turning the turret
 
 			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
 														//std::cout << "setColor full RxBuffer: " << RxBuffer << "\n"; //For debugging
@@ -1080,7 +1061,6 @@ void Laser::setWavelength(const int wavelength_nm)
 			try
 			{
 				mSerial->write(TxBuffer + "\r");
-
 				//std::cout << "Sleep time in ms: " << static_cast<int>( std::abs( 1.*(mWavelength_nm - wavelength_nm) / mTuningSpeed / ms ) ) << "\n";	//For debugging
 
 				//Thread-safe message
@@ -1462,12 +1442,12 @@ CollectorLens::~CollectorLens()
 	SCC_Close(mSerialNumber);	//Close device
 }
 
-void CollectorLens::move(const double position) const
+void CollectorLens::move(const double position)
 {
-	if (position < 0 || position > mPosLimit)
+	if (position < mPosLimit.at(0) || position > mPosLimit.at(1))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position for the collector lens must be in the range 0-13 mm");
 
-	//Move to a different location only
+	//Move to the new position if different from the current position (within an error)
 	if (std::abs(position - mPosition) > 0.001 * mm)
 	{
 		//Move to position
@@ -1489,6 +1469,9 @@ void CollectorLens::move(const double position) const
 		}
 		//For debugging. Get current position
 		//std::cout << "Collector lens current position: " << SCC_GetPosition(mSerialNumber) / mCalib /mm << " mm\n";
+
+		//Update the current position
+		mPosition = position;
 	}
 }
 
@@ -1502,7 +1485,7 @@ void CollectorLens::downloadConfig() const
 	std::cout << "Collector lens acceleration: " << currentAcceleration << "\tvelocity " << currentVelocity << "\n";
 }
 
-void CollectorLens::home() const
+void CollectorLens::home()
 {
 	Sleep(100);	//The code does not work without this sleep
 	SCC_ClearMessageQueue(mSerialNumber);
@@ -1517,9 +1500,11 @@ void CollectorLens::home() const
 	{
 		SCC_WaitForMessage(mSerialNumber, &messageType, &messageId, &messageData);
 	}
+	//Update the current position
+	mPosition = 0;
 }
 
-void CollectorLens::positionCollectorLens(const int wavelength_nm) const
+void CollectorLens::positionCollectorLens(const int wavelength_nm)
 {
 	switch (wavelength_nm)
 	{
@@ -1692,19 +1677,17 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
 void VirtualLaser::reconfigure(const int wavelength_nm)
 {
-
+	//Tune the laser wavelength
+	//mCombinedLasers.tuneLaserWavelength(wavelength_nm);
+	std::thread th1(&CombinedLasers::tuneLaserWavelength, &mCombinedLasers, wavelength_nm);
 
 	//Set the filterwheels
 	//mVirtualFilterWheel.turnFilterwheels_(wavelength_nm);
-	std::thread th1(&VirtualFilterWheel::turnFilterwheels_, &mVirtualFilterWheel, wavelength_nm);
+	std::thread th2(&VirtualFilterWheel::turnFilterwheels_, &mVirtualFilterWheel, wavelength_nm);
 
 	//Set the collector lens position
 	//positionCollectorLens_();
-	std::thread th2(&CollectorLens::positionCollectorLens, &mCollectorLens, wavelength_nm);
-
-	//Tune the laser wavelength
-	//mCombinedLasers.tuneLaserWavelength(wavelength_nm);
-	std::thread th3(&CombinedLasers::tuneLaserWavelength, &mCombinedLasers, wavelength_nm);
+	std::thread th3(&CollectorLens::positionCollectorLens, &mCollectorLens, wavelength_nm);
 
 	th1.join(); th2.join(); th3.join();
 

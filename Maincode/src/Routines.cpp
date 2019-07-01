@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 52.792 * mm, 17.000 * mm, 18.079 * mm };//Beads 74, 79
+double3 stackCenterXYZ{ 52.792 * mm, 17.000 * mm, 18.078 * mm };//Beads 74, 78
 //const double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
@@ -146,26 +146,26 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
-		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
+		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("GFP") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("TDT") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
 		const int nFramesCont{ 1 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
-		int heightPerFramePerbeamlet_pix;
+		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
 		PMT16XCHAN PMT16Xchan;
 
 #if multibeam
 			//Multibeam
-			heightPerFramePerbeamlet_pix = static_cast<int>(heightPerFrame_pix / 16);
+			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / 16);
 			PMT16Xchan = PMT16XCHAN::CH00;
 			selectPower = 1000. * mW;
@@ -173,7 +173,7 @@ namespace PMT16XRoutines
 #else
 			//Singlebeam
 			//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CH00 to let the laser scan through the PMT16X channels
-			heightPerFramePerbeamlet_pix = heightPerFrame_pix;
+			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 			FFOVslowPerBeamlet = FFOVslow;
 			PMT16Xchan = PMT16XCHAN::CH02;
 			selectPower = singleChannel.mScanPi;
@@ -223,9 +223,9 @@ namespace PMT16XRoutines
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 		}
-
+		
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFramePerbeamlet_pix, FIFOOUT::EN, PMT16Xchan };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
 
 		//LASER
 		const VirtualLaser laser{ RTcontrol,  singleChannel.mWavelength_nm, LASER::VISION };
@@ -334,18 +334,18 @@ namespace PMT16XRoutines
 		const double FFOVfast{ widthPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
-		int heightPerFramePerBeamlet_pix;
+		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
 		PMT16XCHAN PMT16Xchan;
 
 #if multibeam
 			//Multibeam
-			heightPerFramePerBeamlet_pix = static_cast<int>(heightPerFrame_pix / 16);
+			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / 16);
 			PMT16Xchan = PMT16XCHAN::CH00;
 #else
 			//Singlebeam
-			heightPerFramePerBeamlet_pix = heightPerFrame_pix;
+			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 			FFOVslowPerBeamlet = FFOVslow;
 			PMT16Xchan = PMT16XCHAN::CH08;
 #endif
@@ -359,7 +359,7 @@ namespace PMT16XRoutines
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFramePerBeamlet_pix, FIFOOUT::EN, PMT16Xchan };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -525,13 +525,13 @@ namespace PMT16XRoutines
 		{
 		case ZSCAN::TOPDOWN:
 			stageZi = stackCenterXYZ.at(ZZ);
-			stageZf = stackCenterXYZ.at(ZZ) + stackDepth + 20 * stepSizeZ; //Notice I have set a longer range
+			stageZf = stackCenterXYZ.at(ZZ) + stackDepth + 20 * stepSizeZ; //Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
 			laserPi = singleChannel.mScanPi;
 			laserPf = singleChannel.mScanPi + stackDepth * singleChannel.mStackPinc;
 			break;
 		case ZSCAN::BOTTOMUP:
 			stageZi = stackCenterXYZ.at(ZZ) + stackDepth;
-			stageZf = stackCenterXYZ.at(ZZ) - 20 * stepSizeZ;				//Notice I have set a longer range
+			stageZf = stackCenterXYZ.at(ZZ) - 20 * stepSizeZ;				//Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
 			laserPi = singleChannel.mScanPi + stackDepth * singleChannel.mStackPinc;
 			laserPf = singleChannel.mScanPi;
 			break;
@@ -1183,19 +1183,19 @@ namespace TestRoutines
 		const int nFramesCont{ 2 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
-		int heightPerFramePerBeamlet_pix;
+		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower;
 		PMT16XCHAN PMT16Xchan;
 
 #if multibeam
 			//Multibeam
-			heightPerFramePerBeamlet_pix = static_cast<int>(heightPerFrame_pix / 16);
+			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / 16);
 			PMT16Xchan = PMT16XCHAN::CH00;
 			selectPower = 1400. * mW;
 #else
 			//Singlebeam
-			heightPerFramePerBeamlet_pix = heightPerFrame_pix;
+			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 			FFOVslowPerBeamlet = FFOVslow;
 			PMT16Xchan = PMT16XCHAN::CH02;
 			selectPower = 50. * mW;
@@ -1205,7 +1205,7 @@ namespace TestRoutines
 		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in Z
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFramePerBeamlet_pix, FIFOOUT::EN, PMT16Xchan };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
 
 		//LASER
 		const int wavelength_nm = 750;

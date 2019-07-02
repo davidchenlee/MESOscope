@@ -146,10 +146,10 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
-		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
+		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("TDT") };	//Select a particular fluorescence channel
@@ -920,14 +920,10 @@ namespace TestRoutines
 		TiffU8 image{ inputFilename, nFramesCont };
 
 		image.mirrorOddFrames();
-		//image.averageFrames();
+		/////image.averageFrames();
 		image.averageEvenOddFrames();
+
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
-
-		//image.saveToFile(outputFilename, 2);
-
-		//image.mirrorOddFrames(nFramesCont);
-		//image.averageEvenOddFrames(nFramesCont);
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely

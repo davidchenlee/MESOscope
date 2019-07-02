@@ -155,11 +155,12 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 //The RS scans bi-directionally. The pixel order has to be reversed for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample
 void Image::correctInterleaved_()
 {
-	//Within a line, the pixels go from lineIndex*widthPerFrame_pix to lineIndex*widthPerFrame_pix + widthPerFrame_pix - 1
+	//std::reverse(mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
+	//reverses all the pixels between and including the indices 'lineIndex * widthPerFrame_pix' and '(lineIndex + 1) * widthPerFrame_pix - 1'
 	for (int lineIndex = 0; lineIndex < mRTcontrol.mHeightPerBeamletAllFrames_pix; lineIndex += 2)
 	{
-		std::reverse(mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix + mRTcontrol.mWidthPerFrame_pix);
-		std::reverse(mMultiplexedArrayB + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayB + lineIndex * mRTcontrol.mWidthPerFrame_pix + mRTcontrol.mWidthPerFrame_pix);
+		std::reverse(mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix);
+		std::reverse(mMultiplexedArrayB + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayB + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix);
 	}
 }
 
@@ -191,7 +192,6 @@ void Image::demuxSingleChannel_()
 	else
 		;//If CH00, don't do anything
 }
-
 
 //Each U32 element in mMultiplexedArrayA and mMultiplexedArrayB has the multiplexed structure:
 //mMultiplexedArrayA[i] =  | Ch08 (MSB) | Ch07 | Ch06 | Ch05 | Ch04 | Ch03 | Ch02 | Ch01 (LSB) |
@@ -235,7 +235,7 @@ void Image::demuxAllChannels_()
 			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * (mMultiplexedArrayA[pixIndex] & 0x0000000F));
 			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * (mMultiplexedArrayB[pixIndex] & 0x0000000F));
 
-			//shift 4 places to the right
+			//shift 4 places to the right for the next iteration
 			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;
 			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;
 		}
@@ -248,8 +248,8 @@ void Image::demuxAllChannels_()
 	//For debugging
 	if (saveTiffAllPMTchan)
 	{
-		//Save all the PMT16X channels in a different page of a Tiff
-		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, 16 * mRTcontrol.mHeightPerBeamletPerFrame_pix , mRTcontrol.mNframes };
+		//Save each PMT16X channel in a separate pages of a Tiff
+		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , 16 * mRTcontrol.mNframes };
 		stack.pushImage(static_cast<int>(PMT16XCHAN::CH01), static_cast<int>(PMT16XCHAN::CH08), CountA.pointerToTiff());
 		stack.pushImage(static_cast<int>(PMT16XCHAN::CH09), static_cast<int>(PMT16XCHAN::CH16), CountB.pointerToTiff());
 		stack.saveToFile("AllChannels", MULTIPAGE::EN, OVERRIDE::DIS);
@@ -280,25 +280,13 @@ void Image::stopFIFOOUTpc_() const
 	//std::cout << "stopFIFO called\n";
 }
 
+//For scanning a z-stack with individual acq triggers plane-by-plane
 void Image::acquire()
 {
 	initialize();
 	mRTcontrol.triggerRT();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
-
-	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
-	{
-		try
-		{
-			readFIFOOUTpc_();			//Read the data received in FIFOOUTpc
-			correctInterleaved_();
-			demultiplex_();				//Move the chuncks of data to the buffer array
-			mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning. Divide the long vertical image in nFrames and vertically mirror the odd frames
-		}
-		catch (const ImageException &e) //Notify the exception and continue with the next iteration
-		{
-			std::cerr << "An ImageException has occurred in: " << e.what() << "\n";
-		}
-	}
+	downloadData();
+	postprocess();
 }
 
 void Image::initialize(const ZSCAN stackScanDir)
@@ -365,17 +353,9 @@ void Image::downloadData()
 
 void Image::postprocess()
 {
-	//Stopwatch
-	//auto t_start = std::chrono::high_resolution_clock::now();
-
 	correctInterleaved_();
 	demultiplex_();				//Move the chuncks of data to the buffer array
 	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning. Divide the long vertical image in nFrames and mirror the odd frames vertically
-
-	//Stop the stopwatch
-	//double duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	//std::cout << "Post-processing elapsed time: " << duration << " ms" << "\n";
-
 }
 
 //Split the long vertical image into nFrames and calculate the average

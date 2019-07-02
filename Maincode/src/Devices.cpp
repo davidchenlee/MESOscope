@@ -180,14 +180,14 @@ void Image::demuxSingleChannel_()
 	{
 		//Shift mMultiplexedArrayA to the right '4 * mRTcontrol.mPMT16Xchan' places, extract the count from the last 4 bits, and upscale it
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
-			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mMultiplexedArrayA[pixIndex] >> 4 * static_cast<unsigned char>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
+			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mMultiplexedArrayA[pixIndex] >> 4 * static_cast<U8>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
 	}
 	//Demultiplex mMultiplexedArrayB (channels 9-16). Each U32 element in mMultiplexedArrayB has the multiplexed structure | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
 	else if (mRTcontrol.mPMT16Xchan >= PMT16XCHAN::CH09 && mRTcontrol.mPMT16Xchan <= PMT16XCHAN::CH16)
 	{
 		//Shift mMultiplexedArrayB to the right '4 * mRTcontrol.mPMT16Xchan' places, extract the count from the last 4 bits, and upscale it
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
-			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mMultiplexedArrayB[pixIndex] >> 4 * static_cast<unsigned char>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
+			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mMultiplexedArrayB[pixIndex] >> 4 * static_cast<U8>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
 	}
 	else
 		;//If CH00, don't do anything
@@ -280,11 +280,11 @@ void Image::stopFIFOOUTpc_() const
 	//std::cout << "stopFIFO called\n";
 }
 
-//For scanning a z-stack with individual acq triggers plane-by-plane
+//Scan a z-stack with individual acquisition triggers plane-by-plane
 void Image::acquire()
 {
 	initialize();
-	mRTcontrol.triggerRT();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
+	mRTcontrol.triggerRT();		//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 	downloadData();
 	postprocess();
 }
@@ -331,9 +331,9 @@ void Image::initialize(const ZSCAN stackScanDir)
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlU32_ZstageTrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
 
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
-	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to the FPGA
-	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI, but if not called, sometimes garbage is generated
-	FIFOOUTpcGarbageCollector_();	//Cleans up any residual data from the previous run
+	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to be sent to the FPGA
+	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
+	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from the previous run
 }
 
 void Image::downloadData()
@@ -354,11 +354,12 @@ void Image::downloadData()
 void Image::postprocess()
 {
 	correctInterleaved_();
-	demultiplex_();				//Move the chuncks of data to the buffer array
-	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning. Divide the long vertical image in nFrames and mirror the odd frames vertically
+	demultiplex_();						//Move the chuncks of data to the buffer array
+	mTiff.mirrorOddFrames();			//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
+	mTiff.correctRSdistortion();		//Correct the image distortion induced by the nonlinear scanning of the RS
 }
 
-//Split the long vertical image into nFrames and calculate the average
+//Split the long vertical image into nFrames and calculate the average over all the frames
 void Image::averageFrames()
 {
 	mTiff.averageFrames();

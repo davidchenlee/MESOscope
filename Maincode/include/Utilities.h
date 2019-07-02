@@ -20,6 +20,7 @@ U16 doubleToFx2p14(double n);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
 
+
 //For saving the parameters to a text file
 class Logger
 {
@@ -35,7 +36,7 @@ public:
 //For manipulating and saving U8 Tiff images
 class TiffU8
 {
-	unsigned char* mArray;
+	U8* mArray;
 	int mWidthPerFrame;
 	int mHeightPerFrame;
 	int mNframes;
@@ -43,11 +44,11 @@ class TiffU8
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
 public:
 	TiffU8(const std::string filename, const int nframes);
-	TiffU8(const unsigned char* inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes);
-	TiffU8(const std::vector<unsigned char> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes);
+	TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes);
+	TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes);
 	TiffU8(const int width, const int height, const int nframes);
 	~TiffU8();
-	unsigned char* const pointerToTiff() const;
+	U8* const pointerToTiff() const;
 	int widthPerFrame() const;
 	int heightPerFrame() const;
 	int nFrames() const;
@@ -57,9 +58,10 @@ public:
 	void averageFrames();
 	void analyze() const;
 	void saveTxt(const std::string fileName) const;
-	void pushImage(const int frameIndex, const unsigned char* inputArray) const;
-	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const unsigned char* inputArray) const;
-	void mergePMT16Xchannels(const int heightPerChannelPerFrame, const unsigned char* inputArrayA, const unsigned char* inputArrayB) const;
+	void pushImage(const int frameIndex, const U8* inputArray) const;
+	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const U8* inputArray) const;
+	void mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
+	void correctRSdistortion();
 };
 
 
@@ -69,7 +71,7 @@ class TiffStack
 	TiffU8 mDiffZ;		//For imaging different z planes
 public:
 	TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
-	void pushSameZ(const int indexSameZ, unsigned char* const pointerToTiff);
+	void pushSameZ(const int indexSameZ, U8* const pointerToTiff);
 	void pushDiffZ(const int indexDiffZ);
 	void saveToFile(const std::string filename, OVERRIDE override) const;
 };

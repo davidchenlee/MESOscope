@@ -90,6 +90,4 @@ namespace Constants
 
 	extern const int nPulses;
 	extern const U8 pulseArray[];
-
-	extern const std::vector<U32> MASK;
 }

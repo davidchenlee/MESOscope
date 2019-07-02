@@ -1,12 +1,12 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 52.792 * mm, 17.000 * mm, 18.078 * mm };//Beads 74, 78
+double3 stackCenterXYZ{ 52.792 * mm, 17.000 * mm, 18.073 * mm };//Beads 73, 79
 //const double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
 const std::string collar{ "1.51" };
-const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 45. * mW, 0. * mWpum }, { "TDT", 1040, 12. * mW, 0. * mWpum }} };	//4um beads
+const ChannelList channelListBeads{ {{ "DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 45. * mW, 0. * mWpum }, { "TDT", 1040, 12. * mW, 0. * mWpum }} };	//4um beads
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//0.5um beads
 //const ChannelList channelListLiver{ {{ "TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }} };
 const ChannelList channelListFluorSlide { { { "DAPI", 750, 10. * mW, 0. * mWpum }} };	//Fluorescent slide
@@ -134,8 +134,6 @@ namespace PMT1XRoutines
 			}//for
 		}//if
 	}
-
-
 }//namespace
 
 
@@ -146,13 +144,13 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
-		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
+		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("TDT") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
@@ -919,11 +917,12 @@ namespace TestRoutines
 		const int nFramesCont{ 10 };
 		TiffU8 image{ inputFilename, nFramesCont };
 
-		image.mirrorOddFrames();
+		image.correctRSdistortion();
+		//image.mirrorOddFrames();
 		/////image.averageFrames();
-		image.averageEvenOddFrames();
+		//image.averageEvenOddFrames();
 
-		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely

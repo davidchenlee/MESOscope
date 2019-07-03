@@ -522,7 +522,7 @@ inline int round_to_int(float r) {
 
 inline int clip(int x, int lower, int upper)
 {
-	return min(upper, max(x, lower));
+	return (std::min)(upper, (std::max)(x, lower));
 
 }
 
@@ -544,25 +544,25 @@ void TiffU8::correctRSdistortion()
 
 
 	/*
-		# time per half mirror scan in us
+	//time per half mirror scan in us
 	T0 = .5 / f * 1e6
 
 	Nx = x.shape[-1]
 
-	# calculate start and stop time in us, assuming centered stage
+	//calculate start and stop time in us, assuming centered stage
 	if t1 is None:
 		t1 = .5 * (T0 - Nx * dt)
 	t2 = T0 - t1
 
 
-	# the full width in um
+	//the full width in um
 	w0 = 2 * w / (np.cos(2 * np.pi * f * t1 * 1e-6) - np.cos(2 * np.pi * f * t2 * 1e-6))
 
-	# start and stop positions
+	//start and stop positions
 	x1 = w0 / 2. * (1 - np.cos(2 * np.pi * f * t1 * 1e-6))
 	x2 = w0 / 2. * (1 - np.cos(2 * np.pi * f * t2 * 1e-6))
 
-	# calculate the new output shape
+	//calculate the new output shape
 
 	Nx_out = int(np.round((x2 - x1) / dx))
 

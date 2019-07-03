@@ -90,7 +90,9 @@ int main(int argc, char* argv[])
 		pressAnyKeyToCont();
 	}
 
-	//pressAnyKeyToCont();
+	//U8 aa = 1;
+	//printHex(static_cast<I16>((std::numeric_limits<I16>::min)()));
+	pressAnyKeyToCont();
 	return 0;
 }
 

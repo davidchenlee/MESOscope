@@ -35,7 +35,7 @@ Image::~Image()
 void Image::FIFOOUTpcGarbageCollector_() const
 {
 	const U32 timeout_ms{ 100 };
-	const int bufSize{ 10000 };
+	const U32 bufSize{ 10000 };
 
 	U32 dummy;
 	U32* garbage = new U32[bufSize];
@@ -54,13 +54,13 @@ void Image::FIFOOUTpcGarbageCollector_() const
 
 		if (nElemToReadA > 0)
 		{
-			nElemToReadA = min(bufSize, nElemToReadA);	//Min between bufSize and nElemToReadA
+			nElemToReadA = (std::min)(bufSize, nElemToReadA);	//Min between bufSize and nElemToReadA
 			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, nElemToReadA, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
 			nElemTotalA += nElemToReadA;
 		}
 		if (nElemToReadB > 0)
 		{
-			nElemToReadB = min(bufSize, nElemToReadB);	//Min between bufSize and nElemToReadB
+			nElemToReadB = (std::min)(bufSize, nElemToReadB);	//Min between bufSize and nElemToReadB
 			FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, nElemToReadB, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
 			nElemTotalB += nElemToReadB;
 		}
@@ -223,8 +223,8 @@ void Image::demuxAllChannels_()
 			 |  .	 |
 			 |Ch16 fN|
 	*/
+
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
-	{
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
 			//If upscaled overflows
@@ -239,7 +239,6 @@ void Image::demuxAllChannels_()
 			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;
 			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;
 		}
-	}
 
 	//Merge the different PMT16X channels. The order depends on the scanning direction of the galvos (forward or backwards) and transfer the result to mTiff
 	if (multibeam)
@@ -475,7 +474,7 @@ double ResonantScanner::downloadControlVoltage() const
 	I16 control_I16;
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_ReadI16(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
 
-	return FPGAns::I16toVoltage(control_I16);
+	return FPGAns::intToVoltage(control_I16);
 }
 
 //Check if the RS is set to run. It does not actually check if the RS is running, for example, by looking at the RSsync signal
@@ -523,16 +522,16 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		switch (mWavelength_nm)
 		{
 		case 750:
-			mVoltagePerDistance = 0.32 * scanCalib;		//By increasing the voltage, the top beads in a Tiff appear before the bottom ones.
-			mVoltageOffset = -0.00 * V;					//A positive offset steers the beam towards channel 1 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, channel 1 is on the left
+			mVoltagePerDistance = 0.31 * scanCalib;		//By increasing this variable, the top beads in a Tiff appear before the bottom ones.
+			mVoltageOffset = 0.05 * V;					//A positive offset steers the beam towards channel 1 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, channel 1 is on the left
 			break;
 		case 920:
 			mVoltagePerDistance = 0.32 * scanCalib;
 			mVoltageOffset = 0.05 * V;
 			break;
 		case 1040:
-			mVoltagePerDistance = 0.33 * scanCalib;
-			mVoltageOffset = 0.03 * V;
+			mVoltagePerDistance = 0.335 * scanCalib;
+			mVoltageOffset = 0.06 * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -545,16 +544,14 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 
 Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double posMax, const int wavelength_nm) : Galvo(RTcontrol, channel, wavelength_nm)
 {
-	const double rescanVoltageSetpoint{ mVoltageOffset + beamletOrder.at(static_cast<int>(mRTcontrol.mPMT16Xchan)) * mInterBeamletDistance * mVoltagePerDistance };
-
 	switch (channel)
 	{
 	case RTCHAN::SCANGALVO:
-		positionLinearRamp(-posMax, posMax); //Raster scan from positive to negative direction of the x-stage
+		positionLinearRamp(-posMax, posMax, mVoltageOffset); //Raster scan from positive to negative direction of the x-stage
 		break;
 	case RTCHAN::RESCANGALVO:
 		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector
-		positionLinearRamp(posMax, -posMax, rescanVoltageSetpoint );
+		positionLinearRamp(posMax, -posMax, mVoltageOffset + beamletOrder.at(static_cast<int>(mRTcontrol.mPMT16Xchan)) * mInterBeamletDistance * mVoltagePerDistance);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
@@ -581,7 +578,7 @@ void Galvo::positionLinearRamp(const double timeStep, const double rampLength, c
 	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, mVoltagePerDistance * posInitial, mVoltagePerDistance * posFinal);
 }
 
-//Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with fixed z)
+//Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with a fixed z)
 void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset) const
 {
 	//Limit the number of steps for long ramps

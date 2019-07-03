@@ -9,8 +9,8 @@ namespace FPGAns
 
 		if (static_cast<U32>(t_tick) > 0x0000FFFF)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step overflow. Time step cast to the max: " << std::fixed << _UI16_MAX * usPerTick << " us\n";
-			return _UI16_MAX;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step overflow. Time step cast to the max: " << std::fixed << (std::numeric_limits<U16>::max)() * usPerTick << " us\n";
+			return (std::numeric_limits<U16>::max)();
 		}
 		else if (static_cast<U32>(t_tick) < tMIN_tick)
 		{
@@ -28,45 +28,54 @@ namespace FPGAns
 	//0x8000 = -32768
 	I16 voltageToI16(const double voltage)
 	{
-		if (voltage > AOmax)
+		//Positive case
+		if (voltage >= 0)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage cast to the max: " + std::to_string(AOmax/V) + " V\n";
-			return (I16)_I16_MAX;
+			if (voltage > AOmax)
+			{
+				std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage clipeed to the max: " + std::to_string(AOmax / V) + " V\n";
+				return static_cast<I16>((std::numeric_limits<I16>::max)());
+			}
+			else
+				return static_cast<I16>(voltage / AOmax * (std::numeric_limits<I16>::max)());
 		}
-		else if (voltage < -AOmax)
+		else //Negative case
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage cast to the min: " + std::to_string(-AOmax/V) + " V\n";
-			return (I16)_I16_MIN;
+			if (voltage < -AOmax)
+			{
+				std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage clipped to the min: " + std::to_string(-AOmax / V) + " V\n";
+				return static_cast<I16>((std::numeric_limits<I16>::min)());
+			}
+			else
+				return static_cast<I16>(voltage / AOmax * -(std::numeric_limits<I16>::min)());
 		}
-		else
-			return (I16)(voltage / AOmax * _I16_MAX);
 	}
 
-	//Convert I16 (-32768 to 32767) to voltage (-10V to 10V)
-	double I16toVoltage(const int input)
+	//Convert an int in the range (-32768 to 32767) to voltage (-10V to 10V)
+	double intToVoltage(const int input)
 	{
 		//Positive case
 		if (input >= 0)
 		{
 			//Check for overflow
-			if (input > _I16_MAX)
+			if (input > (std::numeric_limits<I16>::max)())
 			{
-				std::cerr << "WARNING in " << __FUNCTION__ << ": Input overflow, _I16_MAX used instead\n";
+				std::cerr << "WARNING in " << __FUNCTION__ << ": Input int overflow, _I16_MAX used instead\n";
 				return AOmax/V;
 			}
 			else
-				return 1. * input / _I16_MAX * AOmax;
+				return 1. * input / (std::numeric_limits<I16>::max)() * AOmax;
 		}
 		else //Negative case
 		{
 			//Check for underoverflow
-			if (input < _I16_MIN)
+			if (input < (std::numeric_limits<I16>::min)())
 			{
-				std::cerr << "WARNING in " << __FUNCTION__ << ": Input underflow, _I16_MIN used instead\n";
+				std::cerr << "WARNING in " << __FUNCTION__ << ": Input int underflow, _I16_MIN used instead\n";
 				return -AOmax/V;
 			}
 			else
-				return -1. * input / _I16_MIN * AOmax;
+				return -1. * input / (std::numeric_limits<I16>::min)()  * AOmax;
 		}		
 	}
 
@@ -430,8 +439,8 @@ namespace FPGAns
 				//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 				if ((chan == static_cast<U8>(RTCHAN::SCANGALVO) || chan == static_cast<U8>(RTCHAN::RESCANGALVO)) )	//Only do GALVO1 and GALVO2 for now
 				{
-					const double Vi = I16toVoltage(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
-					const double Vf = I16toVoltage((I16)mVectorOfQueues.at(chan).front());	//First element of the new RT control sequence
+					const double Vi = intToVoltage(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
+					const double Vf = intToVoltage(static_cast<I16>(mVectorOfQueues.at(chan).front()));	//First element of the new RT control sequence
 		
 					//For debugging
 					//std::cout << Vi << "\n";

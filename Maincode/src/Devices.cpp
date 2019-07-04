@@ -4,7 +4,7 @@
 
 //When multiplexing, create a mTiff to store 16 stripes of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(FPGAns::RTcontrol &RTcontrol) :
-	mRTcontrol(RTcontrol), mTiff(mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * 15 + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes)
+	mRTcontrol{ RTcontrol }, mTiff{ mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * 15 + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes }
 {
 	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
@@ -390,7 +390,7 @@ U8* const Image::pointerToTiff() const
 #pragma endregion "Image"
 
 #pragma region "Resonant scanner"
-ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol): mRTcontrol(RTcontrol)
+ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol) : mRTcontrol{ RTcontrol }
 {	
 	//Calculate the spatial fill factor
 	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * mRTcontrol.mDwell / halfPeriodLineclock };
@@ -502,7 +502,7 @@ void ResonantScanner::isRunning() const
 #pragma endregion "Resonant scanner"
 
 #pragma region "Galvo"
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavelength_nm): mRTcontrol(RTcontrol), mGalvoRTchannel(channel), mWavelength_nm(wavelength_nm)
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavelength_nm) : mRTcontrol{ RTcontrol }, mGalvoRTchannel{ channel }, mWavelength_nm{ wavelength_nm }
 {
 	//Calibration factor of the scan galvo. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
 	const double scanCalib{ 0.02417210 * V / um };			
@@ -542,7 +542,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 	}
 }
 
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double posMax, const int wavelength_nm) : Galvo(RTcontrol, channel, wavelength_nm)
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double posMax, const int wavelength_nm) : Galvo{ RTcontrol, channel, wavelength_nm }
 {
 	switch (channel)
 	{
@@ -755,7 +755,7 @@ void PMT16X::readTemp() const
 
 
 #pragma region "Filterwheel"
-Filterwheel::Filterwheel(const FILTERWHEEL whichFilterwheel): mWhichFilterwheel(whichFilterwheel)
+Filterwheel::Filterwheel(const FILTERWHEEL whichFilterwheel) : mWhichFilterwheel{ whichFilterwheel }
 {
 	switch (whichFilterwheel)
 	{
@@ -941,7 +941,7 @@ void Filterwheel::setWavelength(const int wavelength_nm)
 #pragma endregion "Filterwheel"
 
 #pragma region "Laser"
-Laser::Laser(const LASER whichLaser): mWhichLaser(whichLaser)
+Laser::Laser(const LASER whichLaser) : mWhichLaser{ whichLaser }
 {
 	switch (mWhichLaser)
 	{
@@ -1158,7 +1158,7 @@ bool Laser::isShutterOpen() const
 
 #pragma region "Shutters"
 //To control the Uniblitz shutters
-Shutter::Shutter(const FPGAns::FPGA &fpga, const LASER whichLaser) : mFpga(fpga)
+Shutter::Shutter(const FPGAns::FPGA &fpga, const LASER whichLaser) : mFpga{ fpga }
 {
 	switch (whichLaser)
 	{
@@ -1198,7 +1198,7 @@ void Shutter::pulse(const double pulsewidth) const
 //Curently, the output of the pockels cell is gated on the FPGA side: the output is HIGH when 'framegate' is HIGH
 //Each Uniblitz shutter goes with a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
 PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelector) :
-	mRTcontrol(RTcontrol), mWavelength_nm(wavelength_nm), mShutter(mRTcontrol.mFpga, laserSelector)
+	mRTcontrol{ RTcontrol }, mWavelength_nm{ wavelength_nm }, mShutter{ mRTcontrol.mFpga, laserSelector }
 {
 	if (laserSelector != LASER::VISION && laserSelector != LASER::FIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
@@ -1359,8 +1359,8 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 */
 #pragma endregion "Pockels cells"
 
-#pragma region "CollectorLens"
-CollectorLens::CollectorLens()
+#pragma region "StepperActuator"
+StepperActuator::StepperActuator(const char* serialNumber) : mSerialNumber{ serialNumber }
 {	
 	//Build list of connected device
 	if (TLI_BuildDeviceList() == 0)
@@ -1406,21 +1406,21 @@ CollectorLens::CollectorLens()
 	
 	//Set the actuator velocity
 	Sleep(100);
-	SCC_SetVelParams(mSerialNumber, mAcc_au, mVel_au);
+	SCC_SetVelParams(mSerialNumber, mAcc_iu, mVel_iu);
 
 	//download the current position
 	mPosition = SCC_GetPosition(mSerialNumber) / mCalib;
 	//std::cout << "Collector lens position: " << mPosition / mm << " mm\n";
 }
 
-CollectorLens::~CollectorLens()
+StepperActuator::~StepperActuator()
 {
 	//Stop polling
 	SCC_StopPolling(mSerialNumber);
 	SCC_Close(mSerialNumber);	//Close device
 }
 
-void CollectorLens::move(const double position)
+void StepperActuator::move(const double position)
 {
 	if (position < mPosLimit.at(0) || position > mPosLimit.at(1))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position for the collector lens must be in the range 0-13 mm");
@@ -1453,17 +1453,17 @@ void CollectorLens::move(const double position)
 	}
 }
 
-void CollectorLens::downloadConfig() const
+void StepperActuator::downloadConfig() const
 {
 	Sleep(100);	//The code does not work without this sleep
 	std::cout << "Collector lens position: " << SCC_GetPosition(mSerialNumber) / mCalib / mm << " mm\n";
 
 	int currentVelocity, currentAcceleration;
 	SCC_GetVelParams(mSerialNumber, &currentAcceleration, &currentVelocity);
-	std::cout << "Collector lens acceleration: " << currentAcceleration << "\tvelocity " << currentVelocity << "\n";
+	std::cout << "Collector lens acceleration: " << currentAcceleration << " iu\tvelocity: " << currentVelocity << " iu\n";
 }
 
-void CollectorLens::home()
+void StepperActuator::home()
 {
 	Sleep(100);	//The code does not work without this sleep
 	SCC_ClearMessageQueue(mSerialNumber);
@@ -1481,32 +1481,32 @@ void CollectorLens::home()
 	//Update the current position
 	mPosition = 0;
 }
-
-void CollectorLens::positionCollectorLens(const int wavelength_nm)
-{
-	switch (wavelength_nm)
-	{
-	case 750:
-		move(10.0 * mm);
-		break;
-	case 920:
-		move(4.0 * mm);
-		break;
-	case 1040:
-		move(1.0 * mm);
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector lens position has not been calibrated for the wavelength " + std::to_string(wavelength_nm));
-	}
-}
-#pragma endregion "CollectorLens"
+#pragma endregion "StepperActuator"
 
 
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
 
+void VirtualLaser::CollectorLens::position(const int wavelength_nm)
+{
+	switch (wavelength_nm)
+	{
+	case 750:
+		mStepper.move(10.0 * mm);
+		break;
+	case 920:
+		mStepper.move(4.0 * mm);
+		break;
+	case 1040:
+		mStepper.move(1.0 * mm);
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector lens position has not been calibrated for the wavelength " + std::to_string(wavelength_nm));
+	}
+}
+
 #pragma region "VirtualFilterWheel"
-VirtualLaser::VirtualFilterWheel::VirtualFilterWheel() : mFWexcitation(FILTERWHEEL::EXC), mFWdetection(FILTERWHEEL::DET) {}
+VirtualLaser::VirtualFilterWheel::VirtualFilterWheel() : mFWexcitation{ FILTERWHEEL::EXC }, mFWdetection{ FILTERWHEEL::DET } {}
 
 void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm)
 {
@@ -1530,7 +1530,7 @@ void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm
 
 #pragma region "CombinedLasers"
 VirtualLaser::CombinedLasers::CombinedLasers(FPGAns::RTcontrol &RTcontrol, const LASER laserSelect) :
-	mRTcontrol(RTcontrol), mLaserSelect(laserSelect), mVision(LASER::VISION), mFidelity(LASER::FIDELITY) {}
+	mRTcontrol{ RTcontrol }, mLaserSelect{ laserSelect }, mVision{ LASER::VISION }, mFidelity{ LASER::FIDELITY } {}
 
 std::string VirtualLaser::CombinedLasers::laserNameToString_(const LASER whichLaser) const
 {
@@ -1639,7 +1639,7 @@ void VirtualLaser::CombinedLasers::closeShutter() const
 }
 #pragma endregion "CombinedLasers"
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect) : mCombinedLasers(RTcontrol, laserSelect)
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect) : mCombinedLasers{ RTcontrol, laserSelect }
 {
 	//Tune the laser wavelength, set the excitation and emission filterwheels, and position the collector lens
 	reconfigure(wavelength_nm);		
@@ -1648,24 +1648,21 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm
 	setPower(initialPower, finalPower);
 }
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LASER laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, laserPower, laserPower, laserSelect) {}
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LASER laserSelect) : VirtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, laserSelect } {}
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelect) : VirtualLaser(RTcontrol, wavelength_nm, 0, 0, laserSelect) {}
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelect) : VirtualLaser{ RTcontrol, wavelength_nm, 0, 0, laserSelect } {}
 
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
 void VirtualLaser::reconfigure(const int wavelength_nm)
 {
 	//Tune the laser wavelength
-	//mCombinedLasers.tuneLaserWavelength(wavelength_nm);
 	std::thread th1(&CombinedLasers::tuneLaserWavelength, &mCombinedLasers, wavelength_nm);
 
 	//Set the filterwheels
-	//mVirtualFilterWheel.turnFilterwheels_(wavelength_nm);
 	std::thread th2(&VirtualFilterWheel::turnFilterwheels_, &mVirtualFilterWheel, wavelength_nm);
 
 	//Set the collector lens position
-	//positionCollectorLens_();
-	std::thread th3(&CollectorLens::positionCollectorLens, &mCollectorLens, wavelength_nm);
+	std::thread th3(&CollectorLens::position, &mCollectorLens, wavelength_nm);
 
 	th1.join(); th2.join(); th3.join();
 
@@ -2049,7 +2046,7 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 #pragma endregion "Stages"
 
 #pragma region "Vibratome"
-Vibratome::Vibratome(const FPGAns::FPGA &fpga, Stage &stage) : mFpga(fpga), mStage(stage) {}
+Vibratome::Vibratome(const FPGAns::FPGA &fpga, Stage &stage) : mFpga{ fpga }, mStage{ stage } {}
 
 //Start or stop running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
 void Vibratome::pushStartStopButton() const
@@ -2139,7 +2136,7 @@ void Vibratome::retractDistance(const double distance) const
 
 #pragma region "Sample"
 Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :
-	mName(sampleName), mImmersionMedium(immersionMedium), mObjectiveCollar(objectiveCollar), mROI(roi), mSurfaceZ(sampleSurfaceZ), mCutAboveBottomOfStack(sliceOffset)
+	mName{ sampleName }, mImmersionMedium{ immersionMedium }, mObjectiveCollar{ objectiveCollar }, mROI{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
 {
 	//Convert input ROI = {ymin, xmin, ymax, xmax} to the equivalent sample length in X and Y
 	mLengthXYZ.at(XX) = mROI.at(XMAX) - mROI.at(XMIN);
@@ -2157,7 +2154,7 @@ Sample::Sample(const std::string sampleName, const std::string immersionMedium, 
 }
 
 Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar) :
-	mName(sampleName), mImmersionMedium(immersionMedium), mObjectiveCollar(objectiveCollar), mCutAboveBottomOfStack(0) {}
+	mName{ sampleName }, mImmersionMedium{ immersionMedium }, mObjectiveCollar{ objectiveCollar }, mCutAboveBottomOfStack{ 0 } {}
 
 void Sample::printParams(std::ofstream *fileHandle) const
 {
@@ -2182,7 +2179,7 @@ void Sample::printParams(std::ofstream *fileHandle) const
 
 #pragma region "Stack"
 Stack::Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, const double3 overlapXYZ_frac) :
-	mFFOV(FFOV), mStepSizeZ(stepSizeZ), mDepth(stepSizeZ *  nFrames), mOverlapXYZ_frac(overlapXYZ_frac)
+	mFFOV{ FFOV }, mStepSizeZ{ stepSizeZ }, mDepth{ stepSizeZ *  nFrames }, mOverlapXYZ_frac{ overlapXYZ_frac }
 {
 	if (FFOV.at(XX) <= 0 || FFOV.at(YY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
@@ -2212,7 +2209,7 @@ void Stack::printParams(std::ofstream *fileHandle) const
 #pragma endregion "Stack"
 
 #pragma region "ChannelList"
-ChannelList::ChannelList(const std::vector<SingleChannel> channelList) : mList(channelList) {}
+ChannelList::ChannelList(const std::vector<SingleChannel> channelList) : mList{ channelList } {}
 
 std::size_t ChannelList::size() const
 {

@@ -69,6 +69,10 @@ public:
 	double mSampRes;									//Spatial sampling resolution (length/pixel)
 
 	ResonantScanner(const FPGAns::RTcontrol &RTcontrol);
+	ResonantScanner(const ResonantScanner&) = delete;				//Disable copy-constructor
+	ResonantScanner& operator=(const ResonantScanner&) = delete;	//Disable assignment-constructor
+	ResonantScanner(ResonantScanner&&) = delete;					//Disable move constructor
+	ResonantScanner& operator=(ResonantScanner&&) = delete;			//Disable move-assignment constructor
 
 	void setFFOV(const double FFOV);
 	void turnOn(const double FFOV);
@@ -95,6 +99,10 @@ class Galvo
 public:
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN galvoChannel, const int wavelength_nm = 0);
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN galvoChannel, const double posMax, const int wavelength_nm = 0);
+	Galvo(const Galvo&) = delete;				//Disable copy-constructor
+	Galvo& operator=(const Galvo&) = delete;	//Disable assignment-constructor
+	Galvo(Galvo&&) = delete;					//Disable move constructor
+	Galvo& operator=(Galvo&&) = delete;			//Disable move-assignment constructor
 
 	void voltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
@@ -243,28 +251,39 @@ public:
 	void setShutter(const bool state) const;
 };
 
-class CollectorLens
+class StepperActuator
 {
 	//To obtain the calibration, use Thorlabs APT software to set the position in mm, then read the position in internal-units via downloadConfig() implemented in this class
-	
 	double mPosition;
-	const char mSerialNumber[9]{ "26000299" };					//Each Thorlabs actuator has a unique serial number
+
+	const char* mSerialNumber;									//Each Thorlabs actuator has a unique serial number
 	const double mCalib{ 26000000/(12.9442 * mm) };				//Calibration factor to convert mm to the actuator's internal units
 	const std::vector<double> mPosLimit{ 0. * mm, 13. * mm };
-	const int mVel_au{ 323449856 };								//Equivalent to 3 mm/s
-	const int mAcc_au{ 11041 };									//Equivalent to 0.5 mm/s^2
+	const int mVel_iu{ 323449856 };								//Equivalent to 3 mm/s
+	const int mAcc_iu{ 11041 };									//Equivalent to 0.5 mm/s^2
 public:
-	CollectorLens();
-	~CollectorLens();
+	StepperActuator(const char* serialNumber);
+	~StepperActuator();
+	StepperActuator(const StepperActuator&) = delete;				//Disable copy-constructor
+	StepperActuator& operator=(const StepperActuator&) = delete;	//Disable assignment-constructor
+	StepperActuator(StepperActuator&&) = delete;					//Disable move constructor
+	StepperActuator& operator=(StepperActuator&&) = delete;			//Disable move-assignment constructor
+	
 	void move(const double position);
 	void downloadConfig() const;
 	void home();
-	void positionCollectorLens(const int wavelength_nm);
 };
 
 class VirtualLaser
 {
 	//Define separate classes to allow concurrent calls
+	class CollectorLens
+	{
+		StepperActuator mStepper{ "26000299" };
+	public:
+		void position(const int wavelength_nm);
+	};
+
 	class CombinedLasers
 	{
 		LASER mLaserSelect;								//use VISION, FIDELITY, or AUTO (let the code decide)
@@ -303,6 +322,11 @@ public:
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LASER laserSelect = LASER::AUTO);
 	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelect = LASER::AUTO);
+	VirtualLaser(const VirtualLaser&) = delete;				//Disable copy-constructor
+	VirtualLaser& operator=(const VirtualLaser&) = delete;	//Disable assignment-constructor
+	VirtualLaser(VirtualLaser&&) = delete;					//Disable move constructor
+	VirtualLaser& operator=(VirtualLaser&&) = delete;			//Disable move-assignment constructor
+
 	void reconfigure(const int wavelength_nm);
 	void setPower(const double laserPower) const;
 	void setPower(const double initialPower, const double finalPower) const;
@@ -374,7 +398,13 @@ class Vibratome
 public:
 	const double2 mStageInitialSlicePosXY{ -53. * mm, 8. * mm };					//Position the stages in front oh the vibratome's blade
 	const double mStageFinalSlicePosY{ 27. * mm };									//Final position of the y stage after slicing
+	
 	Vibratome(const FPGAns::FPGA &fpga, Stage &stage);
+	Vibratome(const Vibratome&) = delete;				//Disable copy-constructor
+	Vibratome& operator=(const Vibratome&) = delete;	//Disable assignment-constructor
+	Vibratome(Vibratome&&) = delete;					//Disable move constructor
+	Vibratome& operator=(Vibratome&&) = delete;			//Disable move-assignment constructor
+
 	void pushStartStopButton() const;
 	void slice(const double planeToCutZ);
 };

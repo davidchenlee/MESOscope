@@ -6,7 +6,7 @@ double3 stackCenterXYZ{ 53.170 * mm, 17.000 * mm, 18.081 * mm };//Beads 74, 81
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
 const std::string collar{ "1.51" };
-const ChannelList channelListBeads{ {{ "DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 45. * mW, 0. * mWpum }, { "TDT", 1040, 25. * mW, 0. * mWpum }} };	//4um beads
+const ChannelList channelListBeads{ {{ "DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 45. * mW, 0. * mWpum }, { "TDT", 1040, 20. * mW, 0. * mWpum }} };	//4um beads
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//0.5um beads
 //const ChannelList channelListLiver{ {{ "TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }} };
 const ChannelList channelListFluorSlide { { { "DAPI", 750, 10. * mW, 0. * mWpum }} };	//Fluorescent slide
@@ -838,7 +838,7 @@ namespace TestRoutines
 
 		//DEFINE THE POCKELS CELLS
 		PockelsCell pockelsVision{ RTcontrol, 750, LASER::VISION };			//Vision
-		PockelsCell pockelsFidelity{ RTcontrol, 1040, LASER::FIDELITY };		//Fidelity
+		PockelsCell pockelsFidelity{ RTcontrol, 1040, LASER::FIDELITY };	//Fidelity
 
 		PockelsCell pockels{ pockelsVision };
 		//PockelsCell pockels{ pockelsFidelity };
@@ -1260,15 +1260,13 @@ namespace TestRoutines
 #endif
 	}
 
-
 	void collectorLens()
 	{
-		CollectorLens collectorLens;
-		collectorLens.move(5.0 * mm);
-		//collectorLens.downloadConfig();
+		StepperActuator collectorLens{ "26000299" };
+		collectorLens.move(10.0 * mm);
+		collectorLens.downloadConfig();
 		//collectorLens.home();
 	}
-
 
 
 	//Photobleach a line along the fast axis (RS) on the sample

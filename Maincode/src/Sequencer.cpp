@@ -100,7 +100,7 @@ void Commandline::printParameters() const
 
 #pragma region "Sequencer"
 //Constructor using the sample's ROI. The number of stacks is calculated automatically based on the FFOV
-Sequencer::Sequencer(const ChannelList channelList, const Sample sample, const Stack stack) : mSample(sample), mChannelList(channelList), mStack(stack)
+Sequencer::Sequencer(const ChannelList channelList, const Sample sample, const Stack stack) : mSample{ sample }, mChannelList{ channelList }, mStack{ stack }
 {
 	//Initialize the z-stage with the position of the sample surface
 	mScanZi = mSample.mSurfaceZ;
@@ -137,7 +137,8 @@ Sequencer::Sequencer(const ChannelList channelList, const Sample sample, const S
 }
 
 //Constructor using the initial stack center and the number of stacks. To be used without slicing
-Sequencer::Sequencer(const ChannelList channelList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ) : mSample(sample), mChannelList(channelList), mStack(stack), mStackArrayDimIJ(stackArrayDimIJ)
+Sequencer::Sequencer(const ChannelList channelList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ) :
+	mSample{ sample }, mChannelList{ channelList }, mStack{ stack }, mStackArrayDimIJ{ stackArrayDimIJ }
 {
 	//Calculate the ROI covered by the stacks
 	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 )

@@ -240,7 +240,7 @@ namespace FPGAns
 #pragma endregion "FPGA"
 
 #pragma region "RTcontrol"
-	RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell) : mWidthPerFrame_pix(widthPerFrame_pix), mDwell(dwell)
+	RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell) : mWidthPerFrame_pix{ widthPerFrame_pix }, mDwell{ dwell }
 	{
 		const int calibFine_tick{ -40 };
 		switch (pixelclockType)
@@ -282,8 +282,8 @@ namespace FPGAns
 	}
 
 	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, FIFOOUT FIFOOUTstate, PMT16XCHAN PMT16Xchan) :
-		mVectorOfQueues(static_cast<U8>(RTCHAN::NCHAN)), mFpga(fpga), mLineclockInput(lineclockInput), mMainTrigger(mainTrigger), mNframes(nFrames),
-		mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerBeamletPerFrame_pix(heightPerBeamletPerFrame_pix), mFIFOOUTstate(FIFOOUTstate), mPMT16Xchan(PMT16Xchan)
+		mVectorOfQueues{ static_cast<U8>(RTCHAN::NCHAN) }, mFpga{ fpga }, mLineclockInput{ lineclockInput }, mMainTrigger{ mainTrigger }, mNframes{ nFrames },
+		mWidthPerFrame_pix{ widthPerFrame_pix }, mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }, mFIFOOUTstate{ FIFOOUTstate }, mPMT16Xchan{ PMT16Xchan }
 	{
 		//Set the imaging parameters
 		mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
@@ -307,7 +307,7 @@ namespace FPGAns
 		}
 	}
 
-	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga) : RTcontrol(fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS, PMT16XCHAN::CH08) {}
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga) : RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS, PMT16XCHAN::CH08 } {}
 
 	//Load the imaging parameters onto the FPGA
 	void RTcontrol::uploadImagingParameters_() const

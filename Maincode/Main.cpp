@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 			//PMT1XRoutines::sequencer(fpga);//FIX: I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
 
 			//PMT16X SEQUENCES
-			PMT16XRoutines::PMT16XframeByFrameScan(fpga);
+			//PMT16XRoutines::PMT16XframeByFrameScan(fpga);
 			//PMT16XRoutines::frameByFrameScanTiling(fpga, 1);
 			//PMT16XRoutines::liveScan(fpga);
 			//PMT16XRoutines::continuousScan(fpga);
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();
-			//TestRoutines::collectorLens();
+			TestRoutines::collectorLens();
 			//TestRoutines::photobleach(fpga);
 			//TestRoutines::generateLocationsForBigStitcher();
 		}
@@ -90,8 +90,6 @@ int main(int argc, char* argv[])
 		pressAnyKeyToCont();
 	}
 
-	//U8 aa = 1;
-	//printHex(static_cast<I16>((std::numeric_limits<I16>::min)()));
 	pressAnyKeyToCont();
 	return 0;
 }

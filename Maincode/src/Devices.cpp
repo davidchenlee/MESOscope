@@ -1754,7 +1754,7 @@ void Stage::configDOtriggers_() const
 	const int DO1{ 1 };
 	setDOtriggerEnabled(ZZ, DO1, true);	//Enable DO1 trigger
 	const double triggerStep{ 0.3 * um };
-	const StageDOtriggerMode triggerMode{ PositionDist };
+	const DOTRIGMODE triggerMode{ POSDIST };
 	const double startThreshold{ 0. * mm };
 	const double stopThreshold{ 0. * mm };
 	setDOtriggerParamAll(ZZ, DO1, triggerStep, triggerMode, startThreshold, stopThreshold);
@@ -1763,7 +1763,7 @@ void Stage::configDOtriggers_() const
 	//DO2 TRIGGER: DO2 is set to output HIGH when the stage z is in motion
 	const int DO2{ 2 };
 	setDOtriggerEnabled(ZZ, DO2, true);	//Enable DO2 trigger
-	setDOtriggerParamSingle(ZZ, DO2, TriggerMode, InMotion);
+	setDOtriggerParamSingle(ZZ, DO2, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));
 }
 
 std::string Stage::axisToString(const Axis axis) const
@@ -1948,7 +1948,7 @@ void Stage::printVelXYZ() const
 //8: start threshold in mm
 //9: stop threshold in mm
 //10: trigger position in mm
-double Stage::downloadDOtriggerParamSingle_(const Axis axis, const int DOchan, const StageDOparam param) const
+double Stage::downloadDOtriggerParamSingle_(const Axis axis, const int DOchan, const DOPARAM param) const
 {
 	const int triggerParam{ static_cast<int>(param) };
 	double value;
@@ -1959,14 +1959,14 @@ double Stage::downloadDOtriggerParamSingle_(const Axis axis, const int DOchan, c
 	return value;
 }
 
-void Stage::setDOtriggerParamSingle(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const
+void Stage::setDOtriggerParamSingle(const Axis axis, const int DOchan, const DOPARAM paramId, const double value) const
 {
 	const int triggerParam{ static_cast<int>(paramId) };
 	if (!PI_CTO(mID_XYZ.at(axis), &DOchan, &triggerParam, &value, 1))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + axisToString(axis));
 }
 
-void Stage::setDOtriggerParamAll(const Axis axis, const int DOchan, const double triggerStep, const StageDOtriggerMode triggerMode, const double startThreshold, const double stopThreshold) const
+void Stage::setDOtriggerParamAll(const Axis axis, const int DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const
 {
 	if ( triggerStep <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be greater than zero");
@@ -1975,12 +1975,12 @@ void Stage::setDOtriggerParamAll(const Axis axis, const int DOchan, const double
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'startThreshold is out of bound for the stage " + axisToString(axis));
 
 
-	setDOtriggerParamSingle(axis, DOchan, TriggerStep, triggerStep / mm);					//Trigger step
-	setDOtriggerParamSingle(axis, DOchan, AxisNumber, 1);									//Axis of the controller (always 1 because each controller has only 1 stage)
-	setDOtriggerParamSingle(axis, DOchan, TriggerMode, static_cast<double>(triggerMode));	//Trigger mode
-	setDOtriggerParamSingle(axis, DOchan, Polarity, 1);										//Polarity (0 for active low, 1 for active high)
-	setDOtriggerParamSingle(axis, DOchan, StartThreshold, startThreshold / mm);				//Start threshold
-	setDOtriggerParamSingle(axis, DOchan, StopThreshold, stopThreshold / mm);				//Stop threshold
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::TRIGSTEP, triggerStep / mm);					//Trigger step
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::AXISNUMBER, 1);								//Axis of the controller (always 1 because each controller has only 1 stage)
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::TRIGMODE, static_cast<double>(triggerMode));	//Trigger mode
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::POLARITY, 1);								//POLARITY (0 for active low, 1 for active high)
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::STARTTHRES, startThreshold / mm);			//Start threshold
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::STOPTHRES, stopThreshold / mm);				//Stop threshold
 }
 
 //Request the enable/disable status of the stage DO
@@ -2024,12 +2024,12 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 		break;
 	}
 
-	const double triggerStep_mm{ downloadDOtriggerParamSingle_(axis, chan, TriggerStep) };
-	const int triggerMode{ static_cast<int>(downloadDOtriggerParamSingle_(axis, chan, TriggerMode)) };
-	const int polarity{ static_cast<int>(downloadDOtriggerParamSingle_(axis, chan, Polarity)) };
-	const double startThreshold_mm{ downloadDOtriggerParamSingle_(axis, chan, StartThreshold) };
-	const double stopThreshold_mm{ downloadDOtriggerParamSingle_(axis, chan, StopThreshold) };
-	const double triggerPosition_mm{ downloadDOtriggerParamSingle_(axis, chan, TriggerPosition) };
+	const double triggerStep_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::TRIGSTEP) };
+	const int triggerMode{ static_cast<int>(downloadDOtriggerParamSingle_(axis, chan, DOPARAM::TRIGMODE)) };
+	const int polarity{ static_cast<int>(downloadDOtriggerParamSingle_(axis, chan, DOPARAM::POLARITY)) };
+	const double startThreshold_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::STARTTHRES) };
+	const double stopThreshold_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::STOPTHRES) };
+	const double triggerPosition_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::TRIGPOS) };
 	const bool triggerState{ isDOtriggerEnabled(axis, chan) };
 	const double vel{ downloadVelSingle_(axis) };
 
@@ -2037,7 +2037,7 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 	std::cout << "is DO trigger enabled? = " << triggerState << "\n";
 	std::cout << "Trigger step = " << triggerStep_mm << " mm\n";
 	std::cout << "Trigger mode = " << triggerMode << "\n";
-	std::cout << "Polarity = " << polarity << "\n";
+	std::cout << "POLARITY = " << polarity << "\n";
 	std::cout << "Start threshold position = " << startThreshold_mm << " mm\n";
 	std::cout << "Stop threshold position = " << stopThreshold_mm << " mm\n";
 	std::cout << "Trigger position = " << triggerPosition_mm << " mm\n";

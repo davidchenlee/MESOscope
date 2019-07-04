@@ -200,11 +200,11 @@ extern "C"
 		KMOT_TrigOut_Synch = 0x0E,///< TBD ?
 	} KMOT_TriggerPortMode;
 
-	/// <summary> Values that represent Trigger Port Polarity. </summary>
+	/// <summary> Values that represent Trigger Port POLARITY. </summary>
 	typedef enum KMOT_TriggerPortPolarity : __int16
 	{
-		KMOT_TrigPolarityHigh = 0x01,///< Trigger Polarity high
-		KMOT_TrigPolarityLow = 0x02,///< Trigger Polarity Low
+		KMOT_TrigPolarityHigh = 0x01,///< Trigger POLARITY high
+		KMOT_TrigPolarityLow = 0x02,///< Trigger POLARITY Low
 	} KMOT_TriggerPortPolarity;
 
 	/// <summary> Values that represent the Encoder PID Loop modes. </summary>

@@ -337,8 +337,8 @@ public:
 
 class Stage
 {
-	enum StageDOparam { TriggerStep = 1, AxisNumber = 2, TriggerMode = 3, Polarity = 7, StartThreshold = 8, StopThreshold = 9, TriggerPosition = 10 };
-	enum StageDOtriggerMode { PositionDist = 0, OnTarget = 2, InMotion = 6, PositionOffset = 7 };
+	enum class DOPARAM { TRIGSTEP = 1, AXISNUMBER = 2, TRIGMODE = 3, POLARITY = 7, STARTTHRES = 8, STOPTHRES = 9, TRIGPOS = 10 };
+	enum class DOTRIGMODE { POSDIST = 0, ONTARGET = 2, INMOTION = 6, POSOFFSET = 7 };
 
 	const int mPort_z{ 4 };							//COM port
 	const int mBaud_z{ 38400 };
@@ -349,7 +349,7 @@ class Stage
 
 	double downloadPositionSingle_(const Axis axis);
 	double downloadVelSingle_(const Axis axis) const;
-	double downloadDOtriggerParamSingle_(const Axis axis, const int DOchan, const StageDOparam paramId) const;
+	double downloadDOtriggerParamSingle_(const Axis axis, const int DOchan, const DOPARAM paramId) const;
 	void configDOtriggers_() const;
 	std::string axisToString(const Axis axis) const;
 public:
@@ -374,8 +374,8 @@ public:
 	void setVelSingle(const Axis axis, const double vel);
 	void setVelXYZ(const double3 vel);
 	void printVelXYZ() const;
-	void setDOtriggerParamSingle(const Axis axis, const int DOchan, const StageDOparam paramId, const double value) const;
-	void setDOtriggerParamAll(const Axis axis, const int DOchan, const double triggerStep, const StageDOtriggerMode triggerMode, const double startThreshold, const double stopThreshold) const;
+	void setDOtriggerParamSingle(const Axis axis, const int DOchan, const DOPARAM paramId, const double value) const;
+	void setDOtriggerParamAll(const Axis axis, const int DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const;
 	bool isDOtriggerEnabled(const Axis axis, const int DOchan) const;
 	void setDOtriggerEnabled(const Axis axis, const int DOchan, const BOOL triggerState) const;
 	void printStageConfig(const Axis axis, const int DOchan) const;

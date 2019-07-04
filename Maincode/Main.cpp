@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
 			//PMT16XRoutines::PMT16XframeByFrameScan(fpga);
 			//PMT16XRoutines::frameByFrameScanTiling(fpga, 1);
 			//PMT16XRoutines::liveScan(fpga);
-			//PMT16XRoutines::continuousScan(fpga);
+			PMT16XRoutines::continuousScan(fpga);
 
 			//TESTS
 			//TestRoutines::digitalLatency(fpga);
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();
-			TestRoutines::collectorLens();
+			//TestRoutines::collectorLens();
 			//TestRoutines::photobleach(fpga);
 			//TestRoutines::generateLocationsForBigStitcher();
 		}
@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
 		pressAnyKeyToCont();
 	}
 
-	pressAnyKeyToCont();
+	//pressAnyKeyToCont();
 	return 0;
 }
 

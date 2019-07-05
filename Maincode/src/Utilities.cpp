@@ -117,8 +117,8 @@ void Logger::record(const std::string description, const std::string input)
 
 #pragma region "TiffU8"
 
-//Construct a tiff from a vertically-concatenated file by splitting the image in nframes
-TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
+//Construct a tiff from a file
+TiffU8::TiffU8(const std::string filename) : mNframes{ 1 }
 {
 	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "r") };
 
@@ -126,54 +126,46 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failed opening the Tiff file");
 
 	//Read the Tiff tags
-	int widthAllFrames, heightAllFrames;
-	if (!TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &widthAllFrames))
+	if (!TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &mWidthPerFrame))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGEWIDTH");
 	
-	if(!TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &heightAllFrames))
+	if(!TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &mHeightPerFrame))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGELENGTH");
 
-	//TIFFGetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, &mStripSize);
-	
-	char* TIFFTAG_ImageJ = new char[256];
+	std::cout << "Image width = " << mWidthPerFrame << "\n";
+	std::cout << "Image height = " << mHeightPerFrame << "\n";
+
+	if (mHeightPerFrame % 2)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Odd number of rows not supported");
+
+	//Read the number of frames from the ImageJ tags
+	char* TIFFTAG_ImageJ;
 	if (TIFFGetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, &TIFFTAG_ImageJ))
 	{
 		std::string tiffTag{ TIFFTAG_ImageJ };
-		std::cout << tiffTag << "\n";
+		//std::cout << tiffTag << "\n";	//For debugging
 
 		std::string  keyword{ "slices=" };
 		std::string::size_type keywordPos{ tiffTag.find(keyword) };	//Find the keyword in the string
 		if (keywordPos != std::string::npos)
 		{
-			//std::cout << "found at: " << keywordPos << '\n';								//For debugging
-			tiffTag.erase(tiffTag.begin(), tiffTag.begin() + keywordPos + keyword.length()); //Delete the beginning of the string until the end of the keyword
-			std::string::size_type keywordPos{ tiffTag.find("\n") };						//Find the first ocurrence of '\n' in the remaining string
+			//std::cout << "found at: " << keywordPos << '\n';	//For debugging
+			tiffTag.erase(tiffTag.begin(), tiffTag.begin() + keywordPos + keyword.length());	//Delete the beginning of the string until the end of the keyword
+			std::string::size_type keywordPos{ tiffTag.find("\n") };							//Find the first ocurrence of '\n' in the remaining string
 			if (keywordPos != std::string::npos)
 			{
-				//std::cout << "found at: " << keywordPos << '\n';							//For debugging
-				tiffTag.erase(tiffTag.begin() + keywordPos, tiffTag.end());					//Delete the end of the string starting from the found '\n'
+				//std::cout << "found at: " << keywordPos << '\n';								//For debugging
+				tiffTag.erase(tiffTag.begin() + keywordPos, tiffTag.end());						//Delete the end of the string starting from the found '\n'
 			}
 
-			std::cout << std::stoi(tiffTag) << "\n";
+			//std::cout << std::stoi(tiffTag) << "\n";	//For debugging
+			mNframes = std::stoi(tiffTag);
 		}
-	}
+	}	
+	//The pointer TIFFTAG_ImageJ can't be cleaned up with delete because it was passed by reference to TIFFGetField()
 
-
-	if (heightAllFrames % 2)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Odd number of rows not supported");
-
-	std::cout << "Width all frames = " << widthAllFrames << "\n";
-	std::cout << "Height all frames = " << heightAllFrames << "\n";
-	//std::cout << "Strip size = " << mStripSize << "\n";
-
-	//Initialize the member variables for width and height of a single frame
-	mWidthPerFrame = widthAllFrames;
-	mHeightPerFrame = heightAllFrames / nframes;
-	mBytesPerLine = mWidthPerFrame * sizeof(U8);	//Length in memory of one row of pixel in the image. Targeting 'U8' only
-													//alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
-
-	if (mBytesPerLine == NULL)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Failed assigning mBytesPerLine");
+	//Length in memory of one row of pixel in the image. Targeting 'U8' only. Alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
+	mBytesPerLine = mWidthPerFrame * sizeof(U8);	
 
 	U8* buffer{ (U8*)_TIFFmalloc(mBytesPerLine) };
 
@@ -183,25 +175,29 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
 	}
 
-	mArray = new U8[mWidthPerFrame * heightAllFrames];	//Allocate memory for the image
+	mArray = new U8[mWidthPerFrame * mHeightPerFrame * mNframes];	//Allocate memory for the image
 
-	//Read the tiff one strip at a time
-	for (int rowIndex = 0; rowIndex < heightAllFrames; rowIndex++)
+	for (int frame_iter = 0; frame_iter < mNframes; frame_iter++)
 	{
-		if (TIFFReadScanline(tiffHandle, buffer, rowIndex, 0) < 0)
-			break;
-		std::memcpy(&mArray[rowIndex*mBytesPerLine], buffer, mBytesPerLine);
+		//Read the tiff one strip at a time
+		for (int rowIndex = 0; rowIndex < mHeightPerFrame; rowIndex++)
+		{
+			if (TIFFReadScanline(tiffHandle, buffer, rowIndex, 0) < 0)
+				break;
+			std::memcpy(&mArray[(frame_iter * mHeightPerFrame + rowIndex) * mBytesPerLine], buffer, mBytesPerLine);
+		}
+		TIFFReadDirectory(tiffHandle);
 	}
 
 	_TIFFfree(buffer);		//Release the memory
-	TIFFClose(tiffHandle);	//Close the tif file
+	TIFFClose(tiffHandle);	//Close the tif file. I hope the pointer TIFFTAG_ImageJ is cleaned up here
 }
 
 //Construct a Tiff from an array
-TiffU8::TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes) :
-	mWidthPerFrame(widthPerFrame), mHeightPerFrame(heightPerFrame), mNframes(nframes), mBytesPerLine(widthPerFrame * sizeof(U8))
+TiffU8::TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames) :
+	mWidthPerFrame(widthPerFrame), mHeightPerFrame(heightPerFrame), mNframes(nFrames), mBytesPerLine(widthPerFrame * sizeof(U8))
 {
-	const int nPixAllFrames{ widthPerFrame * heightPerFrame * nframes };
+	const int nPixAllFrames{ widthPerFrame * heightPerFrame * nFrames };
 	mArray = new U8[nPixAllFrames];
 
 	//Copy input image onto mArray
@@ -209,10 +205,10 @@ TiffU8::TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPe
 }
 
 //Construct a Tiff from a vector
-TiffU8::TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes) :
-	mWidthPerFrame(widthPerFrame), mHeightPerFrame(heightPerFrame), mNframes(nframes), mBytesPerLine(widthPerFrame * sizeof(U8))
+TiffU8::TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames) :
+	mWidthPerFrame(widthPerFrame), mHeightPerFrame(heightPerFrame), mNframes(nFrames), mBytesPerLine(widthPerFrame * sizeof(U8))
 {
-	const int nPixAllFrames{ widthPerFrame * heightPerFrame * nframes };
+	const int nPixAllFrames{ widthPerFrame * heightPerFrame * nFrames };
 	mArray = new U8[nPixAllFrames];
 
 	//Copy input image onto mArray
@@ -220,10 +216,10 @@ TiffU8::TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const
 }
 
 //Construct a new Tiff by allocating memory and initialize it
-TiffU8::TiffU8(const int widthPerFrame, const int heightPerFrame, const int nframes) :
-	mWidthPerFrame(widthPerFrame), mHeightPerFrame(heightPerFrame), mNframes(nframes), mBytesPerLine(widthPerFrame * sizeof(U8))
+TiffU8::TiffU8(const int widthPerFrame, const int heightPerFrame, const int nFrames) :
+	mWidthPerFrame(widthPerFrame), mHeightPerFrame(heightPerFrame), mNframes(nFrames), mBytesPerLine(widthPerFrame * sizeof(U8))
 {
-	mArray = new U8[widthPerFrame * heightPerFrame * nframes]();
+	mArray = new U8[widthPerFrame * heightPerFrame * nFrames]();
 }
 
 TiffU8::~TiffU8()
@@ -250,6 +246,13 @@ int TiffU8::heightPerFrame() const
 int TiffU8::nFrames() const
 {
 	return mNframes;
+}
+
+//Split the image vertically into 'nFrames' sub-images
+void TiffU8::splitIntoFrames(const int nFrames)
+{
+	mNframes = nFrames;
+	mHeightPerFrame = mHeightPerFrame / nFrames;
 }
 
 //Split mArray into sub-images (or "frames")
@@ -296,15 +299,15 @@ void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const O
 	}
 
 	//Choose whether to save the first frame at the top or bottom of the stack
-	int iterFrame, lastFrame;
+	int frame_iter, lastFrame;
 	switch (scanDir)
 	{
 	case ZSCAN::TOPDOWN:	//Forward saving: first frame at the top of the stack
-		iterFrame = 0;
+		frame_iter = 0;
 		lastFrame = nFrames - 1;
 		break;
 	case ZSCAN::BOTTOMUP:	//Reverse saving: first frame at the bottom of the stack
-		iterFrame = nFrames - 1;
+		frame_iter = nFrames - 1;
 		lastFrame = 0;
 		break;
 	default:
@@ -323,26 +326,25 @@ void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const O
 		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);							//Single channel with min as black				
 		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, width));		//Set the strip size of the file to be size of one row of pixels
 		//TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);									//Specify that it's a frame within the multipage file
-		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, iterFrame, nFrames);								//Specify the frame number
+		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, frame_iter, nFrames);							//Specify the frame number
 
 		//IMAGEJ TAG FOR USING HYPERSTACKS
 		std::string TIFFTAG_ImageJ = "ImageJ=1.52e\nimages=" + std::to_string(nFrames) + "\nchannels=1\nslices=" + std::to_string(nFrames) + "\nhyperstack=true\nmode=grayscale\nunit=\\u00B5m\nloop=false ";
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, TIFFTAG_ImageJ.c_str());
 
-		//Write the sub-image to the file one strip at a time
-		//I think many readers ignore the 'TIFFTAG_ORIENTATION' tag and consider the origin of the image at the TOP-LEFT
+		//Write a frame to the file one strip at a time
 		for (int rowIndex = 0; rowIndex < height; rowIndex++)
 		{
-			std::memcpy(buffer, &mArray[(iterFrame * height + rowIndex)*mBytesPerLine], mBytesPerLine);
+			std::memcpy(buffer, &mArray[(frame_iter * height + rowIndex) * mBytesPerLine], mBytesPerLine);
 			if (TIFFWriteScanline(tiffHandle, buffer, rowIndex, 0) < 0)
 				break;
 		}
 		TIFFWriteDirectory(tiffHandle); //Create a page structure. This gives a large overhead
 
-		if (iterFrame == lastFrame)
+		if (frame_iter == lastFrame)
 			break;
 
-		iterFrame += static_cast<int>(scanDir); //Increasing iterator for TOPDOWN. Decreasing for BOTTOMUP
+		frame_iter += static_cast<int>(scanDir); //Increasing iterator for TOPDOWN. Decreasing for BOTTOMUP
 	} while (true);
 
 	_TIFFfree(buffer);		//Destroy the buffer

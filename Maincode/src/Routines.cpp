@@ -911,14 +911,14 @@ namespace TestRoutines
 
 	void tiffU8()
 	{
-		//std::string inputFilename{ "no correction" };
-		std::string inputFilename{ "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4285" };
+		std::string inputFilename{ "Liver distorted" };
+		//std::string inputFilename{ "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610" };
 		std::string outputFilename{ "output" };
 
-		const int nFrames{ 2 };
-		TiffU8 image{ inputFilename, nFrames };
+		TiffU8 image{ inputFilename };
+		//image.splitIntoFrames(10);
 
-		image.mirrorOddFrames();
+		//image.mirrorOddFrames();
 		/////image.averageFrames();
 		//image.averageEvenOddFrames();
 

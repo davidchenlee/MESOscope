@@ -43,15 +43,16 @@ class TiffU8
 	int mBytesPerLine; 
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
 public:
-	TiffU8(const std::string filename, const int nframes);
-	TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes);
-	TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nframes);
-	TiffU8(const int width, const int height, const int nframes);
+	TiffU8(const std::string filename);
+	TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames);
+	TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames);
+	TiffU8(const int width, const int height, const int nFrames);
 	~TiffU8();
 	U8* const pointerToTiff() const;
 	int widthPerFrame() const;
 	int heightPerFrame() const;
 	int nFrames() const;
+	void splitIntoFrames(const int nFrames);
 	void saveToFile(std::string filename, const MULTIPAGE multipage, const OVERRIDE override = OVERRIDE::DIS, const ZSCAN scanDir = ZSCAN::TOPDOWN) const;
 	void mirrorOddFrames();
 	void averageEvenOddFrames();

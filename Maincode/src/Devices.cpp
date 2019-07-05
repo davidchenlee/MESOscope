@@ -1001,6 +1001,7 @@ int Laser::downloadWavelength_nm_() const
 			if (i != std::string::npos)
 				RxBuffer.erase(i, keyword.length());
 
+			//Delete '\r' and '\n'
 			RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\r'), RxBuffer.end());
 			RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 			//std::cout << RxBuffer << "\n";	//For debugging

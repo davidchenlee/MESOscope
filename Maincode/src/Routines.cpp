@@ -911,14 +911,14 @@ namespace TestRoutines
 
 	void tiffU8()
 	{
-		std::string inputFilename{ "Test" };
-		//std::string inputFilename{ "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610" };
-		std::string outputFilename{ "test" };
+		//std::string inputFilename{ "no correction" };
+		std::string inputFilename{ "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4285" };
+		std::string outputFilename{ "output" };
 
-		const int nFrames{ 10 };
+		const int nFrames{ 2 };
 		TiffU8 image{ inputFilename, nFrames };
 
-		//image.mirrorOddFrames();
+		image.mirrorOddFrames();
 		/////image.averageFrames();
 		//image.averageEvenOddFrames();
 
@@ -932,7 +932,7 @@ namespace TestRoutines
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 		*/
 
-		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
 		pressAnyKeyToCont();
 	}
 

@@ -117,19 +117,48 @@ void Logger::record(const std::string description, const std::string input)
 
 #pragma region "TiffU8"
 
-//Construct a tiff from a vertically-concatenated file
+//Construct a tiff from a vertically-concatenated file by splitting the image in nframes
 TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 {
 	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "r") };
 
 	if (tiffHandle == nullptr)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Opening Tiff failed");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failed opening the Tiff file");
 
+	//Read the Tiff tags
 	int widthAllFrames, heightAllFrames;
-	TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &widthAllFrames);
-	TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &heightAllFrames);
+	if (!TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &widthAllFrames))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGEWIDTH");
+	
+	if(!TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &heightAllFrames))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGELENGTH");
+
 	//TIFFGetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, &mStripSize);
 	
+	char* TIFFTAG_ImageJ = new char[256];
+	if (TIFFGetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, &TIFFTAG_ImageJ))
+	{
+		std::string tiffTag{ TIFFTAG_ImageJ };
+		std::cout << tiffTag << "\n";
+
+		std::string  keyword{ "slices=" };
+		std::string::size_type keywordPos{ tiffTag.find(keyword) };	//Find the keyword in the string
+		if (keywordPos != std::string::npos)
+		{
+			//std::cout << "found at: " << keywordPos << '\n';								//For debugging
+			tiffTag.erase(tiffTag.begin(), tiffTag.begin() + keywordPos + keyword.length()); //Delete the beginning of the string until the end of the keyword
+			std::string::size_type keywordPos{ tiffTag.find("\n") };						//Find the first ocurrence of '\n' in the remaining string
+			if (keywordPos != std::string::npos)
+			{
+				//std::cout << "found at: " << keywordPos << '\n';							//For debugging
+				tiffTag.erase(tiffTag.begin() + keywordPos, tiffTag.end());					//Delete the end of the string starting from the found '\n'
+			}
+
+			std::cout << std::stoi(tiffTag) << "\n";
+		}
+	}
+
+
 	if (heightAllFrames % 2)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Odd number of rows not supported");
 
@@ -161,7 +190,7 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 	{
 		if (TIFFReadScanline(tiffHandle, buffer, rowIndex, 0) < 0)
 			break;
-		std::memcpy(&mArray[(heightAllFrames - rowIndex - 1)*mBytesPerLine], buffer, mBytesPerLine);
+		std::memcpy(&mArray[rowIndex*mBytesPerLine], buffer, mBytesPerLine);
 	}
 
 	_TIFFfree(buffer);		//Release the memory

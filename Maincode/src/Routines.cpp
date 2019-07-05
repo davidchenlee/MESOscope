@@ -911,18 +911,29 @@ namespace TestRoutines
 
 	void tiffU8()
 	{
-		std::string inputFilename{ "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610" };
+		std::string inputFilename{ "Test" };
+		//std::string inputFilename{ "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610" };
 		std::string outputFilename{ "test" };
 
-		const int nFramesCont{ 10 };
-		TiffU8 image{ inputFilename, nFramesCont };
+		const int nFrames{ 10 };
+		TiffU8 image{ inputFilename, nFrames };
 
-		image.correctRSdistortion();
 		//image.mirrorOddFrames();
 		/////image.averageFrames();
 		//image.averageEvenOddFrames();
 
+		/*
+		//Declare and start a stopwatch
+		double duration;
+		auto t_start{ std::chrono::high_resolution_clock::now() };
+		image.Test();
+		//Stop the stopwatch
+		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+		std::cout << "Elapsed time: " << duration << " ms" << "\n";
+		*/
+
 		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+		pressAnyKeyToCont();
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely

@@ -117,7 +117,7 @@ void Logger::record(const std::string description, const std::string input)
 
 #pragma region "TiffU8"
 
-//Construct a tiff from a file
+//Construct a tiff from a vertically-concatenated file
 TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 {
 	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "r") };
@@ -129,7 +129,7 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 	TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &widthAllFrames);
 	TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &heightAllFrames);
 	//TIFFGetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, &mStripSize);
-
+	
 	if (heightAllFrames % 2)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Odd number of rows not supported");
 
@@ -141,7 +141,7 @@ TiffU8::TiffU8(const std::string filename, const int nframes): mNframes(nframes)
 	mWidthPerFrame = widthAllFrames;
 	mHeightPerFrame = heightAllFrames / nframes;
 	mBytesPerLine = mWidthPerFrame * sizeof(U8);	//Length in memory of one row of pixel in the image. Targeting 'U8' only
-															//alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
+													//alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
 
 	if (mBytesPerLine == NULL)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failed assigning mBytesPerLine");
@@ -224,7 +224,7 @@ int TiffU8::nFrames() const
 }
 
 //Split mArray into sub-images (or "frames")
-//Purpose: the microscope concatenates all the planes in a scanned stack and hands over a vertically-concatenated image which has to be resized into sub-images
+//Purpose: the microscope concatenates all the planes in a stack and hands over a vertically-concatenated image that has to be resized into individual images
 void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const OVERRIDE override, const ZSCAN scanDir) const
 {
 	int width, height, nFrames;
@@ -270,7 +270,7 @@ void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const O
 	int iterFrame, lastFrame;
 	switch (scanDir)
 	{
-	case ZSCAN::TOPDOWN:		//Forward saving: first frame at the top of the stack
+	case ZSCAN::TOPDOWN:	//Forward saving: first frame at the top of the stack
 		iterFrame = 0;
 		lastFrame = nFrames - 1;
 		break;
@@ -298,7 +298,7 @@ void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const O
 
 		//IMAGEJ TAG FOR USING HYPERSTACKS
 		std::string TIFFTAG_ImageJ = "ImageJ=1.52e\nimages=" + std::to_string(nFrames) + "\nchannels=1\nslices=" + std::to_string(nFrames) + "\nhyperstack=true\nmode=grayscale\nunit=\\u00B5m\nloop=false ";
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, TIFFTAG_ImageJ);
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, TIFFTAG_ImageJ.c_str());
 
 		//Write the sub-image to the file one strip at a time
 		//I think many readers ignore the 'TIFFTAG_ORIENTATION' tag and consider the origin of the image at the TOP-LEFT
@@ -328,18 +328,18 @@ void TiffU8::mirrorOddFrames()
 {
 	if (mNframes > 1)
 	{
-		U8 *buffer{ (U8*)_TIFFmalloc(mBytesPerLine) };		//Buffer used to store the row of pixel information for writing to file
+		U8 *buffer{ (U8*)_TIFFmalloc(mBytesPerLine) };		//Buffer used to store a row of pixels
 
 		if (buffer == NULL) //Check that the buffer memory was allocated
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory");
 
-		for (int frame = 1; frame < mNframes; frame += 2)
+		for (int frame_iter = 1; frame_iter < mNframes; frame_iter += 2)
 		{
 			//Swap the first and last rows of the sub-image, then do the second and second last rows, etc
 			for (int rowIndex = 0; rowIndex < mHeightPerFrame / 2; rowIndex++)
 			{
-				int eneTene = frame * mHeightPerFrame + rowIndex;				//Swap this row
-				int moneMei = (frame + 1) * mHeightPerFrame - rowIndex - 1;		//With this one
+				int eneTene = frame_iter * mHeightPerFrame + rowIndex;				//Swap this row
+				int moneMei = (frame_iter + 1) * mHeightPerFrame - rowIndex - 1;	//With this one
 				std::memcpy(buffer, &mArray[eneTene*mBytesPerLine], mBytesPerLine);
 				std::memcpy(&mArray[eneTene*mBytesPerLine], &mArray[moneMei*mBytesPerLine], mBytesPerLine);
 				std::memcpy(&mArray[moneMei*mBytesPerLine], buffer, mBytesPerLine);
@@ -373,12 +373,12 @@ void TiffU8::averageEvenOddFrames()
 		for (int pixIndex = 0; pixIndex < 2 * nPixPerFrame; pixIndex++)
 		{
 			if (mNframes % 2)	//Odd number of frames: 1, 3, 5, etc
-				mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / (nFramesHalf + 1));
+				mArray[pixIndex] = static_cast<U8>(1.f * avg[pixIndex] / (nFramesHalf + 1));
 			else				//Even number of frames: 0, 2, 4, etc
-				mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / nFramesHalf);
+				mArray[pixIndex] = static_cast<U8>(1.f * avg[pixIndex] / nFramesHalf);
 		}
 
-		mNframes = 2;	//Keep the averages in separate pages
+		mNframes = 2;	//Keep the odd and even averages in separate pages
 		delete[] avg;
 	}
 }
@@ -398,7 +398,7 @@ void TiffU8::averageFrames()
 
 		//Calculate the average intensity and reassign  it to mArray
 		for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-			mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / mNframes);
+			mArray[pixIndex] = static_cast<U8>(1.f * avg[pixIndex] / mNframes);
 
 		//Update the number of frames to 1
 		mNframes = 1;
@@ -513,8 +513,19 @@ void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* i
 		}
 }
 
+//Correct the image distortion induced by the nonlinear scanning of the RS
+void TiffU8::correctRSdistortion()
+{
+	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
+	U8* correctedArray = new U8[nPixAllFrames];
 
+	//Apply correction to mArray. For now, I just copy all the pixels
+	std::memcpy(correctedArray, mArray, nPixAllFrames * sizeof(U8));
 
+	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
+
+	mArray = correctedArray;	//Reassign the pointer mArray to the new, corrected array
+}
 
 inline int round_to_int(float r) {
 	return (int)lrint(r);
@@ -533,81 +544,78 @@ template<class T> inline T interpolate(float lam, const T  &val1, const T &val2)
 	return (T)(clip(res, (std::numeric_limits<U8>::min)(), (std::numeric_limits<U8>::max)()));
 }
 
-
-
-//Correct the image distortion induced by the nonlinear scanning of the RS
-void TiffU8::correctRSdistortion()
+void TiffU8::Test()
 {
+	//Code based on Martin's implementation, mweigert@mpi-cbg.de
+
+	//Assuming the mirror scan has the form:
+	//x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
+
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
 	U8* correctedArray = new U8[nPixAllFrames];
 
-
-
-	/*
 	//time per half mirror scan in us
-	T0 = .5 / f * 1e6
+	const double Thalf{ 62.5 * us };//half period
+	const double freq{ 0.5 / Thalf };
 
-	Nx = x.shape[-1]
+	const double dwell{ 0.1625 * us }; //dwell time
+
+	const double pixSizeX{ 0.5 * um };	//resolution in um
+	const double FFOV{ 150. * um }; //width FOV in um
 
 	//calculate start and stop time in us, assuming centered stage
-	if t1 is None:
-		t1 = .5 * (T0 - Nx * dt)
-	t2 = T0 - t1
-
+	const double t1{ 0.5 * (Thalf - mWidthPerFrame * dwell) };
+	const double t2{ Thalf - t1 };
 
 	//the full width in um
-	w0 = 2 * w / (np.cos(2 * np.pi * f * t1 * 1e-6) - np.cos(2 * np.pi * f * t2 * 1e-6))
+	const double fullScan{ 2 * FFOV / (std::cos(2 * PI * freq * t1) - std::cos(2 * PI * freq * t2)) };
 
 	//start and stop positions
-	x1 = w0 / 2. * (1 - np.cos(2 * np.pi * f * t1 * 1e-6))
-	x2 = w0 / 2. * (1 - np.cos(2 * np.pi * f * t2 * 1e-6))
+	const double x1{ 0.5 * fullScan * (1 - std::cos(2 * PI * freq * t1)) };
+	const double x2{ 0.5 * fullScan * (1 - std::cos(2 * PI * freq * t2)) };
 
-	//calculate the new output shape
+	std::cout << "t1 (us): " << t1 / us << "\n";
+	std::cout << "t2 (us): " << t2 / us << "\n";
+	std::cout << "x1 (um): " << x1 / um << "\n";
+	std::cout << "x2 (um): " << x2 / um << "\n";
 
-	Nx_out = int(np.round((x2 - x1) / dx))
-
-	xbar1 = x1 / w0
-	xbar2 = x2 / w0
-	tbar1 = t1 / T0
-	tbar2 = t2 / T0
-	*/
-
-
+	//Normalized variables
+	const double xbar1{ x1 / fullScan };
+	const double xbar2{ x2 / fullScan };
+	const double tbar1{ t1 / Thalf };
+	const double tbar2{ t2 / Thalf };
 
 	// precompute the mapping of the fast coordinate (k)
 	float *kk_floats_precomputed = new float[mWidthPerFrame];
 	for (int k = 0; k < mWidthPerFrame; k++) {
 		const float x = k / (mWidthPerFrame - 1.f);
-		//const float a = 1.f - 2.f*x1 - 2.f*(x2 - x1)*x;
-		//const float t = (acos(a) / PI - t1) / (t2 - t1);
-		//kk_floats_precomputed[k] = t * (mWidthPerFrame - 1.f);
+		const float a = 1.f - 2.f*xbar1 - 2.f*(xbar2 - xbar1)*x;
+		const float t = (std::acos(a) / PI - tbar1) / (tbar2 - tbar1);
+		kk_floats_precomputed[k] = t * (mWidthPerFrame - 1.f);
+		//std::cout << kk_floats_precomputed[k] << "\n";
 	}
-
-//# pragma omp parallel for schedule(dynamic)
+	
+# pragma omp parallel for schedule(dynamic)
 	for (int j = 0; j < mHeightPerFrame; j++) {
 		for (int k = 0; k < mWidthPerFrame; k++) {
-
 			const float kk_float = kk_floats_precomputed[k];
 			const int kk = round_to_int(floor(kk_float));
 			const int kk1 = clip(kk, 0, mWidthPerFrame - 1);
 			const int kk2 = clip(kk + 1, 0, mWidthPerFrame - 1);
-
-			const U8 value1 = mArray[j, kk1];	//Read from the input array
-			const U8 value2 = mArray[j, kk2];	//Read from the input array
-			correctedArray[j, k] = interpolate<U8>(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
+			const U8 value1 = mArray[j * mWidthPerFrame + kk1];	//Read from the input array
+			const U8 value2 = mArray[j * mWidthPerFrame + kk2];	//Read from the input array
+			correctedArray[j * mWidthPerFrame + k] = interpolate<U8>(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
+		
+			//if (j == 100)
+				//std::cout << (int)correctedArray[j * mWidthPerFrame + k] << "\n";
 		}
 	}
 
 	delete[] kk_floats_precomputed;
-	
-
-
-	//Apply correction to mArray. For now, I just copy all the pixels
-	std::memcpy(correctedArray, mArray, nPixAllFrames * sizeof(U8));
-
 	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
 
-	mArray = correctedArray;	//Reassign the pointer mArray to the new, corrected array
+	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
+	
 }
 
 #pragma endregion "TiffU8"

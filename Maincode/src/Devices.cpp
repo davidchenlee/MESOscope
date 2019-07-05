@@ -547,7 +547,8 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double po
 	switch (channel)
 	{
 	case RTCHAN::SCANGALVO:
-		positionLinearRamp(-posMax, posMax, mVoltageOffset); //Raster scan from positive to negative direction of the x-stage
+		//Raster scan from the positive to the negative direction of the x-stage
+		positionLinearRamp(-posMax, posMax, mVoltageOffset);
 		break;
 	case RTCHAN::RESCANGALVO:
 		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector

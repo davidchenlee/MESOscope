@@ -62,6 +62,7 @@ public:
 	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const U8* inputArray) const;
 	void mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
 	void correctRSdistortion();
+	void Test();
 };
 
 

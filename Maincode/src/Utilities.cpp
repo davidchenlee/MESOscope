@@ -132,9 +132,6 @@ TiffU8::TiffU8(const std::string filename) : mNframes{ 1 }
 	if(!TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &mHeightPerFrame))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGELENGTH");
 
-	std::cout << "Image width = " << mWidthPerFrame << "\n";
-	std::cout << "Image height = " << mHeightPerFrame << "\n";
-
 	if (mHeightPerFrame % 2)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Odd number of rows not supported");
 
@@ -163,6 +160,10 @@ TiffU8::TiffU8(const std::string filename) : mNframes{ 1 }
 		}
 	}	
 	//The pointer TIFFTAG_ImageJ can't be cleaned up with delete because it was passed by reference to TIFFGetField()
+
+	std::cout << "Image width = " << mWidthPerFrame << "\n";
+	std::cout << "Image height = " << mHeightPerFrame << "\n";
+	std::cout << "Number of frames = " << mNframes << "\n";
 
 	//Length in memory of one row of pixel in the image. Targeting 'U8' only. Alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
 	mBytesPerLine = mWidthPerFrame * sizeof(U8);	
@@ -390,13 +391,13 @@ void TiffU8::averageEvenOddFrames()
 
 		//Calculate the average of the even and odd frames separately
 		unsigned int* avg{ new unsigned int[2 * nPixPerFrame]() };
-		for (int frame = 0; frame < mNframes; frame++)
+		for (int frame_iter = 0; frame_iter < mNframes; frame_iter++)
 			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
 			{
-				if (frame % 2)
-					avg[pixIndex] += mArray[frame * nPixPerFrame + pixIndex];					//Odd frames
+				if (frame_iter % 2)
+					avg[pixIndex] += mArray[frame_iter * nPixPerFrame + pixIndex];					//Odd frames
 				else
-					avg[nPixPerFrame + pixIndex] += mArray[frame * nPixPerFrame + pixIndex];	//Even frames
+					avg[nPixPerFrame + pixIndex] += mArray[frame_iter * nPixPerFrame + pixIndex];	//Even frames
 			}
 
 		//Put 'evenImage' and 'oddImage' back into mArray. Concatenate 'oddImage' after 'evenImage'. Ignore the rest of the data in mArray
@@ -404,9 +405,9 @@ void TiffU8::averageEvenOddFrames()
 		for (int pixIndex = 0; pixIndex < 2 * nPixPerFrame; pixIndex++)
 		{
 			if (mNframes % 2)	//Odd number of frames: 1, 3, 5, etc
-				mArray[pixIndex] = static_cast<U8>(1.f * avg[pixIndex] / (nFramesHalf + 1));
+				mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / (nFramesHalf + 1));
 			else				//Even number of frames: 0, 2, 4, etc
-				mArray[pixIndex] = static_cast<U8>(1.f * avg[pixIndex] / nFramesHalf);
+				mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / nFramesHalf);
 		}
 
 		mNframes = 2;	//Keep the odd and even averages in separate pages
@@ -429,7 +430,7 @@ void TiffU8::averageFrames()
 
 		//Calculate the average intensity and reassign  it to mArray
 		for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-			mArray[pixIndex] = static_cast<U8>(1.f * avg[pixIndex] / mNframes);
+			mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / mNframes);
 
 		//Update the number of frames to 1
 		mNframes = 1;
@@ -558,26 +559,24 @@ void TiffU8::correctRSdistortion()
 	mArray = correctedArray;	//Reassign the pointer mArray to the new, corrected array
 }
 
-inline int round_to_int(float r) {
-	return (int)lrint(r);
-}
 
-inline int clip(int x, int lower, int upper)
+inline int clipU8(int x, int lower, int upper)
 {
 	return (std::min)(upper, (std::max)(x, lower));
-
 }
 
-template<class T> inline T interpolate(float lam, const T  &val1, const T &val2)
+inline U8 interpolateU8(double lam, const U8  &val1, const U8 &val2)
 {
-	int res = round_to_int((1.f - lam)*val1 + lam * val2);
+	int res = static_cast<int>(std::round( (1 - lam) * val1 + lam * val2) );
 
-	return (T)(clip(res, (std::numeric_limits<U8>::min)(), (std::numeric_limits<U8>::max)()));
+	return static_cast<U8>(clipU8(res, (std::numeric_limits<U8>::min)(), (std::numeric_limits<U8>::max)()));
 }
 
 void TiffU8::Test()
 {
-	//Code based on Martin's implementation, mweigert@mpi-cbg.de
+	//Code based on Martin's correction algorithm
+	//https://github.com/mpicbg-csbd/scancorrect
+	//mweigert@mpi-cbg.de
 
 	//Assuming the mirror scan has the form:
 	//x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
@@ -617,38 +616,32 @@ void TiffU8::Test()
 	const double tbar2{ t2 / Thalf };
 
 	// precompute the mapping of the fast coordinate (k)
-	float *kk_floats_precomputed = new float[mWidthPerFrame];
+	double *kk_precomputed = new double[mWidthPerFrame];
 	for (int k = 0; k < mWidthPerFrame; k++) {
-		const float x = k / (mWidthPerFrame - 1.f);
-		const float a = 1.f - 2.f*xbar1 - 2.f*(xbar2 - xbar1)*x;
-		const float t = (std::acos(a) / PI - tbar1) / (tbar2 - tbar1);
-		kk_floats_precomputed[k] = t * (mWidthPerFrame - 1.f);
+		const double x = 1. * k / (mWidthPerFrame - 1);
+		const double a = 1 - 2 * xbar1 - 2 * (xbar2 - xbar1) * x;
+		const double t = (std::acos(a) / PI - tbar1) / (tbar2 - tbar1);
+		kk_precomputed[k] = t * (mWidthPerFrame - 1);
 		//std::cout << kk_floats_precomputed[k] << "\n";
 	}
 	
 # pragma omp parallel for schedule(dynamic)
-	for (int j = 0; j < mHeightPerFrame; j++) {
+	for (int rowIndex = 0; rowIndex < mHeightPerFrame * mNframes; rowIndex++) {
 		for (int k = 0; k < mWidthPerFrame; k++) {
-			const float kk_float = kk_floats_precomputed[k];
-			const int kk = round_to_int(floor(kk_float));
-			const int kk1 = clip(kk, 0, mWidthPerFrame - 1);
-			const int kk2 = clip(kk + 1, 0, mWidthPerFrame - 1);
-			const U8 value1 = mArray[j * mWidthPerFrame + kk1];	//Read from the input array
-			const U8 value2 = mArray[j * mWidthPerFrame + kk2];	//Read from the input array
-			correctedArray[j * mWidthPerFrame + k] = interpolate<U8>(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
-		
-			//if (j == 100)
-				//std::cout << (int)correctedArray[j * mWidthPerFrame + k] << "\n";
+			const double kk_double = kk_precomputed[k];
+			const int kk = static_cast<int>(std::floor(kk_double));
+			const int kk1 = clipU8(kk, 0, mWidthPerFrame - 1);
+			const int kk2 = clipU8(kk + 1, 0, mWidthPerFrame - 1);
+			const U8 value1 = mArray[rowIndex * mWidthPerFrame + kk1];	//Read from the input array
+			const U8 value2 = mArray[rowIndex * mWidthPerFrame + kk2];	//Read from the input array
+			correctedArray[rowIndex * mWidthPerFrame + k] = interpolateU8(kk_double - kk1, value1, value2);	//Interpolate and save to the output array
 		}
 	}
 
-	delete[] kk_floats_precomputed;
+	delete[] kk_precomputed;
 	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
-
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
-	
 }
-
 #pragma endregion "TiffU8"
 
 

@@ -912,17 +912,16 @@ namespace TestRoutines
 	void tiffU8()
 	{
 		std::string inputFilename{ "Liver distorted" };
+		//std::string inputFilename{ "no correction" };
 		//std::string inputFilename{ "Beads_4um_750nm_50mW_x=35.120_y=19.808_z=18.4610" };
 		std::string outputFilename{ "output" };
 
 		TiffU8 image{ inputFilename };
 		//image.splitIntoFrames(10);
-
 		//image.mirrorOddFrames();
 		/////image.averageFrames();
 		//image.averageEvenOddFrames();
-
-		/*
+	
 		//Declare and start a stopwatch
 		double duration;
 		auto t_start{ std::chrono::high_resolution_clock::now() };
@@ -930,8 +929,7 @@ namespace TestRoutines
 		//Stop the stopwatch
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
-		*/
-
+		
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
 		pressAnyKeyToCont();
 	}

@@ -325,7 +325,7 @@ public:
 	VirtualLaser(const VirtualLaser&) = delete;				//Disable copy-constructor
 	VirtualLaser& operator=(const VirtualLaser&) = delete;	//Disable assignment-constructor
 	VirtualLaser(VirtualLaser&&) = delete;					//Disable move constructor
-	VirtualLaser& operator=(VirtualLaser&&) = delete;			//Disable move-assignment constructor
+	VirtualLaser& operator=(VirtualLaser&&) = delete;		//Disable move-assignment constructor
 
 	void reconfigure(const int wavelength_nm);
 	void setPower(const double laserPower) const;

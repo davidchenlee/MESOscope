@@ -320,7 +320,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerBeamletPerFrame_pix)));	//Number of lines per beamlet in a frame
 	
 		//SELECTORS
-		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));	//Lineclock: resonant scanner (RS) or function generator (FG)
+		checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));		//Lineclock: resonant scanner (RS) or function generator (FG)
 	}
 
 
@@ -334,9 +334,9 @@ namespace FPGAns
 			QU32 allQueues;		//Create a single long queue
 			for (int chan = 0; chan < static_cast<U8>(RTCHAN::NCHAN); chan++)
 			{
-				allQueues.push_back(vectorOfQueues.at(chan).size());	//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'	
+				allQueues.push_back(vectorOfQueues.at(chan).size());			//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'	
 				for (std::vector<int>::size_type iter = 0; iter != vectorOfQueues.at(chan).size(); iter++)
-					allQueues.push_back(vectorOfQueues.at(chan).at(iter));	//Push VectorOfQueues[i]
+					allQueues.push_back(vectorOfQueues.at(chan).at(iter));		//Push VectorOfQueues[i]
 			}
 
 			const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 
@@ -439,7 +439,7 @@ namespace FPGAns
 				//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 				if ((chan == static_cast<U8>(RTCHAN::SCANGALVO) || chan == static_cast<U8>(RTCHAN::RESCANGALVO)) )	//Only do GALVO1 and GALVO2 for now
 				{
-					const double Vi = intToVoltage(AOlastVoltage_I16.at(chan));				//Last element of the last RT control sequence
+					const double Vi = intToVoltage(AOlastVoltage_I16.at(chan));							//Last element of the last RT control sequence
 					const double Vf = intToVoltage(static_cast<I16>(mVectorOfQueues.at(chan).front()));	//First element of the new RT control sequence
 		
 					//For debugging

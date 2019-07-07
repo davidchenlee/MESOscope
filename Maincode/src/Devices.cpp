@@ -613,7 +613,7 @@ std::vector<uint8_t> PMT16X::sendCommand_(std::vector<uint8_t> command_array) co
 {
 	command_array.push_back(sumCheck_(command_array, command_array.size()));	//Append the sumcheck
 
-	std::string TxBuffer{ command_array.begin(), command_array.end() }; //Convert the vector<char> to string
+	std::string TxBuffer{ command_array.begin(), command_array.end() };			//Convert the vector<char> to string
 	TxBuffer += "\r";	//End the command line with CR
 	//printHex(TxBuffer); //For debugging
 
@@ -686,8 +686,8 @@ void PMT16X::setSingleGain(const int channel, const int gain) const
 
 void PMT16X::setAllGainToZero() const
 {
-	std::vector<uint8_t> parameters{ sendCommand_({ 'R' }) }; //The manual says that this sets all the gains to 255, but it really does it to 0
-															//printHex(parameters);	//For debugging
+	std::vector<uint8_t> parameters{ sendCommand_({ 'R' }) };	//The manual says that this sets all the gains to 255, but it really does it to 0
+	//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the PMT16X are correct. The second char returned is the sumcheck
 	if (parameters.at(0) == 'R' && parameters.at(1) == 'R')

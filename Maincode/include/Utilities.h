@@ -5,9 +5,10 @@
 #include <iostream>
 #include <Const.h>
 #include <experimental/filesystem>	//standard method in C++14 but not C++11
-#include <bitset>					//For  std::bitset
+#include <bitset>					//For std::bitset
 #include <tiffio.h>					//Tiff files				
 #include <windows.h>				//For using the ESC key
+#include <CL/cl.hpp>				//OpenCL
 using namespace Constants;
 
 std::string doesFileExist(const std::string filename);
@@ -64,6 +65,7 @@ public:
 	void mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
 	void correctRSdistortion();
 	void Test();
+	void TestOpenCL();
 };
 
 

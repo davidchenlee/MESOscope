@@ -1,8 +1,8 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 53.000 * mm, 17.000 * mm, 18.074 * mm };//Beads 74, 81
-//double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };//Fluorescent slide
+double3 stackCenterXYZ{ 53.000 * mm, 17.000 * mm, 18.074 * mm };	//Beads 74, 81
+//double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
 const std::string collar{ "1.51" };
@@ -434,8 +434,8 @@ namespace PMT16XRoutines
 
 					//EXECUTE THE RT CONTROL SEQUENCE
 					Image image{ RTcontrol };
-					image.acquire();			//Execute the RT control sequence and acquire the image
-					image.averageFrames();		//Average the frames acquired via continuous XY acquisition
+					image.acquire();					//Execute the RT control sequence and acquire the image
+					image.averageFrames();				//Average the frames acquired via continuous XY acquisition
 					tiffStack.pushSameZ(0, image.pointerToTiff());
 					tiffStack.pushDiffZ(iterDiffZ);
 					std::cout << "\n";
@@ -485,7 +485,7 @@ namespace PMT16XRoutines
 
 		while (true)
 		{
-			laser.setPower(singleChannel.mScanPi);	//Set the laser power
+			laser.setPower(singleChannel.mScanPi);				//Set the laser power
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
@@ -494,7 +494,7 @@ namespace PMT16XRoutines
 			image.saveTiffSinglePage("Untitled", OVERRIDE::EN);	//Save individual files
 			Sleep(700);
 
-			pressESCforEarlyTermination();		//Early termination if ESC is pressed
+			pressESCforEarlyTermination();						//Early termination if ESC is pressed
 		}
 	}
 
@@ -604,11 +604,11 @@ namespace TestRoutines
 		const double timeStep{ 4. * us };
 
 		FPGAns::RTcontrol RTcontrol{ fpga };
-		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 10 * V);				//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 10 * V);			//Initial pulse
 		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 0);
 		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, 4 * us, delay, 0, 5 * V);		//Linear ramp to accumulate the error
-		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 10 * V);				//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 0);					//Final pulse
+		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 10 * V);			//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 0);				//Final pulse
 
 		//DO0
 		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 1);
@@ -622,9 +622,9 @@ namespace TestRoutines
 	{
 		std::vector<U8> stackOfAverages;
 
-		FPGAns::RTcontrol RTcontrol{ fpga }; 		//Create a realtime control sequence
+		FPGAns::RTcontrol RTcontrol{ fpga }; 	//Create a realtime control sequence
 		Image image{ RTcontrol };
-		image.acquire();					//Execute the realtime control sequence and acquire the image
+		image.acquire();						//Execute the realtime control sequence and acquire the image
 		//image.pushToVector(stackOfAverages);
 		//std::cout << "size: " << stackOfAverages.size() << "\n";
 		//TiffU8 acqParam{ stackOfAverages, 300, 400 };
@@ -931,6 +931,9 @@ namespace TestRoutines
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 		
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+
+		image.TestOpenCL();
+
 		pressAnyKeyToCont();
 	}
 
@@ -1163,9 +1166,9 @@ namespace TestRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH08 };
 
 		//GALVOS
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };				//Scan duration in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
 		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-		//Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, 0 };		//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
+		//Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 		Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, wavelength_nm };
 
 		//LASER

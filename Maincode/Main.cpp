@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 			//PMT1XRoutines::sequencer(fpga);//FIX: I changed Pinc to be the power increase per um instead of per stack. I have to update this routine to reflect this change.
 
 			//PMT16X SEQUENCES
-			//PMT16XRoutines::PMT16XframeByFrameScan(fpga);
+			PMT16XRoutines::PMT16XframeByFrameScan(fpga);
 			//PMT16XRoutines::frameByFrameScanTiling(fpga, 1);
 			//PMT16XRoutines::liveScan(fpga);
 			//PMT16XRoutines::continuousScan(fpga);
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::virtualLasers(fpga);
 
 			//TestRoutines::convertI16toVolt();
-			TestRoutines::tiffU8();
+			//TestRoutines::tiffU8();
 			//TestRoutines::ethernetSpeed();
 			//TestRoutines::multithread();
 

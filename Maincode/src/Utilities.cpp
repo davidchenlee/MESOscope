@@ -560,16 +560,16 @@ void TiffU8::correctRSdistortion()
 }
 
 
-inline int clipU8(int x, int lower, int upper)
+inline int clip(int x, int lower, int upper)
 {
 	return (std::min)(upper, (std::max)(x, lower));
 }
 
 inline U8 interpolateU8(double lam, const U8  &val1, const U8 &val2)
 {
-	int res = static_cast<int>(std::round( (1 - lam) * val1 + lam * val2) );
-
-	return static_cast<U8>(clipU8(res, (std::numeric_limits<U8>::min)(), (std::numeric_limits<U8>::max)()));
+	//int res = static_cast<int>(std::round( (1 - lam) * val1 + lam * val2) );
+	//return static_cast<U8>(clip(res, (std::numeric_limits<U8>::min)(), (std::numeric_limits<U8>::max)()));
+	return static_cast<int>(std::round((1. - lam) * val1 + lam * val2));
 }
 
 void TiffU8::Test()
@@ -619,7 +619,7 @@ void TiffU8::Test()
 	double *kk_precomputed = new double[mWidthPerFrame];
 	for (int k = 0; k < mWidthPerFrame; k++) {
 		const double x = 1. * k / (mWidthPerFrame - 1);
-		const double a = 1 - 2 * xbar1 - 2 * (xbar2 - xbar1) * x;
+		const double a = 1. - 2 * xbar1 - 2 * (xbar2 - xbar1) * x;
 		const double t = (std::acos(a) / PI - tbar1) / (tbar2 - tbar1);
 		kk_precomputed[k] = t * (mWidthPerFrame - 1);
 		//std::cout << kk_floats_precomputed[k] << "\n";
@@ -630,8 +630,8 @@ void TiffU8::Test()
 		for (int k = 0; k < mWidthPerFrame; k++) {
 			const double kk_double = kk_precomputed[k];
 			const int kk = static_cast<int>(std::floor(kk_double));
-			const int kk1 = clipU8(kk, 0, mWidthPerFrame - 1);
-			const int kk2 = clipU8(kk + 1, 0, mWidthPerFrame - 1);
+			const int kk1 = clip(kk, 0, mWidthPerFrame - 1);
+			const int kk2 = clip(kk + 1, 0, mWidthPerFrame - 1);
 			const U8 value1 = mArray[rowIndex * mWidthPerFrame + kk1];	//Read from the input array
 			const U8 value2 = mArray[rowIndex * mWidthPerFrame + kk2];	//Read from the input array
 			correctedArray[rowIndex * mWidthPerFrame + k] = interpolateU8(kk_double - kk1, value1, value2);	//Interpolate and save to the output array

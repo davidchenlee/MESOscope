@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 53.000 * mm, 17.000 * mm, 18.074 * mm };	//Beads 74, 81
+double3 stackCenterXYZ{ 53.000 * mm, 17.000 * mm, 18.075 * mm };	//Beads 75, 81
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
@@ -921,19 +921,10 @@ namespace TestRoutines
 		//image.mirrorOddFrames();
 		/////image.averageFrames();
 		//image.averageEvenOddFrames();
-	
-		//Declare and start a stopwatch
-		double duration;
-		auto t_start{ std::chrono::high_resolution_clock::now() };
-		image.Test();
-		//Stop the stopwatch
-		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-		std::cout << "Elapsed time: " << duration << " ms" << "\n";
-		
-		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+		//image.Test();
+		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
 
 		image.TestOpenCL();
-
 		pressAnyKeyToCont();
 	}
 

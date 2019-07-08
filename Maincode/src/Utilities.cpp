@@ -644,6 +644,7 @@ void TiffU8::Test()
 }
 
 //Example from http://simpleopencl.blogspot.com/2013/06/tutorial-simple-start-with-opencl-and-c.html
+//Currently, openCL 1.2 installed
 void TiffU8::TestOpenCL()
 {
 	std::vector<cl::Platform> all_platforms;
@@ -652,7 +653,7 @@ void TiffU8::TestOpenCL()
 		std::cout << " No platforms found. Check OpenCL installation!\n";
 		exit(1);
 	}
-	cl::Platform default_platform = all_platforms[0];
+	cl::Platform default_platform{ all_platforms[0] };
 	std::cout << "Using platform: " << default_platform.getInfo<CL_PLATFORM_NAME>() << "\n";
 
 	//get default device of the default platform
@@ -662,61 +663,116 @@ void TiffU8::TestOpenCL()
 		std::cout << " No devices found. Check OpenCL installation!\n";
 		exit(1);
 	}
-	cl::Device default_device = all_devices[0];
+	cl::Device default_device{ all_devices[0] };
 	std::cout << "Using device: " << default_device.getInfo<CL_DEVICE_NAME>() << "\n";
+	std::cout << "Device version: " << default_device.getInfo<CL_DEVICE_VERSION>() << "\n";
+	std::cout << "Device global mem size: " << default_device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>() << "\n";
+	std::cout << "Device max mem alloc size: " << default_device.getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>() << "\n";
+	std::cout << "Device max compute units: " << default_device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>() << "\n"; //7
+	std::cout << "Device max work group sizes: " << default_device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() << "\n";//1024
+	std::cout << "Device max work item sizes: ( " << default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>().at(0) << " " <<
+		default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>().at(1) << " " <<
+		default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>().at(2)  <<" )\n"; //(1024 1024 64)
 
 
-	cl::Context context({ default_device });
-
+	cl::Context context{ { default_device } };
 	cl::Program::Sources sources;
 
 	// kernel calculates for each element C=A+B
-	std::string kernel_code =
-		"   void kernel simple_add(global const int* A, global const int* B, global int* C){       "
-		"       C[get_global_id(0)]=A[get_global_id(0)]+B[get_global_id(0)];                 "
-		"   }                                                                               ";
+	std::string kernel_code
+	{
+		"	int maxU32(int x, int y)"
+		"	{"
+		"	return x > y ? x : y;"
+		"	}"
+		""
+		"	int minU32(int x, int y)"
+		"	{"
+		"	return x < y ? x : y;"
+		"	}"
+		""
+		"	int clipU32(int x, int lower, int upper)"
+		"	{"
+		"	return minU32(upper, maxU32(x, lower));"
+		"	}"
+		""
+		"	unsigned char interpolateU8(double lam, const unsigned char  val1, const unsigned char val2)"
+		"	{"
+		"	return convert_uchar8(round(1. - lam) * val1 + lam * val2);"
+		"	}"
+		""
+		"   void kernel simple_add(global const float* kPrecomputed, global const unsigned char* uncorrectedArray, global float* correctedArray, const int widthPerFrame, const int nFrames)"
+		"	{"
+		"       /*correctedArray[get_global_id(0)] = kPrecomputed[get_global_id(0)] + uncorrectedArray[get_global_id(0)] + widthPerFrame;*/"
+		"		unsigned char qwe = 10;"
+		"		"
+		"       correctedArray[get_global_id(0)] = interpolateU8(0.6, 0 ,255);"
+		"   }"
+	};
 	sources.push_back({ kernel_code.c_str(),kernel_code.length() });
 
 	cl::Program program(context, sources);
 	if (program.build({ default_device }) != CL_SUCCESS) {
 		std::cout << " Error building: " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(default_device) << "\n";
+		pressAnyKeyToCont();
 		exit(1);
 	}
 
+	//I will need at most 560 * 200 kernels = 112000
 	// create buffers on the device
-	cl::Buffer buffer_A(context, CL_MEM_READ_WRITE, sizeof(int) * 10);
-	cl::Buffer buffer_B(context, CL_MEM_READ_WRITE, sizeof(int) * 10);
-	cl::Buffer buffer_C(context, CL_MEM_READ_WRITE, sizeof(int) * 10);
+	const std::size_t nElem = 50000;
 
-	int A[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-	int B[] = { 0, 1, 2, 0, 1, 2, 0, 1, 2, 0 };
+	float kPrecomputed[nElem];
+	for (int i = 0; i < nElem; i++)
+	{
+		kPrecomputed[i] = 1.f * i;
+	}
+	unsigned char uncorrectedArray[nElem];
+	for (int i = 0; i < nElem; i++)
+	{
+		uncorrectedArray[i] = i;
+	}
+
+	cl::Buffer buffer_kPrecomputed{ context, CL_MEM_READ_WRITE, sizeof(float) * nElem };
+	cl::Buffer buffer_uncorrectedArray{ context, CL_MEM_READ_WRITE, sizeof(unsigned char) * nElem };
+	cl::Buffer buffer_correctedArray{ context, CL_MEM_READ_WRITE, sizeof(float) * nElem };
+
+
+	//Declare and start a stopwatch
+	double duration;
+	auto t_start{ std::chrono::high_resolution_clock::now() };
 
 	//create queue to which we will push commands for the device.
-	cl::CommandQueue queue(context, default_device);
+	cl::CommandQueue queue{ context, default_device };
 
 	//write arrays A and B to the device
-	queue.enqueueWriteBuffer(buffer_A, CL_TRUE, 0, sizeof(int) * 10, A);
-	queue.enqueueWriteBuffer(buffer_B, CL_TRUE, 0, sizeof(int) * 10, B);
+	queue.enqueueWriteBuffer(buffer_kPrecomputed, CL_TRUE, 0, sizeof(float) * nElem, kPrecomputed);
+	queue.enqueueWriteBuffer(buffer_uncorrectedArray, CL_TRUE, 0, sizeof(unsigned char) * nElem, uncorrectedArray);
 
 	//run the kernel
-
-
-	//alternative way to run the kernel
-	cl::Kernel kernel_add=cl::Kernel(program,"simple_add");
-	kernel_add.setArg(0,buffer_A);
-	kernel_add.setArg(1,buffer_B);
-	kernel_add.setArg(2,buffer_C);
-	queue.enqueueNDRangeKernel(kernel_add,cl::NullRange,cl::NDRange(10),cl::NullRange);
+	cl::Kernel kernel_add{ cl::Kernel(program,"simple_add") };
+	kernel_add.setArg(0, buffer_kPrecomputed);
+	kernel_add.setArg(1, buffer_uncorrectedArray);
+	kernel_add.setArg(2, buffer_correctedArray);
+	kernel_add.setArg(3, 0);
+	kernel_add.setArg(4, 0);
+	queue.enqueueNDRangeKernel(kernel_add,cl::NullRange,cl::NDRange(nElem),cl::NullRange);
 	queue.finish();
 
-	int C[10];
-	//read result C from the device to array C
-	queue.enqueueReadBuffer(buffer_C, CL_TRUE, 0, sizeof(int) * 10, C);
+	float correctedArray[nElem];
+	//read correctedArray from the device
+	queue.enqueueReadBuffer(buffer_correctedArray, CL_TRUE, 0, sizeof(float) * nElem, correctedArray);
 
-	std::cout << " result: \n";
+	//Stop the stopwatch
+	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "Elapsed time: " << duration << " ms" << "\n";
+
+	std::cout << " correctedArray: \n";
 	for (int i = 0; i < 10; i++) {
-		std::cout << C[i] << " ";
+		std::cout << correctedArray[i] << " ";
 	}
+
+
 
 }
 

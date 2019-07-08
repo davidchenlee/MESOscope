@@ -922,9 +922,9 @@ namespace TestRoutines
 		/////image.averageFrames();
 		//image.averageEvenOddFrames();
 		//image.Test();
-		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
 
 		image.TestOpenCL();
+		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
 		pressAnyKeyToCont();
 	}
 

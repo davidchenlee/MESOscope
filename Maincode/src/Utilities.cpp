@@ -652,7 +652,7 @@ void TiffU8::TestOpenCL()
 //x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
 
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
-	const int heightAllFrame{ mHeightPerFrame * mNframes };//I will need at most mHeightPerFrame * mNframes = 560 * 200 kernels = 112000
+	const int heightAllFrames{ mHeightPerFrame * mNframes };//I will need at most mHeightPerFrame * mNframes = 560 * 200 kernels = 112000
 
 	//time per half mirror scan in us
 	const double Thalf{ 62.5 * us };//half period
@@ -689,10 +689,10 @@ void TiffU8::TestOpenCL()
 	// precompute the mapping of the fast coordinate (k)
 	float *kPrecomputed = new float[mWidthPerFrame];
 	for (int k = 0; k < mWidthPerFrame; k++) {
-		const float x = 1.f * k / (mWidthPerFrame - 1);
+		const float x = 1.f * k / (mWidthPerFrame - 1.f);
 		const float a = 1.f - 2 * xbar1 - 2 * (xbar2 - xbar1) * x;
 		const float t = (std::acos(a) / PI_float - tbar1) / (tbar2 - tbar1);
-		kPrecomputed[k] = t * (mWidthPerFrame - 1);
+		kPrecomputed[k] = t * (mWidthPerFrame - 1.f);
 		//std::cout << kk_floats_precomputed[k] << "\n";
 	}
 
@@ -747,23 +747,19 @@ void TiffU8::TestOpenCL()
 		""
 		"	unsigned char interpolateU8(float lam, const unsigned char  val1, const unsigned char val2)\n"
 		"	{\n"
-		"	return convert_uchar8(round(1.f - lam) * val1 + lam * val2);\n"
+		"	return convert_uchar8(round( (1.f - lam) * val1 + lam * val2) );\n"
 		"	}\n"
 		""
 		"   void kernel simple_add(global const float* kPrecomputed, global const unsigned char* uncorrectedArray, global unsigned char* correctedArray, const int widthPerFrame, global double* debugger)\n"
 		"	{\n"
-		"		/*Each work item processes a line of the image. get_global_id(0) represents the row number*/"
-		"		for(int k = 0; k < widthPerFrame; k++)\n"
-		"			{\n"
-		"			const float kk_float = kPrecomputed[k]; \n"
+		"		/*Each work item processes a line of the image. get_global_id(1) represents the row number*/"
+		"			const float kk_float = kPrecomputed[get_global_id(0)]; \n"
 		"			const int kk = floor(kk_float);\n"
 		"			const int kk1 = clipU32(kk, 0, widthPerFrame - 1);\n"
 		"			const int kk2 = clipU32(kk + 1, 0, widthPerFrame - 1);\n"
-		"			const unsigned char value1 = uncorrectedArray[get_global_id(0) * widthPerFrame + kk1];\n"
-		"			const unsigned char value2 = uncorrectedArray[get_global_id(0) * widthPerFrame + kk2];\n"
-		"			/*correctedArray[get_global_id(0) * widthPerFrame + k] = interpolateU8(kk_float - kk1, value1, value2);\n*/"
-		"			}\n"
-		""
+		"			const unsigned char value1 = uncorrectedArray[get_global_id(1) * widthPerFrame + kk1];\n"
+		"			const unsigned char value2 = uncorrectedArray[get_global_id(1) * widthPerFrame + kk2];\n"
+		"			correctedArray[get_global_id(1) * widthPerFrame + get_global_id(0)] = interpolateU8(kk_float - kk1, value1, value2);\n"
 		"       *debugger = uncorrectedArray[1000];\n"
 		"   }"
 	};
@@ -800,7 +796,7 @@ void TiffU8::TestOpenCL()
 	kernel_add.setArg(2, buffer_correctedArray);
 	kernel_add.setArg(3, mWidthPerFrame);
 	kernel_add.setArg(4, buffer_debugger);
-	queue.enqueueNDRangeKernel(kernel_add,cl::NullRange,cl::NDRange(nPixAllFrames),cl::NullRange);
+	queue.enqueueNDRangeKernel(kernel_add,cl::NullRange,cl::NDRange(mWidthPerFrame, heightAllFrames),cl::NullRange);
 	queue.finish();
 
 	//read correctedArray from the device
@@ -814,15 +810,17 @@ void TiffU8::TestOpenCL()
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 	std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
+	/*
 	std::cout << "correctedArray: \n";
 	for (int i = 0; i < 10; i++) {
-		std::cout << correctedArray[i] << " ";
+		std::cout << (int) correctedArray[i] << " ";
 	}
 	std::cout << "\n";
 
 	std::cout << std::fixed;
 	std::cout << std::setprecision(10);
 	std::cout << "Debugger: " << debugger << "\n";
+	*/
 
 	delete[] kPrecomputed;
 	delete[] mArray;			//Free the memory-block containing the old, uncorrected array

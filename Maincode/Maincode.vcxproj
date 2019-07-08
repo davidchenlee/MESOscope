@@ -182,6 +182,9 @@
     <ClInclude Include="include\Thorlabs.MotionControl.KCube.StepperMotor.h" />
     <ClInclude Include="include\Utilities.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="src\asdas.cl" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -924,7 +924,7 @@ namespace TestRoutines
 		//image.Test();
 
 		image.TestOpenCL();
-		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
+		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
 		pressAnyKeyToCont();
 	}
 

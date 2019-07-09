@@ -27,7 +27,8 @@ namespace Constants
 	extern const double VISIONpulsePeriod{ 0.0125 * us };	//The pulse repetition rate of VISION is 80 MHz
 
 	//PIXELCLOCK
-	extern const double halfPeriodLineclock{ 63.05 * us };	//Half-period of the resonant scanner. I measure 25.220 ms over 400 half oscillations. Therefore, the average half-period is 25200us/400 = 63.05 us
+	extern const double pixelDwellTime{ 0.1625 * us };		//= 13 * 12.5 ns = 162.5 ns
+	extern const double LineclockHalfPeriod{ 63.05 * us };	//Half-period of the resonant scanner. I measure 25.220 ms over 400 half oscillations. Therefore, the average half-period is 25200us/400 = 63.05 us
 															//The forward and backward travel times differ slightly and the difference depends on the scanning amplitude
 															//For example, forward = 63.14 us, backwards = 62.99 us, diff = 150 ns (i.e., ~ 1 pixel)
 															//The measured RS period (126.1 us) seems to be independent of the scanning amplitude

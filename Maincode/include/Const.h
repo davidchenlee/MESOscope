@@ -65,9 +65,10 @@ namespace Constants
 	extern const int mW;
 	extern const double mWpum;
 
-	extern const double halfPeriodLineclock;
 	extern const double VISIONpulsePeriod;
-
+	extern const double pixelDwellTime;
+	extern const double LineclockHalfPeriod;
+	
 	extern const int AOmax;
 	extern const int tickPerUs;
 	extern const double usPerTick;

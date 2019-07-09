@@ -572,121 +572,44 @@ inline U8 interpolateU8(float lam, const U8  &val1, const U8 &val2)
 	return static_cast<int>(std::round((1.f - lam) * val1 + lam * val2));
 }
 
-void TiffU8::Test()
-{
-	//Code based on Martin's correction algorithm
-	//https://github.com/mpicbg-csbd/scancorrect
-	//mweigert@mpi-cbg.de
 
-	//Assuming the mirror scan has the form:
-	//x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
-
-	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
-	U8* correctedArray = new U8[nPixAllFrames];
-
-	//time per half mirror scan in us
-	const double Thalf{ 62.5 * us };//half period
-	const double freq{ 0.5 / Thalf };
-
-	const double dwell{ 0.1625 * us }; //dwell time
-
-	const double pixSizeX{ 0.5 * um };	//resolution in um
-	const double FFOV{ 150. * um }; //width FOV in um
-
-	//calculate start and stop time in us, assuming centered stage
-	const double t1{ 0.5 * (Thalf - mWidthPerFrame * dwell) };
-	const double t2{ Thalf - t1 };
-
-	//the full width in um
-	const double fullScan{ 2 * FFOV / (std::cos(2 * PI * freq * t1) - std::cos(2 * PI * freq * t2)) };
-
-	//start and stop positions
-	const double x1{ 0.5 * fullScan * (1 - std::cos(2 * PI * freq * t1)) };
-	const double x2{ 0.5 * fullScan * (1 - std::cos(2 * PI * freq * t2)) };
-
-	std::cout << "t1 (us): " << t1 / us << "\n";
-	std::cout << "t2 (us): " << t2 / us << "\n";
-	std::cout << "x1 (um): " << x1 / um << "\n";
-	std::cout << "x2 (um): " << x2 / um << "\n";
-
-	//Normalized variables
-	const float xbar1{ static_cast<float>(x1 / fullScan) };
-	const float xbar2{ static_cast<float>(x2 / fullScan) };
-	const float tbar1{ static_cast<float>(t1 / Thalf) };
-	const float tbar2{ static_cast<float>(t2 / Thalf) };
-	const float PI_float{ static_cast<float>(PI) };
-
-	// precompute the mapping of the fast coordinate (k)
-	float *kk_precomputed = new float[mWidthPerFrame];
-	for (int k = 0; k < mWidthPerFrame; k++) {
-		const float x = 1.f * k / (mWidthPerFrame - 1.f);
-		const float a = 1.f - 2 * xbar1 - 2 * (xbar2 - xbar1) * x;
-		const float t = (std::acos(a) / PI_float - tbar1) / (tbar2 - tbar1);
-		kk_precomputed[k] = t * (mWidthPerFrame - 1.f);
-		//std::cout << kk_floats_precomputed[k] << "\n";
-	}
-	
-# pragma omp parallel for schedule(dynamic)
-	for (int rowIndex = 0; rowIndex < mHeightPerFrame * mNframes; rowIndex++) {
-		for (int k = 0; k < mWidthPerFrame; k++) {
-			const float kk_float = kk_precomputed[k];
-			const int kk = static_cast<int>(std::floor(kk_float));
-			const int kk1 = clip(kk, 0, mWidthPerFrame - 1);
-			const int kk2 = clip(kk + 1, 0, mWidthPerFrame - 1);
-			const U8 value1 = mArray[rowIndex * mWidthPerFrame + kk1];	//Read from the input array
-			const U8 value2 = mArray[rowIndex * mWidthPerFrame + kk2];	//Read from the input array
-			correctedArray[rowIndex * mWidthPerFrame + k] = interpolateU8(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
-		}
-	}
-
-	delete[] kk_precomputed;
-	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
-	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
-}
 
 //Code based on http://simpleopencl.blogspot.com/2013/06/tutorial-simple-start-with-opencl-and-c.html
 //Currently, openCL 1.2 installed
-void TiffU8::TestOpenCL()
+void TiffU8::TestOpenCL(const double LineclockHalfPeriod, const double pixelSizeX, const double FFOVslow)
 {
-	//Assuming the mirror scan has the form:
+//Assuming the mirror scan has the form:
 //x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
 
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
-	const int heightAllFrames{ mHeightPerFrame * mNframes };//I will need at most mHeightPerFrame * mNframes = 560 * 200 kernels = 112000
+	const int heightAllFrames{ mHeightPerFrame * mNframes };
 
-	//time per half mirror scan in us
-	const double Thalf{ 62.5 * us };//half period
-	const double freq{ 0.5 / Thalf };
+	//Start and stop time of the RS scan that define the FFOVslow
+	const double t1{ 0.5 * (LineclockHalfPeriod - mWidthPerFrame * pixelDwellTime) };
+	const double t2{ LineclockHalfPeriod - t1 };
 
-	const double dwell{ 0.1625 * us }; //dwell time
+	//The full amplitude of the RS (from turning point to turning point) in um
+	const double fullScan{ 2 * FFOVslow / (std::cos(PI * t1 / LineclockHalfPeriod) - std::cos(PI * t2 / LineclockHalfPeriod)) };
 
-	const double pixSizeX{ 0.5 * um };	//resolution in um
-	const double FFOV{ 150. * um }; //width FOV in um
+	//Start and stop positions of the RS that define the FFOVslow
+	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / LineclockHalfPeriod)) };
+	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / LineclockHalfPeriod)) };
 
-	//calculate start and stop time in us, assuming centered stage
-	const double t1{ 0.5 * (Thalf - mWidthPerFrame * dwell) };
-	const double t2{ Thalf - t1 };
-
-	//the full width in um
-	const double fullScan{ 2 * FFOV / (std::cos(2 * PI * freq * t1) - std::cos(2 * PI * freq * t2)) };
-
-	//start and stop positions
-	const double x1{ 0.5 * fullScan * (1 - std::cos(2 * PI * freq * t1)) };
-	const double x2{ 0.5 * fullScan * (1 - std::cos(2 * PI * freq * t2)) };
-
+	/*//For debugging
 	std::cout << "t1 (us): " << t1 / us << "\n";
 	std::cout << "t2 (us): " << t2 / us << "\n";
 	std::cout << "x1 (um): " << x1 / um << "\n";
 	std::cout << "x2 (um): " << x2 / um << "\n";
+	*/
 
 	//Normalized variables
 	const float xbar1{ static_cast<float>(x1 / fullScan) };
 	const float xbar2{ static_cast<float>(x2 / fullScan) };
-	const float tbar1{ static_cast<float>(t1 / Thalf) };
-	const float tbar2{ static_cast<float>(t2 / Thalf) };
+	const float tbar1{ static_cast<float>(t1 / LineclockHalfPeriod) };
+	const float tbar2{ static_cast<float>(t2 / LineclockHalfPeriod) };
 	const float PI_float{ static_cast<float>(PI) };
 
-	// precompute the mapping of the fast coordinate (k)
+	//Precompute the mapping of the fast coordinate (k)
 	float *kPrecomputed = new float[mWidthPerFrame];
 	for (int k = 0; k < mWidthPerFrame; k++) {
 		const float x = 1.f * k / (mWidthPerFrame - 1.f);
@@ -699,8 +622,7 @@ void TiffU8::TestOpenCL()
 	std::vector<cl::Platform> all_platforms;
 	cl::Platform::get(&all_platforms);
 	if (all_platforms.size() == 0) {
-		std::cout << " No platforms found. Check OpenCL installation!\n";
-		exit(1);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": No platforms found. Check OpenCL installation!");
 	}
 	cl::Platform default_platform{ all_platforms[0] };
 	std::cout << "Using platform: " << default_platform.getInfo<CL_PLATFORM_NAME>() << "\n";
@@ -709,8 +631,7 @@ void TiffU8::TestOpenCL()
 	std::vector<cl::Device> all_devices;
 	default_platform.getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
 	if (all_devices.size() == 0) {
-		std::cout << " No devices found. Check OpenCL installation!\n";
-		exit(1);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": No devices found. Check OpenCL installation!");
 	}
 	cl::Device default_device{ all_devices[0] };
 	std::cout << "Using device: " << default_device.getInfo<CL_DEVICE_NAME>() << "\n";
@@ -724,7 +645,7 @@ void TiffU8::TestOpenCL()
 		default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>().at(2)  <<" )\n"; //(1024 1024 64)
 
 	
-	//Build a string with the openCl code
+	//Build a string with the openCl kernel code
 	std::string openclFilename{ "RScorrection.cl" };
 	std::ifstream openclKernelCode{ openclFilePath + openclFilename };
 	if(!openclKernelCode.is_open())
@@ -735,9 +656,8 @@ void TiffU8::TestOpenCL()
 	cl::Context context{ { default_device } };
 	cl::Program program{ context, sources };
 	if (program.build({ default_device }) != CL_SUCCESS) {
+		throw std::runtime_error((std::string)__FUNCTION__);
 		std::cout << " Error building: " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(default_device) << "\n";
-		pressAnyKeyToCont();
-		exit(1);
 	}
 
 	// create buffers on the device
@@ -795,6 +715,79 @@ void TiffU8::TestOpenCL()
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
 
+/*
+void TiffU8::Test()
+{
+	//Correction code based on Martin's algorithm
+	//https://github.com/mpicbg-csbd/scancorrect
+	//mweigert@mpi-cbg.de
+
+	//Assuming the mirror scan has the form:
+	//x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
+
+	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
+	U8* correctedArray = new U8[nPixAllFrames];
+
+	//time per half mirror scan in us
+	const double Thalf{ 62.5 * us };//half period
+	const double freq{ 0.5 / Thalf };
+
+	const double dwell{ 0.1625 * us }; //dwell time
+
+	const double pixSizeX{ 0.5 * um };	//resolution in um
+	const double FFOV{ 150. * um }; //width FOV in um
+
+	//calculate start and stop time, assuming centered stage
+	const double t1{ 0.5 * (Thalf - mWidthPerFrame * dwell) };
+	const double t2{ Thalf - t1 };
+
+	//the full width in um
+	const double fullScan{ 2 * FFOV / (std::cos(2 * PI * freq * t1) - std::cos(2 * PI * freq * t2)) };
+
+	//start and stop positions
+	const double x1{ 0.5 * fullScan * (1 - std::cos(2 * PI * freq * t1)) };
+	const double x2{ 0.5 * fullScan * (1 - std::cos(2 * PI * freq * t2)) };
+
+	std::cout << "t1 (us): " << t1 / us << "\n";
+	std::cout << "t2 (us): " << t2 / us << "\n";
+	std::cout << "x1 (um): " << x1 / um << "\n";
+	std::cout << "x2 (um): " << x2 / um << "\n";
+
+	//Normalized variables
+	const float xbar1{ static_cast<float>(x1 / fullScan) };
+	const float xbar2{ static_cast<float>(x2 / fullScan) };
+	const float tbar1{ static_cast<float>(t1 / Thalf) };
+	const float tbar2{ static_cast<float>(t2 / Thalf) };
+	const float PI_float{ static_cast<float>(PI) };
+
+	// precompute the mapping of the fast coordinate (k)
+	float *kk_precomputed = new float[mWidthPerFrame];
+	for (int k = 0; k < mWidthPerFrame; k++) {
+		const float x = 1.f * k / (mWidthPerFrame - 1.f);
+		const float a = 1.f - 2 * xbar1 - 2 * (xbar2 - xbar1) * x;
+		const float t = (std::acos(a) / PI_float - tbar1) / (tbar2 - tbar1);
+		kk_precomputed[k] = t * (mWidthPerFrame - 1.f);
+		//std::cout << kk_floats_precomputed[k] << "\n";
+	}
+	
+# pragma omp parallel for schedule(dynamic)
+	for (int rowIndex = 0; rowIndex < mHeightPerFrame * mNframes; rowIndex++) {
+		for (int k = 0; k < mWidthPerFrame; k++) {
+			const float kk_float = kk_precomputed[k];
+			const int kk = static_cast<int>(std::floor(kk_float));
+			const int kk1 = clip(kk, 0, mWidthPerFrame - 1);
+			const int kk2 = clip(kk + 1, 0, mWidthPerFrame - 1);
+			const U8 value1 = mArray[rowIndex * mWidthPerFrame + kk1];	//Read from the input array
+			const U8 value2 = mArray[rowIndex * mWidthPerFrame + kk2];	//Read from the input array
+			correctedArray[rowIndex * mWidthPerFrame + k] = interpolateU8(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
+		}
+	}
+
+	delete[] kk_precomputed;
+	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
+	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
+}
+*/
 
 #pragma endregion "TiffU8"
 

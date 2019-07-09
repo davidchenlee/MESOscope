@@ -47,7 +47,7 @@ namespace PMT1XRoutines
 		if (1)
 		{
 			//STAGES. Specify the velocity
-			Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };
+			Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (LineclockHalfPeriod * heightPerFrame_pix) };
 			stage.moveSingle(ZZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
 
 			//CREATE THE REALTIME CONTROL SEQUENCE
@@ -253,8 +253,8 @@ namespace PMT16XRoutines
 			datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod / us);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
-			datalog.record("RS period (us) = ", 2 * halfPeriodLineclock / us);
-			datalog.record("Pixel dwell time (us) = ", RTcontrol.mDwell / us);
+			datalog.record("RS period (us) = ", 2 * LineclockHalfPeriod / us);
+			datalog.record("Pixel dwell time (us) = ", pixelDwellTime / us);
 			datalog.record("RS fill factor = ", RScanner.mFillFactor);
 			datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
 			datalog.record("\nIMAGE--------------------------------------------------------");
@@ -390,8 +390,8 @@ namespace PMT16XRoutines
 			datalog.record("FPGA clock (MHz) = ", tickPerUs);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
-			datalog.record("RS period (us) = ", 2 * halfPeriodLineclock / us);
-			datalog.record("Pixel dwell time (us) = ", RTcontrol.mDwell / us);
+			datalog.record("RS period (us) = ", 2 * LineclockHalfPeriod / us);
+			datalog.record("Pixel dwell time (us) = ", pixelDwellTime / us);
 			datalog.record("RS fill factor = ", RScanner.mFillFactor);
 			datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
 			datalog.record("\nIMAGE--------------------------------------------------------");
@@ -537,7 +537,7 @@ namespace PMT16XRoutines
 
 		//STAGES
 		const double3 initialStageXYZ{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stageZi};		//Initial position of the stages. The sign of stackDepth determines the scanning direction					
-		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (halfPeriodLineclock * heightPerFrame_pix) };	//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
+		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (LineclockHalfPeriod * heightPerFrame_pix) };	//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
 		stage.moveXYZ(initialStageXYZ);
 		stage.waitForMotionToStopAll();
 
@@ -923,7 +923,7 @@ namespace TestRoutines
 		//image.averageEvenOddFrames();
 		//image.Test();
 
-		image.TestOpenCL();
+		image.TestOpenCL(LineclockHalfPeriod, 0.5 * um, 150. * um);
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
 		pressAnyKeyToCont();
 	}

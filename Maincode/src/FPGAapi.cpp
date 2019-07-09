@@ -206,7 +206,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																		//Trigger the FPGA outputs (non-RT trigger)
 		checkStatus(__FUNCTION__, NiFpga_WriteI16(getHandle(), NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));															//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
 
-		if (linegateTimeout <= 2 * halfPeriodLineclock)
+		if (linegateTimeout <= 2 * LineclockHalfPeriod)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(linegateTimeout / us * tickPerUs)));			//Timeout the trigger of the control sequence
 
@@ -260,9 +260,9 @@ namespace FPGAns
 	void RTcontrol::Pixelclock::pushUniformDwellTimes(const int calibFine_tick)
 	{
 		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (halfPeriodLineclock-400*125ns)/2
+		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (LineclockHalfPeriod-400*125ns)/2
 
-		const double initialWaitingTime{ (halfPeriodLineclock - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
+		const double initialWaitingTime{ (LineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
 
 		//Check if the pixelclock overflows each Lineclock
 		if (initialWaitingTime <= 0)
@@ -291,7 +291,7 @@ namespace FPGAns
 		uploadImagingParameters_();
 
 		//Generate a pixelclock
-		const Pixelclock pixelclock(mWidthPerFrame_pix, mDwell);
+		const Pixelclock pixelclock(mWidthPerFrame_pix, pixelDwellTime);
 		mVectorOfQueues.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 
 		//If the z stage acts as the main trigger (for cont z scanning), add a timer after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence

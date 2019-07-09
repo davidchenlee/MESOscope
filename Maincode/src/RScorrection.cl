@@ -1,3 +1,4 @@
+/*Kernel code for openCL 1.2*/
 
 int maxU32(int x, int y)
 {

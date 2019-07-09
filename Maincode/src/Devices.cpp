@@ -393,11 +393,12 @@ U8* const Image::pointerToTiff() const
 ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol) : mRTcontrol{ RTcontrol }
 {	
 	//Calculate the spatial fill factor
-	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * mRTcontrol.mDwell / halfPeriodLineclock };
+	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * pixelDwellTime / LineclockHalfPeriod };
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
-		mFillFactor = sin(PI / 2 * temporalFillFactor);						//Note that the fill factor doesn't depend on the RS amplitude because the RS period is fixed
+		mFillFactor = sin(PI / 2 * temporalFillFactor);						//Note that the fill factor doesn't depend on the RS amplitude
+																			//because the RS period is always the same and independent of the amplitude
 
 	//std::cout << "Fill factor = " << mFillFactor << "\n";					//For debugging
 
@@ -592,7 +593,7 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 		timeStep = 8. * us;
 
 	//The position offset allows to compensate for the slight axis misalignment of the rescanner
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, halfPeriodLineclock * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, LineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
 		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal);
 }
 #pragma endregion "Galvo"

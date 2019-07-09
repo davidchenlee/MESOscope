@@ -61,8 +61,7 @@ namespace FPGAns
 		LINECLOCK mLineclockInput;														//Resonant scanner (RS) or Function generator (FG)
 		MAINTRIG mMainTrigger;															//Trigger the acquisition with the z stage: enable (0), disable (1)
 		FIFOOUT mFIFOOUTstate;															//Enable or disable the fpga FIFOOUT
-		const double mDwell{ 0.1625 * us };												//mDwell = 13 * 12.5 ns = 162.5 ns
-		const double mPulsesPerPix = mDwell / VISIONpulsePeriod;						//Max number of laser pulses per pixel
+		const double mPulsesPerPix = pixelDwellTime / VISIONpulsePeriod;				//Max number of laser pulses per pixel
 		const U8 mUpscaleFactorU8{ static_cast<U8>(255 / (mPulsesPerPix + 1)) };		//Upscale 4-bit counts to 8-bit (range 0-255) for compatibility with ImageJ's standards. Plus one to avoid overflow
 		int mWidthPerFrame_pix;															//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
 		int mHeightPerBeamletPerFrame_pix;												//Height in pixels of a single beamlet in a single frame (galvo axis)

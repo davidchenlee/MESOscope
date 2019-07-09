@@ -723,49 +723,17 @@ void TiffU8::TestOpenCL()
 		default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>().at(1) << " " <<
 		default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>().at(2)  <<" )\n"; //(1024 1024 64)
 
-
+	
+	//Build a string with the openCl code
+	std::string openclFilename{ "RScorrection.cl" };
+	std::ifstream openclKernelCode{ openclFilePath + openclFilename };
+	if(!openclKernelCode.is_open())
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Failed opening the file " + openclFilename);
+	std::string sourceCode{ std::istreambuf_iterator<char>(openclKernelCode), std::istreambuf_iterator<char>() };	//Create a string from the beginning to the end of the file
+	cl::Program::Sources sources{ 1, std::make_pair(sourceCode.c_str(), sourceCode.length()) };
+	
 	cl::Context context{ { default_device } };
-	cl::Program::Sources sources;
-
-	// kernel calculates for each element C=A+B
-	std::string kernel_code
-	{
-		"	int maxU32(int x, int y)\n"
-		"	{\n"
-		"	return x > y ? x : y;\n"
-		"	}\n"\
-		""
-		"	int minU32(int x, int y)\n"
-		"	{\n"
-		"	return x < y ? x : y;\n"
-		"	}\n"
-		""
-		"	int clipU32(int x, int lower, int upper)\n"
-		"	{\n"
-		"	return minU32(upper, maxU32(x, lower));\n"
-		"	}\n"
-		""
-		"	unsigned char interpolateU8(float lam, const unsigned char  val1, const unsigned char val2)\n"
-		"	{\n"
-		"	return convert_uchar8(round( (1.f - lam) * val1 + lam * val2) );\n"
-		"	}\n"
-		""
-		"   void kernel simple_add(global const float* kPrecomputed, global const unsigned char* uncorrectedArray, global unsigned char* correctedArray, const int widthPerFrame, global double* debugger)\n"
-		"	{\n"
-		"		/*Each work item processes a line of the image. get_global_id(1) represents the row number*/"
-		"			const float kk_float = kPrecomputed[get_global_id(0)]; \n"
-		"			const int kk = floor(kk_float);\n"
-		"			const int kk1 = clipU32(kk, 0, widthPerFrame - 1);\n"
-		"			const int kk2 = clipU32(kk + 1, 0, widthPerFrame - 1);\n"
-		"			const unsigned char value1 = uncorrectedArray[get_global_id(1) * widthPerFrame + kk1];\n"
-		"			const unsigned char value2 = uncorrectedArray[get_global_id(1) * widthPerFrame + kk2];\n"
-		"			correctedArray[get_global_id(1) * widthPerFrame + get_global_id(0)] = interpolateU8(kk_float - kk1, value1, value2);\n"
-		"       *debugger = uncorrectedArray[1000];\n"
-		"   }"
-	};
-	sources.push_back({ kernel_code.c_str(),kernel_code.length() });
-
-	cl::Program program(context, sources);
+	cl::Program program{ context, sources };
 	if (program.build({ default_device }) != CL_SUCCESS) {
 		std::cout << " Error building: " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(default_device) << "\n";
 		pressAnyKeyToCont();
@@ -782,15 +750,15 @@ void TiffU8::TestOpenCL()
 	double duration;
 	auto t_start{ std::chrono::high_resolution_clock::now() };
 
-	//create queue to which we will push commands for the device.
+	//reate queue to which we will push commands for the device.
 	cl::CommandQueue queue{ context, default_device };
 
-	//write arrays A and B to the device
+	//Write arrays A and B to the device
 	queue.enqueueWriteBuffer(buffer_kPrecomputed, CL_TRUE, 0, sizeof(float) * mWidthPerFrame, kPrecomputed);
 	queue.enqueueWriteBuffer(buffer_uncorrectedArray, CL_TRUE, 0, sizeof(unsigned char) * nPixAllFrames, mArray);
 
-	//run the kernel
-	cl::Kernel kernel_add{ cl::Kernel(program,"simple_add") };
+	//Run the kernel
+	cl::Kernel kernel_add{ cl::Kernel{program,"simple_add"} };
 	kernel_add.setArg(0, buffer_kPrecomputed);
 	kernel_add.setArg(1, buffer_uncorrectedArray);
 	kernel_add.setArg(2, buffer_correctedArray);
@@ -799,7 +767,7 @@ void TiffU8::TestOpenCL()
 	queue.enqueueNDRangeKernel(kernel_add,cl::NullRange,cl::NDRange(mWidthPerFrame, heightAllFrames),cl::NullRange);
 	queue.finish();
 
-	//read correctedArray from the device
+	//Read correctedArray from the device
 	unsigned char* correctedArray = new unsigned char[nPixAllFrames];
 	queue.enqueueReadBuffer(buffer_correctedArray, CL_TRUE, 0, sizeof(unsigned char) * nPixAllFrames, correctedArray);
 

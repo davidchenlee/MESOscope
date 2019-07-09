@@ -49,6 +49,7 @@ namespace Constants
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;
+	extern const std::string openclFilePath;
 
 	extern const INPUT photocounterInput;
 	extern const PIXELCLOCK pixelclockType;

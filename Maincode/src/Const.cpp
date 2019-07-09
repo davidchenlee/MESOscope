@@ -6,6 +6,7 @@ namespace Constants
 	extern const std::string folderPath{ "D:\\_output_local\\" };
 	//extern const std::string folderPath{ "Z:\\_output_remote\\" };
 	extern const std::string bitfilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" };	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
+	extern const std::string openclFilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\Maincode\\src\\" };		//OpenCL kernel code
 
 	extern const INPUT photocounterInput{ INPUT::PMT };													//PMT (PMT) or simulated PMT (SIM)
 	extern const PIXELCLOCK pixelclockType{ PIXELCLOCK::UNIFORM };										//UNIFORM or NONUNIFORM dwell times

@@ -183,7 +183,7 @@
     <ClInclude Include="include\Utilities.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\asdas.cl" />
+    <None Include="src\RScorrection.cl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

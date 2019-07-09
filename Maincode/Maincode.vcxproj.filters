@@ -79,7 +79,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\RScorrection.cl">
+    <None Include="src\openclKernel.cl">
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>

@@ -157,6 +157,7 @@ void Image::correctInterleaved_()
 {
 	//std::reverse(mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
 	//reverses all the pixels between and including the indices 'lineIndex * widthPerFrame_pix' and '(lineIndex + 1) * widthPerFrame_pix - 1'
+//# pragma omp parallel for schedule(dynamic)
 	for (int lineIndex = 0; lineIndex < mRTcontrol.mHeightPerBeamletAllFrames_pix; lineIndex += 2)
 	{
 		std::reverse(mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix);
@@ -353,9 +354,9 @@ void Image::downloadData()
 void Image::postprocess()
 {
 	correctInterleaved_();
-	demultiplex_();						//Move the chuncks of data to the buffer array
-	mTiff.mirrorOddFrames();			//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
-	mTiff.correctRSdistortion();		//Correct the image distortion induced by the nonlinear scanning of the RS
+	demultiplex_();																//Move the chuncks of data to the buffer array
+	mTiff.mirrorOddFrames();													//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
+	mTiff.correctRSdistortionGPU(0.5 * um, mRTcontrol.mWidthPerFrame_pix);		//Correct the image distortion induced by the nonlinear scanning of the RS
 }
 
 //Split the long vertical image into nFrames and calculate the average over all the frames

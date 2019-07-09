@@ -365,6 +365,7 @@ void TiffU8::mirrorOddFrames()
 		if (buffer == NULL) //Check that the buffer memory was allocated
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory");
 
+//# pragma omp parallel for schedule(dynamic)
 		for (int frame_iter = 1; frame_iter < mNframes; frame_iter += 2)
 		{
 			//Swap the first and last rows of the sub-image, then do the second and second last rows, etc
@@ -545,20 +546,6 @@ void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* i
 		}
 }
 
-//Correct the image distortion induced by the nonlinear scanning of the RS
-void TiffU8::correctRSdistortion()
-{
-	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
-	U8* correctedArray = new U8[nPixAllFrames];
-
-	//Apply correction to mArray. For now, I just copy all the pixels
-	std::memcpy(correctedArray, mArray, nPixAllFrames * sizeof(U8));
-
-	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
-
-	mArray = correctedArray;	//Reassign the pointer mArray to the new, corrected array
-}
-
 
 inline int clip(int x, int lower, int upper)
 {
@@ -572,14 +559,12 @@ inline U8 interpolateU8(float lam, const U8  &val1, const U8 &val2)
 	return static_cast<int>(std::round((1.f - lam) * val1 + lam * val2));
 }
 
-
-
-//Code based on http://simpleopencl.blogspot.com/2013/06/tutorial-simple-start-with-opencl-and-c.html
-//Currently, openCL 1.2 installed
-void TiffU8::TestOpenCL(const double LineclockHalfPeriod, const double pixelSizeX, const double FFOVslow)
+//Correct the image distortion induced by the nonlinear scanning of the RS
+//Correction code based on Martin's algorithm, https://github.com/mpicbg-csbd/scancorrect, mweigert@mpi-cbg.de
+//OpenCL code based on http://simpleopencl.blogspot.com/2013/06/tutorial-simple-start-with-opencl-and-c.html
+void TiffU8::correctRSdistortionGPU(const double LineclockHalfPeriod, const double pixelSizeX, const double FFOVslow)
 {
-//Assuming the mirror scan has the form:
-//x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
+//It is assumed that the laser scans the sample following x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
 
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
 	const int heightAllFrames{ mHeightPerFrame * mNframes };
@@ -616,7 +601,7 @@ void TiffU8::TestOpenCL(const double LineclockHalfPeriod, const double pixelSize
 		const float a = 1.f - 2 * xbar1 - 2 * (xbar2 - xbar1) * x;
 		const float t = (std::acos(a) / PI_float - tbar1) / (tbar2 - tbar1);
 		kPrecomputed[k] = t * (mWidthPerFrame - 1.f);
-		//std::cout << kk_floats_precomputed[k] << "\n";
+		//std::cout << kk_floats_precomputed[k] << "\n";	//For debugging
 	}
 
 	std::vector<cl::Platform> all_platforms;
@@ -625,15 +610,17 @@ void TiffU8::TestOpenCL(const double LineclockHalfPeriod, const double pixelSize
 		throw std::runtime_error((std::string)__FUNCTION__ + ": No platforms found. Check OpenCL installation!");
 	}
 	cl::Platform default_platform{ all_platforms[0] };
-	std::cout << "Using platform: " << default_platform.getInfo<CL_PLATFORM_NAME>() << "\n";
 
-	//get default device of the default platform
+	//Get default device of the default platform
 	std::vector<cl::Device> all_devices;
 	default_platform.getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
 	if (all_devices.size() == 0) {
 		throw std::runtime_error((std::string)__FUNCTION__ + ": No devices found. Check OpenCL installation!");
 	}
 	cl::Device default_device{ all_devices[0] };
+
+	/*//For debugging
+	std::cout << "Using platform: " << default_platform.getInfo<CL_PLATFORM_NAME>() << "\n";
 	std::cout << "Using device: " << default_device.getInfo<CL_DEVICE_NAME>() << "\n";
 	std::cout << "Device version: " << default_device.getInfo<CL_DEVICE_VERSION>() << "\n";
 	std::cout << "Device global mem size: " << default_device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>() << "\n";
@@ -643,10 +630,10 @@ void TiffU8::TestOpenCL(const double LineclockHalfPeriod, const double pixelSize
 	std::cout << "Device max work item sizes: ( " << default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>().at(0) << " " <<
 		default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>().at(1) << " " <<
 		default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>().at(2)  <<" )\n"; //(1024 1024 64)
-
+	*/
 	
-	//Build a string with the openCl kernel code
-	std::string openclFilename{ "RScorrection.cl" };
+	//Build a string with the openCl kernel
+	std::string openclFilename{ "openclKernel.cl" };
 	std::ifstream openclKernelCode{ openclFilePath + openclFilename };
 	if(!openclKernelCode.is_open())
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Failed opening the file " + openclFilename);
@@ -660,25 +647,21 @@ void TiffU8::TestOpenCL(const double LineclockHalfPeriod, const double pixelSize
 		std::cout << " Error building: " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(default_device) << "\n";
 	}
 
-	// create buffers on the device
+	//Create buffers on the device
 	cl::Buffer buffer_kPrecomputed{ context, CL_MEM_READ_WRITE, sizeof(float) * mWidthPerFrame };
 	cl::Buffer buffer_uncorrectedArray{ context, CL_MEM_READ_WRITE, sizeof(unsigned char) * nPixAllFrames };
 	cl::Buffer buffer_correctedArray{ context, CL_MEM_READ_WRITE, sizeof(unsigned char) * nPixAllFrames };
 	cl::Buffer buffer_debugger{ context, CL_MEM_READ_WRITE, sizeof(double) };
 
-	//Declare and start a stopwatch
-	double duration;
-	auto t_start{ std::chrono::high_resolution_clock::now() };
-
-	//reate queue to which we will push commands for the device.
+	//Create queue to which we will push commands for the device.
 	cl::CommandQueue queue{ context, default_device };
 
-	//Write arrays A and B to the device
+	//Write arrays to the device
 	queue.enqueueWriteBuffer(buffer_kPrecomputed, CL_TRUE, 0, sizeof(float) * mWidthPerFrame, kPrecomputed);
 	queue.enqueueWriteBuffer(buffer_uncorrectedArray, CL_TRUE, 0, sizeof(unsigned char) * nPixAllFrames, mArray);
 
 	//Run the kernel
-	cl::Kernel kernel_add{ cl::Kernel{program,"simple_add"} };
+	cl::Kernel kernel_add{ cl::Kernel{program,"correctRSdistortion"} };
 	kernel_add.setArg(0, buffer_kPrecomputed);
 	kernel_add.setArg(1, buffer_uncorrectedArray);
 	kernel_add.setArg(2, buffer_correctedArray);
@@ -693,10 +676,6 @@ void TiffU8::TestOpenCL(const double LineclockHalfPeriod, const double pixelSize
 
 	double debugger;
 	queue.enqueueReadBuffer(buffer_debugger, CL_TRUE, 0, sizeof(double), &debugger);
-
-	//Stop the stopwatch
-	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
 	/*
 	std::cout << "correctedArray: \n";
@@ -715,49 +694,36 @@ void TiffU8::TestOpenCL(const double LineclockHalfPeriod, const double pixelSize
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
 
-/*
-void TiffU8::Test()
+//Correct the image distortion induced by the nonlinear scanning of the RS
+//Correction code based on Martin's algorithm, https://github.com/mpicbg-csbd/scancorrect, mweigert@mpi-cbg.de
+void TiffU8::correctRSdistortionCPU(const double LineclockHalfPeriod, const double pixelSizeX, const double FFOVslow)
 {
-	//Correction code based on Martin's algorithm
-	//https://github.com/mpicbg-csbd/scancorrect
-	//mweigert@mpi-cbg.de
-
-	//Assuming the mirror scan has the form:
-	//x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
-
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
 	U8* correctedArray = new U8[nPixAllFrames];
 
-	//time per half mirror scan in us
-	const double Thalf{ 62.5 * us };//half period
-	const double freq{ 0.5 / Thalf };
+	//Start and stop time of the RS scan that define the FFOVslow
+	const double t1{ 0.5 * (LineclockHalfPeriod - mWidthPerFrame * pixelDwellTime) };
+	const double t2{ LineclockHalfPeriod - t1 };
 
-	const double dwell{ 0.1625 * us }; //dwell time
+	//The full amplitude of the RS (from turning point to turning point) in um
+	const double fullScan{ 2 * FFOVslow / (std::cos(PI * t1 / LineclockHalfPeriod) - std::cos(PI * t2 / LineclockHalfPeriod)) };
 
-	const double pixSizeX{ 0.5 * um };	//resolution in um
-	const double FFOV{ 150. * um }; //width FOV in um
+	//Start and stop positions of the RS that define the FFOVslow
+	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / LineclockHalfPeriod)) };
+	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / LineclockHalfPeriod)) };
 
-	//calculate start and stop time, assuming centered stage
-	const double t1{ 0.5 * (Thalf - mWidthPerFrame * dwell) };
-	const double t2{ Thalf - t1 };
-
-	//the full width in um
-	const double fullScan{ 2 * FFOV / (std::cos(2 * PI * freq * t1) - std::cos(2 * PI * freq * t2)) };
-
-	//start and stop positions
-	const double x1{ 0.5 * fullScan * (1 - std::cos(2 * PI * freq * t1)) };
-	const double x2{ 0.5 * fullScan * (1 - std::cos(2 * PI * freq * t2)) };
-
+	/*//For debugging
 	std::cout << "t1 (us): " << t1 / us << "\n";
 	std::cout << "t2 (us): " << t2 / us << "\n";
 	std::cout << "x1 (um): " << x1 / um << "\n";
 	std::cout << "x2 (um): " << x2 / um << "\n";
+	*/
 
 	//Normalized variables
 	const float xbar1{ static_cast<float>(x1 / fullScan) };
 	const float xbar2{ static_cast<float>(x2 / fullScan) };
-	const float tbar1{ static_cast<float>(t1 / Thalf) };
-	const float tbar2{ static_cast<float>(t2 / Thalf) };
+	const float tbar1{ static_cast<float>(t1 / LineclockHalfPeriod) };
+	const float tbar2{ static_cast<float>(t2 / LineclockHalfPeriod) };
 	const float PI_float{ static_cast<float>(PI) };
 
 	// precompute the mapping of the fast coordinate (k)
@@ -787,8 +753,6 @@ void TiffU8::Test()
 	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
-*/
-
 #pragma endregion "TiffU8"
 
 

@@ -20,7 +20,7 @@ unsigned char interpolateU8(float lam, const unsigned char  val1, const unsigned
 return convert_uchar8(round( (1.f - lam) * val1 + lam * val2) );
 }
 
-void kernel simple_add(global const float* kPrecomputed, global const unsigned char* uncorrectedArray, global unsigned char* correctedArray, const int widthPerFrame, global double* debugger)
+void kernel correctRSdistortion(global const float* kPrecomputed, global const unsigned char* uncorrectedArray, global unsigned char* correctedArray, const int widthPerFrame, global double* debugger)
 {
 	/*Each work item processes a line of the image. get_global_id(0) indexes the fast axis (Tiff horizontal) and get_global_id(1) the slow axis (Tiff vertical)*/
 	const float kk_float = kPrecomputed[get_global_id(0)];
@@ -30,5 +30,4 @@ void kernel simple_add(global const float* kPrecomputed, global const unsigned c
 	const unsigned char value1 = uncorrectedArray[get_global_id(1) * widthPerFrame + kk1];
 	const unsigned char value2 = uncorrectedArray[get_global_id(1) * widthPerFrame + kk2];
 	correctedArray[get_global_id(1) * widthPerFrame + get_global_id(0)] = interpolateU8(kk_float - kk1, value1, value2);
-	*debugger = uncorrectedArray[1000];
 }

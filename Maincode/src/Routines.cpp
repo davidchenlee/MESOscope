@@ -144,10 +144,10 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
-		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
+		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
@@ -498,11 +498,9 @@ namespace PMT16XRoutines
 		}
 	}
 
-	/*
-	I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the beads' z-position looks
+	/*I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the beads' z-position looks
 	almost identical with a difference of maybe only 1 plane (0.5 um)
-	Remember that I do not use MACROS on the stages anymore
-	*/
+	Remember that I do not use MACROS on the stages anymore*/
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -923,9 +921,16 @@ namespace TestRoutines
 		//image.averageEvenOddFrames();
 		//image.Test();
 
-		image.TestOpenCL(LineclockHalfPeriod, 0.5 * um, 150. * um);
-		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
-		pressAnyKeyToCont();
+		//Declare and start a stopwatch
+		double duration;
+		auto t_start{ std::chrono::high_resolution_clock::now() };
+		//Stop the stopwatch
+		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+		std::cout << "Elapsed time: " << duration << " ms" << "\n";
+
+		//image.correctRSdistortionGPU(0.5 * um, 150. * um);
+		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
+		//pressAnyKeyToCont();
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely

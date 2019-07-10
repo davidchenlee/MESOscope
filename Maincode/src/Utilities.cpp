@@ -54,6 +54,18 @@ U16 doubleToFx2p14(double n)
 	return int_part + frac_part;
 }
 
+//Clip x so that lower <= x <= upper
+template<class T> inline T clip(T x, T lower, T upper)
+{
+	return (std::min)(upper, (std::max)(x, lower));
+}
+
+//Clip x so that 0x00 <= x <= 0xFF
+U8 clipU8(U8 x)
+{
+	return (std::min)(x, (std::numeric_limits<U8>::max)());
+}
+
 //Convert a double to a string with decimal places
 std::string toString(const double number, const int nDecimalPlaces)
 {
@@ -365,7 +377,6 @@ void TiffU8::mirrorOddFrames()
 		if (buffer == NULL) //Check that the buffer memory was allocated
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory");
 
-//# pragma omp parallel for schedule(dynamic)
 		for (int frame_iter = 1; frame_iter < mNframes; frame_iter += 2)
 		{
 			//Swap the first and last rows of the sub-image, then do the second and second last rows, etc
@@ -546,12 +557,6 @@ void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* i
 		}
 }
 
-
-inline int clip(int x, int lower, int upper)
-{
-	return (std::min)(upper, (std::max)(x, lower));
-}
-
 inline U8 interpolateU8(float lam, const U8  &val1, const U8 &val2)
 {
 	//int res = static_cast<int>(std::round( (1 - lam) * val1 + lam * val2) );
@@ -562,7 +567,7 @@ inline U8 interpolateU8(float lam, const U8  &val1, const U8 &val2)
 //Correct the image distortion induced by the nonlinear scanning of the RS
 //Correction code based on Martin's algorithm, https://github.com/mpicbg-csbd/scancorrect, mweigert@mpi-cbg.de
 //OpenCL code based on http://simpleopencl.blogspot.com/2013/06/tutorial-simple-start-with-opencl-and-c.html
-void TiffU8::correctRSdistortionGPU(const double LineclockHalfPeriod, const double pixelSizeX, const double FFOVslow)
+void TiffU8::correctRSdistortionGPU(const double FFOVslow)
 {
 //It is assumed that the laser scans the sample following x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
 
@@ -696,7 +701,7 @@ void TiffU8::correctRSdistortionGPU(const double LineclockHalfPeriod, const doub
 
 //Correct the image distortion induced by the nonlinear scanning of the RS
 //Correction code based on Martin's algorithm, https://github.com/mpicbg-csbd/scancorrect, mweigert@mpi-cbg.de
-void TiffU8::correctRSdistortionCPU(const double LineclockHalfPeriod, const double pixelSizeX, const double FFOVslow)
+void TiffU8::correctRSdistortionCPU(const double FFOVslow)
 {
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
 	U8* correctedArray = new U8[nPixAllFrames];

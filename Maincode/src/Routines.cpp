@@ -259,7 +259,7 @@ namespace PMT16XRoutines
 			datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
 			datalog.record("\nIMAGE--------------------------------------------------------");
 			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
-			datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleFactorU8);
+			datalog.record("Upscaling factor = ", RTcontrol.mUpscaleFactor);
 			datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
 			datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
 			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
@@ -396,7 +396,7 @@ namespace PMT16XRoutines
 			datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
 			datalog.record("\nIMAGE--------------------------------------------------------");
 			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
-			datalog.record("8-bit upscaling factor = ", RTcontrol.mUpscaleFactorU8);
+			datalog.record("Upscaling factor = ", RTcontrol.mUpscaleFactor);
 			datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
 			datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
 			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
@@ -928,7 +928,7 @@ namespace TestRoutines
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
-		//image.correctRSdistortionGPU(0.5 * um, 150. * um);
+		//image.correctRSdistortionGPU(150. * um);
 		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
 		//pressAnyKeyToCont();
 	}

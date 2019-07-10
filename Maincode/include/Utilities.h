@@ -18,6 +18,8 @@ void printHex(const std::vector<uint8_t>  input);
 void printHex(const std::string input);
 void printBinary16(const int input);
 U16 doubleToFx2p14(double n);
+template<class T> inline T clip(T x, T lower, T upper);
+U8 clipU8(U8 x);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
 
@@ -63,8 +65,8 @@ public:
 	void pushImage(const int frameIndex, const U8* inputArray) const;
 	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const U8* inputArray) const;
 	void mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
-	void correctRSdistortionGPU(const double pixelSizeX, const double FFOVslow);
-	void correctRSdistortionCPU(const double pixelSizeX, const double FFOVslow);
+	void correctRSdistortionGPU(const double FFOVslow);
+	void correctRSdistortionCPU(const double FFOVslow);
 };
 
 

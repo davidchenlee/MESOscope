@@ -157,7 +157,6 @@ void Image::correctInterleaved_()
 {
 	//std::reverse(mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
 	//reverses all the pixels between and including the indices 'lineIndex * widthPerFrame_pix' and '(lineIndex + 1) * widthPerFrame_pix - 1'
-//# pragma omp parallel for schedule(dynamic)
 	for (int lineIndex = 0; lineIndex < mRTcontrol.mHeightPerBeamletAllFrames_pix; lineIndex += 2)
 	{
 		std::reverse(mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix);
@@ -179,16 +178,22 @@ void Image::demuxSingleChannel_()
 	//Demultiplex mMultiplexedArrayA (channels 1-8). Each U32 element in mMultiplexedArrayA has the multiplexed structure | Ch08 (MSB) | Ch07 | Ch06 | Ch05 | Ch04 | Ch03 | Ch02 | Ch01 (LSB) |
 	if (mRTcontrol.mPMT16Xchan >= PMT16XCHAN::CH01 && mRTcontrol.mPMT16Xchan <= PMT16XCHAN::CH08)
 	{
-		//Shift mMultiplexedArrayA to the right '4 * mRTcontrol.mPMT16Xchan' places, extract the count from the last 4 bits, and upscale it
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
-			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mMultiplexedArrayA[pixIndex] >> 4 * static_cast<U8>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
+		{
+			const int nShift{ 4 * static_cast<int>(mRTcontrol.mPMT16Xchan) };															//Shift mMultiplexedArrayA to the right 4 bits for CH01, 4*2 bits for CH02, 4*3 bits for CH03, etc...
+			const U8 upscaled{ static_cast<U8>(mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayA[pixIndex] >> nShift) & 0x0000000F)) };	//Extract the count from the last 4 bits and upscale it
+			(mTiff.pointerToTiff())[pixIndex] = clipU8(upscaled);																		//Clip U8 overflow
+		}
 	}
 	//Demultiplex mMultiplexedArrayB (channels 9-16). Each U32 element in mMultiplexedArrayB has the multiplexed structure | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
 	else if (mRTcontrol.mPMT16Xchan >= PMT16XCHAN::CH09 && mRTcontrol.mPMT16Xchan <= PMT16XCHAN::CH16)
 	{
-		//Shift mMultiplexedArrayB to the right '4 * mRTcontrol.mPMT16Xchan' places, extract the count from the last 4 bits, and upscale it
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
-			(mTiff.pointerToTiff())[pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * ((mMultiplexedArrayB[pixIndex] >> 4 * static_cast<U8>(mRTcontrol.mPMT16Xchan)) & 0x0000000F));
+		{
+			const int nShift{ 4 * static_cast<int>(mRTcontrol.mPMT16Xchan) };															//Shift mMultiplexedArrayB to the right 4 bits for CH09, 4*2 bits for CH10, 4*3 bits for CH11, etc...
+			const U8 upscaled{ static_cast<U8>(mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayB[pixIndex] >> nShift) & 0x0000000F)) };	//Extract the count from the last 4 bits and upscale it
+			(mTiff.pointerToTiff())[pixIndex] = clipU8(upscaled);																		//Clip U8 overflow
+		}
 	}
 	else
 		;//If CH00, don't do anything
@@ -228,15 +233,11 @@ void Image::demuxAllChannels_()
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
-			//If upscaled overflows
-			//if (upscaled > _UI8_MAX)
-			//	upscaled = _UI8_MAX;
-
 			//Extract the count from the first 4 bits and upscale it
-			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * (mMultiplexedArrayA[pixIndex] & 0x0000000F));
-			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactorU8 * (mMultiplexedArrayB[pixIndex] & 0x0000000F));
+			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F));
+			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F));
 
-			//shift 4 places to the right for the next iteration
+			//Shift 4 places to the right for the next iteration
 			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;
 			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;
 		}
@@ -353,10 +354,40 @@ void Image::downloadData()
 
 void Image::postprocess()
 {
+	//Declare and start a stopwatch
+	double duration;
+	auto t_start{ std::chrono::high_resolution_clock::now() };
 	correctInterleaved_();
-	demultiplex_();																//Move the chuncks of data to the buffer array
-	mTiff.mirrorOddFrames();													//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
-	mTiff.correctRSdistortionGPU(0.5 * um, mRTcontrol.mWidthPerFrame_pix);		//Correct the image distortion induced by the nonlinear scanning of the RS
+	
+	//Stop the stopwatch
+	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "correctInterleaved_() elapsed time: " << duration << " ms" << "\n";
+
+
+	t_start = std::chrono::high_resolution_clock::now();
+	demultiplex_();									//Move the chuncks of data to the buffer array
+	
+	//Stop the stopwatch
+	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "demultiplex_() elapsed time: " << duration << " ms" << "\n";
+
+
+
+	t_start = std::chrono::high_resolution_clock::now();
+	mTiff.mirrorOddFrames();						//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
+	
+	//Stop the stopwatch
+	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "mirrorOddFrames() elapsed time: " << duration << " ms" << "\n";
+
+
+
+	t_start = std::chrono::high_resolution_clock::now();
+	mTiff.correctRSdistortionGPU(150. * um);		//Correct the image distortion induced by the nonlinear scanning of the RS
+
+	//Stop the stopwatch
+	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "correctRSdistortionGPU elapsed time: " << duration << " ms" << "\n";
 }
 
 //Split the long vertical image into nFrames and calculate the average over all the frames

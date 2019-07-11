@@ -525,8 +525,8 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		switch (mWavelength_nm)
 		{
 		case 750:
-			mVoltagePerDistance = 0.310 * scanCalib;		//By increasing this variable, the top beads in a Tiff appear before the bottom ones.
-			mVoltageOffset = 0.04 * V;					//A positive offset steers the beam towards channel 1 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, channel 1 is on the left
+			mVoltagePerDistance = 0.30 * scanCalib;		//By increasing this variable, the top beads in a Tiff appear before the bottom ones.
+			mVoltageOffset = 0.05 * V;					//A positive offset steers the beam towards channel 1 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, channel 1 is on the left
 			break;
 		case 920:
 			mVoltagePerDistance = 0.32 * scanCalib;
@@ -534,7 +534,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 			break;
 		case 1040:
 			mVoltagePerDistance = 0.32 * scanCalib;
-			mVoltageOffset = 0.08 * V;
+			mVoltageOffset = 0.07 * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -550,7 +550,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double po
 	switch (channel)
 	{
 	case RTCHAN::SCANGALVO:
-		//Raster scan from the positive to the negative direction of the x-stage
+		//Raster scan the sample from the positive to the negative direction of the x-stage
 		positionLinearRamp(-posMax, posMax, mVoltageOffset);
 		break;
 	case RTCHAN::RESCANGALVO:
@@ -1503,7 +1503,7 @@ void VirtualLaser::CollectorLens::position(const int wavelength_nm)
 		mStepper.move(4.0 * mm);
 		break;
 	case 1040:
-		mStepper.move(1.0 * mm);
+		mStepper.move(0.0 * mm);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector lens position has not been calibrated for the wavelength " + std::to_string(wavelength_nm));

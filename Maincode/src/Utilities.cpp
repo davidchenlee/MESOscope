@@ -540,8 +540,17 @@ void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* i
 	const int heightPerChannelAllFrames = heightPerChannelPerFrame * mNframes;
 
 	//Note that CH01 corresponds to chanIndex = 0,  CH02 corresponds to chanIndex = 1, etc
-	//Even 'frameIndex' (forward scan)
+	//Even 'frameIndex' (Raster scan the sample from the positive to the negative direction of the x-stage)
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex += 2)
+		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
+		{
+			//CH01-CH08
+			std::memcpy(&mArray[((15 - chanIndex) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
+			//CH09-CH16
+			std::memcpy(&mArray[((7 - chanIndex) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
+		}
+	//Odd 'frameIndex' (Raster scan the sample from the negative to the positive direction of the x-stage)
+	for (int frameIndex = 1; frameIndex < mNframes; frameIndex += 2)
 		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{
 			//CH01-CH08
@@ -550,15 +559,7 @@ void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* i
 			std::memcpy(&mArray[((chanIndex + 8) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
 		}
 
-	//Odd 'frameIndex' (backward scan)
-	for (int frameIndex = 1; frameIndex < mNframes; frameIndex += 2)
-		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
-		{
-			//CH01-CH08
-			std::memcpy(&mArray[((15 - chanIndex) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
-			//CH09-CH16
-			std::memcpy(&mArray[((7 - chanIndex) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
-		}
+
 }
 
 inline U8 interpolateU8(float lam, const U8  &val1, const U8 &val2)

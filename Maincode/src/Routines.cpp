@@ -1,12 +1,12 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 53.150 * mm, 17.000 * mm, 18.077 * mm };	//Beads 77, 82
+double3 stackCenterXYZ{ 53.000 * mm, 17.000 * mm, 18.077 * mm };	//Beads 77, 84
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
 const std::string collar{ "1.51" };
-const ChannelList channelListBeads{ {{ "DAPI", 750, 50. * mW, 0. * mWpum }, { "GFP", 920, 60. * mW, 0. * mWpum }, { "TDT", 1040, 25. * mW, 0. * mWpum }} };	//4um beads
+const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 80. * mW, 0. * mWpum }, { "TDT", 1040, 25. * mW, 0. * mWpum }} };	//4um beads
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//0.5um beads
 //const ChannelList channelListLiver{ {{ "TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }} };
 const ChannelList channelListFluorSlide { { { "DAPI", 750, 10. * mW, 0. * mWpum }} };	//Fluorescent slide
@@ -115,7 +115,7 @@ namespace PMT1XRoutines
 						"_x=" + toString(stackCenterXY.at(STAGEX) / mm, 3) + "_y=" + toString(stackCenterXY.at(STAGEY) / mm, 3) +
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
 
-					image.postprocess();
+					image.postprocess(RScanner.mFFOV);
 					image.saveTiffMultiPage(longName, OVERRIDE::DIS);
 					break;
 				case ACTION::CUT:
@@ -135,7 +135,6 @@ namespace PMT1XRoutines
 		}//if
 	}
 }//namespace
-
 
 namespace PMT16XRoutines
 {
@@ -166,7 +165,7 @@ namespace PMT16XRoutines
 			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
 			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / 16);
 			PMT16Xchan = PMT16XCHAN::CH00;
-			selectPower = 1000. * mW;
+			selectPower = 800. * mW;
 			selectPowerInc = 0;
 #else
 			//Singlebeam
@@ -290,8 +289,8 @@ namespace PMT16XRoutines
 
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
-				image.acquire();			//Execute the RT control sequence and acquire the image
-				image.averageFrames();		//Average the frames acquired via continuous XY acquisition
+				image.acquire(RScanner.mFFOV);		//Execute the RT control sequence and acquire the image
+				image.averageFrames();				//Average the frames acquired via continuous XY acquisition
 				//image.averageEvenOddFrames();
 				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
 
@@ -434,7 +433,7 @@ namespace PMT16XRoutines
 
 					//EXECUTE THE RT CONTROL SEQUENCE
 					Image image{ RTcontrol };
-					image.acquire();					//Execute the RT control sequence and acquire the image
+					image.acquire(RScanner.mFFOV);		//Execute the RT control sequence and acquire the image
 					image.averageFrames();				//Average the frames acquired via continuous XY acquisition
 					tiffStack.pushSameZ(0, image.pointerToTiff());
 					tiffStack.pushDiffZ(iterDiffZ);
@@ -489,7 +488,7 @@ namespace PMT16XRoutines
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
-			image.acquire();									//Execute the RT control sequence and acquire the image
+			image.acquire(RScanner.mFFOV);						//Execute the RT control sequence and acquire the image
 			image.averageFrames();								//Average the frames acquired via continuous XY acquisition
 			image.saveTiffSinglePage("Untitled", OVERRIDE::EN);	//Save individual files
 			Sleep(700);
@@ -565,14 +564,10 @@ namespace PMT16XRoutines
 		stage.moveSingle(STAGEZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
 		image.downloadData();
 
-
-
-
-
 		//Declare and start a stopwatch
 		double duration;
 		auto t_start{ std::chrono::high_resolution_clock::now() };
-		image.postprocess();
+		image.postprocess(RScanner.mFFOV);
 		//Stop the stopwatch
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
@@ -634,7 +629,7 @@ namespace TestRoutines
 
 		FPGAns::RTcontrol RTcontrol{ fpga }; 	//Create a realtime control sequence
 		Image image{ RTcontrol };
-		image.acquire();						//Execute the realtime control sequence and acquire the image
+		image.acquire(0);						//Execute the realtime control sequence and acquire the image
 		//image.pushToVector(stackOfAverages);
 		//std::cout << "size: " << stackOfAverages.size() << "\n";
 		//TiffU8 acqParam{ stackOfAverages, 300, 400 };
@@ -721,7 +716,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+		image.acquire(RScanner.mFFOV);		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 		image.averageEvenOddFrames();
 		image.saveTiffMultiPage("Untitled", OVERRIDE::DIS);
 	}
@@ -757,7 +752,7 @@ namespace TestRoutines
 
 		//Execute the realtime control sequence and acquire the image
 		Image image{ RTcontrol };
-		image.acquire();		//Execute the RT control sequence
+		image.acquire(0);		//Execute the RT control sequence
 	}
 
 	void stagePosition()
@@ -858,7 +853,7 @@ namespace TestRoutines
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		Image image{ RTcontrol };
-		image.acquire();
+		image.acquire(0);
 	}
 
 	void pockelsRamp(const FPGAns::FPGA &fpga)
@@ -884,7 +879,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+		image.acquire(0);		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 	}
 
 	void lasers(const FPGAns::FPGA &fpga)
@@ -1158,6 +1153,8 @@ namespace TestRoutines
 			255		//CH16
 			});
 			*/
+
+		pressAnyKeyToCont();
 	}
 
 	//Test reading different channels of the PMT16X
@@ -1184,7 +1181,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire();			//Execute the RT control sequence and acquire the image
+		image.acquire(0);			//Execute the RT control sequence and acquire the image
 		image.saveTiffMultiPage("SingleChannel", OVERRIDE::EN);
 	}
 
@@ -1233,7 +1230,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire();			//Execute the RT control sequence and acquire the image
+		image.acquire(0);			//Execute the RT control sequence and acquire the image
 	}
 
 
@@ -1312,7 +1309,7 @@ namespace TestRoutines
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		pockels.setShutter(true);
 		Image image{ RTcontrol };
-		image.acquire();
+		image.acquire(0);
 
 		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the RT sequence
 		pressAnyKeyToCont();

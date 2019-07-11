@@ -242,9 +242,9 @@ void Image::demuxAllChannels_()
 			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;
 		}
 
-	//Merge the different PMT16X channels. The order depends on the scanning direction of the galvos (forward or backwards) and transfer the result to mTiff
+	//Merge the different PMT16X channels. The order depends on the scanning direction of the galvos (forward or backwards)
 	if (multibeam)
-		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //Here, mRTcontrol.mHeightPerFrame_pix is the height of a single PMT16X channel
+		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
 
 	//For debugging
 	if (saveTiffAllPMTchan)
@@ -354,40 +354,10 @@ void Image::downloadData()
 
 void Image::postprocess()
 {
-	//Declare and start a stopwatch
-	double duration;
-	auto t_start{ std::chrono::high_resolution_clock::now() };
 	correctInterleaved_();
-	
-	//Stop the stopwatch
-	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "correctInterleaved_() elapsed time: " << duration << " ms" << "\n";
-
-
-	t_start = std::chrono::high_resolution_clock::now();
 	demultiplex_();									//Move the chuncks of data to the buffer array
-	
-	//Stop the stopwatch
-	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "demultiplex_() elapsed time: " << duration << " ms" << "\n";
-
-
-
-	t_start = std::chrono::high_resolution_clock::now();
 	mTiff.mirrorOddFrames();						//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
-	
-	//Stop the stopwatch
-	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "mirrorOddFrames() elapsed time: " << duration << " ms" << "\n";
-
-
-
-	t_start = std::chrono::high_resolution_clock::now();
 	mTiff.correctRSdistortionGPU(150. * um);		//Correct the image distortion induced by the nonlinear scanning of the RS
-
-	//Stop the stopwatch
-	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "correctRSdistortionGPU elapsed time: " << duration << " ms" << "\n";
 }
 
 //Split the long vertical image into nFrames and calculate the average over all the frames
@@ -556,15 +526,15 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		{
 		case 750:
 			mVoltagePerDistance = 0.31 * scanCalib;		//By increasing this variable, the top beads in a Tiff appear before the bottom ones.
-			mVoltageOffset = 0.05 * V;					//A positive offset steers the beam towards channel 1 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, channel 1 is on the left
+			mVoltageOffset = 0.06 * V;					//A positive offset steers the beam towards channel 1 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, channel 1 is on the left
 			break;
 		case 920:
 			mVoltagePerDistance = 0.32 * scanCalib;
 			mVoltageOffset = 0.05 * V;
 			break;
 		case 1040:
-			mVoltagePerDistance = 0.335 * scanCalib;
-			mVoltageOffset = 0.06 * V;
+			mVoltagePerDistance = 0.32 * scanCalib;
+			mVoltageOffset = 0.10 * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -1527,7 +1497,7 @@ void VirtualLaser::CollectorLens::position(const int wavelength_nm)
 	switch (wavelength_nm)
 	{
 	case 750:
-		mStepper.move(10.0 * mm);
+		mStepper.move(9.0 * mm);
 		break;
 	case 920:
 		mStepper.move(4.0 * mm);

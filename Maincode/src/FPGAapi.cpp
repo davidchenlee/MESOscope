@@ -242,33 +242,22 @@ namespace FPGAns
 #pragma region "RTcontrol"
 	RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell) : mWidthPerFrame_pix{ widthPerFrame_pix }, mDwell{ dwell }
 	{
-		const int calibFine_tick{ -40 };
-		switch (pixelclockType)
-		{
-		case PIXELCLOCK::UNIFORM:
-			pushUniformDwellTimes(calibFine_tick);
-			break;
-		//case nonuniform: pushCorrectedDwellTimes();
-			//break;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pixelclock type unavailable");
-		}
+		pushUniformDwellTimes();
 	}
 
-	//Pixelclock with equal dwell times
-	//calibFine_tick: fine tune the pixelclock timing
-	void RTcontrol::Pixelclock::pushUniformDwellTimes(const int calibFine_tick)
+	//The pixel clock is triggered by the line clock (see the LV implementation) after an initial waiting time
+	void RTcontrol::Pixelclock::pushUniformDwellTimes()
 	{
 		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (LineclockHalfPeriod-400*125ns)/2
 
 		const double initialWaitingTime{ (LineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
 
-		//Check if the pixelclock overflows each Lineclock
+		//Check if the pixelclock overflows the Lineclock
 		if (initialWaitingTime <= 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 
-		mPixelclockQ.push_back(FPGAns::packU32(FPGAns::timeToTick(initialWaitingTime) + calibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
+		mPixelclockQ.push_back(FPGAns::packU32(FPGAns::timeToTick(initialWaitingTime) + mCalibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
 
 		//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
 		//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
@@ -508,7 +497,7 @@ return round(calculateDwellTime_us(pix) * tickPerUs) / tickPerUs;		// 1/tickPerU
 //Pixelclock with equal pixel size (spatial).
 void RTcontrol::Pixelclock::pushCorrectedDwellTimes()
 {
-//The pixel clock is triggered by the line clock (see the LV implementation) followed by a waiting time 'InitialWaitingTime_tick'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+
 const int calibCoarse_tick = 2043;	//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan
 const int calibFine_tick = 10;
 

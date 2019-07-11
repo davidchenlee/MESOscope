@@ -42,8 +42,9 @@ namespace FPGAns
 			const int mLatency_tick{ 2 };		//Latency at detecting the line clock. Calibrate the latency with the oscilloscope
 			double mDwell;
 			int mWidthPerFrame_pix;
-
-			void pushUniformDwellTimes(const int calibFine_tick);
+			const int mCalibFine_tick{ -40 };	//Fine tune the relative delay of the pixel clock wrt the line clock. Acquire an averaged image
+												//and align the pixels corresponding to forward and backward scans of the RS
+			void pushUniformDwellTimes();
 		public:
 			Pixelclock(const int widthPerFrame_pix, const double dwell);
 			QU32 readPixelclock() const;
@@ -62,7 +63,7 @@ namespace FPGAns
 		MAINTRIG mMainTrigger;															//Trigger the acquisition with the z stage: enable (0), disable (1)
 		FIFOOUT mFIFOOUTstate;															//Enable or disable the fpga FIFOOUT
 		const double mPulsesPerPix = pixelDwellTime / VISIONpulsePeriod;				//Max number of laser pulses per pixel
-		const U8 mUpscaleFactor{ static_cast<U8>(255 / (mPulsesPerPix + 1.)) };		//Upscale 4-bit counts to 8-bit (range 0-255) for compatibility with ImageJ's standards. Plus one to avoid overflow
+		const U8 mUpscaleFactor{ static_cast<U8>(255 / (mPulsesPerPix + 1.)) };			//Upscale 4-bit counts to 8-bit (range 0-255) for compatibility with ImageJ's standards. Plus one to avoid overflow
 		int mWidthPerFrame_pix;															//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
 		int mHeightPerBeamletPerFrame_pix;												//Height in pixels of a single beamlet in a single frame (galvo axis)
 		int mNframes;																	//Number of frames to acquire

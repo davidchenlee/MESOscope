@@ -36,10 +36,10 @@ public:
 	Image(Image&&) = delete;					//Disable move constructor
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
-	void acquire();
+	void acquire(const double FFOVfast = 150.*um);
 	void initialize(const ZSCAN scanDir = ZSCAN::TOPDOWN);
 	void downloadData();
-	void postprocess();
+	void postprocess(const double FFOVfast = 150.*um);
 	void averageFrames();
 	void averageEvenOddFrames();
 	void saveTiffSinglePage(std::string filename, const OVERRIDE override) const;

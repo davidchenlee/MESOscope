@@ -571,21 +571,21 @@ inline U8 interpolateU8(float lam, const U8  &val1, const U8 &val2)
 //Correct the image distortion induced by the nonlinear scanning of the RS
 //Correction code based on Martin's algorithm, https://github.com/mpicbg-csbd/scancorrect, mweigert@mpi-cbg.de
 //OpenCL code based on http://simpleopencl.blogspot.com/2013/06/tutorial-simple-start-with-opencl-and-c.html
-void TiffU8::correctRSdistortionGPU(const double FFOVslow)
+void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 {
 //It is assumed that the laser scans the sample following x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
 
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
 	const int heightAllFrames{ mHeightPerFrame * mNframes };
 
-	//Start and stop time of the RS scan that define the FFOVslow
+	//Start and stop time of the RS scan that define FFOVfast
 	const double t1{ 0.5 * (LineclockHalfPeriod - mWidthPerFrame * pixelDwellTime) };
 	const double t2{ LineclockHalfPeriod - t1 };
 
 	//The full amplitude of the RS (from turning point to turning point) in um
-	const double fullScan{ 2 * FFOVslow / (std::cos(PI * t1 / LineclockHalfPeriod) - std::cos(PI * t2 / LineclockHalfPeriod)) };
+	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / LineclockHalfPeriod) - std::cos(PI * t2 / LineclockHalfPeriod)) };
 
-	//Start and stop positions of the RS that define the FFOVslow
+	//Start and stop positions of the RS that define FFOVfast
 	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / LineclockHalfPeriod)) };
 	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / LineclockHalfPeriod)) };
 
@@ -705,19 +705,19 @@ void TiffU8::correctRSdistortionGPU(const double FFOVslow)
 
 //Correct the image distortion induced by the nonlinear scanning of the RS
 //Correction code based on Martin's algorithm, https://github.com/mpicbg-csbd/scancorrect, mweigert@mpi-cbg.de
-void TiffU8::correctRSdistortionCPU(const double FFOVslow)
+void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 {
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
 	U8* correctedArray = new U8[nPixAllFrames];
 
-	//Start and stop time of the RS scan that define the FFOVslow
+	//Start and stop time of the RS scan that define FFOVfast
 	const double t1{ 0.5 * (LineclockHalfPeriod - mWidthPerFrame * pixelDwellTime) };
 	const double t2{ LineclockHalfPeriod - t1 };
 
 	//The full amplitude of the RS (from turning point to turning point) in um
-	const double fullScan{ 2 * FFOVslow / (std::cos(PI * t1 / LineclockHalfPeriod) - std::cos(PI * t2 / LineclockHalfPeriod)) };
+	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / LineclockHalfPeriod) - std::cos(PI * t2 / LineclockHalfPeriod)) };
 
-	//Start and stop positions of the RS that define the FFOVslow
+	//Start and stop positions of the RS that define the FFOVfast
 	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / LineclockHalfPeriod)) };
 	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / LineclockHalfPeriod)) };
 

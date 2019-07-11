@@ -47,6 +47,13 @@ namespace Constants
 	enum class ZSCAN { BOTTOMUP = -1, TOPDOWN = 1};
 	enum class PMT16XCHAN { CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CH16, CH00}; //CH00 centers the rescanner (i.e., 'offset + 0 V' is sent to the scanner)
 
+	class FFOV {
+	public:
+		double mFFOVslow;
+		double mFFOVfast;
+		FFOV(const double FFOVslow, const double FFOVfast) : mFFOVslow(FFOVslow), mFFOVfast(FFOVfast) {}
+	};
+
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;
 	extern const std::string openclFilePath;

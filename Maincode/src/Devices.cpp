@@ -282,12 +282,12 @@ void Image::stopFIFOOUTpc_() const
 }
 
 //Scan a z-stack with individual acquisition triggers plane-by-plane
-void Image::acquire()
+void Image::acquire(const double FFOVfast)
 {
 	initialize();
 	mRTcontrol.triggerRT();		//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 	downloadData();
-	postprocess();
+	postprocess(FFOVfast);
 }
 
 void Image::initialize(const ZSCAN stackScanDir)
@@ -352,12 +352,12 @@ void Image::downloadData()
 	}
 }
 
-void Image::postprocess()
+void Image::postprocess(const double FFOVfast)
 {
 	correctInterleaved_();
-	demultiplex_();									//Move the chuncks of data to the buffer array
-	mTiff.mirrorOddFrames();						//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
-	mTiff.correctRSdistortionGPU(150. * um);		//Correct the image distortion induced by the nonlinear scanning of the RS
+	demultiplex_();								//Move the chuncks of data to the buffer array
+	mTiff.mirrorOddFrames();					//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
+	mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 }
 
 //Split the long vertical image into nFrames and calculate the average over all the frames

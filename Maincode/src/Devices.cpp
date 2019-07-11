@@ -525,8 +525,8 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		switch (mWavelength_nm)
 		{
 		case 750:
-			mVoltagePerDistance = 0.31 * scanCalib;		//By increasing this variable, the top beads in a Tiff appear before the bottom ones.
-			mVoltageOffset = 0.06 * V;					//A positive offset steers the beam towards channel 1 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, channel 1 is on the left
+			mVoltagePerDistance = 0.310 * scanCalib;		//By increasing this variable, the top beads in a Tiff appear before the bottom ones.
+			mVoltageOffset = 0.04 * V;					//A positive offset steers the beam towards channel 1 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, channel 1 is on the left
 			break;
 		case 920:
 			mVoltagePerDistance = 0.32 * scanCalib;
@@ -534,7 +534,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 			break;
 		case 1040:
 			mVoltagePerDistance = 0.32 * scanCalib;
-			mVoltageOffset = 0.10 * V;
+			mVoltageOffset = 0.08 * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -1497,7 +1497,7 @@ void VirtualLaser::CollectorLens::position(const int wavelength_nm)
 	switch (wavelength_nm)
 	{
 	case 750:
-		mStepper.move(9.0 * mm);
+		mStepper.move(8.0 * mm);
 		break;
 	case 920:
 		mStepper.move(4.0 * mm);
@@ -1711,31 +1711,31 @@ Stage::Stage(const double velX, const double velY, const double velZ)
 
 	//Open the connections to the stage controllers and assign the IDs
 	std::cout << "Establishing connection with the stages\n";
-	mID_XYZ.at(XX) = PI_ConnectUSB(stageIDx.c_str());
-	mID_XYZ.at(YY) = PI_ConnectUSB(stageIDy.c_str());
-	mID_XYZ.at(ZZ) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
-	//mID_XYZ.at(ZZ) = PI_ConnectUSB(stageIDz.c_str());
+	mID_XYZ.at(STAGEX) = PI_ConnectUSB(stageIDx.c_str());
+	mID_XYZ.at(STAGEY) = PI_ConnectUSB(stageIDy.c_str());
+	mID_XYZ.at(STAGEZ) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	//mID_XYZ.at(STAGEZ) = PI_ConnectUSB(stageIDz.c_str());
 
-	if (mID_XYZ.at(XX) < 0)
+	if (mID_XYZ.at(STAGEX) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
 
-	if (mID_XYZ.at(YY) < 0)
+	if (mID_XYZ.at(STAGEY) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
 
-	if (mID_XYZ.at(ZZ) < 0)
+	if (mID_XYZ.at(STAGEZ) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
 
 	std::cout << "Connection with the stages successfully established\n";
 
 	//Download the current position
-	mPositionXYZ.at(XX) = downloadPositionSingle_(XX);
-	mPositionXYZ.at(YY) = downloadPositionSingle_(YY);
-	mPositionXYZ.at(ZZ) = downloadPositionSingle_(ZZ);
+	mPositionXYZ.at(STAGEX) = downloadPositionSingle_(STAGEX);
+	mPositionXYZ.at(STAGEY) = downloadPositionSingle_(STAGEY);
+	mPositionXYZ.at(STAGEZ) = downloadPositionSingle_(STAGEZ);
 
 	//Download the current velocities
-	mVelXYZ.at(XX) = downloadVelSingle_(XX);
-	mVelXYZ.at(YY) = downloadVelSingle_(YY);
-	mVelXYZ.at(ZZ) = downloadVelSingle_(ZZ);
+	mVelXYZ.at(STAGEX) = downloadVelSingle_(STAGEX);
+	mVelXYZ.at(STAGEY) = downloadVelSingle_(STAGEY);
+	mVelXYZ.at(STAGEZ) = downloadVelSingle_(STAGEZ);
 
 	configDOtriggers_();				//Configure the stage velocities and DO triggers
 	setVelXYZ({ velX, velY, velZ });	//Set the stage velocities
@@ -1744,9 +1744,9 @@ Stage::Stage(const double velX, const double velY, const double velZ)
 Stage::~Stage()
 {
 	//Close the Connections
-	PI_CloseConnection(mID_XYZ.at(XX));
-	PI_CloseConnection(mID_XYZ.at(YY));
-	PI_CloseConnection(mID_XYZ.at(ZZ));
+	PI_CloseConnection(mID_XYZ.at(STAGEX));
+	PI_CloseConnection(mID_XYZ.at(STAGEY));
+	PI_CloseConnection(mID_XYZ.at(STAGEZ));
 	//std::cout << "Connection with the stages successfully closed\n";
 }
 
@@ -1757,29 +1757,29 @@ void Stage::configDOtriggers_() const
 	/*
 	//DO1 TRIGGER: DO1 is set to output a pulse (fixed width = 50 us) whenever the stage covers a certain distance (e.g. 0.3 um)
 	const int DO1{ 1 };
-	setDOtriggerEnabled(ZZ, DO1, true);	//Enable DO1 trigger
+	setDOtriggerEnabled(STAGEZ, DO1, true);	//Enable DO1 trigger
 	const double triggerStep{ 0.3 * um };
 	const DOTRIGMODE triggerMode{ POSDIST };
 	const double startThreshold{ 0. * mm };
 	const double stopThreshold{ 0. * mm };
-	setDOtriggerParamAll(ZZ, DO1, triggerStep, triggerMode, startThreshold, stopThreshold);
+	setDOtriggerParamAll(STAGEZ, DO1, triggerStep, triggerMode, startThreshold, stopThreshold);
 	*/
 
 	//DO2 TRIGGER: DO2 is set to output HIGH when the stage z is in motion
 	const int DO2{ 2 };
-	setDOtriggerEnabled(ZZ, DO2, true);	//Enable DO2 trigger
-	setDOtriggerParamSingle(ZZ, DO2, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));
+	setDOtriggerEnabled(STAGEZ, DO2, true);	//Enable DO2 trigger
+	setDOtriggerParamSingle(STAGEZ, DO2, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));
 }
 
 std::string Stage::axisToString(const Axis axis) const
 {
 	switch (axis)
 	{
-	case XX:
+	case STAGEX:
 		return "X";
-	case YY:
+	case STAGEY:
 		return "Y";
-	case ZZ:
+	case STAGEZ:
 		return "Z";
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
@@ -1794,9 +1794,9 @@ double3 Stage::readPositionXYZ() const
 
 void Stage::printPositionXYZ() const
 {
-	std::cout << "Stage X position = " << mPositionXYZ.at(XX) / mm << " mm\n";
-	std::cout << "Stage Y position = " << mPositionXYZ.at(YY) / mm << " mm\n";
-	std::cout << "Stage Z position = " << mPositionXYZ.at(ZZ) / mm << " mm\n";
+	std::cout << "Stage X position = " << mPositionXYZ.at(STAGEX) / mm << " mm\n";
+	std::cout << "Stage Y position = " << mPositionXYZ.at(STAGEY) / mm << " mm\n";
+	std::cout << "Stage Z position = " << mPositionXYZ.at(STAGEZ) / mm << " mm\n";
 }
 
 //Retrieve the stage position from the controller
@@ -1830,16 +1830,16 @@ void Stage::moveSingle(const Axis axis, const double position)
 //Move the 3 stages to the requested position
 void Stage::moveXY(const double2 positionXY)
 {
-	moveSingle(XX, positionXY.at(XX));
-	moveSingle(YY, positionXY.at(YY));
+	moveSingle(STAGEX, positionXY.at(STAGEX));
+	moveSingle(STAGEY, positionXY.at(STAGEY));
 }
 
 //Move the 3 stages to the requested position
 void Stage::moveXYZ(const double3 positionXYZ)
 {
-	moveSingle(XX, positionXYZ.at(XX));
-	moveSingle(YY, positionXYZ.at(YY));
-	moveSingle(ZZ, positionXYZ.at(ZZ));
+	moveSingle(STAGEX, positionXYZ.at(STAGEX));
+	moveSingle(STAGEY, positionXYZ.at(STAGEY));
+	moveSingle(STAGEZ, positionXYZ.at(STAGEZ));
 }
 
 bool Stage::isMoving(const Axis axis) const
@@ -1874,13 +1874,13 @@ void Stage::waitForMotionToStopAll() const
 
 	BOOL isMoving_x, isMoving_y, isMoving_z;
 	do {
-		if (!PI_IsMoving(mID_XYZ.at(XX), mNstagesPerController, &isMoving_x))
+		if (!PI_IsMoving(mID_XYZ.at(STAGEX), mNstagesPerController, &isMoving_x))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage X");
 
-		if (!PI_IsMoving(mID_XYZ.at(YY), mNstagesPerController, &isMoving_y))
+		if (!PI_IsMoving(mID_XYZ.at(STAGEY), mNstagesPerController, &isMoving_y))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Y");
 
-		if (!PI_IsMoving(mID_XYZ.at(ZZ), mNstagesPerController, &isMoving_z))
+		if (!PI_IsMoving(mID_XYZ.at(STAGEZ), mNstagesPerController, &isMoving_z))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Z");
 
 		std::cout << ".";
@@ -1891,9 +1891,9 @@ void Stage::waitForMotionToStopAll() const
 
 void Stage::stopAll() const
 {
-	PI_StopAll(mID_XYZ.at(XX));
-	PI_StopAll(mID_XYZ.at(YY));
-	PI_StopAll(mID_XYZ.at(ZZ));
+	PI_StopAll(mID_XYZ.at(STAGEX));
+	PI_StopAll(mID_XYZ.at(STAGEY));
+	PI_StopAll(mID_XYZ.at(STAGEZ));
 
 	std::cout << "Stages stopped\n";
 }
@@ -1932,16 +1932,16 @@ void Stage::setVelSingle(const Axis axis, const double vel)
 //Set the velocity of the stage 
 void Stage::setVelXYZ(const double3 velXYZ)
 {
-	setVelSingle(XX, velXYZ.at(XX));
-	setVelSingle(YY, velXYZ.at(YY));
-	setVelSingle(ZZ, velXYZ.at(ZZ));
+	setVelSingle(STAGEX, velXYZ.at(STAGEX));
+	setVelSingle(STAGEY, velXYZ.at(STAGEY));
+	setVelSingle(STAGEZ, velXYZ.at(STAGEZ));
 }
 
 void Stage::printVelXYZ() const
 {
-	std::cout << "Stage X vel = " << mVelXYZ.at(XX) / mmps << " mm/s\n";
-	std::cout << "Stage Y vel = " << mVelXYZ.at(YY) / mmps << " mm/s\n";
-	std::cout << "Stage Z vel = " << mVelXYZ.at(ZZ) / mmps << " mm/s\n";
+	std::cout << "Stage X vel = " << mVelXYZ.at(STAGEX) / mmps << " mm/s\n";
+	std::cout << "Stage Y vel = " << mVelXYZ.at(STAGEY) / mmps << " mm/s\n";
+	std::cout << "Stage Z vel = " << mVelXYZ.at(STAGEZ) / mmps << " mm/s\n";
 }
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
@@ -2012,17 +2012,17 @@ void Stage::printStageConfig(const Axis axis, const int chan) const
 {
 	switch (axis)
 	{
-	case XX:
+	case STAGEX:
 		//Only DO1 is wired to the FPGA
 		if (chan != 1)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString(axis));
 		break;
-	case YY:
+	case STAGEY:
 		//Only DO1 is wired to the FPGA
 		if (chan != 1)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString(axis));
 		break;
-	case ZZ:
+	case STAGEZ:
 		//Only DO1 and DO2 are wired to the FPGA
 		if (chan < 1 || chan > 2)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 and DO2 are currently wired to the FPGA for the stage " + axisToString(axis));
@@ -2068,17 +2068,17 @@ void Vibratome::pushStartStopButton() const
 void Vibratome::slice(const double planeToCutZ)
 {
 	mStage.setVelXYZ(mStageConveyingVelXYZ);															//Change the velocity to move the sample to the vibratome
-	mStage.moveXYZ({ mStageInitialSlicePosXY.at(XX), mStageInitialSlicePosXY.at(YY), planeToCutZ });	//Position the sample in front of the vibratome's blade
+	mStage.moveXYZ({ mStageInitialSlicePosXY.at(STAGEX), mStageInitialSlicePosXY.at(STAGEY), planeToCutZ });	//Position the sample in front of the vibratome's blade
 	mStage.waitForMotionToStopAll();
 
-	mStage.setVelSingle(YY, mSlicingVel);							//Change the y vel for slicing
-	pushStartStopButton();											//Turn on the vibratome
-	mStage.moveSingle(YY, mStageFinalSlicePosY);					//Slice the sample: move the stage y towards the blade
-	mStage.waitForMotionToStopSingle(YY);							//Wait until the motion ends
-	mStage.setVelSingle(YY, mStageConveyingVelXYZ.at(YY));			//Set back the y vel to move the sample back to the microscope
+	mStage.setVelSingle(STAGEY, mSlicingVel);							//Change the y vel for slicing
+	pushStartStopButton();												//Turn on the vibratome
+	mStage.moveSingle(STAGEY, mStageFinalSlicePosY);					//Slice the sample: move the stage y towards the blade
+	mStage.waitForMotionToStopSingle(STAGEY);							//Wait until the motion ends
+	mStage.setVelSingle(STAGEY, mStageConveyingVelXYZ.at(STAGEY));		//Set back the y vel to move the sample back to the microscope
 
-	//mStage.moveSingle(YY, mStage.mTravelRangeXYZ.at(YY).at(1));	//Move the stage y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
-	//mStage.waitForMotionToStopSingle(YY);							//Wait until the motion ends
+	//mStage.moveSingle(STAGEY, mStage.mTravelRangeXYZ.at(STAGEY).at(1));	//Move the stage y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
+	//mStage.waitForMotionToStopSingle(STAGEY);							//Wait until the motion ends
 
 	pushStartStopButton();											//Turn off the vibratome
 
@@ -2144,14 +2144,14 @@ Sample::Sample(const std::string sampleName, const std::string immersionMedium, 
 	mName{ sampleName }, mImmersionMedium{ immersionMedium }, mObjectiveCollar{ objectiveCollar }, mROI{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
 {
 	//Convert input ROI = {ymin, xmin, ymax, xmax} to the equivalent sample length in X and Y
-	mLengthXYZ.at(XX) = mROI.at(XMAX) - mROI.at(XMIN);
-	mLengthXYZ.at(YY) = mROI.at(YMAX) - mROI.at(YMIN);
-	mLengthXYZ.at(ZZ) = sampleLengthZ;
+	mLengthXYZ.at(STAGEX) = mROI.at(XMAX) - mROI.at(XMIN);
+	mLengthXYZ.at(STAGEY) = mROI.at(YMAX) - mROI.at(YMIN);
+	mLengthXYZ.at(STAGEZ) = sampleLengthZ;
 
-	if (mLengthXYZ.at(XX) <= 0 || mLengthXYZ.at(YY) <= 0)
+	if (mLengthXYZ.at(STAGEX) <= 0 || mLengthXYZ.at(STAGEY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
 
-	if (mLengthXYZ.at(ZZ) <= 0)
+	if (mLengthXYZ.at(STAGEZ) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Z must be positive");
 
 	if (mCutAboveBottomOfStack < 0)
@@ -2169,11 +2169,11 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
 	*fileHandle << std::setprecision(4);
 	*fileHandle << "ROI [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROI.at(YMIN) / mm << "," << mROI.at(XMIN) / mm << "," << mROI.at(YMAX) / mm << "," << mROI.at(XMAX) / mm << "]\n";
-	*fileHandle << "Length (mm) = (" << mLengthXYZ.at(XX) / mm << "," << mLengthXYZ.at(YY) / mm << "," << mLengthXYZ.at(ZZ) / mm << ")\n\n";
+	*fileHandle << "Length (mm) = (" << mLengthXYZ.at(STAGEX) / mm << "," << mLengthXYZ.at(STAGEY) / mm << "," << mLengthXYZ.at(STAGEZ) / mm << ")\n\n";
 
 	*fileHandle << "SLICE ************************************************************\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Blade position x,y (mm) = (" << mBladePositionXY.at(XX) / mm << "," << mBladePositionXY.at(YY) / mm << ")\n";
+	*fileHandle << "Blade position x,y (mm) = (" << mBladePositionXY.at(STAGEX) / mm << "," << mBladePositionXY.at(STAGEY) / mm << ")\n";
 	*fileHandle << std::setprecision(1);
 	*fileHandle << "Blade-focal plane vertical offset (um) = " << mBladeFocalplaneOffsetZ / um << "\n";
 	*fileHandle << "Cut above the bottom of the stack (um) = " << mCutAboveBottomOfStack / um << "\n";
@@ -2186,7 +2186,7 @@ void Sample::printParams(std::ofstream *fileHandle) const
 Stack::Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, const double3 overlapXYZ_frac) :
 	mFFOV{ FFOV }, mStepSizeZ{ stepSizeZ }, mDepth{ stepSizeZ *  nFrames }, mOverlapXYZ_frac{ overlapXYZ_frac }
 {
-	if (FFOV.at(XX) <= 0 || FFOV.at(YY) <= 0)
+	if (FFOV.at(STAGEX) <= 0 || FFOV.at(STAGEY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
 
 	if (mStepSizeZ <= 0)
@@ -2195,8 +2195,8 @@ Stack::Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, cons
 	if (mDepth <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth must be positive");
 
-	if (mOverlapXYZ_frac.at(XX) < 0 || mOverlapXYZ_frac.at(YY) < 0 || mOverlapXYZ_frac.at(ZZ) < 0
-		|| mOverlapXYZ_frac.at(XX) > 0.2 || mOverlapXYZ_frac.at(YY) > 0.2 || mOverlapXYZ_frac.at(ZZ) > 0.2)
+	if (mOverlapXYZ_frac.at(STAGEX) < 0 || mOverlapXYZ_frac.at(STAGEY) < 0 || mOverlapXYZ_frac.at(STAGEZ) < 0
+		|| mOverlapXYZ_frac.at(STAGEX) > 0.2 || mOverlapXYZ_frac.at(STAGEY) > 0.2 || mOverlapXYZ_frac.at(STAGEZ) > 0.2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range 0-0.2");
 }
 
@@ -2204,11 +2204,11 @@ void Stack::printParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "STACK ************************************************************\n";
 	*fileHandle << std::setprecision(1);
-	*fileHandle << "FOV (um) = (" << mFFOV.at(XX) / um << "," << mFFOV.at(YY) / um << ")\n";
+	*fileHandle << "FOV (um) = (" << mFFOV.at(STAGEX) / um << "," << mFFOV.at(STAGEY) / um << ")\n";
 	*fileHandle << "Step size Z (um) = " << mStepSizeZ / um << "\n";
 	*fileHandle << "Stack depth (um) = " << mDepth / um << "\n";
-	*fileHandle << "Stack overlap (frac) = (" << mOverlapXYZ_frac.at(XX) << "," << mOverlapXYZ_frac.at(YY) << "," << mOverlapXYZ_frac.at(ZZ) << ")\n";
-	*fileHandle << "Stack overlap (um) = (" << mOverlapXYZ_frac.at(XX) * mFFOV.at(XX) / um << "," << mOverlapXYZ_frac.at(YY) * mFFOV.at(YY) / um << "," << mOverlapXYZ_frac.at(ZZ) * mDepth << ")\n";
+	*fileHandle << "Stack overlap (frac) = (" << mOverlapXYZ_frac.at(STAGEX) << "," << mOverlapXYZ_frac.at(STAGEY) << "," << mOverlapXYZ_frac.at(STAGEZ) << ")\n";
+	*fileHandle << "Stack overlap (um) = (" << mOverlapXYZ_frac.at(STAGEX) * mFFOV.at(STAGEX) / um << "," << mOverlapXYZ_frac.at(STAGEY) * mFFOV.at(STAGEY) / um << "," << mOverlapXYZ_frac.at(STAGEZ) * mDepth << ")\n";
 	*fileHandle << "\n";
 }
 #pragma endregion "Stack"

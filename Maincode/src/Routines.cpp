@@ -1,12 +1,12 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 53.150 * mm, 17.000 * mm, 18.077 * mm };	//Beads 77, 83
+double3 stackCenterXYZ{ 53.150 * mm, 17.000 * mm, 18.077 * mm };	//Beads 77, 82
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
 const std::string collar{ "1.51" };
-const ChannelList channelListBeads{ {{ "DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 45. * mW, 0. * mWpum }, { "TDT", 1040, 20. * mW, 0. * mWpum }} };	//4um beads
+const ChannelList channelListBeads{ {{ "DAPI", 750, 50. * mW, 0. * mWpum }, { "GFP", 920, 60. * mW, 0. * mWpum }, { "TDT", 1040, 25. * mW, 0. * mWpum }} };	//4um beads
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//0.5um beads
 //const ChannelList channelListLiver{ {{ "TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }} };
 const ChannelList channelListFluorSlide { { { "DAPI", 750, 10. * mW, 0. * mWpum }} };	//Fluorescent slide
@@ -16,7 +16,7 @@ const ChannelList channelList{ channelListBeads };
 namespace PMT1XRoutines
 {
 	//Full sequence to image and cut an entire sample automatically
-	//Note that the stack starts at stackCenterXYZ.at(ZZ). Therefore, the stack is not centered around stackCenterXYZ.at(ZZ).
+	//Note that the stack starts at stackCenterXYZ.at(STAGEZ). Therefore, the stack is not centered around stackCenterXYZ.at(STAGEZ).
 	void sequencer(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -30,7 +30,7 @@ namespace PMT1XRoutines
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };											//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };														//Sample thickness
-		const double sampleSurfaceZ{ stackCenterXYZ.at(ZZ) };
+		const double sampleSurfaceZ{ stackCenterXYZ.at(STAGEZ) };
 
 		//const ChannelList channelList{ channelList };
 		const ChannelList channelList{ {channelList.findChannel("GFP")} };
@@ -48,7 +48,7 @@ namespace PMT1XRoutines
 		{
 			//STAGES. Specify the velocity
 			Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (LineclockHalfPeriod * heightPerFrame_pix) };
-			stage.moveSingle(ZZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
+			stage.moveSingle(STAGEZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
 
 			//CREATE THE REALTIME CONTROL SEQUENCE
 			FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH08 };	//Notice the ZSTAGE flag
@@ -61,7 +61,7 @@ namespace PMT1XRoutines
 			RScanner.isRunning();		//Make sure that the RS is running
 
 			//GALVO RT linear ramp	
-			const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOV.at(XX) / 2 };
+			const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOV.at(STAGEX) / 2 };
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
@@ -107,12 +107,12 @@ namespace PMT1XRoutines
 
 					image.initialize(scanDirZ);
 					std::cout << "Scanning the stack...\n";
-					stage.moveSingle(ZZ, scanZf);		//Move the stage to trigger the control sequence and data acquisition
+					stage.moveSingle(STAGEZ, scanZf);		//Move the stage to trigger the control sequence and data acquisition
 					image.downloadData();
 					break;
 				case ACTION::SAV:
 					longName = toString(wavelength_nm, 0) + "nm_Pi=" + toString(scanPi / mW, 1) + "mW_Pf=" + toString((scanPi + static_cast<int>(scanDirZ) * stackPinc) / mW, 1) + "mW" +
-						"_x=" + toString(stackCenterXY.at(XX) / mm, 3) + "_y=" + toString(stackCenterXY.at(YY) / mm, 3) +
+						"_x=" + toString(stackCenterXY.at(STAGEX) / mm, 3) + "_y=" + toString(stackCenterXY.at(STAGEY) / mm, 3) +
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
 
 					image.postprocess();
@@ -173,7 +173,7 @@ namespace PMT16XRoutines
 			//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CH00 to let the laser scan through the PMT16X channels
 			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 			FFOVslowPerBeamlet = FFOVslow;
-			PMT16Xchan = PMT16XCHAN::CH15;
+			PMT16Xchan = PMT16XCHAN::CH08;
 			selectPower = singleChannel.mScanPi;
 			selectPowerInc = singleChannel.mStackPinc;
 #endif
@@ -208,7 +208,7 @@ namespace PMT16XRoutines
 			override = OVERRIDE::DIS;
 			//Generate the control sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
 			break;
 		case RUNMODE::STACKCENTERED:
 			nSameZ = 1;
@@ -216,7 +216,7 @@ namespace PMT16XRoutines
 			override = OVERRIDE::DIS;
 			//Generate the discrete scan sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stackCenterXYZ.at(ZZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
@@ -299,7 +299,7 @@ namespace PMT16XRoutines
 				{
 					//Save individual files
 					std::string singleFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString(selectPower / mW, 1) + "mW" +
-						"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(YY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(ZZ) / mm, 4) };
+						"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEZ) / mm, 4) };
 					image.saveTiffMultiPage(singleFilename, override);
 				}
 			}
@@ -311,8 +311,8 @@ namespace PMT16XRoutines
 		{
 			//Save the stackDiffZ to file
 			std::string stackFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_Pi=" + toString(selectPower / mW, 1) + "mW_Pinc=" + toString(selectPowerInc / mWpum, 1) + "mWpum" +
-				"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
-				"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
+				"_x=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
+				"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 			tiffStack.saveToFile(stackFilename, override);
 
 			pressESCforEarlyTermination();
@@ -414,7 +414,7 @@ namespace PMT16XRoutines
 				//Generate the discrete scan sequence for the stages
 				std::vector<double3> stagePositionXYZ;
 				for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-					stagePositionXYZ.push_back({ locationXYList.at(iter_loc).at(XX), locationXYList.at(iter_loc).at(YY), stackCenterXYZ.at(ZZ) + iterDiffZ * stepSizeZ });
+					stagePositionXYZ.push_back({ locationXYList.at(iter_loc).at(STAGEX), locationXYList.at(iter_loc).at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
 
 				//CREATE A STACK FOR STORING THE TIFFS
 				TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nDiffZ, 1 };
@@ -446,8 +446,8 @@ namespace PMT16XRoutines
 				//Save the stackDiffZ to file
 				std::string shortName{ "Slice" + std::to_string(nSlice) + "_" + channelList.at(iter_wv).mName + "_Tile" + std::to_string(iter_loc + 1) };
 				std::string longName{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(channelList.at(iter_wv).mScanPi / mW, 1) + "mW_Pinc=" + toString(channelList.at(iter_wv).mStackPinc / mWpum, 1) + "mWpum" +
-					"_x=" + toString(stagePositionXYZ.front().at(XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(YY) / mm, 3) +
-					"_zi=" + toString(stagePositionXYZ.front().at(ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
+					"_x=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
+					"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 
 				datalog.record(shortName + "\t" + longName);
 				tiffStack.saveToFile(shortName, OVERRIDE::DIS);
@@ -463,8 +463,8 @@ namespace PMT16XRoutines
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		const int nFramesCont{ 1 };				//Number of frames for continuous XY acquisition
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };							//Full FOV in the slow axis
+		const int nFramesCont{ 1 };															//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH08 };
@@ -514,28 +514,28 @@ namespace PMT16XRoutines
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
 		//Override the stage position
-		stackCenterXYZ.at(ZZ) -= nFramesCont * stepSizeZ /2;
+		stackCenterXYZ.at(STAGEZ) -= nFramesCont * stepSizeZ /2;
 
 		double stageZi, stageZf, laserPi, laserPf;
 		switch (scanDirZ)
 		{
 		case ZSCAN::TOPDOWN:
-			stageZi = stackCenterXYZ.at(ZZ);
-			stageZf = stackCenterXYZ.at(ZZ) + stackDepth + 20 * stepSizeZ; //Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
+			stageZi = stackCenterXYZ.at(STAGEZ);
+			stageZf = stackCenterXYZ.at(STAGEZ) + stackDepth + 20 * stepSizeZ; //Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
 			laserPi = singleChannel.mScanPi;
 			laserPf = singleChannel.mScanPi + stackDepth * singleChannel.mStackPinc;
 			break;
 		case ZSCAN::BOTTOMUP:
-			stageZi = stackCenterXYZ.at(ZZ) + stackDepth;
-			stageZf = stackCenterXYZ.at(ZZ) - 20 * stepSizeZ;				//Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
+			stageZi = stackCenterXYZ.at(STAGEZ) + stackDepth;
+			stageZf = stackCenterXYZ.at(STAGEZ) - 20 * stepSizeZ;				//Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
 			laserPi = singleChannel.mScanPi + stackDepth * singleChannel.mStackPinc;
 			laserPf = singleChannel.mScanPi;
 			break;
 		}
 
 		//STAGES
-		const double3 initialStageXYZ{ stackCenterXYZ.at(XX), stackCenterXYZ.at(YY), stageZi};		//Initial position of the stages. The sign of stackDepth determines the scanning direction					
-		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (LineclockHalfPeriod * heightPerFrame_pix) };	//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
+		const double3 initialStageXYZ{ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stageZi};		//Initial position of the stages. The sign of stackDepth determines the scanning direction					
+		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (LineclockHalfPeriod * heightPerFrame_pix) };			//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
 		stage.moveXYZ(initialStageXYZ);
 		stage.waitForMotionToStopAll();
 
@@ -562,7 +562,7 @@ namespace PMT16XRoutines
 		Image image{ RTcontrol };
 		image.initialize(scanDirZ);
 		std::cout << "Scanning the stack...\n";
-		stage.moveSingle(ZZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
+		stage.moveSingle(STAGEZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
 		image.downloadData();
 
 
@@ -579,7 +579,7 @@ namespace PMT16XRoutines
 
 
 		const std::string filename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(singleChannel.mStackPinc / mWpum, 1) +
-			"mWpum_x=" + toString(initialStageXYZ.at(XX) / mm, 3) + "_y=" + toString(initialStageXYZ.at(YY) / mm, 3) +
+			"mWpum_x=" + toString(initialStageXYZ.at(STAGEX) / mm, 3) + "_y=" + toString(initialStageXYZ.at(STAGEY) / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
 	}
@@ -777,7 +777,7 @@ namespace TestRoutines
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
-		stage.waitForMotionToStopSingle(ZZ);
+		stage.waitForMotionToStopSingle(STAGEZ);
 
 		std::cout << "Stages final position:" << "\n";
 		stage.printPositionXYZ();
@@ -786,9 +786,9 @@ namespace TestRoutines
 		int input = 1;
 		while (input)
 		{
-			std::cout << "Stage X position = " << stage.downloadPositionSingle_(XX) << "\n";
-			std::cout << "Stage Y position = " << stage.downloadPositionSingle_(YY) << "\n";
-			std::cout << "Stage X position = " << stage.downloadPositionSingle_(ZZ) << "\n";
+			std::cout << "Stage X position = " << stage.downloadPositionSingle_(STAGEX) << "\n";
+			std::cout << "Stage Y position = " << stage.downloadPositionSingle_(STAGEY) << "\n";
+			std::cout << "Stage X position = " << stage.downloadPositionSingle_(STAGEZ) << "\n";
 
 			std::cout << "Enter command: ";
 			std::cin >> input;
@@ -809,15 +809,15 @@ namespace TestRoutines
 		std::cout << "Stages initial vel:" << "\n";
 		stage.printVelXYZ();
 
-		//stage.isDOtriggerEnabled(ZZ, DOchannel);
-		//stage.setDOtriggerEnabled(ZZ, DOchannel , true);
+		//stage.isDOtriggerEnabled(STAGEZ, DOchannel);
+		//stage.setDOtriggerEnabled(STAGEZ, DOchannel , true);
 
 		//const int triggerParam = 1;
-		//stage.downloadDOtriggerParamSingle_(ZZ, DOchannel , triggerParam);
-		//std::cout << "x stage vel: " << stage.downloadVelSingle_(XX) / mmps << " mm/s" << "\n";
-		//std::cout << "y stage vel: " << stage.downloadVelSingle_(YY) / mmps << " mm/s" << "\n";
-		//std::cout << "z stage vel: " << stage.downloadVelSingle_(ZZ) / mmps << " mm/s" << "\n";
-		//stage.printStageConfig(ZZ, DOchan);
+		//stage.downloadDOtriggerParamSingle_(STAGEZ, DOchannel , triggerParam);
+		//std::cout << "x stage vel: " << stage.downloadVelSingle_(STAGEX) / mmps << " mm/s" << "\n";
+		//std::cout << "y stage vel: " << stage.downloadVelSingle_(STAGEY) / mmps << " mm/s" << "\n";
+		//std::cout << "z stage vel: " << stage.downloadVelSingle_(STAGEZ) / mmps << " mm/s" << "\n";
+		//stage.printStageConfig(STAGEZ, DOchan);
 	}
 
 	void shutter(const FPGAns::FPGA &fpga)
@@ -1123,7 +1123,7 @@ namespace TestRoutines
 
 		for (std::vector<int>::size_type iter_loc = 0; iter_loc < locationList.size(); iter_loc++)
 		{
-			std::cout << "x = " << locationList.at(iter_loc).at(XX) / mm << "\ty = " << locationList.at(iter_loc).at(YY) / mm << "\n";
+			std::cout << "x = " << locationList.at(iter_loc).at(STAGEX) / mm << "\ty = " << locationList.at(iter_loc).at(STAGEY) / mm << "\n";
 		}
 	}
 
@@ -1329,14 +1329,14 @@ namespace TestRoutines
 		Logger datalog(sampleName + "_locations");
 		datalog.record("dim=3"); //Needed in BigStitcher
 	
-		for (int nTile = 0; nTile < nStacksXY.at(XX) * nStacksXY.at(YY); nTile++)
+		for (int nTile = 0; nTile < nStacksXY.at(STAGEX) * nStacksXY.at(STAGEY); nTile++)
 		//for (int nTile = 0; nTile < 180; nTile++)
 		{
 			int2 nXY = nTileToArrayIndices(nTile);
-			int tileShiftX{ -nXY.at(XX) * tileShiftXY_pix.at(XX) };
-			int tileShiftY{ -nXY.at(YY) * tileShiftXY_pix.at(YY) };
+			int tileShiftX{ -nXY.at(STAGEX) * tileShiftXY_pix.at(STAGEX) };
+			int tileShiftY{ -nXY.at(STAGEY) * tileShiftXY_pix.at(STAGEY) };
 			std::string line{ std::to_string(nTile) + ";;(" + std::to_string(tileShiftY) + "," + std::to_string(tileShiftX) + ",0)" };	//In BigStitcher, X is horizontal and Y is vertical
-			//std::string line{ std::to_string(nTile) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(XX)) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(YY)) }; //For debugging
+			//std::string line{ std::to_string(nTile) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(STAGEX)) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(STAGEY)) }; //For debugging
 			datalog.record(line);
 		}
 
@@ -1348,12 +1348,12 @@ namespace TestRoutines
 		const int2 nStacksXY{ 30, 28 };
 
 		int nx;
-		int ny{ nTile / nStacksXY.at(XX) };
+		int ny{ nTile / nStacksXY.at(STAGEX) };
 
 		if (ny % 2)	//ny is odd
-			nx = nStacksXY.at(XX) - nTile % nStacksXY.at(XX) - 1;
+			nx = nStacksXY.at(STAGEX) - nTile % nStacksXY.at(STAGEX) - 1;
 		else		//ny is even
-			nx = nTile % nStacksXY.at(XX);
+			nx = nTile % nStacksXY.at(STAGEX);
 	
 		return {nx,ny};
 	}

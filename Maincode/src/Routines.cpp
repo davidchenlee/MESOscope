@@ -1,12 +1,12 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 53.000 * mm, 17.000 * mm, 18.077 * mm };	//Beads 77, 84
+double3 stackCenterXYZ{ 53.100 * mm, 17.000 * mm, 18.078 * mm };	//Beads 78, 82
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
 const std::string collar{ "1.51" };
-const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 80. * mW, 0. * mWpum }, { "TDT", 1040, 25. * mW, 0. * mWpum }} };	//4um beads
+const ChannelList channelListBeads{ {{ "DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 60. * mW, 0. * mWpum }, { "TDT", 1040, 25. * mW, 0. * mWpum }} };	//4um beads
 //const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//0.5um beads
 //const ChannelList channelListLiver{ {{ "TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }} };
 const ChannelList channelListFluorSlide { { { "DAPI", 750, 10. * mW, 0. * mWpum }} };	//Fluorescent slide
@@ -161,27 +161,27 @@ namespace PMT16XRoutines
 		PMT16XCHAN PMT16Xchan;
 
 #if multibeam
-			//Multibeam
-			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
-			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / 16);
-			PMT16Xchan = PMT16XCHAN::CH00;
-			selectPower = 800. * mW;
-			selectPowerInc = 0;
+		//Multibeam
+		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
+		FFOVslowPerBeamlet = static_cast<int>(FFOVslow / 16);
+		PMT16Xchan = PMT16XCHAN::CH00;
+		selectPower = 1000. * mW;
+		selectPowerInc = 0;
 #else
-			//Singlebeam
-			//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CH00 to let the laser scan through the PMT16X channels
-			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
-			FFOVslowPerBeamlet = FFOVslow;
-			PMT16Xchan = PMT16XCHAN::CH08;
-			selectPower = singleChannel.mScanPi;
-			selectPowerInc = singleChannel.mStackPinc;
+		//Singlebeam
+		//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CH00 to let the laser scan through the PMT16X channels
+		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
+		FFOVslowPerBeamlet = FFOVslow;
+		PMT16Xchan = PMT16XCHAN::CH08;
+		selectPower = singleChannel.mScanPi;
+		selectPowerInc = singleChannel.mStackPinc;
 #endif
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
 		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in Z
 
 		//STAGES
-		std::vector<double3> stagePositionXYZ;		
+		std::vector<double3> stagePositionXYZ;
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
 		int nDiffZ;		//Number of frames at different Zs
@@ -220,7 +220,7 @@ namespace PMT16XRoutines
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 		}
-		
+
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
 
@@ -315,6 +315,162 @@ namespace PMT16XRoutines
 			tiffStack.saveToFile(stackFilename, override);
 
 			pressESCforEarlyTermination();
+		}
+	}
+
+	void PMT16XframeByFrameScanTest(const FPGAns::FPGA &fpga)
+	{
+		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
+		//forth on the same z plane. The images the can be averaged
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
+		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
+
+		//ACQUISITION SETTINGS
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
+		const double pixelSizeXY{ 0.5 * um };
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
+		const int nFramesCont{ 1 };
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
+
+		int heightPerBeamletPerFrame_pix;
+		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
+		PMT16XCHAN PMT16Xchan;
+
+#if multibeam
+		//Multibeam
+		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / 16);
+		FFOVslowPerBeamlet = static_cast<int>(FFOVslow / 16);
+		PMT16Xchan = PMT16XCHAN::CH00;
+		selectPower = 800. * mW;
+		selectPowerInc = 0;
+#else
+		//Singlebeam
+		//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CH00 to let the laser scan through the PMT16X channels
+		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
+		FFOVslowPerBeamlet = FFOVslow;
+		PMT16Xchan = PMT16XCHAN::CH08;
+		selectPower = singleChannel.mScanPi;
+		selectPowerInc = singleChannel.mStackPinc;
+#endif
+		//STACK
+		const double stepSizeZ{ 1.0 * um };
+		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in Z
+
+		//STAGES
+		std::vector<double3> stagePositionXYZ;
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
+
+		int nDiffZ;		//Number of frames at different Zs
+		int nSameZ;		//Number of frames at the same Z
+		OVERRIDE override;
+		switch (acqMode)
+		{
+		case RUNMODE::SINGLE:
+			nSameZ = 1;
+			nDiffZ = 1; //Do not change this
+			override = OVERRIDE::DIS;
+			stagePositionXYZ.push_back(stackCenterXYZ);
+			break;
+		case RUNMODE::AVG:
+			nSameZ = 10;
+			nDiffZ = 1; //Do not change this
+			override = OVERRIDE::DIS;
+			stagePositionXYZ.push_back(stackCenterXYZ);
+			break;
+		case RUNMODE::STACK:
+			nSameZ = 1;
+			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
+			override = OVERRIDE::DIS;
+			//Generate the control sequence for the stages
+			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
+			break;
+		case RUNMODE::STACKCENTERED:
+			nSameZ = 1;
+			nDiffZ = static_cast<int>(stackDepthZ / stepSizeZ);
+			override = OVERRIDE::DIS;
+			//Generate the discrete scan sequence for the stages
+			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
+			break;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
+		}
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
+
+		//LASER
+		const VirtualLaser laser{ RTcontrol,  singleChannel.mWavelength_nm, LASER::VISION };
+
+		//RS
+		const ResonantScanner RScanner{ RTcontrol };
+		RScanner.isRunning();					//Make sure that the RS is running
+
+		//GALVO RT linear scan
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, singleChannel.mWavelength_nm };
+		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, singleChannel.mWavelength_nm };
+
+		//CREATE A STACK FOR STORING THE TIFFS
+		TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nDiffZ, nSameZ };
+
+		//OPEN THE UNIBLITZ SHUTTERS
+		laser.openShutter();	//The destructor will close the shutter automatically
+
+		for (int iterShiftX = 0; iterShiftX < 16; iterShiftX++)
+		{
+			//Update the vector containing the sample locations
+			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+				stagePositionXYZ.at(iterDiffZ).at(STAGEX) -= 35. * um;
+
+			//ACQUIRE FRAMES AT DIFFERENT Zs
+			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
+			{
+				stage.moveXYZ(stagePositionXYZ.at(iterDiffZ));
+				stage.waitForMotionToStopAll();
+				stage.printPositionXYZ();		//Print the stage position		
+
+				//Acquire many frames at the same Z via discontinuous acquisition
+				for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
+				{
+					std::cout << "Frame # (diff Z): " << (iterDiffZ + 1) << "/" << nDiffZ << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
+						"\tTotal frame: " << iterDiffZ * nSameZ + (iterSameZ + 1) << "/" << nDiffZ * nSameZ << "\n";
+
+					laser.setPower(selectPower + iterDiffZ * stepSizeZ * selectPowerInc);	//Update the laser power
+
+					//EXECUTE THE RT CONTROL SEQUENCE
+					Image image{ RTcontrol };
+					image.acquire(RScanner.mFFOV);		//Execute the RT control sequence and acquire the image
+					image.averageFrames();				//Average the frames acquired via continuous XY acquisition
+					//image.averageEvenOddFrames();
+					tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
+
+					if (acqMode == RUNMODE::SINGLE)
+					{
+						//Save individual files
+						std::string singleFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString(selectPower / mW, 1) + "mW" +
+							"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEZ) / mm, 4) };
+						image.saveTiffMultiPage(singleFilename, override);
+					}
+				}
+				tiffStack.pushDiffZ(iterDiffZ);
+				std::cout << "\n";
+			}
+
+			if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::STACK || acqMode == RUNMODE::STACKCENTERED)
+			{
+				//Save the stackDiffZ to file
+				std::string stackFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_Pi=" + toString(selectPower / mW, 1) + "mW_Pinc=" + toString(selectPowerInc / mWpum, 1) + "mWpum" +
+					"_x=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
+					"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
+				tiffStack.saveToFile(stackFilename, override);
+
+				pressESCforEarlyTermination();
+			}
 		}
 	}
 

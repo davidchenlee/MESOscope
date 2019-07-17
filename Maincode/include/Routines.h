@@ -11,6 +11,7 @@ namespace PMT1XRoutines
 namespace PMT16XRoutines
 {
 	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga);
+	void PMT16XframeByFrameScanTest(const FPGAns::FPGA &fpga);
 	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice);
 	void liveScan(const FPGAns::FPGA &fpga);
 	void continuousScan(const FPGAns::FPGA &fpga);

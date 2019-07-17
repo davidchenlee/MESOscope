@@ -357,7 +357,7 @@ void Image::postprocess(const double FFOVfast)
 	correctInterleaved_();
 	demultiplex_();								//Move the chuncks of data to the buffer array
 	mTiff.mirrorOddFrames();					//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
-	mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
+	//mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 }
 
 //Split the long vertical image into nFrames and calculate the average over all the frames
@@ -530,7 +530,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 			break;
 		case 920:
 			mVoltagePerDistance = 0.32 * scanCalib;
-			mVoltageOffset = 0.05 * V;
+			mVoltageOffset = 0.07 * V;
 			break;
 		case 1040:
 			mVoltagePerDistance = 0.32 * scanCalib;
@@ -1497,7 +1497,7 @@ void VirtualLaser::CollectorLens::position(const int wavelength_nm)
 	switch (wavelength_nm)
 	{
 	case 750:
-		mStepper.move(8.0 * mm);
+		mStepper.move(8.5 * mm);
 		break;
 	case 920:
 		mStepper.move(4.0 * mm);

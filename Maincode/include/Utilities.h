@@ -68,7 +68,7 @@ public:
 	void mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
 	void correctRSdistortionGPU(const double FFOVfast);
 	void correctRSdistortionCPU(const double FFOVfast);
-	void supressCrosstalk(const double crosstalkRatio = 1.0);
+	void suppressCrosstalk(const double crosstalkRatio = 1.0);
 	void flattenFieldLinear(const double maxScaleFactor = 1.0);
 };
 

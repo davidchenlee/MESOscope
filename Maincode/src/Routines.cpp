@@ -1075,7 +1075,7 @@ namespace TestRoutines
 	{
 		//std::string inputFilename{ "Liver distorted" };
 		//std::string inputFilename{ "no correction" };
-		std::string inputFilename{ "920nm (1)" };
+		std::string inputFilename{ "aaa" };
 		std::string outputFilename{ "output" };
 
 		TiffU8 image{ inputFilename };
@@ -1093,8 +1093,8 @@ namespace TestRoutines
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
 		image.correctRSdistortionGPU(150. * um);
-		image.supressCrosstalk(0.0);
-		image.flattenFieldLinear(3.5);
+		image.suppressCrosstalk(0.5);
+	//	image.flattenFieldLinear(1.5);
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
 		pressAnyKeyToCont();
 	}

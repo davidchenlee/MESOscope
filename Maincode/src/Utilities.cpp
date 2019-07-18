@@ -61,9 +61,9 @@ template<class T> inline T clip(T x, T lower, T upper)
 }
 
 //Clip x so that 0x00 <= x <= 0xFF
-U8 clipU8(const U8 x)
+U8 clipU8(const int x)
 {
-	return (std::min)(x, (std::numeric_limits<U8>::max)());
+	return static_cast<U8>( (std::min)(x, 255) );
 }
 
 //Convert a double to a string with decimal places
@@ -766,22 +766,18 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 
 void TiffU8::supressCrosstalk()
 {
-
 	const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };
-	unsigned int* avg{ new unsigned int[nPixPerFrame]() };
+	const int heightPerFramePerBeamlet{ mHeightPerFrame / nChanPMT };
 
 	//For each pixel, calculate the sum intensity over all the frames
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
-		for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-			avg[pixIndex] += mArray[frameIndex * nPixPerFrame + pixIndex];
+		for (int pixIndex = 0; pixIndex < mWidthPerFrame * heightPerFramePerBeamlet; pixIndex++)
+		{
+			mArray[frameIndex * nPixPerFrame + pixIndex] = clipU8(4 * static_cast<int>(mArray[frameIndex * nPixPerFrame + pixIndex]));
+		}
 
-	//Calculate the average intensity and reassign  it to mArray
-	for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-		mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / mNframes);
 
-	//Update the number of frames to 1
-	mNframes = 1;
-	delete[] avg;
+
 }
 #pragma endregion "TiffU8"
 

@@ -61,9 +61,14 @@ template<class T> inline T clip(T x, T lower, T upper)
 }
 
 //Clip x so that 0x00 <= x <= 0xFF
-U8 clipU8(const int x)
+U8 clipIntToU8(const int x)
 {
 	return static_cast<U8>( (std::min)(x, 255) );
+}
+
+U8 clipDoubleToU8(const double x)
+{
+	return static_cast<U8>((std::max)(0.,(std::min)(x, 255.)));
 }
 
 //Convert a double to a string with decimal places
@@ -764,19 +769,31 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
 
+//The PMT16X channels have some crosstalk. The image in every strip corresponding to a PMT16X channel is ghost-imaged on the neighbor top and bottom strips
+//To correct for this, substract a fraction of the neighbor top and neighbor bottom strips
 void TiffU8::supressCrosstalk()
 {
-	const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };
-	const int heightPerFramePerBeamlet{ mHeightPerFrame / nChanPMT };
+	const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };			//Number of pixels in a frame
+	const int nPixStrip{ mWidthPerFrame * mHeightPerFrame / nChanPMT };	//Number of pixels in a strip
+	const double crosstalkFraction{ 0.2 };
 
-	//For each pixel, calculate the sum intensity over all the frames
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
-		for (int pixIndex = 0; pixIndex < mWidthPerFrame * heightPerFramePerBeamlet; pixIndex++)
+	{
+		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
 		{
-			mArray[frameIndex * nPixPerFrame + pixIndex] = clipU8(4 * static_cast<int>(mArray[frameIndex * nPixPerFrame + pixIndex]));
+			//First channel
+			mArray[frameIndex * nPixPerFrame + pixIndex] = clipDoubleToU8(mArray[frameIndex * nPixPerFrame + pixIndex] - crosstalkFraction * mArray[frameIndex * nPixPerFrame + nPixStrip + pixIndex]);
+
+			//Last channel
+			mArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex] = clipDoubleToU8(mArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex]
+				- crosstalkFraction * mArray[frameIndex * nPixPerFrame + (nChanPMT - 2) * nPixStrip + pixIndex]);
+
+			//All the channels in between
+			for (int chanIndex = 1; chanIndex < nChanPMT - 1; chanIndex++)
+				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipDoubleToU8(mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]
+					- crosstalkFraction * ( mArray[frameIndex * nPixPerFrame + (chanIndex - 1) * nPixStrip + pixIndex] + mArray[frameIndex * nPixPerFrame + (chanIndex + 1) * nPixStrip + pixIndex] ));
 		}
-
-
+	}
 
 }
 #pragma endregion "TiffU8"

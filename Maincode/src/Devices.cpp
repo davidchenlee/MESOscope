@@ -186,7 +186,7 @@ void Image::demuxSingleChannel_()
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
 			const int upscaled{ mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayA[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.pointerToTiff())[pixIndex] = clipU8(upscaled);																//Clip if overflow
+			(mTiff.pointerToTiff())[pixIndex] = clipIntToU8(upscaled);															//Clip if overflow
 		}
 	}
 	//Demultiplex mMultiplexedArrayB (channels 9-16). Each U32 element in mMultiplexedArrayB has the multiplexed structure | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
@@ -195,7 +195,7 @@ void Image::demuxSingleChannel_()
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
 			const int upscaled{ mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayB[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.pointerToTiff())[pixIndex] = clipU8(upscaled);																//Clip if overflow
+			(mTiff.pointerToTiff())[pixIndex] = clipIntToU8(upscaled);															//Clip if overflow
 		}
 	}
 	else
@@ -238,12 +238,12 @@ void Image::demuxAllChannels_()
 		{
 			//Buffer A (channels 1-8)
 			const int upscaledA{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };						//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8(upscaledA);		//Clip if overflow
+			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipIntToU8(upscaledA);	//Clip if overflow
 			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;													//Shift 4 places to the right for the next iteration
 
 			//Buffer B (channels 9-16)
 			const int upscaledB{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };						//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8(upscaledB);		//Clip if overflow
+			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipIntToU8(upscaledB);	//Clip if overflow
 			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;													//Shift 4 places to the right for the next iteration
 		}
 

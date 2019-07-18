@@ -771,29 +771,57 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 
 //The PMT16X channels have some crosstalk. The image in every strip corresponding to a PMT16X channel is ghost-imaged on the neighbor top and bottom strips
 //To correct for this, substract a fraction of the neighbor top and neighbor bottom strips
-void TiffU8::supressCrosstalk()
+void TiffU8::supressCrosstalk(const double crosstalkRatio)
 {
-	const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };			//Number of pixels in a frame
+	if (crosstalkRatio < 0 || crosstalkRatio > 1.0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Crosstalk ration must be in the range [0, 1.0]");
+
+	const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };			//Number of pixels in a single frame
 	const int nPixStrip{ mWidthPerFrame * mHeightPerFrame / nChanPMT };	//Number of pixels in a strip
-	const double crosstalkFraction{ 0.2 };
 
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
-	{
 		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
 		{
 			//First channel
-			mArray[frameIndex * nPixPerFrame + pixIndex] = clipDoubleToU8(mArray[frameIndex * nPixPerFrame + pixIndex] - crosstalkFraction * mArray[frameIndex * nPixPerFrame + nPixStrip + pixIndex]);
+			mArray[frameIndex * nPixPerFrame + pixIndex] = clipDoubleToU8(mArray[frameIndex * nPixPerFrame + pixIndex] - crosstalkRatio * mArray[frameIndex * nPixPerFrame + nPixStrip + pixIndex]);
 
 			//Last channel
 			mArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex] = clipDoubleToU8(mArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex]
-				- crosstalkFraction * mArray[frameIndex * nPixPerFrame + (nChanPMT - 2) * nPixStrip + pixIndex]);
+				- crosstalkRatio * mArray[frameIndex * nPixPerFrame + (nChanPMT - 2) * nPixStrip + pixIndex]);
 
 			//All the channels in between
 			for (int chanIndex = 1; chanIndex < nChanPMT - 1; chanIndex++)
 				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipDoubleToU8(mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]
-					- crosstalkFraction * ( mArray[frameIndex * nPixPerFrame + (chanIndex - 1) * nPixStrip + pixIndex] + mArray[frameIndex * nPixPerFrame + (chanIndex + 1) * nPixStrip + pixIndex] ));
+					- crosstalkRatio * ( mArray[frameIndex * nPixPerFrame + (chanIndex - 1) * nPixStrip + pixIndex] + mArray[frameIndex * nPixPerFrame + (chanIndex + 1) * nPixStrip + pixIndex] ));
 		}
+}
+
+//
+//Linearly interpolate between maxScaleFactor and 1.0
+void TiffU8::flattenFieldLinear(const double maxScaleFactor)
+{
+	if (maxScaleFactor < 1.0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Scale factor must be greater or equal to 1.0");
+
+	const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };			//Number of pixels in a single frame
+	const int nPixStrip{ mWidthPerFrame * mHeightPerFrame / nChanPMT };	//Number of pixels in a strip
+	const int nChanPMT_half{ nChanPMT / 2 };
+	std::vector<double> upscaleVector(nChanPMT);
+
+	for (int chanIndex = 0; chanIndex < nChanPMT_half; chanIndex++)
+	{
+		upscaleVector.at(chanIndex) = - (maxScaleFactor - 1.) / (nChanPMT_half - 1) * chanIndex + maxScaleFactor;		//Linear interpolation
+		upscaleVector.at(nChanPMT - 1 - chanIndex) = upscaleVector.at(chanIndex);									//for the second half, the same values but in the reverse order
 	}
+
+	//For debugging
+	//for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
+		//std::cout << upscaleVector.at(chanIndex) << "\n";
+
+	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
+		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
+			for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
+				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipDoubleToU8(upscaleVector.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
 
 }
 #pragma endregion "TiffU8"

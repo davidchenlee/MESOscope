@@ -1075,7 +1075,7 @@ namespace TestRoutines
 	{
 		//std::string inputFilename{ "Liver distorted" };
 		//std::string inputFilename{ "no correction" };
-		std::string inputFilename{ "Beads4um_750nm_Pi=1000.0mW_Pinc=0.0mWpum_x=52.670_y=17.060_zi=18.0780_zf=18.0780_Step=0.0010 (1)" };
+		std::string inputFilename{ "920nm (1)" };
 		std::string outputFilename{ "output" };
 
 		TiffU8 image{ inputFilename };
@@ -1092,10 +1092,11 @@ namespace TestRoutines
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
-		//image.correctRSdistortionGPU(150. * um);
-		image.supressCrosstalk();
+		image.correctRSdistortionGPU(150. * um);
+		image.supressCrosstalk(0.0);
+		image.flattenFieldLinear(3.5);
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
-		//pressAnyKeyToCont();
+		pressAnyKeyToCont();
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely

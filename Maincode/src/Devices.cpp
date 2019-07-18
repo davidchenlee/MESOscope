@@ -166,7 +166,7 @@ void Image::correctInterleaved_()
 
 void Image::demultiplex_()
 {	
-	if (demuxAllPMTchan)
+	if (multibeam || saveAllPMTchan)
 		demuxAllChannels_();
 	else
 		demuxSingleChannel_();
@@ -234,6 +234,8 @@ void Image::demuxAllChannels_()
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
 			//Extract the count from the first 4 bits and upscale it
+
+
 			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F));
 			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F));
 
@@ -247,7 +249,7 @@ void Image::demuxAllChannels_()
 		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
 
 	//For debugging
-	if (saveTiffAllPMTchan)
+	if (saveAllPMTchan)
 	{
 		//Save each PMT16X channel in a separate pages of a Tiff
 		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , 16 * mRTcontrol.mNframes };
@@ -1500,7 +1502,7 @@ void VirtualLaser::CollectorLens::position(const int wavelength_nm)
 		mStepper.move(8.5 * mm);
 		break;
 	case 920:
-		mStepper.move(4.0 * mm);
+		mStepper.move(5.0 * mm);
 		break;
 	case 1040:
 		mStepper.move(0.0 * mm);

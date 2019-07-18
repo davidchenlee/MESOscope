@@ -3,10 +3,9 @@
 #include <vector>
 #include <array>
 
-#define multibeam 0			//Multibeam or singlebeam
+#define multibeam 1				//Multibeam or singlebeam
+#define saveAllPMTchan 0	//Process and save all the channels of PMT16X separately
 #define pockelsAutoOff 1		//For debugging purposes. In LV, let 'framegate' gate the output of the pockels cell
-#define demuxAllPMTchan 1		//Post-process the counts from all the channels of the PMT16X. Disable to use a single channel only
-#define saveTiffAllPMTchan 1	//If demuxAllPMTchan = 1, process and save all the channels of PMT16X
 
 namespace Constants
 {

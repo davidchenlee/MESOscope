@@ -2,7 +2,7 @@
 
 #pragma region "Image"
 
-//When multiplexing, create a mTiff to store 16 stripes of height 'mRTcontrol.mHeightPerFrame_pix' each
+//When multiplexing, create a mTiff to store 16 strips of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(FPGAns::RTcontrol &RTcontrol) :
 	mRTcontrol{ RTcontrol }, mTiff{ mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * (nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes }
 {
@@ -180,9 +180,10 @@ void Image::demuxSingleChannel_()
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
-			const int nShift{ 4 * static_cast<int>(mRTcontrol.mPMT16Xchan) };															//Shift mMultiplexedArrayA to the right 4 bits for CH01, 4*2 bits for CH02, 4*3 bits for CH03, etc...
-			const U8 upscaled{ static_cast<U8>(mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayA[pixIndex] >> nShift) & 0x0000000F)) };	//Extract the count from the last 4 bits and upscale it
-			(mTiff.pointerToTiff())[pixIndex] = clipU8(upscaled);																		//Clip U8 overflow
+			const int nBitsToShift{ 4 * static_cast<int>(mRTcontrol.mPMT16Xchan) };																//Shift mMultiplexedArrayA to the right  a number of bits depending on the PMT channel to be read.
+																																				//E.g., shift 4 bits for CH01, 4*2 bits for CH02, 4*3 bits for CH03, etc...
+			const U8 upscaled{ static_cast<U8>(mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayA[pixIndex] >> nBitsToShift) & 0x0000000F)) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
+			(mTiff.pointerToTiff())[pixIndex] = clipU8(upscaled);																				//Clip if overflow
 		}
 	}
 	//Demultiplex mMultiplexedArrayB (channels 9-16). Each U32 element in mMultiplexedArrayB has the multiplexed structure | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
@@ -191,7 +192,7 @@ void Image::demuxSingleChannel_()
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
 			const int nShift{ 4 * static_cast<int>(mRTcontrol.mPMT16Xchan) };															//Shift mMultiplexedArrayB to the right 4 bits for CH09, 4*2 bits for CH10, 4*3 bits for CH11, etc...
-			const U8 upscaled{ static_cast<U8>(mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayB[pixIndex] >> nShift) & 0x0000000F)) };	//Extract the count from the last 4 bits and upscale it
+			const U8 upscaled{ static_cast<U8>(mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayB[pixIndex] >> nShift) & 0x0000000F)) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
 			(mTiff.pointerToTiff())[pixIndex] = clipU8(upscaled);																		//Clip U8 overflow
 		}
 	}
@@ -233,16 +234,18 @@ void Image::demuxAllChannels_()
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
-			//Extract the count from the first 4 bits and upscale it
-			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F));
-			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F));
+			//Buffer A (channels 1-8)
+			const U8 upscaledA{ static_cast<U8>(mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F)) };		//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8(upscaledA);		//Clip if overflow
+			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;													//Shift 4 places to the right for the next iteration
 
-			//Shift 4 places to the right for the next iteration
-			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;
-			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;
+			//Buffer B (channels 9-16)
+			const U8 upscaledB{ static_cast<U8>(mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F)) };		//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8(upscaledB);		//Clip if overflow
+			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;													//Shift 4 places to the right for the next iteration
 		}
 
-	//Merge the different PMT16X channels. The order depends on the scanning direction of the galvos (forward or backwards)
+	//Merge all the PMT16X channels into a single image. The strip ordering depends on the scanning direction of the galvos (forward or backwards)
 	if (multibeam)
 		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
 

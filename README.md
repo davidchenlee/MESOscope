@@ -3,7 +3,6 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- Add U8 clipper to demuxAllChannels_()
 - Multi-thread demuxAllChannels_()
 - Fix how to deal with multithread exception in the Filterwheel class!!!!
 - Do a post-sequence clean up routine to set the pockels outputs to 0

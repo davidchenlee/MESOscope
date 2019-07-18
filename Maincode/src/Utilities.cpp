@@ -393,7 +393,7 @@ void TiffU8::mirrorOddFrames()
 	}
 }
 
-//The galvo (vectical axis of the image) performs bi-directional scanning and the data is saved in a long image (vertical stripe)
+//The galvo (vectical axis of the image) performs bi-directional scanning and the data is saved in a long image (vertical strip)
 //Divide the long image in nFrames, average the even and odd frames separately, and return the averages in different pages
 void TiffU8::averageEvenOddFrames()
 {

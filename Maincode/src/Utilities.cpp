@@ -536,7 +536,7 @@ void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* i
 	//std::memcpy(mArray, inputArrayA, 8 * heightPerChannelAllFrames * mBytesPerLine);
 	//std::memcpy(&mArray[8 * heightPerChannelAllFrames * mBytesPerLine], inputArrayB, 8 * heightPerChannelAllFrames * mBytesPerLine);
 
-	const int heightAllChannelsPerFrame = 16 * heightPerChannelPerFrame;
+	const int heightAllChannelsPerFrame = nChanPMT * heightPerChannelPerFrame;
 	const int heightPerChannelAllFrames = heightPerChannelPerFrame * mNframes;
 
 	//Note that CH01 corresponds to chanIndex = 0,  CH02 corresponds to chanIndex = 1, etc

@@ -4,7 +4,7 @@
 
 //When multiplexing, create a mTiff to store 16 stripes of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(FPGAns::RTcontrol &RTcontrol) :
-	mRTcontrol{ RTcontrol }, mTiff{ mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * 15 + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes }
+	mRTcontrol{ RTcontrol }, mTiff{ mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * (nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes }
 {
 	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
@@ -234,8 +234,6 @@ void Image::demuxAllChannels_()
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
 			//Extract the count from the first 4 bits and upscale it
-
-
 			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F));
 			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = static_cast<U8>(mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F));
 
@@ -252,7 +250,7 @@ void Image::demuxAllChannels_()
 	if (saveAllPMTchan)
 	{
 		//Save each PMT16X channel in a separate pages of a Tiff
-		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , 16 * mRTcontrol.mNframes };
+		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , nChanPMT * mRTcontrol.mNframes };
 		stack.pushImage(static_cast<int>(PMT16XCHAN::CH01), static_cast<int>(PMT16XCHAN::CH08), CountA.pointerToTiff());
 		stack.pushImage(static_cast<int>(PMT16XCHAN::CH09), static_cast<int>(PMT16XCHAN::CH16), CountB.pointerToTiff());
 		stack.saveToFile("AllChannels", MULTIPAGE::EN, OVERRIDE::DIS);
@@ -665,15 +663,15 @@ void PMT16X::readAllGain() const
 	
 	//Print out the gains
 	std::cout << "PMT16X gains:\n";
-	for (int ii = 1; ii <= 16; ii++)
+	for (int ii = 1; ii <= nChanPMT; ii++)
 		std::cout << "Gain #" << ii << " (0-255) = " << static_cast<int>(parameters.at(ii)) << "\n";		
 }
 
 void PMT16X::setSingleGain(const int channel, const int gain) const
 {
 	//Check that the inputVector parameters are within range
-	if (channel < 1 || channel > 16)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X channel number out of range (1-16)");
+	if (channel < 1 || channel > nChanPMT)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X channel number out of range (1-" + std::to_string(nChanPMT) + ")");
 
 	if (gain < 0 || gain > 255)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain out of range (0-255)");
@@ -717,10 +715,10 @@ void PMT16X::setAllGain(const int gain) const
 void PMT16X::setAllGain(std::vector<uint8_t> gains) const
 {
 	//Check that the inputVector parameters are within range
-	if (gains.size() != 16)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Gain array must have 16 elements");
+	if (gains.size() != nChanPMT)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Gain array must have " + std::to_string(nChanPMT) + " elements");
 
-	for (int ii = 0; ii < 16; ii++)
+	for (int ii = 0; ii < nChanPMT; ii++)
 		if (gains.at(ii) < 0 || gains.at(ii) > 255)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ":  PMT16X gain #" + std::to_string(ii) + " out of range (0-255)");
 
@@ -734,7 +732,7 @@ void PMT16X::setAllGain(std::vector<uint8_t> gains) const
 
 	//Print out the gains
 	std::cout << "PMT16X gains successfully set to:\n";
-	for (int ii = 1; ii <= 16; ii++)
+	for (int ii = 1; ii <= nChanPMT; ii++)
 		std::cout << "Gain #" << ii << " (0-255) = " << static_cast<int>(parameters.at(ii)) << "\n";
 
 }

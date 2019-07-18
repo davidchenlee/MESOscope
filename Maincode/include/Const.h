@@ -3,9 +3,9 @@
 #include <vector>
 #include <array>
 
-#define multibeam 1				//Multibeam or singlebeam
+#define multibeam 1			//Multibeam or singlebeam
 #define saveAllPMTchan 0	//Process and save all the channels of PMT16X separately
-#define pockelsAutoOff 1		//For debugging purposes. In LV, let 'framegate' gate the output of the pockels cell
+#define pockelsAutoOff 1	//For debugging purposes. In LV, let 'framegate' gate the output of the pockels cell
 
 namespace Constants
 {
@@ -89,6 +89,7 @@ namespace Constants
 	extern const double	ZstageTrigDelayTopdown;
 	extern const double	ZstageTrigDelayBottomup;
 
+	extern const int nChanPMT;
 	extern const int nPulses;
 	extern const U8 pulseArray[];
 }

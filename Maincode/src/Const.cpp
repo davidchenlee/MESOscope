@@ -74,6 +74,7 @@ namespace Constants
 	extern const double	ZstageTrigDelayBottomup{ 40 * ms };
 													
 	//PMT
+	extern const int nChanPMT{ 16 };
 	//Simulate the PMT pulses. When the array element is HIGH, the output of the subvi changes its state for the next clock cycle (currently, 160MHz = 6.25ns)
 	//Example, if I divide each line in 500 pixels, then the pix dwell time is 125 ns and each pixel could contain at most 10 laser pulses (laser pulses separated by 12.5ns = 80 MHz)
 	extern const int nPulses{ 20 };												//Number of pulses

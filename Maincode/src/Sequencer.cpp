@@ -330,7 +330,7 @@ std::vector<double2> Sequencer::generateLocationList()
 	{
 		while (II >= 0 && II < mStackArrayDimIJ.at(STAGEX))		//x direction
 		{
-			const double2 stackCenterXY = stackIndicesToStackCenter_({ II, JJ });
+			const double2 stackCenterXY{ stackIndicesToStackCenter_({ II, JJ }) };
 			locationList.push_back(stackCenterXY);
 			
 			//std::cout << "x = " << stackCenterXY.at(STAGEX) / mm << "\ty = " << stackCenterXY.at(STAGEY) / mm << "\n";		//For debugging

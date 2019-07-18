@@ -88,7 +88,7 @@ class Galvo
 	const double mRampDurationFineTuning{ -250. * us };
 
 	//To aim a single beam at a specific channel of the PMT16X
-	const double mInterBeamletDistance = 17.5 * um;			//Set by the beamsplitter specs
+	const double mInterBeamletDistance{ 17.5 * um };			//Set by the beamsplitter specs
 	const std::vector<double> beamletOrder{ 7.5, 6.5, 5.5, 4.5, 3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5, -4.5, -5.5, -6.5, -7.5, 0.0 };		//The last entry in this array centers the rescanner wrt the PMT16X
 
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	

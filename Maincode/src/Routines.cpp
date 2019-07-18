@@ -1,8 +1,8 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 52.670 * mm, 17.060 * mm, 18.078 * mm };	//Beads BLUE
-//double3 stackCenterXYZ{ 52.670 * mm, 17.060 * mm, 18.082 * mm };	//Beads GREEN and RED
+//double3 stackCenterXYZ{ 52.670 * mm, 17.060 * mm, 18.078 * mm };	//Beads BLUE
+double3 stackCenterXYZ{ 52.670 * mm, 17.060 * mm, 18.082 * mm };	//Beads GREEN and RED
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
@@ -150,7 +150,7 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("GFP") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
@@ -560,7 +560,7 @@ namespace PMT16XRoutines
 			datalog.record("\n");
 
 			//Update the laser wavelength
-			const int wavelength_nm = channelList.at(iter_wv).mWavelength_nm;
+			const int wavelength_nm{ channelList.at(iter_wv).mWavelength_nm };
 			laser.reconfigure(wavelength_nm);	//When switching pockels, the class destructor closes the uniblitz shutter
 			laser.openShutter();				//Re-open the Uniblitz shutter if closed
 
@@ -1322,7 +1322,7 @@ namespace TestRoutines
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const int nFramesCont{ 1 };						//Number of frames for continuous XY acquisition
-		const int wavelength_nm = 750;
+		const int wavelength_nm{ 750 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH08 };
@@ -1377,7 +1377,7 @@ namespace TestRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
 
 		//LASER
-		const int wavelength_nm = 750;
+		const int wavelength_nm{ 750 };
 		const VirtualLaser laser{ RTcontrol, wavelength_nm, selectPower, LASER::VISION };
 
 		//GALVO RT linear scan
@@ -1393,7 +1393,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGAns::FPGA &fpga)
 	{
-		const double slicePlaneZ = (23.640 + 0.050) * mm;
+		const double slicePlaneZ{ (23.640 + 0.050) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 		Vibratome vibratome{ fpga, stage };

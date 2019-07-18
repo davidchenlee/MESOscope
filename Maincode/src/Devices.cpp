@@ -38,7 +38,7 @@ void Image::FIFOOUTpcGarbageCollector_() const
 	const U32 bufSize{ 10000 };
 
 	U32 dummy;
-	U32* garbage = new U32[bufSize];
+	U32* garbage{ new U32[bufSize] };
 	U32 nElemToReadA{ 0 }, nElemToReadB{ 0 };			//Elements to read from FIFOOUTpc A and B
 	int nElemTotalA{ 0 }, nElemTotalB{ 0 }; 			//Total number of elements read from FIFOOUTpc A and B
 	while (true)
@@ -81,7 +81,7 @@ void Image::readFIFOOUTpc_()
 	/*
 	//Declare and start a stopwatch [2]
 	double duration;
-	auto t_start = std::chrono::high_resolution_clock::now();
+	auto t_start{ std::chrono::high_resolution_clock::now() };
 	*/
 	
 	const int readFifoWaitingTime_ms{ 5 };				//Waiting time between each iteration
@@ -325,8 +325,7 @@ void Image::initialize(const ZSCAN stackScanDir)
 			std::cerr << "WARNING in " << __FUNCTION__ << ": ZstageTrigDelay has not been calibrated for heightPerFrame = " << mRTcontrol.mHeightPerBeamletPerFrame_pix << " pix\n";
 			std::cerr << "Press any key to continue or ESC to exit\n";
 			
-			char input_char = _getch();
-			if (input_char == 27)
+			if (_getch() == 27)
 				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 		}
 
@@ -876,7 +875,7 @@ std::string Filterwheel::colorToString_(const FILTERCOLOR color) const
 
 void Filterwheel::setPosition(const FILTERCOLOR color)
 {
-	const int position = colorToPosition_(color);
+	const int position{ colorToPosition_(color) };
 
 	if (position != mPosition)
 	{
@@ -1313,7 +1312,7 @@ void PockelsCell::voltageToZero() const
 //Increase the pockels voltage linearly from the first to the last frame
 void PockelsCell::voltageLinearRamp(const double Vi, const double Vf) const
 {
-	const double Vratio = Vf / Vi;
+	const double Vratio{ Vf / Vi };
 
 	//Make sure that Fx2p14 will not overflow
 	if (Vratio > 4)	
@@ -1335,8 +1334,8 @@ void PockelsCell::voltageLinearRamp(const double Vi, const double Vf) const
 //Increase the laser power linearly from the first to the last frame
 void PockelsCell::powerLinearRamp(const double Pi, const double Pf) const
 {
-	const double Vi = laserpowerToVolt_(Pi);
-	const double Vf = laserpowerToVolt_(Pf);
+	const double Vi{ laserpowerToVolt_(Pi) };
+	const double Vf{ laserpowerToVolt_(Pf) };
 
 	voltageLinearRamp(Vi, Vf);
 }
@@ -1592,8 +1591,7 @@ void VirtualLaser::CombinedLasers::isLaserInternalShutterOpen() const
 		{
 			std::cout << "The internal shutter of " + laserNameToString_(mCurrentLaser) + " seems to be closed. Press ESC to exit or any other key to try again\n";
 
-			char input_char = _getch();
-			if (input_char == 27)
+			if (_getch() == 27)
 				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 		}
 		else

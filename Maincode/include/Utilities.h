@@ -19,7 +19,7 @@ void printHex(const std::string input);
 void printBinary16(const int input);
 U16 doubleToFx2p14(double n);
 template<class T> inline T clip(T x, T lower, T upper);
-U8 clipU8(U8 x);
+U8 clipU8(const U8 x);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
 

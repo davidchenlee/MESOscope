@@ -61,7 +61,7 @@ template<class T> inline T clip(T x, T lower, T upper)
 }
 
 //Clip x so that 0x00 <= x <= 0xFF
-U8 clipU8(U8 x)
+U8 clipU8(const U8 x)
 {
 	return (std::min)(x, (std::numeric_limits<U8>::max)());
 }
@@ -557,15 +557,16 @@ void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* i
 			//CH09-CH16
 			std::memcpy(&mArray[((chanIndex + 8) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
 		}
-
-
 }
 
 inline U8 interpolateU8(float lam, const U8  &val1, const U8 &val2)
 {
+	//Old way with clipping
 	//int res = static_cast<int>(std::round( (1 - lam) * val1 + lam * val2) );
 	//return static_cast<U8>(clip(res, (std::numeric_limits<U8>::min)(), (std::numeric_limits<U8>::max)()));
-	return static_cast<int>(std::round((1.f - lam) * val1 + lam * val2));
+
+	//new way without clipping
+	return static_cast<U8>( std::round((1.f - lam) * val1 + lam * val2) );
 }
 
 //Correct the image distortion induced by the nonlinear scanning of the RS
@@ -766,7 +767,21 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 void TiffU8::supressCrosstalk()
 {
 
+	const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };
+	unsigned int* avg{ new unsigned int[nPixPerFrame]() };
 
+	//For each pixel, calculate the sum intensity over all the frames
+	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
+		for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
+			avg[pixIndex] += mArray[frameIndex * nPixPerFrame + pixIndex];
+
+	//Calculate the average intensity and reassign  it to mArray
+	for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
+		mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / mNframes);
+
+	//Update the number of frames to 1
+	mNframes = 1;
+	delete[] avg;
 }
 #pragma endregion "TiffU8"
 

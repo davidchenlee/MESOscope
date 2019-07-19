@@ -60,15 +60,17 @@ template<class T> inline T clip(T x, T lower, T upper)
 	return (std::min)(upper, (std::max)(x, lower));
 }
 
-//Clip x so that 0x00 <= x <= 0xFF
-template<class T> U8 clipU8pos(const T x)
+//Clip so that x <= 0xFF
+template<class T> inline U8 clipU8pos(const T x)
 {
-	return static_cast<U8>( (std::min)(x, static_cast <T>(255)) );
+	return static_cast<U8>( (std::min)(x, static_cast<T>(255)) );
 }
+template U8 clipU8pos(const int x);	//Allow calling the function from a different .cpp file
 
-template<class T> U8 clipU8dual(const T x)
+//Clip so that 0x00 <= x <= 0xFF
+template<class T> inline U8 clipU8dual(const T x)
 {
-	return static_cast<U8>( (std::max)(0.,(std::min)(x, static_cast<T>(255))) );
+	return static_cast<U8>( (std::max)(static_cast<T>(0),(std::min)(x, static_cast<T>(255))) );
 }
 
 //Convert a double to a string with decimal places
@@ -784,15 +786,17 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
 		{
 			//First channel
-			correctedArray[frameIndex * nPixPerFrame + pixIndex] = clipU8dual(mArray[frameIndex * nPixPerFrame + pixIndex] - crosstalkRatio * mArray[frameIndex * nPixPerFrame + nPixStrip + pixIndex]);
+			correctedArray[frameIndex * nPixPerFrame + pixIndex] = clipU8dual(
+				mArray[frameIndex * nPixPerFrame + pixIndex] - crosstalkRatio * mArray[frameIndex * nPixPerFrame + nPixStrip + pixIndex]);
 
 			//Last channel
-			correctedArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex] = clipU8dual(mArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex]
-				- crosstalkRatio * mArray[frameIndex * nPixPerFrame + (nChanPMT - 2) * nPixStrip + pixIndex]);
+			correctedArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex] = clipU8dual(
+				mArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex] - crosstalkRatio * mArray[frameIndex * nPixPerFrame + (nChanPMT - 2) * nPixStrip + pixIndex]);
 
 			//All channels in between
 			for (int chanIndex = 1; chanIndex < nChanPMT - 1; chanIndex++)
-				correctedArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]
+				correctedArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(
+					mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]
 					- crosstalkRatio * ( mArray[frameIndex * nPixPerFrame + (chanIndex - 1) * nPixStrip + pixIndex] + mArray[frameIndex * nPixPerFrame + (chanIndex + 1) * nPixStrip + pixIndex] ));
 		}
 	delete[] mArray;			//Free the memory-block containing the old, uncorrected array

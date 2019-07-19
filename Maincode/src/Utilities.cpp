@@ -61,14 +61,14 @@ template<class T> inline T clip(T x, T lower, T upper)
 }
 
 //Clip x so that 0x00 <= x <= 0xFF
-U8 clipIntToU8(const int x)
+template<class T> U8 clipU8pos(const T x)
 {
-	return static_cast<U8>( (std::min)(x, 255) );
+	return static_cast<U8>( (std::min)(x, static_cast <T>(255)) );
 }
 
-U8 clipDoubleToU8(const double x)
+template<class T> U8 clipU8dual(const T x)
 {
-	return static_cast<U8>((std::max)(0.,(std::min)(x, 255.)));
+	return static_cast<U8>( (std::max)(0.,(std::min)(x, static_cast<T>(255))) );
 }
 
 //Convert a double to a string with decimal places
@@ -774,8 +774,7 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 {
 	if (crosstalkRatio < 0 || crosstalkRatio > 1.0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Crosstalk ration must be in the range [0, 1.0]");
-
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Crosstalk ratio must be in the range [0, 1.0]");
 
 	const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };			//Number of pixels in a single frame
 	const int nPixStrip{ mWidthPerFrame * mHeightPerFrame / nChanPMT };	//Number of pixels in a strip
@@ -785,15 +784,15 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
 		{
 			//First channel
-			correctedArray[frameIndex * nPixPerFrame + pixIndex] = clipDoubleToU8(mArray[frameIndex * nPixPerFrame + pixIndex] - crosstalkRatio * mArray[frameIndex * nPixPerFrame + nPixStrip + pixIndex]);
+			correctedArray[frameIndex * nPixPerFrame + pixIndex] = clipU8dual(mArray[frameIndex * nPixPerFrame + pixIndex] - crosstalkRatio * mArray[frameIndex * nPixPerFrame + nPixStrip + pixIndex]);
 
 			//Last channel
-			correctedArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex] = clipDoubleToU8(mArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex]
+			correctedArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex] = clipU8dual(mArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex]
 				- crosstalkRatio * mArray[frameIndex * nPixPerFrame + (nChanPMT - 2) * nPixStrip + pixIndex]);
 
-			//All the channels in between
+			//All channels in between
 			for (int chanIndex = 1; chanIndex < nChanPMT - 1; chanIndex++)
-				correctedArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipDoubleToU8(mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]
+				correctedArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]
 					- crosstalkRatio * ( mArray[frameIndex * nPixPerFrame + (chanIndex - 1) * nPixStrip + pixIndex] + mArray[frameIndex * nPixPerFrame + (chanIndex + 1) * nPixStrip + pixIndex] ));
 		}
 	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
@@ -825,7 +824,7 @@ void TiffU8::flattenFieldLinear(const double maxScaleFactor)
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
 		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
 			for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
-				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipDoubleToU8(upscaleVector.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
+				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(upscaleVector.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
 
 }
 #pragma endregion "TiffU8"

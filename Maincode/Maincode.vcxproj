@@ -93,6 +93,8 @@
       <AdditionalIncludeDirectories>C:\Program Files %28x86%29\GnuWin32\include;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;D:\OwnCloud\Codes\MESOscope\Maincode\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalUsingDirectories>%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <OpenMPSupport>true</OpenMPSupport>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <DebugInformationFormat>None</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -109,6 +111,8 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\OwnCloud\Codes\MESOscope\Maincode\include;C:\Program Files %28x86%29\GnuWin32\include;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <DebugInformationFormat>None</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

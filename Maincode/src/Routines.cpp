@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-//double3 stackCenterXYZ{ 52.670 * mm, 17.060 * mm, 18.078 * mm };	//Beads BLUE
+//double3 stackCenterXYZ{ 52.670 * mm, 17.060 * mm, 18.076 * mm };	//Beads BLUE
 double3 stackCenterXYZ{ 52.670 * mm, 17.060 * mm, 18.082 * mm };	//Beads GREEN and RED
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
@@ -150,7 +150,7 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("GFP") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("TDT") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
@@ -166,7 +166,7 @@ namespace PMT16XRoutines
 		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
 		FFOVslowPerBeamlet = static_cast<int>(FFOVslow / nChanPMT);
 		PMT16Xchan = PMT16XCHAN::CH00;
-		selectPower = 1000. * mW;
+		selectPower = 800. * mW;
 		selectPowerInc = 0;
 #else
 		//Singlebeam

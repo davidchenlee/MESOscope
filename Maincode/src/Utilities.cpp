@@ -803,9 +803,8 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
 
-//
-//Linearly interpolate between maxScaleFactor and 1.0
-void TiffU8::flattenFieldLinear(const double maxScaleFactor)
+//Upscale the channel counts by the factor (1 + alpha * |n - n0|)^1
+void TiffU8::flattenField(const double maxScaleFactor)
 {
 	if (maxScaleFactor < 1.0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Scale factor must be greater or equal to 1.0");
@@ -817,13 +816,15 @@ void TiffU8::flattenFieldLinear(const double maxScaleFactor)
 
 	for (int chanIndex = 0; chanIndex < nChanPMT_half; chanIndex++)
 	{
-		upscaleVector.at(chanIndex) = - (maxScaleFactor - 1.) / (nChanPMT_half - 1) * chanIndex + maxScaleFactor;		//Linear interpolation
-		upscaleVector.at(nChanPMT - 1 - chanIndex) = upscaleVector.at(chanIndex);										//for the second half, the same values but in the reverse order
+		const double alpha{ (std::sqrt(maxScaleFactor) - 1) / (nChanPMT_half - 1) };
+		const double aux{ 1 +  alpha * std::abs(chanIndex - (nChanPMT_half - 1)) };
+		upscaleVector.at(chanIndex) = aux * aux;
+		upscaleVector.at(nChanPMT - 1 - chanIndex) = upscaleVector.at(chanIndex);		//for the second half, the same values but in the reverse order
 	}
 
 	//For debugging
 	//for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
-		//std::cout << upscaleVector.at(chanIndex) << "\n";
+	//	std::cout << upscaleVector.at(chanIndex) << "\n";
 
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
 		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)

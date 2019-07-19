@@ -10,8 +10,6 @@
 #include <conio.h>					//For _getch()
 #include "Thorlabs.MotionControl.KCube.StepperMotor.h"	//For the Thorlabs stepper
 
-
-
 class Image
 {
 	FPGAns::RTcontrol &mRTcontrol;			//Const because the variables referenced by mRTcontrol are not changed by the methods in this class

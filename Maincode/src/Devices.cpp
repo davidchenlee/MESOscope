@@ -512,7 +512,7 @@ void ResonantScanner::isRunning() const
 Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavelength_nm) : mRTcontrol{ RTcontrol }, mGalvoRTchannel{ channel }, mWavelength_nm{ wavelength_nm }
 {
 	//Calibration factor of the scan galvo. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
-	const double scanCalib{ 0.02417210 * V / um };			
+	const double scanCalib{ 0.02417210 * V / um };		
 
 	switch (channel)
 	{
@@ -896,7 +896,7 @@ void Filterwheel::setPosition(const FILTERCOLOR color)
 
 			//Thread-safe message
 			std::stringstream msg;
-			msg << "Turning " << mFilterwheelName << " to " + colorToString_(color) << "...\n";
+			msg << "Setting " << mFilterwheelName << " to " + colorToString_(color) << "...\n";
 			std::cout << msg.str();
 
 			Sleep(static_cast<DWORD>(1. * minSteps / mTurningSpeed / ms));	//Wait until the filterwheel stops turning the turret

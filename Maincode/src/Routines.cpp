@@ -1,8 +1,8 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-//double3 stackCenterXYZ{ 52.670 * mm, 17.060 * mm, 18.076 * mm };	//Beads BLUE
-double3 stackCenterXYZ{ 52.670 * mm, 17.060 * mm, 18.082 * mm };	//Beads GREEN and RED
+double3 stackCenterXYZ{ 52.780 * mm, 17.140 * mm, 18.076 * mm };	//Beads BLUE
+//double3 stackCenterXYZ{ 52.670 * mm, 17.060 * mm, 18.082 * mm };	//Beads GREEN and RED
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
@@ -13,6 +13,8 @@ const ChannelList channelListBeads{ {{ "DAPI", 750, 30. * mW, 0. * mWpum }, { "G
 const ChannelList channelListFluorSlide { { { "DAPI", 750, 10. * mW, 0. * mWpum }} };	//Fluorescent slide
 const ChannelList channelList{ channelListBeads };
 //const ChannelList channelList{ channelListFluorSlide };
+
+Sample aa{ sampleName, immersionMedium, collar };
 
 namespace PMT1XRoutines
 {
@@ -144,18 +146,18 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
-		const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
 		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("TDT") };	//Select a particular fluorescence channel
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
+		const int heightPerFrame_pix{ 512 };
 		const int nFramesCont{ 1 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
+		const double FFOVslow{ 16 * 16. * um };			//Full FOV in the slow axis
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -164,7 +166,7 @@ namespace PMT16XRoutines
 #if multibeam
 		//Multibeam
 		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
-		FFOVslowPerBeamlet = static_cast<int>(FFOVslow / nChanPMT);
+		FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
 		PMT16Xchan = PMT16XCHAN::CH00;
 		selectPower = 800. * mW;
 		selectPowerInc = 0;
@@ -329,12 +331,12 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("GFP") };	//Select a particular fluorescence channel
-		const double pixelSizeXY{ 0.5 * um };
+		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
+		//const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
+		const int heightPerFrame_pix{ 512 };	//35 for PMT16X
 		const int nFramesCont{ 1 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
+		const double FFOVslow{ 16 * 16. * um };			//Full FOV in the slow axis
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -343,7 +345,7 @@ namespace PMT16XRoutines
 #if multibeam
 		//Multibeam
 		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
-		FFOVslowPerBeamlet = static_cast<int>(FFOVslow / nChanPMT);
+		FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
 		PMT16Xchan = PMT16XCHAN::CH00;
 		selectPower = 800. * mW;
 		selectPowerInc = 0;
@@ -422,11 +424,11 @@ namespace PMT16XRoutines
 		//OPEN THE UNIBLITZ SHUTTERS
 		laser.openShutter();	//The destructor will close the shutter automatically
 
-		for (int iterShiftX = 0; iterShiftX < nChanPMT; iterShiftX++)
+		for (int iterShiftX = 0; iterShiftX < 200; iterShiftX++)
 		{
 			//Update the vector containing the sample locations
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-				stagePositionXYZ.at(iterDiffZ).at(STAGEX) += 35. * um;
+				stagePositionXYZ.at(iterDiffZ).at(STAGEX) += 1.0 * um;
 
 			//ACQUIRE FRAMES AT DIFFERENT Zs
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
@@ -454,7 +456,7 @@ namespace PMT16XRoutines
 					{
 						//Save individual files
 						std::string singleFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString(selectPower / mW, 1) + "mW" +
-							"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEZ) / mm, 4) };
+							"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEX) / mm, 4) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEZ) / mm, 4) };
 						image.saveTiffMultiPage(singleFilename, override);
 					}
 				}
@@ -1093,8 +1095,8 @@ namespace TestRoutines
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
 		image.correctRSdistortionGPU(150. * um);
-		image.suppressCrosstalk(0.5);
-	//	image.flattenFieldLinear(1.5);
+		image.suppressCrosstalk(0.2);
+		image.flattenField(2.0);
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
 		pressAnyKeyToCont();
 	}

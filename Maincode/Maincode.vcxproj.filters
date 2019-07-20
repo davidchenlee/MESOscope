@@ -56,12 +56,6 @@
     <ClInclude Include="include\FPGAapi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\serial\serial.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\serial\win.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Utilities.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -75,6 +69,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Thorlabs.MotionControl.KCube.StepperMotor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\serial\serial.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\serial\win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

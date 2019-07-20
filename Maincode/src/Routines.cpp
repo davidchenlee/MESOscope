@@ -1,8 +1,8 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 52.780 * mm, 17.140 * mm, 18.076 * mm };	//Beads BLUE
-//double3 stackCenterXYZ{ 52.670 * mm, 17.060 * mm, 18.082 * mm };	//Beads GREEN and RED
+double3 stackCenterXYZ{ 52.670 * mm, 17.100 * mm, 18.076 * mm };	//Beads BLUE
+//double3 stackCenterXYZ{ 52.670 * mm, 17.100 * mm, 18.082 * mm };	//Beads GREEN and RED
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
 const std::string immersionMedium{ "SiliconeOil" };
@@ -155,9 +155,9 @@ namespace PMT16XRoutines
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 512 };
+		const int heightPerFrame_pix{ 560 };
 		const int nFramesCont{ 1 };
-		const double FFOVslow{ 16 * 16. * um };			//Full FOV in the slow axis
+		const double FFOVslow{ 16 * 17.5 * um };			//Full FOV in the slow axis
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -175,7 +175,7 @@ namespace PMT16XRoutines
 		//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CH00 to let the laser scan through the PMT16X channels
 		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 		FFOVslowPerBeamlet = FFOVslow;
-		PMT16Xchan = PMT16XCHAN::CH08;
+		PMT16Xchan = PMT16XCHAN::CH15;
 		selectPower = singleChannel.mScanPi;
 		selectPowerInc = singleChannel.mStackPinc;
 #endif
@@ -334,9 +334,9 @@ namespace PMT16XRoutines
 		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
 		//const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 512 };	//35 for PMT16X
+		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
 		const int nFramesCont{ 1 };
-		const double FFOVslow{ 16 * 16. * um };			//Full FOV in the slow axis
+		const double FFOVslow{ 16 * 17.5 * um };			//Full FOV in the slow axis
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -1096,7 +1096,7 @@ namespace TestRoutines
 
 		image.correctRSdistortionGPU(150. * um);
 		image.suppressCrosstalk(0.2);
-		image.flattenField(2.0);
+		image.flattenField(1.5);
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
 		pressAnyKeyToCont();
 	}

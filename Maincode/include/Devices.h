@@ -82,7 +82,6 @@ public:
 	void isRunning() const;
 };
 
-
 class Galvo
 {
 	const double mRampDurationFineTuning{ -250. * us };

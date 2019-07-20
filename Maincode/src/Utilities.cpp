@@ -803,7 +803,7 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
 
-//Upscale the channel counts by the factor (1 + alpha * |n - n0|)^1
+//Upscale the channel n = 0, 1, ..., 15 by (1 + (sqrt(factor) - 1) * |n/7.5 - 1|)^2
 void TiffU8::flattenField(const double maxScaleFactor)
 {
 	if (maxScaleFactor < 1.0)
@@ -811,26 +811,22 @@ void TiffU8::flattenField(const double maxScaleFactor)
 
 	const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };			//Number of pixels in a single frame
 	const int nPixStrip{ mWidthPerFrame * mHeightPerFrame / nChanPMT };	//Number of pixels in a strip
-	const int nChanPMT_half{ nChanPMT / 2 };
 	std::vector<double> upscaleVector(nChanPMT);
 
-	for (int chanIndex = 0; chanIndex < nChanPMT_half; chanIndex++)
+	for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
 	{
-		const double alpha{ (std::sqrt(maxScaleFactor) - 1) / (nChanPMT_half - 1) };
-		const double aux{ 1 +  alpha * std::abs(chanIndex - (nChanPMT_half - 1)) };
+		const double aux{ 1 +  (std::sqrt(maxScaleFactor) - 1) * std::abs(chanIndex/7.5 - 1)};
 		upscaleVector.at(chanIndex) = aux * aux;
-		upscaleVector.at(nChanPMT - 1 - chanIndex) = upscaleVector.at(chanIndex);		//for the second half, the same values but in the reverse order
 	}
 
 	//For debugging
-	//for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
-	//	std::cout << upscaleVector.at(chanIndex) << "\n";
+	for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
+		std::cout << upscaleVector.at(chanIndex) << "\n";
 
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
 		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
 			for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
 				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(upscaleVector.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
-
 }
 #pragma endregion "TiffU8"
 

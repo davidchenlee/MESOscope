@@ -145,11 +145,23 @@ TiffU8::TiffU8(const std::string filename) : mNframes{ 1 }
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failed opening the Tiff file");
 
 	//Read the Tiff tags
+	int samplesPerPixel{ 0 }, bitsPerSample{ 0 };
+
+	if (!TIFFGetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_SAMPLESPERPIXEL");
+
+	if (!TIFFGetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, &bitsPerSample))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_BITSPERSAMPLE,");
+
 	if (!TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &mWidthPerFrame))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGEWIDTH");
 	
 	if(!TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &mHeightPerFrame))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGELENGTH");
+
+	//Unsupported file formats
+	if (samplesPerPixel != 1 || bitsPerSample != 8)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Only 8-bit grayscale Tiff supported");
 
 	if (mHeightPerFrame % 2)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Odd number of rows not supported");
@@ -819,8 +831,8 @@ void TiffU8::flattenField(const double maxScaleFactor)
 	}
 
 	//For debugging
-	for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
-		std::cout << upscaleVector.at(chanIndex) << "\n";
+	//for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
+	//	std::cout << upscaleVector.at(chanIndex) << "\n";
 
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
 		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)

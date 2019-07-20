@@ -18,7 +18,6 @@ int main(int argc, char* argv[])
 			Laser vision{ LASER::VISION };
 			Laser fidelity{ LASER::FIDELITY };
 
-			//Set the FOV
 			std::string whichLaser{ argv[1] };			//V for Vision, F for Fidelity VF for both
 			double FFOV{ 1.*std::stoi(argv[2]) / um };	//Field of view in um
 			std::string runCommand{ argv[3] };			//1 for run RS, 0 for stop RS

@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 52.670 * mm, 17.150 * mm, 18.076 * mm };	//Beads BLUE
+double3 stackCenterXYZ{ 52.795 * mm, 17.150 * mm, 18.075 * mm };	//Beads BLUE
 //double3 stackCenterXYZ{ 52.670 * mm, 17.150 * mm, 18.082 * mm };	//Beads GREEN and RED
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 const std::string sampleName{ "Beads4um" };
@@ -424,11 +424,11 @@ namespace PMT16XRoutines
 		//OPEN THE UNIBLITZ SHUTTERS
 		laser.openShutter();	//The destructor will close the shutter automatically
 
-		for (int iterShiftX = 0; iterShiftX < 200; iterShiftX++)
+		for (int iterShiftX = 0; iterShiftX < 50; iterShiftX++)
 		{
 			//Update the vector containing the sample locations
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-				stagePositionXYZ.at(iterDiffZ).at(STAGEX) += 1.0 * um;
+				stagePositionXYZ.at(iterDiffZ).at(STAGEX) += 5.0 * um;
 
 			//ACQUIRE FRAMES AT DIFFERENT Zs
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)

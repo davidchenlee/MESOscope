@@ -502,38 +502,38 @@ void TiffU8::pushImage(const int firstFrameIndex, const int lastFrameIndex, cons
 
 /*
 The input arrays have the structure:
-inputArrayA = |CH01 f1|
+inputArrayA = |CH00 f1|
 			  |  .	  |
-			  |CH01 fN|
+			  |CH00 fN|
 			  |  .	  |
 			  |  .	  |
 			  |  .	  |
-			  |CH08 f1|
+			  |CH07 f1|
+			  |  .	  |
+			  |CH07 fN|
+
+inputArrayB = |CH08 f1|
 			  |  .	  |
 			  |CH08 fN|
-
-inputArrayB = |CH09 f1|
-			  |  .	  |
-			  |CH09 fN|
 			  |  .	  |
 			  |  .	  |
 			  |  .	  |
-			  |CH16 f1|
+			  |CH15 f1|
 			  |  .	  |
-			  |CH16 fN|
+			  |CH15 fN|
 
 "Merging" places channels belonging to the same frame together. The resulting structure is:
-mArray = |CH01 f1|
+mArray = |CH00 f1|
 		 |  .	 |
-		 |CH16 f1|
-		 |CH16 f2|
+		 |CH15 f1|
+		 |CH15 f2|
 		 |  .	 |
 		 |  .	 |
 		 |  .	 |
-		 |CH01 f2|
-		 |CH01 fN|
+		 |CH00 f2|
+		 |CH00 fN|
 		 |  .	 |
-		 |CH16 fN|
+		 |CH15 fN|
 Note in the figure above that the channel ordering within each frame is reversed wrt the next frame because of the bidirectionality of the scan galvo
 */
 void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const
@@ -545,23 +545,22 @@ void TiffU8::mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* i
 	const int heightAllChannelsPerFrame{ nChanPMT * heightPerChannelPerFrame };
 	const int heightPerChannelAllFrames{ heightPerChannelPerFrame * mNframes };
 
-	//Note that CH01 corresponds to chanIndex = 0,  CH02 corresponds to chanIndex = 1, etc
 	//Even 'frameIndex' (Raster scan the sample from the positive to the negative direction of the x-stage)
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex += 2)
 		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{
-			//CH01-CH08
+			//CH00-CH07
 			std::memcpy(&mArray[((15 - chanIndex) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
-			//CH09-CH16
+			//CH08-CH15
 			std::memcpy(&mArray[((7 - chanIndex) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
 		}
 	//Odd 'frameIndex' (Raster scan the sample from the negative to the positive direction of the x-stage)
 	for (int frameIndex = 1; frameIndex < mNframes; frameIndex += 2)
 		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{
-			//CH01-CH08
+			//CH00-CH07
 			std::memcpy(&mArray[(chanIndex * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
-			//CH09-CH16
+			//CH08-CH15
 			std::memcpy(&mArray[((chanIndex + 8) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
 		}
 }

@@ -129,7 +129,7 @@ public:
 	PMT16X& operator=(PMT16X&&) = delete;		//Disable move-assignment constructor
 
 	void readAllGain() const;
-	void setSingleGain(const int channel, const int gain) const;
+	void setSingleGain(const PMT16XCHAN chan, const int gain) const;
 	void setAllGainToZero() const;
 	void setAllGain(const int gain) const;
 	void setAllGain(std::vector<uint8_t> gains) const;

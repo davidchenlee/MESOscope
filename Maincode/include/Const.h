@@ -44,7 +44,7 @@ namespace Constants
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};
 	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};
 	enum class ZSCAN { BOTTOMUP = -1, TOPDOWN = 1};
-	enum class PMT16XCHAN { CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CH16, CH00}; //CH00 centers the rescanner (i.e., 'offset + 0 V' is sent to the scanner)
+	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED};
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;

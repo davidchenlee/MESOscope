@@ -176,12 +176,12 @@ void Image::demultiplex_()
 void Image::demuxSingleChannel_()
 {
 	//Shift mMultiplexedArrayA and  mMultiplexedArrayB to the right a number of bits depending on the PMT channel to be read
-	//For mMultiplexedArrayA, shift 0 bits for CH01, 4 bits for CH02, 8 bits for CH03, etc...
-	//For mMultiplexedArrayAB, shift 0 bits for CH09, 4 bits for CH10, 8 bits for CH11, etc...
+	//For mMultiplexedArrayA, shift 0 bits for CH00, 4 bits for CH01, 8 bits for CH02, etc...
+	//For mMultiplexedArrayAB, shift 0 bits for CH08, 4 bits for CH09, 8 bits for CH10, etc...
 	const int nBitsToShift{ 4 * static_cast<int>(mRTcontrol.mPMT16Xchan) };
 
-	//Demultiplex mMultiplexedArrayA (channels 1-8). Each U32 element in mMultiplexedArrayA has the multiplexed structure | Ch08 (MSB) | Ch07 | Ch06 | Ch05 | Ch04 | Ch03 | Ch02 | Ch01 (LSB) |
-	if (mRTcontrol.mPMT16Xchan >= PMT16XCHAN::CH01 && mRTcontrol.mPMT16Xchan <= PMT16XCHAN::CH08)
+	//Demultiplex mMultiplexedArrayA (CH00-CH07). Each U32 element in mMultiplexedArrayA has the multiplexed structure | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
+	if (mRTcontrol.mPMT16Xchan >= PMT16XCHAN::CH00 && mRTcontrol.mPMT16Xchan <= PMT16XCHAN::CH07)
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
@@ -189,8 +189,8 @@ void Image::demuxSingleChannel_()
 			(mTiff.pointerToTiff())[pixIndex] = clipU8pos(upscaled);															//Clip if overflow
 		}
 	}
-	//Demultiplex mMultiplexedArrayB (channels 9-16). Each U32 element in mMultiplexedArrayB has the multiplexed structure | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
-	else if (mRTcontrol.mPMT16Xchan >= PMT16XCHAN::CH09 && mRTcontrol.mPMT16Xchan <= PMT16XCHAN::CH16)
+	//Demultiplex mMultiplexedArrayB (CH08-CH15). Each U32 element in mMultiplexedArrayB has the multiplexed structure | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
+	else if (mRTcontrol.mPMT16Xchan >= PMT16XCHAN::CH08 && mRTcontrol.mPMT16Xchan <= PMT16XCHAN::CH15)
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
@@ -199,49 +199,49 @@ void Image::demuxSingleChannel_()
 		}
 	}
 	else
-		;//If CH00, don't do anything
+		;//If CENTERED, don't do anything
 }
 
 //Each U32 element in mMultiplexedArrayA and mMultiplexedArrayB has the multiplexed structure:
-//mMultiplexedArrayA[i] =  | Ch08 (MSB) | Ch07 | Ch06 | Ch05 | Ch04 | Ch03 | Ch02 | Ch01 (LSB) |
-//mMultiplexedArrayB[i] =  | Ch16 (MSB) | Ch15 | Ch14 | Ch13 | Ch12 | Ch11 | Ch10 | Ch09 (LSB) |
+//mMultiplexedArrayA[i] =  | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
+//mMultiplexedArrayB[i] =  | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
 void Image::demuxAllChannels_()
 {
 	//Use 2 separate arrays to allow parallelization in the future
-	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch01-Ch08
-	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in Ch09-Ch16
+	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH00-CH07
+	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH08-CH15
 
 	/*Iterate over all the pixels and frames (all the frames are concatenated in a single-long image), demultiplex the counts, and store them in CountA and CountB
-	CountA = |Ch01 f1|
+	CountA = |CH00 f1|
 			 |  .	 |
-			 |Ch01 fN|
+			 |CH00 fN|
 			 |  .	 |
 			 |  .	 |
 			 |  .	 |
-			 |Ch08 f1|
+			 |CH07 f1|
 			 |  .	 |
-			 |Ch08 fN|
+			 |CH07 fN|
 
-	CountB = |Ch09 f1|
+	CountB = |CH08 f1|
 			 |  .	 |
-			 |Ch09 fN|
+			 |CH08 fN|
 			 |  .	 |
 			 |  .	 |
 			 |  .	 |
-			 |Ch16 f1|
+			 |CH15 f1|
 			 |  .	 |
-			 |Ch16 fN|
+			 |CH15 fN|
 	*/
 
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
-			//Buffer A (channels 1-8)
+			//Buffer A (CH00-CH07)
 			const int upscaledA{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };						//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
 			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8pos(upscaledA);		//Clip if overflow
 			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;													//Shift 4 places to the right for the next iteration
 
-			//Buffer B (channels 9-16)
+			//Buffer B (CH08-CH15)
 			const int upscaledB{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };						//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
 			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8pos(upscaledB);		//Clip if overflow
 			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;													//Shift 4 places to the right for the next iteration
@@ -256,8 +256,8 @@ void Image::demuxAllChannels_()
 	{
 		//Save each PMT16X channel in a separate pages of a Tiff
 		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , nChanPMT * mRTcontrol.mNframes };
-		stack.pushImage(static_cast<int>(PMT16XCHAN::CH01), static_cast<int>(PMT16XCHAN::CH08), CountA.pointerToTiff());
-		stack.pushImage(static_cast<int>(PMT16XCHAN::CH09), static_cast<int>(PMT16XCHAN::CH16), CountB.pointerToTiff());
+		stack.pushImage(static_cast<int>(PMT16XCHAN::CH00), static_cast<int>(PMT16XCHAN::CH07), CountA.pointerToTiff());
+		stack.pushImage(static_cast<int>(PMT16XCHAN::CH08), static_cast<int>(PMT16XCHAN::CH15), CountB.pointerToTiff());
 		stack.saveToFile("AllChannels", MULTIPAGE::EN, OVERRIDE::DIS);
 	}
 }
@@ -530,7 +530,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		{
 		case 750:
 			mVoltagePerDistance = 0.30 * scanCalib;		//By increasing this variable, the top beads in a Tiff appear before the bottom ones.
-			mVoltageOffset = 0.04 * V;					//A positive offset steers the beam towards channel 1 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, channel 1 is on the left
+			mVoltageOffset = 0.04 * V;					//A positive offset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
 			break;
 		case 920:
 			mVoltagePerDistance = 0.32 * scanCalib;
@@ -661,32 +661,35 @@ void PMT16X::readAllGain() const
 {
 	std::vector<uint8_t> parameters{ sendCommand_({'I'})};
 
-	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
+	//The gains are stored in parameters.at(1) to parameters.at(15)
+	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two elements in 'parameter', which are the returned sumcheck and CR
 	if (parameters.at(0) != 'I' || parameters.at(17) != sumCheck_(parameters, parameters.size() - 2))
 		std::cout << "Warning in " + (std::string)__FUNCTION__  + ": CheckSum mismatch\n";
 	
 	//Print out the gains
 	std::cout << "PMT16X gains:\n";
-	for (int ii = 1; ii <= nChanPMT; ii++)
-		std::cout << "Gain #" << ii << " (0-255) = " << static_cast<int>(parameters.at(ii)) << "\n";		
+	for (int ii = 0; ii < nChanPMT; ii++)
+		std::cout << "Gain CH" << ii << " (0-255) = " << static_cast<int>(parameters.at(ii+1)) << "\n";		
 }
 
-void PMT16X::setSingleGain(const int channel, const int gain) const
+void PMT16X::setSingleGain(const PMT16XCHAN chan, const int gain) const
 {
 	//Check that the inputVector parameters are within range
-	if (channel < 1 || channel > nChanPMT)
+	if (chan < PMT16XCHAN::CH00 || chan > PMT16XCHAN::CH15)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X channel number out of range (1-" + std::to_string(nChanPMT) + ")");
 
 	if (gain < 0 || gain > 255)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain out of range (0-255)");
+	
+	//The PMT16X indexes the channels starting from 1 to 16
+	uint8_t chanPMT{ static_cast<uint8_t>(static_cast<int>(chan) + 1) };
 
-
-	std::vector<uint8_t> parameters{ sendCommand_({'g', (uint8_t)channel, (uint8_t)gain})};
+	std::vector<uint8_t> parameters{ sendCommand_({'g', chanPMT, (uint8_t)gain})};
 	//printHex(parameters);	//For debugging
 
 	//Check that the chars returned by the PMT16X are correct. Sum-check the chars till the last two, which are the returned sumcheck and CR
-	if (parameters.at(0) == 'g' && parameters.at(1) == (uint8_t)channel && parameters.at(2) == (uint8_t)gain && parameters.at(3) == sumCheck_(parameters, parameters.size()-2))
-		std::cout << "PMT16X channel " << channel << " successfully set to " << gain << "\n";
+	if (parameters.at(0) == 'g' && parameters.at(1) == chanPMT && parameters.at(2) == (uint8_t)gain && parameters.at(3) == sumCheck_(parameters, parameters.size()-2))
+		std::cout << "PMT16X channel " << static_cast<int>(chan) << " successfully set to " << gain << "\n";
 	else
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch\n";
 }

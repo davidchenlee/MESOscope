@@ -296,7 +296,7 @@ namespace FPGAns
 		}
 	}
 
-	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga) : RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS, PMT16XCHAN::CH08 } {}
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga) : RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS, PMT16XCHAN::CH07 } {}
 
 	//Load the imaging parameters onto the FPGA
 	void RTcontrol::uploadImagingParameters_() const

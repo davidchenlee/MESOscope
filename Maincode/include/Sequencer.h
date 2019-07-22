@@ -47,7 +47,6 @@ class Sequencer
 	//Parameters that are unchanged throughout the sequence
 	Sample mSample;							//Sample
 	const Stack mStack;						//Stack
-	const ChannelList mChannelList;			//Channels
 	const int3 mInitialScanDir{ 1, 1, 1 };	//Initial scan directions in x, y, and z
 	ROI mROIcovered;
 
@@ -72,8 +71,8 @@ class Sequencer
 public:
 	int mCommandCounter{ 0 };
 
-	Sequencer(const ChannelList channelList, const Sample sample, const Stack stack);
-	Sequencer(const ChannelList channelList, Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ);
+	Sequencer(const Sample sample, const Stack stack);
+	Sequencer(Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor

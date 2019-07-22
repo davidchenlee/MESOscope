@@ -408,6 +408,26 @@ public:
 	void slice(const double planeToCutZ);
 };
 
+//Create a list of fluorescent labels
+class FluorLabelList
+{
+public:
+	struct SingleLabel				//Parameters for a single fluorescent label
+	{
+		std::string mName{ "" };	//Fluorescent label name
+		int mWavelength_nm;			//Laser wavelength
+		double mScanPi;				//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
+		double mStackPinc;			//Laser power increase per unit of distance in Z
+	};
+	std::vector<SingleLabel> mFluorLabelList;
+	FluorLabelList(const std::vector<SingleLabel> fluorLabelList);
+	std::size_t size() const;
+	SingleLabel front() const;
+	SingleLabel at(const int index) const;
+	void printParams(std::ofstream *fileHandle) const;
+	SingleLabel findFluorLabel(const std::string fluorLabel) const;
+};
+
 class Sample
 {
 public:
@@ -417,13 +437,15 @@ public:
 	ROI mROI{ 0, 0, 0, 0 };				//Region of interest across the entire sample {ymin, xmin, ymax, xmax}
 	double3 mLengthXYZ{ 0, 0, 0 };		//Sample size in x, y, and z
 	double mSurfaceZ{ -1. * mm };
+	FluorLabelList mFluorLabelList;
 
 	const double2 mBladePositionXY{ 0. * mm, 0. * mm };		//Location of the vibratome blade in x and y wrt the stages origin
 	const double mBladeFocalplaneOffsetZ{ 0. * um };		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
-	double mCutAboveBottomOfStack;
+	double mCutAboveBottomOfStack{ 0 };
 
-	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset);
-	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar);	//For debugging with beads
+	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const FluorLabelList fluorLabelList = { {} });
+	Sample(const Sample& sample, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset);
+	FluorLabelList::SingleLabel findFluorLabel(const std::string fluorLabel) const;
 	void printParams(std::ofstream *fileHandle) const;
 };
 
@@ -439,24 +461,6 @@ public:
 	void printParams(std::ofstream *fileHandle) const;
 };
 
-//Create a list of channels
-class ChannelList
-{
-public:
-	struct SingleChannel			//Parameters for a single channel
-	{
-		std::string mName{ "" };	//Channel name
-		int mWavelength_nm;			//Laser wavelength
-		double mScanPi;				//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mStackPinc;			//Laser power increase per unit of distance in Z
-	};
 
-	std::vector<SingleChannel> mList;
 
-	ChannelList(const std::vector<SingleChannel> channelList);
-	std::size_t size() const;
-	SingleChannel front() const;
-	SingleChannel at(const int index) const;
-	void printParams(std::ofstream *fileHandle) const;
-	SingleChannel findChannel(const std::string channel) const;
-};
+

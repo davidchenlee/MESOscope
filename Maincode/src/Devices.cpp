@@ -2145,9 +2145,56 @@ void Vibratome::retractDistance(const double distance) const
 */
 #pragma endregion "Vibratome"
 
+#pragma region "FluorLabelList"
+FluorLabelList::FluorLabelList(const std::vector<SingleLabel> fluorLabelList) : mFluorLabelList{ fluorLabelList } {}
+
+std::size_t FluorLabelList::size() const
+{
+	return mFluorLabelList.size();
+}
+
+FluorLabelList::SingleLabel FluorLabelList::front() const
+{
+	return mFluorLabelList.front();
+}
+
+FluorLabelList::SingleLabel FluorLabelList::at(const int index) const
+{
+	return mFluorLabelList.at(index);
+}
+
+void FluorLabelList::printParams(std::ofstream *fileHandle) const
+{
+	*fileHandle << "LASER ************************************************************\n";
+
+	for (std::vector<int>::size_type iterWL = 0; iterWL != mFluorLabelList.size(); iterWL++)
+	{
+		*fileHandle << "Wavelength (nm) = " << mFluorLabelList.at(iterWL).mWavelength_nm <<
+			"\nLaser power (mW) = " << mFluorLabelList.at(iterWL).mScanPi / mW <<
+			"\nPower increase (mW/um) = " << mFluorLabelList.at(iterWL).mStackPinc / mWpum << "\n";
+	}
+	*fileHandle << "\n";
+}
+
+//Return the first instance of "fluorLabel" in mFluorLabelList
+FluorLabelList::SingleLabel FluorLabelList::findFluorLabel(const std::string fluorLabel) const
+{
+	for (std::vector<int>::size_type iter_label = 0; iter_label < mFluorLabelList.size(); iter_label++)
+	{
+		if (!fluorLabel.compare(mFluorLabelList.at(iter_label).mName)) //compare() returns 0 if the strings are identical
+			return mFluorLabelList.at(iter_label);
+	}
+	//If the requested fluorLabel is not found
+	throw std::runtime_error((std::string)__FUNCTION__ + ": Fluorescent label " + fluorLabel + " not found");
+}
+#pragma endregion "FluorLabelList"
+
 #pragma region "Sample"
-Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :
-	mName{ sampleName }, mImmersionMedium{ immersionMedium }, mObjectiveCollar{ objectiveCollar }, mROI{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
+Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const FluorLabelList fluorLabelList) :
+	mName{ sampleName }, mImmersionMedium{ immersionMedium }, mObjectiveCollar{ objectiveCollar }, mFluorLabelList{ fluorLabelList }{}
+
+Sample::Sample(const Sample& sample, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :
+	mName{ sample.mName }, mImmersionMedium{ sample.mImmersionMedium }, mObjectiveCollar{ sample.mObjectiveCollar }, mFluorLabelList{ sample.mFluorLabelList }, mROI{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
 {
 	//Convert input ROI = {ymin, xmin, ymax, xmax} to the equivalent sample length in X and Y
 	mLengthXYZ.at(STAGEX) = mROI.at(XMAX) - mROI.at(XMIN);
@@ -2164,8 +2211,10 @@ Sample::Sample(const std::string sampleName, const std::string immersionMedium, 
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be positive");
 }
 
-Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar) :
-	mName{ sampleName }, mImmersionMedium{ immersionMedium }, mObjectiveCollar{ objectiveCollar }, mCutAboveBottomOfStack{ 0 } {}
+FluorLabelList::SingleLabel Sample::findFluorLabel(const std::string fluorLabel) const
+{
+	return mFluorLabelList.findFluorLabel(fluorLabel);
+}
 
 void Sample::printParams(std::ofstream *fileHandle) const
 {
@@ -2186,7 +2235,6 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "\n";
 }
 #pragma endregion "Sample"
-
 
 #pragma region "Stack"
 Stack::Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, const double3 overlapXYZ_frac) :
@@ -2218,52 +2266,6 @@ void Stack::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "\n";
 }
 #pragma endregion "Stack"
-
-#pragma region "ChannelList"
-ChannelList::ChannelList(const std::vector<SingleChannel> channelList) : mList{ channelList } {}
-
-std::size_t ChannelList::size() const
-{
-	return mList.size();
-}
-
-ChannelList::SingleChannel ChannelList::front() const
-{
-	return mList.front();
-}
-
-ChannelList::SingleChannel ChannelList::at(const int index) const
-{
-	return mList.at(index);
-}
-
-
-void ChannelList::printParams(std::ofstream *fileHandle) const
-{
-	*fileHandle << "LASER ************************************************************\n";
-
-	for (std::vector<int>::size_type iterWL = 0; iterWL != mList.size(); iterWL++)
-	{
-		*fileHandle << "Wavelength (nm) = " << mList.at(iterWL).mWavelength_nm <<
-			"\nLaser power (mW) = " << mList.at(iterWL).mScanPi / mW <<
-			"\nPower increase (mW/um) = " << mList.at(iterWL).mStackPinc / mWpum << "\n";
-	}
-	*fileHandle << "\n";
-}
-
-//Return the first instance of "channel" in mList
-ChannelList::SingleChannel ChannelList::findChannel(const std::string channel) const
-{
-	for (std::vector<int>::size_type iter_laser = 0; iter_laser < mList.size(); iter_laser++)
-	{
-		if (!channel.compare(mList.at(iter_laser).mName)) //compare() returns 0 if the strings are identical
-			return mList.at(iter_laser);			
-	}
-	//If the requested channel is not found
-	throw std::runtime_error((std::string)__FUNCTION__ + ": Channel " + channel + " not found");
-}
-#pragma endregion "ChannelList"
-
 
 /*
 [1] The stage Z has a virtual COM port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.

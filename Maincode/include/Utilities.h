@@ -24,7 +24,6 @@ template<class T> inline U8 clipU8dual(const T x);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
 
-
 //For saving the parameters to a text file
 class Logger
 {
@@ -71,7 +70,6 @@ public:
 	void suppressCrosstalk(const double crosstalkRatio = 1.0);
 	void flattenField(const double maxScaleFactor = 1.0);
 };
-
 
 class TiffStack
 {

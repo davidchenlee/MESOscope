@@ -135,7 +135,6 @@ void Logger::record(const std::string description, const std::string input)
 #pragma endregion "Logger"
 
 #pragma region "TiffU8"
-
 //Construct a tiff from a file
 TiffU8::TiffU8(const std::string filename) : mNframes{ 1 }
 {
@@ -159,7 +158,7 @@ TiffU8::TiffU8(const std::string filename) : mNframes{ 1 }
 	if(!TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &mHeightPerFrame))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGELENGTH");
 
-	//Unsupported file formats
+	//Reject unsupported file formats
 	if (samplesPerPixel != 1 || bitsPerSample != 8)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Only 8-bit grayscale Tiff supported");
 

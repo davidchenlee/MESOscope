@@ -1,20 +1,14 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ 52.795 * mm, 17.150 * mm, 18.075 * mm };	//Beads BLUE
-//double3 stackCenterXYZ{ 52.670 * mm, 17.150 * mm, 18.082 * mm };	//Beads GREEN and RED
+double3 stackCenterXYZ{ 53.000 * mm, 17.300 * mm, 18.077 * mm };	//77, 85
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
-const std::string sampleName{ "Beads4um" };
-const std::string immersionMedium{ "SiliconeOil" };
-const std::string collar{ "1.51" };
-const ChannelList channelListBeads{ {{ "DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 60. * mW, 0. * mWpum }, { "TDT", 1040, 25. * mW, 0. * mWpum }} };	//4um beads
-//const ChannelList channelListBeads{ {{ "DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }} };	//0.5um beads
-//const ChannelList channelListLiver{ {{ "TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }} };
-const ChannelList channelListFluorSlide { { { "DAPI", 750, 10. * mW, 0. * mWpum }} };	//Fluorescent slide
-const ChannelList channelList{ channelListBeads };
-//const ChannelList channelList{ channelListFluorSlide };
 
-Sample aa{ sampleName, immersionMedium, collar };
+Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 25. * mW, 0. * mWpum }}} };
+Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
+Sample fluorSlide{ "Beads4um", "SiliconeOil", "1.51", {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
+Sample liver{ "Beads1um", "SiliconeMineralOil5050", "1.49", {{{"TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }}} };
+Sample currentSample{ beads4um };
 
 namespace PMT1XRoutines
 {
@@ -35,17 +29,13 @@ namespace PMT1XRoutines
 		const double sampleLengthZ{ 0.01 * mm };														//Sample thickness
 		const double sampleSurfaceZ{ stackCenterXYZ.at(STAGEZ) };
 
-		//const ChannelList channelList{ channelList };
-		const ChannelList channelList{ {channelList.findChannel("GFP")} };
-		const Sample sample{ sampleName, immersionMedium, collar, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
+		const Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
 
 		//Create a sequence
-		//Sequencer sequence{ channelList, sample, stack };
-		Sequencer sequence{ channelList, Sample(sampleName, immersionMedium, collar), stack, stackCenterXYZ, { 2, 1 } }; //Last 2 parameters: stack center and number of stacks
+		Sequencer sequence{ sample, stack, stackCenterXYZ, { 2, 1 } }; //Last 2 parameters: stack center and number of stacks
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
-
 
 		if (1)
 		{
@@ -57,7 +47,7 @@ namespace PMT1XRoutines
 			FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH07 };	//Notice the ZSTAGE flag
 
 			//LASER: wavelength_nm, laserPower, whichLaser
-			VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm };
+			VirtualLaser laser{ RTcontrol, sample.mFluorLabelList.front().mWavelength_nm };
 
 			//RS
 			const ResonantScanner RScanner{ RTcontrol };
@@ -146,18 +136,18 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::STACK };			//Image a stack frame by frame from the initial z position
-		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
+		const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
+		const FluorLabelList::SingleLabel singleFluorLabel{ currentSample.findFluorLabel("GFP") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
+		const int heightPerFrame_pix{ 512 };
 		const int nFramesCont{ 1 };
-		const double FFOVslow{ 16 * 17.5 * um };			//Full FOV in the slow axis
+		const double FFOVslow{ 16 * 16. * um };			//Full FOV in the slow axis
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -176,8 +166,8 @@ namespace PMT16XRoutines
 		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 		FFOVslowPerBeamlet = FFOVslow;
 		PMT16Xchan = PMT16XCHAN::CH14;
-		selectPower = singleChannel.mScanPi;
-		selectPowerInc = singleChannel.mStackPinc;
+		selectPower = singleFluorLabel.mScanPi;
+		selectPowerInc = singleFluorLabel.mStackPinc;
 #endif
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
@@ -228,7 +218,7 @@ namespace PMT16XRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
 
 		//LASER
-		const VirtualLaser laser{ RTcontrol,  singleChannel.mWavelength_nm, LASER::VISION };
+		const VirtualLaser laser{ RTcontrol,  singleFluorLabel.mWavelength_nm, LASER::VISION };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -236,20 +226,20 @@ namespace PMT16XRoutines
 
 		//GALVO RT linear scan
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, singleChannel.mWavelength_nm };
-		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, singleChannel.mWavelength_nm };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, singleFluorLabel.mWavelength_nm };
+		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, singleFluorLabel.mWavelength_nm };
 
 		//DATALOG
 		{
-			Logger datalog("datalog_" + sampleName);
+			Logger datalog("datalog_" + currentSample.mName);
 			datalog.record("SAMPLE-------------------------------------------------------");
-			datalog.record("Sample = ", sampleName);
-			datalog.record("Immersion medium = ", immersionMedium);
-			datalog.record("Correction collar = ", collar);
+			datalog.record("Sample = ", currentSample.mName);
+			datalog.record("Immersion medium = ", currentSample.mImmersionMedium);
+			datalog.record("Correction collar = ", currentSample.mObjectiveCollar);
 			datalog.record("\nFPGA---------------------------------------------------------");
 			datalog.record("FPGA clock (MHz) = ", tickPerUs);
 			datalog.record("\nLASER--------------------------------------------------------");
-			datalog.record("Laser wavelength (nm) = ", singleChannel.mWavelength_nm);
+			datalog.record("Laser wavelength (nm) = ", singleFluorLabel.mWavelength_nm);
 			datalog.record("Laser power first frame (mW) = ", selectPower / mW);
 			datalog.record("Laser power increase (mW/um) = ", selectPowerInc / mWpum);
 			datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod / us);
@@ -300,7 +290,7 @@ namespace PMT16XRoutines
 				if (acqMode == RUNMODE::SINGLE)
 				{
 					//Save individual files
-					std::string singleFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString(selectPower / mW, 1) + "mW" +
+					std::string singleFilename{ currentSample.mName + "_" + toString(singleFluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(selectPower / mW, 1) + "mW" +
 						"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEZ) / mm, 4) };
 					image.saveTiffMultiPage(singleFilename, override);
 				}
@@ -312,7 +302,7 @@ namespace PMT16XRoutines
 		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::STACK || acqMode == RUNMODE::STACKCENTERED)
 		{
 			//Save the stackDiffZ to file
-			std::string stackFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_Pi=" + toString(selectPower / mW, 1) + "mW_Pinc=" + toString(selectPowerInc / mWpum, 1) + "mWpum" +
+			std::string stackFilename{ currentSample.mName + "_" + toString(singleFluorLabel.mWavelength_nm, 0) + "nm_Pi=" + toString(selectPower / mW, 1) + "mW_Pinc=" + toString(selectPowerInc / mWpum, 1) + "mWpum" +
 				"_x=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
 				"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 			tiffStack.saveToFile(stackFilename, override);
@@ -331,12 +321,12 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::STACKCENTERED };	//Image a stack frame by frame centered at the initial z position
 
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular fluorescence channel
+		const FluorLabelList::SingleLabel singleFluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		//const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };	//35 for PMT16X
+		const int heightPerFrame_pix{ 512 };	//35 for PMT16X
 		const int nFramesCont{ 1 };
-		const double FFOVslow{ 16 * 17.5 * um };			//Full FOV in the slow axis
+		const double FFOVslow{ 16 * 16.* um };			//Full FOV in the slow axis
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -355,8 +345,8 @@ namespace PMT16XRoutines
 		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 		FFOVslowPerBeamlet = FFOVslow;
 		PMT16Xchan = PMT16XCHAN::CH07;
-		selectPower = singleChannel.mScanPi;
-		selectPowerInc = singleChannel.mStackPinc;
+		selectPower = singleFluorLabel.mScanPi;
+		selectPowerInc = singleFluorLabel.mStackPinc;
 #endif
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
@@ -407,7 +397,7 @@ namespace PMT16XRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
 
 		//LASER
-		const VirtualLaser laser{ RTcontrol,  singleChannel.mWavelength_nm, LASER::VISION };
+		const VirtualLaser laser{ RTcontrol,  singleFluorLabel.mWavelength_nm, LASER::VISION };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -415,8 +405,8 @@ namespace PMT16XRoutines
 
 		//GALVO RT linear scan
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, singleChannel.mWavelength_nm };
-		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, singleChannel.mWavelength_nm };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, singleFluorLabel.mWavelength_nm };
+		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, singleFluorLabel.mWavelength_nm };
 
 		//CREATE A STACK FOR STORING THE TIFFS
 		TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nDiffZ, nSameZ };
@@ -455,7 +445,7 @@ namespace PMT16XRoutines
 					if (acqMode == RUNMODE::SINGLE)
 					{
 						//Save individual files
-						std::string singleFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString(selectPower / mW, 1) + "mW" +
+						std::string singleFilename{ currentSample.mName + "_" + toString(singleFluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(selectPower / mW, 1) + "mW" +
 							"_x=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEX) / mm, 4) + "_y=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterDiffZ).at(STAGEZ) / mm, 4) };
 						image.saveTiffMultiPage(singleFilename, override);
 					}
@@ -467,7 +457,7 @@ namespace PMT16XRoutines
 			if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::STACK || acqMode == RUNMODE::STACKCENTERED)
 			{
 				//Save the stackDiffZ to file
-				std::string stackFilename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_Pi=" + toString(selectPower / mW, 1) + "mW_Pinc=" + toString(selectPowerInc / mWpum, 1) + "mWpum" +
+				std::string stackFilename{ currentSample.mName + "_" + toString(singleFluorLabel.mWavelength_nm, 0) + "nm_Pi=" + toString(selectPower / mW, 1) + "mW_Pinc=" + toString(selectPowerInc / mWpum, 1) + "mWpum" +
 					"_x=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
 					"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 				tiffStack.saveToFile(stackFilename, override);
@@ -481,7 +471,7 @@ namespace PMT16XRoutines
 	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice)
 	{
 		//ACQUISITION SETTINGS
-		const ChannelList channelList{ {channelList.findChannel("GFP")} }; //Override
+		const FluorLabelList fluorLabelList{ {currentSample.findFluorLabel("GFP")} };
 		const int2 nStacksXY{ 30, 28 };
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
@@ -523,27 +513,27 @@ namespace PMT16XRoutines
 
 		//GALVO RT linear scan
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, channelList.front().mWavelength_nm };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, fluorLabelList.front().mWavelength_nm };
 
 		//LASER
-		VirtualLaser laser{ RTcontrol, channelList.front().mWavelength_nm, LASER::VISION };
+		VirtualLaser laser{ RTcontrol, fluorLabelList.front().mWavelength_nm, LASER::VISION };
 
 		//Create a location list
-		Sequencer sequence{ channelList, Sample(sampleName, immersionMedium, collar), stack, stackCenterXYZ, nStacksXY };
+		Sequencer sequence{ currentSample, stack, stackCenterXYZ, nStacksXY };
 		std::vector<double2> locationXYList{ sequence.generateLocationList() };
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
 		//Iterate over the wavelengths
-		for (std::vector<int>::size_type iter_wv = 0; iter_wv < channelList.size(); iter_wv++)
+		for (std::vector<int>::size_type iter_wv = 0; iter_wv < fluorLabelList.size(); iter_wv++)
 		{
 			//DATALOG
-			Logger datalog("datalog_Slice" + std::to_string(nSlice) + "_" + channelList.at(iter_wv).mName);
+			Logger datalog("datalog_Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iter_wv).mName);
 			datalog.record("SAMPLE-------------------------------------------------------");
-			datalog.record("Sample = ", sampleName);
-			datalog.record("Immersion medium = ", immersionMedium);
-			datalog.record("Correction collar = ", collar);
+			datalog.record("Sample = ", currentSample.mName);
+			datalog.record("Immersion medium = ", currentSample.mImmersionMedium);
+			datalog.record("Correction collar = ", currentSample.mObjectiveCollar);
 			datalog.record("\nFPGA---------------------------------------------------------");
 			datalog.record("FPGA clock (MHz) = ", tickPerUs);
 			datalog.record("\nSCAN---------------------------------------------------------");
@@ -562,7 +552,7 @@ namespace PMT16XRoutines
 			datalog.record("\n");
 
 			//Update the laser wavelength
-			const int wavelength_nm{ channelList.at(iter_wv).mWavelength_nm };
+			const int wavelength_nm{ fluorLabelList.at(iter_wv).mWavelength_nm };
 			laser.reconfigure(wavelength_nm);	//When switching pockels, the class destructor closes the uniblitz shutter
 			laser.openShutter();				//Re-open the Uniblitz shutter if closed
 
@@ -588,7 +578,7 @@ namespace PMT16XRoutines
 					std::cout << "Location: " << iter_loc + 1 << "/" << locationXYList.size() << "\tTotal frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
 
 					//Update the laser power
-					laser.setPower(channelList.at(iter_wv).mScanPi + iterDiffZ * stepSizeZ * channelList.at(iter_wv).mStackPinc);
+					laser.setPower(fluorLabelList.at(iter_wv).mScanPi + iterDiffZ * stepSizeZ * fluorLabelList.at(iter_wv).mStackPinc);
 
 					//EXECUTE THE RT CONTROL SEQUENCE
 					Image image{ RTcontrol };
@@ -602,8 +592,8 @@ namespace PMT16XRoutines
 				}
 
 				//Save the stackDiffZ to file
-				std::string shortName{ "Slice" + std::to_string(nSlice) + "_" + channelList.at(iter_wv).mName + "_Tile" + std::to_string(iter_loc + 1) };
-				std::string longName{ sampleName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(channelList.at(iter_wv).mScanPi / mW, 1) + "mW_Pinc=" + toString(channelList.at(iter_wv).mStackPinc / mWpum, 1) + "mWpum" +
+				std::string shortName{ "Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iter_wv).mName + "_Tile" + std::to_string(iter_loc + 1) };
+				std::string longName{ currentSample.mName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(fluorLabelList.at(iter_wv).mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabelList.at(iter_wv).mStackPinc / mWpum, 1) + "mWpum" +
 					"_x=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
 					"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 
@@ -617,7 +607,7 @@ namespace PMT16XRoutines
 	void liveScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("TDT") };	//Select a particular fluorescence channel
+		const FluorLabelList::SingleLabel singleFluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -628,7 +618,7 @@ namespace PMT16XRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH07 };
 
 		//LASER
-		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, LASER::VISION };
+		const VirtualLaser laser{ RTcontrol, singleFluorLabel.mWavelength_nm, LASER::VISION };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -636,14 +626,14 @@ namespace PMT16XRoutines
 
 		//GALVO RT linear scan
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, singleChannel.mWavelength_nm };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, singleFluorLabel.mWavelength_nm };
 
 		//OPEN THE UNIBLITZ SHUTTERS
 		laser.openShutter();	//The destructor will close the shutter automatically
 
 		while (true)
 		{
-			laser.setPower(singleChannel.mScanPi);				//Set the laser power
+			laser.setPower(singleFluorLabel.mScanPi);				//Set the laser power
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
@@ -662,7 +652,7 @@ namespace PMT16XRoutines
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const ChannelList::SingleChannel singleChannel{ channelList.findChannel("DAPI") };	//Select a particular laser
+		const FluorLabelList::SingleLabel singleFluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -680,14 +670,14 @@ namespace PMT16XRoutines
 		case ZSCAN::TOPDOWN:
 			stageZi = stackCenterXYZ.at(STAGEZ);
 			stageZf = stackCenterXYZ.at(STAGEZ) + stackDepth + 20 * stepSizeZ; //Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
-			laserPi = singleChannel.mScanPi;
-			laserPf = singleChannel.mScanPi + stackDepth * singleChannel.mStackPinc;
+			laserPi = singleFluorLabel.mScanPi;
+			laserPf = singleFluorLabel.mScanPi + stackDepth * singleFluorLabel.mStackPinc;
 			break;
 		case ZSCAN::BOTTOMUP:
 			stageZi = stackCenterXYZ.at(STAGEZ) + stackDepth;
 			stageZf = stackCenterXYZ.at(STAGEZ) - 20 * stepSizeZ;				//Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
-			laserPi = singleChannel.mScanPi + stackDepth * singleChannel.mStackPinc;
-			laserPf = singleChannel.mScanPi;
+			laserPi = singleFluorLabel.mScanPi + stackDepth * singleFluorLabel.mStackPinc;
+			laserPf = singleFluorLabel.mScanPi;
 			break;
 		}
 
@@ -701,7 +691,7 @@ namespace PMT16XRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH07 };	//Notice the ZSTAGE flag
 
 		//LASER
-		const VirtualLaser laser{ RTcontrol, singleChannel.mWavelength_nm, laserPi, LASER::VISION };
+		const VirtualLaser laser{ RTcontrol, singleFluorLabel.mWavelength_nm, laserPi, LASER::VISION };
 		//laser.powerLinearRamp(laserPi, laserPf);
 
 		//RS
@@ -711,7 +701,7 @@ namespace PMT16XRoutines
 		//GALVO RT linear scan
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, singleChannel.mWavelength_nm };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, singleFluorLabel.mWavelength_nm };
 
 		//OPEN THE SHUTTER
 		laser.openShutter();	//The destructor will close the shutter automatically
@@ -732,7 +722,7 @@ namespace PMT16XRoutines
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
 
-		const std::string filename{ sampleName + "_" + toString(singleChannel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(singleChannel.mStackPinc / mWpum, 1) +
+		const std::string filename{ currentSample.mName + "_" + toString(singleFluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(singleFluorLabel.mStackPinc / mWpum, 1) +
 			"mWpum_x=" + toString(initialStageXYZ.at(STAGEX) / mm, 3) + "_y=" + toString(initialStageXYZ.at(STAGEY) / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
@@ -1096,9 +1086,9 @@ namespace TestRoutines
 
 		image.correctRSdistortionGPU(150. * um);
 		image.suppressCrosstalk(0.2);
-		image.flattenField(1.5);
+		image.flattenField(2.0);
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
-		pressAnyKeyToCont();
+		//pressAnyKeyToCont();
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely
@@ -1192,16 +1182,13 @@ namespace TestRoutines
 		const double sampleLengthZ{ 0.01 * mm };							//Sample thickness
 		const double sampleSurfaceZ{ 18.471 * mm };
 
-		const ChannelList channelList{ channelList };
-		//const ChannelList channelList{ channelList.findChannel("DAPI") };
-		Sample sample{ "Beads4um", "Grycerol", "1.47", roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
+		Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlapXYZ_frac };
 
 		//Create a sequence
-		Sequencer sequence{ channelList, sample, stack };
+		Sequencer sequence{ sample, stack };
 		sequence.generateCommandList();
 		sequence.printToFile("CommandlistLight");
-
 
 		if (1)
 		{
@@ -1274,7 +1261,7 @@ namespace TestRoutines
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 		//Create a sequence
-		Sequencer sequence{ channelList, Sample(sampleName, immersionMedium, collar), stack, stackCenterXYZ, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
+		Sequencer sequence{ currentSample, stack, stackCenterXYZ, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
 		std::vector<double2> locationList{ sequence.generateLocationList() };
 
 		for (std::vector<int>::size_type iter_loc = 0; iter_loc < locationList.size(); iter_loc++)
@@ -1485,7 +1472,7 @@ namespace TestRoutines
 		const int2 nStacksXY{ 30, 28 };	
 		const int2 tileShiftXY_pix{ 543, 291 };
 
-		Logger datalog(sampleName + "_locations");
+		Logger datalog(currentSample.mName + "_locations");
 		datalog.record("dim=3"); //Needed in BigStitcher
 	
 		for (int nTile = 0; nTile < nStacksXY.at(STAGEX) * nStacksXY.at(STAGEY); nTile++)

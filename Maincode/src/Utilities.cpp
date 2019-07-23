@@ -61,11 +61,11 @@ template<class T> inline T clip(T x, T lower, T upper)
 }
 
 //Clip so that x <= 0xFF
-template<class T> inline U8 clipU8pos(const T x)
+template<class T> inline U8 clipU8top(const T x)
 {
 	return static_cast<U8>( (std::min)(x, static_cast<T>(255)) );
 }
-template U8 clipU8pos(const int x);	//Allow calling the function from a different .cpp file
+template U8 clipU8top(const int x);	//Allow calling the function from a different .cpp file
 
 //Clip so that 0x00 <= x <= 0xFF
 template<class T> inline U8 clipU8dual(const T x)

@@ -54,6 +54,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::collectorLens();
 			//TestRoutines::photobleach(fpga);
 			//TestRoutines::generateLocationsForBigStitcher();
+			//TestRoutines::clipU8();
 		}
 		catch (const std::invalid_argument &e)
 		{

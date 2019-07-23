@@ -186,7 +186,7 @@ void Image::demuxSingleChannel_()
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
 			const int upscaled{ mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayA[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.pointerToTiff())[pixIndex] = clipU8pos(upscaled);															//Clip if overflow
+			(mTiff.pointerToTiff())[pixIndex] = clipU8top(upscaled);															//Clip if overflow
 		}
 	}
 	//Demultiplex mMultiplexedArrayB (CH08-CH15). Each U32 element in mMultiplexedArrayB has the multiplexed structure | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
@@ -195,7 +195,7 @@ void Image::demuxSingleChannel_()
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
 			const int upscaled{ mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayB[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.pointerToTiff())[pixIndex] = clipU8pos(upscaled);															//Clip if overflow
+			(mTiff.pointerToTiff())[pixIndex] = clipU8top(upscaled);															//Clip if overflow
 		}
 	}
 	else
@@ -238,12 +238,12 @@ void Image::demuxAllChannels_()
 		{
 			//Buffer A (CH00-CH07)
 			const int upscaledA{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };						//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8pos(upscaledA);		//Clip if overflow
+			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledA);		//Clip if overflow
 			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;													//Shift 4 places to the right for the next iteration
 
 			//Buffer B (CH08-CH15)
 			const int upscaledB{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };						//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8pos(upscaledB);		//Clip if overflow
+			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledB);		//Clip if overflow
 			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;													//Shift 4 places to the right for the next iteration
 		}
 
@@ -540,7 +540,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 			break;
 		case 1040:
 			mVoltagePerDistance = 0.32 * scanCalib;
-			mVoltageOffset = 0.07 * V;
+			mVoltageOffset = 0.09 * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -1511,13 +1511,13 @@ void VirtualLaser::CollectorLens::set(const int wavelength_nm)
 	switch (wavelength_nm)
 	{
 	case 750:
-		mStepper.move(10.0 * mm);
+		mStepper.move(9.0 * mm);
 		break;
 	case 920:
 		mStepper.move(5.0 * mm);
 		break;
 	case 1040:
-		mStepper.move(0.0 * mm);
+		mStepper.move(1.0 * mm);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector lens position has not been calibrated for the wavelength " + std::to_string(wavelength_nm));

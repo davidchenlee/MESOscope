@@ -65,4 +65,5 @@ namespace TestRoutines
 	void photobleach(const FPGAns::FPGA &fpga);
 	void generateLocationsForBigStitcher();
 	int2 nTileToArrayIndices(const int nTile);
+	void clipU8();
 }

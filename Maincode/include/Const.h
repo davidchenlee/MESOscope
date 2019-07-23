@@ -4,7 +4,7 @@
 #include <array>
 
 #define multibeam 0			//Multibeam or singlebeam
-#define saveAllPMTchan 0	//Process and save all the channels of PMT16X separately
+#define saveAllPMTchan 1	//Process and save all the channels of PMT16X separately
 #define pockelsAutoOff 1	//For debugging purposes. In LV, let 'framegate' gate the output of the pockels cell
 
 namespace Constants
@@ -37,7 +37,7 @@ namespace Constants
 	enum class RTCHAN { PIXELCLOCK, SCANGALVO, RESCANGALVO, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };		//NCHAN = number of RT channels available including the channel for the pixelclock
 	enum class FILTERWHEEL { DET, EXC };
 	enum Axis { STAGEX, STAGEY, STAGEZ };
-	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANXY };
+	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANXY, COLLECTLENS };
 	enum class ACTION { CUT, ACQ, SAV, MOV };
 	enum class LASER { VISION, FIDELITY, AUTO};
 	enum class FILTERCOLOR { BLUE, GREEN, RED, OPEN, CLOSED };

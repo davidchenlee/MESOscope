@@ -228,14 +228,14 @@ void Sequencer::moveStage_(const int2 stackIJ)
 void Sequencer::acqStack_(const int iterWL)
 {
 	//Read the corresponding laser configuration
-	const FluorLabelList::SingleLabel singleFluorLabel{ mSample.mFluorLabelList.at(iterWL) };
+	const FluorLabelList::FluorLabel fluorLabel{ mSample.mFluorLabelList.at(iterWL) };
 
 	//Determine if the initial laser power is the lowest (top of the stack) or the highest (bottom of the stack)
-	const double scanPi{ calculateStackScanInitialPower_(singleFluorLabel.mScanPi, singleFluorLabel.mStackPinc, mScanDir.at(STAGEZ)) };
+	const double scanPi{ calculateStackScanInitialPower_(fluorLabel.mScanPi, fluorLabel.mStackPinc, mScanDir.at(STAGEZ)) };
 
 	Commandline commandline;
 	commandline.mAction = ACTION::ACQ;
-	commandline.mCommand.acqStack = { mStackCounter, singleFluorLabel.mWavelength_nm, mScanDir.at(STAGEZ), mScanZi, mStack.mDepth, scanPi, singleFluorLabel.mStackPinc };
+	commandline.mCommand.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mScanDir.at(STAGEZ), mScanZi, mStack.mDepth, scanPi, fluorLabel.mStackPinc };
 	mCommandList.push_back(commandline);
 
 	mStackCounter++;	//Count the number of stacks acquired

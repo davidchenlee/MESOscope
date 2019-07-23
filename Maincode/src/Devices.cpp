@@ -1501,12 +1501,17 @@ void StepperActuator::home()
 //Integrate the lasers, pockels cells, and filterwheels in a single class
 #pragma region "VirtualLaser"
 
-void VirtualLaser::CollectorLens::position(const int wavelength_nm)
+void VirtualLaser::CollectorLens::move(const double position)
+{
+	mStepper.move(position);
+}
+
+void VirtualLaser::CollectorLens::set(const int wavelength_nm)
 {
 	switch (wavelength_nm)
 	{
 	case 750:
-		mStepper.move(8.0 * mm);
+		mStepper.move(10.0 * mm);
 		break;
 	case 920:
 		mStepper.move(5.0 * mm);
@@ -1675,7 +1680,7 @@ void VirtualLaser::reconfigure(const int wavelength_nm)
 	std::thread th2(&VirtualFilterWheel::turnFilterwheels_, &mVirtualFilterWheel, wavelength_nm);
 
 	//Set the collector lens position
-	std::thread th3(&CollectorLens::position, &mCollectorLens, wavelength_nm);
+	std::thread th3(&CollectorLens::set, &mCollectorLens, wavelength_nm);
 
 	th1.join(); th2.join(); th3.join();
 
@@ -1707,6 +1712,12 @@ void VirtualLaser::openShutter() const
 void VirtualLaser::closeShutter() const
 {
 	mCombinedLasers.closeShutter();
+}
+
+//Used for optimizing the collector lens position
+void VirtualLaser::moveCollectorLens(const double position)
+{
+	mCollectorLens.move(position);
 }
 #pragma endregion "VirtualLaser"
 
@@ -2148,19 +2159,19 @@ void Vibratome::retractDistance(const double distance) const
 #pragma endregion "Vibratome"
 
 #pragma region "FluorLabelList"
-FluorLabelList::FluorLabelList(const std::vector<SingleLabel> fluorLabelList) : mFluorLabelList{ fluorLabelList } {}
+FluorLabelList::FluorLabelList(const std::vector<FluorLabel> fluorLabelList) : mFluorLabelList{ fluorLabelList } {}
 
 std::size_t FluorLabelList::size() const
 {
 	return mFluorLabelList.size();
 }
 
-FluorLabelList::SingleLabel FluorLabelList::front() const
+FluorLabelList::FluorLabel FluorLabelList::front() const
 {
 	return mFluorLabelList.front();
 }
 
-FluorLabelList::SingleLabel FluorLabelList::at(const int index) const
+FluorLabelList::FluorLabel FluorLabelList::at(const int index) const
 {
 	return mFluorLabelList.at(index);
 }
@@ -2179,7 +2190,7 @@ void FluorLabelList::printParams(std::ofstream *fileHandle) const
 }
 
 //Return the first instance of "fluorLabel" in mFluorLabelList
-FluorLabelList::SingleLabel FluorLabelList::findFluorLabel(const std::string fluorLabel) const
+FluorLabelList::FluorLabel FluorLabelList::findFluorLabel(const std::string fluorLabel) const
 {
 	for (std::vector<int>::size_type iter_label = 0; iter_label < mFluorLabelList.size(); iter_label++)
 	{
@@ -2213,7 +2224,7 @@ Sample::Sample(const Sample& sample, ROI roi, const double sampleLengthZ, const 
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be positive");
 }
 
-FluorLabelList::SingleLabel Sample::findFluorLabel(const std::string fluorLabel) const
+FluorLabelList::FluorLabel Sample::findFluorLabel(const std::string fluorLabel) const
 {
 	return mFluorLabelList.findFluorLabel(fluorLabel);
 }

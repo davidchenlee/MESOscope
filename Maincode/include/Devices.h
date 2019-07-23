@@ -280,7 +280,8 @@ class VirtualLaser
 	{
 		StepperActuator mStepper{ "26000299" };
 	public:
-		void position(const int wavelength_nm);
+		void move(const double position);
+		void set(const int wavelength_nm);
 	};
 
 	class CombinedLasers
@@ -332,6 +333,7 @@ public:
 	void powerLinearRamp(const double Pi, const double Pf) const;
 	void openShutter() const;
 	void closeShutter() const;
+	void moveCollectorLens(const double position);
 };
 
 class Stage
@@ -412,20 +414,20 @@ public:
 class FluorLabelList
 {
 public:
-	struct SingleLabel				//Parameters for a single fluorescent label
+	struct FluorLabel				//Parameters for a single fluorescent label
 	{
 		std::string mName{ "" };	//Fluorescent label name
 		int mWavelength_nm;			//Laser wavelength
 		double mScanPi;				//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
 		double mStackPinc;			//Laser power increase per unit of distance in Z
 	};
-	std::vector<SingleLabel> mFluorLabelList;
-	FluorLabelList(const std::vector<SingleLabel> fluorLabelList);
+	std::vector<FluorLabel> mFluorLabelList;
+	FluorLabelList(const std::vector<FluorLabel> fluorLabelList);
 	std::size_t size() const;
-	SingleLabel front() const;
-	SingleLabel at(const int index) const;
+	FluorLabel front() const;
+	FluorLabel at(const int index) const;
 	void printParams(std::ofstream *fileHandle) const;
-	SingleLabel findFluorLabel(const std::string fluorLabel) const;
+	FluorLabel findFluorLabel(const std::string fluorLabel) const;
 };
 
 class Sample
@@ -445,7 +447,7 @@ public:
 
 	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const FluorLabelList fluorLabelList = { {} });
 	Sample(const Sample& sample, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset);
-	FluorLabelList::SingleLabel findFluorLabel(const std::string fluorLabel) const;
+	FluorLabelList::FluorLabel findFluorLabel(const std::string fluorLabel) const;
 	void printParams(std::ofstream *fileHandle) const;
 };
 

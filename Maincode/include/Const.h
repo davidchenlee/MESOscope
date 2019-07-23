@@ -37,7 +37,7 @@ namespace Constants
 	enum class RTCHAN { PIXELCLOCK, SCANGALVO, RESCANGALVO, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };		//NCHAN = number of RT channels available including the channel for the pixelclock
 	enum class FILTERWHEEL { DET, EXC };
 	enum Axis { STAGEX, STAGEY, STAGEZ };
-	enum class RUNMODE { SINGLE, LIVE, AVG, STACK, STACKCENTERED };
+	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANXY };
 	enum class ACTION { CUT, ACQ, SAV, MOV };
 	enum class LASER { VISION, FIDELITY, AUTO};
 	enum class FILTERCOLOR { BLUE, GREEN, RED, OPEN, CLOSED };

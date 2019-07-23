@@ -362,6 +362,8 @@ void Image::postprocess(const double FFOVfast)
 	demultiplex_();								//Move the chuncks of data to the buffer array
 	mTiff.mirrorOddFrames();					//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
 	//mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
+	//mTiff.suppressCrosstalk(0.2);
+	//mTiff.flattenField(1.5);
 }
 
 //Split the long vertical image into nFrames and calculate the average over all the frames

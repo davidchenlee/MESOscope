@@ -28,7 +28,7 @@ namespace Constants
 
 	//PIXELCLOCK
 	extern const double pixelDwellTime{ 0.1625 * us };		//= 13 * 12.5 ns = 162.5 ns
-	extern const double LineclockHalfPeriod{ 63.05 * us };	//Half-period of the resonant scanner. I measure 25.220 ms over 400 half oscillations. Therefore, the average half-period is 25200us/400 = 63.05 us
+	extern const double lineclockHalfPeriod{ 63.05 * us };	//Half-period of the resonant scanner. I measure 25.220 ms over 400 half oscillations. Therefore, the average half-period is 25200us/400 = 63.05 us
 															//The forward and backward travel times differ slightly and the difference depends on the scanning amplitude
 															//For example, forward = 63.14 us, backwards = 62.99 us, diff = 150 ns (i.e., ~ 1 pixel)
 															//The measured RS period (126.1 us) seems to be independent of the scanning amplitude
@@ -75,9 +75,11 @@ namespace Constants
 													
 	//PMT
 	extern const int nChanPMT{ 16 };
-	//Simulate the PMT pulses. When the array element is HIGH, the output of the subvi changes its state for the next clock cycle (currently, 160MHz = 6.25ns)
-	//Example, if I divide each line in 500 pixels, then the pix dwell time is 125 ns and each pixel could contain at most 10 laser pulses (laser pulses separated by 12.5ns = 80 MHz)
-	extern const int nPulses{ 20 };												//Number of pulses
-	extern const U8 pulseArray[nPulses]{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-											0, 0, 0, 0, 0, 0, 0, 0, 1, 0 };		//@160MHz, one cycle through this array lasts 125ns
+
+	//Simulate the PMT pulses. The PMT simulator in the LV changes from 0 to 1 or vice versa every time there is a 1 in the array
+	//In LV, the clock of the photocounter, and therefore, of the PMT simulator are currently 120MHz = 8.333 ns
+	//Given the current pixel dwell time 162.5 ns, the max number of pulses is therefore pixelDwellTime/usPerTick = 162.5 ns/ 8.333 ns = 19.5 pulses
+	extern const int nPMTsim{ 20 };			//Size of PMTsimArray. IMPORTANT: the size of PMTsimArray in LV has to be changed manually and then the code recompiled
+	extern const U8 PMTsimArray[nPMTsim]{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+										  1, 1, 1, 1, 1, 1, 1, 0, 0, 1 };
 }

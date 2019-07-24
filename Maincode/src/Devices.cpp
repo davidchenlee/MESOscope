@@ -178,7 +178,7 @@ void Image::demuxSingleChannel_()
 	//Shift mMultiplexedArrayA and  mMultiplexedArrayB to the right a number of bits depending on the PMT channel to be read
 	//For mMultiplexedArrayA, shift 0 bits for CH00, 4 bits for CH01, 8 bits for CH02, etc...
 	//For mMultiplexedArrayAB, shift 0 bits for CH08, 4 bits for CH09, 8 bits for CH10, etc...
-	const int nBitsToShift{ 4 * static_cast<int>(mRTcontrol.mPMT16Xchan) };
+	const unsigned int nBitsToShift{ 4 * static_cast<unsigned int>(mRTcontrol.mPMT16Xchan) };
 
 	//Demultiplex mMultiplexedArrayA (CH00-CH07). Each U32 element in mMultiplexedArrayA has the multiplexed structure | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
 	if (mRTcontrol.mPMT16Xchan >= PMT16XCHAN::CH00 && mRTcontrol.mPMT16Xchan <= PMT16XCHAN::CH07)
@@ -199,7 +199,7 @@ void Image::demuxSingleChannel_()
 		}
 	}
 	else
-		;//If CENTERED, don't do anything
+		;//If PMT16XCHAN::CENTERED, don't do anything
 }
 
 //Each U32 element in mMultiplexedArrayA and mMultiplexedArrayB has the multiplexed structure:
@@ -401,7 +401,7 @@ U8* const Image::pointerToTiff() const
 ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol) : mRTcontrol{ RTcontrol }
 {	
 	//Calculate the spatial fill factor
-	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * pixelDwellTime / LineclockHalfPeriod };
+	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * pixelDwellTime / lineclockHalfPeriod };
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
@@ -601,7 +601,7 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 		timeStep = 8. * us;
 
 	//The position offset allows to compensate for the slight axis misalignment of the rescanner
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, LineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
+	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
 		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal);
 }
 #pragma endregion "Galvo"

@@ -186,9 +186,10 @@ namespace FPGAns
 		if (FIFOtimeout_tick < 0 || syncDOtoAO_tick < 0 || pockelsFirstFrameDelay < 0 || pockelsSecondaryDelay < 0  || galvosCommonDelay < 0 || rescanGalvoDelay < 0 || linegateTimeout < 0 || stagePulseStretcher < 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
-		//INPUT SELECTORS
-		checkStatus(__FUNCTION__, NiFpga_WriteU8(getHandle(), NiFpga_FPGAvi_ControlU8_PhotocounterInputSelector, static_cast<U8>(photocounterInput)));		//Debugger. Use the PMT-pulse simulator as the input of the photon-counter
-		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getHandle(), NiFpga_FPGAvi_ControlArrayBool_PulseSequence, pulseArray, nPulses));					//For debugging the photocounters
+		//PMT simulator for debugging
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(getHandle(), NiFpga_FPGAvi_ControlBool_PhotocounterInputSelector, static_cast<bool>(photocounterInput)));	//Use the PMT simulator as the input of the photocounters
+		checkStatus(__FUNCTION__, NiFpga_WriteU8(getHandle(), NiFpga_FPGAvi_ControlU8_nPMTsim, static_cast<U8>(nPMTsim)));									//Size of PMTsimArray
+		checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getHandle(), NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, PMTsimArray, nPMTsim));					//Array that simulates the pulses from the PMTs
 
 		//FIFOIN
 		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTCHAN::NCHAN)));						//Number of input channels
@@ -206,7 +207,7 @@ namespace FPGAns
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																		//Trigger the FPGA outputs (non-RT trigger)
 		checkStatus(__FUNCTION__, NiFpga_WriteI16(getHandle(), NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));															//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
 
-		if (linegateTimeout <= 2 * LineclockHalfPeriod)
+		if (linegateTimeout <= 2 * lineclockHalfPeriod)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(linegateTimeout / us * tickPerUs)));			//Timeout the trigger of the control sequence
 
@@ -249,9 +250,9 @@ namespace FPGAns
 	void RTcontrol::Pixelclock::pushUniformDwellTimes()
 	{
 		//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (LineclockHalfPeriod-400*125ns)/2
+		//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (lineclockHalfPeriod-400*125ns)/2
 
-		const double initialWaitingTime{ (LineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
+		const double initialWaitingTime{ (lineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
 
 		//Check if the pixelclock overflows the Lineclock
 		if (initialWaitingTime <= 0)

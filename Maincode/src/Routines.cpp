@@ -1,10 +1,10 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (53.050 - 0.120) * mm, 17.300 * mm, 18.108 * mm };
+double3 stackCenterXYZ{ (53.050 - 0.240) * mm, 17.300 * mm, 18.109 * mm };
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 
-Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 25. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
+Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 50. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 20. * mW, 0. * mWpum }}} };
 Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
 Sample fluorSlide{ "Beads4um", "SiliconeOil", "1.51", {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
 Sample liver{ "Beads1um", "SiliconeMineralOil5050", "1.49", {{{"TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }}} };
@@ -40,7 +40,7 @@ namespace PMT1XRoutines
 		if (1)
 		{
 			//STAGES. Specify the velocity
-			Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (LineclockHalfPeriod * heightPerFrame_pix) };
+			Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (lineclockHalfPeriod * heightPerFrame_pix) };
 			stage.moveSingle(STAGEZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
 
 			//CREATE THE REALTIME CONTROL SEQUENCE
@@ -257,7 +257,7 @@ namespace PMT16XRoutines
 			datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod / us);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
-			datalog.record("RS period (us) = ", 2 * LineclockHalfPeriod / us);
+			datalog.record("RS period (us) = ", 2 * lineclockHalfPeriod / us);
 			datalog.record("Pixel dwell time (us) = ", pixelDwellTime / us);
 			datalog.record("RS fill factor = ", RScanner.mFillFactor);
 			datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
@@ -411,7 +411,7 @@ namespace PMT16XRoutines
 			datalog.record("FPGA clock (MHz) = ", tickPerUs);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
-			datalog.record("RS period (us) = ", 2 * LineclockHalfPeriod / us);
+			datalog.record("RS period (us) = ", 2 * lineclockHalfPeriod / us);
 			datalog.record("Pixel dwell time (us) = ", pixelDwellTime / us);
 			datalog.record("RS fill factor = ", RScanner.mFillFactor);
 			datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
@@ -556,7 +556,7 @@ namespace PMT16XRoutines
 
 		//STAGES
 		const double3 initialStageXYZ{ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stageZi};		//Initial position of the stages. The sign of stackDepth determines the scanning direction					
-		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (LineclockHalfPeriod * heightPerFrame_pix) };			//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
+		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (lineclockHalfPeriod * heightPerFrame_pix) };			//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
 		stage.moveXYZ(initialStageXYZ);
 		stage.waitForMotionToStopAll();
 
@@ -647,15 +647,10 @@ namespace TestRoutines
 
 	void pixelclock(const FPGAns::FPGA &fpga)
 	{
-		std::vector<U8> stackOfAverages;
-
-		FPGAns::RTcontrol RTcontrol{ fpga }; 	//Create a realtime control sequence
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 100, 100, FIFOOUT::EN, PMT16XCHAN::CH07 }; 	//Create a realtime control sequence
 		Image image{ RTcontrol };
 		image.acquire(0);						//Execute the realtime control sequence and acquire the image
-		//image.pushToVector(stackOfAverages);
-		//std::cout << "size: " << stackOfAverages.size() << "\n";
-		//TiffU8 acqParam{ stackOfAverages, 300, 400 };
-		//acqParam.saveTiff("Untitled");
+		image.saveTiffSinglePage("output", OVERRIDE::EN);
 	}
 
 	//Generate a long digital pulse and check the frameDuration with the oscilloscope

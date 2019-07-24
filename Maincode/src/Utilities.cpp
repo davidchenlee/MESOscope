@@ -597,15 +597,15 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	const int heightAllFrames{ mHeightPerFrame * mNframes };
 
 	//Start and stop time of the RS scan that define FFOVfast
-	const double t1{ 0.5 * (LineclockHalfPeriod - mWidthPerFrame * pixelDwellTime) };
-	const double t2{ LineclockHalfPeriod - t1 };
+	const double t1{ 0.5 * (lineclockHalfPeriod - mWidthPerFrame * pixelDwellTime) };
+	const double t2{ lineclockHalfPeriod - t1 };
 
 	//The full amplitude of the RS (from turning point to turning point) in um
-	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / LineclockHalfPeriod) - std::cos(PI * t2 / LineclockHalfPeriod)) };
+	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / lineclockHalfPeriod) - std::cos(PI * t2 / lineclockHalfPeriod)) };
 
 	//Start and stop positions of the RS that define FFOVfast
-	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / LineclockHalfPeriod)) };
-	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / LineclockHalfPeriod)) };
+	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / lineclockHalfPeriod)) };
+	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / lineclockHalfPeriod)) };
 
 	/*//For debugging
 	std::cout << "t1 (us): " << t1 / us << "\n";
@@ -617,8 +617,8 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	//Normalized variables
 	const float xbar1{ static_cast<float>(x1 / fullScan) };
 	const float xbar2{ static_cast<float>(x2 / fullScan) };
-	const float tbar1{ static_cast<float>(t1 / LineclockHalfPeriod) };
-	const float tbar2{ static_cast<float>(t2 / LineclockHalfPeriod) };
+	const float tbar1{ static_cast<float>(t1 / lineclockHalfPeriod) };
+	const float tbar2{ static_cast<float>(t2 / lineclockHalfPeriod) };
 	const float PI_float{ static_cast<float>(PI) };
 
 	//Precompute the mapping of the fast coordinate (k)
@@ -729,15 +729,15 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 	U8* correctedArray{ new U8[nPixAllFrames] };
 
 	//Start and stop time of the RS scan that define FFOVfast
-	const double t1{ 0.5 * (LineclockHalfPeriod - mWidthPerFrame * pixelDwellTime) };
-	const double t2{ LineclockHalfPeriod - t1 };
+	const double t1{ 0.5 * (lineclockHalfPeriod - mWidthPerFrame * pixelDwellTime) };
+	const double t2{ lineclockHalfPeriod - t1 };
 
 	//The full amplitude of the RS (from turning point to turning point) in um
-	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / LineclockHalfPeriod) - std::cos(PI * t2 / LineclockHalfPeriod)) };
+	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / lineclockHalfPeriod) - std::cos(PI * t2 / lineclockHalfPeriod)) };
 
 	//Start and stop positions of the RS that define the FFOVfast
-	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / LineclockHalfPeriod)) };
-	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / LineclockHalfPeriod)) };
+	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / lineclockHalfPeriod)) };
+	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / lineclockHalfPeriod)) };
 
 	/*//For debugging
 	std::cout << "t1 (us): " << t1 / us << "\n";
@@ -749,8 +749,8 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 	//Normalized variables
 	const float xbar1{ static_cast<float>(x1 / fullScan) };
 	const float xbar2{ static_cast<float>(x2 / fullScan) };
-	const float tbar1{ static_cast<float>(t1 / LineclockHalfPeriod) };
-	const float tbar2{ static_cast<float>(t2 / LineclockHalfPeriod) };
+	const float tbar1{ static_cast<float>(t1 / lineclockHalfPeriod) };
+	const float tbar2{ static_cast<float>(t2 / lineclockHalfPeriod) };
 	const float PI_float{ static_cast<float>(PI) };
 
 	// precompute the mapping of the fast coordinate (k)

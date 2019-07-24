@@ -66,7 +66,7 @@ namespace Constants
 
 	extern const double VISIONpulsePeriod;
 	extern const double pixelDwellTime;
-	extern const double LineclockHalfPeriod;
+	extern const double lineclockHalfPeriod;
 	
 	extern const int AOmax;
 	extern const int tickPerUs;
@@ -90,6 +90,6 @@ namespace Constants
 	extern const double	ZstageTrigDelayBottomup;
 
 	extern const int nChanPMT;
-	extern const int nPulses;
-	extern const U8 pulseArray[];
+	extern const int nPMTsim;
+	extern const U8 PMTsimArray[];
 }

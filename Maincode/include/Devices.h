@@ -12,19 +12,19 @@
 
 class Image
 {
-	FPGAns::RTcontrol &mRTcontrol;			//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
-	U32* mMultiplexedArrayA;				//Buffer array to read FIFOOUTpc A
-	U32* mMultiplexedArrayB;				//Buffer array to read FIFOOUTpc B
-	TiffU8 mTiff;							//Tiff that stores the content of mMultiplexedArrayA and mMultiplexedArrayB
+	FPGAns::RTcontrol &mRTcontrol;	//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
+	U32* mMultiplexedArrayA;		//Buffer array to read FIFOOUTpc A
+	U32* mMultiplexedArrayB;		//Buffer array to read FIFOOUTpc B
+	TiffU8 mTiff;					//Tiff that stores the content of mMultiplexedArrayA and mMultiplexedArrayB
 	ZSCAN mScanDir;
 
 	void FIFOOUTpcGarbageCollector_() const;
 	void readFIFOOUTpc_();
 	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);
 	void correctInterleaved_();
-	void demultiplex_();
+	void demultiplex_(const bool saveAllPMT);
 	void demuxSingleChannel_();
-	void demuxAllChannels_();
+	void demuxAllChannels_(const bool saveAllPMT);
 	void startFIFOOUTpc_() const;
 	void configureFIFOOUTpc_(const U32 depth) const;
 	void stopFIFOOUTpc_() const;
@@ -37,10 +37,10 @@ public:
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
 	U8* const data() const;
-	void acquire();
+	void acquire(const bool saveAllPMT = false);
 	void initializeAcq(const ZSCAN scanDir = ZSCAN::TOPDOWN);
 	void downloadData();
-	void constructImage();
+	void constructImage(const bool saveAllPMT = false);
 	void correctImage(const double FFOVfast);
 	void averageFrames();
 	void averageEvenOddFrames();

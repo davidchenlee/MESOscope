@@ -164,15 +164,15 @@ void Image::correctInterleaved_()
 	}
 }
 
-void Image::demultiplex_()
+void Image::demultiplex_(const bool saveAllPMT)
 {	
-	if (multibeam || saveAllPMTchan)
-		demuxAllChannels_();
+	if (multibeam || saveAllPMT)
+		demuxAllChannels_(saveAllPMT);
 	else
 		demuxSingleChannel_();
 }
 
-//Singlebeam. For speed, only process the data from a single channel
+//Singlebeam. Only readn and process the data from a single channel for speed
 void Image::demuxSingleChannel_()
 {
 	//Shift mMultiplexedArrayA and  mMultiplexedArrayB to the right a number of bits depending on the PMT channel to be read
@@ -205,7 +205,7 @@ void Image::demuxSingleChannel_()
 //Each U32 element in mMultiplexedArrayA and mMultiplexedArrayB has the multiplexed structure:
 //mMultiplexedArrayA[i] =  | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
 //mMultiplexedArrayB[i] =  | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
-void Image::demuxAllChannels_()
+void Image::demuxAllChannels_(const bool saveAllPMT)
 {
 	//Use 2 separate arrays to allow parallelization in the future
 	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH00-CH07
@@ -252,9 +252,9 @@ void Image::demuxAllChannels_()
 		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());				//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
 
 	//For debugging
-	if (saveAllPMTchan)
+	if (saveAllPMT)
 	{
-		//Save each PMT16X channel in a separate pages of a Tiff
+		//Save all PMT16X channels in separate pages in a Tiff
 		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , nChanPMT * mRTcontrol.mNframes };
 		stack.pushImage(static_cast<int>(PMT16XCHAN::CH00), static_cast<int>(PMT16XCHAN::CH07), CountA.data());
 		stack.pushImage(static_cast<int>(PMT16XCHAN::CH08), static_cast<int>(PMT16XCHAN::CH15), CountB.data());
@@ -293,12 +293,12 @@ U8* const Image::data() const
 }
 
 //Scan a z-stack with individual acquisition triggers plane-by-plane
-void Image::acquire()
+void Image::acquire(const bool saveAllPMT)
 {
 	initializeAcq();
 	mRTcontrol.triggerRT();		//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 	downloadData();
-	constructImage();
+	constructImage(saveAllPMT);
 }
 
 void Image::initializeAcq(const ZSCAN stackScanDir)
@@ -362,11 +362,11 @@ void Image::downloadData()
 	}
 }
 
-void Image::constructImage()
+void Image::constructImage(const bool saveAllPMT)
 {
 	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
-	demultiplex_();				//Move the chuncks of data to the buffer array
-	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
+	demultiplex_(saveAllPMT);				//Move the chuncks of data to the buffer array
+	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Divide the image vertically in nFrames and mirror the odd frames vertically
 }
 
 void Image::correctImage(const double FFOVfast)
@@ -596,8 +596,8 @@ void Galvo::positionLinearRamp(const double timeStep, const double rampLength, c
 void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset) const
 {
 	//Limit the number of steps for long ramps
-	//Currently, the bottleneck is the buffe of the galvoss on the fpga that only support 5000 elements
-	//For 2 us-steps, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned
+	//Currently, the bottleneck is the buffer of the galvos on the fpga because it only supports 5000 elements
+	//For timeStep = 2 us, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned
 	double timeStep;
 	if(mRTcontrol.mHeightPerBeamletPerFrame_pix <= 100)
 		timeStep = 2. * us;

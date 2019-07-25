@@ -3,8 +3,7 @@
 #include <vector>
 #include <array>
 
-#define multibeam 0			//Multibeam or singlebeam
-#define saveAllPMTchan 1	//Process and save all the channels of PMT16X separately
+#define multibeam 1			//Multibeam or singlebeam
 #define pockelsAutoOff 1	//For debugging purposes. In LV, let 'framegate' gate the output of the pockels cell
 
 namespace Constants

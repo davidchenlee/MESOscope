@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (53.050 - 0.110) * mm, 17.300 * mm, 18.115 * mm };
+double3 stackCenterXYZ{ (53.050 - 0.137 + 0.016 ) * mm, 17.300 * mm, 18.115 * mm };
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 20. * mW, 0. * mWpum }}} };
@@ -141,21 +141,21 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in z frame by frame from the z position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in z frame by frame centered at the z position
-		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in x frame by frame
-		const RUNMODE acqMode{ RUNMODE::COLLECTLENS };		//For optimizing the collector lens. Set saveAllPMTchan = 1
+		const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in x frame by frame
+		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens. Set saveAllPMT = 1
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("GFP") };	//Select a particular fluorescence channel
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
 			stackCenterXYZ.at(STAGEZ) -= 6 * um;
 
 		const double pixelSizeXY{ 0.5 * um };
+		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 512 };
+		const int heightPerFrame_pix{ 560 };
 		const int nFramesCont{ 1 };
-		const double FFOVslow{ 16 * 16. * um };			//Full FOV in the slow axis
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -166,7 +166,7 @@ namespace PMT16XRoutines
 		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
 		FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
 		PMT16Xchan = PMT16XCHAN::CENTERED;
-		selectPower = 500. * mW;
+		selectPower = 600. * mW;
 		selectPowerInc = 0;
 #else
 		//Singlebeam
@@ -179,19 +179,20 @@ namespace PMT16XRoutines
 #endif
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double steSizeX{ 5.0 * um };
+		const double steSizeX{ 1.0 * um };
 		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in Z
 
 		//STAGES
 		std::vector<double3> stagePositionXYZ;
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
-		int nSameZ;		//Number of frames at the same Z
-		double collectorLensPosIni, collectorLensPosFinal, collectorLensStep;	//For debugging the collector lens
+		int nSameZ{1};											//Number of frames at the same Z
+		bool saveAllPMT{ false };								//Save all PMT16X channels in separate pages in a Tiff
+		double cLensPosIni, cLensPosFinal, cLensStep;			//For debugging the collector lens
 		switch (acqMode)
 		{
 		case RUNMODE::SINGLE:
-			nSameZ = 1;
+			//saveAllPMT = true;
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case RUNMODE::AVG:
@@ -199,28 +200,26 @@ namespace PMT16XRoutines
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case RUNMODE::SCANZ:
-			nSameZ = 1;
 			//Generate the control sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / stepSizeZ); iterDiffZ++)
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
 			break;
 		case RUNMODE::SCANZCENTERED:
-			nSameZ = 1;
 			//Generate the discrete scan sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / stepSizeZ); iterDiffZ++)
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
 			break;
 		case RUNMODE::SCANXY:
-			nSameZ = 1;
 			//Generate the discrete scan sequence for the stages
 			for (int iterPos = 0; iterPos < 50; iterPos++)
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX) + iterPos * steSizeX, stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ)});
 			break;
 		case RUNMODE::COLLECTLENS:
-			collectorLensPosIni = 0.0 * mm;
-			collectorLensPosFinal = 12.0 * mm;
-			collectorLensStep = 1.0 * mm;;
-			nSameZ = static_cast<int>( std::floor((collectorLensPosFinal - collectorLensPosIni)/ collectorLensStep) ) + 1;
+			saveAllPMT = true;
+			cLensPosIni = 0.0 * mm;
+			cLensPosFinal = 12.0 * mm;
+			cLensStep = 1.0 * mm;;
+			nSameZ = static_cast<int>( std::floor((cLensPosFinal - cLensPosIni)/ cLensStep) ) + 1;
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		default:
@@ -284,7 +283,11 @@ namespace PMT16XRoutines
 		{
 			stage.moveXYZ(stagePositionXYZ.at(iterLocation));
 			stage.waitForMotionToStopAll();
-			stage.printPositionXYZ();		//Print the stage position		
+			stage.printPositionXYZ();		//Print the stage position	
+			
+			//The first time the stages move may involve a big jump. Let the stages settle a little longer
+			if(iterLocation == 0)
+				Sleep(500);
 
 			//Acquire many frames at the same Z via discontinuous acquisition
 			for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
@@ -296,11 +299,11 @@ namespace PMT16XRoutines
 
 				//Used with to optimize the collector lens position
 				if (acqMode == RUNMODE::COLLECTLENS)
-					laser.moveCollectorLens(collectorLensPosIni + iterSameZ * collectorLensStep);
+					laser.moveCollectorLens(cLensPosIni + iterSameZ * cLensStep);
 
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
-				image.acquire();						//Execute the RT control sequence and acquire the image
+				image.acquire(saveAllPMT);				//Execute the RT control sequence and acquire the image
 				image.averageFrames();					//Average the frames acquired via continuous XY acquisition
 				//image.averageEvenOddFrames();
 				image.correctImage(RScanner.mFFOV);
@@ -337,7 +340,6 @@ namespace PMT16XRoutines
 				"_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
 				"_z=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_Step=" + toString(steSizeX / mm, 4) };
 			tiffStack.saveToFile(stackFilename, OVERRIDE::DIS);
-
 			pressESCforEarlyTermination();
 		}
 	}
@@ -761,8 +763,8 @@ namespace TestRoutines
 	{
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 2 };
+		const int heightPerFrame_pix{ 35 };
+		const int nFramesCont{ 1 };
 		const int wavelength_nm = 750;			//The rescanner calib depends on the laser wavelength
 
 		//CREATE A REALTIME CONTROL SEQUENCE

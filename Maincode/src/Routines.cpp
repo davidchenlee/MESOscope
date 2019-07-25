@@ -94,11 +94,11 @@ namespace PMT1XRoutines
 					stackPinc = acqStack.mStackPinc;
 
 					//Update the laser parameters if needed
-					laser.reconfigure(wavelength_nm);	//When switching pockels, the class destructor closes the uniblitz shutter
+					laser.reconfigure(wavelength_nm);		//When switching pockels, the class destructor closes the uniblitz shutter
 					laser.setPower(scanPi, static_cast<int>(scanDirZ) * stackPinc);
-					laser.openShutter();	//Re-open the Uniblitz shutter if closed
+					laser.openShutter();					//Re-open the Uniblitz shutter if closed
 
-					image.initialize(scanDirZ);
+					image.initializeAcq(scanDirZ);
 					std::cout << "Scanning the stack...\n";
 					stage.moveSingle(STAGEZ, scanZf);		//Move the stage to trigger the control sequence and data acquisition
 					image.downloadData();
@@ -108,7 +108,8 @@ namespace PMT1XRoutines
 						"_x=" + toString(stackCenterXY.at(STAGEX) / mm, 3) + "_y=" + toString(stackCenterXY.at(STAGEY) / mm, 3) +
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
 
-					image.postprocess(RScanner.mFFOV);
+					image.constructImage();
+					image.correctImage(RScanner.mFFOV);
 					image.saveTiffMultiPage(longName, OVERRIDE::DIS);
 					break;
 				case ACTION::CUT:
@@ -299,10 +300,11 @@ namespace PMT16XRoutines
 
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
-				image.acquire(RScanner.mFFOV);		//Execute the RT control sequence and acquire the image
-				image.averageFrames();				//Average the frames acquired via continuous XY acquisition
+				image.acquire();						//Execute the RT control sequence and acquire the image
+				image.averageFrames();					//Average the frames acquired via continuous XY acquisition
 				//image.averageEvenOddFrames();
-				tiffStack.pushSameZ(iterSameZ, image.pointerToTiff());
+				image.correctImage(RScanner.mFFOV);
+				tiffStack.pushSameZ(iterSameZ, image.data());
 
 				if (acqMode == RUNMODE::SINGLE)
 				{
@@ -455,13 +457,14 @@ namespace PMT16XRoutines
 
 					//EXECUTE THE RT CONTROL SEQUENCE
 					Image image{ RTcontrol };
-					image.acquire(RScanner.mFFOV);		//Execute the RT control sequence and acquire the image
-					image.averageFrames();				//Average the frames acquired via continuous XY acquisition
-					tiffStack.pushSameZ(0, image.pointerToTiff());
+					image.acquire();							//Execute the RT control sequence and acquire the image
+					image.averageFrames();						//Average the frames acquired via continuous XY acquisition
+					image.correctImage(RScanner.mFFOV);
+					tiffStack.pushSameZ(0, image.data());
 					tiffStack.pushDiffZ(iterDiffZ);
 					std::cout << "\n";
 
-					pressESCforEarlyTermination();		//Early termination if ESC is pressed
+					pressESCforEarlyTermination();				//Early termination if ESC is pressed
 				}
 
 				//Save the stackDiffZ to file
@@ -484,8 +487,8 @@ namespace PMT16XRoutines
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };							//Full FOV in the slow axis
-		const int nFramesCont{ 1 };															//Number of frames for continuous XY acquisition
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
+		const int nFramesCont{ 1 };									//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH07 };
@@ -506,12 +509,13 @@ namespace PMT16XRoutines
 
 		while (true)
 		{
-			laser.setPower(fluorLabel.mScanPi);				//Set the laser power
+			laser.setPower(fluorLabel.mScanPi);					//Set the laser power
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
-			image.acquire(RScanner.mFFOV);						//Execute the RT control sequence and acquire the image
+			image.acquire();									//Execute the RT control sequence and acquire the image
 			image.averageFrames();								//Average the frames acquired via continuous XY acquisition
+			image.correctImage(RScanner.mFFOV);
 			image.saveTiffSinglePage("Untitled", OVERRIDE::EN);	//Save individual files
 			Sleep(700);
 
@@ -581,24 +585,26 @@ namespace PMT16XRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.initialize(scanDirZ);
+		image.initializeAcq(scanDirZ);
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(STAGEZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
 		image.downloadData();
-
-		//Declare and start a stopwatch
-		double duration;
-		auto t_start{ std::chrono::high_resolution_clock::now() };
-		image.postprocess(RScanner.mFFOV);
-		//Stop the stopwatch
-		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-		std::cout << "Elapsed time: " << duration << " ms" << "\n";
-
+		image.constructImage();
+		image.correctImage(RScanner.mFFOV);
 
 		const std::string filename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) +
 			"mWpum_x=" + toString(initialStageXYZ.at(STAGEX) / mm, 3) + "_y=" + toString(initialStageXYZ.at(STAGEY) / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
+
+		/*
+		//Declare and start a stopwatch
+		double duration;
+		auto t_start{ std::chrono::high_resolution_clock::now() };
+		//Stop the stopwatch
+		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+		std::cout << "Elapsed time: " << duration << " ms" << "\n";
+		*/
 	}
 
 }//namespace
@@ -649,7 +655,7 @@ namespace TestRoutines
 	{
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 100, 100, FIFOOUT::EN, PMT16XCHAN::CH07 }; 	//Create a realtime control sequence
 		Image image{ RTcontrol };
-		image.acquire(0);						//Execute the realtime control sequence and acquire the image
+		image.acquire();						//Execute the realtime control sequence and acquire the image
 		image.saveTiffSinglePage("output", OVERRIDE::EN);
 	}
 
@@ -733,7 +739,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire(RScanner.mFFOV);		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 		image.averageEvenOddFrames();
 		image.saveTiffMultiPage("Untitled", OVERRIDE::DIS);
 	}
@@ -769,7 +775,7 @@ namespace TestRoutines
 
 		//Execute the realtime control sequence and acquire the image
 		Image image{ RTcontrol };
-		image.acquire(0);		//Execute the RT control sequence
+		image.acquire();		//Execute the RT control sequence
 	}
 
 	void stagePosition()
@@ -870,7 +876,7 @@ namespace TestRoutines
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		Image image{ RTcontrol };
-		image.acquire(0);
+		image.acquire();
 	}
 
 	void pockelsRamp(const FPGAns::FPGA &fpga)
@@ -896,7 +902,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire(0);		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 	}
 
 	void lasers(const FPGAns::FPGA &fpga)
@@ -1206,7 +1212,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire(0);			//Execute the RT control sequence and acquire the image
+		image.acquire();			//Execute the RT control sequence and acquire the image
 		image.saveTiffMultiPage("SingleChannel", OVERRIDE::EN);
 	}
 
@@ -1255,7 +1261,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire(0);			//Execute the RT control sequence and acquire the image
+		image.acquire();			//Execute the RT control sequence and acquire the image
 	}
 
 
@@ -1334,7 +1340,7 @@ namespace TestRoutines
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		pockels.setShutter(true);
 		Image image{ RTcontrol };
-		image.acquire(0);
+		image.acquire();
 
 		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the RT sequence
 		pressAnyKeyToCont();

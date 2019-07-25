@@ -259,7 +259,7 @@ TiffU8::~TiffU8()
 }
 
 //Access the Tiff data in the TiffU8 object
-U8* const TiffU8::pointerToTiff() const
+U8* const TiffU8::data() const
 {
 	return mArray;
 }
@@ -860,9 +860,9 @@ void TiffStack::pushDiffZ(const int indexDiffZ)
 	//I want to average all the stacks in mSameZ and then move to the next plane and repeat
 	//However, averageFrames() collapses mSameZ to a single image containing the average
 	//Solution: make a temporary copy of mSameZ and calculate the average over it
-	TiffU8 auxTiff{ mSameZ.pointerToTiff(), mSameZ.widthPerFrame(), mSameZ.heightPerFrame(), mSameZ.nFrames() }; //Make a copy of mSameZ
+	TiffU8 auxTiff{ mSameZ.data(), mSameZ.widthPerFrame(), mSameZ.heightPerFrame(), mSameZ.nFrames() }; //Make a copy of mSameZ
 	auxTiff.averageFrames();	//Average the images with the same Z
-	mDiffZ.pushImage(indexDiffZ, auxTiff.pointerToTiff());
+	mDiffZ.pushImage(indexDiffZ, auxTiff.data());
 }
 
 void TiffStack::saveToFile(const std::string filename, OVERRIDE override) const

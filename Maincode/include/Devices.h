@@ -13,9 +13,9 @@
 class Image
 {
 	FPGAns::RTcontrol &mRTcontrol;			//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
-	U32* mMultiplexedArrayA;				//Array to read FIFOOUTpc A
-	U32* mMultiplexedArrayB;				//Array to read FIFOOUTpc B
-	TiffU8 mTiff;							//Tiff that store the content of mMultiplexedArrayA and mMultiplexedArrayB
+	U32* mMultiplexedArrayA;				//Buffer array to read FIFOOUTpc A
+	U32* mMultiplexedArrayB;				//Buffer array to read FIFOOUTpc B
+	TiffU8 mTiff;							//Tiff that stores the content of mMultiplexedArrayA and mMultiplexedArrayB
 	ZSCAN mScanDir;
 
 	void FIFOOUTpcGarbageCollector_() const;
@@ -36,15 +36,17 @@ public:
 	Image(Image&&) = delete;					//Disable move constructor
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
-	void acquire(const double FFOVfast);
-	void initialize(const ZSCAN scanDir = ZSCAN::TOPDOWN);
+	U8* const data() const;
+	void acquire();
+	void initializeAcq(const ZSCAN scanDir = ZSCAN::TOPDOWN);
 	void downloadData();
-	void postprocess(const double FFOVfast);
+	void constructImage();
+	void correctImage(const double FFOVfast);
 	void averageFrames();
 	void averageEvenOddFrames();
 	void saveTiffSinglePage(std::string filename, const OVERRIDE override) const;
 	void saveTiffMultiPage(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
-	U8* const pointerToTiff() const;
+
 };
 
 class ImageException : public std::runtime_error

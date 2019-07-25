@@ -152,7 +152,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	}
 }
 
-//The RS scans bi-directionally. The pixel order has to be reversed for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample
+//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample
 void Image::correctInterleaved_()
 {
 	//std::reverse(mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
@@ -186,7 +186,7 @@ void Image::demuxSingleChannel_()
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
 			const int upscaled{ mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayA[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.pointerToTiff())[pixIndex] = clipU8top(upscaled);															//Clip if overflow
+			(mTiff.data())[pixIndex] = clipU8top(upscaled);																		//Clip if overflow
 		}
 	}
 	//Demultiplex mMultiplexedArrayB (CH08-CH15). Each U32 element in mMultiplexedArrayB has the multiplexed structure | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
@@ -195,7 +195,7 @@ void Image::demuxSingleChannel_()
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
 			const int upscaled{ mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayB[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.pointerToTiff())[pixIndex] = clipU8top(upscaled);															//Clip if overflow
+			(mTiff.data())[pixIndex] = clipU8top(upscaled);																		//Clip if overflow
 		}
 	}
 	else
@@ -237,27 +237,27 @@ void Image::demuxAllChannels_()
 		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
 		{
 			//Buffer A (CH00-CH07)
-			const int upscaledA{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };						//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountA.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledA);		//Clip if overflow
-			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;													//Shift 4 places to the right for the next iteration
+			const int upscaledA{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };				//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			(CountA.data())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledA);		//Clip if overflow
+			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;											//Shift 4 places to the right for the next iteration
 
 			//Buffer B (CH08-CH15)
-			const int upscaledB{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };						//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountB.pointerToTiff())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledB);		//Clip if overflow
-			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;													//Shift 4 places to the right for the next iteration
+			const int upscaledB{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };				//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			(CountB.data())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledB);		//Clip if overflow
+			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;											//Shift 4 places to the right for the next iteration
 		}
 
 	//Merge all the PMT16X channels into a single image. The strip ordering depends on the scanning direction of the galvos (forward or backwards)
 	if (multibeam)
-		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.pointerToTiff(), CountB.pointerToTiff()); //mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
+		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());				//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
 
 	//For debugging
 	if (saveAllPMTchan)
 	{
 		//Save each PMT16X channel in a separate pages of a Tiff
 		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , nChanPMT * mRTcontrol.mNframes };
-		stack.pushImage(static_cast<int>(PMT16XCHAN::CH00), static_cast<int>(PMT16XCHAN::CH07), CountA.pointerToTiff());
-		stack.pushImage(static_cast<int>(PMT16XCHAN::CH08), static_cast<int>(PMT16XCHAN::CH15), CountB.pointerToTiff());
+		stack.pushImage(static_cast<int>(PMT16XCHAN::CH00), static_cast<int>(PMT16XCHAN::CH07), CountA.data());
+		stack.pushImage(static_cast<int>(PMT16XCHAN::CH08), static_cast<int>(PMT16XCHAN::CH15), CountB.data());
 		stack.saveToFile("AllChannels", MULTIPAGE::EN, OVERRIDE::DIS);
 	}
 }
@@ -286,16 +286,22 @@ void Image::stopFIFOOUTpc_() const
 	//std::cout << "stopFIFO called\n";
 }
 
-//Scan a z-stack with individual acquisition triggers plane-by-plane
-void Image::acquire(const double FFOVfast)
+//Access the Tiff data in the Image object
+U8* const Image::data() const
 {
-	initialize();
-	mRTcontrol.triggerRT();		//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
-	downloadData();
-	postprocess(FFOVfast);
+	return mTiff.data();
 }
 
-void Image::initialize(const ZSCAN stackScanDir)
+//Scan a z-stack with individual acquisition triggers plane-by-plane
+void Image::acquire()
+{
+	initializeAcq();
+	mRTcontrol.triggerRT();		//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
+	downloadData();
+	constructImage();
+}
+
+void Image::initializeAcq(const ZSCAN stackScanDir)
 {
 	//Enable pushing data to FIFOOUTfpga. Disable for debugging
 	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
@@ -356,11 +362,15 @@ void Image::downloadData()
 	}
 }
 
-void Image::postprocess(const double FFOVfast)
+void Image::constructImage()
 {
-	correctInterleaved_();
-	demultiplex_();								//Move the chuncks of data to the buffer array
-	mTiff.mirrorOddFrames();					//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
+	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
+	demultiplex_();				//Move the chuncks of data to the buffer array
+	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning from frame to frame. Divide the image vertically in nFrames and mirror the odd frames vertically
+}
+
+void Image::correctImage(const double FFOVfast)
+{
 	//mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 	//mTiff.suppressCrosstalk(0.2);
 	//mTiff.flattenField(1.5);
@@ -388,12 +398,6 @@ void Image::saveTiffSinglePage(std::string filename, const OVERRIDE override) co
 void Image::saveTiffMultiPage(std::string filename, const OVERRIDE override) const
 {
 	mTiff.saveToFile(filename, MULTIPAGE::EN, override, mScanDir);
-}
-
-//Access the Tiff data in the Image object
-U8* const Image::pointerToTiff() const
-{
-	return mTiff.pointerToTiff();
 }
 #pragma endregion "Image"
 

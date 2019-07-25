@@ -137,11 +137,11 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in z frame by frame from the z position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in z frame by frame centered at the z position
-		const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in x frame by frame
+		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in x frame by frame
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens. Set saveAllPMT = 1
 		
 		//ACQUISITION SETTINGS
@@ -155,7 +155,7 @@ namespace PMT16XRoutines
 		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 1 };
+		const int nFramesCont{ 10 };
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -304,7 +304,7 @@ namespace PMT16XRoutines
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
 				image.acquire(saveAllPMT);				//Execute the RT control sequence and acquire the image
-				image.averageFrames();					//Average the frames acquired via continuous XY acquisition
+				//image.averageFrames();					//Average the frames acquired via continuous XY acquisition
 				//image.averageEvenOddFrames();
 				image.correctImage(RScanner.mFFOV);
 				tiffStack.pushSameZ(iterSameZ, image.data());
@@ -765,7 +765,7 @@ namespace TestRoutines
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
 		const int nFramesCont{ 1 };
-		const int wavelength_nm = 750;			//The rescanner calib depends on the laser wavelength
+		const int wavelength_nm{ 920 };			//The rescanner calib depends on the laser wavelength
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS, PMT16XCHAN::CH07 };

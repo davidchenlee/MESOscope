@@ -1511,13 +1511,13 @@ void VirtualLaser::CollectorLens::set(const int wavelength_nm)
 	switch (wavelength_nm)
 	{
 	case 750:
-		mStepper.move(9.0 * mm);
+		mStepper.move(8.0 * mm);
 		break;
 	case 920:
-		mStepper.move(5.0 * mm);
+		mStepper.move(4.5 * mm);
 		break;
 	case 1040:
-		mStepper.move(1.0 * mm);
+		mStepper.move(0.5 * mm);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector lens position has not been calibrated for the wavelength " + std::to_string(wavelength_nm));

@@ -1,10 +1,10 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (53.050 - 0.240) * mm, 17.300 * mm, 18.109 * mm };
+double3 stackCenterXYZ{ (53.050 - 0.110) * mm, 17.300 * mm, 18.115 * mm };
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 
-Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 50. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 20. * mW, 0. * mWpum }}} };
+Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 20. * mW, 0. * mWpum }}} };
 Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
 Sample fluorSlide{ "Beads4um", "SiliconeOil", "1.51", {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
 Sample liver{ "Beads1um", "SiliconeMineralOil5050", "1.49", {{{"TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }}} };
@@ -136,19 +136,19 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in z frame by frame from the z position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in z frame by frame centered at the z position
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in x frame by frame
-		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };		//For optimizing the collector lens
+		const RUNMODE acqMode{ RUNMODE::COLLECTLENS };		//For optimizing the collector lens. Set saveAllPMTchan = 1
 		
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 
 		//This is because the beads at 750 nm are chromatically shifted
-		if (fluorLabel.mWavelength_nm == 920 || fluorLabel.mWavelength_nm == 1040)
-			stackCenterXYZ.at(STAGEZ) += 6 * um;
+		if (fluorLabel.mWavelength_nm == 750)
+			stackCenterXYZ.at(STAGEZ) -= 6 * um;
 
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
@@ -165,7 +165,7 @@ namespace PMT16XRoutines
 		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
 		FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
 		PMT16Xchan = PMT16XCHAN::CENTERED;
-		selectPower = 800. * mW;
+		selectPower = 500. * mW;
 		selectPowerInc = 0;
 #else
 		//Singlebeam
@@ -217,7 +217,7 @@ namespace PMT16XRoutines
 			break;
 		case RUNMODE::COLLECTLENS:
 			collectorLensPosIni = 0.0 * mm;
-			collectorLensPosFinal = 13. * mm;
+			collectorLensPosFinal = 12.0 * mm;
 			collectorLensStep = 1.0 * mm;;
 			nSameZ = static_cast<int>( std::floor((collectorLensPosFinal - collectorLensPosIni)/ collectorLensStep) ) + 1;
 			stagePositionXYZ.push_back(stackCenterXYZ);
@@ -953,7 +953,7 @@ namespace TestRoutines
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
 		image.correctRSdistortionGPU(150. * um);
-		image.suppressCrosstalk(0.2);
+		image.suppressCrosstalk(0.1);
 		image.flattenField(2.0);
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
 		//pressAnyKeyToCont();
@@ -1018,6 +1018,14 @@ namespace TestRoutines
 
 		first.join();//pauses until first finishes
 		second.join();//pauses until second finishes
+	}
+
+	void clipU8()
+	{
+		int input{ 260 };
+		U8 output{ clipU8top(input) };
+		std::cout << (int)output << "\n";
+		pressAnyKeyToCont();
 	}
 
 	void sequencerConcurrentTest()
@@ -1370,13 +1378,5 @@ namespace TestRoutines
 			nx = nTile % nStacksXY.at(STAGEX);
 	
 		return {nx,ny};
-	}
-
-	void clipU8()
-	{
-		int input{ 260 };
-		U8 output{ clipU8top(input) };
-		std::cout << (int)output << "\n";
-		pressAnyKeyToCont();
 	}
 }//namespace

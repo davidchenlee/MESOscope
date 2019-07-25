@@ -591,7 +591,8 @@ inline U8 interpolateU8(float lam, const U8  &val1, const U8 &val2)
 //OpenCL code based on http://simpleopencl.blogspot.com/2013/06/tutorial-simple-start-with-opencl-and-c.html
 void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 {
-//It is assumed that the laser scans the sample following x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
+	if (FFOVfast <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be greater than 0");
 
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
 	const int heightAllFrames{ mHeightPerFrame * mNframes };
@@ -600,7 +601,7 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	const double t1{ 0.5 * (lineclockHalfPeriod - mWidthPerFrame * pixelDwellTime) };
 	const double t2{ lineclockHalfPeriod - t1 };
 
-	//The full amplitude of the RS (from turning point to turning point) in um
+	//The full amplitude of the RS (from turning point to turning point) in um. It is assumed that the laser scans the sample following x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
 	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / lineclockHalfPeriod) - std::cos(PI * t2 / lineclockHalfPeriod)) };
 
 	//Start and stop positions of the RS that define FFOVfast
@@ -725,6 +726,9 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 //Correction code based on Martin's algorithm, https://github.com/mpicbg-csbd/scancorrect, mweigert@mpi-cbg.de
 void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 {
+	if (FFOVfast <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be greater than 0");
+
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
 	U8* correctedArray{ new U8[nPixAllFrames] };
 

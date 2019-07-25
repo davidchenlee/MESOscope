@@ -48,6 +48,7 @@ namespace TestRoutines
 	void tiffU8();
 	void ethernetSpeed();
 	void multithread();
+	void clipU8();
 
 	//Sequencer
 	void sequencerConcurrentTest();
@@ -65,5 +66,5 @@ namespace TestRoutines
 	void photobleach(const FPGAns::FPGA &fpga);
 	void generateLocationsForBigStitcher();
 	int2 nTileToArrayIndices(const int nTile);
-	void clipU8();
+
 }

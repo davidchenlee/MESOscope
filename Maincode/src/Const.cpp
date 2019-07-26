@@ -29,7 +29,7 @@ namespace Constants
 	//PIXELCLOCK
 	extern const double pixelDwellTime{ 0.1625 * us };		//= 13 * 12.5 ns = 162.5 ns
 	extern const double lineclockHalfPeriod{ 63.05 * us };	//Half-period of the resonant scanner. I measure 25.220 ms over 400 half oscillations. Therefore, the average half-period is 25200us/400 = 63.05 us
-															//The forward and backward travel times differ slightly and the difference depends on the scanning amplitude
+															//The forward and backward times differ slightly and the difference depends on the scanning amplitude
 															//For example, forward = 63.14 us, backwards = 62.99 us, diff = 150 ns (i.e., ~ 1 pixel)
 															//The measured RS period (126.1 us) seems to be independent of the scanning amplitude
 	//FPGA
@@ -55,11 +55,11 @@ namespace Constants
 
 	//GALVOS
 	//To fine tune the delay using beads
-	//1. First maximize the ramp duration of both galvos by tuning 'mRampDurationFineTuning'.
-	//If the ramp is too long, the overshooting of each individual frame will accumulate over all the frames. As a result, the bead position will drift as a z-stack is scrolled over
-	//2. Adjust 'galvosCommonDelay' until the bead position coincide for the forth and back scans
-	extern const double galvosCommonDelay{ 5 * us };		//Delay both galvos together. The scanner is triggered by the frameclock. If too long, the overshoot of the scanner will accumulate over >100 frames
-	extern const double rescanGalvoDelay{ 30 * us };		//Delay the rescan galvo wrt the preframeclock. If too long, the overshoot of the rescanner will accumulate over >100 frames
+	//1. First maximize the ramp duration by minimizing 'mRampDurationFineTuning'.
+	//(If the ramp oveflows in a frame, the overshooting will accumulate over all the frames and as a result, the bead position in each frame will drift)
+	//2. Adjust 'scanGalvoDelay' until the bead position coincide for the forth and back scans
+	extern const double scanGalvoDelay{ 137 * us };		//
+	extern const double rescanGalvoDelay{ 0. * us };	//
 
 	//STAGES
 	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if the z stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence

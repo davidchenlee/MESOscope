@@ -86,7 +86,9 @@ public:
 
 class Galvo
 {
-	const double mRampDurationFineTuning{ -250. * us };
+	//The galvo ramp duration is calculated as lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix. However, lineclockHalfPeriod seems to depend on the RS amplitude
+	//If the ramp oveflows in a frame, the overshooting will accumulate over all the frames and as a result, the bead position in each frame will drift
+	const double mRampDurationFineTuning{ -20. * us };
 
 	//To aim a single beam at a specific channel of the PMT16X
 	const double mInterBeamletDistance{ 17.5 * um };			//Set by the beamsplitter specs

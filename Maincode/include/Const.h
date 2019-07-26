@@ -81,7 +81,7 @@ namespace Constants
 
 	extern const double pockelsFirstFrameDelay;
 	extern const double pockelsSecondaryDelay;
-	extern const double galvosCommonDelay;
+	extern const double scanGalvoDelay;
 	extern const double rescanGalvoDelay;
 
 	extern const double	ZstageTrigDelayTopdown;

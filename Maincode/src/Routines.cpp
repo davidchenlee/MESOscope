@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (53.050 - 0.137 + 0.016 ) * mm, 17.300 * mm, 18.115 * mm };
+double3 stackCenterXYZ{ (53.050 - 0.137 + 0.016 ) * mm, 17.300 * mm, 18.114 * mm };
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 20. * mW, 0. * mWpum }}} };
@@ -155,7 +155,7 @@ namespace PMT16XRoutines
 		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 10 };
+		const int nFramesCont{ 1 };
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -304,7 +304,7 @@ namespace PMT16XRoutines
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
 				image.acquire(saveAllPMT);				//Execute the RT control sequence and acquire the image
-				//image.averageFrames();					//Average the frames acquired via continuous XY acquisition
+				image.averageFrames();					//Average the frames acquired via continuous XY acquisition
 				//image.averageEvenOddFrames();
 				image.correctImage(RScanner.mFFOV);
 				tiffStack.pushSameZ(iterSameZ, image.data());
@@ -541,6 +541,10 @@ namespace PMT16XRoutines
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
 		//Override the stage position
+				//This is because the beads at 750 nm are chromatically shifted
+		if (fluorLabel.mWavelength_nm == 750)
+			stackCenterXYZ.at(STAGEZ) -= 6 * um;
+
 		stackCenterXYZ.at(STAGEZ) -= nFramesCont * stepSizeZ /2;
 
 		double stageZi, stageZf, laserPi, laserPf;
@@ -764,7 +768,7 @@ namespace TestRoutines
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
-		const int nFramesCont{ 1 };
+		const int nFramesCont{ 100 };
 		const int wavelength_nm{ 920 };			//The rescanner calib depends on the laser wavelength
 
 		//CREATE A REALTIME CONTROL SEQUENCE

@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (53.050 - 0.137 + 0.016 ) * mm, 17.300 * mm, 18.114 * mm };
+double3 stackCenterXYZ{ (53.050 - 0.137 + 0.016 ) * mm, 17.300 * mm, 18.112 * mm };
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 20. * mW, 0. * mWpum }}} };
@@ -10,6 +10,7 @@ Sample fluorSlide{ "Beads4um", "SiliconeOil", "1.51", {{{ "DAPI", 750, 10. * mW,
 Sample liver{ "Beads1um", "SiliconeMineralOil5050", "1.49", {{{"TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }}} };
 Sample currentSample{ beads4um };
 
+/*
 namespace PMT1XRoutines
 {
 	//Full sequence to image and cut an entire sample automatically
@@ -129,6 +130,7 @@ namespace PMT1XRoutines
 		}//if
 	}
 }//namespace
+*/
 
 namespace PMT16XRoutines
 {
@@ -152,9 +154,9 @@ namespace PMT16XRoutines
 			stackCenterXYZ.at(STAGEZ) -= 6 * um;
 
 		const double pixelSizeXY{ 0.5 * um };
-		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 		const int nFramesCont{ 10 };
 
 		int heightPerBeamletPerFrame_pix;
@@ -535,43 +537,64 @@ namespace PMT16XRoutines
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 100 };				//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int nFramesCont{ 100 };								//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
 		const double stepSizeZ{ 0.5 * um };
-		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };		//Scan direction in z
+		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };						//Scan direction in z
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
-		//Override the stage position
-				//This is because the beads at 750 nm are chromatically shifted
+		//Override the stage position because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
 			stackCenterXYZ.at(STAGEZ) -= 6 * um;
 
 		stackCenterXYZ.at(STAGEZ) -= nFramesCont * stepSizeZ /2;
 
+		int heightPerBeamletPerFrame_pix;
+		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
+		PMT16XCHAN PMT16Xchan;
+
+#if multibeam
+		//Multibeam
+		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
+		FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
+		PMT16Xchan = PMT16XCHAN::CENTERED;
+		selectPower = 600. * mW;
+		selectPowerInc = 0;
+#else
+		//Singlebeam
+		//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan through the PMT16X channels
+		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
+		FFOVslowPerBeamlet = FFOVslow;
+		PMT16Xchan = PMT16XCHAN::CH07;
+		selectPower = fluorLabel.mScanPi;
+		selectPowerInc = fluorLabel.mStackPinc;
+
+#endif
 		double stageZi, stageZf, laserPi, laserPf;
 		switch (scanDirZ)
 		{
 		case ZSCAN::TOPDOWN:
 			stageZi = stackCenterXYZ.at(STAGEZ);
 			stageZf = stackCenterXYZ.at(STAGEZ) + stackDepth + 20 * stepSizeZ; //Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
-			laserPi = fluorLabel.mScanPi;
-			laserPf = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
+			laserPi = selectPower;
+			laserPf = fluorLabel.mScanPi + stackDepth * selectPowerInc;
 			break;
 		case ZSCAN::BOTTOMUP:
 			stageZi = stackCenterXYZ.at(STAGEZ) + stackDepth;
 			stageZf = stackCenterXYZ.at(STAGEZ) - 20 * stepSizeZ;				//Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
-			laserPi = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
-			laserPf = fluorLabel.mScanPi;
+			laserPi = fluorLabel.mScanPi + stackDepth * selectPowerInc;
+			laserPf = selectPower;
 			break;
 		}
 
 		//STAGES
-		const double3 initialStageXYZ{ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stageZi};		//Initial position of the stages. The sign of stackDepth determines the scanning direction					
-		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (lineclockHalfPeriod * heightPerFrame_pix) };			//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerFrame_pix
+		const double3 initialStageXYZ{ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stageZi};			//Initial position of the stages. The sign of stackDepth determines the scanning direction					
+		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };	//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 		stage.moveXYZ(initialStageXYZ);
 		stage.waitForMotionToStopAll();
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH07 };	//Notice the ZSTAGE flag
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };	//Notice the ZSTAGE flag
 
 		//LASER
 		const VirtualLaser laser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, LASER::VISION };
@@ -582,9 +605,8 @@ namespace PMT16XRoutines
 		RScanner.isRunning();		//Make sure that the RS is running
 
 		//GALVO RT linear scan
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, fluorLabel.mWavelength_nm };
+		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, fluorLabel.mWavelength_nm };
 
 		//OPEN THE SHUTTER
 		laser.openShutter();	//The destructor will close the shutter automatically

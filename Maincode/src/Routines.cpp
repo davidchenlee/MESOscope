@@ -155,7 +155,7 @@ namespace PMT16XRoutines
 		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 1 };
+		const int nFramesCont{ 10 };
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -192,7 +192,7 @@ namespace PMT16XRoutines
 		switch (acqMode)
 		{
 		case RUNMODE::SINGLE:
-			saveAllPMT = true;
+			//saveAllPMT = true;
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case RUNMODE::AVG:
@@ -305,7 +305,7 @@ namespace PMT16XRoutines
 				Image image{ RTcontrol };
 				image.acquire(saveAllPMT);				//Execute the RT control sequence and acquire the image
 				//image.averageFrames();					//Average the frames acquired via continuous XY acquisition
-				//image.averageEvenOddFrames();
+				image.averageEvenOddFrames();
 				image.correctImage(RScanner.mFFOV);
 				tiffStack.pushSameZ(iterSameZ, image.data());
 
@@ -767,9 +767,9 @@ namespace TestRoutines
 	{
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 100 };
-		const int wavelength_nm{ 920 };			//The rescanner calib depends on the laser wavelength
+		const int heightPerFrame_pix{ 35 };
+		const int nFramesCont{ 10 };
+		const int wavelength_nm{ 750 };			//The rescanner calib depends on the laser wavelength
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS, PMT16XCHAN::CH07 };

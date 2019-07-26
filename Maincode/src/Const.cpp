@@ -46,20 +46,15 @@ namespace Constants
 	extern const double linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
 															//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered
 	extern const int FIFOtimeout_tick{ 100 };				//Timeout of the all the FIFOS on the FPGA
-	extern const int FIFOINmax{ 32773 };					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the implementation on the FPGA!
-
+	extern const int FIFOINmax{ 32773 };					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the LV implementation on the FPGA!
 
 	//POCKELS
-	extern const double pockelsFirstFrameDelay{ 112. * us };//Delay of the Pockels wrt the preframeclock. The pockels is turned on early to avoid the laser overshoot
+	extern const double pockelsFirstFrameDelay{ 112. * us };//Delay of the Pockels wrt the preframeclock. The pockels is turned on early to avoid transient overshooting
 	extern const double pockelsSecondaryDelay{ 0 };			//Delay of the Pockels wrt the preframeclock in the subsequent frames 
 
 	//GALVOS
-	//To fine tune the delay using beads
-	//1. First maximize the ramp duration by minimizing 'mRampDurationFineTuning'.
-	//(If the ramp oveflows in a frame, the overshooting will accumulate over all the frames and as a result, the bead position in each frame will drift)
-	//2. Adjust 'scanGalvoDelay' until the bead position coincide for the forth and back scans
-	extern const double scanGalvoDelay{ 137 * us };		//
-	extern const double rescanGalvoDelay{ 0. * us };	//
+	extern const double scanGalvoDelay{ 150 * us };			//Adjust 'scanGalvoDelay' until the bead position in a fordward scan coincides with that of a backward scan
+	extern const double rescanGalvoDelay{ 0. * us };		//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
 
 	//STAGES
 	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if the z stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence

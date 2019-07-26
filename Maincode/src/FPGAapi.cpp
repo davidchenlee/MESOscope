@@ -199,15 +199,13 @@ namespace FPGAns
 		//TRIGGERS AND DELAYS
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));																				//Pc trigger signal
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));																	//Z-stage as tigger
-		checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_SyncDOtoAO_tick, static_cast<U16>(syncDOtoAO_tick)));												//DO and AO relative sync
+		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_SyncDOtoAO_tick, static_cast<U32>(syncDOtoAO_tick)));												//DO and AO relative sync
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PockelsFirstFrameDelay_tick, static_cast<U32>(pockelsFirstFrameDelay / us * tickPerUs)));			//Pockels delay wrt the preframeclock (first frame only)
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PockelsFrameDelay_tick, static_cast<U32>(pockelsSecondaryDelay / us * tickPerUs)));					//Pockels delay wrt the preframeclock
 		checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																		//Trigger the FPGA outputs (non-RT trigger)
 		checkStatus(__FUNCTION__, NiFpga_WriteI16(getHandle(), NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));															//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PreframeclockScanGalvo_tick, static_cast<U32>(scanGalvoDelay / us * tickPerUs)));					//Scan galvo delay wrt the preframeclock
 		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PreframeclockRescanGalvo_tick, static_cast<U32>(rescanGalvoDelay / us * tickPerUs)));				//Rescan galvo delay wrt the preframeclock
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_ScanGalvoDelay_tick, static_cast<U32>(0 / us * tickPerUs)));
-		checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_RescanGalvoDelay_tick, static_cast<U32>(0 / us * tickPerUs)));
 
 		if (linegateTimeout <= 2 * lineclockHalfPeriod)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");

@@ -3,7 +3,7 @@
 #include <vector>
 #include <array>
 
-#define multibeam 1			//Multibeam or singlebeam
+#define multibeam 0			//Multibeam or singlebeam
 #define pockelsAutoOff 1	//For debugging purposes. In LV, let 'framegate' gate the output of the pockels cell
 
 namespace Constants
@@ -84,7 +84,6 @@ namespace Constants
 	extern const double galvosCommonDelay;
 	extern const double rescanGalvoDelay;
 
-	extern const double stagePulseStretcher;
 	extern const double	ZstageTrigDelayTopdown;
 	extern const double	ZstageTrigDelayBottomup;
 

@@ -339,6 +339,7 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 
 	}
 
+	//Set the delay for tje z-stage triggering the acq sequence
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlU32_ZstageTrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
 
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA

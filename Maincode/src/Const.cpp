@@ -62,7 +62,6 @@ namespace Constants
 	extern const double rescanGalvoDelay{ 30 * us };		//Delay the rescan galvo wrt the preframeclock. If too long, the overshoot of the rescanner will accumulate over >100 frames
 
 	//STAGES
-	extern const double stagePulseStretcher{ 5 * ms };		//Stretch the pulsewidth from the stages (the stage controller has a 20kHz clock = 50 us) to trigger the aqc sequence. Currently not in use
 	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if the z stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
 
 	//Delay the z-stage triggering the acq sequence

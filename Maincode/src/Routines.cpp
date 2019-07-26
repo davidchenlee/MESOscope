@@ -145,7 +145,7 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens. Set saveAllPMT = 1
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("GFP") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
@@ -155,7 +155,7 @@ namespace PMT16XRoutines
 		const double FFOVslow{ 280. * um };			//Full FOV in the slow axis
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 1 };
+		const int nFramesCont{ 100 };
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -304,7 +304,7 @@ namespace PMT16XRoutines
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
 				image.acquire(saveAllPMT);				//Execute the RT control sequence and acquire the image
-				image.averageFrames();					//Average the frames acquired via continuous XY acquisition
+				//image.averageFrames();					//Average the frames acquired via continuous XY acquisition
 				//image.averageEvenOddFrames();
 				image.correctImage(RScanner.mFFOV);
 				tiffStack.pushSameZ(iterSameZ, image.data());
@@ -659,10 +659,10 @@ namespace TestRoutines
 
 	void pixelclock(const FPGAns::FPGA &fpga)
 	{
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 100, 100, FIFOOUT::EN, PMT16XCHAN::CH07 }; 	//Create a realtime control sequence
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 2, 300, 560, FIFOOUT::DIS, PMT16XCHAN::CH07 }; 	//Create a realtime control sequence
 		Image image{ RTcontrol };
-		image.acquire();						//Execute the realtime control sequence and acquire the image
-		image.saveTiffSinglePage("output", OVERRIDE::EN);
+		image.acquire();	//Execute the realtime control sequence and acquire the image
+		//image.saveTiffSinglePage("output", OVERRIDE::EN);
 	}
 
 	//Generate a long digital pulse and check the frameDuration with the oscilloscope
@@ -767,9 +767,9 @@ namespace TestRoutines
 	{
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 35 };
-		const int nFramesCont{ 100 };
-		const int wavelength_nm{ 920 };			//The rescanner calib depends on the laser wavelength
+		const int heightPerFrame_pix{ 560 };
+		const int nFramesCont{ 10 };
+		const int wavelength_nm{ 750 };			//The rescanner calib depends on the laser wavelength
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS, PMT16XCHAN::CH07 };

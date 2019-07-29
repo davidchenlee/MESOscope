@@ -537,15 +537,15 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		{
 		case 750:
 			mVoltagePerDistance = 0.30 * scanCalib;		//By increasing this variable, the top beads in a Tiff appear before the bottom ones.
-			mVoltageOffset = 0.04 * V;					//A positive offset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
+			mVoltageOffset = (0.04 - 0.13) * V;					//A positive offset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
 			break;
 		case 920:
 			mVoltagePerDistance = 0.32 * scanCalib;
-			mVoltageOffset = 0.07 * V;
+			mVoltageOffset = (0.07 - 0.13) * V;
 			break;
 		case 1040:
 			mVoltagePerDistance = 0.32 * scanCalib;
-			mVoltageOffset = 0.09 * V;
+			mVoltageOffset = (0.09 - 0.16) * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -1516,7 +1516,7 @@ void VirtualLaser::CollectorLens::set(const int wavelength_nm)
 	switch (wavelength_nm)
 	{
 	case 750:
-		mStepper.move(8.0 * mm);
+		mStepper.move(8.5 * mm);
 		break;
 	case 920:
 		mStepper.move(4.5 * mm);

@@ -73,11 +73,11 @@ public:
 
 class TiffStack
 {
-	TiffU8 mSameZ;		//For imaging the same z plane many times and then compute the average image
-	TiffU8 mDiffZ;		//For imaging different z planes
+	TiffU8 mArraySameZ;		//For imaging the same z plane many times and then compute the average image
+	TiffU8 mArrayDiffZ;		//For imaging different z planes
 public:
 	TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
-	void pushSameZ(const int indexSameZ, U8* const pointerToTiff);
+	void pushSameZ(const int indexSameZ, const U8* data);
 	void pushDiffZ(const int indexDiffZ);
 	void saveToFile(const std::string filename, OVERRIDE override) const;
 };

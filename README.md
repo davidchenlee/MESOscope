@@ -3,9 +3,9 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- Implement multibeam in continuousScan()
-- Measure the multibeam magnification. Make sure that the beamsplitter rotation is aligned
-- test Fidelity
+- Install both Uniblitz shutters
+- Realign the detection path and recalibrate the rescanner
+- Align the 1040 nm beamsplitter
 - Multi-thread demuxAllChannels_()
 - Fix how to deal with multithread exception in the Filterwheel class
 - Do a post-sequence clean up routine to set the pockels outputs to 0

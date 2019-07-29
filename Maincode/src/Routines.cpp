@@ -1,10 +1,10 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (53.050 - 0.137 + 0.016 ) * mm, 17.300 * mm, 18.112 * mm };
+double3 stackCenterXYZ{ (53.050 - 0.137 + 0.016 ) * mm, 17.300 * mm, 18.116 * mm };
 //double3 stackCenterXYZ{ 50.000 * mm, -7.000 * mm, 18.110 * mm };	//Fluorescent slide
 
-Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 20. * mW, 0. * mWpum }}} };
+Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 20. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 10. * mW, 0. * mWpum }}} };
 Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
 Sample fluorSlide{ "Beads4um", "SiliconeOil", "1.51", {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
 Sample liver{ "Beads1um", "SiliconeMineralOil5050", "1.49", {{{"TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }}} };
@@ -157,7 +157,7 @@ namespace PMT16XRoutines
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
-		const int nFramesCont{ 10 };
+		const int nFramesCont{ 1 };
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
@@ -168,7 +168,7 @@ namespace PMT16XRoutines
 		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
 		FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
 		PMT16Xchan = PMT16XCHAN::CENTERED;
-		selectPower = 600. * mW;
+		selectPower = 500. * mW;
 		selectPowerInc = 0;
 #else
 		//Singlebeam
@@ -181,16 +181,16 @@ namespace PMT16XRoutines
 #endif
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double steSizeX{ 1.0 * um };
-		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in Z
+		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in Z
 
 		//STAGES
 		std::vector<double3> stagePositionXYZ;
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
-		int nSameZ{1};											//Number of frames at the same Z
-		bool saveAllPMT{ false };								//Save all PMT16X channels in separate pages in a Tiff
-		double cLensPosIni, cLensPosFinal, cLensStep;			//For debugging the collector lens
+		int nSameZ{ 1 };									//Number of frames at the same Z
+		double stepSizeX;									//Step for lateral scanning
+		bool saveAllPMT{ false };							//Save all PMT16X channels in separate pages in a Tiff
+		double cLensPosIni, cLensPosFinal, cLensStep;		//For debugging the collector lens
 		switch (acqMode)
 		{
 		case RUNMODE::SINGLE:
@@ -212,15 +212,16 @@ namespace PMT16XRoutines
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
 			break;
 		case RUNMODE::SCANXY:
+			stepSizeX = 5. * um;
 			//Generate the discrete scan sequence for the stages
 			for (int iterPos = 0; iterPos < 50; iterPos++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX) + iterPos * steSizeX, stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ)});
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX) + iterPos * stepSizeX, stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ)});
 			break;
 		case RUNMODE::COLLECTLENS:
 			saveAllPMT = true;
-			cLensPosIni = 0.0 * mm;
+			cLensPosIni = 5.0 * mm;
 			cLensPosFinal = 12.0 * mm;
-			cLensStep = 1.0 * mm;;
+			cLensStep = 0.5 * mm;;
 			nSameZ = static_cast<int>( std::floor((cLensPosFinal - cLensPosIni)/ cLensStep) ) + 1;
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
@@ -245,7 +246,7 @@ namespace PMT16XRoutines
 
 		//DATALOG
 		{
-			Logger datalog("datalog_" + currentSample.mName);
+			Logger datalog(currentSample.mName);
 			datalog.record("SAMPLE-------------------------------------------------------");
 			datalog.record("Sample = ", currentSample.mName);
 			datalog.record("Immersion medium = ", currentSample.mImmersionMedium);
@@ -287,9 +288,9 @@ namespace PMT16XRoutines
 			stage.waitForMotionToStopAll();
 			stage.printPositionXYZ();		//Print the stage position	
 			
-			//The first time the stages move may involve a big jump. Let the stages settle a little longer
+			//Let the stages settle a little longer in the beginning because of the large initial movement
 			if(iterLocation == 0)
-				Sleep(500);
+				Sleep(400);
 
 			//Acquire many frames at the same Z via discontinuous acquisition
 			for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
@@ -306,8 +307,8 @@ namespace PMT16XRoutines
 				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
 				image.acquire(saveAllPMT);				//Execute the RT control sequence and acquire the image
-				//image.averageFrames();					//Average the frames acquired via continuous XY acquisition
-				image.averageEvenOddFrames();
+				image.averageFrames();					//Average the frames imaged via continuous acquisition
+				//image.averageEvenOddFrames();
 				image.correctImage(RScanner.mFFOV);
 				tiffStack.pushSameZ(iterSameZ, image.data());
 
@@ -319,7 +320,7 @@ namespace PMT16XRoutines
 					image.saveTiffMultiPage(singleFilename, OVERRIDE::DIS);
 				}
 			}
-			tiffStack.pushDiffZ(iterLocation);
+			tiffStack.pushDiffZ(iterLocation);			//Average the frames imaged via discontinuous acquisition
 			std::cout << "\n";
 		}
 
@@ -340,7 +341,7 @@ namespace PMT16XRoutines
 			std::string stackFilename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_Pi=" + toString(selectPower / mW, 1) + "mW_Pinc=" + toString(selectPowerInc / mWpum, 1) + "mWpum" +
 				"_xi=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 4) + "_xf=" + toString(stagePositionXYZ.back().at(STAGEX) / mm, 4) +
 				"_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
-				"_z=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_Step=" + toString(steSizeX / mm, 4) };
+				"_z=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) };
 			tiffStack.saveToFile(stackFilename, OVERRIDE::DIS);
 			pressESCforEarlyTermination();
 		}
@@ -408,7 +409,7 @@ namespace PMT16XRoutines
 		for (std::vector<int>::size_type iter_wv = 0; iter_wv < fluorLabelList.size(); iter_wv++)
 		{
 			//DATALOG
-			Logger datalog("datalog_Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iter_wv).mName);
+			Logger datalog("Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iter_wv).mName);
 			datalog.record("SAMPLE-------------------------------------------------------");
 			datalog.record("Sample = ", currentSample.mName);
 			datalog.record("Immersion medium = ", currentSample.mImmersionMedium);

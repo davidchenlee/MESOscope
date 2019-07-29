@@ -458,7 +458,7 @@ void TiffU8::averageFrames()
 			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
 				avg[pixIndex] += mArray[frameIndex * nPixPerFrame + pixIndex];
 
-		//Calculate the average intensity and reassign  it to mArray
+		//Calculate the average intensity and reassign it to mArray
 		for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
 			mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / mNframes);
 
@@ -844,29 +844,27 @@ void TiffU8::flattenField(const double maxScaleFactor)
 }
 #pragma endregion "TiffU8"
 
-
 #pragma region "Stack"
 TiffStack::TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ) :
-	mDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ), mSameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ) {}
+	mArrayDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ), mArraySameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ) {}
 
-void TiffStack::pushSameZ(const int indexSameZ, U8* const pointerToTiff)
+void TiffStack::pushSameZ(const int indexSameZ, const U8* data)
 {
-	mSameZ.pushImage(indexSameZ, pointerToTiff);
+	mArraySameZ.pushImage(indexSameZ, data);
 }
 
+//I want get the average of the stack mArraySameZ and store it in a single frame of mArrayDiffZ
+//However, if I apply averageFrames() on mArraySameZ, it collapses mArraySameZ to a single image (containing the average), and therefore, the next iterations won't be able to use mArraySameZ container anymore
+//Temporary hack: make a duplicate of mArraySameZ and calculate the average on it
 void TiffStack::pushDiffZ(const int indexDiffZ)
 {
-	//Temporary hack
-	//I want to average all the stacks in mSameZ and then move to the next plane and repeat
-	//However, averageFrames() collapses mSameZ to a single image containing the average
-	//Solution: make a temporary copy of mSameZ and calculate the average over it
-	TiffU8 auxTiff{ mSameZ.data(), mSameZ.widthPerFrame(), mSameZ.heightPerFrame(), mSameZ.nFrames() }; //Make a copy of mSameZ
-	auxTiff.averageFrames();	//Average the images with the same Z
-	mDiffZ.pushImage(indexDiffZ, auxTiff.data());
+	TiffU8 avgTiff{ mArraySameZ.data(), mArraySameZ.widthPerFrame(), mArraySameZ.heightPerFrame(), mArraySameZ.nFrames() }; //Make a copy of mArraySameZ
+	avgTiff.averageFrames();																								//Average the images with the same Z
+	mArrayDiffZ.pushImage(indexDiffZ, avgTiff.data());
 }
 
 void TiffStack::saveToFile(const std::string filename, OVERRIDE override) const
 {
-	mDiffZ.saveToFile(filename, MULTIPAGE::EN, override);
+	mArrayDiffZ.saveToFile(filename, MULTIPAGE::EN, override);
 }
 #pragma endregion "Stack"

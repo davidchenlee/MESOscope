@@ -166,20 +166,18 @@ namespace PMT16XRoutines
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
-		PMT16XCHAN PMT16Xchan;
 
-#if multibeam
-		//Multibeam
-		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
-		FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
-		PMT16Xchan = PMT16XCHAN::CENTERED;
-#else
-		//Singlebeam
-		//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan through the PMT16X channels
-		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
-		FFOVslowPerBeamlet = FFOVslow;
-		PMT16Xchan = PMT16XCHAN::CH07;
-#endif
+		if (multibeam)
+		{
+			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
+			FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
+		}
+		else//Singlebeam. When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan through the PMT16X channels
+		{
+			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
+			FFOVslowPerBeamlet = FFOVslow;
+		}
+
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
 		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in Z
@@ -231,7 +229,7 @@ namespace PMT16XRoutines
 		}
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
 
 		//LASER
 		VirtualLaser laser{ RTcontrol,  fluorLabel.mWavelength_nm, LASER::VISION };
@@ -363,19 +361,17 @@ namespace PMT16XRoutines
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
-		PMT16XCHAN PMT16Xchan;
 
-#if multibeam
-			//Multibeam
+		if (multibeam)
+		{
 			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
 			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / nChanPMT);
-			PMT16Xchan = PMT16XCHAN::CENTERED;
-#else
-			//Singlebeam
+		}
+		else //Singlebeam
+		{
 			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 			FFOVslowPerBeamlet = FFOVslow;
-			PMT16Xchan = PMT16XCHAN::CH07;
-#endif
+		}
 
 		//STACK
 		const double2 FFOV{ FFOVslow, FFOVfast };							//Full FOV in the (slow axis, fast axis)
@@ -386,7 +382,7 @@ namespace PMT16XRoutines
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -497,7 +493,7 @@ namespace PMT16XRoutines
 		const int nFramesCont{ 1 };									//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH07 };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
 
 		//LASER
 		const VirtualLaser laser{ RTcontrol, fluorLabel.mWavelength_nm, LASER::VISION };
@@ -553,21 +549,18 @@ namespace PMT16XRoutines
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
-		PMT16XCHAN PMT16Xchan;
 
-#if multibeam
-		//Multibeam
-		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
-		FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
-		PMT16Xchan = PMT16XCHAN::CENTERED;
-#else
-		//Singlebeam
-		//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan through the PMT16X channels
-		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
-		FFOVslowPerBeamlet = FFOVslow;
-		PMT16Xchan = PMT16XCHAN::CH07;
-
-#endif
+		if (multibeam)
+		{
+			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
+			FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
+		}
+		else//Singlebeam. When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan through the PMT16X channels
+		{
+			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
+			FFOVslowPerBeamlet = FFOVslow;
+		}
+		
 		double stageZi, stageZf, laserPi, laserPf;
 		switch (scanDirZ)
 		{
@@ -592,7 +585,7 @@ namespace PMT16XRoutines
 		stage.waitForMotionToStopAll();
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };	//Notice the ZSTAGE flag
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
 		//LASER
 		const VirtualLaser laser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, LASER::VISION };
@@ -679,7 +672,7 @@ namespace TestRoutines
 
 	void pixelclock(const FPGAns::FPGA &fpga)
 	{
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 2, 300, 560, FIFOOUT::DIS, PMT16XCHAN::CH07 }; 	//Create a realtime control sequence
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 2, 300, 560, FIFOOUT::DIS }; 	//Create a realtime control sequence
 		Image image{ RTcontrol };
 		image.acquire();	//Execute the realtime control sequence and acquire the image
 		//image.saveTiffSinglePage("output", OVERRIDE::EN);
@@ -741,7 +734,7 @@ namespace TestRoutines
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH07 };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -792,7 +785,7 @@ namespace TestRoutines
 		const int wavelength_nm{ 750 };			//The rescanner calib depends on the laser wavelength
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS, PMT16XCHAN::CH07 };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
 
 		//GALVOS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
@@ -913,7 +906,7 @@ namespace TestRoutines
 		const int nFramesCont{ 10 };			//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS, PMT16XCHAN::CENTERED };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
 
 		//POCKELS CELL
 		const int wavelength_nm{ 750 };
@@ -967,7 +960,7 @@ namespace TestRoutines
 	{
 		//std::string inputFilename{ "Liver distorted" };
 		//std::string inputFilename{ "no correction" };
-		std::string inputFilename{ "aaa" };
+		std::string inputFilename{ "Beads0.5um_920nm_Pi=25.0mW_Pinc=0.0mWpum_x=25.320_y=20.055_zi=18.3820_zf=18.3919_Step=0.0001" };
 		std::string outputFilename{ "output" };
 
 		TiffU8 image{ inputFilename };
@@ -984,9 +977,9 @@ namespace TestRoutines
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
-		image.correctRSdistortionGPU(150. * um);
-		image.suppressCrosstalk(0.1);
-		image.flattenField(2.0);
+		image.correctRSdistortionGPU(200. * um);
+		//image.suppressCrosstalk(0.1);
+		//image.flattenField(2.0);
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
 		//pressAnyKeyToCont();
 	}
@@ -1225,7 +1218,7 @@ namespace TestRoutines
 		const int wavelength_nm{ 750 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN, PMT16XCHAN::CH07 };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
 
 		//GALVOS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
@@ -1254,19 +1247,16 @@ namespace TestRoutines
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower;
-		PMT16XCHAN PMT16Xchan;
 
 #if multibeam
 			//Multibeam
 			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
 			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / nChanPMT);
-			PMT16Xchan = PMT16XCHAN::CENTERED;
 			selectPower = 1400. * mW;
 #else
 			//Singlebeam
 			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 			FFOVslowPerBeamlet = FFOVslow;
-			PMT16Xchan = PMT16XCHAN::CH01;
 			selectPower = 50. * mW;
 #endif
 		//STACK
@@ -1274,7 +1264,7 @@ namespace TestRoutines
 		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in Z
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN, PMT16Xchan };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
 
 		//LASER
 		const int wavelength_nm{ 750 };
@@ -1317,21 +1307,20 @@ namespace TestRoutines
 		//FWexcitation.setWavelength(wavelength_nm);
 		//FWdetection.setWavelength(wavelength_nm);
 
-#if multibeam
-		//Multiplex
-		//Turn both filterwheels concurrently
-		std::thread th1{ &Filterwheel::setWavelength, &FWexcitation, wavelength_nm };
-		std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
-		th1.join();
-		th2.join();
-#else
-		//Single beam
-		//Turn both filterwheels concurrently
-		std::thread th1{ &Filterwheel::setPosition, &FWexcitation, FILTERCOLOR::OPEN };				//Leave the excitation filterwheel open
-		std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
-		th1.join();
-		th2.join();
-#endif
+		if (multibeam)//Multiplex. Turn both filterwheels concurrently
+		{
+			std::thread th1{ &Filterwheel::setWavelength, &FWexcitation, wavelength_nm };
+			std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
+			th1.join();
+			th2.join();
+		}
+		else//Single beam. Turn both filterwheels concurrently
+		{
+			std::thread th1{ &Filterwheel::setPosition, &FWexcitation, FILTERCOLOR::OPEN };				//Leave the excitation filterwheel open
+			std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
+			th1.join();
+			th2.join();
+		}
 	}
 
 	void collectorLens()
@@ -1350,7 +1339,7 @@ namespace TestRoutines
 		laser.setWavelength(920);
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 100, 300, 400, FIFOOUT::DIS, PMT16XCHAN::CENTERED };
+		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 100, 300, 400, FIFOOUT::DIS };
 
 		//RS
 		ResonantScanner RScanner{ RTcontrol };

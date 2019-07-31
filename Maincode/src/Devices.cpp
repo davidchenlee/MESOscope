@@ -1245,11 +1245,9 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, 
 
 	//Initialize the power softlimit
 #if multibeam
-	//Multibeam		
-	mMaxPower = 1000 * mW;
-#else
-	//Singlebeam			
-	mMaxPower = 150 * mW;
+	mMaxPower = 1000 * mW;//Multibeam		
+#else	
+	mMaxPower = 150 * mW;//Singlebeam	
 #endif
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
@@ -1539,21 +1537,21 @@ VirtualLaser::VirtualFilterWheel::VirtualFilterWheel() : mFWexcitation{ FILTERWH
 
 void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm)
 {
-#if multibeam
-	//Multiplex
-	//Turn both filterwheels concurrently
-	std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };
-	std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
-	th1.join();
-	th2.join();
-#else
-	//Single beam
-	//Turn both filterwheels concurrently
-	std::thread th1(&Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN);	//Set the excitation filterwheel open (no filter)
-	std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
-	th1.join();
-	th2.join();
-#endif
+	if (multibeam)//Multiplex. Turn both filterwheels concurrently
+	{
+		std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };
+		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
+		th1.join();
+		th2.join();
+	}
+
+	else //Single beam. Turn both filterwheels concurrently
+	{
+		std::thread th1(&Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN);	//Set the excitation filterwheel open (no filter)
+		std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
+		th1.join();
+		th2.join();
+	}
 }
 #pragma endregion "VirtualFilterWheel"
 

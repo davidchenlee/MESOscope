@@ -268,9 +268,9 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUT FIFOOUTstate, const PMT16XCHAN PMT16Xchan) :
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUT FIFOOUTstate) :
 		mVectorOfQueues{ static_cast<U8>(RTCHAN::NCHAN) }, mFpga{ fpga }, mLineclockInput{ lineclockInput }, mMainTrigger{ mainTrigger }, mNframes{ nFrames },
-		mWidthPerFrame_pix{ widthPerFrame_pix }, mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }, mFIFOOUTstate{ FIFOOUTstate }, mPMT16Xchan{ PMT16Xchan }
+		mWidthPerFrame_pix{ widthPerFrame_pix }, mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }, mFIFOOUTstate{ FIFOOUTstate }
 	{
 		//Set the imaging parameters
 		mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
@@ -280,6 +280,12 @@ namespace FPGAns
 		//Generate a pixelclock
 		const Pixelclock pixelclock(mWidthPerFrame_pix, pixelDwellTime);
 		mVectorOfQueues.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
+
+		//Determine the setpoint for the rescanner. It is called by the Galvo and Image classes
+		if (multibeam)
+			mPMT16Xchan = PMT16XCHAN::CENTERED;
+		else
+			mPMT16Xchan = PMT16XCHAN::CH07;
 
 		//If the z stage acts as the main trigger (for cont z scanning), add a timer after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
 		if (mMainTrigger == MAINTRIG::ZSTAGE)
@@ -294,7 +300,7 @@ namespace FPGAns
 		}
 	}
 
-	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga) : RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS, PMT16XCHAN::CH07 } {}
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga) : RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS } {}
 
 	//Load the imaging parameters onto the FPGA
 	void RTcontrol::uploadImagingParameters_() const

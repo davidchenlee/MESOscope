@@ -70,10 +70,8 @@ namespace FPGAns
 		int mHeightPerBeamletAllFrames_pix;												//Total number of lines per beamlet in all the frames
 		int mNpixPerBeamletAllFrames;													//Total number of pixels per beamlet in all the frames
 		PMT16XCHAN mPMT16Xchan;															//PMT16X channel to be used
-		bool mMultibeam;
 
-		RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput , const MAINTRIG mainTrigger,
-			const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUT FIFOOUTstate, const PMT16XCHAN PMT16Xchan);
+		RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput , const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUT FIFOOUTstate);
 		RTcontrol(const FPGAns::FPGA &fpga);
 		RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 		RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor

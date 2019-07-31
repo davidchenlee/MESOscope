@@ -372,7 +372,7 @@ void Image::constructImage(const bool saveAllPMT)
 
 void Image::correctImage(const double FFOVfast)
 {
-	//mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
+	mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 
 	if (multibeam)
 	{
@@ -540,9 +540,11 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		//Adjust 'mRescanVoltageOffset' to center the beads on the selected PMT16X channel
 		switch (mWavelength_nm)
 		{
+			//By increasing mVoltagePerDistance, the top beads in a Tiff appear before the bottom ones.
+			//A positive mVoltageOffset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
 		case 750:
-			mVoltagePerDistance = 0.30 * scanCalib;		//By increasing this variable, the top beads in a Tiff appear before the bottom ones.
-			mVoltageOffset = 0.06 * V;					//A positive offset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
+			mVoltagePerDistance = 0.30 * scanCalib;
+			mVoltageOffset = 0.06 * V;					
 			break;
 		case 920:
 			mVoltagePerDistance = 0.32 * scanCalib;
@@ -550,7 +552,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 			break;
 		case 1040:
 			mVoltagePerDistance = 0.32 * scanCalib;
-			mVoltageOffset = 0.09 * V;
+			mVoltageOffset = 0.10 * V;					//0.08 for Vision, 0.10 for Fidelity
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -1519,13 +1521,13 @@ void VirtualLaser::CollectorLens::set(const int wavelength_nm)
 	switch (wavelength_nm)
 	{
 	case 750:
-		mStepper.move(8.5 * mm);
+		mStepper.move(10.0 * mm);
 		break;
 	case 920:
-		mStepper.move(4.5 * mm);
+		mStepper.move(6.0 * mm);
 		break;
 	case 1040:
-		mStepper.move(0.5 * mm);
+		mStepper.move(1.0 * mm);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector lens position has not been calibrated for the wavelength " + std::to_string(wavelength_nm));

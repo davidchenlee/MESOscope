@@ -281,7 +281,7 @@ namespace FPGAns
 		const Pixelclock pixelclock(mWidthPerFrame_pix, pixelDwellTime);
 		mVectorOfQueues.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 
-		//Determine the setpoint for the rescanner. It is called by the Galvo and Image classes
+		//Determine the setpoint for the rescanner. mPMT16Xchan is called by the classes Galvo and Image
 		if (multibeam)
 			mPMT16Xchan = PMT16XCHAN::CENTERED;
 		else

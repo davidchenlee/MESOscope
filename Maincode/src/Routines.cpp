@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (52.949 + 0.000 ) * mm, 17.250 * mm, (18.120) * mm };
+double3 stackCenterXYZ{ (52.949 + 0.000 ) * mm, 17.250 * mm, 18.117 * mm };
 //double3 stackCenterXYZ{ 52.949 * mm, -7.000 * mm, 18.190 * mm };	//Fluorescent slide
 
 #if multibeam
@@ -143,19 +143,23 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in z frame by frame from the z position
-		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in z frame by frame centered at the z position
+		const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in z frame by frame centered at the z position
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in x frame by frame
-		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens. Set saveAllPMT = 1
+		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const LASER selectLaser{ LASER::FIDELITY };
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
 			stackCenterXYZ.at(STAGEZ) -= 6 * um;
+		//This is because FIDELITY is chromatically shifted wrt VISION
+		if (selectLaser == LASER::FIDELITY)
+			stackCenterXYZ.at(STAGEZ) -= 5 * um;
 
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
@@ -166,13 +170,12 @@ namespace PMT16XRoutines
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
-
 		if (multibeam)
 		{
 			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
 			FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
 		}
-		else//Singlebeam. When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan through the PMT16X channels
+		else//Singlebeam. When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan over the PMT16X channels
 		{
 			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 			FFOVslowPerBeamlet = FFOVslow;
@@ -213,13 +216,13 @@ namespace PMT16XRoutines
 		case RUNMODE::SCANXY:
 			stepSizeX = 5. * um;
 			//Generate the discrete scan sequence for the stages
-			for (int iterPos = 0; iterPos < 50; iterPos++)
+			for (int iterPos = 0; iterPos < 100; iterPos++)
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX) + iterPos * stepSizeX, stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ)});
 			break;
 		case RUNMODE::COLLECTLENS:
 			saveAllPMT = true;
-			cLensPosIni = 5.0 * mm;
-			cLensPosFinal = 12.0 * mm;
+			cLensPosIni = 6.0 * mm;
+			cLensPosFinal = 13.0 * mm;
 			cLensStep = 0.5 * mm;;
 			nSameZ = static_cast<int>( std::floor((cLensPosFinal - cLensPosIni)/ cLensStep) ) + 1;
 			stagePositionXYZ.push_back(stackCenterXYZ);
@@ -232,7 +235,7 @@ namespace PMT16XRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
 
 		//LASER
-		VirtualLaser laser{ RTcontrol,  fluorLabel.mWavelength_nm, LASER::VISION };
+		VirtualLaser laser{ RTcontrol, fluorLabel.mWavelength_nm, selectLaser };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -311,7 +314,7 @@ namespace PMT16XRoutines
 				image.correctImage(RScanner.mFFOV);
 				tiffStack.pushSameZ(iterSameZ, image.data());
 
-				if (acqMode == RUNMODE::SINGLE)
+				if (acqMode == RUNMODE::SINGLE && !saveAllPMT)
 				{
 					//Save individual files
 					std::string singleFilename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
@@ -531,7 +534,7 @@ namespace PMT16XRoutines
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -555,7 +558,7 @@ namespace PMT16XRoutines
 			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
 			FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
 		}
-		else//Singlebeam. When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan through the PMT16X channels
+		else//Singlebeam. When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan over the PMT16X channels
 		{
 			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 			FFOVslowPerBeamlet = FFOVslow;
@@ -588,7 +591,7 @@ namespace PMT16XRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
 		//LASER
-		const VirtualLaser laser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, LASER::VISION };
+		const VirtualLaser laser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, LASER::FIDELITY };
 		//laser.powerLinearRamp(laserPi, laserPf);
 
 		//RS

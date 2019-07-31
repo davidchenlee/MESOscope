@@ -373,8 +373,13 @@ void Image::constructImage(const bool saveAllPMT)
 void Image::correctImage(const double FFOVfast)
 {
 	//mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
-	//mTiff.suppressCrosstalk(0.2);
-	//mTiff.flattenField(1.5);
+
+	if (multibeam)
+	{
+		//mTiff.suppressCrosstalk(0.2);
+		mTiff.flattenField(2.0);
+	}
+
 }
 
 //Split the long vertical image into nFrames and calculate the average over all the frames
@@ -537,15 +542,15 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		{
 		case 750:
 			mVoltagePerDistance = 0.30 * scanCalib;		//By increasing this variable, the top beads in a Tiff appear before the bottom ones.
-			mVoltageOffset = (0.04 - 0.13) * V;					//A positive offset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
+			mVoltageOffset = 0.06 * V;					//A positive offset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
 			break;
 		case 920:
 			mVoltagePerDistance = 0.32 * scanCalib;
-			mVoltageOffset = (0.07 - 0.13) * V;
+			mVoltageOffset = 0.08 * V;
 			break;
 		case 1040:
 			mVoltagePerDistance = 0.32 * scanCalib;
-			mVoltageOffset = (0.09 - 0.16) * V;
+			mVoltageOffset = 0.09 * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");

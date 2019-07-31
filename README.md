@@ -4,7 +4,6 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 - Install both Uniblitz shutters
-- Realign the detection path and recalibrate the rescanner
 - Align the 1040 nm beamsplitter
 - Multi-thread demuxAllChannels_()
 - Fix how to deal with multithread exception in the Filterwheel class

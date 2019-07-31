@@ -268,7 +268,7 @@ namespace FPGAns
 		return mPixelclockQ;
 	}
 
-	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, FIFOOUT FIFOOUTstate, PMT16XCHAN PMT16Xchan) :
+	RTcontrol::RTcontrol(const FPGAns::FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUT FIFOOUTstate, const PMT16XCHAN PMT16Xchan) :
 		mVectorOfQueues{ static_cast<U8>(RTCHAN::NCHAN) }, mFpga{ fpga }, mLineclockInput{ lineclockInput }, mMainTrigger{ mainTrigger }, mNframes{ nFrames },
 		mWidthPerFrame_pix{ widthPerFrame_pix }, mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }, mFIFOOUTstate{ FIFOOUTstate }, mPMT16Xchan{ PMT16Xchan }
 	{

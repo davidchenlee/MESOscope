@@ -1246,10 +1246,10 @@ PockelsCell::PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, 
 	//Initialize the power softlimit
 #if multibeam
 	//Multibeam		
-	mMaxPower = 1600 * mW;
+	mMaxPower = 1000 * mW;
 #else
 	//Singlebeam			
-	mMaxPower = 300 * mW;
+	mMaxPower = 150 * mW;
 #endif
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14

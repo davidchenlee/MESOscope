@@ -4,10 +4,14 @@
 double3 stackCenterXYZ{ (52.949 + 0.000 ) * mm, 17.250 * mm, (18.120) * mm };
 //double3 stackCenterXYZ{ 52.949 * mm, -7.000 * mm, 18.190 * mm };	//Fluorescent slide
 
+#if multibeam
+Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{"DAPI", 750, 600. * mW, 0. * mWpum }, { "GFP", 920, 600. * mW, 0. * mWpum }, { "TDT", 1040, 200. * mW, 0. * mWpum }}} };
+#else
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 10. * mW, 0. * mWpum }}} };
 Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
 Sample fluorSlide{ "fluorBlue", "SiliconeOil", "1.51", {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
 Sample liver{ "Beads1um", "SiliconeMineralOil5050", "1.49", {{{"TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }}} };
+#endif
 Sample currentSample{ beads4um };
 
 /*
@@ -147,7 +151,7 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens. Set saveAllPMT = 1
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
@@ -161,7 +165,7 @@ namespace PMT16XRoutines
 		const int nFramesCont{ 1 };
 
 		int heightPerBeamletPerFrame_pix;
-		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
+		double FFOVslowPerBeamlet;
 		PMT16XCHAN PMT16Xchan;
 
 #if multibeam
@@ -169,16 +173,12 @@ namespace PMT16XRoutines
 		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
 		FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
 		PMT16Xchan = PMT16XCHAN::CENTERED;
-		selectPower = 200. * mW;
-		selectPowerInc = 0;
 #else
 		//Singlebeam
 		//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan through the PMT16X channels
 		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 		FFOVslowPerBeamlet = FFOVslow;
 		PMT16Xchan = PMT16XCHAN::CH07;
-		selectPower = fluorLabel.mScanPi;
-		selectPowerInc = fluorLabel.mStackPinc;
 #endif
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
@@ -256,8 +256,8 @@ namespace PMT16XRoutines
 			datalog.record("FPGA clock (MHz) = ", tickPerUs);
 			datalog.record("\nLASER--------------------------------------------------------");
 			datalog.record("Laser wavelength (nm) = ", fluorLabel.mWavelength_nm);
-			datalog.record("Laser power first frame (mW) = ", selectPower / mW);
-			datalog.record("Laser power increase (mW/um) = ", selectPowerInc / mWpum);
+			datalog.record("Laser power first frame (mW) = ", fluorLabel.mScanPi / mW);
+			datalog.record("Laser power increase (mW/um) = ", fluorLabel.mStackPinc / mWpum);
 			datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod / us);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
@@ -299,7 +299,7 @@ namespace PMT16XRoutines
 				std::cout << "Frame # (diff Z): " << (iterLocation + 1) << "/" << nLocations << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
 					"\tTotal frame: " << iterLocation * nSameZ + (iterSameZ + 1) << "/" << nLocations * nSameZ << "\n";
 
-				laser.setPower(selectPower + iterLocation * stepSizeZ * selectPowerInc);	//Update the laser power
+				laser.setPower(fluorLabel.mScanPi + iterLocation * stepSizeZ * fluorLabel.mStackPinc);	//Update the laser power
 
 				//Used with to optimize the collector lens position
 				if (acqMode == RUNMODE::COLLECTLENS)
@@ -316,7 +316,7 @@ namespace PMT16XRoutines
 				if (acqMode == RUNMODE::SINGLE)
 				{
 					//Save individual files
-					std::string singleFilename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(selectPower / mW, 1) + "mW" +
+					std::string singleFilename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
 						"_x=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEZ) / mm, 4) };
 					image.saveTiffMultiPage(singleFilename, OVERRIDE::DIS);
 				}
@@ -328,7 +328,7 @@ namespace PMT16XRoutines
 		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
 		{
 			//Save the scanZ to file
-			std::string stackFilename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_Pi=" + toString(selectPower / mW, 1) + "mW_Pinc=" + toString(selectPowerInc / mWpum, 1) + "mWpum" +
+			std::string stackFilename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_Pi=" + toString(fluorLabel.mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) + "mWpum" +
 				"_x=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
 				"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 			tiffStack.saveToFile(stackFilename, OVERRIDE::DIS);
@@ -339,7 +339,7 @@ namespace PMT16XRoutines
 		if (acqMode == RUNMODE::SCANXY)
 		{
 			//Save the scanXY to file
-			std::string stackFilename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_Pi=" + toString(selectPower / mW, 1) + "mW_Pinc=" + toString(selectPowerInc / mWpum, 1) + "mWpum" +
+			std::string stackFilename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_Pi=" + toString(fluorLabel.mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) + "mWpum" +
 				"_xi=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 4) + "_xf=" + toString(stagePositionXYZ.back().at(STAGEX) / mm, 4) +
 				"_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
 				"_z=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) };
@@ -552,7 +552,7 @@ namespace PMT16XRoutines
 		stackCenterXYZ.at(STAGEZ) -= nFramesCont * stepSizeZ /2;
 
 		int heightPerBeamletPerFrame_pix;
-		double FFOVslowPerBeamlet, selectPower, selectPowerInc;
+		double FFOVslowPerBeamlet;
 		PMT16XCHAN PMT16Xchan;
 
 #if multibeam
@@ -560,16 +560,12 @@ namespace PMT16XRoutines
 		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
 		FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
 		PMT16Xchan = PMT16XCHAN::CENTERED;
-		selectPower = 600. * mW;
-		selectPowerInc = 0;
 #else
 		//Singlebeam
 		//When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan through the PMT16X channels
 		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 		FFOVslowPerBeamlet = FFOVslow;
 		PMT16Xchan = PMT16XCHAN::CH07;
-		selectPower = fluorLabel.mScanPi;
-		selectPowerInc = fluorLabel.mStackPinc;
 
 #endif
 		double stageZi, stageZf, laserPi, laserPf;
@@ -578,14 +574,14 @@ namespace PMT16XRoutines
 		case ZSCAN::TOPDOWN:
 			stageZi = stackCenterXYZ.at(STAGEZ);
 			stageZf = stackCenterXYZ.at(STAGEZ) + stackDepth + 20 * stepSizeZ; //Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
-			laserPi = selectPower;
-			laserPf = fluorLabel.mScanPi + stackDepth * selectPowerInc;
+			laserPi = fluorLabel.mScanPi;
+			laserPf = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			break;
 		case ZSCAN::BOTTOMUP:
 			stageZi = stackCenterXYZ.at(STAGEZ) + stackDepth;
 			stageZf = stackCenterXYZ.at(STAGEZ) - 20 * stepSizeZ;				//Notice that I use a longer range to avoid nonlinearity at the end of the stage scan
-			laserPi = fluorLabel.mScanPi + stackDepth * selectPowerInc;
-			laserPf = selectPower;
+			laserPi = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
+			laserPf = fluorLabel.mScanPi;
 			break;
 		}
 

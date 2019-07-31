@@ -419,7 +419,8 @@ public:
 class FluorLabelList
 {
 public:
-	struct FluorLabel				//Parameters for a single fluorescent label
+	//Parameters for a single fluorescent label
+	struct FluorLabel
 	{
 		std::string mName{ "" };	//Fluorescent label name
 		int mWavelength_nm;			//Laser wavelength

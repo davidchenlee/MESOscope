@@ -93,19 +93,18 @@ class Galvo
 
 	const double mInterBeamletDistance{ 17.5 * um };		//Set by the beamsplitter specs
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	
-	RTCHAN mGalvoRTchannel;
+	RTCHAN mWhichGalvo;
 	double mVoltagePerDistance;
 	double mVoltageOffset;
-	int mWavelength_nm;
 	double beamletIndex_(PMT16XCHAN PMT16Xchan) const;
 public:
-	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN galvoChannel, const int wavelength_nm = 0);
-	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN galvoChannel, const double posMax, const int wavelength_nm = 0);
+	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double posMax, const LASER whichLaser = LASER::VISION , const int wavelength_nm = 0);
 	Galvo(const Galvo&) = delete;				//Disable copy-constructor
 	Galvo& operator=(const Galvo&) = delete;	//Disable assignment-constructor
 	Galvo(Galvo&&) = delete;					//Disable move constructor
 	Galvo& operator=(Galvo&&) = delete;			//Disable move-assignment constructor
 
+	void reconfigure(const int wavelength_nm, const LASER whichLaser);
 	void voltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
@@ -289,18 +288,19 @@ class VirtualLaser
 
 	class CombinedLasers
 	{
-		LASER mLaserSelect;								//use VISION, FIDELITY, or AUTO (let the code decide)
+		LASER mWhichLaser;								//use VISION, FIDELITY, or AUTO (let the code decide)
 		LASER mCurrentLaser;							//Current laser in use: VISION or FIDELITY
 		Laser mVision;
 		Laser mFidelity;
 		FPGAns::RTcontrol &mRTcontrol;
-		std::unique_ptr <PockelsCell> mPockelsPtr;		//Create a pockels handle dynamically. Alternatively, I could've created a fixed handle for each laser wavelength to be used
+		std::unique_ptr <PockelsCell> mPockelsPtr;		//Create a pockels handle dynamically. Alternatively, I could create a fixed handle for each wavelength used
 		const double mPockelTimeStep{ 8. * us };		//Time step for the RT pockels command
 
 		std::string laserNameToString_(const LASER whichLaser) const;
 		LASER autoSelectLaser_(const int wavelength_nm) const;
 	public:
-		CombinedLasers(FPGAns::RTcontrol &RTcontrol, const LASER laserSelect = LASER::AUTO);
+		CombinedLasers(FPGAns::RTcontrol &RTcontrol, const LASER whichLaser = LASER::AUTO);
+		LASER currentLaser() const;
 		void isLaserInternalShutterOpen() const;
 		void tuneLaserWavelength(const int wavelength_nm);
 		void setPower(const double initialPower, const double finalPower) const;
@@ -322,15 +322,16 @@ class VirtualLaser
 	VirtualFilterWheel mVirtualFilterWheel;
 	CollectorLens mCollectorLens;
 public:
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect);
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LASER laserSelect = LASER::AUTO);
-	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelect = LASER::AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER whichLaser);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER whichLaser = LASER::AUTO);
+	VirtualLaser(FPGAns::RTcontrol &RTcontrol, const LASER whichLaser = LASER::AUTO);
 	VirtualLaser(const VirtualLaser&) = delete;				//Disable copy-constructor
 	VirtualLaser& operator=(const VirtualLaser&) = delete;	//Disable assignment-constructor
 	VirtualLaser(VirtualLaser&&) = delete;					//Disable move constructor
 	VirtualLaser& operator=(VirtualLaser&&) = delete;		//Disable move-assignment constructor
 
-	void reconfigure(const int wavelength_nm);
+	LASER currentLaser() const;
+	void configure(const int wavelength_nm);
 	void setPower(const double laserPower) const;
 	void setPower(const double initialPower, const double finalPower) const;
 	void powerLinearRamp(const double Pi, const double Pf) const;

@@ -524,48 +524,11 @@ void ResonantScanner::isRunning() const
 #pragma endregion "Resonant scanner"
 
 #pragma region "Galvo"
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavelength_nm) : mRTcontrol{ RTcontrol }, mGalvoRTchannel{ channel }, mWavelength_nm{ wavelength_nm }
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double posMax, const LASER whichLaser, const int wavelength_nm) : mRTcontrol{ RTcontrol }, mWhichGalvo{ whichGalvo }
 {
-	switch (channel)
-	{
-	case RTCHAN::SCANGALVO:
-		mVoltagePerDistance = scannerCalib.voltagePerDistance;
-		mVoltageOffset = scannerCalib.voltageOffset;
-		break;
-	case RTCHAN::RESCANGALVO:
-		//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission fixed at the detector
-		//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the tiffs for all the channels
-		//The beads should show up in the selected channel only
-		//Adjust 'mVoltagePerDistance' until all the beads show up simultaneously in the selected PMT16X channel
-		//Adjust 'mRescanVoltageOffset' to center the beads on the selected PMT16X channel
-		switch (mWavelength_nm)
-		{
-			//By increasing mVoltagePerDistance, the top beads in a Tiff appear first, then the bottom ones.
-			//A positive mVoltageOffset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
-		case 750:
-			mVoltagePerDistance = rescannerCalib750nm.voltagePerDistance;
-			mVoltageOffset = rescannerCalib750nm.voltageOffset;
-			break;
-		case 920:
-			mVoltagePerDistance = rescannerCalib920nm.voltagePerDistance;
-			mVoltageOffset = rescannerCalib920nm.voltageOffset;
-			break;
-		case 1040:
-			mVoltagePerDistance = rescannerCalib1040nm.voltagePerDistance;
-			mVoltageOffset = rescannerCalib1040nm.voltageOffset;
-			break;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
-		}
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
-	}
-}
+	reconfigure(wavelength_nm, whichLaser);
 
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double posMax, const int wavelength_nm) : Galvo{ RTcontrol, channel, wavelength_nm }
-{
-	switch (channel)
+	switch (whichGalvo)
 	{
 	case RTCHAN::SCANGALVO:
 		//Raster scan the sample from the positive to the negative direction of the x-stage
@@ -577,6 +540,55 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double po
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
+	}
+}
+
+void Galvo::reconfigure(const int wavelength_nm, const LASER whichLaser)
+{
+	switch (mWhichGalvo)
+	{
+	case RTCHAN::SCANGALVO:
+		mVoltagePerDistance = scannerCalib.voltagePerDistance;
+		mVoltageOffset = scannerCalib.voltageOffset;
+		break;
+	case RTCHAN::RESCANGALVO:
+
+		switch (whichLaser)//The calibration of the rescanning galvo when using Vision or Fidelity is slightly different
+		{
+		case LASER::VISION:
+			switch (wavelength_nm)
+			{
+			case 750:			
+				mVoltagePerDistance = rescannerCalibV750nm.voltagePerDistance;	//By increasing mVoltagePerDistance, the top beads in a Tiff appear first, then the bottom ones
+				mVoltageOffset = rescannerCalibV750nm.voltageOffset;			//A positive mVoltageOffset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
+				break;
+			case 920:
+				mVoltagePerDistance = rescannerCalibV920nm.voltagePerDistance;
+				mVoltageOffset = rescannerCalibV920nm.voltageOffset;
+				break;
+			case 1040:
+				mVoltagePerDistance = rescannerCalibV1040nm.voltagePerDistance;
+				mVoltageOffset = rescannerCalibV1040nm.voltageOffset;
+				break;
+			default:
+				throw std::invalid_argument((std::string)__FUNCTION__ + ": The galvo has not been calibrated for the wavelength " + std::to_string(wavelength_nm) + " nm");
+			}
+			break;
+		case LASER::FIDELITY:
+			switch (wavelength_nm)
+			{
+			case 1040:
+				mVoltagePerDistance = rescannerCalibF1040nm.voltagePerDistance;
+				mVoltageOffset = rescannerCalibF1040nm.voltageOffset;
+				break;
+			default:
+				throw std::invalid_argument((std::string)__FUNCTION__ + ": FIDELITY only supports the wavelength 1040 nm\n");
+			}
+			break;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
+		}
+		break;
 	}
 }
 
@@ -625,22 +637,22 @@ double Galvo::beamletIndex_(PMT16XCHAN PMT16Xchan) const
 
 void Galvo::voltageToZero() const
 {
-	mRTcontrol.pushAnalogSinglet(mGalvoRTchannel, AO_tMIN, 0 * V);
+	mRTcontrol.pushAnalogSinglet(mWhichGalvo, AO_tMIN, 0 * V);
 }
 
 void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
 {
-	mRTcontrol.pushAnalogSinglet(mGalvoRTchannel, timeStep, AO);
+	mRTcontrol.pushAnalogSinglet(mWhichGalvo, timeStep, AO);
 }
 
 void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const
 {
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, Vi, Vf);
+	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, Vi, Vf);
 }
 
 void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal) const
 {
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, rampLength, mVoltagePerDistance * posInitial, mVoltagePerDistance * posFinal);
+	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, mVoltagePerDistance * posInitial, mVoltagePerDistance * posFinal);
 }
 
 //Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with a fixed z)
@@ -656,7 +668,7 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 		timeStep = 8. * us;
 
 	//The position offset allows to compensate for the slight axis misalignment of the rescanner
-	mRTcontrol.pushLinearRamp(mGalvoRTchannel, timeStep, lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
+	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
 		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal);
 }
 #pragma endregion "Galvo"
@@ -1024,7 +1036,7 @@ Laser::Laser(const LASER whichLaser) : mWhichLaser{ whichLaser }
 		mBaud = 115200;
 		break;
 	default:
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}
 
 	try
@@ -1138,7 +1150,7 @@ void Laser::setWavelength(const int wavelength_nm)
 		break;
 	case LASER::FIDELITY:
 		if (wavelength_nm != 1040)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": FIDELITY only supports the wavelenfth 1040 nm\n");
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": FIDELITY only supports the wavelength 1040 nm\n");
 		break;
 	default:
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
@@ -1332,7 +1344,7 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 
 		//FIDELITY
 	case RTCHAN::FIDELITY:
-		amplitude = 210 * mW;
+		amplitude = 300 * mW;
 		angularFreq = 0.276 / V;
 		phase = -0.049 * V;
 		break;
@@ -1601,8 +1613,8 @@ void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm
 #pragma endregion "VirtualFilterWheel"
 
 #pragma region "CombinedLasers"
-VirtualLaser::CombinedLasers::CombinedLasers(FPGAns::RTcontrol &RTcontrol, const LASER laserSelect) :
-	mRTcontrol{ RTcontrol }, mLaserSelect{ laserSelect }, mVision{ LASER::VISION }, mFidelity{ LASER::FIDELITY } {}
+VirtualLaser::CombinedLasers::CombinedLasers(FPGAns::RTcontrol &RTcontrol, const LASER whichLaser) :
+	mRTcontrol{ RTcontrol }, mWhichLaser{ whichLaser }, mVision{ LASER::VISION }, mFidelity{ LASER::FIDELITY } {}
 
 std::string VirtualLaser::CombinedLasers::laserNameToString_(const LASER whichLaser) const
 {
@@ -1621,17 +1633,23 @@ std::string VirtualLaser::CombinedLasers::laserNameToString_(const LASER whichLa
 LASER VirtualLaser::CombinedLasers::autoSelectLaser_(const int wavelength_nm) const
 {
 	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
-	if (mLaserSelect == LASER::AUTO)
+	if (mWhichLaser == LASER::AUTO)
 	{
 		if (wavelength_nm < 1040)
 			return LASER::VISION;
 		else if (wavelength_nm == 1040)
 			return LASER::FIDELITY;
 		else
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in the CombinedLasers class");
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in CombinedLasers class");
 	}
-	else //If mLaserSelect != LASER::AUTO, the mLaserSelect is either LASER::VISION or LASER::FIDELITY
-		return mLaserSelect;
+	else //If mWhichLaser != LASER::AUTO, the mWhichLaser is either LASER::VISION or LASER::FIDELITY
+		return mWhichLaser;
+}
+
+//Which laser is currently being used
+LASER VirtualLaser::CombinedLasers::currentLaser() const
+{
+	return mCurrentLaser;
 }
 
 void VirtualLaser::CombinedLasers::isLaserInternalShutterOpen() const
@@ -1679,7 +1697,7 @@ void VirtualLaser::CombinedLasers::tuneLaserWavelength(const int wavelength_nm)
 				mVision.setWavelength(wavelength_nm);
 
 		//Update the pockels handler to initialize or update the laser power
-		//The pockels destructor is made to close the uniblitz shutter automatically to allow switching between VISION and FIDELITY and also tuning VISION without photobleaching the sample
+		//The pockels destructor is made to close the uniblitz shutter automatically for switching from VISION to FIDELITY or viceversa without photobleaching the sample, and also for tuning VISION's wavelength
 		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));
 }
 
@@ -1710,22 +1728,36 @@ void VirtualLaser::CombinedLasers::closeShutter() const
 }
 #pragma endregion "CombinedLasers"
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect) : mCombinedLasers{ RTcontrol, laserSelect }
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER whichLaser) : mCombinedLasers{ RTcontrol, whichLaser }
 {
 	//Tune the laser wavelength, set the excitation and emission filterwheels, and position the collector lens concurrently
-	reconfigure(wavelength_nm);		
+	configure(wavelength_nm);		
 
 	//Set the laser power
 	setPower(initialPower, finalPower);
 }
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double laserPower, const LASER laserSelect) : VirtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, laserSelect } {}
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER whichLaser) : mCombinedLasers{ RTcontrol, whichLaser }
+{
+	//Tune the laser wavelength, set the excitation and emission filterwheels, and position the collector lens concurrently
+	configure(wavelength_nm);
+}
 
-VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelect) : VirtualLaser{ RTcontrol, wavelength_nm, 0, 0, laserSelect } {}
+//This constructor requires to call VirtualLaser::configure() and VirtualLaser::setPower() manually, otherwise some class members will no be initialized properly
+VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const LASER whichLaser) : mCombinedLasers{ RTcontrol, whichLaser } {}
+
+//Which laser is currently being used
+LASER VirtualLaser::currentLaser() const
+{
+	return mCombinedLasers.currentLaser();
+}
 
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
-void VirtualLaser::reconfigure(const int wavelength_nm)
+void VirtualLaser::configure(const int wavelength_nm)
 {
+	//TODO: the threads are not handling the exceptions thrown by the functions
+	//Maybe read https://vorbrodt.blog/2019/03/24/propagate-exceptions-across-threads/
+
 	//Tune the laser wavelength
 	std::thread th1(&CombinedLasers::tuneLaserWavelength, &mCombinedLasers, wavelength_nm);
 

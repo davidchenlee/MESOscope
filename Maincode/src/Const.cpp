@@ -56,10 +56,19 @@ namespace Constants
 	extern const double scanGalvoDelay{ 150 * us };														//Adjust 'scanGalvoDelay' until the bead position in a fordward scan coincides with that of a backward scan
 	extern const double rescanGalvoDelay{ 0. * us };													//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
 	extern const GALVOcalib scannerCalib{ 0.02417210 * V / um , 0.0 * V };								//Calibration factor of the scan galvo. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
-	extern const GALVOcalib rescannerCalib750nm{ 0.30 * scannerCalib.voltagePerDistance, 0.06 * V };
-	extern const GALVOcalib rescannerCalib920nm{ 0.32 * scannerCalib.voltagePerDistance, 0.08 * V };
-	extern const GALVOcalib rescannerCalib1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.09 * V };	//Using Vision
-	//extern const GALVOcalib rescannerCalib1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.10 * V };	//Using Fidelity
+
+	//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission fixed at the detector
+	//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the tiffs in all the PMT channels
+	//The beads should show up in the selected channel only
+	//Adjust 'mVoltagePerDistance' until all the beads show up in the same selected PMT16X channel
+	//Adjust 'mRescanVoltageOffset' to center the beads on the selected PMT16X channel
+	extern const GALVOcalib rescannerCalibV750nm{ 0.30 * scannerCalib.voltagePerDistance, 0.06 * V };
+	extern const GALVOcalib rescannerCalibV920nm{ 0.32 * scannerCalib.voltagePerDistance, 0.08 * V };
+	extern const GALVOcalib rescannerCalibV1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.09 * V };	//Using Vision
+	extern const GALVOcalib rescannerCalibF1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.10 * V };	//Using Fidelity
+
+
+
 
 	//STAGES
 	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if the z stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence

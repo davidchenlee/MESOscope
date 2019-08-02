@@ -90,9 +90,10 @@ namespace Constants
 	extern const double scanGalvoDelay;
 	extern const double rescanGalvoDelay;
 	extern const GALVOcalib scannerCalib;
-	extern const GALVOcalib rescannerCalib750nm;
-	extern const GALVOcalib rescannerCalib920nm;
-	extern const GALVOcalib rescannerCalib1040nm;
+	extern const GALVOcalib rescannerCalibV750nm;
+	extern const GALVOcalib rescannerCalibV920nm;
+	extern const GALVOcalib rescannerCalibV1040nm;
+	extern const GALVOcalib rescannerCalibF1040nm;
 
 	extern const double	ZstageTrigDelayTopdown;
 	extern const double	ZstageTrigDelayBottomup;

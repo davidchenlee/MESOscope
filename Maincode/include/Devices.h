@@ -212,6 +212,7 @@ public:
 	Laser(Laser&&) = delete;					//Disable move constructor
 	Laser& operator=(Laser&&) = delete;			//Disable move-assignment constructor
 
+	int currentWavelength_nm() const;
 	void printWavelength_nm() const;
 	void setWavelength(const int wavelength_nm);
 	void setShutter(const bool state) const;
@@ -301,6 +302,7 @@ class VirtualLaser
 	public:
 		CombinedLasers(FPGAns::RTcontrol &RTcontrol, const LASER whichLaser = LASER::AUTO);
 		LASER currentLaser() const;
+		int currentWavelength_nm() const;
 		void isLaserInternalShutterOpen() const;
 		void tuneLaserWavelength(const int wavelength_nm);
 		void setPower(const double initialPower, const double finalPower) const;
@@ -331,6 +333,7 @@ public:
 	VirtualLaser& operator=(VirtualLaser&&) = delete;		//Disable move-assignment constructor
 
 	LASER currentLaser() const;
+	int currentWavelength_nm() const;
 	void configure(const int wavelength_nm);
 	void setPower(const double laserPower) const;
 	void setPower(const double initialPower, const double finalPower) const;

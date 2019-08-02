@@ -62,6 +62,8 @@ namespace Constants
 	//The beads should show up in the selected channel only
 	//Adjust 'mVoltagePerDistance' until all the beads show up in the same selected PMT16X channel
 	//Adjust 'mRescanVoltageOffset' to center the beads on the selected PMT16X channel
+	//By increasing mVoltagePerDistance, the top beads in a Tiff appear first, then the bottom ones
+	//A positive mVoltageOffset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
 	extern const GALVOcalib rescannerCalibV750nm{ 0.30 * scannerCalib.voltagePerDistance, 0.06 * V };
 	extern const GALVOcalib rescannerCalibV920nm{ 0.32 * scannerCalib.voltagePerDistance, 0.08 * V };
 	extern const GALVOcalib rescannerCalibV1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.09 * V };	//Using Vision

@@ -375,7 +375,7 @@ void Image::constructImage(const bool saveAllPMT)
 
 void Image::correctImage(const double FFOVfast)
 {
-	mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
+	//mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 
 	if (multibeam)
 	{
@@ -550,17 +550,20 @@ void Galvo::reconfigure(const int wavelength_nm, const LASER whichLaser)
 	case RTCHAN::SCANGALVO:
 		mVoltagePerDistance = scannerCalib.voltagePerDistance;
 		mVoltageOffset = scannerCalib.voltageOffset;
-		break;
-	case RTCHAN::RESCANGALVO:
 
-		switch (whichLaser)//The calibration of the rescanning galvo when using Vision or Fidelity is slightly different
+		//For debugging
+		std::cout << "Scanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
+		std::cout << "Scanner mVoltageOffset = " << mVoltageOffset << "\n";
+		break;
+	case RTCHAN::RESCANGALVO://This implementation is because calibration of the rescan galvo is slightly different when using Vision or Fidelity
+		switch (whichLaser)
 		{
 		case LASER::VISION:
 			switch (wavelength_nm)
 			{
 			case 750:			
-				mVoltagePerDistance = rescannerCalibV750nm.voltagePerDistance;	//By increasing mVoltagePerDistance, the top beads in a Tiff appear first, then the bottom ones
-				mVoltageOffset = rescannerCalibV750nm.voltageOffset;			//A positive mVoltageOffset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
+				mVoltagePerDistance = rescannerCalibV750nm.voltagePerDistance;
+				mVoltageOffset = rescannerCalibV750nm.voltageOffset;
 				break;
 			case 920:
 				mVoltagePerDistance = rescannerCalibV920nm.voltagePerDistance;
@@ -588,6 +591,10 @@ void Galvo::reconfigure(const int wavelength_nm, const LASER whichLaser)
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
 		}
+
+		//For debugging
+		std::cout << "Rescanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
+		std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
 		break;
 	}
 }
@@ -1048,6 +1055,7 @@ Laser::Laser(const LASER whichLaser) : mWhichLaser{ whichLaser }
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure establishing serial communication with " + laserName);
 	}
 
+	//Store the wavelength as a class member
 	mWavelength_nm = downloadWavelength_nm_();
 }
 
@@ -1097,6 +1105,11 @@ int Laser::downloadWavelength_nm_() const
 	default:
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}	
+}
+
+int Laser::currentWavelength_nm() const
+{
+	return mWavelength_nm;
 }
 
 void Laser::printWavelength_nm() const
@@ -1652,6 +1665,19 @@ LASER VirtualLaser::CombinedLasers::currentLaser() const
 	return mCurrentLaser;
 }
 
+int VirtualLaser::CombinedLasers::currentWavelength_nm() const
+{
+	switch (mCurrentLaser)
+	{
+	case LASER::VISION:
+		return mVision.currentWavelength_nm();
+	case LASER::FIDELITY:
+		return mFidelity.currentWavelength_nm();
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
+	}
+}
+
 void VirtualLaser::CombinedLasers::isLaserInternalShutterOpen() const
 {
 	while (true)
@@ -1750,6 +1776,11 @@ VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const LASER whichLaser)
 LASER VirtualLaser::currentLaser() const
 {
 	return mCombinedLasers.currentLaser();
+}
+
+int VirtualLaser::currentWavelength_nm() const
+{
+	return mCombinedLasers.currentWavelength_nm();
 }
 
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens

@@ -3,6 +3,7 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
+- figure out why the FOV of 16X is slightly different from 1X
 - Check the power increase
 - Check the sequencer
 - Implement findSampleContour()

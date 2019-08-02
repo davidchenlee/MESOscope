@@ -285,7 +285,7 @@ namespace FPGAns
 		if (multibeam)
 			mPMT16Xchan = PMT16XCHAN::CENTERED;
 		else
-			mPMT16Xchan = PMT16XCHAN::CH07;
+			mPMT16Xchan = PMT16Xchan;
 
 		//If the z stage acts as the main trigger (for cont z scanning), add a timer after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
 		if (mMainTrigger == MAINTRIG::ZSTAGE)

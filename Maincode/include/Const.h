@@ -81,8 +81,18 @@ namespace Constants
 
 	extern const double pockelsFirstFrameDelay;
 	extern const double pockelsSecondaryDelay;
+
+	struct GALVOcalib
+	{
+		double voltagePerDistance;
+		double voltageOffset;
+	};
 	extern const double scanGalvoDelay;
 	extern const double rescanGalvoDelay;
+	extern const GALVOcalib scannerCalib;
+	extern const GALVOcalib rescannerCalib750nm;
+	extern const GALVOcalib rescannerCalib920nm;
+	extern const GALVOcalib rescannerCalib1040nm;
 
 	extern const double	ZstageTrigDelayTopdown;
 	extern const double	ZstageTrigDelayBottomup;
@@ -90,4 +100,10 @@ namespace Constants
 	extern const int nChanPMT;
 	extern const int nPMTsim;
 	extern const U8 PMTsimArray[];
+
+	extern const PMT16XCHAN PMT16Xchan;
+
+	extern const double cLensPos750nm;
+	extern const double cLensPos920nm;
+	extern const double cLensPos1040nm;
 }

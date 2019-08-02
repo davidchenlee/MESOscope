@@ -1,13 +1,13 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (52.949 + 0.000 ) * mm, 17.250 * mm, 18.117 * mm };
+double3 stackCenterXYZ{ (52.949 - 0.015 ) * mm, 17.250 * mm, 18.118 * mm };
 //double3 stackCenterXYZ{ 52.949 * mm, -7.000 * mm, 18.190 * mm };	//Fluorescent slide
 
 #if multibeam
-Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{"DAPI", 750, 600. * mW, 0. * mWpum }, { "GFP", 920, 600. * mW, 0. * mWpum }, { "TDT", 1040, 200. * mW, 0. * mWpum }}} };
+Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{"DAPI", 750, (37. * mW) * 16, 0. * mWpum }, { "GFP", 920, (37. * mW) * 16, 0. * mWpum }, { "TDT", 1040, (12. * mW) * 16, 0. * mWpum }}} };
 #else
-Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 10. * mW, 0. * mWpum }}} };
+Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 8. * mW, 0. * mWpum }}} };
 Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
 Sample fluorSlide{ "fluorBlue", "SiliconeOil", "1.51", {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
 Sample liver{ "Beads1um", "SiliconeMineralOil5050", "1.49", {{{"TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }}} };
@@ -143,16 +143,16 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in z frame by frame from the z position
-		const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in z frame by frame centered at the z position
+		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in z frame by frame centered at the z position
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in x frame by frame
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
-		const LASER selectLaser{ LASER::FIDELITY };
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
+		const LASER selectLaser{ LASER::VISION };
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
@@ -216,13 +216,13 @@ namespace PMT16XRoutines
 		case RUNMODE::SCANXY:
 			stepSizeX = 5. * um;
 			//Generate the discrete scan sequence for the stages
-			for (int iterPos = 0; iterPos < 100; iterPos++)
+			for (int iterPos = 0; iterPos < 40; iterPos++)
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX) + iterPos * stepSizeX, stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ)});
 			break;
 		case RUNMODE::COLLECTLENS:
 			saveAllPMT = true;
-			cLensPosIni = 6.0 * mm;
-			cLensPosFinal = 13.0 * mm;
+			cLensPosIni = 0.0 * mm;
+			cLensPosFinal = 5.0 * mm;
 			cLensStep = 0.5 * mm;;
 			nSameZ = static_cast<int>( std::floor((cLensPosFinal - cLensPosIni)/ cLensStep) ) + 1;
 			stagePositionXYZ.push_back(stackCenterXYZ);
@@ -302,7 +302,7 @@ namespace PMT16XRoutines
 
 				laser.setPower(fluorLabel.mScanPi + iterLocation * stepSizeZ * fluorLabel.mStackPinc);	//Update the laser power
 
-				//Used with to optimize the collector lens position
+				//Used to optimize the collector lens position
 				if (acqMode == RUNMODE::COLLECTLENS)
 					laser.moveCollectorLens(cLensPosIni + iterSameZ * cLensStep);
 
@@ -391,12 +391,12 @@ namespace PMT16XRoutines
 		const ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();					//Make sure that the RS is running
 
+		//LASER
+		VirtualLaser laser{ RTcontrol, fluorLabelList.front().mWavelength_nm, LASER::VISION };
+
 		//GALVO RT linear scan
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
 		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, fluorLabelList.front().mWavelength_nm };
-
-		//LASER
-		VirtualLaser laser{ RTcontrol, fluorLabelList.front().mWavelength_nm, LASER::VISION };
 
 		//Create a location list
 		Sequencer sequence{ currentSample, stack, stackCenterXYZ, nStacksXY };

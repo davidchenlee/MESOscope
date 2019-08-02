@@ -23,8 +23,8 @@ namespace Constants
 	extern const int mW{ 1 };								//Milliwatt
 	extern const double mWpum{ 1. * mW / um };				//mW per micron
 
-	//VISION LASER
-	extern const double VISIONpulsePeriod{ 0.0125 * us };	//The pulse repetition rate of VISION is 80 MHz
+	//LASERS
+	extern const double VISIONpulsePeriod{ 0.0125 * us };	//The pulse repetition rate of VISION and FIDELITY is 80 MHz
 
 	//PIXELCLOCK
 	extern const double pixelDwellTime{ 0.1625 * us };		//= 13 * 12.5 ns = 162.5 ns
@@ -53,8 +53,13 @@ namespace Constants
 	extern const double pockelsSecondaryDelay{ 0 };			//Delay of the Pockels wrt the preframeclock in the subsequent frames 
 
 	//GALVOS
-	extern const double scanGalvoDelay{ 150 * us };			//Adjust 'scanGalvoDelay' until the bead position in a fordward scan coincides with that of a backward scan
-	extern const double rescanGalvoDelay{ 0. * us };		//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
+	extern const double scanGalvoDelay{ 150 * us };														//Adjust 'scanGalvoDelay' until the bead position in a fordward scan coincides with that of a backward scan
+	extern const double rescanGalvoDelay{ 0. * us };													//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
+	extern const GALVOcalib scannerCalib{ 0.02417210 * V / um , 0.0 * V };								//Calibration factor of the scan galvo. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
+	extern const GALVOcalib rescannerCalib750nm{ 0.30 * scannerCalib.voltagePerDistance, 0.06 * V };
+	extern const GALVOcalib rescannerCalib920nm{ 0.32 * scannerCalib.voltagePerDistance, 0.08 * V };
+	extern const GALVOcalib rescannerCalib1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.09 * V };	//Using Vision
+	//extern const GALVOcalib rescannerCalib1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.10 * V };	//Using Fidelity
 
 	//STAGES
 	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if the z stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
@@ -70,10 +75,17 @@ namespace Constants
 	//PMT
 	extern const int nChanPMT{ 16 };
 
-	//Simulate the PMT pulses. The PMT simulator in the LV changes from 0 to 1 or vice versa every time there is a 1 in the array
-	//In LV, the clock of the photocounter, and therefore, of the PMT simulator are currently 120MHz = 8.333 ns
-	//Given the current pixel dwell time 162.5 ns, the max number of pulses is therefore pixelDwellTime/usPerTick = 162.5 ns/ 8.333 ns = 19.5 pulses
-	extern const int nPMTsim{ 20 };			//Size of PMTsimArray. IMPORTANT: the size of PMTsimArray in LV has to be changed manually and then the code recompiled
+	//Simulate the PMT pulses. The PMT simulator implemented in the LV changes from 0 to 1 or vice versa every time there is a 1 in the array
+	//In LV, the clock of the photocounters is currently 120MHz = 8.333 ns. Use the same clock for the simulator.
+	//Given the current pixel dwell time of 162.5 ns, the max number of pulses is pixelDwellTime/usPerTick = 162.5 ns/ 8.333 ns = 19.5 pulses
+	extern const int nPMTsim{ 20 };			//Size of PMTsimArray. IMPORTANT: the size of PMTsimArray in LV has to be changed manually (dynamical allocation not allowed) and after that the LV code has to be recompiled
 	extern const U8 PMTsimArray[nPMTsim]{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 										  1, 1, 1, 1, 1, 1, 1, 0, 0, 1 };
+
+	extern const PMT16XCHAN PMT16Xchan{ PMT16XCHAN::CH07 }; //CH00 - CH15
+
+	//COLLECTOR LENS
+	extern const double cLensPos750nm{ 10.0 * mm };
+	extern const double cLensPos920nm{ 6.0 * mm };
+	extern const double cLensPos1040nm{ 1.0 * mm };
 }

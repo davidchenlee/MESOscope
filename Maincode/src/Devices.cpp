@@ -258,7 +258,10 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , nChanPMT * mRTcontrol.mNframes };
 		stack.pushImage(static_cast<int>(PMT16XCHAN::CH00), static_cast<int>(PMT16XCHAN::CH07), CountA.data());
 		stack.pushImage(static_cast<int>(PMT16XCHAN::CH08), static_cast<int>(PMT16XCHAN::CH15), CountB.data());
-		stack.saveToFile("AllChannels", MULTIPAGE::EN, OVERRIDE::DIS);
+
+		std::string PMT16Xchan_s{ std::to_string(static_cast<int>(mRTcontrol.mPMT16Xchan)) };
+		stack.saveToFile("AllChannels PMT16Xchan=" + PMT16Xchan_s, MULTIPAGE::EN, OVERRIDE::DIS);
+
 	}
 }
 
@@ -376,8 +379,8 @@ void Image::correctImage(const double FFOVfast)
 
 	if (multibeam)
 	{
-		//mTiff.suppressCrosstalk(0.2);
-		mTiff.flattenField(2.0);
+		//mTiff.suppressCrosstalk(0.1);
+		//mTiff.flattenField(2.0);
 	}
 
 }
@@ -523,14 +526,11 @@ void ResonantScanner::isRunning() const
 #pragma region "Galvo"
 Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavelength_nm) : mRTcontrol{ RTcontrol }, mGalvoRTchannel{ channel }, mWavelength_nm{ wavelength_nm }
 {
-	//Calibration factor of the scan galvo. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
-	const double scanCalib{ 0.02417210 * V / um };		
-
 	switch (channel)
 	{
 	case RTCHAN::SCANGALVO:
-		mVoltagePerDistance = scanCalib;
-		mVoltageOffset = 0;
+		mVoltagePerDistance = scannerCalib.voltagePerDistance;
+		mVoltageOffset = scannerCalib.voltageOffset;
 		break;
 	case RTCHAN::RESCANGALVO:
 		//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission fixed at the detector
@@ -540,19 +540,19 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const int wavel
 		//Adjust 'mRescanVoltageOffset' to center the beads on the selected PMT16X channel
 		switch (mWavelength_nm)
 		{
-			//By increasing mVoltagePerDistance, the top beads in a Tiff appear before the bottom ones.
+			//By increasing mVoltagePerDistance, the top beads in a Tiff appear first, then the bottom ones.
 			//A positive mVoltageOffset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
 		case 750:
-			mVoltagePerDistance = 0.30 * scanCalib;
-			mVoltageOffset = 0.06 * V;					
+			mVoltagePerDistance = rescannerCalib750nm.voltagePerDistance;
+			mVoltageOffset = rescannerCalib750nm.voltageOffset;
 			break;
 		case 920:
-			mVoltagePerDistance = 0.32 * scanCalib;
-			mVoltageOffset = 0.08 * V;
+			mVoltagePerDistance = rescannerCalib920nm.voltagePerDistance;
+			mVoltageOffset = rescannerCalib920nm.voltageOffset;
 			break;
 		case 1040:
-			mVoltagePerDistance = 0.32 * scanCalib;
-			mVoltageOffset = 0.10 * V;					//0.08 for Vision, 0.10 for Fidelity
+			mVoltagePerDistance = rescannerCalib1040nm.voltagePerDistance;
+			mVoltageOffset = rescannerCalib1040nm.voltageOffset;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": galvo wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -572,11 +572,54 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN channel, const double po
 		positionLinearRamp(-posMax, posMax, mVoltageOffset);
 		break;
 	case RTCHAN::RESCANGALVO:
-		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector
-		positionLinearRamp(posMax, -posMax, mVoltageOffset + beamletOrder.at(static_cast<int>(mRTcontrol.mPMT16Xchan)) * mInterBeamletDistance * mVoltagePerDistance);
+		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
+		positionLinearRamp(posMax, -posMax, mVoltageOffset + beamletIndex_(mRTcontrol.mPMT16Xchan) * mInterBeamletDistance * mVoltagePerDistance);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
+	}
+}
+
+double Galvo::beamletIndex_(PMT16XCHAN PMT16Xchan) const
+{
+	switch (PMT16Xchan)
+	{
+	case PMT16XCHAN::CH00:
+		return 7.5;
+	case PMT16XCHAN::CH01:
+		return 6.5;
+	case PMT16XCHAN::CH02:
+		return 5.5;
+	case PMT16XCHAN::CH03:
+		return 4.5;
+	case PMT16XCHAN::CH04:
+		return 3.5;
+	case PMT16XCHAN::CH05:
+		return 2.5;
+	case PMT16XCHAN::CH06:
+		return 1.5;
+	case PMT16XCHAN::CH07:
+		return 0.5;
+	case PMT16XCHAN::CH08:
+		return -0.5;
+	case PMT16XCHAN::CH09:
+		return -1.5;
+	case PMT16XCHAN::CH10:
+		return -2.5;
+	case PMT16XCHAN::CH11:
+		return -3.5;
+	case PMT16XCHAN::CH12:
+		return -4.5;
+	case PMT16XCHAN::CH13:
+		return -5.5;
+	case PMT16XCHAN::CH14:
+		return -6.5;
+	case PMT16XCHAN::CH15:
+		return -7.5;
+	case PMT16XCHAN::CENTERED:
+		return 0.0;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected PMT16X channel unavailable");
 	}
 }
 
@@ -1521,13 +1564,13 @@ void VirtualLaser::CollectorLens::set(const int wavelength_nm)
 	switch (wavelength_nm)
 	{
 	case 750:
-		mStepper.move(10.0 * mm);
+		mStepper.move(cLensPos750nm);
 		break;
 	case 920:
-		mStepper.move(6.0 * mm);
+		mStepper.move(cLensPos920nm);
 		break;
 	case 1040:
-		mStepper.move(1.0 * mm);
+		mStepper.move(cLensPos1040nm);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector lens position has not been calibrated for the wavelength " + std::to_string(wavelength_nm));
@@ -1669,7 +1712,7 @@ void VirtualLaser::CombinedLasers::closeShutter() const
 
 VirtualLaser::VirtualLaser(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const LASER laserSelect) : mCombinedLasers{ RTcontrol, laserSelect }
 {
-	//Tune the laser wavelength, set the excitation and emission filterwheels, and position the collector lens
+	//Tune the laser wavelength, set the excitation and emission filterwheels, and position the collector lens concurrently
 	reconfigure(wavelength_nm);		
 
 	//Set the laser power

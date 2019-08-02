@@ -91,15 +91,13 @@ class Galvo
 															//However, in practice lineclockHalfPeriod  is not fixed but seems to depend on the RS amplitude
 															//If mRampDurationFineTuning is changed, then scanGalvoDelay has to be readjusted to match the galvo's forward and backward scans
 
-	//To aim a single beam at a specific channel of the PMT16X
-	const double mInterBeamletDistance{ 17.5 * um };			//Set by the beamsplitter specs
-	const std::vector<double> beamletOrder{ 7.5, 6.5, 5.5, 4.5, 3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5, -4.5, -5.5, -6.5, -7.5, 0.0 };		//The last entry in this array centers the rescanner wrt the PMT16X
-
+	const double mInterBeamletDistance{ 17.5 * um };		//Set by the beamsplitter specs
 	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	
 	RTCHAN mGalvoRTchannel;
 	double mVoltagePerDistance;
 	double mVoltageOffset;
 	int mWavelength_nm;
+	double beamletIndex_(PMT16XCHAN PMT16Xchan) const;
 public:
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN galvoChannel, const int wavelength_nm = 0);
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN galvoChannel, const double posMax, const int wavelength_nm = 0);

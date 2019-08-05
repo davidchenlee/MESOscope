@@ -23,6 +23,7 @@ template<class T> inline U8 clipU8top(const T x);
 template<class T> inline U8 clipU8dual(const T x);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
+int pnpoly(int nvert, float *vertx, float *verty, float testx, float testy);
 
 //For saving the parameters to a text file
 class Logger

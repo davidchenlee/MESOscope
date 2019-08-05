@@ -817,7 +817,7 @@ void Filterwheel::setPosition(const FILTERCOLOR color)
 
 			//Thread-safe message
 			std::stringstream msg;
-			msg << "Setting the" << mFilterwheelName << " to " + colorToString_(color) << "...\n";
+			msg << "Setting the " << mFilterwheelName << " to " + colorToString_(color) << "...\n";
 			std::cout << msg.str();
 
 			Sleep(static_cast<DWORD>(1. * minSteps / mTurningSpeed / ms));	//Wait until the filterwheel stops turning the turret
@@ -1522,6 +1522,11 @@ LASER VirtualLaser::CombinedLasers::currentLaser() const
 	return mCurrentLaser;
 }
 
+std::string VirtualLaser::CombinedLasers::currentLaser_s() const
+{
+	return laserNameToString_(mCurrentLaser);
+}
+
 int VirtualLaser::CombinedLasers::currentWavelength_nm() const
 {
 	switch (mCurrentLaser)
@@ -1635,6 +1640,11 @@ LASER VirtualLaser::currentLaser() const
 	return mCombinedLasers.currentLaser();
 }
 
+std::string VirtualLaser::currentLaser_s() const
+{
+	return mCombinedLasers.currentLaser_s();
+}
+
 int VirtualLaser::currentWavelength_nm() const
 {
 	return mCombinedLasers.currentWavelength_nm();
@@ -1701,7 +1711,7 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double
 	if (virtualLaser != nullptr)
 		reconfigure(virtualLaser->currentWavelength_nm(), virtualLaser->currentLaser());
 	else
-		reconfigure(750, LASER::VISION);	//Use Vision at 750 nm as default parameters
+		reconfigure(750, LASER::VISION);	//By default, use Vision at 750 nm
 
 	switch (whichGalvo)
 	{

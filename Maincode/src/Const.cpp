@@ -24,7 +24,7 @@ namespace Constants
 	extern const double mWpum{ 1. * mW / um };				//mW per micron
 
 	//LASERS
-	extern const double VISIONpulsePeriod{ 0.0125 * us };	//The pulse repetition rate of VISION and FIDELITY is 80 MHz
+	extern const double laserPulsePeriod{ 0.0125 * us };	//The pulse repetition rate of VISION and FIDELITY is 80 MHz
 
 	//PIXELCLOCK
 	extern const double pixelDwellTime{ 0.1625 * us };		//= 13 * 12.5 ns = 162.5 ns

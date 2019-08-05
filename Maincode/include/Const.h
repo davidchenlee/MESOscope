@@ -63,7 +63,7 @@ namespace Constants
 	extern const int mW;
 	extern const double mWpum;
 
-	extern const double VISIONpulsePeriod;
+	extern const double laserPulsePeriod;
 	extern const double pixelDwellTime;
 	extern const double lineclockHalfPeriod;
 	

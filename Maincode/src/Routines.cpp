@@ -151,8 +151,8 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
-		const LASER whichLaser{ LASER::VISION};
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const LASER whichLaser{ LASER::FIDELITY };
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
@@ -256,10 +256,11 @@ namespace PMT16XRoutines
 			datalog.record("\nFPGA---------------------------------------------------------");
 			datalog.record("FPGA clock (MHz) = ", tickPerUs);
 			datalog.record("\nLASER--------------------------------------------------------");
-			datalog.record("Laser wavelength (nm) = ", fluorLabel.mWavelength_nm);
+			datalog.record("Laser used = ", virtualLaser.currentLaser_s());
+			datalog.record("Laser wavelength (nm) = ", virtualLaser.currentWavelength_nm());
 			datalog.record("Laser power first frame (mW) = ", fluorLabel.mScanPi / mW);
 			datalog.record("Laser power increase (mW/um) = ", fluorLabel.mStackPinc / mWpum);
-			datalog.record("Laser repetition period (us) = ", VISIONpulsePeriod / us);
+			datalog.record("Laser repetition period (us) = ", laserPulsePeriod / us);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
 			datalog.record("RS period (us) = ", 2 * lineclockHalfPeriod / us);
@@ -425,7 +426,7 @@ namespace PMT16XRoutines
 			datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
 			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
 			datalog.record("Resolution Y (galvo) (um/pix) = ", pixelSizeXY / um);
-			datalog.record("\n");
+			datalog.record("\nSTAGE--------------------------------------------------------");
 
 			//Update the laser wavelength
 			const int wavelength_nm{ fluorLabelList.at(iter_wv).mWavelength_nm };
@@ -545,11 +546,11 @@ namespace PMT16XRoutines
 		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };						//Scan direction in z
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
-		//This is because the beads at 750 nm are chromatically shifted
+		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
 		if (fluorLabel.mWavelength_nm == 750)
 			stackCenterXYZ.at(STAGEZ) -= 6 * um;
 		//This is because FIDELITY is chromatically shifted wrt VISION
-		if (whichLaser == LASER::FIDELITY)
+		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == LASER::FIDELITY || whichLaser == LASER::AUTO))
 			stackCenterXYZ.at(STAGEZ) -= 5 * um;
 
 		stackCenterXYZ.at(STAGEZ) -= nFramesCont * stepSizeZ /2;
@@ -909,21 +910,20 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 10 };			//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 40 };			//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
 
 		//POCKELS CELL
-		const int wavelength_nm{ 750 };
-		PockelsCell pockels{ RTcontrol, wavelength_nm, LASER::VISION };
-		//pockels.pushPowerSinglet(400 * us, 50. * mW, OVERRIDE);
-		pockels.powerLinearRamp(10. * mW, 10. * mW);		//Linearly scale the laser power from the first to the last frame
+		const int wavelength_nm{ 1040 };
+		PockelsCell pockels{ RTcontrol, wavelength_nm, LASER::FIDELITY };
+		pockels.pushPowerSinglet(400 * us, 100. * mW, OVERRIDE::EN);
+		//pockels.powerLinearRamp(100. * mW, 200. * mW);		//Linearly scale the laser power from the first to the last frame
 
 		//Test the voltage setpoint
 		//pockels.pushVoltageSinglet(8* us, 0.5 * V);
 		//pockels.voltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
-
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };

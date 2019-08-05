@@ -1,5 +1,5 @@
 #pragma once
-#include <thread>
+#include <future>
 #include <fstream>					//file management
 #include <ctime>					//Clock()
 #include <algorithm>				//std::max and std::min
@@ -212,11 +212,11 @@ public:
 	Laser(Laser&&) = delete;					//Disable move constructor
 	Laser& operator=(Laser&&) = delete;			//Disable move-assignment constructor
 
-	int currentWavelength_nm() const;
 	void printWavelength_nm() const;
 	void setWavelength(const int wavelength_nm);
 	void setShutter(const bool state) const;
 	bool isShutterOpen() const;
+	int currentWavelength_nm() const;
 };
 
 class Shutter

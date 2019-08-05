@@ -975,7 +975,7 @@ void Filterwheel::setPosition(const FILTERCOLOR color)
 
 			//Thread-safe message
 			std::stringstream msg;
-			msg << "Setting " << mFilterwheelName << " to " + colorToString_(color) << "...\n";
+			msg << "Setting the" << mFilterwheelName << " to " + colorToString_(color) << "...\n";
 			std::cout << msg.str();
 
 			Sleep(static_cast<DWORD>(1. * minSteps / mTurningSpeed / ms));	//Wait until the filterwheel stops turning the turret
@@ -1105,11 +1105,6 @@ int Laser::downloadWavelength_nm_() const
 	default:
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}	
-}
-
-int Laser::currentWavelength_nm() const
-{
-	return mWavelength_nm;
 }
 
 void Laser::printWavelength_nm() const
@@ -1246,6 +1241,11 @@ bool Laser::isShutterOpen() const
 	{
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with " + laserName);
 	}
+}
+
+int Laser::currentWavelength_nm() const
+{
+	return mWavelength_nm;
 }
 #pragma endregion "Laser"
 
@@ -1609,18 +1609,34 @@ void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm
 {
 	if (multibeam)//Multiplex. Turn both filterwheels concurrently
 	{
-		std::thread th1{ &Filterwheel::setWavelength, &mFWexcitation, wavelength_nm };
-		std::thread th2{ &Filterwheel::setWavelength, &mFWdetection, wavelength_nm };
-		th1.join();
-		th2.join();
+		std::future<void> th1{ std::async(&Filterwheel::setWavelength, &mFWexcitation, wavelength_nm) };
+		std::future<void> th2{ std::async(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm) };
+
+		try
+		{
+		th1.get();
+		th2.get();
+		}
+		catch (...)
+		{
+			throw;
+		}
 	}
 
 	else //Single beam. Turn both filterwheels concurrently
 	{
-		std::thread th1(&Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN);	//Set the excitation filterwheel open (no filter)
-		std::thread th2(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm);
-		th1.join();
-		th2.join();
+		std::future<void> th1{ std::async(&Filterwheel::setPosition, &mFWexcitation, FILTERCOLOR::OPEN) };
+		std::future<void> th2{ std::async(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm) };
+
+		try
+		{
+			th1.get();
+			th2.get();
+		}
+		catch (...)
+		{
+			throw;
+		}
 	}
 }
 #pragma endregion "VirtualFilterWheel"
@@ -1786,19 +1802,20 @@ int VirtualLaser::currentWavelength_nm() const
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
 void VirtualLaser::configure(const int wavelength_nm)
 {
-	//TODO: the threads are not handling the exceptions thrown by the functions
-	//Maybe read https://vorbrodt.blog/2019/03/24/propagate-exceptions-across-threads/
+	std::future<void> th1{ std::async(&CombinedLasers::tuneLaserWavelength, &mCombinedLasers, wavelength_nm) };			//Tune the laser wavelength
+	std::future<void> th2{ std::async(&VirtualFilterWheel::turnFilterwheels_, &mVirtualFilterWheel, wavelength_nm) };	//Set the filterwheels
+	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };							//Set the collector lens position
 
-	//Tune the laser wavelength
-	std::thread th1(&CombinedLasers::tuneLaserWavelength, &mCombinedLasers, wavelength_nm);
-
-	//Set the filterwheels
-	std::thread th2(&VirtualFilterWheel::turnFilterwheels_, &mVirtualFilterWheel, wavelength_nm);
-
-	//Set the collector lens position
-	std::thread th3(&CollectorLens::set, &mCollectorLens, wavelength_nm);
-
-	th1.join(); th2.join(); th3.join();
+	try
+	{
+		th1.get();
+		th2.get();
+		th3.get();
+	}
+	catch (...)
+	{
+		throw;
+	}
 
 	//Check if the laser internal shutter is open
 	mCombinedLasers.isLaserInternalShutterOpen();

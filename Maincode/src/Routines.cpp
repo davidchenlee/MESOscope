@@ -152,7 +152,7 @@ namespace PMT16XRoutines
 		
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
-		const LASER whichLaser{ LASER::VISION };
+		const LASER whichLaser{ LASER::VISION};
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
@@ -948,7 +948,7 @@ namespace TestRoutines
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga };
 
-		const int wavelength_nm{ 750 };
+		const int wavelength_nm{ 1040 };
 		const double laserPower{ 50. * mW };
 		VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, LASER::VISION };
 
@@ -1316,19 +1316,19 @@ namespace TestRoutines
 		//FWexcitation.setWavelength(wavelength_nm);
 		//FWdetection.setWavelength(wavelength_nm);
 
-		if (multibeam)//Multiplex. Turn both filterwheels concurrently
+		if (1)//Multibeam. Turn both filterwheels concurrently
 		{
-			std::thread th1{ &Filterwheel::setWavelength, &FWexcitation, wavelength_nm };
-			std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
-			th1.join();
-			th2.join();
+			std::future<void> th1{ std::async(&Filterwheel::setWavelength, &FWexcitation, wavelength_nm) };
+			std::future<void> th2{ std::async(&Filterwheel::setWavelength, &FWdetection, wavelength_nm) };
+			th1.get();
+			th2.get();
 		}
-		else//Single beam. Turn both filterwheels concurrently
+		else//Singlebeam. Turn both filterwheels concurrently
 		{
-			std::thread th1{ &Filterwheel::setPosition, &FWexcitation, FILTERCOLOR::OPEN };				//Leave the excitation filterwheel open
-			std::thread th2{ &Filterwheel::setWavelength, &FWdetection, wavelength_nm };
-			th1.join();
-			th2.join();
+			std::future<void> th1{ std::async(&Filterwheel::setWavelength, &FWexcitation, wavelength_nm) };	//Leave the excitation filterwheel open
+			std::future<void> th2{ std::async(&Filterwheel::setWavelength, &FWdetection, wavelength_nm) };
+			th1.get();
+			th2.get();
 		}
 	}
 

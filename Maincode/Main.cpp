@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
 			//PMT16XRoutines::PMT16XframeByFrameScan(fpga);
 			//PMT16XRoutines::frameByFrameScanTiling(fpga, 1);
 			//PMT16XRoutines::liveScan(fpga);
-			PMT16XRoutines::continuousScan(fpga);
+			//PMT16XRoutines::continuousScan(fpga);
 
 			//TESTS
 			//TestRoutines::digitalLatency(fpga);
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::pockels(fpga);
 			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::lasers(fpga);
-			//TestRoutines::virtualLasers(fpga);
+			TestRoutines::virtualLasers(fpga);
 
 			//TestRoutines::convertI16toVolt();
 			//TestRoutines::tiffU8();
@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 		pressAnyKeyToCont();
 	}
 
-	pressAnyKeyToCont();
+	//pressAnyKeyToCont();
 	return 0;
 }
 

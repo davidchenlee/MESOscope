@@ -235,8 +235,7 @@ namespace PMT16XRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
 
 		//LASER
-		VirtualLaser virtualLaser{ RTcontrol, whichLaser };
-		virtualLaser.configure(fluorLabel.mWavelength_nm);
+		VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, whichLaser };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -244,7 +243,7 @@ namespace PMT16XRoutines
 
 		//GALVO RT linear scan
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, virtualLaser.currentLaser(), virtualLaser.currentWavelength_nm() };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, fluorLabel.mWavelength_nm };
 
 		//DATALOG
@@ -431,11 +430,11 @@ namespace PMT16XRoutines
 			//Update the laser wavelength
 			const int wavelength_nm{ fluorLabelList.at(iter_wv).mWavelength_nm };
 			virtualLaser.configure(wavelength_nm);		//When switching pockels, the class destructor closes the uniblitz shutter
-			virtualLaser.openShutter();				//Re-open the Uniblitz shutter if closed
+			virtualLaser.openShutter();					//Re-open the Uniblitz shutter if closed
 
 			//GALVO RT linear scan
 			const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-			const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, virtualLaser.currentLaser(), virtualLaser.currentWavelength_nm() };
+			const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 
 			//Iterate over the locations
 			for (std::vector<int>::size_type iter_loc = 0; iter_loc < locationXYList.size(); iter_loc++)
@@ -508,7 +507,7 @@ namespace PMT16XRoutines
 
 		//GALVO RT linear scan
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, virtualLaser.currentLaser(), virtualLaser.currentWavelength_nm() };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, &virtualLaser };
 
 		//OPEN THE UNIBLITZ SHUTTERS
 		virtualLaser.openShutter();	//The destructor will close the shutter automatically
@@ -604,7 +603,7 @@ namespace PMT16XRoutines
 
 		//GALVO RT linear scan
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, virtualLaser.currentLaser(), virtualLaser.currentWavelength_nm() };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 
 		//OPEN THE SHUTTER
 		virtualLaser.openShutter();	//The destructor will close the shutter automatically
@@ -789,7 +788,6 @@ namespace TestRoutines
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
 		const int nFramesCont{ 10 };
-		const int wavelength_nm{ 750 };			//The rescanner calib depends on the laser wavelength
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
@@ -797,7 +795,7 @@ namespace TestRoutines
 		//GALVOS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
 		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-		Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, LASER::VISION, wavelength_nm };
+		Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2 };
 
 		//Execute the realtime control sequence and acquire the image
 		Image image{ RTcontrol };
@@ -1222,21 +1220,21 @@ namespace TestRoutines
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 1 };						//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 1 };										//Number of frames for continuous XY acquisition
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
 		const int wavelength_nm{ 750 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
 
-		//GALVOS
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
-		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-		//Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
-		Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, LASER::VISION, wavelength_nm };
-
 		//LASER
 		const double laserPower{ 30. * mW };
-		VirtualLaser virtualLaser{ RTcontrol, 750, laserPower, laserPower, LASER::VISION };
+		VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, LASER::VISION };
+
+		//GALVOS
+		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
+		Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, &virtualLaser };
+		//Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
@@ -1281,7 +1279,7 @@ namespace TestRoutines
 
 		//GALVO RT linear scan
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, virtualLaser.currentLaser(), virtualLaser.currentWavelength_nm() };
+		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, wavelength_nm };
 
 		//EXECUTE THE RT CONTROL SEQUENCE

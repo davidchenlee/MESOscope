@@ -7,7 +7,7 @@ Code in C++ for controlling the NI USB-7852R card
 - Check the power increase
 - Check the sequencer
 - Implement findSampleContour()
-- Multi-thread demuxAllChannels_()
+- Multithread demuxAllChannels_()
 - Do a post-sequence clean up routine to set the pockels outputs to 0
 - For the vibratome, show a progress bar for the slicing sequence
 - Maybe install VTK to display tiff images

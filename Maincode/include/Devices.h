@@ -84,34 +84,6 @@ public:
 	void isRunning() const;
 };
 
-class Galvo
-{
-	const double mRampDurationFineTuning{ -30. * us };		//Slightly decrease the ramp duration, otherwise the ramp overflow in each frame accumulates over a continuous scan (e.g. over 200 frames)
-															//Ideally, the ramp duration of the galvo is exactly lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix
-															//However, in practice lineclockHalfPeriod  is not fixed but seems to depend on the RS amplitude
-															//If mRampDurationFineTuning is changed, then scanGalvoDelay has to be readjusted to match the galvo's forward and backward scans
-
-	const double mInterBeamletDistance{ 17.5 * um };		//Set by the beamsplitter specs
-	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	
-	RTCHAN mWhichGalvo;
-	double mVoltagePerDistance;
-	double mVoltageOffset;
-	double beamletIndex_(PMT16XCHAN PMT16Xchan) const;
-public:
-	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double posMax, const LASER whichLaser = LASER::VISION , const int wavelength_nm = 0);
-	Galvo(const Galvo&) = delete;				//Disable copy-constructor
-	Galvo& operator=(const Galvo&) = delete;	//Disable assignment-constructor
-	Galvo(Galvo&&) = delete;					//Disable move constructor
-	Galvo& operator=(Galvo&&) = delete;			//Disable move-assignment constructor
-
-	void reconfigure(const int wavelength_nm, const LASER whichLaser);
-	void voltageToZero() const;
-	void pushVoltageSinglet(const double timeStep, const double AO) const;
-	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
-	void positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal) const;
-	void positionLinearRamp(const double posInitial, const double posFinal, const double posOffset = 0) const;
-};
-
 class PMT16X
 {
 	std::unique_ptr<serial::Serial> mSerial;
@@ -341,6 +313,34 @@ public:
 	void openShutter() const;
 	void closeShutter() const;
 	void moveCollectorLens(const double position);
+};
+
+class Galvo
+{
+	const double mRampDurationFineTuning{ -30. * us };		//Slightly decrease the ramp duration, otherwise the ramp overflow in each frame accumulates over a continuous scan (e.g. over 200 frames)
+															//Ideally, the ramp duration of the galvo is exactly lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix
+															//However, in practice lineclockHalfPeriod  is not fixed but seems to depend on the RS amplitude
+															//If mRampDurationFineTuning is changed, then scanGalvoDelay has to be readjusted to match the galvo's forward and backward scans
+
+	const double mInterBeamletDistance{ 17.5 * um };		//Set by the beamsplitter specs
+	FPGAns::RTcontrol &mRTcontrol;							//Non-const because some methods in this class change the variables referenced by mRTcontrol	
+	RTCHAN mWhichGalvo;
+	double mVoltagePerDistance;
+	double mVoltageOffset;
+	double beamletIndex_(PMT16XCHAN PMT16Xchan) const;
+public:
+	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double posMax, const VirtualLaser *virtualLaser = nullptr);
+	Galvo(const Galvo&) = delete;				//Disable copy-constructor
+	Galvo& operator=(const Galvo&) = delete;	//Disable assignment-constructor
+	Galvo(Galvo&&) = delete;					//Disable move constructor
+	Galvo& operator=(Galvo&&) = delete;			//Disable move-assignment constructor
+
+	void reconfigure(const int wavelength_nm, const LASER whichLaser);
+	void voltageToZero() const;
+	void pushVoltageSinglet(const double timeStep, const double AO) const;
+	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
+	void positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal) const;
+	void positionLinearRamp(const double posInitial, const double posFinal, const double posOffset = 0) const;
 };
 
 class Stage

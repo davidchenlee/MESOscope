@@ -523,164 +523,6 @@ void ResonantScanner::isRunning() const
 }
 #pragma endregion "Resonant scanner"
 
-#pragma region "Galvo"
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double posMax, const LASER whichLaser, const int wavelength_nm) : mRTcontrol{ RTcontrol }, mWhichGalvo{ whichGalvo }
-{
-	reconfigure(wavelength_nm, whichLaser);
-
-	switch (whichGalvo)
-	{
-	case RTCHAN::SCANGALVO:
-		//Raster scan the sample from the positive to the negative direction of the x-stage
-		positionLinearRamp(-posMax, posMax, mVoltageOffset);
-		break;
-	case RTCHAN::RESCANGALVO:
-		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
-		positionLinearRamp(posMax, -posMax, mVoltageOffset + beamletIndex_(mRTcontrol.mPMT16Xchan) * mInterBeamletDistance * mVoltagePerDistance);
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
-	}
-}
-
-void Galvo::reconfigure(const int wavelength_nm, const LASER whichLaser)
-{
-	switch (mWhichGalvo)
-	{
-	case RTCHAN::SCANGALVO:
-		mVoltagePerDistance = scannerCalib.voltagePerDistance;
-		mVoltageOffset = scannerCalib.voltageOffset;
-
-		//For debugging
-		std::cout << "Scanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
-		std::cout << "Scanner mVoltageOffset = " << mVoltageOffset << "\n";
-		break;
-	case RTCHAN::RESCANGALVO://This implementation is because calibration of the rescan galvo is slightly different when using Vision or Fidelity
-		switch (whichLaser)
-		{
-		case LASER::VISION:
-			switch (wavelength_nm)
-			{
-			case 750:			
-				mVoltagePerDistance = rescannerCalibV750nm.voltagePerDistance;
-				mVoltageOffset = rescannerCalibV750nm.voltageOffset;
-				break;
-			case 920:
-				mVoltagePerDistance = rescannerCalibV920nm.voltagePerDistance;
-				mVoltageOffset = rescannerCalibV920nm.voltageOffset;
-				break;
-			case 1040:
-				mVoltagePerDistance = rescannerCalibV1040nm.voltagePerDistance;
-				mVoltageOffset = rescannerCalibV1040nm.voltageOffset;
-				break;
-			default:
-				throw std::invalid_argument((std::string)__FUNCTION__ + ": The galvo has not been calibrated for the wavelength " + std::to_string(wavelength_nm) + " nm");
-			}
-			break;
-		case LASER::FIDELITY:
-			switch (wavelength_nm)
-			{
-			case 1040:
-				mVoltagePerDistance = rescannerCalibF1040nm.voltagePerDistance;
-				mVoltageOffset = rescannerCalibF1040nm.voltageOffset;
-				break;
-			default:
-				throw std::invalid_argument((std::string)__FUNCTION__ + ": FIDELITY only supports the wavelength 1040 nm\n");
-			}
-			break;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
-		}
-
-		//For debugging
-		std::cout << "Rescanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
-		std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
-		break;
-	}
-}
-
-double Galvo::beamletIndex_(PMT16XCHAN PMT16Xchan) const
-{
-	switch (PMT16Xchan)
-	{
-	case PMT16XCHAN::CH00:
-		return 7.5;
-	case PMT16XCHAN::CH01:
-		return 6.5;
-	case PMT16XCHAN::CH02:
-		return 5.5;
-	case PMT16XCHAN::CH03:
-		return 4.5;
-	case PMT16XCHAN::CH04:
-		return 3.5;
-	case PMT16XCHAN::CH05:
-		return 2.5;
-	case PMT16XCHAN::CH06:
-		return 1.5;
-	case PMT16XCHAN::CH07:
-		return 0.5;
-	case PMT16XCHAN::CH08:
-		return -0.5;
-	case PMT16XCHAN::CH09:
-		return -1.5;
-	case PMT16XCHAN::CH10:
-		return -2.5;
-	case PMT16XCHAN::CH11:
-		return -3.5;
-	case PMT16XCHAN::CH12:
-		return -4.5;
-	case PMT16XCHAN::CH13:
-		return -5.5;
-	case PMT16XCHAN::CH14:
-		return -6.5;
-	case PMT16XCHAN::CH15:
-		return -7.5;
-	case PMT16XCHAN::CENTERED:
-		return 0.0;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected PMT16X channel unavailable");
-	}
-}
-
-void Galvo::voltageToZero() const
-{
-	mRTcontrol.pushAnalogSinglet(mWhichGalvo, AO_tMIN, 0 * V);
-}
-
-void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
-{
-	mRTcontrol.pushAnalogSinglet(mWhichGalvo, timeStep, AO);
-}
-
-void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const
-{
-	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, Vi, Vf);
-}
-
-void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal) const
-{
-	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, mVoltagePerDistance * posInitial, mVoltagePerDistance * posFinal);
-}
-
-//Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with a fixed z)
-void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset) const
-{
-	//Limit the number of steps for long ramps
-	//Currently, the bottleneck is the buffer of the galvos on the fpga because it only supports 5000 elements
-	//For timeStep = 2 us, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned
-	double timeStep;
-	if(mRTcontrol.mHeightPerBeamletPerFrame_pix <= 100)
-		timeStep = 2. * us;
-	else
-		timeStep = 8. * us;
-
-	//The position offset allows to compensate for the slight axis misalignment of the rescanner
-	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
-		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal);
-}
-#pragma endregion "Galvo"
-
-
 #pragma region "PMT16X"
 PMT16X::PMT16X()
 {
@@ -1642,8 +1484,7 @@ void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm
 #pragma endregion "VirtualFilterWheel"
 
 #pragma region "CombinedLasers"
-VirtualLaser::CombinedLasers::CombinedLasers(FPGAns::RTcontrol &RTcontrol, const LASER whichLaser) :
-	mRTcontrol{ RTcontrol }, mWhichLaser{ whichLaser }, mVision{ LASER::VISION }, mFidelity{ LASER::FIDELITY } {}
+VirtualLaser::CombinedLasers::CombinedLasers(FPGAns::RTcontrol &RTcontrol, const LASER whichLaser) : mRTcontrol{ RTcontrol }, mWhichLaser{ whichLaser }, mVision{ LASER::VISION }, mFidelity{ LASER::FIDELITY } {}
 
 std::string VirtualLaser::CombinedLasers::laserNameToString_(const LASER whichLaser) const
 {
@@ -1853,6 +1694,166 @@ void VirtualLaser::moveCollectorLens(const double position)
 	mCollectorLens.move(position);
 }
 #pragma endregion "VirtualLaser"
+
+#pragma region "Galvo"
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double posMax, const VirtualLaser *virtualLaser) : mRTcontrol{ RTcontrol }, mWhichGalvo{ whichGalvo }
+{
+	if (virtualLaser != nullptr)
+		reconfigure(virtualLaser->currentWavelength_nm(), virtualLaser->currentLaser());
+	else
+		reconfigure(750, LASER::VISION);	//Use Vision at 750 nm as default parameters
+
+	switch (whichGalvo)
+	{
+	case RTCHAN::SCANGALVO:
+		//Raster scan the sample from the positive to the negative direction of the x-stage
+		positionLinearRamp(-posMax, posMax, mVoltageOffset);
+		break;
+	case RTCHAN::RESCANGALVO:
+		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
+		positionLinearRamp(posMax, -posMax, mVoltageOffset + beamletIndex_(mRTcontrol.mPMT16Xchan) * mInterBeamletDistance * mVoltagePerDistance);
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
+	}
+}
+
+void Galvo::reconfigure(const int wavelength_nm, const LASER whichLaser)
+{
+	switch (mWhichGalvo)
+	{
+	case RTCHAN::SCANGALVO:
+		mVoltagePerDistance = scannerCalib.voltagePerDistance;
+		mVoltageOffset = scannerCalib.voltageOffset;
+
+		//For debugging
+		std::cout << "Scanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
+		std::cout << "Scanner mVoltageOffset = " << mVoltageOffset << "\n";
+		break;
+	case RTCHAN::RESCANGALVO://calibration of the rescan galvo is slightly different when using Vision or Fidelity
+		switch (whichLaser)
+		{
+		case LASER::VISION:
+			switch (wavelength_nm)
+			{
+			case 750:
+				mVoltagePerDistance = rescannerCalibV750nm.voltagePerDistance;
+				mVoltageOffset = rescannerCalibV750nm.voltageOffset;
+				break;
+			case 920:
+				mVoltagePerDistance = rescannerCalibV920nm.voltagePerDistance;
+				mVoltageOffset = rescannerCalibV920nm.voltageOffset;
+				break;
+			case 1040:
+				mVoltagePerDistance = rescannerCalibV1040nm.voltagePerDistance;
+				mVoltageOffset = rescannerCalibV1040nm.voltageOffset;
+				break;
+			default:
+				throw std::invalid_argument((std::string)__FUNCTION__ + ": The galvo has not been calibrated for the wavelength " + std::to_string(wavelength_nm) + " nm");
+			}
+			break;
+		case LASER::FIDELITY:
+			switch (wavelength_nm)
+			{
+			case 1040:
+				mVoltagePerDistance = rescannerCalibF1040nm.voltagePerDistance;
+				mVoltageOffset = rescannerCalibF1040nm.voltageOffset;
+				break;
+			default:
+				throw std::invalid_argument((std::string)__FUNCTION__ + ": FIDELITY only supports the wavelength 1040 nm\n");
+			}
+			break;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
+		}
+
+		//For debugging
+		std::cout << "Rescanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
+		std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
+		break;
+	}
+}
+
+double Galvo::beamletIndex_(PMT16XCHAN PMT16Xchan) const
+{
+	switch (PMT16Xchan)
+	{
+	case PMT16XCHAN::CH00:
+		return 7.5;
+	case PMT16XCHAN::CH01:
+		return 6.5;
+	case PMT16XCHAN::CH02:
+		return 5.5;
+	case PMT16XCHAN::CH03:
+		return 4.5;
+	case PMT16XCHAN::CH04:
+		return 3.5;
+	case PMT16XCHAN::CH05:
+		return 2.5;
+	case PMT16XCHAN::CH06:
+		return 1.5;
+	case PMT16XCHAN::CH07:
+		return 0.5;
+	case PMT16XCHAN::CH08:
+		return -0.5;
+	case PMT16XCHAN::CH09:
+		return -1.5;
+	case PMT16XCHAN::CH10:
+		return -2.5;
+	case PMT16XCHAN::CH11:
+		return -3.5;
+	case PMT16XCHAN::CH12:
+		return -4.5;
+	case PMT16XCHAN::CH13:
+		return -5.5;
+	case PMT16XCHAN::CH14:
+		return -6.5;
+	case PMT16XCHAN::CH15:
+		return -7.5;
+	case PMT16XCHAN::CENTERED:
+		return 0.0;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected PMT16X channel unavailable");
+	}
+}
+
+void Galvo::voltageToZero() const
+{
+	mRTcontrol.pushAnalogSinglet(mWhichGalvo, AO_tMIN, 0 * V);
+}
+
+void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
+{
+	mRTcontrol.pushAnalogSinglet(mWhichGalvo, timeStep, AO);
+}
+
+void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const
+{
+	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, Vi, Vf);
+}
+
+void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal) const
+{
+	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, mVoltagePerDistance * posInitial, mVoltagePerDistance * posFinal);
+}
+
+//Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with a fixed z)
+void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset) const
+{
+	//Limit the number of steps for long ramps
+	//Currently, the bottleneck is the buffer of the galvos on the fpga because it only supports 5000 elements
+	//For timeStep = 2 us, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned
+	double timeStep;
+	if (mRTcontrol.mHeightPerBeamletPerFrame_pix <= 100)
+		timeStep = 2. * us;
+	else
+		timeStep = 8. * us;
+
+	//The position offset allows to compensate for the slight axis misalignment of the rescanner
+	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
+		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal);
+}
+#pragma endregion "Galvo"
 
 #pragma region "Stages"
 Stage::Stage(const double velX, const double velY, const double velZ)

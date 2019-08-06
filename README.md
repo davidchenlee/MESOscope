@@ -4,9 +4,9 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 - Check the sequencer
-- figure out why the FOV of 16X is slightly different from 1X
 - Implement findSampleContour()
-- Implement suppressCrosstalk() flattenField() on the GPU
+- figure out why the FOV of 16X is slightly different from 1X
+- (20190812->) Implement suppressCrosstalk() flattenField() on the GPU
 - Multithread demuxAllChannels_()
 - Do a post-sequence clean up routine to set the pockels outputs to 0
 - For the vibratome, show a progress bar for the slicing sequence

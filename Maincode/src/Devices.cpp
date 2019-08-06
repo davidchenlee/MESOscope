@@ -9,8 +9,7 @@ Image::Image(FPGAns::RTcontrol &RTcontrol) :
 	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 
-	//Trigger the acquisition with the PC or the Z stage
-	//This needs to be here and not in the RTcontrol class because the z-trigger has to be turned off in the destructor to allow moving the z-stage
+	//Trigger the acquisition with the PC or the Z stage. It has to be here and not in the RTcontrol class because the z-trigger has to be turned off in the destructor to allow positioning the z-stage after every acquisition
 	if (static_cast<bool>(mRTcontrol.mMainTrigger))
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, static_cast<bool>(mRTcontrol.mMainTrigger)));
 }
@@ -1522,9 +1521,15 @@ LASER VirtualLaser::CombinedLasers::currentLaser() const
 	return mCurrentLaser;
 }
 
-std::string VirtualLaser::CombinedLasers::currentLaser_s() const
+std::string VirtualLaser::CombinedLasers::currentLaser_s(const bool justTheNameInitials) const
 {
-	return laserNameToString_(mCurrentLaser);
+	std::string fullName{ laserNameToString_(mCurrentLaser) };
+	std::string nameInitials{ fullName.front() };
+
+	if (justTheNameInitials && nameInitials.size() != 0)
+		return nameInitials;
+
+	return fullName;
 }
 
 int VirtualLaser::CombinedLasers::currentWavelength_nm() const
@@ -1640,9 +1645,9 @@ LASER VirtualLaser::currentLaser() const
 	return mCombinedLasers.currentLaser();
 }
 
-std::string VirtualLaser::currentLaser_s() const
+std::string VirtualLaser::currentLaser_s(const bool justTheNameInitials) const
 {
-	return mCombinedLasers.currentLaser_s();
+	return mCombinedLasers.currentLaser_s(justTheNameInitials);
 }
 
 int VirtualLaser::currentWavelength_nm() const
@@ -1708,10 +1713,7 @@ void VirtualLaser::moveCollectorLens(const double position)
 #pragma region "Galvo"
 Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double posMax, const VirtualLaser *virtualLaser) : mRTcontrol{ RTcontrol }, mWhichGalvo{ whichGalvo }
 {
-	if (virtualLaser != nullptr)
-		reconfigure(virtualLaser->currentWavelength_nm(), virtualLaser->currentLaser());
-	else
-		reconfigure(750, LASER::VISION);	//By default, use Vision at 750 nm
+	reconfigure(virtualLaser);
 
 	switch (whichGalvo)
 	{
@@ -1728,8 +1730,23 @@ Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double
 	}
 }
 
-void Galvo::reconfigure(const int wavelength_nm, const LASER whichLaser)
+void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 {
+	LASER whichLaser;
+	int wavelength_nm;
+
+	//Make sure that the laser and wavelength are defined in virtualLaser, otherwise use Vision at 750 nm as default
+	if (virtualLaser != nullptr)
+	{
+		whichLaser = virtualLaser->currentLaser();
+		wavelength_nm = virtualLaser->currentWavelength_nm();
+	}
+	else
+	{
+		whichLaser = LASER::VISION;
+		wavelength_nm = 750;
+	}
+
 	switch (mWhichGalvo)
 	{
 	case RTCHAN::SCANGALVO:
@@ -2327,7 +2344,7 @@ void FluorLabelList::printParams(std::ofstream *fileHandle) const
 	for (std::vector<int>::size_type iterWL = 0; iterWL != mFluorLabelList.size(); iterWL++)
 	{
 		*fileHandle << "Wavelength (nm) = " << mFluorLabelList.at(iterWL).mWavelength_nm <<
-			"\nLaser power (mW) = " << mFluorLabelList.at(iterWL).mScanPi / mW <<
+			"\nPower (mW) = " << mFluorLabelList.at(iterWL).mScanPi / mW <<
 			"\nPower increase (mW/um) = " << mFluorLabelList.at(iterWL).mStackPinc / mWpum << "\n";
 	}
 	*fileHandle << "\n";
@@ -2418,7 +2435,9 @@ void Stack::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "FOV (um) = (" << mFFOV.at(STAGEX) / um << "," << mFFOV.at(STAGEY) / um << ")\n";
 	*fileHandle << "Step size Z (um) = " << mStepSizeZ / um << "\n";
 	*fileHandle << "Stack depth (um) = " << mDepth / um << "\n";
+	*fileHandle << std::setprecision(2);
 	*fileHandle << "Stack overlap (frac) = (" << mOverlapXYZ_frac.at(STAGEX) << "," << mOverlapXYZ_frac.at(STAGEY) << "," << mOverlapXYZ_frac.at(STAGEZ) << ")\n";
+	*fileHandle << std::setprecision(1);
 	*fileHandle << "Stack overlap (um) = (" << mOverlapXYZ_frac.at(STAGEX) * mFFOV.at(STAGEX) / um << "," << mOverlapXYZ_frac.at(STAGEY) * mFFOV.at(STAGEY) / um << "," << mOverlapXYZ_frac.at(STAGEZ) * mDepth << ")\n";
 	*fileHandle << "\n";
 }

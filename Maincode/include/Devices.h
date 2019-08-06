@@ -274,7 +274,7 @@ class VirtualLaser
 	public:
 		CombinedLasers(FPGAns::RTcontrol &RTcontrol, const LASER whichLaser = LASER::AUTO);
 		LASER currentLaser() const;
-		std::string currentLaser_s() const;
+		std::string currentLaser_s(const bool justTheNameInitials) const;
 		int currentWavelength_nm() const;
 		void isLaserInternalShutterOpen() const;
 		void tuneLaserWavelength(const int wavelength_nm);
@@ -306,7 +306,7 @@ public:
 	VirtualLaser& operator=(VirtualLaser&&) = delete;		//Disable move-assignment constructor
 
 	LASER currentLaser() const;
-	std::string currentLaser_s() const;
+	std::string currentLaser_s(const bool justTheNameInitials = false) const;
 	int currentWavelength_nm() const;
 	void configure(const int wavelength_nm);
 	void setPower(const double laserPower) const;
@@ -337,7 +337,7 @@ public:
 	Galvo(Galvo&&) = delete;					//Disable move constructor
 	Galvo& operator=(Galvo&&) = delete;			//Disable move-assignment constructor
 
-	void reconfigure(const int wavelength_nm, const LASER whichLaser);
+	void reconfigure(const VirtualLaser *virtualLaser);
 	void voltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;

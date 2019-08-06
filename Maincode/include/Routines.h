@@ -3,17 +3,13 @@
 #include "Sequencer.h"
 
 //MAIN SEQUENCES
-namespace PMT1XRoutines
-{
-	void sequencer(const FPGAns::FPGA &fpga);
-}
-
 namespace PMT16XRoutines
 {
-	void PMT16XframeByFrameScan(const FPGAns::FPGA &fpga);
-	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice);
+	void frameByFrameZscan(const FPGAns::FPGA &fpga);
+	void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice);
 	void liveScan(const FPGAns::FPGA &fpga);
 	void continuousScan(const FPGAns::FPGA &fpga);
+	void sequencer(const FPGAns::FPGA &fpga);
 }
 
 //TESTS

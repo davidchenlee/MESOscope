@@ -12,11 +12,14 @@ struct MoveStage {
 struct AcqStack {
 	int mStackNumber;
 	int mWavelength_nm;
-	int mScanDirZ;			//Z-stage scan direction: +1 for positive, -1 for negative
+	int mScanDirZ;			//+1 for z-stage moving up (top-down imaging) or -1 for z-stage moving down (bottom-up imaging)
 	double mScanZi;			//Initial z position of a stack-scan
 	double mStackDepth;		//Stack depth or thickness
 	double mScanPi;			//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
-	double mStackPinc;		//Laser power increase per unit distance in the axis STAGEZ
+	double mStackPinc;		//Laser power increase in the axis STAGEZ per unit of distance
+
+
+	//double mScanPf = mScanPi + static_cast<int>(mScanDirZ) * mStackDepth * mStackPinc;
 };
 
 struct CutSlice {
@@ -47,7 +50,7 @@ class Sequencer
 	//Parameters that are unchanged throughout the sequence
 	Sample mSample;							//Sample
 	const Stack mStack;						//Stack
-	const int3 mInitialScanDir{ 1, 1, 1 };	//Initial scan directions in the axis STAGEX, STAGEY, and STAGEZ
+	const int3 mInitialScanDir{ 1, 1, 1 };	//Initial scan directions wrt the axis STAGEX, STAGEY, and STAGEZ
 	ROI mROIcovered;
 
 	//Parameters that vary throughout the sequence
@@ -55,12 +58,12 @@ class Sequencer
 	int mStackCounter{ 0 };				//Count the number of stacks
 	int mSliceCounter{ 0 };				//Count the number of the slices
 	int2 mStackArrayDimIJ;				//Dimension of the array of stacks. Value computed dynamically
-	int3 mScanDir{ mInitialScanDir };	//Scan directions in the axis STAGEX, STAGEY, and STAGEZ
+	int3 mScanDir{ mInitialScanDir };	//Scan directions wrt the axis STAGEX, STAGEY, and STAGEZ
 	double mScanZi;						//Initial z-stage position for a stack-scan
 	double mPlaneToSliceZ;				//Height of the plane to cut	
 	int mNtotalSlices;					//Number of vibratome slices in the entire sample
 
-	double calculateStackScanInitialPower_(const double scanPmin, const double stackPinc, const int scanDirZ);
+	double calculateStackInitialPower_(const double Ptop, const double stackPinc, const int scanDirZ, const double stackDepth);
 	double2 stackIndicesToStackCenter_(const int2 stackArrayIndicesIJ) const;
 	void reverseStageScanDirection_(const Axis axis);
 	void resetStageScanDirections_();

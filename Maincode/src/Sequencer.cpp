@@ -108,18 +108,18 @@ Sequencer::Sequencer(const Sample sample, const Stack stack) : mSample{ sample }
 	//Initialize the height of the plane to slice
 	mPlaneToSliceZ = mScanZi + mStack.mDepth - mSample.mCutAboveBottomOfStack;
 
-	//Calculate the number of stacks in X and Y based on the sample size and stack FFOV
+	//Calculate the number of stacks in the axis STAGEX and STAGEY based on the sample size and stack FFOV
 	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
 	const double overlapX_frac{ mStack.mOverlapXYZ_frac.at(STAGEX) };		//Dummy local variable
 	const double overlapY_frac{ mStack.mOverlapXYZ_frac.at(STAGEY) };		//Dummy local variable
-	mStackArrayDimIJ.at(STAGEX) = static_cast<int>(std::ceil(  1/(1-overlapX_frac) * (mSample.mLengthXYZ.at(STAGEX) / mStack.mFFOV.at(STAGEX) - 1) + 1  ));		//Number of stacks in x
-	mStackArrayDimIJ.at(STAGEY) = static_cast<int>(std::ceil(  1/(1-overlapY_frac) * (mSample.mLengthXYZ.at(STAGEY) / mStack.mFFOV.at(STAGEY) - 1) + 1  ));		//Number of stacks in y
+	mStackArrayDimIJ.at(STAGEX) = static_cast<int>(std::ceil(  1/(1-overlapX_frac) * (mSample.mLengthXYZ.at(STAGEX) / mStack.mFFOV.at(STAGEX) - 1) + 1  ));		//Number of stacks in the axis STAGEX
+	mStackArrayDimIJ.at(STAGEY) = static_cast<int>(std::ceil(  1/(1-overlapY_frac) * (mSample.mLengthXYZ.at(STAGEY) / mStack.mFFOV.at(STAGEY) - 1) + 1  ));		//Number of stacks in the axis STAGEY
 
 	//Calculate the total number of stacks in a vibratome slice and also in the entire sample
-	const double overlapZ_frac{ mStack.mOverlapXYZ_frac.at(STAGEZ) };																		//Dummy local variable
-	mNtotalSlices = static_cast<int>(std::ceil(  1 / (1 - overlapZ_frac) * (mSample.mLengthXYZ.at(STAGEZ) / mStack.mDepth - 1) + 1  ));		//Total number of slices in the entire sample
-	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(STAGEX) * mStackArrayDimIJ.at(STAGEY) };									//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * mNtotalStacksPerVibratomeSlice };				//Total number of stacks in the entire sample
+	const double overlapZ_frac{ mStack.mOverlapXYZ_frac.at(STAGEZ) };																			//Dummy local variable
+	mNtotalSlices = static_cast<int>(std::ceil(  1 / (1 - overlapZ_frac) * (mSample.mLengthXYZ.at(STAGEZ) / mStack.mDepth - 1) + 1  ));			//Total number of slices in the entire sample
+	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(STAGEX) * mStackArrayDimIJ.at(STAGEY) };										//Total number of stacks in a vibratome slice
+	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * mNtotalStacksPerVibratomeSlice };	//Total number of stacks in the entire sample
 
 	//Calculate the ROI effectively covered by the stacks, which might be slightly larger than the sample's ROI
 	mROIcovered.at(XMIN) = mSample.mROI.at(XMIN);
@@ -243,7 +243,7 @@ void Sequencer::acqStack_(const int iterWL)
 
 	//Update the parameters for the next iteration
 	mScanZi += mScanDir.at(STAGEZ) * mStack.mDepth;		//Next initial z-scan position
-	reverseStageScanDirection_(STAGEZ);					//Switch the scanning direction in z
+	reverseStageScanDirection_(STAGEZ);					//Switch the scanning direction in the axis STAGEZ
 }
 
 void Sequencer::saveStack_()
@@ -257,7 +257,7 @@ void Sequencer::saveStack_()
 
 void Sequencer::cutSlice_()
 {
-	//Move the sample to face the vibratome blade. Notice the additional offset in z
+	//Move the sample to face the vibratome blade. Notice the additional offset in the axis STAGEZ
 	const double3 samplePositionXYZ{ mSample.mBladePositionXY.at(STAGEX), mSample.mBladePositionXY.at(STAGEY), mPlaneToSliceZ + mSample.mBladeFocalplaneOffsetZ };
 
 	Commandline commandline;
@@ -289,23 +289,23 @@ void Sequencer::generateCommandList()
 
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mSample.mFluorLabelList.size(); iterWL++)
 		{
-			//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over x often and over y less often
-			while (JJ >= 0 && JJ < mStackArrayDimIJ.at(STAGEY))			//y direction
+			//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over STAGEX often and over STAGEY less often
+			while (JJ >= 0 && JJ < mStackArrayDimIJ.at(STAGEY))			//STAGEY direction
 			{
-				while (II >= 0 && II < mStackArrayDimIJ.at(STAGEX))		//x direction
+				while (II >= 0 && II < mStackArrayDimIJ.at(STAGEX))		//STAGEX direction
 				{
 					moveStage_({ II, JJ });
 					acqStack_(iterWL);
 					saveStack_();
-					II += mScanDir.at(STAGEX);		//Increase the iterator x
+					II += mScanDir.at(STAGEX);		//Increase the iterator in the axis STAGE X
 				}
 
-				//Initialize the next cycle by going back in x one step and switching the scanning direction
+				//Initialize the next cycle by going back in the axis STAGEX one step and switching the scanning direction
 				II -= mScanDir.at(STAGEX);
 				reverseStageScanDirection_(STAGEX);
-				JJ += mScanDir.at(STAGEY);	//Increase the iterator y
+				JJ += mScanDir.at(STAGEY);	//Increase the iterator in the axis STAGEY
 			}
-			//Initialize the next cycle by going back in y one step and switching the scanning direction
+			//Initialize the next cycle by going back in the axis STAGEY one step and switching the scanning direction
 			JJ -= mScanDir.at(STAGEY);
 			reverseStageScanDirection_(STAGEY);
 		}
@@ -325,24 +325,24 @@ std::vector<double2> Sequencer::generateLocationList()
 	int II{ 0 }, JJ{ 0 };			//Reset the stack indices after every cut
 	resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
 
-	//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over x often and over y less often
-	while (JJ >= 0 && JJ < mStackArrayDimIJ.at(STAGEY))			//y direction
+	//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over STAGEX often and over STAGEY less often
+	while (JJ >= 0 && JJ < mStackArrayDimIJ.at(STAGEY))			//STAGEY direction
 	{
-		while (II >= 0 && II < mStackArrayDimIJ.at(STAGEX))		//x direction
+		while (II >= 0 && II < mStackArrayDimIJ.at(STAGEX))		//STAGEX direction
 		{
 			const double2 stackCenterXY{ stackIndicesToStackCenter_({ II, JJ }) };
 			locationList.push_back(stackCenterXY);
 			
 			//std::cout << "x = " << stackCenterXY.at(STAGEX) / mm << "\ty = " << stackCenterXY.at(STAGEY) / mm << "\n";		//For debugging
-			II += mScanDir.at(STAGEX);		//Increase the iterator x
+			II += mScanDir.at(STAGEX);		//Increase the iterator in the axis STAGEX
 		}
 
-		//Initialize the next cycle by going back in x one step and switching the scanning direction
+		//Initialize the next cycle by going back in the axis STAGEX one step and switching the scanning direction
 		II -= mScanDir.at(STAGEX);
 		reverseStageScanDirection_(STAGEX);
-		JJ += mScanDir.at(STAGEY);	//Increase the iterator y
+		JJ += mScanDir.at(STAGEY);	//Increase the iterator in the axis STAGEY
 	}
-	//Initialize the next cycle by going back in y one step and switching the scanning direction
+	//Initialize the next cycle by going back in the axis STAGEY one step and switching the scanning direction
 	JJ -= mScanDir.at(STAGEY);
 	reverseStageScanDirection_(STAGEY);
 

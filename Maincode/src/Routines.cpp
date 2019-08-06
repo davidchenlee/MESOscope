@@ -27,7 +27,7 @@ namespace PMT1XRoutines
 		const int heightPerFrame_pix{ 400 };
 		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };		//Full FOV in the (slow axis, fast axis)
 		const int nFramesCont{ 160 };																	//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };																//Step size in z
+		const double stepSizeZ{ 0.5 * um };																//Step size in the axis STAGEZ
 		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.180 * mm, 35.025 * mm };							//Region of interest {ymin, xmin, ymax, xmax}
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };											//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
@@ -145,20 +145,20 @@ namespace PMT16XRoutines
 		//forth on the same z plane. The images the can be averaged
 		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
-		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in z frame by frame from the z position
-		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in z frame by frame centered at the z position
-		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in x frame by frame
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the starting position
+		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
+		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
-		const LASER whichLaser{ LASER::FIDELITY };
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("GFP") };	//Select a particular fluorescence channel
+		const LASER whichLaser{ LASER::VISION };
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
 			stackCenterXYZ.at(STAGEZ) -= 6 * um;
 		//This is because FIDELITY is chromatically shifted wrt VISION
-		if (whichLaser == LASER::FIDELITY)
+		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == LASER::FIDELITY || whichLaser == LASER::AUTO))
 			stackCenterXYZ.at(STAGEZ) -= 5 * um;
 
 		const double pixelSizeXY{ 0.5 * um };
@@ -183,7 +183,7 @@ namespace PMT16XRoutines
 
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in Z
+		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the axis STAGEZ
 
 		//STAGES
 		std::vector<double3> stagePositionXYZ;
@@ -196,7 +196,7 @@ namespace PMT16XRoutines
 		switch (acqMode)
 		{
 		case RUNMODE::SINGLE:
-			//saveAllPMT = true;
+			saveAllPMT = true;
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case RUNMODE::AVG:
@@ -284,6 +284,9 @@ namespace PMT16XRoutines
 		//OPEN THE UNIBLITZ SHUTTERS
 		virtualLaser.openShutter();	//The destructor will close the shutter automatically
 
+
+		std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s() + toString(fluorLabel.mWavelength_nm, 0) + "nm" };
+
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
@@ -318,9 +321,9 @@ namespace PMT16XRoutines
 				if (acqMode == RUNMODE::SINGLE && !saveAllPMT)
 				{
 					//Save individual files
-					std::string singleFilename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
-						"_x=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEZ) / mm, 4) };
-					image.saveTiffMultiPage(singleFilename, OVERRIDE::DIS);
+					filename.append( "_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
+					"_x=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEZ) / mm, 4) );
+					image.saveTiffMultiPage(filename, OVERRIDE::DIS);
 				}
 			}
 			tiffStack.pushDiffZ(iterLocation);			//Average the frames imaged via discontinuous acquisition
@@ -330,10 +333,10 @@ namespace PMT16XRoutines
 		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
 		{
 			//Save the scanZ to file
-			std::string stackFilename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_Pi=" + toString(fluorLabel.mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) + "mWpum" +
+			filename.append( "_Pi=" + toString(fluorLabel.mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) + "mWpum" +
 				"_x=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
-				"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
-			tiffStack.saveToFile(stackFilename, OVERRIDE::DIS);
+				"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) );
+			tiffStack.saveToFile(filename, OVERRIDE::DIS);
 
 			pressESCforEarlyTermination();
 		}
@@ -341,11 +344,11 @@ namespace PMT16XRoutines
 		if (acqMode == RUNMODE::SCANXY)
 		{
 			//Save the scanXY to file
-			std::string stackFilename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_Pi=" + toString(fluorLabel.mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) + "mWpum" +
+			filename.append( "_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
 				"_xi=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 4) + "_xf=" + toString(stagePositionXYZ.back().at(STAGEX) / mm, 4) +
 				"_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
-				"_z=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) };
-			tiffStack.saveToFile(stackFilename, OVERRIDE::DIS);
+				"_z=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) );
+			tiffStack.saveToFile(filename, OVERRIDE::DIS);
 			pressESCforEarlyTermination();
 		}
 	}
@@ -354,8 +357,8 @@ namespace PMT16XRoutines
 	void frameByFrameScanTiling(const FPGAns::FPGA &fpga, const int nSlice)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList fluorLabelList{ {currentSample.findFluorLabel("GFP")} };
-		const int2 nStacksXY{ 30, 28 };
+		const FluorLabelList fluorLabelList{ {currentSample.findFluorLabel("DAPI")} };
+		const int2 nStacksXY{ 2, 1 };
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -365,7 +368,6 @@ namespace PMT16XRoutines
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
-
 		if (multibeam)
 		{
 			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
@@ -379,8 +381,8 @@ namespace PMT16XRoutines
 
 		//STACK
 		const double2 FFOV{ FFOVslow, FFOVfast };							//Full FOV in the (slow axis, fast axis)
-		const double stepSizeZ{ 1.0 * um };									//Step size in z
-		const double stackDepthZ{ 10. * um };								//Acquire a stack this deep in Z
+		const double stepSizeZ{ 1.0 * um };									//Step size in the axis STAGEZ
+		const double stackDepthZ{ 40. * um };								//Acquire a stack this deep in the axis STAGEZ
 		const int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
 		const double3 stackOverlap_frac{ 0.03, 0.03, 0.03 };				//Stack overlap
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
@@ -443,9 +445,13 @@ namespace PMT16XRoutines
 				//Generate the discrete scan sequence for the stages
 				std::vector<double3> stagePositionXYZ;
 				for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-					stagePositionXYZ.push_back({ locationXYList.at(iter_loc).at(STAGEX), locationXYList.at(iter_loc).at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
+				{
+					//stagePositionXYZ.push_back({ locationXYList.at(iter_loc).at(STAGEX), locationXYList.at(iter_loc).at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
+					stagePositionXYZ.push_back({ locationXYList.at(iter_loc).at(STAGEX), locationXYList.at(iter_loc).at(STAGEY), stackCenterXYZ.at(STAGEZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
+				}
 
-				//CREATE A STACK FOR STORING THE TIFFS
+
+				//CREATE A STACK FOR SAVING THE TIFFS
 				TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nDiffZ, 1 };
 
 				//ACQUIRE FRAMES AT DIFFERENT Zs
@@ -464,7 +470,7 @@ namespace PMT16XRoutines
 					//EXECUTE THE RT CONTROL SEQUENCE
 					Image image{ RTcontrol };
 					image.acquire();							//Execute the RT control sequence and acquire the image
-					image.averageFrames();						//Average the frames acquired via continuous XY acquisition
+					image.averageFrames();						//Average the frames acquired via continuous acquisition
 					image.correctImage(RScanner.mFFOV);
 					tiffStack.pushSameZ(0, image.data());
 					tiffStack.pushDiffZ(iterDiffZ);
@@ -543,7 +549,7 @@ namespace PMT16XRoutines
 		const int nFramesCont{ 100 };								//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
 		const double stepSizeZ{ 0.5 * um };
-		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };						//Scan direction in z
+		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };						//Scan direction in the axis STAGEZ
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
 		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
@@ -1082,7 +1088,7 @@ namespace TestRoutines
 		const int heightPerFrame_pix{ 400 };
 		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };
 		const int nFramesCont{ 80 };										//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };									//Step size in z
+		const double stepSizeZ{ 0.5 * um };									//Step size in the axis STAGEZ
 		const ROI roi{ 9.950 * mm, 34.850 * mm, 10.150 * mm, 35.050 * mm }; //Region of interest {ymin, xmin, ymax, xmax}
 		const double3 stackOverlapXYZ_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };						//height to cut above the bottom of the stack
@@ -1163,7 +1169,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const double2 FFOV{ 200. * um, 150. * um };
 		const int nDiffZ{ 100 };											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };									//Step size in z
+		const double stepSizeZ{ 0.5 * um };									//Step size in the axis STAGEZ
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
@@ -1268,7 +1274,7 @@ namespace TestRoutines
 #endif
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in Z
+		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the axis STAGEZ
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };

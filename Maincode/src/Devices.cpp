@@ -380,7 +380,7 @@ void Image::correctImage(const double FFOVfast)
 	if (multibeam)
 	{
 		//mTiff.suppressCrosstalk(0.1);
-		//mTiff.flattenField(2.0);
+		//mTiff.flattenField(1.5);
 	}
 
 }
@@ -2241,7 +2241,7 @@ void Vibratome::slice(const double planeToCutZ)
 	mStage.setVelSingle(STAGEY, mStageConveyingVelXYZ.at(STAGEY));		//Set back the y vel to move the sample back to the microscope
 
 	//mStage.moveSingle(STAGEY, mStage.mTravelRangeXYZ.at(STAGEY).at(1));	//Move the stage y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
-	//mStage.waitForMotionToStopSingle(STAGEY);							//Wait until the motion ends
+	//mStage.waitForMotionToStopSingle(STAGEY);								//Wait until the motion ends
 
 	pushStartStopButton();											//Turn off the vibratome
 
@@ -2353,7 +2353,7 @@ Sample::Sample(const std::string sampleName, const std::string immersionMedium, 
 Sample::Sample(const Sample& sample, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :
 	mName{ sample.mName }, mImmersionMedium{ sample.mImmersionMedium }, mObjectiveCollar{ sample.mObjectiveCollar }, mFluorLabelList{ sample.mFluorLabelList }, mROI{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
 {
-	//Convert input ROI = {ymin, xmin, ymax, xmax} to the equivalent sample length in X and Y
+	//Convert input ROI = {ymin, xmin, ymax, xmax} to the equivalent sample length in the axis STAGEX and STAGEY
 	mLengthXYZ.at(STAGEX) = mROI.at(XMAX) - mROI.at(XMIN);
 	mLengthXYZ.at(STAGEY) = mROI.at(YMAX) - mROI.at(YMIN);
 	mLengthXYZ.at(STAGEZ) = sampleLengthZ;

@@ -429,7 +429,7 @@ public:
 		std::string mName{ "" };	//Fluorescent label name
 		int mWavelength_nm;			//Laser wavelength
 		double mScanPi;				//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mStackPinc;			//Laser power increase per unit of distance in Z
+		double mStackPinc;			//Laser power increase per unit of distance in the axis STAGEZ
 	};
 	std::vector<FluorLabel> mFluorLabelList;
 	FluorLabelList(const std::vector<FluorLabel> fluorLabelList);
@@ -447,11 +447,11 @@ public:
 	std::string mImmersionMedium;
 	std::string mObjectiveCollar;
 	ROI mROI{ 0, 0, 0, 0 };				//Region of interest across the entire sample {ymin, xmin, ymax, xmax}
-	double3 mLengthXYZ{ 0, 0, 0 };		//Sample size in x, y, and z
+	double3 mLengthXYZ{ 0, 0, 0 };		//Sample size in the axis STAGEX, STAGEY, and STAGEZ
 	double mSurfaceZ{ -1. * mm };
 	FluorLabelList mFluorLabelList;
 
-	const double2 mBladePositionXY{ 0. * mm, 0. * mm };		//Location of the vibratome blade in x and y wrt the stages origin
+	const double2 mBladePositionXY{ 0. * mm, 0. * mm };		//Location of the vibratome blade in the axis STAGEX and STAGEY wrt the stages origin
 	const double mBladeFocalplaneOffsetZ{ 0. * um };		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack{ 0 };
 
@@ -464,10 +464,10 @@ public:
 class Stack
 {
 public:
-	double2 mFFOV;				//Full field of view in x and y
-	double mStepSizeZ;			//Image resolution in z
+	double2 mFFOV;				//Full field of view in the axis STAGEX and STAGEY
+	double mStepSizeZ;			//Image resolution in the axis STAGEZ
 	double mDepth;				//Stack depth or thickness
-	double3 mOverlapXYZ_frac;	//Stack overlap in x, y, and z
+	double3 mOverlapXYZ_frac;	//Stack overlap in the axis STAGEX, STAGEY, and STAGEZ
 
 	Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, const double3 stackOverlapXYZ_frac);
 	void printParams(std::ofstream *fileHandle) const;

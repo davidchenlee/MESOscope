@@ -64,13 +64,11 @@ namespace Constants
 	//Adjust 'mRescanVoltageOffset' to center the beads on the selected PMT16X channel
 	//By increasing mVoltagePerDistance, the top beads in a Tiff appear first, then the bottom ones
 	//A positive mVoltageOffset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
-	extern const GALVOcalib rescannerCalibV750nm{ 0.30 * scannerCalib.voltagePerDistance, 0.06 * V };
+	extern const GALVOcalib rescannerCalibV750nm{ 0.31 * scannerCalib.voltagePerDistance, 0.06 * V };
 	extern const GALVOcalib rescannerCalibV920nm{ 0.32 * scannerCalib.voltagePerDistance, 0.08 * V };
-	extern const GALVOcalib rescannerCalibV1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.09 * V };	//Using Vision
-	extern const GALVOcalib rescannerCalibF1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.10 * V };	//Using Fidelity
-
-
-
+	extern const GALVOcalib rescannerCalibV1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.10 * V };	//Using Vision
+	extern const GALVOcalib rescannerCalibF1040nm{ 0.325 * scannerCalib.voltagePerDistance, 0.10 * V };	//Using Fidelity
+	extern const PMT16XCHAN PMT16Xchan{ PMT16XCHAN::CH01 }; //CH00 - CH15
 
 	//STAGES
 	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if the z stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
@@ -93,10 +91,8 @@ namespace Constants
 	extern const U8 PMTsimArray[nPMTsim]{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 										  1, 1, 1, 1, 1, 1, 1, 0, 0, 1 };
 
-	extern const PMT16XCHAN PMT16Xchan{ PMT16XCHAN::CH07 }; //CH00 - CH15
-
 	//COLLECTOR LENS
 	extern const double cLensPos750nm{ 10.0 * mm };
 	extern const double cLensPos920nm{ 6.0 * mm };
-	extern const double cLensPos1040nm{ 1.0 * mm };
+	extern const double cLensPos1040nm{ 0.5 * mm };
 }

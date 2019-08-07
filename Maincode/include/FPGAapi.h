@@ -83,7 +83,7 @@ namespace FPGAns
 		void pushDigitalSinglet(const RTCHAN chan, double timeStep, const bool DO);
 		void pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override = OVERRIDE::DIS);
 		void pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor);
-		void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf);
+		void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override);
 		void presetFPGAoutput() const;
 		void uploadRT() const;
 		void triggerRT() const;

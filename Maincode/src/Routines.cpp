@@ -1,11 +1,12 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (52.934 + 0.000 ) * mm, 17.250 * mm, (18.120) * mm };
+double3 stackCenterXYZ{ (52.934 + 0.000 ) * mm, 17.250 * mm, (18.120 - 0.050) * mm };
 //double3 stackCenterXYZ{ 52.949 * mm, -7.000 * mm, 18.190 * mm };	//Fluorescent slide
 
 #if multibeam
 Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{"DAPI", 750, (37. * mW) * 16, (0.0) * 16 * mWpum }, { "GFP", 920, (37. * mW) * 16, 0. * 16 * mWpum }, { "TDT", 1040, (18. * mW) * 16, 0. * 16 * mWpum }}} };
+//Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{ "TDT", 1040, (18. * mW) * 16, 0. * 16 * mWpum }}} };
 #else
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 8. * mW, 0. * mWpum }}} };
 Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
@@ -417,7 +418,7 @@ namespace PMT16XRoutines
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
 		const LASER whichLaser{ LASER::AUTO };
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
@@ -611,7 +612,7 @@ namespace PMT16XRoutines
 					image.downloadData();
 					break;
 				case ACTION::SAV:
-					longName = toString(acqStack.mWavelength_nm, 0) + "nm_Pi=" + toString(acqStack.mScanPi / mW, 1) + "mW_Pf=" + toString(acqStack.scanPf() / mW, 1) + "mW" +
+					longName = virtualLaser.currentLaser_s(true) + toString(acqStack.mWavelength_nm, 0) + "nm_Pi=" + toString(acqStack.mScanPi / mW, 1) + "mW_Pf=" + toString(acqStack.scanPf() / mW, 1) + "mW" +
 						"_x=" + toString(stackCenterXY.at(STAGEX) / mm, 3) + "_y=" + toString(stackCenterXY.at(STAGEY) / mm, 3) +
 						"_zi=" + toString(acqStack.mScanZi / mm, 4) + "_zf=" + toString(acqStack.scanZf() / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
 
@@ -666,7 +667,7 @@ namespace TestRoutines
 		FPGAns::RTcontrol RTcontrol{ fpga };
 		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 10 * V);			//Initial pulse
 		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 0);
-		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, 4 * us, delay, 0, 5 * V);		//Linear ramp to accumulate the error
+		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, 4 * us, delay, 0, 5 * V, OVERRIDE::DIS);		//Linear ramp to accumulate the error
 		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 10 * V);			//Initial pulse
 		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 0);				//Final pulse
 
@@ -719,9 +720,9 @@ namespace TestRoutines
 		const double step{ 4. * us };
 
 		FPGAns::RTcontrol RTcontrol{ fpga };
-		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 2 * ms, 0, -Vmax);
-		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 20 * ms, -Vmax, Vmax);
-		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 2 * ms, Vmax, 0);
+		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 2 * ms, 0, -Vmax, OVERRIDE::DIS);
+		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 20 * ms, -Vmax, Vmax, OVERRIDE::DIS);
+		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 2 * ms, Vmax, 0, OVERRIDE::DIS);
 
 		const double pulsewidth(300. * us);
 		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, pulsewidth, 1);
@@ -896,7 +897,7 @@ namespace TestRoutines
 
 		PockelsCell pockels{ pockelsFidelity };
 		//PockelsCell pockels{ pockelsFidelity };
-		pockels.pushPowerSinglet(8 * us, 100. * mW);
+		pockels.pushPowerSinglet(8 * us, 100. * mW, OVERRIDE::DIS);
 		//pockels.pushPowerSinglet(8 * us, 0 * mW);
 		//pockels.pushVoltageSinglet(8 * us, 5.5 * V);
 
@@ -1358,7 +1359,7 @@ namespace TestRoutines
 
 		//POCKELS CELLS
 		PockelsCell pockels{ RTcontrol, 920, LASER::VISION };
-		pockels.pushPowerSinglet(8 * us, 200 * mW);
+		pockels.pushPowerSinglet(8 * us, 200 * mW, OVERRIDE::DIS);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		pockels.setShutter(true);

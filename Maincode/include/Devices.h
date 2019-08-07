@@ -217,11 +217,11 @@ class PockelsCell
 public:
 	PockelsCell(FPGAns::RTcontrol &RTcontrol, const int wavelength_nm, const LASER laserSelector);	//Do not set the output to 0 through the destructor to allow latching the last value
 
-	void pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override = OVERRIDE::DIS) const;
-	void pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override = OVERRIDE::DIS) const;
+	void pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const;
+	void pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const;
 	void voltageToZero() const;
-	void voltageLinearRamp(const double Vi, const double Vf) const;
-	void powerLinearRamp(const double Pi, const double Pf) const;
+	void voltageLinearScaling(const double Vi, const double Vf) const;
+	void powerLinearScaling(const double Pi, const double Pf) const;
 	void setShutter(const bool state) const;
 };
 
@@ -279,7 +279,7 @@ class VirtualLaser
 		void isLaserInternalShutterOpen() const;
 		void tuneLaserWavelength(const int wavelength_nm);
 		void setPower(const double initialPower, const double finalPower) const;
-		void powerLinearRamp(const double Pi, const double Pf) const;
+		void powerLinearScaling(const double Pi, const double Pf) const;
 		void openShutter() const;
 		void closeShutter() const;
 	};
@@ -311,7 +311,7 @@ public:
 	void configure(const int wavelength_nm);
 	void setPower(const double laserPower) const;
 	void setPower(const double initialPower, const double finalPower) const;
-	void powerLinearRamp(const double Pi, const double Pf) const;
+	void powerLinearScaling(const double Pi, const double Pf) const;
 	void openShutter() const;
 	void closeShutter() const;
 	void moveCollectorLens(const double position);
@@ -329,6 +329,7 @@ class Galvo
 	RTCHAN mWhichGalvo;
 	double mVoltagePerDistance;
 	double mVoltageOffset;
+	double mPosMax;
 	double beamletIndex_(PMT16XCHAN PMT16Xchan) const;
 public:
 	Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double posMax, const VirtualLaser *virtualLaser = nullptr);
@@ -340,9 +341,9 @@ public:
 	void reconfigure(const VirtualLaser *virtualLaser);
 	void voltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
-	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const;
-	void positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal) const;
-	void positionLinearRamp(const double posInitial, const double posFinal, const double posOffset = 0) const;
+	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const;
+	void positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal, const OVERRIDE override) const;
+	void positionLinearRamp(const double posInitial, const double posFinal, const double posOffset, const OVERRIDE override) const;
 };
 
 class Stage

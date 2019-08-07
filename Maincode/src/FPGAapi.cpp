@@ -168,7 +168,7 @@ namespace FPGAns
 		//0 resets, 1 does not reset
 		checkStatus(__FUNCTION__, NiFpga_Close(mHandle, !static_cast<bool>(reset)));
 
-		if (static_cast<bool>(reset))
+		if (reset == FPGARESET::EN)
 			std::cout << "The FPGA has been successfully reset\n";
 
 		//You must call this function after all other function calls if NiFpga_Initialize succeeds. This function unloads the NiFpga library.
@@ -398,7 +398,7 @@ namespace FPGAns
 		}
 
 		//Clear the current content
-		if (static_cast<bool>(override))
+		if (override == OVERRIDE::EN)
 			mVectorOfQueues.at(static_cast<U8>(chan)).clear();
 
 		mVectorOfQueues.at(static_cast<U8>(chan)).push_back(FPGAns::packAnalogSinglet(timeStep, AO));
@@ -410,8 +410,12 @@ namespace FPGAns
 		mVectorOfQueues.at(static_cast<U8>(chan)).push_back(static_cast<U32>(doubleToFx2p14(scalingFactor)));
 	}
 
-	void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf)
+	void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override)
 	{
+		//Clear the current content
+		if (override == OVERRIDE::EN)
+			mVectorOfQueues.at(static_cast<U8>(chan)).clear();
+
 		linearRamp(mVectorOfQueues.at(static_cast<U8>(chan)), timeStep, rampLength, Vi, Vf);
 	}
 

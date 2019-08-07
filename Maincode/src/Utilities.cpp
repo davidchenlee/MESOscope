@@ -306,7 +306,7 @@ void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const O
 	int width, height, nFrames;
 
 	//Multi page structure
-	if (static_cast<bool>(multipage))
+	if (multipage == MULTIPAGE::EN)
 	{
 		nFrames = mNframes;
 		width = mWidthPerFrame;
@@ -326,7 +326,7 @@ void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const O
 	std::cout << height << "\n";
 	*/
 
-	if (!static_cast<bool>(override))
+	if (override == OVERRIDE::DIS)
 		filename = doesFileExist(filename);	//Check if the file exits. It gives some overhead
 
 	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "w") };

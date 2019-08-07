@@ -10,14 +10,14 @@ Image::Image(FPGAns::RTcontrol &RTcontrol) :
 	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 
 	//Trigger the acquisition with the PC or the Z stage. It has to be here and not in the RTcontrol class because the z-trigger has to be turned off in the destructor to allow positioning the z-stage after every acquisition
-	if (static_cast<bool>(mRTcontrol.mMainTrigger))
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, static_cast<bool>(mRTcontrol.mMainTrigger)));
+	if (mRTcontrol.mMainTrigger == MAINTRIG::ZSTAGE)
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, true));
 }
 
 Image::~Image()
 {
 	//Turn off the acq trigger by the z stage to allow moving the z stage
-	if (static_cast<bool>(mRTcontrol.mMainTrigger))
+	if (mRTcontrol.mMainTrigger == MAINTRIG::ZSTAGE)
 		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));
 
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
@@ -306,8 +306,8 @@ void Image::acquire(const bool saveAllPMT)
 void Image::initializeAcq(const ZSCAN stackScanDir)
 {
 	//Enable pushing data to FIFOOUTfpga. Disable for debugging
-	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
-		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, static_cast<bool>(mRTcontrol.mFIFOOUTstate)));
+	if (mRTcontrol.mFIFOOUTstate == FIFOOUT::EN)
+		FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
 
 	//Initialize mScanDir
 	mScanDir = stackScanDir;
@@ -352,7 +352,7 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 
 void Image::downloadData()
 {
-	if (static_cast<bool>(mRTcontrol.mFIFOOUTstate))
+	if (mRTcontrol.mFIFOOUTstate == FIFOOUT::EN)
 	{
 		try
 		{
@@ -1235,8 +1235,8 @@ void PockelsCell::voltageToZero() const
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, AO_tMIN, 0 * V);
 }
 
-//Increase the pockels voltage linearly from the first to the last frame
-void PockelsCell::voltageLinearRamp(const double Vi, const double Vf) const
+//Linearly scale the pockels voltage from the first to the last frame
+void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
 {
 	const double Vratio{ Vf / Vi };
 
@@ -1257,13 +1257,13 @@ void PockelsCell::voltageLinearRamp(const double Vi, const double Vf) const
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, 1 + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
 }
 
-//Increase the laser power linearly from the first to the last frame
-void PockelsCell::powerLinearRamp(const double Pi, const double Pf) const
+//Linearly scale the laser power from the first to the last frame
+void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 {
 	const double Vi{ laserpowerToVolt_(Pi) };
 	const double Vf{ laserpowerToVolt_(Pf) };
 
-	voltageLinearRamp(Vi, Vf);
+	voltageLinearScaling(Vi, Vf);
 }
 
 void PockelsCell::setShutter(const bool state) const
@@ -1599,15 +1599,15 @@ void VirtualLaser::CombinedLasers::setPower(const double initialPower, const dou
 	//Set the initial laser power
 	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, initialPower, OVERRIDE::EN);
 
-	//Set the power increase
+	//Linearly scale the laser power across the frames
 	if (finalPower != initialPower)
-		mPockelsPtr->powerLinearRamp(initialPower, finalPower);
+		mPockelsPtr->powerLinearScaling(initialPower, finalPower);
 }
 
-//Increase the laser power linearly from the first to the last frame
-void VirtualLaser::CombinedLasers::powerLinearRamp(const double Pi, const double Pf) const
+//Linearly scale the laser power from the first to the last frame
+void VirtualLaser::CombinedLasers::powerLinearScaling(const double Pi, const double Pf) const
 {
-	mPockelsPtr->powerLinearRamp(Pi, Pf);
+	mPockelsPtr->powerLinearScaling(Pi, Pf);
 }
 
 void VirtualLaser::CombinedLasers::openShutter() const
@@ -1687,10 +1687,10 @@ void VirtualLaser::setPower(const double initialPower, const double finalPower) 
 	mCombinedLasers.setPower(initialPower, finalPower);
 }
 
-//Increase the laser power linearly from the first to the last frame
-void VirtualLaser::powerLinearRamp(const double Pi, const double Pf) const
+//Linearly scale the laser power from the first to the last frame
+void VirtualLaser::powerLinearScaling(const double Pi, const double Pf) const
 {
-	mCombinedLasers.powerLinearRamp(Pi, Pf);
+	mCombinedLasers.powerLinearScaling(Pi, Pf);
 }
 
 void VirtualLaser::openShutter() const
@@ -1711,23 +1711,9 @@ void VirtualLaser::moveCollectorLens(const double position)
 #pragma endregion "VirtualLaser"
 
 #pragma region "Galvo"
-Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double posMax, const VirtualLaser *virtualLaser) : mRTcontrol{ RTcontrol }, mWhichGalvo{ whichGalvo }
+Galvo::Galvo(FPGAns::RTcontrol &RTcontrol, const RTCHAN whichGalvo, const double posMax, const VirtualLaser *virtualLaser) : mRTcontrol{ RTcontrol }, mWhichGalvo{ whichGalvo }, mPosMax{ posMax }
 {
 	reconfigure(virtualLaser);
-
-	switch (whichGalvo)
-	{
-	case RTCHAN::SCANGALVO:
-		//Raster scan the sample from the positive to the negative direction of the x-stage
-		positionLinearRamp(-posMax, posMax, mVoltageOffset);
-		break;
-	case RTCHAN::RESCANGALVO:
-		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
-		positionLinearRamp(posMax, -posMax, mVoltageOffset + beamletIndex_(mRTcontrol.mPMT16Xchan) * mInterBeamletDistance * mVoltagePerDistance);
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
-	}
 }
 
 void Galvo::reconfigure(const VirtualLaser *virtualLaser)
@@ -1735,7 +1721,7 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 	LASER whichLaser;
 	int wavelength_nm;
 
-	//Make sure that the laser and wavelength are defined in virtualLaser, otherwise use Vision at 750 nm as default
+	//Make sure that the laser and wavelength are well defined in virtualLaser, otherwise use Vision at 750 nm as default
 	if (virtualLaser != nullptr)
 	{
 		whichLaser = virtualLaser->currentLaser();
@@ -1747,7 +1733,8 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 		wavelength_nm = 750;
 	}
 
-	switch (mWhichGalvo)
+	//Choose the scan or rescan galvo because the calibration parameters are different
+	switch (mWhichGalvo)//which GALVO
 	{
 	case RTCHAN::SCANGALVO:
 		mVoltagePerDistance = scannerCalib.voltagePerDistance;
@@ -1756,10 +1743,17 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 		//For debugging
 		std::cout << "Scanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
 		std::cout << "Scanner mVoltageOffset = " << mVoltageOffset << "\n";
+
+		//Raster scan the sample from the positive to the negative direction of the x-stage
+		positionLinearRamp(-mPosMax, mPosMax, mVoltageOffset, OVERRIDE::EN);
 		break;
-	case RTCHAN::RESCANGALVO://calibration of the rescan galvo is slightly different when using Vision or Fidelity
+	case RTCHAN::RESCANGALVO:
+
+		//The calibration of the rescanner is slightly different when using Vision or Fidelity
 		switch (whichLaser)
 		{
+
+		//The calibration of the rescanner also depends on the wavelength used
 		case LASER::VISION:
 			switch (wavelength_nm)
 			{
@@ -1797,7 +1791,12 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 		//For debugging
 		std::cout << "Rescanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
 		std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
+
+		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
+		positionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + beamletIndex_(mRTcontrol.mPMT16Xchan) * mInterBeamletDistance * mVoltagePerDistance,	OVERRIDE::EN);
 		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 	}
 }
 
@@ -1854,18 +1853,18 @@ void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
 	mRTcontrol.pushAnalogSinglet(mWhichGalvo, timeStep, AO);
 }
 
-void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf) const
+void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const
 {
-	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, Vi, Vf);
+	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, Vi, Vf, override);
 }
 
-void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal) const
+void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal, const OVERRIDE override) const
 {
-	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, mVoltagePerDistance * posInitial, mVoltagePerDistance * posFinal);
+	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, mVoltagePerDistance * posInitial, mVoltagePerDistance * posFinal, override);
 }
 
 //Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with a fixed z)
-void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset) const
+void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset, const OVERRIDE override) const
 {
 	//Limit the number of steps for long ramps
 	//Currently, the bottleneck is the buffer of the galvos on the fpga because it only supports 5000 elements
@@ -1878,7 +1877,7 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 
 	//The position offset allows to compensate for the slight axis misalignment of the rescanner
 	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
-		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal);
+		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal, override);
 }
 #pragma endregion "Galvo"
 

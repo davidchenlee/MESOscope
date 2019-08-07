@@ -25,14 +25,13 @@ namespace Constants
 	typedef std::array<double, 2> double2;		//array of 2 doubles
 	typedef std::array <double, 4> ROI;			//ROI = {ymin, xmin, ymax, xmax}
 
-	enum class INPUT { PMT, SIM };
-	enum class LINECLOCK { RS, FG  };
-	enum class MAINTRIG { PC, ZSTAGE };
-	enum class FPGARESET { DIS, EN };
-	enum class FIFOOUT { DIS, EN  };
-	enum class MULTIPAGE { DIS, EN };
-	enum class OVERRIDE { DIS, EN };
-	enum class PIXELCLOCK { UNIFORM, NONUNIFORM };
+	enum class PMTIN { PMT = false, SIM = true };
+	enum class LINECLOCK { RS = false, FG = true  };
+	enum class MAINTRIG { PC = false, ZSTAGE = true };
+	enum class FPGARESET { DIS = false, EN = true };
+	enum class FIFOOUT { DIS = false, EN = true  };
+	enum class MULTIPAGE { DIS = false, EN = true };
+	enum class OVERRIDE { DIS = false, EN = true };
 	enum class RTCHAN { PIXELCLOCK, SCANGALVO, RESCANGALVO, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };		//NCHAN = number of RT channels available including the channel for the pixelclock
 	enum class FILTERWHEEL { DET, EXC };
 	enum Axis { STAGEX, STAGEY, STAGEZ };
@@ -48,9 +47,6 @@ namespace Constants
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;
 	extern const std::string openclFilePath;
-
-	extern const INPUT photocounterInput;
-	extern const PIXELCLOCK pixelclockType;
 
 	extern const double PI;
 	extern const int us;
@@ -100,6 +96,7 @@ namespace Constants
 	extern const double	ZstageTrigDelayBottomup;
 
 	extern const int nChanPMT;
+	extern const PMTIN photocounterInput;
 	extern const int nPMTsim;
 	extern const U8 PMTsimArray[];
 

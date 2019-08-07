@@ -8,9 +8,6 @@ namespace Constants
 	extern const std::string bitfilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" };	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
 	extern const std::string openclFilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\Maincode\\src\\" };		//OpenCL kernel code
 
-	extern const INPUT photocounterInput{ INPUT::PMT };													//PMT (PMT) or simulated PMT (SIM)
-//	extern const PIXELCLOCK pixelclockType{ PIXELCLOCK::UNIFORM };										//UNIFORM or NONUNIFORM dwell times
-
 	//GENERAL CONSTANTS
 	extern const double PI{ 3.1415926535897 };
 	extern const int us{ 1 };								//Microsecond
@@ -64,7 +61,7 @@ namespace Constants
 	//Adjust 'mRescanVoltageOffset' to center the beads on the selected PMT16X channel
 	//By increasing mVoltagePerDistance, the top beads in a Tiff appear first, then the bottom ones
 	//A positive mVoltageOffset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
-	extern const GALVOcalib rescannerCalibV750nm{ 0.31 * scannerCalib.voltagePerDistance, 0.06 * V };
+	extern const GALVOcalib rescannerCalibV750nm{ 0.31 * scannerCalib.voltagePerDistance, 0.07 * V };
 	extern const GALVOcalib rescannerCalibV920nm{ 0.32 * scannerCalib.voltagePerDistance, 0.08 * V };
 	extern const GALVOcalib rescannerCalibV1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.10 * V };	//Using Vision
 	extern const GALVOcalib rescannerCalibF1040nm{ 0.325 * scannerCalib.voltagePerDistance, 0.10 * V };	//Using Fidelity
@@ -83,6 +80,7 @@ namespace Constants
 													
 	//PMT
 	extern const int nChanPMT{ 16 };
+	extern const PMTIN photocounterInput{ PMTIN::PMT };			//PMT (PMT) or simulated PMT (SIM)
 
 	//Simulate the PMT pulses. The PMT simulator implemented in the LV changes from 0 to 1 or vice versa every time there is a 1 in the array
 	//In LV, the clock of the photocounters is currently 120MHz = 8.333 ns. Use the same clock for the simulator.

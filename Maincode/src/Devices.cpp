@@ -2367,17 +2367,17 @@ Sample::Sample(const std::string sampleName, const std::string immersionMedium, 
 	mName{ sampleName }, mImmersionMedium{ immersionMedium }, mObjectiveCollar{ objectiveCollar }, mFluorLabelList{ fluorLabelList }{}
 
 Sample::Sample(const Sample& sample, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :
-	mName{ sample.mName }, mImmersionMedium{ sample.mImmersionMedium }, mObjectiveCollar{ sample.mObjectiveCollar }, mFluorLabelList{ sample.mFluorLabelList }, mROI{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
+	mName{ sample.mName }, mImmersionMedium{ sample.mImmersionMedium }, mObjectiveCollar{ sample.mObjectiveCollar }, mFluorLabelList{ sample.mFluorLabelList }, mROIreq{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
 {
 	//Convert input ROI = {ymin, xmin, ymax, xmax} to the equivalent sample length in the axis STAGEX and STAGEY
-	mLengthXYZ.at(STAGEX) = mROI.at(XMAX) - mROI.at(XMIN);
-	mLengthXYZ.at(STAGEY) = mROI.at(YMAX) - mROI.at(YMIN);
-	mLengthXYZ.at(STAGEZ) = sampleLengthZ;
+	mSizeReq.at(STAGEX) = mROIreq.at(XMAX) - mROIreq.at(XMIN);
+	mSizeReq.at(STAGEY) = mROIreq.at(YMAX) - mROIreq.at(YMIN);
+	mSizeReq.at(STAGEZ) = sampleLengthZ;
 
-	if (mLengthXYZ.at(STAGEX) <= 0 || mLengthXYZ.at(STAGEY) <= 0)
+	if (mSizeReq.at(STAGEX) <= 0 || mSizeReq.at(STAGEY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
 
-	if (mLengthXYZ.at(STAGEZ) <= 0)
+	if (mSizeReq.at(STAGEZ) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Z must be positive");
 
 	if (mCutAboveBottomOfStack < 0)
@@ -2396,12 +2396,12 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "Immersion medium = " << mImmersionMedium << "\n";
 	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "ROI [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROI.at(YMIN) / mm << "," << mROI.at(XMIN) / mm << "," << mROI.at(YMAX) / mm << "," << mROI.at(XMAX) / mm << "]\n";
-	*fileHandle << "Length (mm) = (" << mLengthXYZ.at(STAGEX) / mm << "," << mLengthXYZ.at(STAGEY) / mm << "," << mLengthXYZ.at(STAGEZ) / mm << ")\n\n";
+	*fileHandle << "Requested ROI [STAGEYmin, STAGEXmin, STAGEYmax, STAGEXmax] (mm) = [" << mROIreq.at(YMIN) / mm << ", " << mROIreq.at(XMIN) / mm << ", " << mROIreq.at(YMAX) / mm << ", " << mROIreq.at(XMAX) / mm << "]\n";
+	*fileHandle << "Requested sample size (STAGEX, STAGEY, STAGEZ) (mm) = (" << mSizeReq.at(STAGEX) / mm << ", " << mSizeReq.at(STAGEY) / mm << ", " << mSizeReq.at(STAGEZ) / mm << ")\n\n";
 
 	*fileHandle << "SLICE ************************************************************\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Blade position x,y (mm) = (" << mBladePositionXY.at(STAGEX) / mm << "," << mBladePositionXY.at(STAGEY) / mm << ")\n";
+	*fileHandle << "Blade position (STAGEX, STAGEY) (mm) = (" << mBladePositionXY.at(STAGEX) / mm << ", " << mBladePositionXY.at(STAGEY) / mm << ")\n";
 	*fileHandle << std::setprecision(1);
 	*fileHandle << "Blade-focal plane vertical offset (um) = " << mBladeFocalplaneOffsetZ / um << "\n";
 	*fileHandle << "Cut above the bottom of the stack (um) = " << mCutAboveBottomOfStack / um << "\n";
@@ -2410,8 +2410,8 @@ void Sample::printParams(std::ofstream *fileHandle) const
 #pragma endregion "Sample"
 
 #pragma region "Stack"
-Stack::Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, const double3 overlapXYZ_frac) :
-	mFFOV{ FFOV }, mStepSizeZ{ stepSizeZ }, mDepth{ stepSizeZ *  nFrames }, mOverlapXYZ_frac{ overlapXYZ_frac }
+Stack::Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, const double3 overlap_frac) :
+	mFFOV{ FFOV }, mStepSizeZ{ stepSizeZ }, mDepth{ stepSizeZ *  nFrames }, mOverlap_frac{ overlap_frac }
 {
 	if (FFOV.at(STAGEX) <= 0 || FFOV.at(STAGEY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
@@ -2422,8 +2422,8 @@ Stack::Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, cons
 	if (mDepth <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth must be positive");
 
-	if (mOverlapXYZ_frac.at(STAGEX) < 0 || mOverlapXYZ_frac.at(STAGEY) < 0 || mOverlapXYZ_frac.at(STAGEZ) < 0
-		|| mOverlapXYZ_frac.at(STAGEX) > 0.2 || mOverlapXYZ_frac.at(STAGEY) > 0.2 || mOverlapXYZ_frac.at(STAGEZ) > 0.2)
+	if (mOverlap_frac.at(STAGEX) < 0 || mOverlap_frac.at(STAGEY) < 0 || mOverlap_frac.at(STAGEZ) < 0
+		|| mOverlap_frac.at(STAGEX) > 0.2 || mOverlap_frac.at(STAGEY) > 0.2 || mOverlap_frac.at(STAGEZ) > 0.2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range 0-0.2");
 }
 
@@ -2431,13 +2431,13 @@ void Stack::printParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "STACK ************************************************************\n";
 	*fileHandle << std::setprecision(1);
-	*fileHandle << "FOV (um) = (" << mFFOV.at(STAGEX) / um << "," << mFFOV.at(STAGEY) / um << ")\n";
+	*fileHandle << "FOV (STAGEX, STAGEY) (um) = (" << mFFOV.at(STAGEX) / um << ", " << mFFOV.at(STAGEY) / um << ")\n";
 	*fileHandle << "Step size Z (um) = " << mStepSizeZ / um << "\n";
 	*fileHandle << "Stack depth (um) = " << mDepth / um << "\n";
 	*fileHandle << std::setprecision(2);
-	*fileHandle << "Stack overlap (frac) = (" << mOverlapXYZ_frac.at(STAGEX) << "," << mOverlapXYZ_frac.at(STAGEY) << "," << mOverlapXYZ_frac.at(STAGEZ) << ")\n";
+	*fileHandle << "Stack overlap (frac) = (" << mOverlap_frac.at(STAGEX) << ", " << mOverlap_frac.at(STAGEY) << ", " << mOverlap_frac.at(STAGEZ) << ")\n";
 	*fileHandle << std::setprecision(1);
-	*fileHandle << "Stack overlap (um) = (" << mOverlapXYZ_frac.at(STAGEX) * mFFOV.at(STAGEX) / um << "," << mOverlapXYZ_frac.at(STAGEY) * mFFOV.at(STAGEY) / um << "," << mOverlapXYZ_frac.at(STAGEZ) * mDepth << ")\n";
+	*fileHandle << "Stack overlap (um) = (" << mOverlap_frac.at(STAGEX) * mFFOV.at(STAGEX) / um << ", " << mOverlap_frac.at(STAGEY) * mFFOV.at(STAGEY) / um << ", " << mOverlap_frac.at(STAGEZ) * mDepth << ")\n";
 	*fileHandle << "\n";
 }
 #pragma endregion "Stack"

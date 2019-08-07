@@ -447,14 +447,14 @@ public:
 	std::string mName;
 	std::string mImmersionMedium;
 	std::string mObjectiveCollar;
-	ROI mROI{ 0, 0, 0, 0 };				//Region of interest across the entire sample {ymin, xmin, ymax, xmax}
-	double3 mLengthXYZ{ 0, 0, 0 };		//Sample size in the axis STAGEX, STAGEY, and STAGEZ
+	ROI mROIreq{ 0, 0, 0, 0 };								//Requested ROI across the entire sample {ymin, xmin, ymax, xmax}
+	double3 mSizeReq{ 0, 0, 0 };							//Requested sample size in the axis STAGEX, STAGEY, and STAGEZ
 	double mSurfaceZ{ -1. * mm };
 	FluorLabelList mFluorLabelList;
 
 	const double2 mBladePositionXY{ 0. * mm, 0. * mm };		//Location of the vibratome blade in the axis STAGEX and STAGEY wrt the stages origin
 	const double mBladeFocalplaneOffsetZ{ 0. * um };		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
-	double mCutAboveBottomOfStack{ 0 };
+	double mCutAboveBottomOfStack{ 0. * um };				//Specify at what height of the overlapping volume to cut
 
 	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const FluorLabelList fluorLabelList = { {} });
 	Sample(const Sample& sample, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset);
@@ -468,9 +468,9 @@ public:
 	double2 mFFOV;				//Full field of view in the axis STAGEX and STAGEY
 	double mStepSizeZ;			//Image resolution in the axis STAGEZ
 	double mDepth;				//Stack depth or thickness
-	double3 mOverlapXYZ_frac;	//Stack overlap in the axis STAGEX, STAGEY, and STAGEZ
+	double3 mOverlap_frac;		//Stack overlap in the axis STAGEX, STAGEY, and STAGEZ
 
-	Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, const double3 stackOverlapXYZ_frac);
+	Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, const double3 stackOverlap_frac);
 	void printParams(std::ofstream *fileHandle) const;
 };
 

@@ -4,7 +4,6 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 - Make sure that TOPDOWN and BOTTOMUP scans coincide
-- it seems like the rescanner is not being recalibrated for FIDELITY. The galvo has to repush the new ramp to the RT queue
 - Check the sequencer
 - Implement findSampleContour()
 - figure out why the FOV of 16X is slightly different from 1X

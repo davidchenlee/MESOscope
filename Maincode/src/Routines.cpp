@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (52.934 + 0.000 ) * mm, 17.250 * mm, (18.120 - 0.050) * mm };
+double3 stackCenterXYZ{ (52.934 + 0.000 ) * mm, 17.250 * mm, 18.120 * mm };
 //double3 stackCenterXYZ{ 52.949 * mm, -7.000 * mm, 18.190 * mm };	//Fluorescent slide
 
 #if multibeam
@@ -276,7 +276,7 @@ namespace PMT16XRoutines
 		VirtualLaser virtualLaser{ RTcontrol, LASER::VISION };
 
 		//Create a location list
-		Sequencer sequence{ currentSample, stack, stackCenterXYZ, nStacksXY };
+		Sequencer sequence{ currentSample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, nStacksXY };
 		std::vector<double2> locationXYList{ sequence.generateLocationList() };
 
 		//STAGES
@@ -531,7 +531,7 @@ namespace PMT16XRoutines
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };											//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };														//Sample thickness
-		const double sampleSurfaceZ{ stackCenterXYZ.at(STAGEZ) };
+		const double sampleSurfaceZ{ stackCenterXYZ.at(STAGEZ) - nFramesCont * stepSizeZ / 2 };			//For beads, center the stack around stackCenterXYZ.at(STAGEZ)
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -550,11 +550,11 @@ namespace PMT16XRoutines
 		const Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
 		//Sequencer sequece(sample, stack);
-		Sequencer sequence{ sample, stack, stackCenterXYZ, { 1, 1 } }; //Last 2 parameters: stack center and number of stacks
+		Sequencer sequence{ sample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, { 1, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {STAGEX, STAGEY}
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
-		if (1)
+		if (0)
 		{
 			//STAGES. Specify the velocity
 			Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };
@@ -1086,13 +1086,13 @@ namespace TestRoutines
 		const int nFramesCont{ 80 };										//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };									//Step size in the axis STAGEZ
 		const ROI roi{ 9.950 * mm, 34.850 * mm, 10.150 * mm, 35.050 * mm }; //Region of interest {ymin, xmin, ymax, xmax}
-		const double3 stackOverlapXYZ_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
+		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };						//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };							//Sample thickness
 		const double sampleSurfaceZ{ 18.471 * mm };
 
 		Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
-		Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlapXYZ_frac };
+		Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
 
 		//Create a sequence
 		Sequencer sequence{ sample, stack };
@@ -1170,7 +1170,7 @@ namespace TestRoutines
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 		//Create a sequence
-		Sequencer sequence{ currentSample, stack, stackCenterXYZ, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
+		Sequencer sequence{ currentSample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
 		std::vector<double2> locationList{ sequence.generateLocationList() };
 
 		for (std::vector<int>::size_type iter_loc = 0; iter_loc < locationList.size(); iter_loc++)

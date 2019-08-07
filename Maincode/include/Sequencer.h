@@ -51,7 +51,7 @@ class Sequencer
 	Sample mSample;							//Sample
 	const Stack mStack;						//Stack
 	const int3 mInitialScanDir{ 1, 1, 1 };	//Initial scan directions wrt the axis STAGEX, STAGEY, and STAGEZ
-	ROI mROIcovered;
+	ROI mROIeffective;						//Slightly larger than the requested area: mSample.mROI
 
 	//Parameters that vary throughout the sequence
 	std::vector<Commandline> mCommandList;
@@ -60,8 +60,8 @@ class Sequencer
 	int2 mStackArrayDimIJ;				//Dimension of the array of stacks. Value computed dynamically
 	int3 mScanDir{ mInitialScanDir };	//Scan directions wrt the axis STAGEX, STAGEY, and STAGEZ
 	double mScanZi;						//Initial z-stage position for a stack-scan
-	double mPlaneToSliceZ;				//Height of the plane to cut	
-	int mNtotalSlices;					//Number of vibratome slices in the entire sample
+	double mPlaneToSliceZ{ 0 };			//Height of the plane to cut	
+	int mNtotalSlices{ 1 };				//Number of vibratome slices in the entire sample
 
 	double calculateStackInitialPower_(const double Ptop, const double stackPinc, const int scanDirZ, const double stackDepth);
 	double2 stackIndicesToStackCenter_(const int2 stackArrayIndicesIJ) const;
@@ -71,11 +71,12 @@ class Sequencer
 	void acqStack_(const int iterWL);
 	void saveStack_();
 	void cutSlice_();
+	double3 effectiveSize_() const;
 public:
 	int mCommandCounter{ 0 };
 
 	Sequencer(const Sample sample, const Stack stack);
-	Sequencer(Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ);
+	Sequencer(Sample sample, const Stack stack, const double2 stackCenterXY, const int2 stackArrayDimIJ);
 	Sequencer(const Sequencer&) = delete;				//Disable copy-constructor
 	Sequencer& operator=(const Sequencer&) = delete;	//Disable assignment-constructor
 	Sequencer(Sequencer&&) = delete;					//Disable move constructor

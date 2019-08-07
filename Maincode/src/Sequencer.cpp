@@ -20,7 +20,7 @@ std::string Commandline::actionToString_(const ACTION action) const
 
 std::string Commandline::printHeader() const
 {
-	return 	"Action\tSlice#\tStackIJ\tStack Center\tStack#\tWavlen\tDirZ\tZi\tZf\tPi\tPf";
+	return 	"Action\tSlice#\tStackIJ\t(STAGEX,STAGEY)\tStack#\tWavlen\tDirZ\tSTAGEZi\tSTAGEZf\tPi\tPf";
 }
 
 std::string Commandline::printHeaderUnits() const
@@ -105,62 +105,54 @@ Sequencer::Sequencer(const Sample sample, const Stack stack) : mSample{ sample }
 
 	//Calculate the number of stacks in the axis STAGEX and STAGEY based on the sample size and stack FFOV
 	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
-	const double overlapX_frac{ mStack.mOverlapXYZ_frac.at(STAGEX) };		//Dummy local variable
-	const double overlapY_frac{ mStack.mOverlapXYZ_frac.at(STAGEY) };		//Dummy local variable
-	mStackArrayDimIJ.at(STAGEX) = static_cast<int>(std::ceil(  1/(1-overlapX_frac) * (mSample.mLengthXYZ.at(STAGEX) / mStack.mFFOV.at(STAGEX) - 1) + 1  ));		//Number of stacks in the axis STAGEX
-	mStackArrayDimIJ.at(STAGEY) = static_cast<int>(std::ceil(  1/(1-overlapY_frac) * (mSample.mLengthXYZ.at(STAGEY) / mStack.mFFOV.at(STAGEY) - 1) + 1  ));		//Number of stacks in the axis STAGEY
+	mStackArrayDimIJ.at(STAGEX) = static_cast<int>(std::ceil(  1/(1- mStack.mOverlap_frac.at(STAGEX)) * (mSample.mSizeReq.at(STAGEX) / mStack.mFFOV.at(STAGEX) - 1) + 1  ));		//Number of stacks in the axis STAGEX
+	mStackArrayDimIJ.at(STAGEY) = static_cast<int>(std::ceil(  1/(1- mStack.mOverlap_frac.at(STAGEY)) * (mSample.mSizeReq.at(STAGEY) / mStack.mFFOV.at(STAGEY) - 1) + 1  ));		//Number of stacks in the axis STAGEY
+
+	//Calculate the effective ROI covered by the stacks, which might be slightly larger than the sample's ROI
+	mROIeffective.at(XMIN) = mSample.mROIreq.at(XMIN);
+	mROIeffective.at(YMIN) = mSample.mROIreq.at(YMIN);
+	mROIeffective.at(XMAX) = mSample.mROIreq.at(XMIN) + mStack.mFFOV.at(STAGEX)  * ((1 - mStack.mOverlap_frac.at(STAGEX)) * mStackArrayDimIJ.at(STAGEX) + 0.5);
+	mROIeffective.at(YMAX) = mSample.mROIreq.at(YMIN) + mStack.mFFOV.at(STAGEY)  * ((1 - mStack.mOverlap_frac.at(STAGEY)) * mStackArrayDimIJ.at(STAGEY) + 0.5);
 
 	//Calculate the total number of stacks in a vibratome slice and in the entire sample
-	const double overlapZ_frac{ mStack.mOverlapXYZ_frac.at(STAGEZ) };																			//Dummy local variable
-	mNtotalSlices = static_cast<int>(std::ceil(  1 / (1 - overlapZ_frac) * (mSample.mLengthXYZ.at(STAGEZ) / mStack.mDepth - 1) + 1  ));			//Total number of slices in the entire sample
-	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(STAGEX) * mStackArrayDimIJ.at(STAGEY) };										//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * mNtotalStacksPerVibratomeSlice };	//Total number of stacks in the entire sample
-
-	//Calculate the ROI effectively covered by the stacks, which might be slightly larger than the sample's ROI
-	mROIcovered.at(XMIN) = mSample.mROI.at(XMIN);
-	mROIcovered.at(YMIN) = mSample.mROI.at(YMIN);
-	mROIcovered.at(XMAX) = mSample.mROI.at(XMIN) + mStack.mFFOV.at(STAGEX)  * ((1 - overlapX_frac) * mStackArrayDimIJ.at(STAGEX) + 0.5);
-	mROIcovered.at(YMAX) = mSample.mROI.at(YMIN) + mStack.mFFOV.at(STAGEY)  * ((1 - overlapY_frac) * mStackArrayDimIJ.at(STAGEY) + 0.5);
+	mNtotalSlices = static_cast<int>(std::ceil(  1 / (1 - mStack.mOverlap_frac.at(STAGEZ)) * (mSample.mSizeReq.at(STAGEZ) / mStack.mDepth - 1) + 1  ));		//Total number of slices in the entire sample
+	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(STAGEX) * mStackArrayDimIJ.at(STAGEY) };													//Total number of stacks in a vibratome slice
+	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * mNtotalStacksPerVibratomeSlice };				//Total number of stacks in the entire sample
 
 	//Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
 
 	//Check that cutAboveBottomOfStack is greater than the stack z-overlap
-	const double stackOverlapZ{ mStack.mOverlapXYZ_frac.at(STAGEZ) * mStack.mDepth };	//Dummy local variable
+	const double stackOverlapZ{ mStack.mOverlap_frac.at(STAGEZ) * mStack.mDepth };	//Dummy local variable
 	if (mSample.mCutAboveBottomOfStack < stackOverlapZ)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'cutAboveBottomOfStack' must be greater than the stack z-overlap " + toString(stackOverlapZ / um, 1) + " um");
 }
 
 //Constructor using the initial stack center and number of stacks. To be used without slicing
-Sequencer::Sequencer(Sample sample, const Stack stack, const double3 stackCenterXYZ, const int2 stackArrayDimIJ) : mSample{ sample }, mStack{ stack }, mStackArrayDimIJ{ stackArrayDimIJ }
+Sequencer::Sequencer(Sample sample, const Stack stack, const double2 stackCenterXY, const int2 stackArrayDimIJ) : mSample{ sample }, mStack{ stack }, mStackArrayDimIJ{ stackArrayDimIJ }
 {
-	//Calculate the ROI covered by the stacks
-	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 )
-	const double overlapX_frac{ mStack.mOverlapXYZ_frac.at(STAGEX) };		//Dummy local variable
-	const double overlapY_frac{ mStack.mOverlapXYZ_frac.at(STAGEY) };		//Dummy local variable
-	mROIcovered.at(XMIN) = stackCenterXYZ.at(STAGEX) - mStack.mFFOV.at(STAGEX) / 2;
-	mROIcovered.at(YMIN) = stackCenterXYZ.at(STAGEY) - mStack.mFFOV.at(STAGEY) / 2;
-	mROIcovered.at(XMAX) = mROIcovered.at(XMIN) + mStack.mFFOV.at(STAGEX) * ((1 - overlapX_frac) * (mStackArrayDimIJ.at(STAGEX) - 1) + 1);
-	mROIcovered.at(YMAX) = mROIcovered.at(YMIN) + mStack.mFFOV.at(STAGEY) * ((1 - overlapY_frac) * (mStackArrayDimIJ.at(STAGEY) - 1) + 1);
-
-	//Initialize the sample's ROI. Just copy the effective ROI covered
-	mSample.mROI = mROIcovered;
-
-	//Initialize the z-stage
-	mScanZi = stackCenterXYZ.at(STAGEZ);
-
-	//Initialize the height of the plane to slice
-	mPlaneToSliceZ = 0;
-
 	if (stackArrayDimIJ.at(STAGEX) <= 0 || stackArrayDimIJ.at(STAGEY) <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack array dimension must be equal to 1 or greater");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack array dimension must be equal to or greater than 1");
 
-	mNtotalSlices = 1;
+	//Calculate the effective ROI covered by the stacks
+	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 )
+	mROIeffective.at(XMIN) = stackCenterXY.at(STAGEX) - mStack.mFFOV.at(STAGEX) / 2;
+	mROIeffective.at(YMIN) = stackCenterXY.at(STAGEY) - mStack.mFFOV.at(STAGEY) / 2;
+	mROIeffective.at(XMAX) = mROIeffective.at(XMIN) + mStack.mFFOV.at(STAGEX) * ((1 - mStack.mOverlap_frac.at(STAGEX)) * (mStackArrayDimIJ.at(STAGEX) - 1) + 1);
+	mROIeffective.at(YMAX) = mROIeffective.at(YMIN) + mStack.mFFOV.at(STAGEY) * ((1 - mStack.mOverlap_frac.at(STAGEY)) * (mStackArrayDimIJ.at(STAGEY) - 1) + 1);
+
+	//Initialize the z-stage with the position of the surface of the sample
+	mScanZi = mSample.mSurfaceZ;
+
 	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(STAGEX) * mStackArrayDimIJ.at(STAGEY) };										//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * mNtotalStacksPerVibratomeSlice };	//Total number of stacks in the entire sample
+	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * mNtotalStacksPerVibratomeSlice };	//Total number of stacks in the entire sample. mNtotalSlices is fixed at 1
 
 	//Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
+
+	//Set these unused sample parameters to 0 to avoid confusion when printing the parameters to text
+	mSample.mROIreq = { 0,0,0,0 };
+	mSample.mSizeReq = { 0,0,0 };
 }
 
 //The initial laser power for scanning a stack depends on whether the stack is imaged from the top down or from the bottom up.
@@ -175,12 +167,12 @@ double Sequencer::calculateStackInitialPower_(const double Ptop, const double st
 //The first stack center is L/2 away from the ROI's edge. The next center is at (1-a)*L away from the first center, where a*L is the stack overlap
 double2 Sequencer::stackIndicesToStackCenter_(const int2 stackArrayIndicesIJ) const
 {
-	const double overlapX_frac{ mStack.mOverlapXYZ_frac.at(STAGEX) };
-	const double overlapY_frac{ mStack.mOverlapXYZ_frac.at(STAGEY) };
+	const double overlapX_frac{ mStack.mOverlap_frac.at(STAGEX) };
+	const double overlapY_frac{ mStack.mOverlap_frac.at(STAGEY) };
 
 	double2 stagePositionXY;
-	stagePositionXY.at(STAGEX) = mSample.mROI.at(XMIN) + mStack.mFFOV.at(STAGEX)  * ((1 - overlapX_frac) * stackArrayIndicesIJ.at(STAGEX) + 0.5);
-	stagePositionXY.at(STAGEY) = mSample.mROI.at(YMIN) + mStack.mFFOV.at(STAGEY)  * ((1 - overlapY_frac) * stackArrayIndicesIJ.at(STAGEY) + 0.5);
+	stagePositionXY.at(STAGEX) = mSample.mROIreq.at(XMIN) + mStack.mFFOV.at(STAGEX)  * ((1 - overlapX_frac) * stackArrayIndicesIJ.at(STAGEX) + 0.5);
+	stagePositionXY.at(STAGEY) = mSample.mROIreq.at(YMIN) + mStack.mFFOV.at(STAGEY)  * ((1 - overlapY_frac) * stackArrayIndicesIJ.at(STAGEY) + 0.5);
 
 	return stagePositionXY;
 }
@@ -250,7 +242,7 @@ void Sequencer::saveStack_()
 
 void Sequencer::cutSlice_()
 {
-	//Move the sample to face the vibratome blade. Notice the additional offset in the axis STAGEZ
+	//Move the sample to face the vibratome blade. Note the additional offset in the axis STAGEZ
 	const double3 samplePositionXYZ{ mSample.mBladePositionXY.at(STAGEX), mSample.mBladePositionXY.at(STAGEY), mPlaneToSliceZ + mSample.mBladeFocalplaneOffsetZ };
 
 	Commandline commandline;
@@ -263,14 +255,20 @@ void Sequencer::cutSlice_()
 
 	//Increase the height of the z-stage for the next iteration		
 	//Because of the overlap, the effective stack depth is (1-a)*stackDepth, where a*stackDepth is the overlap
-	mScanZi += (1 - mStack.mOverlapXYZ_frac.at(STAGEZ)) * mStack.mDepth;
+	mScanZi += (1 - mStack.mOverlap_frac.at(STAGEZ)) * mStack.mDepth;
 
-	//Increase the height of the plane to be cut for the next iteration
+	//Increase the height of the plane to be cut in the next iteration
 	//Because of the overlap, the effective stack depth is (1-a)*stackDepth, where a*stackDepth is the overlap
-	mPlaneToSliceZ += (1 - mStack.mOverlapXYZ_frac.at(STAGEZ)) * mStack.mDepth;
+	mPlaneToSliceZ += (1 - mStack.mOverlap_frac.at(STAGEZ)) * mStack.mDepth;
 }
 
-//To generate a scan pattern with slicing
+//Convert ia ROI = {ymin, xmin, ymax, xmax} to the equivalent sample size in the axis STAGEX and STAGEY
+double3 Sequencer::effectiveSize_() const
+{
+	return { mROIeffective.at(XMAX) - mROIeffective.at(XMIN), mROIeffective.at(YMAX) - mROIeffective.at(YMIN), mStack.mDepth * ((1 - mStack.mOverlap_frac.at(STAGEZ)) * (mNtotalSlices - 1) + 1) };
+}
+
+//Generate a scan pattern and use the vibratome to slice the sample
 void Sequencer::generateCommandList()
 {
 	std::cout << "Generating the command list..." << "\n";
@@ -309,7 +307,7 @@ void Sequencer::generateCommandList()
 	}
 }
 
-//To generate a scan pattern WITHOUT slicing
+//Generate a scan pattern WITHOUT using the vibratome
 std::vector<double2> Sequencer::generateLocationList()
 {
 	std::vector<double2> locationList;
@@ -342,7 +340,6 @@ std::vector<double2> Sequencer::generateLocationList()
 	return locationList;
 }
 
-
 Commandline Sequencer::readCommandline(const int iterCommandLine) const
 {
 	return mCommandList.at(iterCommandLine);
@@ -351,13 +348,14 @@ Commandline Sequencer::readCommandline(const int iterCommandLine) const
 void Sequencer::printSequencerParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "SEQUENCER ************************************************************\n";
-	*fileHandle << "Stages initial scan direction (x,y,z) = {" << mInitialScanDir.at(STAGEX) << "," << mInitialScanDir.at(STAGEY) << "," << mInitialScanDir.at(STAGEZ) << "}\n";
+	*fileHandle << "Stages initial scan direction {STAGEX,STAGEY, STAGEZ} = {" << mInitialScanDir.at(STAGEX) << ", " << mInitialScanDir.at(STAGEY) << ", " << mInitialScanDir.at(STAGEZ) << "}\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "ROI covered [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROIcovered.at(YMIN) / mm << "," << mROIcovered.at(XMIN) / mm << "," << mROIcovered.at(YMAX) / mm << "," << mROIcovered.at(XMAX) / mm << "]\n";
-	*fileHandle << "Sample surface z position (mm) = " << mSample.mSurfaceZ / mm << "\n";
+	*fileHandle << "Effective ROI [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROIeffective.at(YMIN) / mm << ", " << mROIeffective.at(XMIN) / mm << ", " << mROIeffective.at(YMAX) / mm << ", " << mROIeffective.at(XMAX) / mm << "]\n";
+	*fileHandle << "Effective sample size (STAGEX, STAGEY, STAGEZ) (mm) = (" << effectiveSize_().at(STAGEX) / mm << ", " << effectiveSize_().at(STAGEY) / mm << ", " << effectiveSize_().at(STAGEZ) / mm << ")\n";
+	*fileHandle << "Sample surface position STAGEZ (mm) = " << mSample.mSurfaceZ / mm << "\n";
 	*fileHandle << std::setprecision(0);
-	*fileHandle << "# tissue slices = " << mNtotalSlices << "\n";
-	*fileHandle << "StackArray dim (x,y) = (" << mStackArrayDimIJ.at(STAGEX) << "," << mStackArrayDimIJ.at(STAGEY) << ")\n";
+	*fileHandle << "Total # tissue slices = " << mNtotalSlices << "\n";
+	*fileHandle << "StackArray dim (STAGEX,STAGEY) = (" << mStackArrayDimIJ.at(STAGEX) << ", " << mStackArrayDimIJ.at(STAGEY) << ")\n";
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
 	*fileHandle << "\n";

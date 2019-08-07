@@ -11,8 +11,8 @@ int main(int argc, char* argv[])
 			//PMT16XRoutines::frameByFrameZscan(fpga);
 			//PMT16XRoutines::frameByFrameZscanTilingXY(fpga, 1);
 			//PMT16XRoutines::liveScan(fpga);
-			//PMT16XRoutines::continuousScan(fpga);
-			PMT16XRoutines::sequencer(fpga);
+			PMT16XRoutines::continuousScan(fpga);
+			//PMT16XRoutines::sequencer(fpga);
 
 			//TESTS
 			//TestRoutines::digitalLatency(fpga);

@@ -30,8 +30,6 @@ std::string Commandline::printHeaderUnits() const
 
 void Commandline::printToFile(std::ofstream *fileHandle) const
 {
-	double scanZf, scanPf;
-
 	switch (mAction)
 	{
 	case ACTION::MOV:
@@ -40,19 +38,16 @@ void Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << std::setprecision(4);
 		*fileHandle << "(" << mCommand.moveStage.mStackCenterXY.at(STAGEX) / mm << "," << mCommand.moveStage.mStackCenterXY.at(STAGEY) / mm << ")\n";
 		break;
-	case ACTION::ACQ:
-		scanZf = mCommand.acqStack.mScanZi + mCommand.acqStack.mScanDirZ * mCommand.acqStack.mStackDepth;
-		scanPf = mCommand.acqStack.mScanPi + mCommand.acqStack.mScanDirZ * mCommand.acqStack.mStackDepth * mCommand.acqStack.mStackPinc;
-		
+	case ACTION::ACQ:		
 		*fileHandle << actionToString_(mAction) << "\t\t\t\t\t";
 		*fileHandle << mCommand.acqStack.mStackNumber << "\t";
 		*fileHandle << mCommand.acqStack.mWavelength_nm << "\t";
 		*fileHandle << mCommand.acqStack.mScanDirZ << "\t";
 		*fileHandle << std::setprecision(3);
 		*fileHandle << mCommand.acqStack.mScanZi / mm << "\t";
-		*fileHandle << scanZf / mm << "\t";
+		*fileHandle << mCommand.acqStack.scanZf() / mm << "\t";
 		*fileHandle << std::setprecision(0);
-		*fileHandle << mCommand.acqStack.mScanPi << "\t" << scanPf << "\n";
+		*fileHandle << mCommand.acqStack.mScanPi << "\t" << mCommand.acqStack.scanPf() << "\n";
 		break;
 	case ACTION::SAV:
 		*fileHandle << actionToString_(mAction) + "\n";

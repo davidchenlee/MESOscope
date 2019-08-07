@@ -374,12 +374,12 @@ void Image::constructImage(const bool saveAllPMT)
 
 void Image::correctImage(const double FFOVfast)
 {
-	//mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
+	mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 
 	if (multibeam)
 	{
 		//mTiff.suppressCrosstalk(0.1);
-		//mTiff.flattenField(1.5);
+		mTiff.flattenField(2.0);
 	}
 
 }

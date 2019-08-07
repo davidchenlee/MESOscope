@@ -18,8 +18,8 @@ struct AcqStack {
 	double mScanPi;			//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
 	double mStackPinc;		//Laser power increase in the axis STAGEZ per unit of distance
 
-
-	//double mScanPf = mScanPi + static_cast<int>(mScanDirZ) * mStackDepth * mStackPinc;
+	double scanZf() const { return  mScanZi + mScanDirZ * mStackDepth; };
+	double scanPf() const{ return mScanPi + mScanDirZ * mStackDepth * mStackPinc;};
 };
 
 struct CutSlice {

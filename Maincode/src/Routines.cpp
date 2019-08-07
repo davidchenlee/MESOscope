@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (52.934 + 0.000 ) * mm, 17.250 * mm, 18.120 * mm };
+double3 stackCenterXYZ{ (52.934 + 0.000 ) * mm, 17.250 * mm, (18.120) * mm };
 //double3 stackCenterXYZ{ 52.949 * mm, -7.000 * mm, 18.190 * mm };	//Fluorescent slide
 
 #if multibeam
@@ -417,12 +417,12 @@ namespace PMT16XRoutines
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const LASER whichLaser{ LASER::AUTO };
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 100 };								//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int nFramesCont{ 200 };								//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
 		const double stepSizeZ{ 0.5 * um };
 		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };						//Scan direction in the axis STAGEZ
@@ -433,7 +433,7 @@ namespace PMT16XRoutines
 			stackCenterXYZ.at(STAGEZ) -= 6 * um;
 		//This is because FIDELITY is chromatically shifted wrt VISION
 		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == LASER::FIDELITY || whichLaser == LASER::AUTO))
-			stackCenterXYZ.at(STAGEZ) -= 3 * um;
+			stackCenterXYZ.at(STAGEZ) -= 6 * um;
 
 		stackCenterXYZ.at(STAGEZ) -= nFramesCont * stepSizeZ /2;
 
@@ -500,7 +500,7 @@ namespace PMT16XRoutines
 		image.constructImage();
 		image.correctImage(RScanner.mFFOV);
 
-		const std::string filename{ currentSample.mName + "_" + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) +
+		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) +
 			"mWpum_x=" + toString(initialStageXYZ.at(STAGEX) / mm, 3) + "_y=" + toString(initialStageXYZ.at(STAGEY) / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
@@ -524,7 +524,7 @@ namespace PMT16XRoutines
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };		//Full FOV in the (slow axis, fast axis)
-		const int nFramesCont{ 160 };																	//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int nFramesCont{ 200 };																	//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };																//Step size in the axis STAGEZ
 		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.180 * mm, 35.025 * mm };							//Region of interest {ymin, xmin, ymax, xmax}
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };											//Stack overlap
@@ -553,7 +553,7 @@ namespace PMT16XRoutines
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
-		if (0)
+		if (1)
 		{
 			//STAGES. Specify the velocity
 			Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };
@@ -561,7 +561,7 @@ namespace PMT16XRoutines
 			stage.waitForMotionToStopAll();
 
 			//CREATE THE REALTIME CONTROL SEQUENCE
-			FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
+			FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
 			//LASER
 			VirtualLaser virtualLaser{ RTcontrol };
@@ -578,10 +578,7 @@ namespace PMT16XRoutines
 			Image image{ RTcontrol };
 
 			//Read the commands line by line
-			double scanZi, scanZf, scanPi, stackPinc;
 			double2 stackCenterXY;
-			int wavelength_nm;
-			ZSCAN scanDirZ;
 			std::string longName;
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
 				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
@@ -594,45 +591,35 @@ namespace PMT16XRoutines
 
 				switch (commandline.mAction)
 				{
-				case ACTION::MOV:
-					//Move the x and y stages to mStackCenterXY
+				case ACTION::MOV://Move the x and y stages to mStackCenterXY
 					stackCenterXY = commandline.mCommand.moveStage.mStackCenterXY;
 					stage.moveXY(stackCenterXY);
 					stage.waitForMotionToStopAll();
 					break;
-				case ACTION::ACQ:
-					//Acquire a stack using the parameters:
+				case ACTION::ACQ://Acquire a stack
 					AcqStack acqStack{ commandline.mCommand.acqStack };
 
-					wavelength_nm = acqStack.mWavelength_nm;
-					scanDirZ = static_cast<ZSCAN>(acqStack.mScanDirZ);
-					scanZi = acqStack.mScanZi;
-					scanZf = scanZi + static_cast<int>(scanDirZ) * acqStack.mStackDepth;
-					scanPi = acqStack.mScanPi;
-					stackPinc = acqStack.mStackPinc;
-
 					//Update the laser parameters if needed
-					virtualLaser.configure(wavelength_nm);										//When switching pockels, the class destructor closes the uniblitz shutter
-					virtualLaser.setPower(scanPi, scanPi + static_cast<int>(scanDirZ) * acqStack.mStackDepth * stackPinc);
-					virtualLaser.openShutter();													//Re-open the Uniblitz shutter if closed by the pockels destructor
-					rescanner.reconfigure(&virtualLaser);										//The calibration of the rescanner depends on the laser and wavelength being used
+					virtualLaser.configure(acqStack.mWavelength_nm);				//When switching pockels, the class destructor closes the uniblitz shutter
+					virtualLaser.setPower(acqStack.mScanPi, acqStack.scanPf());
+					virtualLaser.openShutter();										//Re-open the Uniblitz shutter if closed by the pockels destructor
+					rescanner.reconfigure(&virtualLaser);							//The calibration of the rescanner depends on the laser and wavelength being used
 
-					image.initializeAcq(scanDirZ);
+					image.initializeAcq(static_cast<ZSCAN>(acqStack.mScanDirZ));
 					std::cout << "Scanning the stack...\n";
-					stage.moveSingle(STAGEZ, scanZf);											//Move the stage to trigger the control sequence and data acquisition
+					stage.moveSingle(STAGEZ, acqStack.scanZf());					//Move the stage to trigger the control sequence and data acquisition
 					image.downloadData();
 					break;
 				case ACTION::SAV:
-					longName = toString(wavelength_nm, 0) + "nm_Pi=" + toString(scanPi / mW, 1) + "mW_Pf=" + toString((scanPi + static_cast<int>(scanDirZ) * stackPinc) / mW, 1) + "mW" +
+					longName = toString(acqStack.mWavelength_nm, 0) + "nm_Pi=" + toString(acqStack.mScanPi / mW, 1) + "mW_Pf=" + toString(acqStack.scanPf() / mW, 1) + "mW" +
 						"_x=" + toString(stackCenterXY.at(STAGEX) / mm, 3) + "_y=" + toString(stackCenterXY.at(STAGEY) / mm, 3) +
-						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
+						"_zi=" + toString(acqStack.mScanZi / mm, 4) + "_zf=" + toString(acqStack.scanZf() / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
 
 					image.constructImage();
 					image.correctImage(RScanner.mFFOV);
 					image.saveTiffMultiPage(longName, OVERRIDE::DIS);
 					break;
-				case ACTION::CUT:
-					//Move the stage to and then cut a slice off
+				case ACTION::CUT://Move the stage to the vibratome and then cut a slice off
 					double3 stagePositionXYZ{ commandline.mCommand.cutSlice.mBladePositionXY };
 					break;
 				default:

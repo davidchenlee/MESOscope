@@ -10,6 +10,7 @@ namespace PMT16XRoutines
 	void liveScan(const FPGAns::FPGA &fpga);
 	void continuousScan(const FPGAns::FPGA &fpga);
 	void sequencer(const FPGAns::FPGA &fpga);
+	void findSampleContour(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, const double2 stackCenterXY);
 }
 
 //TESTS

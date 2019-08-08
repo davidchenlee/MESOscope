@@ -287,7 +287,8 @@ namespace FPGAns
 		else
 			mPMT16Xchan = PMT16Xchan;
 
-		//If the z stage acts as the main trigger (for cont z scanning), add a timer after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
+		//When the z stage acts as the main trigger (for cont z scanning), the motion monitor of the z stage bounces and therefore false-triggers new acquisitions
+		//Solution: after an acq sequence, wait a certain amount of time before the acq is triggered again (timer implemented in LV)
 		if (mMainTrigger == MAINTRIG::ZSTAGE)
 		{
 			checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.getHandle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postsequenceTimer / us * tickPerUs)));

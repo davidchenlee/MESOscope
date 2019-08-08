@@ -3,7 +3,7 @@
 #pragma region "Image"
 
 //When multiplexing, create a mTiff to store 16 strips of height 'mRTcontrol.mHeightPerFrame_pix' each
-Image::Image(FPGAns::RTcontrol &RTcontrol) :
+Image::Image(const FPGAns::RTcontrol &RTcontrol) :
 	mRTcontrol{ RTcontrol }, mTiff{ mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * (nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes }
 {
 	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
@@ -314,7 +314,6 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 
 	//Z STAGE. Fine tune the delay of the z-stage trigger for the acq sequence
 	double ZstageTrigDelay{ 0 };
-
 	if (mRTcontrol.mMainTrigger == MAINTRIG::ZSTAGE)
 	{
 		if (mRTcontrol.mHeightPerBeamletPerFrame_pix == 35)
@@ -329,10 +328,11 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 				break;
 			}
 		}
-		else if (mRTcontrol.mHeightPerBeamletPerFrame_pix >= 400) ; //Do nothing if mHeightPerFrame_pix is big enough
+		else if (mRTcontrol.mHeightPerBeamletPerFrame_pix >= 400)
+			; //Do nothing if mHeightPerFrame_pix is big enough
 		else //ZstageTrigDelay is uncalibrated
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": ZstageTrigDelay has not been calibrated for heightPerFrame = " << mRTcontrol.mHeightPerBeamletPerFrame_pix << " pix\n";
+			std::cerr << "WARNING in " << __FUNCTION__ << ": ZstageTrigDelay has not been calibrated for the heightPerFrame = " << mRTcontrol.mHeightPerBeamletPerFrame_pix << " pix\n";
 			std::cerr << "Press any key to continue or ESC to exit\n";
 			
 			if (_getch() == 27)
@@ -406,6 +406,10 @@ void Image::saveTiffSinglePage(std::string filename, const OVERRIDE override) co
 void Image::saveTiffMultiPage(std::string filename, const OVERRIDE override) const
 {
 	mTiff.saveToFile(filename, MULTIPAGE::EN, override, mScanDir);
+}
+
+bool Image::isEmpty() const
+{	return false;
 }
 #pragma endregion "Image"
 

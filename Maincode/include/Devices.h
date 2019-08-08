@@ -12,10 +12,10 @@
 
 class Image
 {
-	FPGAns::RTcontrol &mRTcontrol;	//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
-	U32* mMultiplexedArrayA;		//Buffer array to read FIFOOUTpc A
-	U32* mMultiplexedArrayB;		//Buffer array to read FIFOOUTpc B
-	TiffU8 mTiff;					//Tiff that stores the content of mMultiplexedArrayA and mMultiplexedArrayB
+	const FPGAns::RTcontrol &mRTcontrol;	//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
+	U32* mMultiplexedArrayA;				//Buffer array to read FIFOOUTpc A
+	U32* mMultiplexedArrayB;				//Buffer array to read FIFOOUTpc B
+	TiffU8 mTiff;							//Tiff that stores the content of mMultiplexedArrayA and mMultiplexedArrayB
 	ZSCAN mScanDir;
 
 	void FIFOOUTpcGarbageCollector_() const;
@@ -29,7 +29,7 @@ class Image
 	void configureFIFOOUTpc_(const U32 depth) const;
 	void stopFIFOOUTpc_() const;
 public:
-	Image(FPGAns::RTcontrol &RTcontrol);
+	Image(const FPGAns::RTcontrol &RTcontrol);
 	~Image();
 	Image(const Image&) = delete;				//Disable copy-constructor
 	Image& operator=(const Image&) = delete;	//Disable assignment-constructor
@@ -46,7 +46,7 @@ public:
 	void averageEvenOddFrames();
 	void saveTiffSinglePage(std::string filename, const OVERRIDE override) const;
 	void saveTiffMultiPage(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
-
+	bool isEmpty() const;
 };
 
 class ImageException : public std::runtime_error

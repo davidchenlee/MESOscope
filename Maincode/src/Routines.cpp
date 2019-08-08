@@ -1,11 +1,11 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (52.934 + 0.000 ) * mm, 17.250 * mm, 18.120 * mm };
+double3 stackCenterXYZ{ (54.450 ) * mm, 21.300 * mm, (18.110) * mm };
 //double3 stackCenterXYZ{ 52.949 * mm, -7.000 * mm, 18.190 * mm };	//Fluorescent slide
 
 #if multibeam
-Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{"DAPI", 750, (37. * mW) * 16, (0.0) * 16 * mWpum }, { "GFP", 920, (37. * mW) * 16, 0. * 16 * mWpum }, { "TDT", 1040, (18. * mW) * 16, 0. * 16 * mWpum }}} };
+Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{"DAPI", 750, (37. * mW) * 16, (0.0) * 16 * mWpum }, { "GFP", 920, (37. * mW) * 16, 0. * 16 * mWpum }, { "TDT", 1040, (15. * mW) * 16, 0. * 16 * mWpum }}} };
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{ "TDT", 1040, (18. * mW) * 16, 0. * 16 * mWpum }}} };
 #else
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 8. * mW, 0. * mWpum }}} };
@@ -31,8 +31,8 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
-		const LASER whichLaser{ LASER::FIDELITY };
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
+		const LASER whichLaser{ LASER::AUTO };
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
@@ -283,10 +283,10 @@ namespace PMT16XRoutines
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
 		//Iterate over the wavelengths
-		for (std::vector<int>::size_type iter_wv = 0; iter_wv < fluorLabelList.size(); iter_wv++)
+		for (std::vector<int>::size_type iterWL = 0; iterWL < fluorLabelList.size(); iterWL++)
 		{
 			//DATALOG
-			Logger datalog("Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iter_wv).mName);
+			Logger datalog("Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iterWL).mName);
 			datalog.record("SAMPLE-------------------------------------------------------");
 			datalog.record("Sample = ", currentSample.mName);
 			datalog.record("Immersion medium = ", currentSample.mImmersionMedium);
@@ -309,7 +309,7 @@ namespace PMT16XRoutines
 			datalog.record("\nSTAGE--------------------------------------------------------");
 
 			//Update the laser wavelength
-			const int wavelength_nm{ fluorLabelList.at(iter_wv).mWavelength_nm };
+			const int wavelength_nm{ fluorLabelList.at(iterWL).mWavelength_nm };
 			virtualLaser.configure(wavelength_nm);		//When switching pockels, the class destructor closes the uniblitz shutter
 			virtualLaser.openShutter();					//Re-open the Uniblitz shutter if closed by the pockels destructor
 
@@ -318,14 +318,14 @@ namespace PMT16XRoutines
 			const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 
 			//Iterate over the locations
-			for (std::vector<int>::size_type iter_loc = 0; iter_loc < locationXYList.size(); iter_loc++)
+			for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationXYList.size(); iterLocation++)
 			{
 				//Generate the discrete scan sequence for the stages
 				std::vector<double3> stagePositionXYZ;
 				for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 				{
-					//stagePositionXYZ.push_back({ locationXYList.at(iter_loc).at(STAGEX), locationXYList.at(iter_loc).at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
-					stagePositionXYZ.push_back({ locationXYList.at(iter_loc).at(STAGEX), locationXYList.at(iter_loc).at(STAGEY), stackCenterXYZ.at(STAGEZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
+					//stagePositionXYZ.push_back({ locationXYList.at(iterLocation).at(STAGEX), locationXYList.at(iterLocation).at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
+					stagePositionXYZ.push_back({ locationXYList.at(iterLocation).at(STAGEX), locationXYList.at(iterLocation).at(STAGEY), stackCenterXYZ.at(STAGEZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
 				}
 
 				//CREATE A STACK FOR SAVING THE TIFFS
@@ -339,10 +339,10 @@ namespace PMT16XRoutines
 					stage.waitForMotionToStopAll();
 					//stage.printPositionXYZ();		//Print the stage position		
 
-					std::cout << "Location: " << iter_loc + 1 << "/" << locationXYList.size() << "\tTotal frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
+					std::cout << "Location: " << iterLocation + 1 << "/" << locationXYList.size() << "\tTotal frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
 
 					//Update the laser power
-					virtualLaser.setPower(fluorLabelList.at(iter_wv).mScanPi + iterDiffZ * stepSizeZ * fluorLabelList.at(iter_wv).mStackPinc);
+					virtualLaser.setPower(fluorLabelList.at(iterWL).mScanPi + iterDiffZ * stepSizeZ * fluorLabelList.at(iterWL).mStackPinc);
 
 					//EXECUTE THE RT CONTROL SEQUENCE
 					Image image{ RTcontrol };
@@ -357,14 +357,14 @@ namespace PMT16XRoutines
 				}
 
 				//Save the stackDiffZ to file
-				std::string shortName{ "Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iter_wv).mName + "_Tile" + std::to_string(iter_loc + 1) };
-				std::string longName{ currentSample.mName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(fluorLabelList.at(iter_wv).mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabelList.at(iter_wv).mStackPinc / mWpum, 1) + "mWpum" +
+				std::string shortName{ "Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iterWL).mName + "_Tile" + std::to_string(iterLocation + 1) };
+				std::string longName{ currentSample.mName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(fluorLabelList.at(iterWL).mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabelList.at(iterWL).mStackPinc / mWpum, 1) + "mWpum" +
 					"_x=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
 					"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 
 				datalog.record(shortName + "\t" + longName);
 				tiffStack.saveToFile(shortName, OVERRIDE::DIS);
-			}//iter_loc
+			}//iterLocation
 		}//iter_wv
 	}
 
@@ -581,7 +581,7 @@ namespace PMT16XRoutines
 			//Read the commands line by line
 			double2 stackCenterXY;
 			std::string longName;
-			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
+			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
 				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
 				Commandline commandline{ sequence.readCommandline(iterCommandline) }; //Implement read-from-file?
@@ -634,6 +634,26 @@ namespace PMT16XRoutines
 				//pressAnyKeyToCont();
 			}//for
 		}//if
+	}
+
+	//Scan the sample and return the coordinates of its contour
+	void findSampleContour(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, const double2 stackCenterXY)
+	{
+		//enable MAINTRIG::PC
+		std::vector<double2> sampleContour;
+
+		sequence.stack().mFFOV;
+
+		//for()	//Scan all over the ROI
+		//{
+		Image image{ RTcontrol };
+		image.acquire();				//Execute the RT control sequence and acquire the image
+		if(image.isEmpty())
+			sampleContour.push_back(stackCenterXY);
+		//}
+
+
+		//disable MAINTRIG::PC
 	}
 }//namespace
 
@@ -1105,7 +1125,7 @@ namespace TestRoutines
 			std::thread saveFile, moveStage;
 
 			//Read the commands line by line
-			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.mCommandCounter; iterCommandline++)
+			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
 				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
 				Commandline commandline{ sequence.readCommandline(iterCommandline) }; //Implement read-from-file?
@@ -1173,9 +1193,9 @@ namespace TestRoutines
 		Sequencer sequence{ currentSample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
 		std::vector<double2> locationList{ sequence.generateLocationList() };
 
-		for (std::vector<int>::size_type iter_loc = 0; iter_loc < locationList.size(); iter_loc++)
+		for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationList.size(); iterLocation++)
 		{
-			std::cout << "x = " << locationList.at(iter_loc).at(STAGEX) / mm << "\ty = " << locationList.at(iter_loc).at(STAGEY) / mm << "\n";
+			std::cout << "x = " << locationList.at(iterLocation).at(STAGEX) / mm << "\ty = " << locationList.at(iterLocation).at(STAGEY) / mm << "\n";
 		}
 	}
 

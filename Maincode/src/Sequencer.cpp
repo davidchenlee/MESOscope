@@ -126,6 +126,7 @@ Sequencer::Sequencer(const Sample sample, const Stack stack) : mSample{ sample }
 	const double stackOverlapZ{ mStack.mOverlap_frac.at(STAGEZ) * mStack.mDepth };	//Dummy local variable
 	if (mSample.mCutAboveBottomOfStack < stackOverlapZ)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'cutAboveBottomOfStack' must be greater than the stack z-overlap " + toString(stackOverlapZ / um, 1) + " um");
+
 }
 
 //Constructor using the initial stack center and number of stacks. To be used without slicing
@@ -150,10 +151,21 @@ Sequencer::Sequencer(Sample sample, const Stack stack, const double2 stackCenter
 	//Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
 
-	//Set these unused sample parameters to 0 to avoid confusion when printing the parameters to text
+	//Set these unused parameters to 0 to avoid any confusion when printing the parameters to text
 	mSample.mROIreq = { 0,0,0,0 };
 	mSample.mSizeReq = { 0,0,0 };
+
+	polyMask.reserve(mStackArrayDimIJ.at(STAGEX) * mStackArrayDimIJ.at(STAGEY));
 }
+
+void Sequencer::generatePolyMask_(const std::vector<double2> vertices)
+{
+	for (std::vector<int>::size_type II = 0; II != mStackArrayDimIJ.at(STAGEX); II++)
+		for (std::vector<int>::size_type JJ = 0; JJ != mStackArrayDimIJ.at(STAGEY); JJ++)
+			polyMask.push_back(0);
+}
+
+
 
 //The initial laser power for scanning a stack depends on whether the stack is imaged from the top down or from the bottom up.
 double Sequencer::calculateStackInitialPower_(const double Ptop, const double stackPinc, const int scanDirZ, const double stackDepth)
@@ -171,8 +183,8 @@ double2 Sequencer::stackIndicesToStackCenter_(const int2 stackArrayIndicesIJ) co
 	const double overlapY_frac{ mStack.mOverlap_frac.at(STAGEY) };
 
 	double2 stagePositionXY;
-	stagePositionXY.at(STAGEX) = mSample.mROIreq.at(XMIN) + mStack.mFFOV.at(STAGEX)  * ((1 - overlapX_frac) * stackArrayIndicesIJ.at(STAGEX) + 0.5);
-	stagePositionXY.at(STAGEY) = mSample.mROIreq.at(YMIN) + mStack.mFFOV.at(STAGEY)  * ((1 - overlapY_frac) * stackArrayIndicesIJ.at(STAGEY) + 0.5);
+	stagePositionXY.at(STAGEX) = mROIeffective.at(XMIN) + mStack.mFFOV.at(STAGEX)  * ((1 - overlapX_frac) * stackArrayIndicesIJ.at(STAGEX) + 0.5);
+	stagePositionXY.at(STAGEY) = mROIeffective.at(YMIN) + mStack.mFFOV.at(STAGEY)  * ((1 - overlapY_frac) * stackArrayIndicesIJ.at(STAGEY) + 0.5);
 
 	return stagePositionXY;
 }
@@ -196,6 +208,12 @@ void Sequencer::reverseStageScanDirection_(const Axis axis)
 void Sequencer::resetStageScanDirections_()
 {
 	mScanDir = mInitialScanDir;
+}
+
+//Convert ia ROI = {ymin, xmin, ymax, xmax} to the equivalent sample size in the axis STAGEX and STAGEY
+double3 Sequencer::effectiveSize_() const
+{
+	return { mROIeffective.at(XMAX) - mROIeffective.at(XMIN), mROIeffective.at(YMAX) - mROIeffective.at(YMIN), mStack.mDepth * ((1 - mStack.mOverlap_frac.at(STAGEZ)) * (mNtotalSlices - 1) + 1) };
 }
 
 void Sequencer::moveStage_(const int2 stackIJ)
@@ -262,12 +280,6 @@ void Sequencer::cutSlice_()
 	mPlaneToSliceZ += (1 - mStack.mOverlap_frac.at(STAGEZ)) * mStack.mDepth;
 }
 
-//Convert ia ROI = {ymin, xmin, ymax, xmax} to the equivalent sample size in the axis STAGEX and STAGEY
-double3 Sequencer::effectiveSize_() const
-{
-	return { mROIeffective.at(XMAX) - mROIeffective.at(XMIN), mROIeffective.at(YMAX) - mROIeffective.at(YMIN), mStack.mDepth * ((1 - mStack.mOverlap_frac.at(STAGEZ)) * (mNtotalSlices - 1) + 1) };
-}
-
 //Generate a scan pattern and use the vibratome to slice the sample
 void Sequencer::generateCommandList()
 {
@@ -307,7 +319,7 @@ void Sequencer::generateCommandList()
 	}
 }
 
-//Generate a scan pattern WITHOUT using the vibratome
+//Generate a location list to be called by frameByFrameZscanTilingXY(). Scan without using the vibratome.
 std::vector<double2> Sequencer::generateLocationList()
 {
 	std::vector<double2> locationList;
@@ -343,6 +355,16 @@ std::vector<double2> Sequencer::generateLocationList()
 Commandline Sequencer::readCommandline(const int iterCommandLine) const
 {
 	return mCommandList.at(iterCommandLine);
+}
+
+int Sequencer::size() const
+{
+	return mCommandCounter;
+}
+
+Stack Sequencer::stack() const
+{
+	return mStack;
 }
 
 void Sequencer::printSequencerParams(std::ofstream *fileHandle) const

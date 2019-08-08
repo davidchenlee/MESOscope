@@ -24,6 +24,7 @@ template<class T> inline U8 clipU8dual(const T x);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
 int pnpoly(int nvert, float *vertx, float *verty, float testx, float testy);
+int2 discriminator(const double2 inputArray, const double threshold);
 
 //For saving the parameters to a text file
 class Logger
@@ -70,7 +71,7 @@ public:
 	void correctRSdistortionCPU(const double FFOVfast);
 	void suppressCrosstalk(const double crosstalkRatio = 1.0);
 	void flattenField(const double maxScaleFactor = 1.0);
-	double2 sampleEdgeDetector() const;
+	double2 testBrightnessUnbalance() const;
 };
 
 class TiffStack

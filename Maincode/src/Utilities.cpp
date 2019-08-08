@@ -119,6 +119,29 @@ int pnpoly(int nvert, float *vertx, float *verty, float testx, float testy)
 	return c;
 }
 
+int2 discriminator(const double2 inputArray, const double threshold)
+{
+	if (threshold > 1 || threshold < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0, 1]");
+
+	int2 output;
+	for (std::vector<int>::size_type iter = 0; iter != inputArray.size(); iter++)
+	{
+		const double testBrighter{ inputArray.at(iter) };
+
+		if (testBrighter > 1 || testBrighter < -1)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The input must be in the range [-1, 1]");
+
+		if (testBrighter > threshold)
+			output.at(iter) = 1;
+		else if (testBrighter < -threshold)	
+			output.at(iter) = -1;
+		else //std::abs(testBrighter) < threshold
+			output.at(iter) = 0;
+	}
+	return output;
+}
+
 
 #pragma region "Logger"
 Logger::Logger(const std::string filename)
@@ -856,9 +879,9 @@ void TiffU8::flattenField(const double maxScaleFactor)
 				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(upscaleVector.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
 }
 
-//Divide the image in 4 quadrants and return the pixel count difference in the form {right-left, top-bottom} normalized to 1
-//E.g., {0.8, 0} means that the right side of the image is brighter than the left side
-double2 TiffU8::sampleEdgeDetector() const
+//Divide the image in 4 quadrants and return the pixel count difference in the form {top-bottom, right-left} normalized to 1
+//E.g., {0, 0.8} means that the right side of the image is brighter than the left side
+double2 TiffU8::testBrightnessUnbalance() const
 {
 	//Divide the image in 4 quadrants
 	const int halfwidth{ mWidthPerFrame / 2 };
@@ -887,7 +910,7 @@ double2 TiffU8::sampleEdgeDetector() const
 	}
 
 	const int sum{ sumTR + sumBR + sumTL + sumBL };
-	return { 1. * (sumTR + sumBR - (sumTL + sumBL)) / sum, 1. * (sumTL + sumTR - (sumBL + sumBR)) / sum }; //{right-left, top-bottom}
+	return { 1. * (sumTL + sumTR - (sumBL + sumBR)) / sum , 1. * (sumTR + sumBR - (sumTL + sumBL)) / sum }; //{top-bottom, right-left,}
 }
 #pragma endregion "TiffU8"
 

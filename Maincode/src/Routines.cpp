@@ -990,22 +990,21 @@ namespace TestRoutines
 	{
 		//std::string inputFilename{ "Liver distorted" };
 		//std::string inputFilename{ "no correction" };
-		std::string inputFilename{ "Slice1_TDT_Tile20" };//brighter on the left
-		//std::string inputFilename{ "Slice1_TDT_Tile653" };//brighter on the right
+		//std::string inputFilename{ "Slice1_TDT_Tile20" };//brighter on the left
+		//std::string inputFilename{ "Slice1_TDT_Tile653" };//brighter on the bottom right
 		//std::string inputFilename{ "Slice1_TDT_Tile220" };//brighter on the top
-		//std::string inputFilename{ "Slice1_TDT_Tile149" };//brighter on the bottom left
+		std::string inputFilename{ "Slice1_TDT_Tile149" };//brighter on the bottom left
 		//std::string inputFilename{ "Slice1_TDT_Tile95" };//uniform brightness
 		
 		std::string outputFilename{ "output" };
 
 		TiffU8 image{ inputFilename };
-		double2 aa{ image.sampleEdgeDetector() };
+		double2 brightnessUnbalance{ image.testBrightnessUnbalance() };
 
-		//Right vs left
-		std::cout << "right - left: " << aa.at(0) << "\n";
+		std::cout << "top-bottom: " << brightnessUnbalance.at(0) << "\tright-left: " << brightnessUnbalance.at(1) << "\n";
 
-		//Top vs bottom
-		std::cout << "top - bottom: " << aa.at(1) << "\n";
+		double threshold{ 0.3 };
+		decodeNextMove(nextMove(discriminator(brightnessUnbalance, threshold)));
 
 		//image.splitIntoFrames(10);
 		//image.mirrorOddFrames();

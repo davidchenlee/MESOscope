@@ -10,6 +10,8 @@
 #include <conio.h>					//For _getch()
 #include "Thorlabs.MotionControl.KCube.StepperMotor.h"	//For the Thorlabs stepper
 
+extern const std::vector<double2> stageSoftPosLimXYZ; //Stage soft limits that do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages). Values initialized in Routines.cpp
+
 class Image
 {
 	const FPGAns::RTcontrol &mRTcontrol;	//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
@@ -364,8 +366,7 @@ class Stage
 	void configDOtriggers_() const;
 	std::string axisToString(const Axis axis) const;
 public:
-	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Position range of the stages set by hardware. Can not be changed
-	const std::vector<double2> mSoftPosLimXYZ{ { -65. * mm, 65. * mm}, { -10. * mm, 30. * mm}, { 1. * mm, 24. * mm} };		//Stage soft limits, which do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages)
+	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Travel range of the stages set by hardware
 	Stage(const double velX, const double velY, const double velZ);
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor
@@ -447,8 +448,8 @@ public:
 	std::string mName;
 	std::string mImmersionMedium;
 	std::string mObjectiveCollar;
-	ROI mROIreq{ 0, 0, 0, 0 };								//Requested ROI across the entire sample {ymin, xmin, ymax, xmax}
-	double3 mSizeReq{ 0, 0, 0 };							//Requested sample size in the axis STAGEX, STAGEY, and STAGEZ
+	ROI mROIrequest{ 0, 0, 0, 0 };							//Requested ROI across the entire sample {ymin, xmin, ymax, xmax}
+	double3 mSizeRequest{ 0, 0, 0 };						//Requested sample size in the axis STAGEX, STAGEY, and STAGEZ
 	double mSurfaceZ{ -1. * mm };
 	FluorLabelList mFluorLabelList;
 

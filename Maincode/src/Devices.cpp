@@ -1996,7 +1996,7 @@ double Stage::downloadPositionSingle_(const Axis axis)
 void Stage::moveSingle(const Axis axis, const double position)
 {
 	//Check if the requested position is within range
-	if (position < mSoftPosLimXYZ.at(axis).at(0) || position > mSoftPosLimXYZ.at(axis).at(1))
+	if (position < stageSoftPosLimXYZ.at(axis).at(0) || position > stageSoftPosLimXYZ.at(axis).at(1))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position out of bounds for stage " + axisToString(axis));
 
 	//Move the stage
@@ -2371,17 +2371,17 @@ Sample::Sample(const std::string sampleName, const std::string immersionMedium, 
 	mName{ sampleName }, mImmersionMedium{ immersionMedium }, mObjectiveCollar{ objectiveCollar }, mFluorLabelList{ fluorLabelList }{}
 
 Sample::Sample(const Sample& sample, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :
-	mName{ sample.mName }, mImmersionMedium{ sample.mImmersionMedium }, mObjectiveCollar{ sample.mObjectiveCollar }, mFluorLabelList{ sample.mFluorLabelList }, mROIreq{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
+	mName{ sample.mName }, mImmersionMedium{ sample.mImmersionMedium }, mObjectiveCollar{ sample.mObjectiveCollar }, mFluorLabelList{ sample.mFluorLabelList }, mROIrequest{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
 {
 	//Convert input ROI = {ymin, xmin, ymax, xmax} to the equivalent sample length in the axis STAGEX and STAGEY
-	mSizeReq.at(STAGEX) = mROIreq.at(XMAX) - mROIreq.at(XMIN);
-	mSizeReq.at(STAGEY) = mROIreq.at(YMAX) - mROIreq.at(YMIN);
-	mSizeReq.at(STAGEZ) = sampleLengthZ;
+	mSizeRequest.at(STAGEX) = mROIrequest.at(XMAX) - mROIrequest.at(XMIN);
+	mSizeRequest.at(STAGEY) = mROIrequest.at(YMAX) - mROIrequest.at(YMIN);
+	mSizeRequest.at(STAGEZ) = sampleLengthZ;
 
-	if (mSizeReq.at(STAGEX) <= 0 || mSizeReq.at(STAGEY) <= 0)
+	if (mSizeRequest.at(STAGEX) <= 0 || mSizeRequest.at(STAGEY) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
 
-	if (mSizeReq.at(STAGEZ) <= 0)
+	if (mSizeRequest.at(STAGEZ) <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Z must be positive");
 
 	if (mCutAboveBottomOfStack < 0)
@@ -2400,8 +2400,8 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "Immersion medium = " << mImmersionMedium << "\n";
 	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Requested ROI [STAGEYmin, STAGEXmin, STAGEYmax, STAGEXmax] (mm) = [" << mROIreq.at(YMIN) / mm << ", " << mROIreq.at(XMIN) / mm << ", " << mROIreq.at(YMAX) / mm << ", " << mROIreq.at(XMAX) / mm << "]\n";
-	*fileHandle << "Requested sample size (STAGEX, STAGEY, STAGEZ) (mm) = (" << mSizeReq.at(STAGEX) / mm << ", " << mSizeReq.at(STAGEY) / mm << ", " << mSizeReq.at(STAGEZ) / mm << ")\n\n";
+	*fileHandle << "Requested ROI [STAGEYmin, STAGEXmin, STAGEYmax, STAGEXmax] (mm) = [" << mROIrequest.at(YMIN) / mm << ", " << mROIrequest.at(XMIN) / mm << ", " << mROIrequest.at(YMAX) / mm << ", " << mROIrequest.at(XMAX) / mm << "]\n";
+	*fileHandle << "Requested sample size (STAGEX, STAGEY, STAGEZ) (mm) = (" << mSizeRequest.at(STAGEX) / mm << ", " << mSizeRequest.at(STAGEY) / mm << ", " << mSizeRequest.at(STAGEZ) / mm << ")\n\n";
 
 	*fileHandle << "SLICE ************************************************************\n";
 	*fileHandle << std::setprecision(4);

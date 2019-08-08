@@ -1,8 +1,8 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
+const std::vector<double2> stageSoftPosLimXYZ{ { 32. * mm, 57. * mm}, { -8. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Stage soft limits
 double3 stackCenterXYZ{ (54.450 ) * mm, 21.300 * mm, (18.110) * mm };
-//double3 stackCenterXYZ{ 52.949 * mm, -7.000 * mm, 18.190 * mm };	//Fluorescent slide
 
 #if multibeam
 Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{"DAPI", 750, (37. * mW) * 16, (0.0) * 16 * mWpum }, { "GFP", 920, (37. * mW) * 16, 0. * 16 * mWpum }, { "TDT", 1040, (15. * mW) * 16, 0. * 16 * mWpum }}} };

@@ -70,7 +70,7 @@ namespace Constants
 	extern const int AO_tMIN;
 	extern const int syncDOtoAO_tick;
 	extern const int nPreframes;
-	extern const double postsequenceTimer;
+
 	extern const double linegateTimeout;
 	extern const int FIFOtimeout_tick;
 	extern const int FIFOINmax;
@@ -91,6 +91,8 @@ namespace Constants
 	extern const GALVOcalib rescannerCalibV1040nm;
 	extern const GALVOcalib rescannerCalibF1040nm;
 	extern const PMT16XCHAN PMT16Xchan;
+
+	extern const double postsequenceTimer;
 
 	extern const double	ZstageTrigDelayTopdown;
 	extern const double	ZstageTrigDelayBottomup;

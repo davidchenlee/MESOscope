@@ -105,17 +105,17 @@ Sequencer::Sequencer(const Sample sample, const Stack stack) : mSample{ sample }
 
 	//Calculate the number of stacks in the axis STAGEX and STAGEY based on the sample size and stack FFOV
 	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
-	mStackArrayDimIJ.at(STAGEX) = static_cast<int>(std::ceil(  1/(1- mStack.mOverlap_frac.at(STAGEX)) * (mSample.mSizeReq.at(STAGEX) / mStack.mFFOV.at(STAGEX) - 1) + 1  ));		//Number of stacks in the axis STAGEX
-	mStackArrayDimIJ.at(STAGEY) = static_cast<int>(std::ceil(  1/(1- mStack.mOverlap_frac.at(STAGEY)) * (mSample.mSizeReq.at(STAGEY) / mStack.mFFOV.at(STAGEY) - 1) + 1  ));		//Number of stacks in the axis STAGEY
+	mStackArrayDimIJ.at(STAGEX) = static_cast<int>(std::ceil(  1/(1- mStack.mOverlap_frac.at(STAGEX)) * (mSample.mSizeRequest.at(STAGEX) / mStack.mFFOV.at(STAGEX) - 1) + 1  ));		//Number of stacks in the axis STAGEX
+	mStackArrayDimIJ.at(STAGEY) = static_cast<int>(std::ceil(  1/(1- mStack.mOverlap_frac.at(STAGEY)) * (mSample.mSizeRequest.at(STAGEY) / mStack.mFFOV.at(STAGEY) - 1) + 1  ));		//Number of stacks in the axis STAGEY
 
 	//Calculate the effective ROI covered by the stacks, which might be slightly larger than the sample's ROI
-	mROIeffective.at(XMIN) = mSample.mROIreq.at(XMIN);
-	mROIeffective.at(YMIN) = mSample.mROIreq.at(YMIN);
-	mROIeffective.at(XMAX) = mSample.mROIreq.at(XMIN) + mStack.mFFOV.at(STAGEX)  * ((1 - mStack.mOverlap_frac.at(STAGEX)) * mStackArrayDimIJ.at(STAGEX) + 0.5);
-	mROIeffective.at(YMAX) = mSample.mROIreq.at(YMIN) + mStack.mFFOV.at(STAGEY)  * ((1 - mStack.mOverlap_frac.at(STAGEY)) * mStackArrayDimIJ.at(STAGEY) + 0.5);
+	mROIeffective.at(XMIN) = mSample.mROIrequest.at(XMIN);
+	mROIeffective.at(YMIN) = mSample.mROIrequest.at(YMIN);
+	mROIeffective.at(XMAX) = mSample.mROIrequest.at(XMIN) + mStack.mFFOV.at(STAGEX)  * ((1 - mStack.mOverlap_frac.at(STAGEX)) * mStackArrayDimIJ.at(STAGEX) + 0.5);
+	mROIeffective.at(YMAX) = mSample.mROIrequest.at(YMIN) + mStack.mFFOV.at(STAGEY)  * ((1 - mStack.mOverlap_frac.at(STAGEY)) * mStackArrayDimIJ.at(STAGEY) + 0.5);
 
 	//Calculate the total number of stacks in a vibratome slice and in the entire sample
-	mNtotalSlices = static_cast<int>(std::ceil(  1 / (1 - mStack.mOverlap_frac.at(STAGEZ)) * (mSample.mSizeReq.at(STAGEZ) / mStack.mDepth - 1) + 1  ));		//Total number of slices in the entire sample
+	mNtotalSlices = static_cast<int>(std::ceil(  1 / (1 - mStack.mOverlap_frac.at(STAGEZ)) * (mSample.mSizeRequest.at(STAGEZ) / mStack.mDepth - 1) + 1  ));		//Total number of slices in the entire sample
 	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(STAGEX) * mStackArrayDimIJ.at(STAGEY) };													//Total number of stacks in a vibratome slice
 	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * mNtotalStacksPerVibratomeSlice };				//Total number of stacks in the entire sample
 
@@ -152,8 +152,8 @@ Sequencer::Sequencer(Sample sample, const Stack stack, const double2 stackCenter
 	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
 
 	//Set these unused parameters to 0 to avoid any confusion when printing the parameters to text
-	mSample.mROIreq = { 0,0,0,0 };
-	mSample.mSizeReq = { 0,0,0 };
+	mSample.mROIrequest = { 0,0,0,0 };
+	mSample.mSizeRequest = { 0,0,0 };
 
 	polyMask.reserve(mStackArrayDimIJ.at(STAGEX) * mStackArrayDimIJ.at(STAGEY));
 }

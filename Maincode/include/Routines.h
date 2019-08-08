@@ -6,11 +6,11 @@
 namespace PMT16XRoutines
 {
 	void frameByFrameZscan(const FPGAns::FPGA &fpga);
-	void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice);
 	void liveScan(const FPGAns::FPGA &fpga);
 	void continuousScan(const FPGAns::FPGA &fpga);
 	void sequencer(const FPGAns::FPGA &fpga);
 	void findSampleContour(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, const double2 stackCenterXY);
+	//	void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice);
 }
 
 //TESTS

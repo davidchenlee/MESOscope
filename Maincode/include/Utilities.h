@@ -70,6 +70,7 @@ public:
 	void correctRSdistortionCPU(const double FFOVfast);
 	void suppressCrosstalk(const double crosstalkRatio = 1.0);
 	void flattenField(const double maxScaleFactor = 1.0);
+	double2 sampleEdgeDetector() const;
 };
 
 class TiffStack

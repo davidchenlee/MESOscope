@@ -5,7 +5,7 @@ using namespace Constants;
 
 struct MoveStage {
 	int mSliceNumber;		//Slice number
-	int2 mStackIJ;			//Indices for the 2D array of stacks
+	int2 mStackIJ;			//Indices of the 2D array of stacks
 	double2 mStackCenterXY;	//STAGEX and STAGEY positions corresponding to the center of the stack
 };
 

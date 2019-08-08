@@ -855,6 +855,40 @@ void TiffU8::flattenField(const double maxScaleFactor)
 			for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
 				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(upscaleVector.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
 }
+
+//Divide the image in 4 quadrants and return the pixel count difference in the form {right-left, top-bottom} normalized to 1
+//E.g., {0.8, 0} means that the right side of the image is brighter than the left side
+double2 TiffU8::sampleEdgeDetector() const
+{
+	//Divide the image in 4 quadrants
+	const int halfwidth{ mWidthPerFrame / 2 };
+	const int halfHeight{ mHeightPerFrame / 2 };
+
+	int sumTL{ 0 }, sumTR{ 0 }, sumBL{ 0 }, sumBR{ 0 };
+	for (int rowIndex = 0; rowIndex < halfHeight; rowIndex++)
+	{
+		//Quadrant top-left
+		for (int colIndex = 0; colIndex < halfwidth; colIndex++)
+			sumTL += mArray[rowIndex * mWidthPerFrame + colIndex];
+
+		//Quadrant top-right
+		for (int colIndex = halfwidth; colIndex < mWidthPerFrame; colIndex++)
+			sumTR += mArray[rowIndex * mWidthPerFrame + colIndex];
+	}
+	for (int rowIndex = halfHeight; rowIndex < mHeightPerFrame; rowIndex++)
+	{
+		//Quadrant bottom-left
+		for (int colIndex = 0; colIndex < halfwidth; colIndex++)
+			sumBL += mArray[rowIndex * mWidthPerFrame + colIndex];
+
+		//Quadrant bottom-right
+		for (int colIndex = halfwidth; colIndex < mWidthPerFrame; colIndex++)
+			sumBR += mArray[rowIndex * mWidthPerFrame + colIndex];
+	}
+
+	const int sum{ sumTR + sumBR + sumTL + sumBL };
+	return { 1. * (sumTR + sumBR - (sumTL + sumBL)) / sum, 1. * (sumTL + sumTR - (sumBL + sumBR)) / sum }; //{right-left, top-bottom}
+}
 #pragma endregion "TiffU8"
 
 #pragma region "Stack"

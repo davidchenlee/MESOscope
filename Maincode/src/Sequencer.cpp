@@ -160,8 +160,8 @@ Sequencer::Sequencer(Sample sample, const Stack stack, const double2 stackCenter
 
 void Sequencer::generatePolyMask_(const std::vector<double2> vertices)
 {
-	for (std::vector<int>::size_type II = 0; II != mStackArrayDimIJ.at(STAGEX); II++)
-		for (std::vector<int>::size_type JJ = 0; JJ != mStackArrayDimIJ.at(STAGEY); JJ++)
+	for (std::vector<int>::size_type iterSTAGEX = 0; iterSTAGEX != mStackArrayDimIJ.at(STAGEX); iterSTAGEX++)
+		for (std::vector<int>::size_type iterSTAGEY = 0; iterSTAGEY != mStackArrayDimIJ.at(STAGEY); iterSTAGEY++)
 			polyMask.push_back(0);
 }
 
@@ -287,29 +287,29 @@ void Sequencer::generateCommandList()
 
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
-		int II{ 0 }, JJ{ 0 };			//Reset the stack indices after every cut
+		int iterSTAGEX{ 0 }, iterSTAGEY{ 0 };			//Reset the stack indices after every cut
 		resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
 
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mSample.mFluorLabelList.size(); iterWL++)
 		{
 			//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over STAGEX often and over STAGEY less often
-			while (JJ >= 0 && JJ < mStackArrayDimIJ.at(STAGEY))			//STAGEY direction
+			while (iterSTAGEY >= 0 && iterSTAGEY < mStackArrayDimIJ.at(STAGEY))			//STAGEY direction
 			{
-				while (II >= 0 && II < mStackArrayDimIJ.at(STAGEX))		//STAGEX direction
+				while (iterSTAGEX >= 0 && iterSTAGEX < mStackArrayDimIJ.at(STAGEX))		//STAGEX direction
 				{
-					moveStage_({ II, JJ });
+					moveStage_({ iterSTAGEX, iterSTAGEY });
 					acqStack_(iterWL);
 					saveStack_();
-					II += mScanDir.at(STAGEX);		//Increase the iterator in the axis STAGE X
+					iterSTAGEX += mScanDir.at(STAGEX);		//Increase the iterator in the axis STAGE X
 				}
 
 				//Initialize the next cycle by going back in the axis STAGEX one step and switching the scanning direction
-				II -= mScanDir.at(STAGEX);
+				iterSTAGEX -= mScanDir.at(STAGEX);
 				reverseStageScanDirection_(STAGEX);
-				JJ += mScanDir.at(STAGEY);	//Increase the iterator in the axis STAGEY
+				iterSTAGEY += mScanDir.at(STAGEY);	//Increase the iterator in the axis STAGEY
 			}
 			//Initialize the next cycle by going back in the axis STAGEY one step and switching the scanning direction
-			JJ -= mScanDir.at(STAGEY);
+			iterSTAGEY -= mScanDir.at(STAGEY);
 			reverseStageScanDirection_(STAGEY);
 		}
 
@@ -319,34 +319,35 @@ void Sequencer::generateCommandList()
 	}
 }
 
-//Generate a location list to be called by frameByFrameZscanTilingXY(). Scan without using the vibratome.
+//Like generateCommandList() but instead of a list of command, Generate a list of locations to be called by frameByFrameZscanTilingXY()
+//Note that this sequence does not use the vibratome
 std::vector<double2> Sequencer::generateLocationList()
 {
 	std::vector<double2> locationList;
 	//std::cout << "Generating the location list..." << "\n";
 
-	int II{ 0 }, JJ{ 0 };			//Reset the stack indices after every cut
+	int iterSTAGEX{ 0 }, iterSTAGEY{ 0 };			//Reset the stack indices after every cut
 	resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
 
 	//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over STAGEX often and over STAGEY less often
-	while (JJ >= 0 && JJ < mStackArrayDimIJ.at(STAGEY))			//STAGEY direction
+	while (iterSTAGEY >= 0 && iterSTAGEY < mStackArrayDimIJ.at(STAGEY))			//STAGEY direction
 	{
-		while (II >= 0 && II < mStackArrayDimIJ.at(STAGEX))		//STAGEX direction
+		while (iterSTAGEX >= 0 && iterSTAGEX < mStackArrayDimIJ.at(STAGEX))		//STAGEX direction
 		{
-			const double2 stackCenterXY{ stackIndicesToStackCenter_({ II, JJ }) };
+			const double2 stackCenterXY{ stackIndicesToStackCenter_({ iterSTAGEX, iterSTAGEY }) };
 			locationList.push_back(stackCenterXY);
 			
 			//std::cout << "x = " << stackCenterXY.at(STAGEX) / mm << "\ty = " << stackCenterXY.at(STAGEY) / mm << "\n";		//For debugging
-			II += mScanDir.at(STAGEX);		//Increase the iterator in the axis STAGEX
+			iterSTAGEX += mScanDir.at(STAGEX);		//Increase the iterator in the axis STAGEX
 		}
 
 		//Initialize the next cycle by going back in the axis STAGEX one step and switching the scanning direction
-		II -= mScanDir.at(STAGEX);
+		iterSTAGEX -= mScanDir.at(STAGEX);
 		reverseStageScanDirection_(STAGEX);
-		JJ += mScanDir.at(STAGEY);	//Increase the iterator in the axis STAGEY
+		iterSTAGEY += mScanDir.at(STAGEY);	//Increase the iterator in the axis STAGEY
 	}
 	//Initialize the next cycle by going back in the axis STAGEY one step and switching the scanning direction
-	JJ -= mScanDir.at(STAGEY);
+	iterSTAGEY -= mScanDir.at(STAGEY);
 	reverseStageScanDirection_(STAGEY);
 
 	return locationList;

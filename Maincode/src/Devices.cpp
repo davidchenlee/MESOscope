@@ -433,7 +433,7 @@ ResonantScanner::ResonantScanner(const FPGAns::RTcontrol &RTcontrol) : mRTcontro
 void ResonantScanner::setVoltage_(const double controlVoltage)
 {
 	if (controlVoltage < 0 || controlVoltage > mVMAX)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested voltage must be in the range 0-" + std::to_string(mVMAX) + " V" );
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested voltage must be in the range [0-" + std::to_string(mVMAX) + "] V" );
 
 	//Update the scan parameters
 	mControlVoltage = controlVoltage;									//Control voltage
@@ -456,7 +456,7 @@ void ResonantScanner::setFFOV(const double FFOV)
 	//std::cout << "mControlVoltage = " << mControlVoltage << "\n";		//For debugging
 
 	if (mControlVoltage < 0 || mControlVoltage > mVMAX)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested FFOV must be in the range 0-" + std::to_string(mVMAX/mVoltagePerDistance /um) + " um");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested FFOV must be in the range [0-" + std::to_string(mVMAX/mVoltagePerDistance /um) + "] um");
 
 	//Upload the control voltage
 	FPGAns::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAns::voltageToI16(mControlVoltage)));
@@ -593,10 +593,10 @@ void PMT16X::setSingleGain(const PMT16XCHAN chan, const int gain) const
 {
 	//Check that the inputVector parameters are within range
 	if (chan < PMT16XCHAN::CH00 || chan > PMT16XCHAN::CH15)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X channel number out of range (1-" + std::to_string(nChanPMT) + ")");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X channel number out of range [1-" + std::to_string(nChanPMT) + "]");
 
 	if (gain < 0 || gain > 255)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain out of range (0-255)");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain out of range [0-255]");
 	
 	//The PMT16X indexes the channels starting from 1 to 16
 	uint8_t chanPMT{ static_cast<uint8_t>(static_cast<int>(chan) + 1) };
@@ -624,7 +624,7 @@ void PMT16X::setAllGainToZero() const
 void PMT16X::setAllGain(const int gain) const
 {
 	if (gain < 0 || gain > 255)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain must be in the range 0-255");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain must be in the range [0-255]");
 
 	std::vector<uint8_t> parameters{ sendCommand_({ 'S', (uint8_t)gain }) };
 	//printHex(parameters);	//For debugging
@@ -644,7 +644,7 @@ void PMT16X::setAllGain(std::vector<uint8_t> gains) const
 
 	for (int ii = 0; ii < nChanPMT; ii++)
 		if (gains.at(ii) < 0 || gains.at(ii) > 255)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ":  PMT16X gain #" + std::to_string(ii) + " out of range (0-255)");
+			throw std::invalid_argument((std::string)__FUNCTION__ + ":  PMT16X gain #" + std::to_string(ii) + " out of range [0-255]");
 
 	gains.insert(gains.begin(), 'G');	//Prepend the command
 	std::vector<uint8_t> parameters{ sendCommand_({ gains }) };
@@ -763,7 +763,7 @@ int Filterwheel::colorToPosition_(const FILTERCOLOR color) const
 FILTERCOLOR Filterwheel::positionToColor_(const int position) const
 {
 	if (position < 1 || position > mNpos)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": the filterwheel position must be between 1 and " + std::to_string(mNpos));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The filterwheel position must be between 1 and " + std::to_string(mNpos));
 
 	return mFWconfig.at(position - 1);
 }
@@ -862,7 +862,7 @@ void Filterwheel::setWavelength(const int wavelength_nm)
 	else if (wavelength_nm >= 680)
 		color = FILTERCOLOR::BLUE;
 	else
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The filterwheel wavelength must be in the range 680 - 1080 nm");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The filterwheel wavelength must be in the range [680-1080] nm");
 
 	setPosition(color);
 }
@@ -959,7 +959,7 @@ void Laser::setWavelength(const int wavelength_nm)
 	{
 	case LASER::VISION:
 		if (wavelength_nm < 680 || wavelength_nm > 1080)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": VISION wavelength must be in the range 680 - 1080 nm");
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": VISION wavelength must be in the range [680-1080] nm");
 
 		if (wavelength_nm != mWavelength_nm)	//Set the new wavelength only if it is different from the current value
 		{
@@ -1192,7 +1192,7 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 			phase = 0.038 * V;
 			break;
 		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
 		}			
 		break;
 
@@ -1208,7 +1208,7 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 
 	double arg{ sqrt(power / amplitude) };
 	if (arg > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Arg of asin is greater than 1");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The argument of asin must be <= 1");
 
 	return asin(arg) / angularFreq + phase;
 }
@@ -1217,7 +1217,7 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const
 {
 	if (AO < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The control voltage of the Pockls cell must be positive");
 
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, AO, override);
 }
@@ -1225,7 +1225,7 @@ void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, con
 void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const
 {
 	if (P < 0 || P > mMaxPower)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's laser power must be in the range 0-" + std::to_string(static_cast<int>(mMaxPower/mW)) + " mW");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power of the pockels cell must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower/mW)) + "] mW");
 
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, laserpowerToVolt_(P), override);
 }
@@ -1242,7 +1242,7 @@ void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
 
 	//Make sure that Fx2p14 will not overflow
 	if (Vratio > 4)	
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested scaling factor must be in the range 0-4");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
@@ -1356,7 +1356,7 @@ StepperActuator::~StepperActuator()
 void StepperActuator::move(const double position)
 {
 	if (position < mPosLimit.at(0) || position > mPosLimit.at(1))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position for the collector lens must be in the range 0-13 mm");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position for the collector lens must be in the range [0-13] mm");
 
 	//Move to the new position if different from the current position (within an error)
 	if (std::abs(position - mPosition) > 0.001 * mm)
@@ -1439,7 +1439,7 @@ void VirtualLaser::CollectorLens::set(const int wavelength_nm)
 		mStepper.move(cLensPos1040nm);
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector lens position has not been calibrated for the wavelength " + std::to_string(wavelength_nm));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The collector lens position has not been calibrated for the wavelength " + std::to_string(wavelength_nm));
 	}
 }
 
@@ -1509,7 +1509,7 @@ LASER VirtualLaser::CombinedLasers::autoSelectLaser_(const int wavelength_nm) co
 		else if (wavelength_nm == 1040)
 			return LASER::FIDELITY;
 		else
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": wavelength > 1040 nm is not implemented in CombinedLasers class");
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Wavelengths > 1040 nm is not implemented in the CombinedLasers class");
 	}
 	else //If mWhichLaser != LASER::AUTO, the mWhichLaser is either LASER::VISION or LASER::FIDELITY
 		return mWhichLaser;
@@ -1882,7 +1882,7 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 #pragma endregion "Galvo"
 
 #pragma region "Stages"
-Stage::Stage(const double velX, const double velY, const double velZ)
+Stage::Stage(const double velX, const double velY, const double velZ, const std::vector<double2> stageSoftPosLimXYZ) : mSoftPosLimXYZ{ stageSoftPosLimXYZ }
 {
 	const std::string stageIDx{ "116049107" };	//X-stage (V-551.4B)
 	const std::string stageIDy{ "116049105" };	//Y-stage (V-551.2B)
@@ -1992,15 +1992,18 @@ double Stage::downloadPositionSingle_(const Axis axis)
 void Stage::moveSingle(const Axis axis, const double position)
 {
 	//Check if the requested position is within range
-	if (position < stageSoftPosLimXYZ.at(axis).at(0) || position > stageSoftPosLimXYZ.at(axis).at(1))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Requested position out of bounds for stage " + axisToString(axis));
+	if (position < mSoftPosLimXYZ.at(axis).at(0) || position > mSoftPosLimXYZ.at(axis).at(1))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the soft limits of the stage " + axisToString(axis));
+
+	if (position < mTravelRangeXYZ.at(axis).at(0) || position > mTravelRangeXYZ.at(axis).at(1))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the physical limits of the stage " + axisToString(axis));
 
 	//Move the stage
 	if (mPositionXYZ.at(axis) != position ) //Move only if the requested position is different from the current position
 	{
 		const double position_mm{ position / mm };								//Divide by mm to convert from implicit to explicit units
 		if (!PI_MOV(mID_XYZ.at(axis), mNstagesPerController, &position_mm) )	//~14 ms to execute this function
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString(axis) + " to the target position");
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString(axis) + " to the target position (maybe hardware limits?)");
 
 		mPositionXYZ.at(axis) = position;
 	}
@@ -2093,7 +2096,7 @@ void Stage::setVelSingle(const Axis axis, const double vel)
 {
 	//Check if the requested vel is valid
 	if (vel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be greater than zero for the stage " + axisToString(axis));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be >0 for the stage " + axisToString(axis));
 
 	//Update the vel if different
 	if (mVelXYZ.at(axis) != vel)
@@ -2105,7 +2108,6 @@ void Stage::setVelSingle(const Axis axis, const double vel)
 		mVelXYZ.at(axis) = vel;
 		//std::cout << "stage vel updated\n"; //For debugging
 	}
-
 }
 
 //Set the velocity of the stage 
@@ -2153,10 +2155,13 @@ void Stage::setDOtriggerParamSingle(const Axis axis, const int DOchan, const DOP
 void Stage::setDOtriggerParamAll(const Axis axis, const int DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const
 {
 	if ( triggerStep <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be greater than zero");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be >0");
 
 	if (startThreshold < mTravelRangeXYZ.at(axis).at(0) || startThreshold > mTravelRangeXYZ.at(axis).at(1))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'startThreshold is out of bound for the stage " + axisToString(axis));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The start position is out of the physical limits of the stage " + axisToString(axis));
+
+	if (stopThreshold < mTravelRangeXYZ.at(axis).at(0) || stopThreshold > mTravelRangeXYZ.at(axis).at(1))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stop position is out of the physical limits of the stage " + axisToString(axis));
 
 
 	setDOtriggerParamSingle(axis, DOchan, DOPARAM::TRIGSTEP, triggerStep / mm);					//Trigger step
@@ -2246,21 +2251,20 @@ void Vibratome::pushStartStopButton() const
 
 void Vibratome::slice(const double planeToCutZ)
 {
-	mStage.setVelXYZ(mStageConveyingVelXYZ);															//Change the velocity to move the sample to the vibratome
+	mStage.setVelXYZ(mStageConveyingVelXYZ);																	//Change the velocity to move the sample to the vibratome
 	mStage.moveXYZ({ mStageInitialSlicePosXY.at(STAGEX), mStageInitialSlicePosXY.at(STAGEY), planeToCutZ });	//Position the sample in front of the vibratome's blade
 	mStage.waitForMotionToStopAll();
 
-	mStage.setVelSingle(STAGEY, mSlicingVel);							//Change the y vel for slicing
-	pushStartStopButton();												//Turn on the vibratome
-	mStage.moveSingle(STAGEY, mStageFinalSlicePosY);					//Slice the sample: move the stage y towards the blade
-	mStage.waitForMotionToStopSingle(STAGEY);							//Wait until the motion ends
-	mStage.setVelSingle(STAGEY, mStageConveyingVelXYZ.at(STAGEY));		//Set back the y vel to move the sample back to the microscope
+	mStage.setVelSingle(STAGEY, mSlicingVel);								//Change the y vel for slicing
+	pushStartStopButton();													//Turn on the vibratome
+	mStage.moveSingle(STAGEY, mStageFinalSlicePosY);						//Slice the sample: move the stage y towards the blade
+	mStage.waitForMotionToStopSingle(STAGEY);								//Wait until the motion ends
+	mStage.setVelSingle(STAGEY, mStageConveyingVelXYZ.at(STAGEY));			//Set back the y vel to move the sample back to the microscope
 
 	//mStage.moveSingle(STAGEY, mStage.mTravelRangeXYZ.at(STAGEY).at(1));	//Move the stage y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
 	//mStage.waitForMotionToStopSingle(STAGEY);								//Wait until the motion ends
 
-	pushStartStopButton();											//Turn off the vibratome
-
+	pushStartStopButton();													//Turn off the vibratome
 }
 
 /*//NOT USING THESE FUNCTIONS ANYMORE
@@ -2363,8 +2367,8 @@ FluorLabelList::FluorLabel FluorLabelList::findFluorLabel(const std::string fluo
 #pragma endregion "FluorLabelList"
 
 #pragma region "Sample"
-Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const FluorLabelList fluorLabelList) :
-	mName{ sampleName }, mImmersionMedium{ immersionMedium }, mObjectiveCollar{ objectiveCollar }, mFluorLabelList{ fluorLabelList }{}
+Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<double2> stageSoftPosLimXYZ, const FluorLabelList fluorLabelList) :
+	mName{ sampleName }, mImmersionMedium{ immersionMedium }, mObjectiveCollar{ objectiveCollar }, mStageSoftPosLimXYZ{ stageSoftPosLimXYZ }, mFluorLabelList{ fluorLabelList }{}
 
 Sample::Sample(const Sample& sample, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :
 	mName{ sample.mName }, mImmersionMedium{ sample.mImmersionMedium }, mObjectiveCollar{ sample.mObjectiveCollar }, mFluorLabelList{ sample.mFluorLabelList }, mROIrequest{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
@@ -2424,7 +2428,7 @@ Stack::Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, cons
 
 	if (mOverlap_frac.at(STAGEX) < 0 || mOverlap_frac.at(STAGEY) < 0 || mOverlap_frac.at(STAGEZ) < 0
 		|| mOverlap_frac.at(STAGEX) > 0.2 || mOverlap_frac.at(STAGEY) > 0.2 || mOverlap_frac.at(STAGEZ) > 0.2)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range 0-0.2");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-0.2]");
 }
 
 void Stack::printParams(std::ofstream *fileHandle) const

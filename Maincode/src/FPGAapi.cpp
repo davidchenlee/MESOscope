@@ -51,7 +51,7 @@ namespace FPGAns
 		}
 	}
 
-	//Convert an int in the range (-32768 to 32767) to voltage (-10V to 10V)
+	//Convert an int in the range -32768 to 32767 to voltage -10V to 10V
 	double intToVoltage(const int input)
 	{
 		//Positive case
@@ -478,7 +478,7 @@ double RTcontrol::Pixelclock::convertSpatialCoordToTime_us(const double x) const
 {
 double arg = 2 * x / RSpkpk_um;
 if (arg > 1)
-throw std::invalid_argument((std::string)__FUNCTION__ + ": Argument of asin greater than 1");
+throw std::invalid_argument((std::string)__FUNCTION__ + ": The argument of asin must be <=1");
 else
 return halfPeriodLineclock / us * asin(arg) / Constants::PI; //The returned value is in the range [-halfPeriodLineclock / us/PI, halfPeriodLineclock / us/PI]
 }

@@ -505,7 +505,7 @@ void TiffU8::pushImage(const int firstFrameIndex, const int lastFrameIndex, cons
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be smaller than or equal to the number of frames");
 
 	if (lastFrameIndex < firstFrameIndex)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": lastFrameIndex must be greater than or equal to firstFrameIndex");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": lastFrameIndex must be >= to firstFrameIndex");
 
 	std::memcpy(&mArray[firstFrameIndex * mHeightPerFrame * mBytesPerLine], inputArray, (lastFrameIndex - firstFrameIndex + 1) * mHeightPerFrame * mBytesPerLine);
 }
@@ -592,7 +592,7 @@ inline U8 interpolateU8(float lam, const U8  &val1, const U8 &val2)
 void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 {
 	if (FFOVfast <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be greater than 0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
 
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
 	const int heightAllFrames{ mHeightPerFrame * mNframes };
@@ -727,7 +727,7 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 {
 	if (FFOVfast <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be greater than 0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
 
 	const int nPixAllFrames{ mWidthPerFrame * mHeightPerFrame * mNframes };
 	U8* correctedArray{ new U8[nPixAllFrames] };
@@ -821,7 +821,7 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 void TiffU8::flattenField(const double maxScaleFactor)
 {
 	if (maxScaleFactor < 1.0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Scale factor must be greater or equal to 1.0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Scale factor must be >= 1.0");
 
 	const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };			//Number of pixels in a single frame
 	const int nPixStrip{ mWidthPerFrame * mHeightPerFrame / nChanPMT };	//Number of pixels in a strip

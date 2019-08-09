@@ -133,7 +133,7 @@ Sequencer::Sequencer(const Sample sample, const Stack stack) : mSample{ sample }
 Sequencer::Sequencer(Sample sample, const Stack stack, const double2 stackCenterXY, const int2 stackArrayDimIJ) : mSample{ sample }, mStack{ stack }, mStackArrayDimIJ{ stackArrayDimIJ }
 {
 	if (stackArrayDimIJ.at(STAGEX) <= 0 || stackArrayDimIJ.at(STAGEY) <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack array dimension must be equal to or greater than 1");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack array dimension must be >=1");
 
 	//Calculate the effective ROI covered by the stacks
 	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 )

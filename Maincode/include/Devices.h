@@ -10,8 +10,6 @@
 #include <conio.h>					//For _getch()
 #include "Thorlabs.MotionControl.KCube.StepperMotor.h"	//For the Thorlabs stepper
 
-extern const std::vector<double2> stageSoftPosLimXYZ; //Stage soft limits that do not necessarily coincide with the values set in hardware (stored in the internal memory of the stages). Values initialized in Routines.cpp
-
 class Image
 {
 	const FPGAns::RTcontrol &mRTcontrol;	//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
@@ -354,10 +352,12 @@ class Stage
 
 	const int mPort_z{ 4 };							//COM port
 	const int mBaud_z{ 38400 };
-	int3 mID_XYZ;									//Controller IDs
-	const char mNstagesPerController[2]{ "1" };		//Number of stages per controller (currently 1)
-	double3 mPositionXYZ;							//Absolute position of the stages
-	double3 mVelXYZ;								//Velocity of the stages
+	int3 mID_XYZ;												//Controller IDs
+	const char mNstagesPerController[2]{ "1" };					//Number of stages per controller (currently 1)
+	double3 mPositionXYZ;										//Absolute position of the stages
+	double3 mVelXYZ;											//Velocity of the stages
+	std::vector<double2> mSoftPosLimXYZ{ {0,0},{0,0},{0,0} };	//Travel soft limits (may differ from the hard limits stored in the internal memory of the stages)
+																//Initialized with invalid values for safety. It must be overridden by the constructor
 
 	double downloadPositionSingle_(const Axis axis);
 	double downloadVelSingle_(const Axis axis) const;
@@ -365,8 +365,8 @@ class Stage
 	void configDOtriggers_() const;
 	std::string axisToString(const Axis axis) const;
 public:
-	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Travel range of the stages set by hardware
-	Stage(const double velX, const double velY, const double velZ);
+	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Travel range set by the physical limits of the stage
+	Stage(const double velX, const double velY, const double velZ, const std::vector<double2> stageSoftPosLimXYZ = { {0,0},{0,0},{0,0} });
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor
 	Stage& operator=(const Stage&) = delete;	//Disable assignment-constructor
@@ -451,12 +451,13 @@ public:
 	double3 mSizeRequest{ 0, 0, 0 };						//Requested sample size in the axis STAGEX, STAGEY, and STAGEZ
 	double mSurfaceZ{ -1. * mm };
 	FluorLabelList mFluorLabelList;
+	std::vector<double2> mStageSoftPosLimXYZ;
 
 	const double2 mBladePositionXY{ 0. * mm, 0. * mm };		//Location of the vibratome blade in the axis STAGEX and STAGEY wrt the stages origin
 	const double mBladeFocalplaneOffsetZ{ 0. * um };		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack{ 0. * um };				//Specify at what height of the overlapping volume to cut
 
-	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const FluorLabelList fluorLabelList = { {} });
+	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<double2> stageSoftPosLimXYZ, const FluorLabelList fluorLabelList = { {} });
 	Sample(const Sample& sample, ROI roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset);
 	FluorLabelList::FluorLabel findFluorLabel(const std::string fluorLabel) const;
 	void printParams(std::ofstream *fileHandle) const;

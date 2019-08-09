@@ -1,12 +1,11 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-const std::vector<double2> stageSoftPosLimXYZ{ { 32. * mm, 57. * mm}, { -8. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Stage soft limits
-
-double3 stackCenterXYZ{ (54.365 + 0.130 ) * mm, 21.300 * mm, (18.119) * mm };
+double3 stackCenterXYZ{ (54.365) * mm, 21.375 * mm, (18.117) * mm };
+const std::vector<double2> PetridishStageLim{ { 32. * mm, 57. * mm}, { -8. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
-Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{"DAPI", 750, (35. * mW) * 16, (0.0) * 16 * mWpum }, { "GFP", 920, (37. * mW) * 16, 0. * 16 * mWpum }, { "TDT", 1040, (15. * mW) * 16, 0. * 16 * mWpum }}} };
+Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishStageLim, {{{"DAPI", 750, (40. * mW) * 16, (0.0) * 16 * mWpum }, { "GFP", 920, (37. * mW) * 16, 0. * 16 * mWpum }, { "TDT", 1040, (15. * mW) * 16, 0. * 16 * mWpum }}} };
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{ "TDT", 1040, (18. * mW) * 16, 0. * 16 * mWpum }}} };
 #else
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 8. * mW, 0. * mWpum }}} };
@@ -24,10 +23,10 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the starting position
-		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
+		const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
@@ -67,7 +66,7 @@ namespace PMT16XRoutines
 
 		//STAGES
 		std::vector<double3> stagePositionXYZ;
-		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
 
 		int nSameZ{ 1 };									//Number of frames at the same Z
 		double stepSizeX;									//Step for lateral scanning
@@ -282,7 +281,7 @@ namespace PMT16XRoutines
 	void continuousScan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const LASER whichLaser{ LASER::AUTO };
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
@@ -335,7 +334,7 @@ namespace PMT16XRoutines
 
 		//STAGES
 		const double3 initialStageXYZ{ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stageZi};			//Initial position of the stages. The sign of stackDepth determines the scanning direction					
-		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };	//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerBeamletPerFrame_pix
+		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix), currentSample.mStageSoftPosLimXYZ };	//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 		stage.moveXYZ(initialStageXYZ);
 		stage.waitForMotionToStopAll();
 
@@ -547,7 +546,7 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 
 	//Create a location list
 	Sequencer sequence{ currentSample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, nStacksXY };
-	std::vector<double2> locationXYList{ sequence.generateLocationList() };
+	std::vector<double2> locationListXY{ sequence.generateLocationList() };
 
 	//STAGES
 	Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
@@ -588,14 +587,14 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 
 		//Iterate over the locations
-		for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationXYList.size(); iterLocation++)
+		for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationListXY.size(); iterLocation++)
 		{
 			//Generate the discrete scan sequence for the stages
 			std::vector<double3> stagePositionXYZ;
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			{
-				//stagePositionXYZ.push_back({ locationXYList.at(iterLocation).at(STAGEX), locationXYList.at(iterLocation).at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
-				stagePositionXYZ.push_back({ locationXYList.at(iterLocation).at(STAGEX), locationXYList.at(iterLocation).at(STAGEY), stackCenterXYZ.at(STAGEZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
+				//stagePositionXYZ.push_back({ locationListXY.at(iterLocation).at(STAGEX), locationListXY.at(iterLocation).at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
+				stagePositionXYZ.push_back({ locationListXY.at(iterLocation).at(STAGEX), locationListXY.at(iterLocation).at(STAGEY), stackCenterXYZ.at(STAGEZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
 			}
 
 			//CREATE A STACK FOR SAVING THE TIFFS
@@ -609,7 +608,7 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 				stage.waitForMotionToStopAll();
 				//stage.printPositionXYZ();		//Print the stage position
 
-				std::cout << "Location: " << iterLocation + 1 << "/" << locationXYList.size() << "\tTotal frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
+				std::cout << "Location: " << iterLocation + 1 << "/" << locationListXY.size() << "\tTotal frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
 
 				//Update the laser power
 				virtualLaser.setPower(fluorLabelList.at(iterWL).mScanPi + iterDiffZ * stepSizeZ * fluorLabelList.at(iterWL).mStackPinc);
@@ -639,14 +638,15 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 }
 */
 
+/*
 	//Scan the sample and return the coordinates of its contour
 	void quickSampleSearch(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage)
 	{
 		//enable MAINTRIG::PC
-		std::vector<int> sampleMask;//the same size as the location list
+		std::vector<int>  locationListXYMask;//the same size as the location list
 
 		//Create a location list
-		std::vector<double2> locationXYList{ sequence.generateLocationList() }; //retrieve the locations from the commandList for a single slice
+		//std::vector<double2> locationListXY{ sequence.generateLocationList() }; //retrieve the locations from the commandList for a single slice
 		
 		const int wavelength_nm{ 1040 };			//Choose a laser wavelength
 		const double laserPower{ 10. * mW };		//Choose a laser power
@@ -655,24 +655,29 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 		virtualLaser.openShutter();					//Re-open the Uniblitz shutter if closed by the pockels destructor
 		rescanner.reconfigure(&virtualLaser);		//The calibration of the rescanner depends on the laser and wavelength being used
 
+		//Take a quick snapshot
+		const double distanceFromTheSurface{ 0 };
 
-		//Iterate over the locations
-		for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationXYList.size(); iterLocation++)
-		{
-			//Update the stages position
-			stage.moveXYZ({ locationXYList.at(iterLocation).at(STAGEX), locationXYList.at(iterLocation).at(STAGEY), 0.0 }); //Put in the last array entry the plane to look at
-			stage.waitForMotionToStopAll();
-
-			//EXECUTE THE RT CONTROL SEQUENCE
-			Image image{ RTcontrol };
-			image.acquire();
-			image.isBright(sampleMask); //push 0 if dark, 1 if bright	
-
-			pressESCforEarlyTermination();				
-		}//iterLocation
-
+		//moveStageSingle(distanceFromTheSurface);
+		Image image{ RTcontrol };
+		image.acquire();
 		//disable MAINTRIG::PC
+
+		if (!image.isDark())	//Do the stack scan
+		{
+			locationListXYMask.push_back(currentLocation);	
+
+			//scan the stack
+
+			//switch the scan direction
+		}
+		else
+		{
+			//skip the stack
+		}
+
 	}
+	*/
 }//namespace
 
 //Photobleach the sample with the resonant scanner to see how much the sample moves after slicing

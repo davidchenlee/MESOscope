@@ -374,12 +374,12 @@ void Image::constructImage(const bool saveAllPMT)
 
 void Image::correctImage(const double FFOVfast)
 {
-	mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
+	//mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 
 	if (multibeam)
 	{
 		//mTiff.suppressCrosstalk(0.1);
-		mTiff.flattenField(2.0);
+		//mTiff.flattenField(2.0);
 	}
 
 }
@@ -406,10 +406,6 @@ void Image::saveTiffSinglePage(std::string filename, const OVERRIDE override) co
 void Image::saveTiffMultiPage(std::string filename, const OVERRIDE override) const
 {
 	mTiff.saveToFile(filename, MULTIPAGE::EN, override, mScanDir);
-}
-
-bool Image::isEmpty() const
-{	return false;
 }
 #pragma endregion "Image"
 

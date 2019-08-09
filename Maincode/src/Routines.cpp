@@ -2,10 +2,11 @@
 
 //SAMPLE PARAMETERS
 const std::vector<double2> stageSoftPosLimXYZ{ { 32. * mm, 57. * mm}, { -8. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Stage soft limits
-double3 stackCenterXYZ{ (54.450 ) * mm, 21.300 * mm, (18.110) * mm };
+
+double3 stackCenterXYZ{ (54.365 + 0.130 ) * mm, 21.300 * mm, (18.119) * mm };
 
 #if multibeam
-Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{"DAPI", 750, (37. * mW) * 16, (0.0) * 16 * mWpum }, { "GFP", 920, (37. * mW) * 16, 0. * 16 * mWpum }, { "TDT", 1040, (15. * mW) * 16, 0. * 16 * mWpum }}} };
+Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{"DAPI", 750, (35. * mW) * 16, (0.0) * 16 * mWpum }, { "GFP", 920, (37. * mW) * 16, 0. * 16 * mWpum }, { "TDT", 1040, (15. * mW) * 16, 0. * 16 * mWpum }}} };
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{ "TDT", 1040, (18. * mW) * 16, 0. * 16 * mWpum }}} };
 #else
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 8. * mW, 0. * mWpum }}} };
@@ -23,10 +24,10 @@ namespace PMT16XRoutines
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the starting position
-		const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
+		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
@@ -639,21 +640,36 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 */
 
 	//Scan the sample and return the coordinates of its contour
-	void findSampleContour(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, const double2 stackCenterXY)
+	void quickSampleSearch(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage)
 	{
 		//enable MAINTRIG::PC
-		std::vector<double2> sampleContour;
+		std::vector<int> sampleMask;//the same size as the location list
 
-		sequence.stack().mFFOV;
+		//Create a location list
+		std::vector<double2> locationXYList{ sequence.generateLocationList() }; //retrieve the locations from the commandList for a single slice
+		
+		const int wavelength_nm{ 1040 };			//Choose a laser wavelength
+		const double laserPower{ 10. * mW };		//Choose a laser power
+		virtualLaser.configure(wavelength_nm);		//When switching pockels, the class destructor closes the uniblitz shutter
+		virtualLaser.setPower(laserPower);			//Update the laser power
+		virtualLaser.openShutter();					//Re-open the Uniblitz shutter if closed by the pockels destructor
+		rescanner.reconfigure(&virtualLaser);		//The calibration of the rescanner depends on the laser and wavelength being used
 
-		//for()	//Scan all over the ROI
-		//{
-		Image image{ RTcontrol };
-		image.acquire();				//Execute the RT control sequence and acquire the image
-		if(image.isEmpty())
-			sampleContour.push_back(stackCenterXY);
-		//}
 
+		//Iterate over the locations
+		for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationXYList.size(); iterLocation++)
+		{
+			//Update the stages position
+			stage.moveXYZ({ locationXYList.at(iterLocation).at(STAGEX), locationXYList.at(iterLocation).at(STAGEY), 0.0 }); //Put in the last array entry the plane to look at
+			stage.waitForMotionToStopAll();
+
+			//EXECUTE THE RT CONTROL SEQUENCE
+			Image image{ RTcontrol };
+			image.acquire();
+			image.isBright(sampleMask); //push 0 if dark, 1 if bright	
+
+			pressESCforEarlyTermination();				
+		}//iterLocation
 
 		//disable MAINTRIG::PC
 	}
@@ -988,23 +1004,11 @@ namespace TestRoutines
 
 	void tiffU8()
 	{
-		//std::string inputFilename{ "Liver distorted" };
+		std::string inputFilename{ "Liver distorted" };
 		//std::string inputFilename{ "no correction" };
-		//std::string inputFilename{ "Slice1_TDT_Tile20" };//brighter on the left
-		//std::string inputFilename{ "Slice1_TDT_Tile653" };//brighter on the bottom right
-		//std::string inputFilename{ "Slice1_TDT_Tile220" };//brighter on the top
-		std::string inputFilename{ "Slice1_TDT_Tile149" };//brighter on the bottom left
-		//std::string inputFilename{ "Slice1_TDT_Tile95" };//uniform brightness
-		
 		std::string outputFilename{ "output" };
 
 		TiffU8 image{ inputFilename };
-		double2 brightnessUnbalance{ image.testBrightnessUnbalance() };
-
-		std::cout << "top-bottom: " << brightnessUnbalance.at(0) << "\tright-left: " << brightnessUnbalance.at(1) << "\n";
-
-		double threshold{ 0.3 };
-		decodeNextMove(nextMove(discriminator(brightnessUnbalance, threshold)));
 
 		//image.splitIntoFrames(10);
 		//image.mirrorOddFrames();

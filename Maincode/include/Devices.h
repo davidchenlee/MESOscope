@@ -48,7 +48,6 @@ public:
 	void averageEvenOddFrames();
 	void saveTiffSinglePage(std::string filename, const OVERRIDE override) const;
 	void saveTiffMultiPage(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
-	bool isEmpty() const;
 };
 
 class ImageException : public std::runtime_error
@@ -474,7 +473,3 @@ public:
 	Stack(const double2 FFOV, const double stepSizeZ, const int nFrames, const double3 stackOverlap_frac);
 	void printParams(std::ofstream *fileHandle) const;
 };
-
-
-
-

@@ -91,6 +91,3 @@ public:
 	void printSequencerParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
 };
-
-int2 nextMove(const int2 imageBrightnessUnbalance);
-void decodeNextMove(const int2 nextMove);

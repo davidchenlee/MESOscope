@@ -4,8 +4,6 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 - Make sure that TOPDOWN and BOTTOMUP scans coincide
-- Check the sequencer
-- Implement findSampleContour()
 - figure out why the FOV of 16X is slightly different from 1X
 - (20190812->) Implement suppressCrosstalk() flattenField() on the GPU
 - Multithread demuxAllChannels_()
@@ -17,8 +15,7 @@ Code in C++ for controlling the NI USB-7852R card
 - I detected that, when the FPGA resets at the end of the code, the shutter #2 is triggered. I see a small voltage on the scope, like ~50mV that seems to be enough to trigger the shutter
 
 ### Hardware
-- Modify the collector lens mount to make more room for the sample container
-- Test the emission aperture
+- (20190812->) Modify the collector lens mount to make more room for the sample container
 - Screw down the PMT16X
 - Screw down the exc filterwheel
 - Test cooling down the PMT16X

@@ -410,7 +410,7 @@ void Image::saveTiffMultiPage(std::string filename, const OVERRIDE override) con
 
 bool Image::isDark(const int threshold) const
 {
-	return isDark(threshold);
+	return mTiff.isDark(threshold);
 }
 #pragma endregion "Image"
 

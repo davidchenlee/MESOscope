@@ -107,6 +107,11 @@ void pressESCforEarlyTermination()
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 }
 
+double multiply16X(const double input)
+{
+	return 16 * input;
+}
+
 #pragma region "Logger"
 Logger::Logger(const std::string filename)
 {

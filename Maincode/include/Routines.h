@@ -7,10 +7,10 @@ namespace PMT16XRoutines
 {
 	void frameByFrameZscan(const FPGAns::FPGA &fpga);
 	void liveScan(const FPGAns::FPGA &fpga);
-	void continuousScan(const FPGAns::FPGA &fpga);
+	void contZscan(const FPGAns::FPGA &fpga);
 	void sequencer(const FPGAns::FPGA &fpga);
-	void quickSampleSearch(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage);
-	//	void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice);
+	//void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice);
+	void snapshot(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage);
 }
 
 //TESTS

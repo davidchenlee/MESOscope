@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 			//SEQUENCES
 			//PMT16XRoutines::frameByFrameZscan(fpga);
 			//PMT16XRoutines::liveScan(fpga);
-			//PMT16XRoutines::continuousScan(fpga);
+			//PMT16XRoutines::contZscan(fpga);
 			//PMT16XRoutines::sequencer(fpga);
 			//PMT16XRoutines::frameByFrameZscanTilingXY(fpga, 1);
 
@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::virtualLasers(fpga);
 
 			//TestRoutines::convertI16toVolt();
-			TestRoutines::tiffU8();
+			//TestRoutines::tiffU8();
 			//TestRoutines::ethernetSpeed();
 			//TestRoutines::multithread();
 			//TestRoutines::clipU8();

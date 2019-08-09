@@ -1,11 +1,11 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (54.365) * mm, 21.375 * mm, (18.117) * mm };
-const std::vector<double2> PetridishStageLim{ { 32. * mm, 57. * mm}, { -8. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
+double3 stackCenterXYZ{ (54.000 ) * mm, 21.375 * mm, (18.286 + 0.000) * mm };
+const std::vector<double2> PetridishPosLimit{ { 32. * mm, 57. * mm}, { -8. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
-Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishStageLim, {{{"DAPI", 750, (40. * mW) * 16, (0.0) * 16 * mWpum }, { "GFP", 920, (37. * mW) * 16, 0. * 16 * mWpum }, { "TDT", 1040, (15. * mW) * 16, 0. * 16 * mWpum }}} };
+Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(40. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(40. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{ "TDT", 1040, (18. * mW) * 16, 0. * 16 * mWpum }}} };
 #else
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 8. * mW, 0. * mWpum }}} };
@@ -278,10 +278,10 @@ namespace PMT16XRoutines
 	/*I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the beads' z-position looks
 	almost identical with a difference of maybe only 1 plane (0.5 um)
 	Remember that I do not use MACROS on the stages anymore*/
-	void continuousScan(const FPGAns::FPGA &fpga)
+	void contZscan(const FPGAns::FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("GFP") };	//Select a particular laser
 		const LASER whichLaser{ LASER::AUTO };
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
@@ -332,12 +332,6 @@ namespace PMT16XRoutines
 			break;
 		}
 
-		//STAGES
-		const double3 initialStageXYZ{ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stageZi};											//Initial position of the stages. The sign of stackDepth determines the scanning direction					
-		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix), currentSample.mStageSoftPosLimXYZ };	//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerBeamletPerFrame_pix
-		stage.moveXYZ(initialStageXYZ);
-		stage.waitForMotionToStopAll();
-
 		//CREATE THE REALTIME CONTROL SEQUENCE
 		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
@@ -352,10 +346,15 @@ namespace PMT16XRoutines
 		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
 		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 
-		//OPEN THE SHUTTER
-		virtualLaser.openShutter();	//The destructor will close the shutter automatically
+		//STAGES
+		const double3 initialStageXYZ{ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stageZi};		//Initial position of the stages. The sign of stackDepth determines the scanning direction		
+		const double velZ{ stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };
+		Stage stage{ 5 * mmps, 5 * mmps, velZ, currentSample.mStageSoftPosLimXYZ };							//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerBeamletPerFrame_pix
+		stage.moveXYZ(initialStageXYZ);
+		stage.waitForMotionToStopAll();
 
 		//EXECUTE THE RT CONTROL SEQUENCE
+		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 		Image image{ RTcontrol };
 		image.initializeAcq(scanDirZ);
 		std::cout << "Scanning the stack...\n";
@@ -417,13 +416,8 @@ namespace PMT16XRoutines
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
-		if (0)
+		if (1)
 		{
-			//STAGES. Specify the velocity
-			Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };
-			stage.moveSingle(STAGEZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
-			stage.waitForMotionToStopAll();
-
 			//CREATE THE REALTIME CONTROL SEQUENCE
 			FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
@@ -437,6 +431,12 @@ namespace PMT16XRoutines
 			//GALVO ramps
 			const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
 			Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2 };
+
+			//STAGES. Specify the velocity
+			const double velZ{ stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };
+			Stage stage{ 5 * mmps, 5 * mmps, velZ, currentSample.mStageSoftPosLimXYZ };
+			stage.moveSingle(STAGEZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
+			stage.waitForMotionToStopAll();
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
@@ -637,17 +637,16 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 	}//iter_wv
 }
 */
-
-/*
 	//Scan the sample and return the coordinates of its contour
-	void quickSampleSearch(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage)
+	void snapshot(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage)
 	{
 		//enable MAINTRIG::PC
-		std::vector<int>  locationListXYMask;//the same size as the location list
 
 		//Create a location list
 		//std::vector<double2> locationListXY{ sequence.generateLocationList() }; //retrieve the locations from the commandList for a single slice
-		
+
+		std::vector<int>  locationXYMaskPerSlice;		//the same size as the locationListXY. Initialize with zeros
+	
 		const int wavelength_nm{ 1040 };			//Choose a laser wavelength
 		const double laserPower{ 10. * mW };		//Choose a laser power
 		virtualLaser.configure(wavelength_nm);		//When switching pockels, the class destructor closes the uniblitz shutter
@@ -655,7 +654,7 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 		virtualLaser.openShutter();					//Re-open the Uniblitz shutter if closed by the pockels destructor
 		rescanner.reconfigure(&virtualLaser);		//The calibration of the rescanner depends on the laser and wavelength being used
 
-		//Take a quick snapshot
+
 		const double distanceFromTheSurface{ 0 };
 
 		//moveStageSingle(distanceFromTheSurface);
@@ -663,9 +662,9 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 		image.acquire();
 		//disable MAINTRIG::PC
 
-		if (!image.isDark())	//Do the stack scan
+		if (!image.isDark(1))	//Image is not dark
 		{
-			locationListXYMask.push_back(currentLocation);	
+			locationXYMaskPerSlice.push_back(1);
 
 			//scan the stack
 
@@ -677,7 +676,7 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 		}
 
 	}
-	*/
+	
 }//namespace
 
 //Photobleach the sample with the resonant scanner to see how much the sample moves after slicing

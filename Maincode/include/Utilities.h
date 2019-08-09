@@ -23,6 +23,7 @@ template<class T> inline U8 clipU8top(const T x);
 template<class T> inline U8 clipU8dual(const T x);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
+double multiply16X(const double input);
 
 //For saving the parameters to a text file
 class Logger

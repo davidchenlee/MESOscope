@@ -60,7 +60,7 @@ public:
 	void mirrorOddFrames();
 	void averageEvenOddFrames();
 	void averageFrames();
-	void analyze() const;
+	bool isDark(const int threshold) const;
 	void saveTxt(const std::string fileName) const;
 	void pushImage(const int frameIndex, const U8* inputArray) const;
 	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const U8* inputArray) const;

@@ -333,7 +333,7 @@ namespace PMT16XRoutines
 		}
 
 		//STAGES
-		const double3 initialStageXYZ{ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stageZi};			//Initial position of the stages. The sign of stackDepth determines the scanning direction					
+		const double3 initialStageXYZ{ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stageZi};											//Initial position of the stages. The sign of stackDepth determines the scanning direction					
 		Stage stage{ 5 * mmps, 5 * mmps, stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix), currentSample.mStageSoftPosLimXYZ };	//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 		stage.moveXYZ(initialStageXYZ);
 		stage.waitForMotionToStopAll();
@@ -1009,30 +1009,33 @@ namespace TestRoutines
 
 	void tiffU8()
 	{
-		std::string inputFilename{ "Liver distorted" };
-		//std::string inputFilename{ "no correction" };
+		
+		std::string inputFilename{ "Slice1_DAPI_Tile235" };
+		//std::string inputFilename{ "Slice1_TDT_Tile272" };
 		std::string outputFilename{ "output" };
 
 		TiffU8 image{ inputFilename };
+		std::cout << image.isDark(1) << "\n";
 
 		//image.splitIntoFrames(10);
 		//image.mirrorOddFrames();
 		/////image.averageFrames();
 		//image.averageEvenOddFrames();
 		//image.Test();
+		//image.correctRSdistortionGPU(200. * um);
+		//image.suppressCrosstalk(0.1);
+		//image.flattenField(2.0);
+		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+		pressAnyKeyToCont();
 
+		/*
 		//Declare and start a stopwatch
 		double duration;
 		auto t_start{ std::chrono::high_resolution_clock::now() };
 		//Stop the stopwatch
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
-
-		//image.correctRSdistortionGPU(200. * um);
-		//image.suppressCrosstalk(0.1);
-		//image.flattenField(2.0);
-		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);	
-		pressAnyKeyToCont();
+		*/
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely

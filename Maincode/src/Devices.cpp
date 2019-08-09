@@ -407,6 +407,11 @@ void Image::saveTiffMultiPage(std::string filename, const OVERRIDE override) con
 {
 	mTiff.saveToFile(filename, MULTIPAGE::EN, override, mScanDir);
 }
+
+bool Image::isDark(const int threshold) const
+{
+	return isDark(threshold);
+}
 #pragma endregion "Image"
 
 #pragma region "Resonant scanner"

@@ -46,6 +46,7 @@ public:
 	void averageEvenOddFrames();
 	void saveTiffSinglePage(std::string filename, const OVERRIDE override) const;
 	void saveTiffMultiPage(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+	bool isDark(const int threshold) const;
 };
 
 class ImageException : public std::runtime_error
@@ -357,7 +358,7 @@ class Stage
 	double3 mPositionXYZ;										//Absolute position of the stages
 	double3 mVelXYZ;											//Velocity of the stages
 	std::vector<double2> mSoftPosLimXYZ{ {0,0},{0,0},{0,0} };	//Travel soft limits (may differ from the hard limits stored in the internal memory of the stages)
-																//Initialized with invalid values for safety. It must be overridden by the constructor
+																//Initialized with invalid values (lower limit = upper limit) for safety. It must be overridden by the constructor
 
 	double downloadPositionSingle_(const Axis axis);
 	double downloadVelSingle_(const Axis axis) const;
@@ -365,7 +366,7 @@ class Stage
 	void configDOtriggers_() const;
 	std::string axisToString(const Axis axis) const;
 public:
-	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };	//Travel range set by the physical limits of the stage
+	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };				//Travel range set by the physical limits of the stage
 	Stage(const double velX, const double velY, const double velZ, const std::vector<double2> stageSoftPosLimXYZ = { {0,0},{0,0},{0,0} });
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor

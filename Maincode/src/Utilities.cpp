@@ -468,13 +468,49 @@ void TiffU8::averageFrames()
 	}
 }
 
-void TiffU8::analyze() const
+//Take the top frame of the stack and return true if it's dark. Divide the image in quadrants for a better sensitivity
+bool TiffU8::isDark(const int threshold) const
 {
-	double totalCount{ 0 };
-	for (int index = 0; index < mWidthPerFrame * mHeightPerFrame; index++)
-		totalCount += mArray[index];
+	if (threshold < 0  || threshold > 255)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-255]");
 
-	//std::cout << "Total count = " << totalCount << "\n";
+	const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };
+
+	//Divide the image in 4 quadrants
+	const int halfwidth{ mWidthPerFrame / 2 }, halfHeight{ mHeightPerFrame / 2 };
+
+	int sumTL{ 0 }, sumTR{ 0 }, sumBL{ 0 }, sumBR{ 0 };
+	for (int rowIndex = 0; rowIndex < halfHeight; rowIndex++)
+	{
+		//Quadrant top-left
+		for (int colIndex = 0; colIndex < halfwidth; colIndex++)
+			sumTL += mArray[rowIndex * mWidthPerFrame + colIndex];
+
+		//Quadrant top-right
+		for (int colIndex = halfwidth; colIndex < mWidthPerFrame; colIndex++)
+			sumTR += mArray[rowIndex * mWidthPerFrame + colIndex];
+	}
+	for (int rowIndex = halfHeight; rowIndex < mHeightPerFrame; rowIndex++)
+	{
+		//Quadrant bottom-left
+		for (int colIndex = 0; colIndex < halfwidth; colIndex++)
+			sumBL += mArray[rowIndex * mWidthPerFrame + colIndex];
+
+		//Quadrant bottom-right
+		for (int colIndex = halfwidth; colIndex < mWidthPerFrame; colIndex++)
+			sumBR += mArray[rowIndex * mWidthPerFrame + colIndex];
+	}
+
+	//For debuging
+	std::cout << "Average count TL = " << 4. * sumTL / nPixPerFrame << "\n";
+	std::cout << "Average count TR = " << 4. * sumTR / nPixPerFrame << "\n";
+	std::cout << "Average count BL = " << 4. * sumBL / nPixPerFrame << "\n";
+	std::cout << "Average count BR = " << 4. * sumBR / nPixPerFrame << "\n";
+
+	return (4. * sumTL / nPixPerFrame < threshold &&
+			4. * sumTR / nPixPerFrame < threshold &&
+			4. * sumBL / nPixPerFrame < threshold &&
+			4. * sumBR / nPixPerFrame < threshold);
 }
 
 

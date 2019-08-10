@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			//PMT16XRoutines::frameByFrameZscan(fpga);
+			PMT16XRoutines::frameByFrameZscan(fpga);
 			//PMT16XRoutines::liveScan(fpga);
 			//PMT16XRoutines::contZscan(fpga);
 			//PMT16XRoutines::sequencer(fpga);
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::clipU8();
 
 			//TestRoutines::sequencerConcurrentTest();
-			//TestRoutines::locationSequencer();
+			//TestRoutines::locationSequence();
 
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);
@@ -53,6 +53,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::collectorLens();
 			//TestRoutines::photobleach(fpga);
 			//TestRoutines::generateLocationsForBigStitcher();
+			
 		}
 		catch (const std::invalid_argument &e)
 		{

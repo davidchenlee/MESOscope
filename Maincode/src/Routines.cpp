@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (54.000 ) * mm, 21.375 * mm, (18.286 + 0.000) * mm };
+double3 stackCenterXYZ{ (54.000 - 0.030 ) * mm, 21.345 * mm, (18.284) * mm };
 const std::vector<double2> PetridishPosLimit{ { 32. * mm, 57. * mm}, { -8. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
@@ -31,7 +31,7 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
 		const LASER whichLaser{ LASER::AUTO };
 
 		//This is because the beads at 750 nm are chromatically shifted
@@ -95,7 +95,7 @@ namespace PMT16XRoutines
 		case RUNMODE::SCANXY:
 			stepSizeX = 5. * um;
 			//Generate the discrete scan sequence for the stages
-			for (int iterPos = 0; iterPos < 40; iterPos++)
+			for (int iterPos = 0; iterPos < 60; iterPos++)
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX) + iterPos * stepSizeX, stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ)});
 			break;
 		case RUNMODE::COLLECTLENS:
@@ -411,8 +411,8 @@ namespace PMT16XRoutines
 		//Create a sequence
 		const Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
-		//Sequencer sequece(sample, stack);
-		Sequencer sequence{ sample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, { 1, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {STAGEX, STAGEY}
+		//Sequence sequece(sample, stack);
+		Sequence sequence{ sample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, { 1, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {STAGEX, STAGEY}
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
@@ -447,7 +447,7 @@ namespace PMT16XRoutines
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
 				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
-				Commandline commandline{ sequence.readCommandline(iterCommandline) }; //Implement read-from-file?
+				Sequence::Commandline commandline{ sequence.readCommandline(iterCommandline) }; //Implement read-from-file?
 				//commandline.printParameters();
 
 				//Stopwatch
@@ -461,7 +461,7 @@ namespace PMT16XRoutines
 					stage.waitForMotionToStopAll();
 					break;
 				case ACTION::ACQ://Acquire a stack
-					AcqStack acqStack{ commandline.mCommand.acqStack };
+					Action::AcqStack acqStack{ commandline.mCommand.acqStack };
 
 					//Update the laser parameters if needed
 					virtualLaser.configure(acqStack.mWavelength_nm);				//When switching pockels, the class destructor closes the uniblitz shutter
@@ -485,6 +485,7 @@ namespace PMT16XRoutines
 					break;
 				case ACTION::CUT://Move the stage to the vibratome and then cut a slice off
 					double3 stagePositionXYZ{ commandline.mCommand.cutSlice.mBladePositionXY };
+					//IMPLEMENT THE SLICING HERE!
 					break;
 				default:
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -545,7 +546,7 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 	VirtualLaser virtualLaser{ RTcontrol, LASER::VISION };
 
 	//Create a location list
-	Sequencer sequence{ currentSample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, nStacksXY };
+	Sequence sequence{ currentSample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, nStacksXY };
 	std::vector<double2> locationListXY{ sequence.generateLocationList() };
 
 	//STAGES
@@ -638,7 +639,7 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 }
 */
 	//Scan the sample and return the coordinates of its contour
-	void snapshot(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage)
+	void snapshot(const FPGAns::RTcontrol &RTcontrol, const Sequence &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage)
 	{
 		//enable MAINTRIG::PC
 
@@ -654,7 +655,6 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 		virtualLaser.openShutter();					//Re-open the Uniblitz shutter if closed by the pockels destructor
 		rescanner.reconfigure(&virtualLaser);		//The calibration of the rescanner depends on the laser and wavelength being used
 
-
 		const double distanceFromTheSurface{ 0 };
 
 		//moveStageSingle(distanceFromTheSurface);
@@ -667,14 +667,12 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 			locationXYMaskPerSlice.push_back(1);
 
 			//scan the stack
-
 			//switch the scan direction
 		}
 		else
 		{
 			//skip the stack
 		}
-
 	}
 	
 }//namespace
@@ -1140,7 +1138,7 @@ namespace TestRoutines
 		Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
 
 		//Create a sequence
-		Sequencer sequence{ sample, stack };
+		Sequence sequence{ sample, stack };
 		sequence.generateCommandList();
 		sequence.printToFile("CommandlistLight");
 
@@ -1153,7 +1151,7 @@ namespace TestRoutines
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
 				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
-				Commandline commandline{ sequence.readCommandline(iterCommandline) }; //Implement read-from-file?
+				Sequence::Commandline commandline{ sequence.readCommandline(iterCommandline) }; //Implement read-from-file?
 				//commandline.printParameters();
 
 				switch (commandline.mAction)
@@ -1205,7 +1203,7 @@ namespace TestRoutines
 		}//if
 	}
 
-	void locationSequencer()
+	void locationSequence()
 	{
 		//ACQUISITION SETTINGS
 		const double2 FFOV{ 200. * um, 150. * um };
@@ -1215,7 +1213,7 @@ namespace TestRoutines
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 		//Create a sequence
-		Sequencer sequence{ currentSample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
+		Sequence sequence{ currentSample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
 		std::vector<double2> locationList{ sequence.generateLocationList() };
 
 		for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationList.size(); iterLocation++)
@@ -1453,5 +1451,19 @@ namespace TestRoutines
 			nx = nTile % nStacksXY.at(STAGEX);
 	
 		return {nx,ny};
+	}
+
+	void openCV()
+	{
+		//cv::Mat image;
+		//image = cv::imread("", cv::IMREAD_COLOR); // Read the file
+
+		//if (!image.data) // Check for invalid input
+		//{
+		//	std::cout << "Could not open or find the image" << std::endl;
+		//}
+
+		//cv::namedWindow("Display window", cv::WINDOW_AUTOSIZE); // Create a window for display.
+		//cv::imshow("Display window", image); // Show our image inside it.
 	}
 }//namespace

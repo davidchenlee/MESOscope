@@ -10,7 +10,7 @@ namespace PMT16XRoutines
 	void contZscan(const FPGAns::FPGA &fpga);
 	void sequencer(const FPGAns::FPGA &fpga);
 	//void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice);
-	void snapshot(const FPGAns::RTcontrol &RTcontrol, const Sequencer &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage);
+	void snapshot(const FPGAns::RTcontrol &RTcontrol, const Sequence &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage);
 }
 
 //TESTS
@@ -47,9 +47,9 @@ namespace TestRoutines
 	void multithread();
 	void clipU8();
 
-	//Sequencer
+	//Sequence
 	void sequencerConcurrentTest();
-	void locationSequencer();
+	void locationSequence();
 
 	//PMT16X
 	void PMT16Xconfig();
@@ -63,5 +63,5 @@ namespace TestRoutines
 	void photobleach(const FPGAns::FPGA &fpga);
 	void generateLocationsForBigStitcher();
 	int2 nTileToArrayIndices(const int nTile);
-
+	void openCV();
 }

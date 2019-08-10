@@ -4,14 +4,14 @@ int main(int argc, char* argv[])
 {
 	try
 	{
-		FPGAns::FPGA fpga;		//Create a FPGA session
+		FPGA fpga;		//Create a FPGA session
 		try
 		{
 			//SEQUENCES
-			PMT16XRoutines::frameByFrameZscan(fpga);
+			//PMT16XRoutines::frameByFrameZscan(fpga);
 			//PMT16XRoutines::liveScan(fpga);
 			//PMT16XRoutines::contZscan(fpga);
-			//PMT16XRoutines::sequencer(fpga);
+			PMT16XRoutines::sequencer(fpga);
 			//PMT16XRoutines::frameByFrameZscanTilingXY(fpga, 1);
 
 			//TESTS
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 			std::cout << "An overflow has occurred in " << e.what() << "\n";
 			pressAnyKeyToCont();
 		}
-		catch (const FPGAns::FPGAexception &e)
+		catch (const FPGAexception &e)
 		{
 			std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
 			pressAnyKeyToCont();
@@ -83,8 +83,8 @@ int main(int argc, char* argv[])
 
 		fpga.close(FPGARESET::DIS);		//Close the FPGA connection
 	}
-	//Catch exceptions thrown by the constructor FPGAns::FPGA
-	catch (const FPGAns::FPGAexception &e)
+	//Catch exceptions thrown by the constructor FPGA
+	catch (const FPGAexception &e)
 	{
 		std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
 		pressAnyKeyToCont();

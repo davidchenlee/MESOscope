@@ -19,7 +19,7 @@ Sample currentSample{ beads4um };
 namespace PMT16XRoutines
 {
 	//The "Swiss knife" of my routines
-	void frameByFrameZscan(const FPGAns::FPGA &fpga)
+	void frameByFrameZscan(const FPGA &fpga)
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
@@ -31,15 +31,15 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
-		const LASER whichLaser{ LASER::AUTO };
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
+		const Laser::ID whichLaser{ Laser::ID::AUTO };
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
-			stackCenterXYZ.at(STAGEZ) -= 6 * um;
+			stackCenterXYZ.at(Stage::Z) -= 6 * um;
 		//This is because FIDELITY is chromatically shifted wrt VISION
-		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == LASER::FIDELITY || whichLaser == LASER::AUTO))
-			stackCenterXYZ.at(STAGEZ) -= 6 * um;
+		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
+			stackCenterXYZ.at(Stage::Z) -= 6 * um;
 
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
@@ -54,7 +54,7 @@ namespace PMT16XRoutines
 			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
 			FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
 		}
-		else//Singlebeam. When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan = PMT16XCHAN::CENTERED to let the laser scan over the PMT16X channels
+		else//Singlebeam. When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan_int = PMT16XCHAN::CENTERED to let the laser scan over the PMT16X channels
 		{
 			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 			FFOVslowPerBeamlet = FFOVslow;
@@ -85,18 +85,18 @@ namespace PMT16XRoutines
 		case RUNMODE::SCANZ:
 			//Generate the control sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / stepSizeZ); iterDiffZ++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z) + iterDiffZ * stepSizeZ });
 			break;
 		case RUNMODE::SCANZCENTERED:
 			//Generate the discrete scan sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / stepSizeZ); iterDiffZ++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
 			break;
 		case RUNMODE::SCANXY:
 			stepSizeX = 5. * um;
 			//Generate the discrete scan sequence for the stages
 			for (int iterPos = 0; iterPos < 60; iterPos++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(STAGEX) + iterPos * stepSizeX, stackCenterXYZ.at(STAGEY), stackCenterXYZ.at(STAGEZ)});
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X) + iterPos * stepSizeX, stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z)});
 			break;
 		case RUNMODE::COLLECTLENS:
 			saveAllPMT = true;
@@ -111,9 +111,9 @@ namespace PMT16XRoutines
 		}
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
 
-		//LASER
+		//ID
 		VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, whichLaser };
 
 		//RS
@@ -121,8 +121,8 @@ namespace PMT16XRoutines
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//GALVO ramps
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, fluorLabel.mWavelength_nm };
 
 		//DATALOG
@@ -200,7 +200,7 @@ namespace PMT16XRoutines
 				{
 					//Save individual files
 					filename.append( "_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
-					"_x=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).at(STAGEZ) / mm, 4) );
+					"_x=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::X) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::Y) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::Z) / mm, 4) );
 					image.saveTiffMultiPage(filename, OVERRIDE::DIS);
 				}
 			}
@@ -212,8 +212,8 @@ namespace PMT16XRoutines
 		{
 			//Save the scanZ to file
 			filename.append( "_Pi=" + toString(fluorLabel.mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) + "mWpum" +
-				"_x=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
-				"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) );
+				"_x=" + toString(stagePositionXYZ.front().at(Stage::X) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(Stage::Y) / mm, 3) +
+				"_zi=" + toString(stagePositionXYZ.front().at(Stage::Z) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(Stage::Z) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) );
 			tiffStack.saveToFile(filename, OVERRIDE::DIS);
 
 			pressESCforEarlyTermination();
@@ -223,16 +223,16 @@ namespace PMT16XRoutines
 		{
 			//Save the scanXY to file
 			filename.append( "_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
-				"_xi=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 4) + "_xf=" + toString(stagePositionXYZ.back().at(STAGEX) / mm, 4) +
-				"_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
-				"_z=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) );
+				"_xi=" + toString(stagePositionXYZ.front().at(Stage::X) / mm, 4) + "_xf=" + toString(stagePositionXYZ.back().at(Stage::X) / mm, 4) +
+				"_y=" + toString(stagePositionXYZ.front().at(Stage::Y) / mm, 3) +
+				"_z=" + toString(stagePositionXYZ.front().at(Stage::Z) / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) );
 			tiffStack.saveToFile(filename, OVERRIDE::DIS);
 			pressESCforEarlyTermination();
 		}
 	}
 
 	//Image the sample non-stop. Use the PI program to move the stages manually
-	void liveScan(const FPGAns::FPGA &fpga)
+	void liveScan(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
@@ -243,25 +243,25 @@ namespace PMT16XRoutines
 		const int nFramesCont{ 1 };									//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
 
-		//LASER
-		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, LASER::VISION };
+		//ID
+		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, Laser::ID::VISION };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();					//Make sure that the RS is running
 
 		//GALVO ramps
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, &virtualLaser };
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2, &virtualLaser };
 
 		//OPEN THE UNIBLITZ SHUTTERS
 		virtualLaser.openShutter();	//The destructor will close the shutter automatically
 
 		while (true)
 		{
-			virtualLaser.setPower(fluorLabel.mScanPi);					//Set the laser power
+			virtualLaser.setPower(fluorLabel.mScanPi);			//Set the laser power
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
@@ -278,11 +278,11 @@ namespace PMT16XRoutines
 	/*I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the beads' z-position looks
 	almost identical with a difference of maybe only 1 plane (0.5 um)
 	Remember that I do not use MACROS on the stages anymore*/
-	void contZscan(const FPGAns::FPGA &fpga)
+	void contZscan(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("GFP") };	//Select a particular laser
-		const LASER whichLaser{ LASER::AUTO };
+		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -294,12 +294,12 @@ namespace PMT16XRoutines
 
 		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
 		if (fluorLabel.mWavelength_nm == 750)
-			stackCenterXYZ.at(STAGEZ) -= 6 * um;
+			stackCenterXYZ.at(Stage::Z) -= 6 * um;
 		//This is because FIDELITY is chromatically shifted wrt VISION
-		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == LASER::FIDELITY || whichLaser == LASER::AUTO))
-			stackCenterXYZ.at(STAGEZ) -= 6 * um;
+		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
+			stackCenterXYZ.at(Stage::Z) -= 6 * um;
 
-		stackCenterXYZ.at(STAGEZ) -= nFramesCont * stepSizeZ /2;
+		stackCenterXYZ.at(Stage::Z) -= nFramesCont * stepSizeZ /2;
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -319,23 +319,23 @@ namespace PMT16XRoutines
 		switch (scanDirZ)
 		{
 		case ZSCAN::TOPDOWN:
-			stageZi = stackCenterXYZ.at(STAGEZ);
-			stageZf = stackCenterXYZ.at(STAGEZ) + stackDepth + 20 * stepSizeZ; //Notice that I increase the z range to avoid nonlinearity at the end of the stage scan
+			stageZi = stackCenterXYZ.at(Stage::Z);
+			stageZf = stackCenterXYZ.at(Stage::Z) + stackDepth + 20 * stepSizeZ; //Notice that I increase the z range to avoid nonlinearity at the end of the stage scan
 			laserPi = fluorLabel.mScanPi;
 			laserPf = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			break;
 		case ZSCAN::BOTTOMUP:
-			stageZi = stackCenterXYZ.at(STAGEZ) + stackDepth;
-			stageZf = stackCenterXYZ.at(STAGEZ) - 20 * stepSizeZ;				//Notice that I increase the z range to avoid nonlinearity at the end of the stage scan
+			stageZi = stackCenterXYZ.at(Stage::Z) + stackDepth;
+			stageZf = stackCenterXYZ.at(Stage::Z) - 20 * stepSizeZ;				//Notice that I increase the z range to avoid nonlinearity at the end of the stage scan
 			laserPi = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			laserPf = fluorLabel.mScanPi;
 			break;
 		}
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
-		//LASER
+		//ID
 		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, laserPi, whichLaser };
 
 		//RS
@@ -343,13 +343,13 @@ namespace PMT16XRoutines
 		RScanner.isRunning();		//Make sure that the RS is running
 
 		//GALVO ramps
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 
 		//STAGES
-		const double3 initialStageXYZ{ stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY), stageZi};		//Initial position of the stages. The sign of stackDepth determines the scanning direction		
+		const double3 initialStageXYZ{ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stageZi};		//Initial position of the stages. The sign of stackDepth determines the scanning direction		
 		const double velZ{ stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };
-		Stage stage{ 5 * mmps, 5 * mmps, velZ, currentSample.mStageSoftPosLimXYZ };							//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerBeamletPerFrame_pix
+		Stage stage{ 5 * mmps, 5 * mmps, velZ, currentSample.mStageSoftPosLimXYZ };								//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 		stage.moveXYZ(initialStageXYZ);
 		stage.waitForMotionToStopAll();
 
@@ -358,13 +358,13 @@ namespace PMT16XRoutines
 		Image image{ RTcontrol };
 		image.initializeAcq(scanDirZ);
 		std::cout << "Scanning the stack...\n";
-		stage.moveSingle(STAGEZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
+		stage.moveSingle(Stage::Z, stageZf);	//Move the stage to trigger the control sequence and data acquisition
 		image.downloadData();
 		image.constructImage();
 		image.correctImage(RScanner.mFFOV);
 
 		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) +
-			"mWpum_x=" + toString(initialStageXYZ.at(STAGEX) / mm, 3) + "_y=" + toString(initialStageXYZ.at(STAGEY) / mm, 3) +
+			"mWpum_x=" + toString(initialStageXYZ.at(Stage::X) / mm, 3) + "_y=" + toString(initialStageXYZ.at(Stage::Y) / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
 
@@ -379,8 +379,8 @@ namespace PMT16XRoutines
 	}
 
 	//Full sequence to image and cut an entire sample automatically
-	//Note that the stack starts at stackCenterXYZ.at(STAGEZ) (i.e., the stack is not centered at stackCenterXYZ.at(STAGEZ))
-	void sequencer(const FPGAns::FPGA &fpga)
+	//Note that the stack starts at stackCenterXYZ.at(Z) (i.e., the stack is not centered at stackCenterXYZ.at(Z))
+	void sequencer(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
@@ -393,35 +393,35 @@ namespace PMT16XRoutines
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };											//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };														//Sample thickness
-		const double sampleSurfaceZ{ stackCenterXYZ.at(STAGEZ) - nFramesCont * stepSizeZ / 2 };			//For beads, center the stack around stackCenterXYZ.at(STAGEZ)
+		const double sampleSurfaceZ{ stackCenterXYZ.at(Stage::Z) - nFramesCont * stepSizeZ / 2 };		//For beads, center the stack around stackCenterXYZ.at(Z)
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
 		if (multibeam)
 		{
 			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
-			FFOVslowPerBeamlet = static_cast<double>(FFOV.at(STAGEX) / nChanPMT);
+			FFOVslowPerBeamlet = static_cast<double>(FFOV.at(Stage::X) / nChanPMT);
 		}
 		else //Singlebeam
 		{
 			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
-			FFOVslowPerBeamlet = FFOV.at(STAGEX);
+			FFOVslowPerBeamlet = FFOV.at(Stage::X);
 		}
 
 		//Create a sequence
 		const Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
 		//Sequence sequece(sample, stack);
-		Sequence sequence{ sample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, { 1, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {STAGEX, STAGEY}
+		Sequence sequence{ sample, stack, {stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y)}, { 1, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {STAGEX, STAGEY}
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
 		if (1)
 		{
 			//CREATE THE REALTIME CONTROL SEQUENCE
-			FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
+			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
-			//LASER
+			//ID
 			VirtualLaser virtualLaser{ RTcontrol };
 
 			//RS
@@ -429,13 +429,13 @@ namespace PMT16XRoutines
 			RScanner.isRunning();		//Make sure that the RS is running
 
 			//GALVO ramps
-			const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-			Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2 };
+			const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
+			Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2 };
 
 			//STAGES. Specify the velocity
 			const double velZ{ stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };
 			Stage stage{ 5 * mmps, 5 * mmps, velZ, currentSample.mStageSoftPosLimXYZ };
-			stage.moveSingle(STAGEZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
+			stage.moveSingle(Stage::Z, sample.mSurfaceZ);	//Move the z stage to the sample surface
 			stage.waitForMotionToStopAll();
 
 			//EXECUTE THE RT CONTROL SEQUENCE
@@ -455,12 +455,12 @@ namespace PMT16XRoutines
 
 				switch (commandline.mAction)
 				{
-				case ACTION::MOV://Move the x and y stages to mStackCenterXY
+				case Action::ID::MOV://Move the x and y stages to mStackCenterXY
 					stackCenterXY = commandline.mCommand.moveStage.mStackCenterXY;
 					stage.moveXY(stackCenterXY);
 					stage.waitForMotionToStopAll();
 					break;
-				case ACTION::ACQ://Acquire a stack
+				case Action::ID::ACQ://Acquire a stack
 					Action::AcqStack acqStack{ commandline.mCommand.acqStack };
 
 					//Update the laser parameters if needed
@@ -471,19 +471,19 @@ namespace PMT16XRoutines
 
 					image.initializeAcq(static_cast<ZSCAN>(acqStack.mScanDirZ));
 					std::cout << "Scanning the stack...\n";
-					stage.moveSingle(STAGEZ, acqStack.scanZf());					//Move the stage to trigger the control sequence and data acquisition
+					stage.moveSingle(Stage::Z, acqStack.scanZf());					//Move the stage to trigger the control sequence and data acquisition
 					image.downloadData();
 					break;
-				case ACTION::SAV:
+				case Action::ID::SAV:
 					longName = virtualLaser.currentLaser_s(true) + toString(acqStack.mWavelength_nm, 0) + "nm_Pi=" + toString(acqStack.mScanPi / mW, 1) + "mW_Pf=" + toString(acqStack.scanPf() / mW, 1) + "mW" +
-						"_x=" + toString(stackCenterXY.at(STAGEX) / mm, 3) + "_y=" + toString(stackCenterXY.at(STAGEY) / mm, 3) +
+						"_x=" + toString(stackCenterXY.at(Stage::X) / mm, 3) + "_y=" + toString(stackCenterXY.at(Stage::Y) / mm, 3) +
 						"_zi=" + toString(acqStack.mScanZi / mm, 4) + "_zf=" + toString(acqStack.scanZf() / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
 
 					image.constructImage();
 					//image.correctImage(RScanner.mFFOV);
 					image.saveTiffMultiPage(longName, OVERRIDE::DIS);
 					break;
-				case ACTION::CUT://Move the stage to the vibratome and then cut a slice off
+				case Action::ID::CUT://Move the stage to the vibratome and then cut a slice off
 					double3 stagePositionXYZ{ commandline.mCommand.cutSlice.mBladePositionXY };
 					//IMPLEMENT THE SLICING HERE!
 					break;
@@ -502,7 +502,7 @@ namespace PMT16XRoutines
 
 	/*
 //Apply 'frameByFrameZscan' on a list of locations
-void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
+void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 {
 	//ACQUISITION SETTINGS
 	const FluorLabelList fluorLabelList{ {currentSample.findFluorLabel("DAPI")} };
@@ -536,17 +536,17 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 	const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 	//CREATE A REALTIME CONTROL SEQUENCE
-	FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
+	RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
 
 	//RS
 	const ResonantScanner RScanner{ RTcontrol };
 	RScanner.isRunning();					//Make sure that the RS is running
 
-	//LASER
-	VirtualLaser virtualLaser{ RTcontrol, LASER::VISION };
+	//ID
+	VirtualLaser virtualLaser{ RTcontrol, ID::VISION };
 
 	//Create a location list
-	Sequence sequence{ currentSample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, nStacksXY };
+	Sequence sequence{ currentSample, stack, {stackCenterXYZ.at(X), stackCenterXYZ.at(Y)}, nStacksXY };
 	std::vector<double2> locationListXY{ sequence.generateLocationList() };
 
 	//STAGES
@@ -594,8 +594,8 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 			std::vector<double3> stagePositionXYZ;
 			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
 			{
-				//stagePositionXYZ.push_back({ locationListXY.at(iterLocation).at(STAGEX), locationListXY.at(iterLocation).at(STAGEY), stackCenterXYZ.at(STAGEZ) + iterDiffZ * stepSizeZ });
-				stagePositionXYZ.push_back({ locationListXY.at(iterLocation).at(STAGEX), locationListXY.at(iterLocation).at(STAGEY), stackCenterXYZ.at(STAGEZ) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
+				//stagePositionXYZ.push_back({ locationListXY.at(iterLocation).at(X), locationListXY.at(iterLocation).at(Y), stackCenterXYZ.at(Z) + iterDiffZ * stepSizeZ });
+				stagePositionXYZ.push_back({ locationListXY.at(iterLocation).at(X), locationListXY.at(iterLocation).at(Y), stackCenterXYZ.at(Z) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
 			}
 
 			//CREATE A STACK FOR SAVING THE TIFFS
@@ -629,8 +629,8 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 			//Save the stackDiffZ to file
 			std::string shortName{ "Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iterWL).mName + "_Tile" + std::to_string(iterLocation + 1) };
 			std::string longName{ currentSample.mName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(fluorLabelList.at(iterWL).mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabelList.at(iterWL).mStackPinc / mWpum, 1) + "mWpum" +
-				"_x=" + toString(stagePositionXYZ.front().at(STAGEX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(STAGEY) / mm, 3) +
-				"_zi=" + toString(stagePositionXYZ.front().at(STAGEZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(STAGEZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
+				"_x=" + toString(stagePositionXYZ.front().at(X) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(Y) / mm, 3) +
+				"_zi=" + toString(stagePositionXYZ.front().at(Z) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(Z) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 
 			datalog.record(shortName + "\t" + longName);
 			tiffStack.saveToFile(shortName, OVERRIDE::DIS);
@@ -639,14 +639,14 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 }
 */
 	//Scan the sample and return the coordinates of its contour
-	void snapshot(const FPGAns::RTcontrol &RTcontrol, const Sequence &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage)
+	void snapshot(const RTcontrol &RTcontrol, const Sequence &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage)
 	{
 		//enable MAINTRIG::PC
 
 		//Create a location list
 		//std::vector<double2> locationListXY{ sequence.generateLocationList() }; //retrieve the locations from the commandList for a single slice
 
-		std::vector<int>  locationXYMaskPerSlice;		//the same size as the locationListXY. Initialize with zeros
+		std::vector<int>  locationXYMaskPerSlice;	//the same size as the locationListXY. Initialize with zeros
 	
 		const int wavelength_nm{ 1040 };			//Choose a laser wavelength
 		const double laserPower{ 10. * mW };		//Choose a laser power
@@ -682,95 +682,95 @@ void frameByFrameZscanTilingXY(const FPGAns::FPGA &fpga, const int nSlice)
 namespace TestRoutines
 {
 	//Generate many short digital pulses and check the overall frameDuration with the oscilloscope
-	void digitalLatency(const FPGAns::FPGA &fpga)
+	void digitalLatency(const FPGA &fpga)
 	{
 		const double timeStep{ 4. * us };
 
-		FPGAns::RTcontrol RTcontrol{ fpga };
+		RTcontrol RTcontrol{ fpga };
 
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
 
 		//Many short digital pulses to accumulate the error
 		for (U32 ii = 0; ii < 99; ii++)
-			RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 0);
+			RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
 
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 0);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
 	}
 
 	//First calibrate the digital channels, then use it as a time reference
-	void analogLatency(const FPGAns::FPGA &fpga)
+	void analogLatency(const FPGA &fpga)
 	{
 		const double delay{ 400. * us };
 		const double timeStep{ 4. * us };
 
-		FPGAns::RTcontrol RTcontrol{ fpga };
-		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 10 * V);			//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 0);
-		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, 4 * us, delay, 0, 5 * V, OVERRIDE::DIS);		//Linear ramp to accumulate the error
-		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 10 * V);			//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, timeStep, 0);				//Final pulse
+		RTcontrol RTcontrol{ fpga };
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, timeStep, 10 * V);						//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, timeStep, 0);
+		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANGALVO, 4 * us, delay, 0, 5 * V, OVERRIDE::DIS);		//Linear ramp to accumulate the error
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, timeStep, 10 * V);						//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, timeStep, 0);								//Final pulse
 
 		//DO0
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 0);
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, delay, 0);
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 0);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, delay, 0);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
 	}
 
-	void pixelclock(const FPGAns::FPGA &fpga)
+	void pixelclock(const FPGA &fpga)
 	{
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 2, 300, 560, FIFOOUT::DIS }; 	//Create a realtime control sequence
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 2, 300, 560, FIFOOUT::DIS }; 	//Create a realtime control sequence
 		Image image{ RTcontrol };
 		image.acquire();	//Execute the realtime control sequence and acquire the image
 		//image.saveTiffSinglePage("output", OVERRIDE::EN);
 	}
 
 	//Generate a long digital pulse and check the frameDuration with the oscilloscope
-	void digitalTiming(const FPGAns::FPGA &fpga)
+	void digitalTiming(const FPGA &fpga)
 	{
 		const double timeStep{ 400. * us };
 
-		FPGAns::RTcontrol RTcontrol{ fpga };
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, timeStep, 0);
+		RTcontrol RTcontrol{ fpga };
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
 	}
 
 	//Test the analog and digital output and the relative timing wrt the pixel clock
-	void analogAndDigitalOut(const FPGAns::FPGA &fpga)
+	void analogAndDigitalOut(const FPGA &fpga)
 	{
-		FPGAns::RTcontrol RTcontrol{ fpga };
+		RTcontrol RTcontrol{ fpga };
 
 		//DO
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, 4 * us, 1);
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, 4 * us, 0);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, 4 * us, 1);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, 4 * us, 0);
 
 		//AO
-		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, 8 * us, 4 * V);
-		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, 4 * us, 2 * V);
-		RTcontrol.pushAnalogSinglet(RTCHAN::SCANGALVO, 4 * us, 1 * V);
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, 8 * us, 4 * V);
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, 4 * us, 2 * V);
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, 4 * us, 1 * V);
 
 		RTcontrol.triggerRT();	//Execute the realtime control sequence
 	}
 
-	void analogRamp(const FPGAns::FPGA &fpga)
+	void analogRamp(const FPGA &fpga)
 	{
 		const double Vmax{ 5. * V };
 		const double step{ 4. * us };
 
-		FPGAns::RTcontrol RTcontrol{ fpga };
-		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 2 * ms, 0, -Vmax, OVERRIDE::DIS);
-		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 20 * ms, -Vmax, Vmax, OVERRIDE::DIS);
-		RTcontrol.pushLinearRamp(RTCHAN::SCANGALVO, step, 2 * ms, Vmax, 0, OVERRIDE::DIS);
+		RTcontrol RTcontrol{ fpga };
+		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANGALVO, step, 2 * ms, 0, -Vmax, OVERRIDE::DIS);
+		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANGALVO, step, 20 * ms, -Vmax, Vmax, OVERRIDE::DIS);
+		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANGALVO, step, 2 * ms, Vmax, 0, OVERRIDE::DIS);
 
 		const double pulsewidth(300. * us);
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, pulsewidth, 1);
-		RTcontrol.pushDigitalSinglet(RTCHAN::DODEBUG, 4 * us, 0);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, pulsewidth, 1);
+		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, 4 * us, 0);
 	}
 
 	//I think this is for matching the galvo forward and backward scans via imaging beads
-	void fineTuneScanGalvo(const FPGAns::FPGA &fpga)
+	void fineTuneScanGalvo(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
@@ -783,7 +783,7 @@ namespace TestRoutines
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -791,12 +791,12 @@ namespace TestRoutines
 
 		//GALVO
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
-		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
 
-		//LASER
+		//ID
 		const int wavelength_nm{ 1040 };
 		const double P{ 25. * mW };		//Laser power
-		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, P, P, LASER::FIDELITY };
+		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, P, P, Laser::ID::FIDELITY };
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		stage.moveXYZ(stagePositionXYZ);
@@ -812,10 +812,10 @@ namespace TestRoutines
 		image.saveTiffMultiPage("Untitled", OVERRIDE::DIS);
 	}
 
-	void resonantScanner(const FPGAns::FPGA &fpga)
+	void resonantScanner(const FPGA &fpga)
 	{
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga };
+		RTcontrol RTcontrol{ fpga };
 
 		ResonantScanner RScanner{ RTcontrol };
 		std::cout << "aaa = " << RScanner.downloadControlVoltage() << "\n";
@@ -825,7 +825,7 @@ namespace TestRoutines
 
 	//Use a single beamlet with the rescanner sync'ed to the scanner to keep the beam position fixed at the detector plane
 	//Must manually open the laser and Uniblitz shutter and adjust the pockels power
-	void galvosSync(const FPGAns::FPGA &fpga)
+	void galvosSync(const FPGA &fpga)
 	{
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
@@ -833,12 +833,12 @@ namespace TestRoutines
 		const int nFramesCont{ 10 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
 
 		//GALVOS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
-		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-		Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2 };
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
+		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2 };
 
 		//Execute the realtime control sequence and acquire the image
 		Image image{ RTcontrol };
@@ -862,7 +862,7 @@ namespace TestRoutines
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
-		stage.waitForMotionToStopSingle(STAGEZ);
+		stage.waitForMotionToStopSingle(Stage::Z);
 
 		std::cout << "Stages final position:" << "\n";
 		stage.printPositionXYZ();
@@ -871,9 +871,9 @@ namespace TestRoutines
 		int input = 1;
 		while (input)
 		{
-			std::cout << "Stage X position = " << stage.downloadPositionSingle_(STAGEX) << "\n";
-			std::cout << "Stage Y position = " << stage.downloadPositionSingle_(STAGEY) << "\n";
-			std::cout << "Stage X position = " << stage.downloadPositionSingle_(STAGEZ) << "\n";
+			std::cout << "Stage X position = " << stage.downloadPositionSingle_(X) << "\n";
+			std::cout << "Stage Y position = " << stage.downloadPositionSingle_(Y) << "\n";
+			std::cout << "Stage X position = " << stage.downloadPositionSingle_(Z) << "\n";
 
 			std::cout << "Enter command: ";
 			std::cin >> input;
@@ -886,7 +886,7 @@ namespace TestRoutines
 	void stageConfig()
 	{
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
-		const int DOchan{ 1 };
+		const Stage::DIOCHAN DOchan{ Stage::DIOCHAN::D1 };
 
 		//std::cout << "Stages initial position:" << "\n";
 		//stage.printPositionXYZ();
@@ -894,23 +894,23 @@ namespace TestRoutines
 		std::cout << "Stages initial vel:" << "\n";
 		stage.printVelXYZ();
 
-		//stage.isDOtriggerEnabled(STAGEZ, DOchannel);
-		//stage.setDOtriggerEnabled(STAGEZ, DOchannel , true);
+		//stage.isDOtriggerEnabled(Z, DOchan);
+		//stage.setDOtriggerEnabled(Z, DOchan , true);
 
-		//const int triggerParam = 1;
-		//stage.downloadDOtriggerParamSingle_(STAGEZ, DOchannel , triggerParam);
-		//std::cout << "x stage vel: " << stage.downloadVelSingle_(STAGEX) / mmps << " mm/s" << "\n";
-		//std::cout << "y stage vel: " << stage.downloadVelSingle_(STAGEY) / mmps << " mm/s" << "\n";
-		//std::cout << "z stage vel: " << stage.downloadVelSingle_(STAGEZ) / mmps << " mm/s" << "\n";
-		//stage.printStageConfig(STAGEZ, DOchan);
+		//const Stage::DOPARAM triggerParam{ Stage::DOPARAM::TRIGSTEP };
+		//stage.downloadDOtriggerParamSingle_(Z, DOchan , triggerParam);
+		//std::cout << "x stage vel: " << stage.downloadVelSingle_(X) / mmps << " mm/s" << "\n";
+		//std::cout << "y stage vel: " << stage.downloadVelSingle_(Y) / mmps << " mm/s" << "\n";
+		//std::cout << "z stage vel: " << stage.downloadVelSingle_(Z) / mmps << " mm/s" << "\n";
+		//stage.printStageConfig(Z, DOchan);
 	}
 
-	void shutter(const FPGAns::FPGA &fpga)
+	void shutter(const FPGA &fpga)
 	{
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga };
+		RTcontrol RTcontrol{ fpga };
 
-		PockelsCell fidelity{ RTcontrol, 1040, LASER::FIDELITY };
+		PockelsCell fidelity{ RTcontrol, 1040, Laser::ID::FIDELITY };
 		fidelity.setShutter(true);
 		Sleep(5000);
 		fidelity.setShutter(false);
@@ -926,14 +926,14 @@ namespace TestRoutines
 //1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter automatically
 //2. Set pockelsAutoOff to 0 for holding on the last value
 //3. Tune Vision's wavelength manually
-	void pockels(const FPGAns::FPGA &fpga)
+	void pockels(const FPGA &fpga)
 	{
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga };
+		RTcontrol RTcontrol{ fpga };
 
 		//DEFINE THE POCKELS CELLS
-		PockelsCell pockelsVision{ RTcontrol, 750, LASER::VISION };
-		PockelsCell pockelsFidelity{ RTcontrol, 1040, LASER::FIDELITY };
+		PockelsCell pockelsVision{ RTcontrol, 750, Laser::ID::VISION };
+		PockelsCell pockelsFidelity{ RTcontrol, 1040, Laser::ID::FIDELITY };
 
 		PockelsCell pockels{ pockelsFidelity };
 		//PockelsCell pockels{ pockelsFidelity };
@@ -947,7 +947,7 @@ namespace TestRoutines
 		pressAnyKeyToCont();
 	}
 
-	void pockelsRamp(const FPGAns::FPGA &fpga)
+	void pockelsRamp(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
@@ -955,13 +955,13 @@ namespace TestRoutines
 		const int nFramesCont{ 40 };			//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
 
 		//POCKELS CELL
 		const int wavelength_nm{ 1040 };
-		PockelsCell pockels{ RTcontrol, wavelength_nm, LASER::FIDELITY };
+		PockelsCell pockels{ RTcontrol, wavelength_nm, Laser::ID::FIDELITY };
 		pockels.pushPowerSinglet(400 * us, 100. * mW, OVERRIDE::EN);
-		//pockels.powerLinearRamp(100. * mW, 200. * mW);		//Linearly scale the laser power from the first to the last frame
+		//pockels.powerLinearRamp(100. * mW, 200. * mW);	//Linearly scale the laser power from the first to the last frame
 
 		//Test the voltage setpoint
 		//pockels.pushVoltageSinglet(8* us, 0.5 * V);
@@ -972,10 +972,10 @@ namespace TestRoutines
 		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
 	}
 
-	void lasers(const FPGAns::FPGA &fpga)
+	void lasers(const FPGA &fpga)
 	{
-		Laser laser{ LASER::VISION };
-		//Laser laser{ LASER::FIDELITY };
+		Laser laser{ Laser::ID::VISION };
+		//Laser laser{ ID::FIDELITY };
 		//std::cout << laser.isShutterOpen() << std::endl;
 		//laser.setShutter(false);
 		laser.setWavelength(1040);
@@ -983,14 +983,14 @@ namespace TestRoutines
 	}
 
 	//Open the Uniblitz shutter manually
-	void virtualLasers(const FPGAns::FPGA &fpga)
+	void virtualLasers(const FPGA &fpga)
 	{
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga };
+		RTcontrol RTcontrol{ fpga };
 
 		const int wavelength_nm{ 1040 };
 		const double laserPower{ 50. * mW };
-		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, LASER::VISION };
+		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, Laser::ID::VISION };
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		//Image image{ RTcontrol };
@@ -999,9 +999,9 @@ namespace TestRoutines
 
 	void convertI16toVolt()
 	{
-		std::cout << "volt to I16: " << FPGAns::voltageToI16(-10) << "\n";
-		std::cout << "int to volt: " << FPGAns::intToVoltage(-32768) << "\n";
-		std::cout << "volt to I16 to volt: " << FPGAns::intToVoltage(FPGAns::voltageToI16(0)) << "\n";
+		std::cout << "volt to I16: " << FPGAfunc::voltageToI16(-10) << "\n";
+		std::cout << "int to volt: " << FPGAfunc::intToVoltage(-32768) << "\n";
+		std::cout << "volt to I16 to volt: " << FPGAfunc::intToVoltage(FPGAfunc::voltageToI16(0)) << "\n";
 	}
 
 	void tiffU8()
@@ -1156,7 +1156,7 @@ namespace TestRoutines
 
 				switch (commandline.mAction)
 				{
-				case ACTION::MOV:
+				case Action::ID::MOV:
 					std::cout << "MOV " << "\n";
 
 					//Skip the first MOV to position the stage
@@ -1167,7 +1167,7 @@ namespace TestRoutines
 					std::cout << "moveStage joinable? " << std::boolalpha << moveStage.joinable() << "\n";
 
 					break;
-				case ACTION::ACQ:
+				case Action::ID::ACQ:
 					std::cout << "ACQ " << "\n";
 
 					if (saveFile.joinable() && moveStage.joinable())
@@ -1176,11 +1176,11 @@ namespace TestRoutines
 						moveStage.join();
 					}
 					break;
-				case ACTION::SAV:
+				case Action::ID::SAV:
 					std::cout << "SAV" << "\n";
 					saveFile = std::thread{ &FUNC::func1, &x, 123 };
 					break;
-				case ACTION::CUT:
+				case Action::ID::CUT:
 					std::cout << "CUT" << "\n";
 					saveFile.join();
 
@@ -1213,12 +1213,12 @@ namespace TestRoutines
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 		//Create a sequence
-		Sequence sequence{ currentSample, stack, {stackCenterXYZ.at(STAGEX), stackCenterXYZ.at(STAGEY)}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
+		Sequence sequence{ currentSample, stack, {stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y)}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
 		std::vector<double2> locationList{ sequence.generateLocationList() };
 
 		for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationList.size(); iterLocation++)
 		{
-			std::cout << "x = " << locationList.at(iterLocation).at(STAGEX) / mm << "\ty = " << locationList.at(iterLocation).at(STAGEY) / mm << "\n";
+			std::cout << "x = " << locationList.at(iterLocation).at(Stage::X) / mm << "\ty = " << locationList.at(iterLocation).at(Stage::Y) / mm << "\n";
 		}
 	}
 
@@ -1260,7 +1260,7 @@ namespace TestRoutines
 
 	//Test reading different channels of the PMT16X
 	//Must manually open the laser and Uniblitz shutter
-	void PMT16Xdemultiplex(const FPGAns::FPGA &fpga)
+	void PMT16Xdemultiplex(const FPGA &fpga)
 	{
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
@@ -1270,15 +1270,15 @@ namespace TestRoutines
 		const int wavelength_nm{ 750 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
 
-		//LASER
+		//ID
 		const double laserPower{ 30. * mW };
-		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, LASER::VISION };
+		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, Laser::ID::VISION };
 
 		//GALVOS
-		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslow / 2 };
-		Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslow / 2, &virtualLaser };
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
+		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2, &virtualLaser };
 		//Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 
 		//EXECUTE THE RT CONTROL SEQUENCE
@@ -1288,7 +1288,7 @@ namespace TestRoutines
 	}
 
 	//Test the synchronization of the 2 galvos and the laser
-	void PMT16XgavosSyncAndLaser(const FPGAns::FPGA &fpga)
+	void PMT16XgavosSyncAndLaser(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
@@ -1316,15 +1316,15 @@ namespace TestRoutines
 		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the axis STAGEZ
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
 
-		//LASER
+		//ID
 		const int wavelength_nm{ 750 };
-		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, selectPower, selectPower, LASER::VISION };
+		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, selectPower, selectPower, Laser::ID::VISION };
 
 		//GALVO ramps
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, wavelength_nm };
 
 		//EXECUTE THE RT CONTROL SEQUENCE
@@ -1333,7 +1333,7 @@ namespace TestRoutines
 	}
 
 
-	void vibratome(const FPGAns::FPGA &fpga)
+	void vibratome(const FPGA &fpga)
 	{
 		const double slicePlaneZ{ (23.640 + 0.050) * mm };
 
@@ -1347,8 +1347,8 @@ namespace TestRoutines
 
 	void filterwheel()
 	{
-		Filterwheel FWexcitation{ FILTERWHEEL::EXC };
-		Filterwheel FWdetection{ FILTERWHEEL::DET };
+		Filterwheel FWexcitation{ Filterwheel::ID::EXC };
+		Filterwheel FWdetection{ Filterwheel::ID::DET };
 
 		int wavelength_nm;
 		if (1)
@@ -1385,23 +1385,23 @@ namespace TestRoutines
 
 
 	//Photobleach a line along the fast axis (RS) on the sample
-	void photobleach(const FPGAns::FPGA &fpga)
+	void photobleach(const FPGA &fpga)
 	{
-		Laser laser{ LASER::VISION };
+		Laser laser{ Laser::ID::VISION };
 		laser.setWavelength(920);
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 100, 300, 400, FIFOOUT::DIS };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 100, 300, 400, FIFOOUT::DIS };
 
 		//RS
 		ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();		//Make sure that the RS is running
 
 		//GALVO. Keep the galvo fixed to bleach a line on the sample
-		Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, 0 };
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
 
 		//POCKELS CELLS
-		PockelsCell pockels{ RTcontrol, 920, LASER::VISION };
+		PockelsCell pockels{ RTcontrol, 920, Laser::ID::VISION };
 		pockels.pushPowerSinglet(8 * us, 200 * mW, OVERRIDE::DIS);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
@@ -1424,14 +1424,14 @@ namespace TestRoutines
 		Logger datalog(currentSample.mName + "_locations");
 		datalog.record("dim=3"); //Needed in BigStitcher
 	
-		for (int nTile = 0; nTile < nStacksXY.at(STAGEX) * nStacksXY.at(STAGEY); nTile++)
+		for (int nTile = 0; nTile < nStacksXY.at(Stage::X) * nStacksXY.at(Stage::Y); nTile++)
 		//for (int nTile = 0; nTile < 180; nTile++)
 		{
 			int2 nXY = nTileToArrayIndices(nTile);
-			int tileShiftX{ -nXY.at(STAGEX) * tileShiftXY_pix.at(STAGEX) };
-			int tileShiftY{ -nXY.at(STAGEY) * tileShiftXY_pix.at(STAGEY) };
+			int tileShiftX{ -nXY.at(Stage::X) * tileShiftXY_pix.at(Stage::X) };
+			int tileShiftY{ -nXY.at(Stage::Y) * tileShiftXY_pix.at(Stage::Y) };
 			std::string line{ std::to_string(nTile) + ";;(" + std::to_string(tileShiftY) + "," + std::to_string(tileShiftX) + ",0)" };	//In BigStitcher, X is horizontal and Y is vertical
-			//std::string line{ std::to_string(nTile) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(STAGEX)) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(STAGEY)) }; //For debugging
+			//std::string line{ std::to_string(nTile) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(X)) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(Y)) }; //For debugging
 			datalog.record(line);
 		}
 
@@ -1443,12 +1443,12 @@ namespace TestRoutines
 		const int2 nStacksXY{ 30, 28 };
 
 		int nx;
-		int ny{ nTile / nStacksXY.at(STAGEX) };
+		int ny{ nTile / nStacksXY.at(Stage::X) };
 
 		if (ny % 2)	//ny is odd
-			nx = nStacksXY.at(STAGEX) - nTile % nStacksXY.at(STAGEX) - 1;
+			nx = nStacksXY.at(Stage::X) - nTile % nStacksXY.at(Stage::X) - 1;
 		else		//ny is even
-			nx = nTile % nStacksXY.at(STAGEX);
+			nx = nTile % nStacksXY.at(Stage::X);
 	
 		return {nx,ny};
 	}

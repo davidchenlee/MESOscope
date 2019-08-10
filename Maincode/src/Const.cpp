@@ -50,9 +50,9 @@ namespace Constants
 	extern const double pockelsSecondaryDelay{ 0 };			//Delay of the Pockels wrt the preframeclock in the subsequent frames 
 
 	//GALVOS
-	extern const double scanGalvoDelay{ 150 * us };														//Adjust 'scanGalvoDelay' until the bead position in a fordward scan coincides with that of a backward scan
-	extern const double rescanGalvoDelay{ 0. * us };													//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
-	extern const GALVOcalib scannerCalib{ 0.02417210 * V / um , 0.0 * V };								//Calibration factor of the scan galvo. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
+	extern const double scanGalvoDelay{ 150 * us };									//Adjust 'scanGalvoDelay' until the bead position in a fordward scan coincides with that of a backward scan
+	extern const double rescanGalvoDelay{ 0. * us };								//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
+	extern const GALVOcalib scannerCalib{ 0.02417210 * V / um , 0.0 * V };			//Calibration factor of the scan galvo. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
 
 	//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission fixed at the detector
 	//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the tiffs in all the PMT channels
@@ -65,7 +65,7 @@ namespace Constants
 	extern const GALVOcalib rescannerCalibV920nm{ 0.32 * scannerCalib.voltagePerDistance, 0.07 * V };
 	extern const GALVOcalib rescannerCalibV1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.10 * V };	//Using Vision
 	extern const GALVOcalib rescannerCalibF1040nm{ 0.32 * scannerCalib.voltagePerDistance, 0.10 * V };	//Using Fidelity
-	extern const PMT16XCHAN PMT16Xchan{ PMT16XCHAN::CH14 }; //CH00 - CH15
+	extern const int PMT16Xchan_int{ 14 }; //0 - 15
 
 	//STAGES
 	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if the z stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence

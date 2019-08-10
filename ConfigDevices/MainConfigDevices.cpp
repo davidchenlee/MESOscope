@@ -10,13 +10,13 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		FPGAns::FPGA fpga;	//Open a FPGA connection
+		FPGA fpga;	//Open a FPGA connection
 		try
 		{
-			FPGAns::RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS };
+			RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS };
 			ResonantScanner RS{ RTcontrol };
-			Laser vision{ LASER::VISION };
-			Laser fidelity{ LASER::FIDELITY };
+			Laser vision{ Laser::ID::VISION };
+			Laser fidelity{ Laser::ID::FIDELITY };
 
 			std::string whichLaser{ argv[1] };			//V for Vision, F for Fidelity VF for both
 			double FFOV{ 1.*std::stoi(argv[2]) / um };	//Field of view in um
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 		{
 			std::cout << "An overflow has occurred: " << e.what() << "\n";
 		}
-		catch (const FPGAns::FPGAexception &e)
+		catch (const FPGAexception &e)
 		{
 			std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
 		}
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 		fpga.close();		//Close the FPGA connection
 	}
 
-	catch (const FPGAns::FPGAexception &e)
+	catch (const FPGAexception &e)
 	{
 		std::cout << "An FPGA exception has occurred: " << e.what() << "\n";
 	}

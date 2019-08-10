@@ -1,17 +1,17 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (54.000 - 0.030 ) * mm, 21.345 * mm, (18.284) * mm };
+double3 stackCenterXYZ{ (54.000 - 0.030 ) * mm, 21.345 * mm, (18.282) * mm };
 const std::vector<double2> PetridishPosLimit{ { 32. * mm, 57. * mm}, { -8. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
-Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(40. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(40. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
+Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(40. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{ "TDT", 1040, (18. * mW) * 16, 0. * 16 * mWpum }}} };
 #else
-Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 8. * mW, 0. * mWpum }}} };
-Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
-Sample fluorSlide{ "fluorBlue", "SiliconeOil", "1.51", {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
-Sample liver{ "Beads1um", "SiliconeMineralOil5050", "1.49", {{{"TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }}} };
+Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 8. * mW, 0. * mWpum }}} };
+Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
+Sample fluorSlide{ "fluorBlue", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
+Sample liver{ "Beads1um", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }}} };
 #endif
 Sample currentSample{ beads4um };
 
@@ -26,12 +26,12 @@ namespace PMT16XRoutines
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the starting position
-		const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
-		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
+		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
+		const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("GFP") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 
 		//This is because the beads at 750 nm are chromatically shifted

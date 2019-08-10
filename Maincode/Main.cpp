@@ -8,10 +8,10 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			//PMT16XRoutines::frameByFrameZscan(fpga);
+			PMT16XRoutines::frameByFrameZscan(fpga);
 			//PMT16XRoutines::liveScan(fpga);
 			//PMT16XRoutines::contZscan(fpga);
-			PMT16XRoutines::sequencer(fpga);
+			//PMT16XRoutines::sequencer(fpga);
 			//PMT16XRoutines::frameByFrameZscanTilingXY(fpga, 1);
 
 			//TESTS
@@ -53,7 +53,8 @@ int main(int argc, char* argv[])
 			//TestRoutines::collectorLens();
 			//TestRoutines::photobleach(fpga);
 			//TestRoutines::generateLocationsForBigStitcher();
-			
+
+			//pressAnyKeyToCont();
 		}
 		catch (const std::invalid_argument &e)
 		{
@@ -89,8 +90,6 @@ int main(int argc, char* argv[])
 		std::cout << "An FPGA exception has occurred in " << e.what() << "\n";
 		pressAnyKeyToCont();
 	}
-
-	//pressAnyKeyToCont();
 	return 0;
 }
 

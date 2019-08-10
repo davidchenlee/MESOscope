@@ -41,17 +41,17 @@ public:
 	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED };
 
 	const FPGA &mFpga;
-	LINECLOCK mLineclockInput;														//Resonant scanner (RS) or Function generator (FG)
-	MAINTRIG mMainTrigger;															//Trigger the acquisition with the z stage: enable (0), disable (1)
-	FIFOOUT mFIFOOUTstate;															//Enable or disable the fpga FIFOOUT
-	const double mPulsesPerPix{ pixelDwellTime / laserPulsePeriod };				//Max number of laser pulses per pixel
-	const U8 mUpscaleFactor{ static_cast<U8>(255 / mPulsesPerPix) };				//Upscale 4-bit counts to 8-bit range [0-255] for compatibility with ImageJ's standards
-	int mWidthPerFrame_pix;															//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
-	int mHeightPerBeamletPerFrame_pix;												//Height in pixels of a single beamlet in a single frame (galvo axis)
-	int mNframes;																	//Number of frames to acquire
-	int mHeightPerBeamletAllFrames_pix;												//Total number of lines per beamlet in all the frames
-	int mNpixPerBeamletAllFrames;													//Total number of pixels per beamlet in all the frames
-	PMT16XCHAN mPMT16Xchan;															//PMT16X channel to be used
+	LINECLOCK mLineclockInput;											//Resonant scanner (RS) or Function generator (FG)
+	MAINTRIG mMainTrigger;												//Trigger the acquisition with the z stage: enable (0), disable (1)
+	FIFOOUT mFIFOOUTstate;												//Enable or disable the fpga FIFOOUT
+	const double mPulsesPerPix{ pixelDwellTime / laserPulsePeriod };	//Max number of laser pulses per pixel
+	const U8 mUpscaleFactor{ static_cast<U8>(255 / mPulsesPerPix) };	//Upscale 4-bit counts to 8-bit range [0-255] for compatibility with ImageJ's standards
+	int mWidthPerFrame_pix;												//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
+	int mHeightPerBeamletPerFrame_pix;									//Height in pixels of a single beamlet in a single frame (galvo axis)
+	int mNframes;														//Number of frames to acquire
+	int mHeightPerBeamletAllFrames_pix;									//Total number of lines per beamlet in all the frames
+	int mNpixPerBeamletAllFrames;										//Total number of pixels per beamlet in all the frames
+	PMT16XCHAN mPMT16Xchan;												//PMT16X channel to be used
 
 	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUT FIFOOUTstate);
 	RTcontrol(const FPGA &fpga);

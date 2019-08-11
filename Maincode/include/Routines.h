@@ -5,12 +5,11 @@
 //MAIN SEQUENCES
 namespace PMT16XRoutines
 {
-	void frameByFrameZscan(const FPGA &fpga);
-	void liveScan(const FPGA &fpga);
+	void stopAndShootZscan(const FPGA &fpga);
 	void contZscan(const FPGA &fpga);
 	void sequencer(const FPGA &fpga);
+	void liveScan(const FPGA &fpga);
 	//void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice);
-	void snapshot(const RTcontrol &RTcontrol, const Sequence &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage);
 }
 
 //TESTS
@@ -28,6 +27,7 @@ namespace TestRoutines
 	void fineTuneScanGalvo(const FPGA &fpga);
 	void resonantScanner(const FPGA &fpga);
 	void galvosSync(const FPGA &fpga);
+	void gavosLaserSync(const FPGA &fpga);
 
 	//Stages
 	void stagePosition();
@@ -39,6 +39,7 @@ namespace TestRoutines
 	void pockelsRamp(const FPGA &fpga);
 	void lasers(const FPGA &fpga);
 	void virtualLasers(const FPGA &fpga);
+	void photobleach(const FPGA &fpga);
 
 	//Data management
 	void convertI16toVolt();
@@ -50,18 +51,16 @@ namespace TestRoutines
 	//Sequence
 	void sequencerConcurrentTest();
 	void locationSequence();
+	void generateLocationsForBigStitcher();
+	int2 nTileToArrayIndices(const int nTile);
 
 	//PMT16X
 	void PMT16Xconfig();
 	void PMT16Xdemultiplex(const FPGA &fpga);
-	void PMT16XgavosSyncAndLaser(const FPGA &fpga);
 
 	//Others
 	void vibratome(const FPGA &fpga);
 	void filterwheel();
 	void collectorLens();
-	void photobleach(const FPGA &fpga);
-	void generateLocationsForBigStitcher();
-	int2 nTileToArrayIndices(const int nTile);
 	void openCV();
 }

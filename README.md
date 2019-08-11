@@ -16,5 +16,4 @@ Code in C++ for controlling the NI USB-7852R card
 
 ### Hardware
 - Screw down the PMT16X
-- Screw down the exc filterwheel
 - Test cooling down the PMT16X

@@ -797,11 +797,11 @@ void Filterwheel::setWavelength(const int wavelength_nm)
 //Download the current filter position
 int Filterwheel::downloadPosition_() const
 {
-	const std::string TxBuffer{ "pos?\r" };	//Command to the filterwheel
-	std::string RxBuffer;					//Reply from the filterwheel
-
 	try
 	{
+		const std::string TxBuffer{ "pos?\r" };	//Command to the filterwheel
+		std::string RxBuffer;					//Reply from the filterwheel
+
 		mSerial->write(TxBuffer);
 		mSerial->read(RxBuffer, mRxBufSize);
 		//std::cout << "Full RxBuffer: " << RxBuffer << "\n"; //For debugging
@@ -891,7 +891,7 @@ Laser::Laser(const ID whichLaser) : mWhichLaser{ whichLaser }
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}
 
-	try
+	try //Establish serial communication with the chosen laser
 	{
 		mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(static_cast<int>(mPort)), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms)));
 	}
@@ -922,7 +922,7 @@ void Laser::setWavelength(const int wavelength_nm)
 		if (wavelength_nm < 680 || wavelength_nm > 1080)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": VISION wavelength must be in the range [680-1080] nm");
 
-		if (wavelength_nm != mWavelength_nm)	//Set the new wavelength only if it is different from the current value
+		if (wavelength_nm != mWavelength_nm)	//Change the wavelength only if the new value is different from the current one
 		{
 			const std::string TxBuffer{ "VW=" + std::to_string(wavelength_nm) };	//Command to the laser
 			std::string RxBuffer;													//Reply from the laser
@@ -937,11 +937,14 @@ void Laser::setWavelength(const int wavelength_nm)
 				msg << "Tuning VISION to " << wavelength_nm << " nm...\n";
 				std::cout << msg.str();
 
-				Sleep(static_cast<DWORD>(std::abs(1.*(mWavelength_nm - wavelength_nm) / mTuningSpeed / ms)));	//Wait till the laser stops tuning
+				//Wait till the laser stops tuning
+				Sleep(static_cast<DWORD>(std::abs(1.*(mWavelength_nm - wavelength_nm) / mTuningSpeed / ms)));
 
-				mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
+				//Read RxBuffer to flush it. Serial::flush() doesn't work. The message reads "CHAMELEON>"
+				mSerial->read(RxBuffer, mRxBufSize);	
 
-				mWavelength_nm = downloadWavelength_nm_();	//Check if the laser was set successfully 
+				//Check if the laser was set successfully 
+				mWavelength_nm = downloadWavelength_nm_();
 
 				if (mWavelength_nm != wavelength_nm)
 				{
@@ -950,7 +953,6 @@ void Laser::setWavelength(const int wavelength_nm)
 					msg << "WARNING: VISION might not be at the correct wavelength " << wavelength_nm << " nm\n";
 					std::cout << msg.str();
 				}
-
 			}
 			catch (const serial::IOException)
 			{
@@ -1093,7 +1095,6 @@ int Laser::downloadWavelength_nm_() const
 	}	
 }
 #pragma endregion "Laser"
-
 
 #pragma region "Shutters"
 //To control the Uniblitz shutters

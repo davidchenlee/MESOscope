@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			PMT16XRoutines::frameByFrameZscan(fpga);
+			PMT16XRoutines::stopAndShootZscan(fpga);
 			//PMT16XRoutines::liveScan(fpga);
 			//PMT16XRoutines::contZscan(fpga);
 			//PMT16XRoutines::sequencer(fpga);
@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);
-			//TestRoutines::PMT16XgavosSyncAndLaser(fpga);
+			//TestRoutines::gavosLaserSync(fpga);
 
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();
@@ -94,12 +94,12 @@ int main(int argc, char* argv[])
 }
 
 /*
-//Main without calling the fpga, because LV blocks the access to the fpga
+//For debugging. Main without calling the fpga, because LV blocks the access to the fpga
 int main(int argc, char* argv[])
 {
 	try
 	{
-		//Make sure first that the power supply of the FPGA is up
+		//Make sure that the power supply of the FPGA is up
 		TestRoutines::PMT16Xconfig();
 	}
 	catch (...)

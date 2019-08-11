@@ -5,8 +5,7 @@ using namespace Constants;
 
 struct FluorLabelList	//Create a list of fluorescent labels
 {
-	//Parameters for a single fluorescent label
-	struct FluorLabel
+	struct FluorLabel //Parameters for a single fluorescent label
 	{
 		std::string mName{ "" };	//Fluorescent label name
 		int mWavelength_nm;			//Laser wavelength
@@ -62,7 +61,6 @@ namespace Action
 		int2 mStackIJ;			//Indices of the 2D array of stacks
 		double2 mStackCenterXY;	//STAGEX and STAGEY positions corresponding to the center of the stack
 	};
-
 	struct AcqStack {
 		int mStackNumber;
 		int mWavelength_nm;
@@ -75,7 +73,6 @@ namespace Action
 		double scanZf() const { return  mScanZi + mScanDirZ * mStackDepth; };
 		double scanPf() const { return mScanPi + mScanDirZ * mStackDepth * mStackPinc; };
 	};
-
 	struct CutSlice {
 		double3 mBladePositionXY;		//Position the sample facing the vibratome blade
 	};
@@ -100,7 +97,6 @@ public:
 		void printParameters() const;
 	private:
 		std::string actionToString_(const Action::ID action) const;
-
 	};
 	Sequence(const Sample sample, const Stack stack);
 	Sequence(Sample sample, const Stack stack, const double2 stackCenterXY, const int2 stackArrayDimIJ);
@@ -119,10 +115,9 @@ public:
 private:
 	Sample mSample;							//Sample
 	const Stack mStack;						//Stack
+	std::vector<Commandline> mCommandList;
 	const int3 mInitialScanDir{ 1, 1, 1 };	//Initial scan directions wrt the axis STAGEX, STAGEY, and STAGEZ
 	ROI mROIeffective;						//Slightly larger than the requested area: mSample.mROI
-
-	std::vector<Commandline> mCommandList;
 	int mStackCounter{ 0 };					//Count the number of stacks
 	int mSliceCounter{ 0 };					//Count the number of the slices
 	int2 mStackArrayDimIJ;					//Dimension of the array of stacks
@@ -141,9 +136,4 @@ private:
 	void saveStack_();
 	void cutSlice_();
 	int mCommandCounter{ 0 };
-
-	//Test functions
-	std::vector<U8> polyMask;
-	void generatePolyMask_(const std::vector<double2> vertices);
-	void findContour_(const bool **maskIJ) const;
 };

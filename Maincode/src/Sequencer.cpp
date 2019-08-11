@@ -278,8 +278,6 @@ Sequence::Sequence(Sample sample, const Stack stack, const double2 stackCenterXY
 	//Set these unused parameters to 0 to avoid any confusion when printing the parameters to text
 	mSample.mROIrequest = { 0,0,0,0 };
 	mSample.mSizeRequest = { 0,0,0 };
-
-	polyMask.reserve(mStackArrayDimIJ.at(Stage::X) * mStackArrayDimIJ.at(Stage::Y));
 }
 
 Sequence::Commandline Sequence::readCommandline(const int iterCommandLine) const
@@ -528,44 +526,5 @@ void Sequence::cutSlice_()
 	//Increase the height of the plane to be cut in the next iteration
 	//Because of the overlap, the effective stack depth is (1-a)*stackDepth, where a*stackDepth is the overlap
 	mPlaneToSliceZ += (1 - mStack.mOverlap_frac.at(Stage::Z)) * mStack.mDepth;
-}
-
-void Sequence::generatePolyMask_(const std::vector<double2> vertices)
-{
-	for (std::vector<int>::size_type II = 0; II != mStackArrayDimIJ.at(Stage::X); II++)
-		for (std::vector<int>::size_type JJ = 0; JJ != mStackArrayDimIJ.at(Stage::Y); JJ++)
-			polyMask.push_back(0);
-}
-
-//maskIJ[I][J] = 0 or 1
-void Sequence::findContour_(const bool **maskIJ) const
-{
-	std::vector<int2> minmaxII, minmaxJJ;
-
-	//for every II, calculate the max and min indices JJ that satisfy maskIJ[II][JJ] == true
-	for (int II = 0; II < mStackArrayDimIJ.at(Stage::X); II++)		//STAGEX direction
-	{
-		std::vector<int> JJs;
-		for (int JJ = 0; JJ < mStackArrayDimIJ.at(Stage::Y); JJ++)	//STAGEY direction
-			if (maskIJ[II][JJ] == true)
-				JJs.push_back(JJ);			//collect all the JJs that satisfy masjIJ[II][JJ] == true
-
-		minmaxJJ.push_back({ JJs.front(), JJs.back() });// {min JJ, max JJ}
-	}
-
-	// {II, {min JJ, max JJ} }
-
-	//for every JJ, calculate the max and min indices II that satisfy maskIJ[II][JJ] == true
-	for (int JJ = 0; JJ < mStackArrayDimIJ.at(Stage::Y); JJ++)		//STAGEY direction
-	{
-		std::vector<int> IIs;
-		for (int II = 0; II < mStackArrayDimIJ.at(Stage::X); II++)	//STAGEX direction
-			if (maskIJ[II][JJ] == true)
-				IIs.push_back(JJ);			//collect all the JJs that satisfy masjIJ[II][JJ] == true
-
-		minmaxJJ.push_back({ IIs.front(), IIs.back() });// {min II, max II}
-	}
-	// {{min II, max II}, JJ }
-
 }
 #pragma endregion "sequencer"

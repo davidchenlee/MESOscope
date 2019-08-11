@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (54.000 - 0.030 ) * mm, 21.345 * mm, (18.282) * mm };
+double3 stackCenterXYZ{ (54.000 - 0.030 ) * mm, 21.345 * mm, (18.278) * mm };
 const std::vector<double2> PetridishPosLimit{ { 32. * mm, 57. * mm}, { -8. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
@@ -19,19 +19,19 @@ Sample currentSample{ beads4um };
 namespace PMT16XRoutines
 {
 	//The "Swiss knife" of my routines
-	void frameByFrameZscan(const FPGA &fpga)
+	void stopAndShootZscan(const FPGA &fpga)
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the starting position
-		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
-		const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
+		const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
+		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("GFP") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 
 		//This is because the beads at 750 nm are chromatically shifted
@@ -228,50 +228,6 @@ namespace PMT16XRoutines
 				"_z=" + toString(stagePositionXYZ.front().at(Stage::Z) / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) );
 			tiffStack.saveToFile(filename, OVERRIDE::DIS);
 			pressESCforEarlyTermination();
-		}
-	}
-
-	//Image the sample non-stop. Use the PI program to move the stages manually
-	void liveScan(const FPGA &fpga)
-	{
-		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
-		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		const int nFramesCont{ 1 };									//Number of frames for continuous XY acquisition
-
-		//CREATE A REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
-
-		//ID
-		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, Laser::ID::VISION };
-
-		//RS
-		const ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();					//Make sure that the RS is running
-
-		//GALVO ramps
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2, &virtualLaser };
-
-		//OPEN THE UNIBLITZ SHUTTERS
-		virtualLaser.openShutter();	//The destructor will close the shutter automatically
-
-		while (true)
-		{
-			virtualLaser.setPower(fluorLabel.mScanPi);			//Set the laser power
-
-			//EXECUTE THE RT CONTROL SEQUENCE
-			Image image{ RTcontrol };
-			image.acquire();									//Execute the RT control sequence and acquire the image
-			image.averageFrames();								//Average the frames acquired via continuous XY acquisition
-			image.correctImage(RScanner.mFFOV);
-			image.saveTiffSinglePage("Untitled", OVERRIDE::EN);	//Save individual files
-			Sleep(700);
-
-			pressESCforEarlyTermination();						//Early termination if ESC is pressed
 		}
 	}
 
@@ -500,8 +456,52 @@ namespace PMT16XRoutines
 		}//if
 	}
 
+	//Image the sample non-stop. Use the PI program to move the stages manually
+	void liveScan(const FPGA &fpga)
+	{
+		//ACQUISITION SETTINGS
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const double pixelSizeXY{ 0.5 * um };
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 560 };
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
+		const int nFramesCont{ 1 };									//Number of frames for continuous XY acquisition
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
+
+		//ID
+		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, Laser::ID::VISION };
+
+		//RS
+		const ResonantScanner RScanner{ RTcontrol };
+		RScanner.isRunning();					//Make sure that the RS is running
+
+		//GALVO ramps
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2, &virtualLaser };
+
+		//OPEN THE UNIBLITZ SHUTTERS
+		virtualLaser.openShutter();	//The destructor will close the shutter automatically
+
+		while (true)
+		{
+			virtualLaser.setPower(fluorLabel.mScanPi);			//Set the laser power
+
+			//EXECUTE THE RT CONTROL SEQUENCE
+			Image image{ RTcontrol };
+			image.acquire();									//Execute the RT control sequence and acquire the image
+			image.averageFrames();								//Average the frames acquired via continuous XY acquisition
+			image.correctImage(RScanner.mFFOV);
+			image.saveTiffSinglePage("Untitled", OVERRIDE::EN);	//Save individual files
+			Sleep(700);
+
+			pressESCforEarlyTermination();						//Early termination if ESC is pressed
+		}
+	}
+
 	/*
-//Apply 'frameByFrameZscan' on a list of locations
+//Apply 'stopAndShootZscan' on a list of locations
 void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 {
 	//ACQUISITION SETTINGS
@@ -637,44 +637,7 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 		}//iterLocation
 	}//iter_wv
 }
-*/
-	//Scan the sample and return the coordinates of its contour
-	void snapshot(const RTcontrol &RTcontrol, const Sequence &sequence, VirtualLaser &virtualLaser, Galvo &rescanner, Stage &stage)
-	{
-		//enable MAINTRIG::PC
-
-		//Create a location list
-		//std::vector<double2> locationListXY{ sequence.generateLocationList() }; //retrieve the locations from the commandList for a single slice
-
-		std::vector<int>  locationXYMaskPerSlice;	//the same size as the locationListXY. Initialize with zeros
-	
-		const int wavelength_nm{ 1040 };			//Choose a laser wavelength
-		const double laserPower{ 10. * mW };		//Choose a laser power
-		virtualLaser.configure(wavelength_nm);		//When switching pockels, the class destructor closes the uniblitz shutter
-		virtualLaser.setPower(laserPower);			//Update the laser power
-		virtualLaser.openShutter();					//Re-open the Uniblitz shutter if closed by the pockels destructor
-		rescanner.reconfigure(&virtualLaser);		//The calibration of the rescanner depends on the laser and wavelength being used
-
-		const double distanceFromTheSurface{ 0 };
-
-		//moveStageSingle(distanceFromTheSurface);
-		Image image{ RTcontrol };
-		image.acquire();
-		//disable MAINTRIG::PC
-
-		if (!image.isDark(1))	//Image is not dark
-		{
-			locationXYMaskPerSlice.push_back(1);
-
-			//scan the stack
-			//switch the scan direction
-		}
-		else
-		{
-			//skip the stack
-		}
-	}
-	
+*/	
 }//namespace
 
 //Photobleach the sample with the resonant scanner to see how much the sample moves after slicing
@@ -845,6 +808,51 @@ namespace TestRoutines
 		image.acquire();		//Execute the RT control sequence
 	}
 
+	//Test the synchronization of the 2 galvos and the laser
+	void gavosLaserSync(const FPGA &fpga)
+	{
+		//ACQUISITION SETTINGS
+		const double pixelSizeXY{ 0.5 * um };
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 560 };
+		const int nFramesCont{ 2 };
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
+
+		int heightPerBeamletPerFrame_pix;
+		double FFOVslowPerBeamlet, selectPower;
+
+#if multibeam
+		//Multibeam
+		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
+		FFOVslowPerBeamlet = static_cast<int>(FFOVslow / nChanPMT);
+		selectPower = 1400. * mW;
+#else
+		//Singlebeam
+		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
+		FFOVslowPerBeamlet = FFOVslow;
+		selectPower = 50. * mW;
+#endif
+		//STACK
+		const double stepSizeZ{ 1.0 * um };
+		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the axis STAGEZ
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
+
+		//ID
+		const int wavelength_nm{ 750 };
+		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, selectPower, selectPower, Laser::ID::VISION };
+
+		//GALVO ramps
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
+		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, wavelength_nm };
+
+		//EXECUTE THE RT CONTROL SEQUENCE
+		Image image{ RTcontrol };
+		image.acquire();			//Execute the RT control sequence and acquire the image
+	}
+
 	void stagePosition()
 	{
 		double duration;
@@ -995,6 +1003,36 @@ namespace TestRoutines
 		//EXECUTE THE RT CONTROL SEQUENCE
 		//Image image{ RTcontrol };
 		//image.acquire();					//Execute the RT control sequence
+	}
+
+	//Photobleach a line along the fast axis (RS) on the sample
+	void photobleach(const FPGA &fpga)
+	{
+		Laser laser{ Laser::ID::VISION };
+		laser.setWavelength(920);
+
+		//CREATE A REALTIME CONTROL SEQUENCE
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 100, 300, 400, FIFOOUT::DIS };
+
+		//RS
+		ResonantScanner RScanner{ RTcontrol };
+		RScanner.isRunning();		//Make sure that the RS is running
+
+		//GALVO. Keep the galvo fixed to bleach a line on the sample
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
+
+		//POCKELS CELLS
+		PockelsCell pockels{ RTcontrol, 920, Laser::ID::VISION };
+		pockels.pushPowerSinglet(8 * us, 200 * mW, OVERRIDE::DIS);
+
+		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
+		pockels.setShutter(true);
+		Image image{ RTcontrol };
+		image.acquire();
+
+		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the RT sequence
+		pressAnyKeyToCont();
+		pockels.setShutter(false);
 	}
 
 	void convertI16toVolt()
@@ -1222,6 +1260,45 @@ namespace TestRoutines
 		}
 	}
 
+	//Generate a text file with the tile location for the BigStitcher
+	void generateLocationsForBigStitcher()
+	{
+		// X is vertical and Y is horizontal, to match the directions of the XYZ stage
+		const int2 nStacksXY{ 30, 28 };
+		const int2 tileShiftXY_pix{ 543, 291 };
+
+		Logger datalog(currentSample.mName + "_locations");
+		datalog.record("dim=3"); //Needed in BigStitcher
+
+		for (int nTile = 0; nTile < nStacksXY.at(Stage::X) * nStacksXY.at(Stage::Y); nTile++)
+			//for (int nTile = 0; nTile < 180; nTile++)
+		{
+			int2 nXY = nTileToArrayIndices(nTile);
+			int tileShiftX{ -nXY.at(Stage::X) * tileShiftXY_pix.at(Stage::X) };
+			int tileShiftY{ -nXY.at(Stage::Y) * tileShiftXY_pix.at(Stage::Y) };
+			std::string line{ std::to_string(nTile) + ";;(" + std::to_string(tileShiftY) + "," + std::to_string(tileShiftX) + ",0)" };	//In BigStitcher, X is horizontal and Y is vertical
+			//std::string line{ std::to_string(nTile) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(X)) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(Y)) }; //For debugging
+			datalog.record(line);
+		}
+
+	}
+
+	//Snake pattern starting from the bottom right of the sample and going up
+	int2 nTileToArrayIndices(const int nTile)
+	{
+		const int2 nStacksXY{ 30, 28 };
+
+		int nx;
+		int ny{ nTile / nStacksXY.at(Stage::X) };
+
+		if (ny % 2)	//ny is odd
+			nx = nStacksXY.at(Stage::X) - nTile % nStacksXY.at(Stage::X) - 1;
+		else		//ny is even
+			nx = nTile % nStacksXY.at(Stage::X);
+
+		return { nx,ny };
+	}
+
 	void PMT16Xconfig()
 	{
 		PMT16X PMT;
@@ -1287,52 +1364,6 @@ namespace TestRoutines
 		image.saveTiffMultiPage("SingleChannel", OVERRIDE::EN);
 	}
 
-	//Test the synchronization of the 2 galvos and the laser
-	void PMT16XgavosSyncAndLaser(const FPGA &fpga)
-	{
-		//ACQUISITION SETTINGS
-		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 2 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
-
-		int heightPerBeamletPerFrame_pix;
-		double FFOVslowPerBeamlet, selectPower;
-
-#if multibeam
-			//Multibeam
-			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
-			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / nChanPMT);
-			selectPower = 1400. * mW;
-#else
-			//Singlebeam
-			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
-			FFOVslowPerBeamlet = FFOVslow;
-			selectPower = 50. * mW;
-#endif
-		//STACK
-		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the axis STAGEZ
-
-		//CREATE A REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
-
-		//ID
-		const int wavelength_nm{ 750 };
-		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, selectPower, selectPower, Laser::ID::VISION };
-
-		//GALVO ramps
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
-		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, wavelength_nm };
-
-		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{ RTcontrol };
-		image.acquire();			//Execute the RT control sequence and acquire the image
-	}
-
-
 	void vibratome(const FPGA &fpga)
 	{
 		const double slicePlaneZ{ (23.640 + 0.050) * mm };
@@ -1381,76 +1412,6 @@ namespace TestRoutines
 		collectorLens.move(10.0 * mm);
 		collectorLens.downloadConfig();
 		//collectorLens.home();
-	}
-
-
-	//Photobleach a line along the fast axis (RS) on the sample
-	void photobleach(const FPGA &fpga)
-	{
-		Laser laser{ Laser::ID::VISION };
-		laser.setWavelength(920);
-
-		//CREATE A REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 100, 300, 400, FIFOOUT::DIS };
-
-		//RS
-		ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();		//Make sure that the RS is running
-
-		//GALVO. Keep the galvo fixed to bleach a line on the sample
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
-
-		//POCKELS CELLS
-		PockelsCell pockels{ RTcontrol, 920, Laser::ID::VISION };
-		pockels.pushPowerSinglet(8 * us, 200 * mW, OVERRIDE::DIS);
-
-		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
-		pockels.setShutter(true);
-		Image image{ RTcontrol };
-		image.acquire();
-
-		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the RT sequence
-		pressAnyKeyToCont();
-		pockels.setShutter(false);
-	}
-
-	//Generate a text file with the tile location for the BigStitcher
-	void generateLocationsForBigStitcher()
-	{
-		// X is vertical and Y is horizontal, to match the directions of the XYZ stage
-		const int2 nStacksXY{ 30, 28 };	
-		const int2 tileShiftXY_pix{ 543, 291 };
-
-		Logger datalog(currentSample.mName + "_locations");
-		datalog.record("dim=3"); //Needed in BigStitcher
-	
-		for (int nTile = 0; nTile < nStacksXY.at(Stage::X) * nStacksXY.at(Stage::Y); nTile++)
-		//for (int nTile = 0; nTile < 180; nTile++)
-		{
-			int2 nXY = nTileToArrayIndices(nTile);
-			int tileShiftX{ -nXY.at(Stage::X) * tileShiftXY_pix.at(Stage::X) };
-			int tileShiftY{ -nXY.at(Stage::Y) * tileShiftXY_pix.at(Stage::Y) };
-			std::string line{ std::to_string(nTile) + ";;(" + std::to_string(tileShiftY) + "," + std::to_string(tileShiftX) + ",0)" };	//In BigStitcher, X is horizontal and Y is vertical
-			//std::string line{ std::to_string(nTile) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(X)) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(Y)) }; //For debugging
-			datalog.record(line);
-		}
-
-	}
-
-	//Snake pattern starting from the bottom right of the sample and going up
-	int2 nTileToArrayIndices(const int nTile)
-	{
-		const int2 nStacksXY{ 30, 28 };
-
-		int nx;
-		int ny{ nTile / nStacksXY.at(Stage::X) };
-
-		if (ny % 2)	//ny is odd
-			nx = nStacksXY.at(Stage::X) - nTile % nStacksXY.at(Stage::X) - 1;
-		else		//ny is even
-			nx = nTile % nStacksXY.at(Stage::X);
-	
-		return {nx,ny};
 	}
 
 	void openCV()

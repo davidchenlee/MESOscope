@@ -1745,8 +1745,8 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 		mVoltageOffset = scannerCalib.voltageOffset;
 
 		//For debugging
-		std::cout << "Scanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
-		std::cout << "Scanner mVoltageOffset = " << mVoltageOffset << "\n";
+		//std::cout << "Scanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
+		//std::cout << "Scanner mVoltageOffset = " << mVoltageOffset << "\n";
 
 		//Raster scan the sample from the positive to the negative direction of the x-stage
 		positionLinearRamp(-mPosMax, mPosMax, mVoltageOffset, OVERRIDE::EN);
@@ -1793,8 +1793,8 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 		}
 
 		//For debugging
-		std::cout << "Rescanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
-		std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
+		//std::cout << "Rescanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
+		//std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
 
 		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
 		positionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + beamletIndex_(mRTcontrol.mPMT16Xchan) * mInterBeamletDistance * mVoltagePerDistance,	OVERRIDE::EN);

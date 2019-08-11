@@ -1,14 +1,14 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (54.000 - 0.030 ) * mm, 21.345 * mm, (18.278) * mm };
+double3 stackCenterXYZ{ (54.620 ) * mm, 21.345 * mm, (17.995) * mm };
 const std::vector<double2> PetridishPosLimit{ { 32. * mm, 57. * mm}, { -8. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
-Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(40. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
+Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{ "TDT", 1040, (18. * mW) * 16, 0. * 16 * mWpum }}} };
 #else
-Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 30. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 8. * mW, 0. * mWpum }}} };
+Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
 Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
 Sample fluorSlide{ "fluorBlue", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
 Sample liver{ "Beads1um", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }}} };
@@ -19,19 +19,19 @@ Sample currentSample{ beads4um };
 namespace PMT16XRoutines
 {
 	//The "Swiss knife" of my routines
-	void stopAndShootZscan(const FPGA &fpga)
+	void stepwiseScan(const FPGA &fpga)
 	{
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the starting position
-		const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
-		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
+		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
+		const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 
 		//This is because the beads at 750 nm are chromatically shifted
@@ -39,7 +39,7 @@ namespace PMT16XRoutines
 			stackCenterXYZ.at(Stage::Z) -= 6 * um;
 		//This is because FIDELITY is chromatically shifted wrt VISION
 		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
-			stackCenterXYZ.at(Stage::Z) -= 6 * um;
+			stackCenterXYZ.at(Stage::Z) -= 4 * um;
 
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
@@ -68,14 +68,17 @@ namespace PMT16XRoutines
 		std::vector<double3> stagePositionXYZ;
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
 
-		int nSameZ{ 1 };									//Number of frames at the same Z
-		double stepSizeX;									//Step for lateral scanning
-		bool saveAllPMT{ false };							//Save all PMT16X channels in separate pages in a Tiff
-		double cLensPosIni, cLensPosFinal, cLensStep;		//For debugging the collector lens
+		int nSameZ{ 1 };												//Number of frames at the same Z
+		double stepSizeX{ 0 };											//Step for lateral scanning
+		bool saveAllPMT{ false };										//Save all PMT16X channels in separate pages in a Tiff
+		double cLensPosIni{ 0 }, cLensPosFinal{ 0 }, cLensStep{ 0 };	//For debugging the collector lens
 		switch (acqMode)
 		{
 		case RUNMODE::SINGLE:
-			//saveAllPMT = true;
+			if (!multibeam) //Never save all the PMT channels when multibeam
+			{
+				saveAllPMT = true;
+			}
 			stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case RUNMODE::AVG:
@@ -93,15 +96,21 @@ namespace PMT16XRoutines
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
 			break;
 		case RUNMODE::SCANXY:
+			//saveAllPMT = true;
+			//stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z) });
+			//stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X) + 0.250 * mm, stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z) - 0.003 * mm});
+			
 			stepSizeX = 5. * um;
 			//Generate the discrete scan sequence for the stages
 			for (int iterPos = 0; iterPos < 60; iterPos++)
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X) + iterPos * stepSizeX, stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z)});
 			break;
 		case RUNMODE::COLLECTLENS:
+			if(multibeam)
+				throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected singlebeam for scanning the collector lens");
 			saveAllPMT = true;
-			cLensPosIni = 0.0 * mm;
-			cLensPosFinal = 5.0 * mm;
+			cLensPosIni = 8.0 * mm;
+			cLensPosFinal = 12.0 * mm;
 			cLensStep = 0.5 * mm;;
 			nSameZ = static_cast<int>( std::floor((cLensPosFinal - cLensPosIni)/ cLensStep) ) + 1;
 			stagePositionXYZ.push_back(stackCenterXYZ);
@@ -237,15 +246,16 @@ namespace PMT16XRoutines
 	void contZscan(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("GFP") };	//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
+		const ZSCAN scanDirZ{ ZSCAN::BOTTOMUP };						//Scan direction in the axis STAGEZ
+
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const int nFramesCont{ 200 };								//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
 		const double stepSizeZ{ 0.5 * um };
-		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };						//Scan direction in the axis STAGEZ
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
 		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
@@ -501,7 +511,7 @@ namespace PMT16XRoutines
 	}
 
 	/*
-//Apply 'stopAndShootZscan' on a list of locations
+//Apply 'stepwiseScan' on a list of locations
 void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 {
 	//ACQUISITION SETTINGS

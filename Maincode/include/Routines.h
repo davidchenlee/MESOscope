@@ -5,7 +5,7 @@
 //MAIN SEQUENCES
 namespace PMT16XRoutines
 {
-	void stopAndShootZscan(const FPGA &fpga);
+	void stepwiseScan(const FPGA &fpga);
 	void contZscan(const FPGA &fpga);
 	void sequencer(const FPGA &fpga);
 	void liveScan(const FPGA &fpga);

@@ -3,7 +3,7 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- Make sure that TOPDOWN and BOTTOMUP scans coincide
+- realign the dichroic and rescanner mounts. Fine tune the galvo parameters
 - figure out why the FOV of 16X is slightly different from 1X
 - (20190812->) Implement suppressCrosstalk() flattenField() on the GPU
 - Multithread demuxAllChannels_()

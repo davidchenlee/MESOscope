@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (52.500 ) * mm, 20.000 * mm, (17.850) * mm };//Liver TDT
+double3 stackCenterXYZ{ (52.500 ) * mm, 20.000 * mm, (17.840) * mm };//Liver TDT
 //double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
 const std::vector<double2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
@@ -22,19 +22,17 @@ namespace PMT16XRoutines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
-		//forth on the same z plane. The images the can be averaged
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
-		const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
-		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the starting position
-		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
-		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::AVG };				//Single frame. The same location is imaged stepwise and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
+		const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const int nFramesCont{ 1 };
+		const int nFramesCont{ 5 };
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -68,7 +66,7 @@ namespace PMT16XRoutines
 		std::vector<double3> stagePositionXYZ;
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
 
-		int nSameZ{ 1 };												//Number of frames at the same Z
+		int nSameLocation{ 1 };											//Number of frames at the same location
 		double stepSizeX{ 0 };											//Step for lateral scanning
 		bool saveAllPMT{ false };										//Save all PMT16X channels in separate pages in a Tiff
 		double cLensPosIni{ 0 }, cLensPosFinal{ 0 }, cLensStep{ 0 };	//For debugging the collector lens
@@ -80,11 +78,11 @@ namespace PMT16XRoutines
 			{
 				//saveAllPMT = true;
 			}
-
 			break;
 		case RUNMODE::AVG:
-			nSameZ = 10;
-			stagePositionXYZ.push_back(stackCenterXYZ);
+			nSameLocation = 10;
+			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
+				stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case RUNMODE::SCANZ:
 			//Generate the control sequence for the stages
@@ -93,7 +91,6 @@ namespace PMT16XRoutines
 			break;
 		case RUNMODE::SCANZCENTERED:
 			//Generate the discrete scan sequence for the stages
-
 			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / stepSizeZ); iterDiffZ++)
 			{
 			const double halfStackLengthZ{ 0.5 * stackDepthZ };
@@ -108,18 +105,19 @@ namespace PMT16XRoutines
 			
 			stepSizeX = 5. * um;
 			//Generate the discrete scan sequence for the stages
-			for (int iterPos = 0; iterPos < 60; iterPos++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X) + iterPos * stepSizeX, stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z)});
+			for (int iterDiffX = 0; iterDiffX < 60; iterDiffX++)
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X) + iterDiffX * stepSizeX, stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z)});
 			break;
 		case RUNMODE::COLLECTLENS:
 			if(multibeam)
-				throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected singlebeam for scanning the collector lens");
+				throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector-lens scanning available only for single beam");
 			saveAllPMT = true;
 			cLensPosIni = 8.0 * mm;
 			cLensPosFinal = 12.0 * mm;
 			cLensStep = 0.5 * mm;;
-			nSameZ = static_cast<int>( std::floor((cLensPosFinal - cLensPosIni)/ cLensStep) ) + 1;
-			stagePositionXYZ.push_back(stackCenterXYZ);
+			nSameLocation = static_cast<int>( std::floor((cLensPosFinal - cLensPosIni)/ cLensStep) ) + 1;
+			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
+				stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
@@ -173,7 +171,8 @@ namespace PMT16XRoutines
 
 		//CREATE A STACK FOR STORING THE TIFFS
 		const int nLocations{ static_cast<int>(stagePositionXYZ.size()) };
-		TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nLocations, nSameZ };
+		//TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nLocations, nSameLocation };
+		TiffU8 output{ widthPerFrame_pix, heightPerFrame_pix, nLocations };
 
 		//OPEN THE UNIBLITZ SHUTTERS
 		virtualLaser.openShutter();	//The destructor will close the shutter automatically
@@ -183,65 +182,59 @@ namespace PMT16XRoutines
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
+			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations  << "\n";
 			stage.moveXYZ(stagePositionXYZ.at(iterLocation));
 			stage.waitForMotionToStopAll();
-			stage.printPositionXYZ();		//Print the stage position	
+			//stage.printPositionXYZ();		//Print the stage position	
 			
-			//Let the stages settle a little longer in the beginning because of the large initial movement
+			//Let the stages settle a little longer because of the larger initial step
 			if(iterLocation == 0)
 				Sleep(400);
 
-			//Acquire many frames at the same Z via discontinuous acquisition
-			for (int iterSameZ = 0; iterSameZ < nSameZ; iterSameZ++)
+			virtualLaser.setPower(fluorLabel.mScanPi + iterLocation * stepSizeZ * fluorLabel.mStackPinc);	//Update the laser power
+
+			//Used to optimize the collector lens position
+			if (acqMode == RUNMODE::COLLECTLENS)
+				virtualLaser.moveCollectorLens(cLensPosIni + iterLocation * cLensStep);
+
+			//EXECUTE THE RT CONTROL SEQUENCE
+			Image image{ RTcontrol };
+			image.acquire(saveAllPMT);				//Execute the RT control sequence and acquire the image
+			image.averageFrames();					//Average the frames imaged via continuous acquisition
+			//image.averageEvenOddFrames();
+			image.correctImage(RScanner.mFFOV);
+
+			if (acqMode == RUNMODE::SINGLE && !saveAllPMT)
 			{
-				std::cout << "Frame # (diff Z): " << (iterLocation + 1) << "/" << nLocations << "\tFrame # (same Z): " << (iterSameZ + 1) << "/" << nSameZ <<
-					"\tTotal frame: " << iterLocation * nSameZ + (iterSameZ + 1) << "/" << nLocations * nSameZ << "\n";
-
-				virtualLaser.setPower(fluorLabel.mScanPi + iterLocation * stepSizeZ * fluorLabel.mStackPinc);	//Update the laser power
-
-				//Used to optimize the collector lens position
-				if (acqMode == RUNMODE::COLLECTLENS)
-					virtualLaser.moveCollectorLens(cLensPosIni + iterSameZ * cLensStep);
-
-				//EXECUTE THE RT CONTROL SEQUENCE
-				Image image{ RTcontrol };
-				image.acquire(saveAllPMT);				//Execute the RT control sequence and acquire the image
-				image.averageFrames();					//Average the frames imaged via continuous acquisition
-				//image.averageEvenOddFrames();
-				image.correctImage(RScanner.mFFOV);
-				tiffStack.pushSameZ(iterSameZ, image.data());
-
-				if (acqMode == RUNMODE::SINGLE && !saveAllPMT)
-				{
-					//Save individual files
-					filename.append( "_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
-					"_x=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::X) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::Y) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::Z) / mm, 4) );
-					image.saveTiffMultiPage(filename, OVERRIDE::DIS);
-				}
+				//Save individual files
+				filename.append("_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
+					"_x=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::X) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::Y) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::Z) / mm, 4));
+				image.saveTiffMultiPage(filename, OVERRIDE::DIS);
 			}
-			tiffStack.pushDiffZ(iterLocation);			//Average the frames imaged via discontinuous acquisition
-			std::cout << "\n";
+
+			output.pushImage(iterLocation, image.data());
 		}
 
 		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
-		{
-			//Save the scanZ to file
+		{	
 			filename.append( "_Pi=" + toString(fluorLabel.mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) + "mWpum" +
 				"_x=" + toString(stagePositionXYZ.front().at(Stage::X) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(Stage::Y) / mm, 3) +
 				"_zi=" + toString(stagePositionXYZ.front().at(Stage::Z) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(Stage::Z) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) );
-			tiffStack.saveToFile(filename, OVERRIDE::DIS);
 
+			output.binFrames(nSameLocation);							//Divide the images in bins of nSameLocation frames each and return the average of each bin
+			output.saveToFile(filename, MULTIPAGE::EN, OVERRIDE::DIS);	//Save the scanZ to file
 			pressESCforEarlyTermination();
 		}
 
 		if (acqMode == RUNMODE::SCANXY)
 		{
-			//Save the scanXY to file
 			filename.append( "_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
 				"_xi=" + toString(stagePositionXYZ.front().at(Stage::X) / mm, 4) + "_xf=" + toString(stagePositionXYZ.back().at(Stage::X) / mm, 4) +
 				"_y=" + toString(stagePositionXYZ.front().at(Stage::Y) / mm, 3) +
 				"_z=" + toString(stagePositionXYZ.front().at(Stage::Z) / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) );
-			tiffStack.saveToFile(filename, OVERRIDE::DIS);
+
+			output.binFrames(nSameLocation);							//Divide the images in bins of nSameLocation frames each and return the average of each bin
+			output.saveToFile(filename, MULTIPAGE::EN, OVERRIDE::DIS);	//Save the scanXY to file
 			pressESCforEarlyTermination();
 		}
 	}

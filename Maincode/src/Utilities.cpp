@@ -472,17 +472,17 @@ void TiffU8::averageFrames()
 	}
 }
 
-//Divide the concatenated images into bins and average the frames within each bin. Each bin contains nFramesPerBin frames
+//Divide the concatenated images into bins of nFramesPerBin frames and return the average of each bin
 void TiffU8::binFrames(const int nFramesPerBin)
 {
 	//nFramesPerBin must be a divisor of mNframes
 	if (mNframes%nFramesPerBin != 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The bin size must be a divisor of the total number of frames");
 
-	const int nBins{ mNframes / nFramesPerBin };	//Number of bins in the stack
-
-	if (mNframes > 1)
+	//If mNframes = 1, there is only a single image. If nFramesPerBin = 1, no average is performed and the stack remains the same
+	if (mNframes > 1 && nFramesPerBin > 1)
 	{
+		const int nBins{ mNframes / nFramesPerBin };	//Number of bins in the stack
 		const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };
 		const int nPixPerBin{ nPixPerFrame * nFramesPerBin };
 		unsigned int* sum{ new unsigned int[nBins * nPixPerFrame]() };
@@ -916,6 +916,7 @@ void TiffU8::flattenField(const double maxScaleFactor)
 }
 #pragma endregion "TiffU8"
 
+/*Obsolete
 #pragma region "Stack"
 TiffStack::TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ) :
 	mArrayDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ), mArraySameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ) {}
@@ -939,7 +940,8 @@ void TiffStack::saveToFile(const std::string filename, OVERRIDE override) const
 {
 	mArrayDiffZ.saveToFile(filename, MULTIPAGE::EN, override);
 
-	//For debugging. For saving mArraySameZ
+	//For debugging. Save mArraySameZ
 	//mArraySameZ.saveToFile(filename, MULTIPAGE::EN, override);
 }
 #pragma endregion "Stack"
+*/

@@ -75,6 +75,7 @@ private:
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
 };
 
+/*Obsolete
 class TiffStack
 {
 public:
@@ -86,4 +87,5 @@ private:
 	TiffU8 mArraySameZ;		//For imaging the same z plane many times and then compute the average image
 	TiffU8 mArrayDiffZ;		//For imaging different z planes
 };
+*/
 

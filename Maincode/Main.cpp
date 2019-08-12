@@ -8,11 +8,10 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			PMT16XRoutines::stepwiseScan(fpga);
-			//PMT16XRoutines::liveScan(fpga);
-			//PMT16XRoutines::contZscan(fpga);
-			//PMT16XRoutines::sequencer(fpga, true);
-			//PMT16XRoutines::frameByFrameZscanTilingXY(fpga, 1);
+			//Routines::stepwiseScan(fpga);
+			//Routines::contScanZ(fpga);
+			//Routines::sequencer(fpga, true);
+			//Routines::liveScan(fpga);
 
 			//TESTS
 			//TestRoutines::digitalLatency(fpga);
@@ -31,7 +30,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::shutter(fpga);
 			//TestRoutines::pockels(fpga);
-			//TestRoutines::pockelsRamp(fpga);
+			TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
 

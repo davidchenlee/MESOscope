@@ -225,8 +225,8 @@ public:
 	void setShutter(const bool state) const;
 private:
 	RTcontrol &mRTcontrol;						//Non-const because some methods in this class change the variables referenced by mRTcontrol						
-	RTcontrol::RTCHAN mPockelsRTchannel;
-	RTcontrol::RTCHAN mScalingRTchannel;
+	RTcontrol::RTCHAN mPockelsRTchan;
+	RTcontrol::RTCHAN mScalingRTchan;
 	int mWavelength_nm;							//Laser wavelength
 	const double timeStep{ 8. * us };
 	double mMaxPower;							//Softlimit for the laser power

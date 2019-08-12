@@ -476,6 +476,10 @@ void TiffU8::averageFrames()
 void TiffU8::binFrames(const int nFramesPerBin)
 {
 	//nFramesPerBin must be a divisor of mNframes
+	if (nFramesPerBin <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The bin size must be >=1");
+
+	//nFramesPerBin must be a divisor of mNframes
 	if (mNframes%nFramesPerBin != 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The bin size must be a divisor of the total number of frames");
 

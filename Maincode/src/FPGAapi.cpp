@@ -190,11 +190,11 @@ void FPGA::initializeFpga_() const
 	//PMT simulator for debugging
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(getHandle(), NiFpga_FPGAvi_ControlBool_PhotocounterInputSelector, static_cast<bool>(photocounterInput)));	//Use the PMT simulator as the input of the photocounters
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(getHandle(), NiFpga_FPGAvi_ControlU8_nPMTsim, static_cast<U8>(nPMTsim)));									//Size of PMTsimArray
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getHandle(), NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, PMTsimArray, nPMTsim));					//Array that simulates the pulses from the PMTs
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getHandle(), NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, PMTsimArray, nPMTsim));						//Array that simulates the pulses from the PMTs
 
 	//FIFOIN
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTcontrol::RTCHAN::NCHAN)));						//Number of input channels
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));											//Trigger of the control sequence
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTcontrol::RTCHAN::NCHAN)));				//Number of input channels
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));												//Trigger of the control sequence
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(getHandle(), NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(FIFOtimeout_tick)));				//FIFOIN timeout
 
 	//TRIGGERS AND DELAYS
@@ -202,9 +202,9 @@ void FPGA::initializeFpga_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));																	//Z-stage as tigger
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_SyncDOtoAO_tick, static_cast<U32>(syncDOtoAO_tick)));												//DO and AO relative sync
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PockelsFirstFrameDelay_tick, static_cast<U32>(pockelsFirstFrameDelay / us * tickPerUs)));			//Pockels delay wrt the preframeclock (first frame only)
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PockelsFrameDelay_tick, static_cast<U32>(pockelsSecondaryDelay / us * tickPerUs)));					//Pockels delay wrt the preframeclock
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																		//Trigger the FPGA outputs (non-RT trigger)
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(getHandle(), NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));															//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PockelsFrameDelay_tick, static_cast<U32>(pockelsSecondaryDelay / us * tickPerUs)));				//Pockels delay wrt the preframeclock
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																	//Trigger the FPGA outputs (non-RT trigger)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(getHandle(), NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));														//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PreframeclockScanGalvo_tick, static_cast<U32>(scanGalvoDelay / us * tickPerUs)));					//Scan galvo delay wrt the preframeclock
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PreframeclockRescanGalvo_tick, static_cast<U32>(rescanGalvoDelay / us * tickPerUs)));				//Rescan galvo delay wrt the preframeclock
 

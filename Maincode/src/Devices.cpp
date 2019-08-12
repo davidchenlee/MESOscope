@@ -357,22 +357,22 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 	*/
 
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
-		for (int channelIndex = 0; channelIndex < 8; channelIndex++)
+		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{
 			//Buffer A (CH00-CH07)
-			const int upscaledA{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };				//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountA.data())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledA);		//Clip if overflow
-			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;											//Shift 4 places to the right for the next iteration
+			const int upscaledA{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };			//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			(CountA.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledA);		//Clip if overflow
+			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;										//Shift 4 places to the right for the next iteration
 
 			//Buffer B (CH08-CH15)
-			const int upscaledB{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };				//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountB.data())[channelIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledB);		//Clip if overflow
-			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;											//Shift 4 places to the right for the next iteration
+			const int upscaledB{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };			//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			(CountB.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledB);		//Clip if overflow
+			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;										//Shift 4 places to the right for the next iteration
 		}
 
 	//Merge all the PMT16X channels into a single image. The strip ordering depends on the scanning direction of the galvos (forward or backwards)
 	if (multibeam)
-		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());				//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
+		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());			//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
 
 	//For debugging
 	if (saveAllPMT)
@@ -1145,14 +1145,14 @@ PockelsCell::PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const La
 	switch (laserSelector)
 	{
 	case Laser::ID::VISION:
-		mPockelsRTchannel = RTcontrol::RTCHAN::VISION;
-		mScalingRTchannel = RTcontrol::RTCHAN::SCALINGVISION;
+		mPockelsRTchan = RTcontrol::RTCHAN::VISION;
+		mScalingRTchan = RTcontrol::RTCHAN::SCALINGVISION;
 		break;
 	case Laser::ID::FIDELITY:
 		if (wavelength_nm != 1040)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength of FIDELITY can not be different from 1040 nm");
-		mPockelsRTchannel = RTcontrol::RTCHAN::FIDELITY;
-		mScalingRTchannel = RTcontrol::RTCHAN::SCALINGFIDELITY;
+		mPockelsRTchan = RTcontrol::RTCHAN::FIDELITY;
+		mScalingRTchan = RTcontrol::RTCHAN::SCALINGFIDELITY;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
@@ -1167,7 +1167,7 @@ PockelsCell::PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const La
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
-		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, 1.0);
+		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1.0);
 }
 
 void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const
@@ -1175,7 +1175,7 @@ void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, con
 	if (AO < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The control voltage of the Pockls cell must be positive");
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, AO, override);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, AO, override);
 }
 
 void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const
@@ -1183,43 +1183,59 @@ void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const 
 	if (P < 0 || P > mMaxPower)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power of the pockels cell must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower / mW)) + "] mW");
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, timeStep, laserpowerToVolt_(P), override);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, laserpowerToVolt_(P), override);
 }
 
 void PockelsCell::voltageToZero() const
 {
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchannel, AO_tMIN, 0 * V);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, AO_tMIN, 0 * V);
 }
 
 //Linearly scale the pockels voltage from the first to the last frame
 void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
 {
-	const double Vratio{ Vf / Vi };
-
-	//Make sure that Fx2p14 will not overflow
-	if (Vratio > 4)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
-
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
+
+	//Make sure that Fx2p14 will not overflow
+	const double Vratio{ Vf / Vi };
+	if (Vratio > 4)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 
 	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
 
 	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
-	mRTcontrol.clearQueue(mScalingRTchannel);
+	mRTcontrol.clearQueue(mScalingRTchan);
 
 	//Push the scaling factors
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
-		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchannel, 1 + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
+		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1 + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
 }
 
 //Linearly scale the laser power from the first to the last frame
 void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 {
-	const double Vi{ laserpowerToVolt_(Pi) };
-	const double Vf{ laserpowerToVolt_(Pf) };
+	if (mRTcontrol.mNframes < 2)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
-	voltageLinearScaling(Vi, Vf);
+	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
+	mRTcontrol.clearQueue(mScalingRTchan);
+
+	const double Vi{ laserpowerToVolt_(Pi) };
+	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
+
+	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
+	{
+		const double V{ laserpowerToVolt_(Pi + (Pf - Pi) / (mRTcontrol.mNframes - 1) * ii) };
+		const double Vratio{ V / Vi };
+
+		//Make sure that Fx2p14 will not overflow
+		if (Vratio > 4)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
+		
+		//Push the scaling factors for the frames
+		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1 + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
+	}
 }
 
 void PockelsCell::setShutter(const bool state) const
@@ -1234,7 +1250,7 @@ void PockelsCell::voltageLinearRampInFrame(const double timeStep, const double r
 	if (Vi < 0 || Vf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, Vi, Vf);
+	mRTcontrol.pushLinearRamp(mPockelsRTchan, timeStep, rampDuration, Vi, Vf);
 }
 
 //Ramp up or down the pockels cell within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
@@ -1243,7 +1259,7 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 	if (Pi < 0 || Pf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTcontrol.pushLinearRamp(mPockelsRTchannel, timeStep, rampDuration, laserpowerToVolt_(Pi), laserpowerToVolt_(Pf));
+	mRTcontrol.pushLinearRamp(mPockelsRTchan, timeStep, rampDuration, laserpowerToVolt_(Pi), laserpowerToVolt_(Pf));
 }
 */
 
@@ -1252,7 +1268,7 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 	double amplitude, angularFreq, phase;		//Calibration parameters
 
 	//VISION
-	switch (mPockelsRTchannel)
+	switch (mPockelsRTchan)
 	{
 	case RTcontrol::RTCHAN::VISION:
 		switch (mWavelength_nm)

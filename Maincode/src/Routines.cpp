@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (52.500 ) * mm, 20.000 * mm, (17.840) * mm };//Liver TDT
+double3 stackCenterXYZ{ (52.700 ) * mm, 20.000 * mm, (17.840) * mm };//Liver TDT
 //double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
 const std::vector<double2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
@@ -17,23 +17,27 @@ Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"
 Sample currentSample{ liver };
 
 
-namespace PMT16XRoutines
+namespace Routines
 {
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::AVG };				//Single frame. The same location is imaged stepwise and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
-		const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
+		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const int nFramesCont{ 5 };
+		const int nFramesCont{ 1 };	
+		const double stackDepthZ{ 100. * um };	//Acquire a stack this deep in the axis STAGEZ
+
+	
 		const double pixelSizeXY{ 0.5 * um };
+		const double stepSizeZ{ 1.0 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
@@ -58,10 +62,6 @@ namespace PMT16XRoutines
 			FFOVslowPerBeamlet = FFOVslow;
 		}
 
-		//STACK
-		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 100. * um };	//Acquire a stack this deep in the axis STAGEZ
-
 		//STAGES
 		std::vector<double3> stagePositionXYZ;
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
@@ -81,11 +81,12 @@ namespace PMT16XRoutines
 			break;
 		case RUNMODE::AVG:
 			nSameLocation = 10;
+			//Generate the discrete scan sequence for the stages
 			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
 				stagePositionXYZ.push_back(stackCenterXYZ);
 			break;
 		case RUNMODE::SCANZ:
-			//Generate the control sequence for the stages
+			//Generate the discrete scan sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / stepSizeZ); iterDiffZ++)
 				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z) + iterDiffZ * stepSizeZ });
 			break;
@@ -126,7 +127,7 @@ namespace PMT16XRoutines
 		//CREATE A REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
 
-		//ID
+		//LASER
 		VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, whichLaser };
 
 		//RS
@@ -209,9 +210,9 @@ namespace PMT16XRoutines
 				//Save individual files
 				filename.append("_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
 					"_x=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::X) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::Y) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::Z) / mm, 4));
+				std::cout << "Saving the stack...\n";
 				image.saveTiffMultiPage(filename, OVERRIDE::DIS);
 			}
-
 			output.pushImage(iterLocation, image.data());
 		}
 
@@ -222,6 +223,7 @@ namespace PMT16XRoutines
 				"_zi=" + toString(stagePositionXYZ.front().at(Stage::Z) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(Stage::Z) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) );
 
 			output.binFrames(nSameLocation);							//Divide the images in bins of nSameLocation frames each and return the average of each bin
+			std::cout << "Saving the stack...\n";
 			output.saveToFile(filename, MULTIPAGE::EN, OVERRIDE::DIS);	//Save the scanZ to file
 			pressESCforEarlyTermination();
 		}
@@ -234,6 +236,7 @@ namespace PMT16XRoutines
 				"_z=" + toString(stagePositionXYZ.front().at(Stage::Z) / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) );
 
 			output.binFrames(nSameLocation);							//Divide the images in bins of nSameLocation frames each and return the average of each bin
+			std::cout << "Saving the stack...\n";
 			output.saveToFile(filename, MULTIPAGE::EN, OVERRIDE::DIS);	//Save the scanXY to file
 			pressESCforEarlyTermination();
 		}
@@ -242,19 +245,19 @@ namespace PMT16XRoutines
 	/*I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the beads' z-position looks
 	almost identical with a difference of maybe only 1 plane (0.5 um)
 	Remember that I do not use MACROS on the stages anymore*/
-	void contZscan(const FPGA &fpga)
+	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const ZSCAN scanDirZ{ ZSCAN::BOTTOMUP };						//Scan direction in the axis STAGEZ
+		const ZSCAN scanDirZ{ ZSCAN::BOTTOMUP };					//Scan direction in the axis STAGEZ
+		const int nFramesCont{ 200 };								//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 
 		const double pixelSizeXY{ 0.5 * um };
+		const double stepSizeZ{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 200 };								//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		const double stepSizeZ{ 0.5 * um };
 		const double stackDepth{ nFramesCont * stepSizeZ };
 
 		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
@@ -269,7 +272,6 @@ namespace PMT16XRoutines
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
-
 		if (multibeam)
 		{
 			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
@@ -286,13 +288,13 @@ namespace PMT16XRoutines
 		{
 		case ZSCAN::TOPDOWN:
 			stageZi = stackCenterXYZ.at(Stage::Z);
-			stageZf = stackCenterXYZ.at(Stage::Z) + stackDepth + 20 * stepSizeZ; //Notice that I increase the z range to avoid nonlinearity at the end of the stage scan
+			stageZf = stackCenterXYZ.at(Stage::Z) + stackDepth + 20 * stepSizeZ; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
 			laserPi = fluorLabel.mScanPi;
 			laserPf = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			break;
 		case ZSCAN::BOTTOMUP:
 			stageZi = stackCenterXYZ.at(Stage::Z) + stackDepth;
-			stageZf = stackCenterXYZ.at(Stage::Z) - 20 * stepSizeZ;				//Notice that I increase the z range to avoid nonlinearity at the end of the stage scan
+			stageZf = stackCenterXYZ.at(Stage::Z) - 20 * stepSizeZ;				//Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
 			laserPi = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			laserPf = fluorLabel.mScanPi;
 			break;
@@ -301,8 +303,8 @@ namespace PMT16XRoutines
 		//CREATE THE REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
-		//ID
-		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, laserPi, whichLaser };
+		//LASER
+		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, laserPf, whichLaser };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -332,16 +334,8 @@ namespace PMT16XRoutines
 		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) +
 			"mWpum_x=" + toString(initialStageXYZ.at(Stage::X) / mm, 3) + "_y=" + toString(initialStageXYZ.at(Stage::Y) / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
+		std::cout << "Saving the stack...\n";
 		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
-
-		/*
-		//Declare and start a stopwatch
-		double duration;
-		auto t_start{ std::chrono::high_resolution_clock::now() };
-		//Stop the stopwatch
-		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-		std::cout << "Elapsed time: " << duration << " ms" << "\n";
-		*/
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -353,7 +347,7 @@ namespace PMT16XRoutines
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };		//Full FOV in the (slow axis, fast axis)
-		const int nFramesCont{ 200 };																	//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int nFramesCont{ 200 };																	//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };																//Step size in the axis STAGEZ
 		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.180 * mm, 35.025 * mm };							//Region of interest {ymin, xmin, ymax, xmax}
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };											//Stack overlap
@@ -387,7 +381,7 @@ namespace PMT16XRoutines
 			//CREATE THE REALTIME CONTROL SEQUENCE
 			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
 
-			//ID
+			//LASER
 			VirtualLaser virtualLaser{ RTcontrol };
 
 			//RS
@@ -480,7 +474,7 @@ namespace PMT16XRoutines
 		//CREATE A REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
 
-		//ID
+		//LASER
 		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, Laser::ID::VISION };
 
 		//RS
@@ -552,7 +546,7 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 	const ResonantScanner RScanner{ RTcontrol };
 	RScanner.isRunning();					//Make sure that the RS is running
 
-	//ID
+	//LASER
 	VirtualLaser virtualLaser{ RTcontrol, ID::VISION };
 
 	//Create a location list
@@ -766,7 +760,7 @@ namespace TestRoutines
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
 
-		//ID
+		//LASER
 		const int wavelength_nm{ 1040 };
 		const double P{ 25. * mW };		//Laser power
 		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, P, P, Laser::ID::FIDELITY };
@@ -849,7 +843,7 @@ namespace TestRoutines
 		//CREATE A REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
 
-		//ID
+		//LASER
 		const int wavelength_nm{ 750 };
 		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, selectPower, selectPower, Laser::ID::VISION };
 
@@ -969,17 +963,19 @@ namespace TestRoutines
 	{
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 40 };			//Number of frames for continuous XY acquisition
+		const int heightPerFrame_pix{ 35 };
+		const int nFramesCont{ 200 };			//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
 
 		//POCKELS CELL
-		const int wavelength_nm{ 1040 };
-		PockelsCell pockels{ RTcontrol, wavelength_nm, Laser::ID::FIDELITY };
-		pockels.pushPowerSinglet(400 * us, 100. * mW, OVERRIDE::EN);
-		//pockels.powerLinearRamp(100. * mW, 200. * mW);	//Linearly scale the laser power from the first to the last frame
+		const int wavelength_nm{ 750 };
+		PockelsCell pockels{ RTcontrol, wavelength_nm, Laser::ID::VISION };
+		const double Pi{ 192. * mW }, Pf{ 336. * mW };
+		//pockels.pushPowerSinglet(400 * us, Pf, OVERRIDE::EN);
+		pockels.powerLinearScaling(0.96 * Pi, Pf);	//Linearly scale the laser power from the first to the last frame
+		//pockels.powerLinearScaling(0.96 * Pf, Pi);
 
 		//Test the voltage setpoint
 		//pockels.pushVoltageSinglet(8* us, 0.5 * V);
@@ -1175,7 +1171,7 @@ namespace TestRoutines
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
 		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };
-		const int nFramesCont{ 80 };										//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int nFramesCont{ 80 };										//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };									//Step size in the axis STAGEZ
 		const ROI roi{ 9.950 * mm, 34.850 * mm, 10.150 * mm, 35.050 * mm }; //Region of interest {ymin, xmin, ymax, xmax}
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
@@ -1256,7 +1252,7 @@ namespace TestRoutines
 	{
 		//ACQUISITION SETTINGS
 		const double2 FFOV{ 200. * um, 150. * um };
-		const int nDiffZ{ 100 };											//Number of frames for continuous XYZ acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int nDiffZ{ 100 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };									//Step size in the axis STAGEZ
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
@@ -1360,7 +1356,7 @@ namespace TestRoutines
 		//CREATE A REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
 
-		//ID
+		//LASER
 		const double laserPower{ 30. * mW };
 		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, Laser::ID::VISION };
 

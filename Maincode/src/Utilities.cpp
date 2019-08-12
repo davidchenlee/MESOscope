@@ -472,36 +472,34 @@ void TiffU8::averageFrames()
 	}
 }
 
-//Divide the concatenated images in a stack of nFrames and return the average over every nFramesPerBlock frames
-//mArray has mNframes and each frame is of size mWidthPerFrame * mHeightPerFrame
-//A "block" has nFramesPerBlock frames and represents the number of frames to average over
-void TiffU8::binFrames(const int nFramesPerBlock)
+//Divide the concatenated images into bins and average the frames within each bin. Each bin contains nFramesPerBin frames
+void TiffU8::binFrames(const int nFramesPerBin)
 {
-	//nFramesPerBlock must be a multiple of mNframes
-	if (mNframes%nFramesPerBlock != 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames to average over must be a multiple of the total number of frames");
+	//nFramesPerBin must be a divisor of mNframes
+	if (mNframes%nFramesPerBin != 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The bin size must be a divisor of the total number of frames");
 
-	const int nBlocks{ mNframes / nFramesPerBlock };	//Number of blocks in the stack, each containing nFramesPerBlock frames
+	const int nBins{ mNframes / nFramesPerBin };	//Number of bins in the stack
 
 	if (mNframes > 1)
 	{
 		const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };
-		const int nPixPerBlock{ nPixPerFrame * nFramesPerBlock };
-		unsigned int* sum{ new unsigned int[nBlocks * nPixPerFrame]() };
+		const int nPixPerBin{ nPixPerFrame * nFramesPerBin };
+		unsigned int* sum{ new unsigned int[nBins * nPixPerFrame]() };
 
-		//Take the first nFramesPerBlock frames and average them. Then continue averaging every nFramesPerBlock frames until the end of the stack
-		for (int blockIndex = 0; blockIndex < nBlocks; blockIndex++)
-			for (int frameIndex = 0; frameIndex < nFramesPerBlock; frameIndex++)		//Frame index within a block
-				for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)				//Read the individual pixels
-					sum[blockIndex * nPixPerFrame + pixIndex] += mArray[blockIndex * nPixPerBlock + frameIndex * nPixPerFrame + pixIndex];
+		//Take the first nFramesPerBin frames and average them. Then continue averaging every nFramesPerBin frames until the end of the stack
+		for (int binIndex = 0; binIndex < nBins; binIndex++)
+			for (int frameIndex = 0; frameIndex < nFramesPerBin; frameIndex++)		//Frame index within a bin
+				for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)			//Read the individual pixels
+					sum[binIndex * nPixPerFrame + pixIndex] += mArray[binIndex * nPixPerBin + frameIndex * nPixPerFrame + pixIndex];
 
-		//Calculate the average intensity in a block and assign it to mArray
-		for (int blockIndex = 0; blockIndex < nBlocks; blockIndex++)
+		//Calculate the average intensity in a bin and assign it to mArray
+		for (int binIndex = 0; binIndex < nBins; binIndex++)
 			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-				mArray[blockIndex * nPixPerFrame + pixIndex] = static_cast<U8>(1. * sum[blockIndex * nPixPerFrame + pixIndex] / nFramesPerBlock);
+				mArray[binIndex * nPixPerFrame + pixIndex] = static_cast<U8>(1. * sum[binIndex * nPixPerFrame + pixIndex] / nFramesPerBin);
 
 		//Update the number of frames in the stack
-		mNframes = nBlocks;
+		mNframes = nBins;
 		delete[] sum;
 	}
 }

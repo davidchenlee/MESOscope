@@ -56,7 +56,7 @@ public:
 	void mirrorOddFrames();
 	void averageEvenOddFrames();
 	void averageFrames();
-	void binFrames(const int nFramesPerBlock);
+	void binFrames(const int nFramesPerBin);
 	bool isDark(const int threshold) const;
 	void saveTxt(const std::string fileName) const;
 	void pushImage(const int frameIndex, const U8* inputArray) const;

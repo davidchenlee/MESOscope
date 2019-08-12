@@ -3,7 +3,10 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
+- calibrate Fidelity
+- For contZscan, do frame average
 - realign the dichroic and rescanner mounts. Fine tune the galvo parameters
+- cover up the entire the emission path
 - figure out why the FOV of 16X is slightly different from 1X
 - (20190812->) Implement suppressCrosstalk() flattenField() on the GPU
 - Multithread demuxAllChannels_()
@@ -17,3 +20,10 @@ Code in C++ for controlling the NI USB-7852R card
 ### Hardware
 - Screw down the PMT16X
 - Test cooling down the PMT16X
+
+### Things that could be improved in the future
+- Mount the collector lens on the detector platform
+- Use a motorized stage for the PMT16X mount
+- Use an apodizing filter to make the fluorescence emission even for the different beamlets
+- Use a grid mask on the PMT16X to reduce the crosstalk
+- Use motorized actuator on the mirrors that align the Ti-Sapphire laser to the microscope because the laser beam slightly wanders with the wavelength tuning

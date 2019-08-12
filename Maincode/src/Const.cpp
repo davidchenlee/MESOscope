@@ -65,7 +65,7 @@ namespace Constants
 	extern const GALVOcalib rescannerCalibV920nm{ 0.310 * scannerCalib.voltagePerDistance, 0.065 * V };
 	extern const GALVOcalib rescannerCalibV1040nm{ 0.33 * scannerCalib.voltagePerDistance, 0.065 * V };	//Using Vision
 	extern const GALVOcalib rescannerCalibF1040nm{ 0.33 * scannerCalib.voltagePerDistance, 0.065 * V };	//Using Fidelity
-	extern const int PMT16Xchan_int{ 1 }; //[0-15] when using a singlebeam, direct the galvo towards a particular channel of the PMT16X
+	extern const int PMT16Xchan_int{ 7 }; //[0-15] when using a singlebeam, direct the galvo towards a particular channel of the PMT16X
 
 	//STAGES
 	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if the z stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence

@@ -7,7 +7,7 @@ namespace PMT16XRoutines
 {
 	void stepwiseScan(const FPGA &fpga);
 	void contZscan(const FPGA &fpga);
-	void sequencer(const FPGA &fpga);
+	void sequencer(const FPGA &fpga, const bool run);
 	void liveScan(const FPGA &fpga);
 	//void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice);
 }

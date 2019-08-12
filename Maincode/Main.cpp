@@ -8,10 +8,10 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			//PMT16XRoutines::stepwiseScan(fpga);
+			PMT16XRoutines::stepwiseScan(fpga);
 			//PMT16XRoutines::liveScan(fpga);
-			PMT16XRoutines::contZscan(fpga);
-			//PMT16XRoutines::sequencer(fpga);
+			//PMT16XRoutines::contZscan(fpga);
+			//PMT16XRoutines::sequencer(fpga, true);
 			//PMT16XRoutines::frameByFrameZscanTilingXY(fpga, 1);
 
 			//TESTS

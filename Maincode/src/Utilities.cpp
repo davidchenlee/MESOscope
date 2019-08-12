@@ -284,15 +284,14 @@ int TiffU8::nFrames() const
 	return mNframes;
 }
 
-//Split the image vertically into 'nFrames' sub-images
+//Divide the concatenated images in a stack of nFrames
 void TiffU8::splitIntoFrames(const int nFrames)
 {
 	mNframes = nFrames;
 	mHeightPerFrame = mHeightPerFrame / nFrames;
 }
 
-//Split mArray into sub-images (or "frames")
-//Purpose: the microscope concatenates all the planes in a stack and hands over a vertically-concatenated image that has to be resized into individual images
+//Divide the concatenated images in a stack of nFrames and save it (the microscope concatenates all the images and hands over a long image that has to be resized into individual images)
 void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const OVERRIDE override, const ZSCAN scanDir) const
 {
 	int width, height, nFrames;
@@ -389,8 +388,8 @@ void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const O
 	std::cout << "Successfully saved: " << filename << ".tif\n";
 }
 
-//The galvo (vectical axis of the image) performs bi-directional scanning and the data is saved in a vertically-concatenated image
-//Divide the long image in nFrames and mirror the odd frames vertically
+//The galvo (vectical axis of the image) performs bi-directional scanning and the data is saved in a concatenated image
+//Divide the concatenated images in a stack of nFrames and mirror the odd frames vertically
 void TiffU8::mirrorOddFrames()
 {
 	if (mNframes > 1)
@@ -406,7 +405,7 @@ void TiffU8::mirrorOddFrames()
 			for (int rowIndex = 0; rowIndex < mHeightPerFrame / 2; rowIndex++)
 			{
 				const int eneTene{ frameIndex * mHeightPerFrame + rowIndex };				//Swap this row
-				const int moneMei{ (frameIndex + 1) * mHeightPerFrame - rowIndex - 1 };	//With this one
+				const int moneMei{ (frameIndex + 1) * mHeightPerFrame - rowIndex - 1 };		//With this one
 				std::memcpy(buffer, &mArray[eneTene*mBytesPerLine], mBytesPerLine);
 				std::memcpy(&mArray[eneTene*mBytesPerLine], &mArray[moneMei*mBytesPerLine], mBytesPerLine);
 				std::memcpy(&mArray[moneMei*mBytesPerLine], buffer, mBytesPerLine);
@@ -417,7 +416,7 @@ void TiffU8::mirrorOddFrames()
 }
 
 //The galvo (vectical axis of the image) performs bi-directional scanning and the data is saved in a long image (vertical strip)
-//Divide the long image in nFrames, average the even and odd frames separately, and return the averages in different pages
+//Divide the concatenated images in a stack of nFrames, average the even and odd frames separately, and return the averages in different pages
 void TiffU8::averageEvenOddFrames()
 {
 	if (mNframes > 2)
@@ -450,7 +449,7 @@ void TiffU8::averageEvenOddFrames()
 	}
 }
 
-//Divide the vertically-concatenated image into 'nFrames' frames and return the average over all the frames
+//Divide the concatenated images in a stack of nFrames and return the average over all the frames
 void TiffU8::averageFrames()
 {
 	if (mNframes > 1)

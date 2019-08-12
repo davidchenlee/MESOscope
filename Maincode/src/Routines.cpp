@@ -1,19 +1,20 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (54.620 ) * mm, 21.345 * mm, (17.995) * mm };
-const std::vector<double2> PetridishPosLimit{ { 32. * mm, 57. * mm}, { -8. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
+double3 stackCenterXYZ{ (52.500 ) * mm, 20.000 * mm, (17.850) * mm };//Liver TDT
+//double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
+const std::vector<double2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
-Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
-//Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", {{{ "TDT", 1040, (18. * mW) * 16, 0. * 16 * mWpum }}} };
+//Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
+Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(60. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(12. * mW), multiply16X(0.09 * mWpum) } }} };
 #else
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
 Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
 Sample fluorSlide{ "fluorBlue", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
-Sample liver{ "Beads1um", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 80. * mW, 0.0 * mWpum } , { "GFP", 920, 80. * mW, 0.4 * mWpum }, { "DAPI", 750, 7. * mW, 0.15 * mWpum }}} };
+Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 10. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 7. * mW, 0.09 * mWpum }}} };
 #endif
-Sample currentSample{ beads4um };
+Sample currentSample{ liver };
 
 
 namespace PMT16XRoutines
@@ -25,14 +26,19 @@ namespace PMT16XRoutines
 		//forth on the same z plane. The images the can be averaged
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
-		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the starting position
+		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
-		const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
+		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
+		const int nFramesCont{ 1 };
+		const double pixelSizeXY{ 0.5 * um };
+		const int widthPerFrame_pix{ 300 };
+		const int heightPerFrame_pix{ 560 };
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
@@ -40,12 +46,6 @@ namespace PMT16XRoutines
 		//This is because FIDELITY is chromatically shifted wrt VISION
 		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
 			stackCenterXYZ.at(Stage::Z) -= 4 * um;
-
-		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
-		const int heightPerFrame_pix{ 560 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
-		const int nFramesCont{ 1 };
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -62,7 +62,7 @@ namespace PMT16XRoutines
 
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the axis STAGEZ
+		const double stackDepthZ{ 100. * um };	//Acquire a stack this deep in the axis STAGEZ
 
 		//STAGES
 		std::vector<double3> stagePositionXYZ;
@@ -75,11 +75,12 @@ namespace PMT16XRoutines
 		switch (acqMode)
 		{
 		case RUNMODE::SINGLE:
-			if (!multibeam) //Never save all the PMT channels when multibeam
-			{
-				saveAllPMT = true;
-			}
 			stagePositionXYZ.push_back(stackCenterXYZ);
+			if (!multibeam) //For multibeam, no need for saving all the PMT channels
+			{
+				//saveAllPMT = true;
+			}
+
 			break;
 		case RUNMODE::AVG:
 			nSameZ = 10;
@@ -92,8 +93,13 @@ namespace PMT16XRoutines
 			break;
 		case RUNMODE::SCANZCENTERED:
 			//Generate the discrete scan sequence for the stages
+
 			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / stepSizeZ); iterDiffZ++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
+			{
+			const double halfStackLengthZ{ 0.5 * stackDepthZ };
+			stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z) + iterDiffZ * stepSizeZ - halfStackLengthZ });
+			}
+				
 			break;
 		case RUNMODE::SCANXY:
 			//saveAllPMT = true;
@@ -246,7 +252,7 @@ namespace PMT16XRoutines
 	void contZscan(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const ZSCAN scanDirZ{ ZSCAN::BOTTOMUP };						//Scan direction in the axis STAGEZ
 
@@ -265,7 +271,8 @@ namespace PMT16XRoutines
 		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
 			stackCenterXYZ.at(Stage::Z) -= 6 * um;
 
-		stackCenterXYZ.at(Stage::Z) -= nFramesCont * stepSizeZ /2;
+		//Center the stack
+		////////////////////////////////////stackCenterXYZ.at(Stage::Z) -= nFramesCont * stepSizeZ /2;
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -346,7 +353,7 @@ namespace PMT16XRoutines
 
 	//Full sequence to image and cut an entire sample automatically
 	//Note that the stack starts at stackCenterXYZ.at(Z) (i.e., the stack is not centered at stackCenterXYZ.at(Z))
-	void sequencer(const FPGA &fpga)
+	void sequencer(const FPGA &fpga, const bool run)
 	{
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
@@ -382,7 +389,7 @@ namespace PMT16XRoutines
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
-		if (1)
+		if (run)
 		{
 			//CREATE THE REALTIME CONTROL SEQUENCE
 			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
@@ -471,11 +478,11 @@ namespace PMT16XRoutines
 	{
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const int nFramesCont{ 1 };									//Number of frames for continuous XY acquisition
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		const int nFramesCont{ 1 };									//Number of frames for continuous XY acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
@@ -955,7 +962,7 @@ namespace TestRoutines
 
 		PockelsCell pockels{ pockelsFidelity };
 		//PockelsCell pockels{ pockelsFidelity };
-		pockels.pushPowerSinglet(8 * us, 100. * mW, OVERRIDE::DIS);
+		pockels.pushPowerSinglet(8 * us, 300. * mW, OVERRIDE::DIS);
 		//pockels.pushPowerSinglet(8 * us, 0 * mW);
 		//pockels.pushVoltageSinglet(8 * us, 5.5 * V);
 
@@ -1055,23 +1062,25 @@ namespace TestRoutines
 	void tiffU8()
 	{
 		
-		std::string inputFilename{ "Slice1_DAPI_Tile235" };
-		//std::string inputFilename{ "Slice1_TDT_Tile272" };
-		std::string outputFilename{ "output" };
+		std::string inputFilename{ "Liver_V750nm_Pi=192.0mW_Pinc=1.4mWpum_x=52.500_y=20.000_zi=17.8440_zf=17.9430_Step=0.0010" };
+		std::string outputFilename{ inputFilename + "_corrected" };
 
 		TiffU8 image{ inputFilename };
-		std::cout << image.isDark(1) << "\n";
+		//image.flattenField(2.0);
+		image.suppressCrosstalk(0.1);
+		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+		//pressAnyKeyToCont();
 
+
+		//std::cout << image.isDark(1) << "\n";
 		//image.splitIntoFrames(10);
 		//image.mirrorOddFrames();
 		/////image.averageFrames();
 		//image.averageEvenOddFrames();
 		//image.Test();
 		//image.correctRSdistortionGPU(200. * um);
-		//image.suppressCrosstalk(0.1);
-		//image.flattenField(2.0);
-		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
-		pressAnyKeyToCont();
+
+
 
 		/*
 		//Declare and start a stopwatch

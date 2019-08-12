@@ -111,7 +111,7 @@ void Image::constructImage(const bool saveAllPMT)
 {
 	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
 	demultiplex_(saveAllPMT);	//Move the chuncks of data to the buffer array
-	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Divide the image vertically in nFrames and mirror the odd frames vertically
+	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Divide the concatenated image in a stack with nFrames and mirror the odd frames vertically
 }
 
 void Image::correctImage(const double FFOVfast)
@@ -123,16 +123,15 @@ void Image::correctImage(const double FFOVfast)
 		//mTiff.suppressCrosstalk(0.1);
 		//mTiff.flattenField(2.0);
 	}
-
 }
 
-//Split the long vertical image into nFrames and calculate the average over all the frames
+//Divide the concatenated image in a stack of nFrames and calculate the average over all the frames
 void Image::averageFrames()
 {
 	mTiff.averageFrames();
 }
 
-//Divide the long image in nFrames, average the even and odd frames separately, and return the averages in separate pages
+//Divide the concatenated image in a stack of nFrames, average the even and odd frames separately, and return the averages in separate pages
 void Image::averageEvenOddFrames()
 {
 	mTiff.averageEvenOddFrames();
@@ -1280,7 +1279,7 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 
 		//FIDELITY
 	case RTcontrol::RTCHAN::FIDELITY:
-		amplitude = 300 * mW;
+		amplitude = 1000 * mW;
 		angularFreq = 0.276 / V;
 		phase = -0.049 * V;
 		break;
@@ -1970,7 +1969,7 @@ void Stage::moveSingle(const Axis axis, const double position)
 	if (mPositionXYZ.at(axis) != position) //Move only if the requested position is different from the current position
 	{
 		const double position_mm{ position / mm };								//Divide by mm to convert from implicit to explicit units
-		if (!PI_MOV(mID_XYZ.at(axis), mNstagesPerController, &position_mm))	//~14 ms to execute this function
+		if (!PI_MOV(mID_XYZ.at(axis), mNstagesPerController, &position_mm))		//~14 ms to execute this function
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString(axis) + " to the target position (maybe hardware limits?)");
 
 		mPositionXYZ.at(axis) = position;

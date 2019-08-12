@@ -25,8 +25,8 @@ namespace PMT16XRoutines
 		//Each of the following modes can be used under 'continuous XY acquisition' by setting nFramesCont > 1, meaning that the galvo is scanned back and
 		//forth on the same z plane. The images the can be averaged
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single shot. Image the same z plane continuosly 'nFramesCont' times and average the images
-		//const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
-		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the starting position
+		const RUNMODE acqMode{ RUNMODE::AVG };			//Image the same z plane frame by frame 'nSameZ' times and average the images
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ frame by frame with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX frame by frame
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
@@ -1062,20 +1062,19 @@ namespace TestRoutines
 	void tiffU8()
 	{
 		
-		std::string inputFilename{ "Liver_V750nm_Pi=192.0mW_Pinc=1.4mWpum_x=52.500_y=20.000_zi=17.8440_zf=17.9430_Step=0.0010" };
-		std::string outputFilename{ inputFilename + "_corrected" };
+		std::string inputFilename{ "Liver_V750nm_Pi=192.0mW_Pinc=1.4mWpum_x=52.500_y=20.000_zi=17.8440_zf=17.8440_Step=0.0010 (2)" };
+		std::string outputFilename{ "correct_" + inputFilename };
 
 		TiffU8 image{ inputFilename };
 		//image.flattenField(2.0);
-		image.suppressCrosstalk(0.1);
-		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
-		//pressAnyKeyToCont();
+		//image.suppressCrosstalk(0.1);
+		image.binFrames(5);
+		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
 
-
+		pressAnyKeyToCont();
 		//std::cout << image.isDark(1) << "\n";
 		//image.splitIntoFrames(10);
 		//image.mirrorOddFrames();
-		/////image.averageFrames();
 		//image.averageEvenOddFrames();
 		//image.Test();
 		//image.correctRSdistortionGPU(200. * um);

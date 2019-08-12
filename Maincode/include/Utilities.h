@@ -28,24 +28,19 @@ double multiply16X(const double input);
 //For saving the parameters to a text file
 class Logger
 {
-	std::ofstream mFileHandle;
 public:
 	Logger(const std::string filename);
 	~Logger();
 	void record(const std::string description);
 	void record(const std::string description, const double input);
 	void record(const std::string description, const std::string input);
+private:
+	std::ofstream mFileHandle;
 };
 
 //For manipulating and saving U8 Tiff images
 class TiffU8
 {
-	U8* mArray;
-	int mWidthPerFrame;
-	int mHeightPerFrame;
-	int mNframes;
-	int mBytesPerLine; 
-	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
 public:
 	TiffU8(const std::string filename);
 	TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames);
@@ -61,6 +56,7 @@ public:
 	void mirrorOddFrames();
 	void averageEvenOddFrames();
 	void averageFrames();
+	void binFrames(const int nFramesPerBlock);
 	bool isDark(const int threshold) const;
 	void saveTxt(const std::string fileName) const;
 	void pushImage(const int frameIndex, const U8* inputArray) const;
@@ -70,16 +66,24 @@ public:
 	void correctRSdistortionCPU(const double FFOVfast);
 	void suppressCrosstalk(const double crosstalkRatio = 1.0);
 	void flattenField(const double maxScaleFactor = 1.0);
+private:
+	U8* mArray;
+	int mWidthPerFrame;
+	int mHeightPerFrame;
+	int mNframes;
+	int mBytesPerLine; 
+	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
 };
 
 class TiffStack
 {
-	TiffU8 mArraySameZ;		//For imaging the same z plane many times and then compute the average image
-	TiffU8 mArrayDiffZ;		//For imaging different z planes
 public:
 	TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
 	void pushSameZ(const int indexSameZ, const U8* data);
 	void pushDiffZ(const int indexDiffZ);
 	void saveToFile(const std::string filename, OVERRIDE override) const;
+private:
+	TiffU8 mArraySameZ;		//For imaging the same z plane many times and then compute the average image
+	TiffU8 mArrayDiffZ;		//For imaging different z planes
 };
 

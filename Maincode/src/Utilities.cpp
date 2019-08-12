@@ -455,20 +455,54 @@ void TiffU8::averageFrames()
 	if (mNframes > 1)
 	{
 		const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };
-		unsigned int* avg{ new unsigned int[nPixPerFrame]() };
+		unsigned int* sum{ new unsigned int[nPixPerFrame]() };
 
 		//For each pixel, calculate the sum intensity over all the frames
 		for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
 			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-				avg[pixIndex] += mArray[frameIndex * nPixPerFrame + pixIndex];
+				sum[pixIndex] += mArray[frameIndex * nPixPerFrame + pixIndex];
 
-		//Calculate the average intensity and reassign it to mArray
+		//Calculate the average intensity and assign it to mArray
 		for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-			mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / mNframes);
+			mArray[pixIndex] = static_cast<U8>(1. * sum[pixIndex] / mNframes);
 
-		//Update the number of frames to 1
+		//Update the number of frames in the stack to 1
 		mNframes = 1;
-		delete[] avg;
+		delete[] sum;
+	}
+}
+
+//Divide the concatenated images in a stack of nFrames and return the average over every nFramesPerBlock frames
+//mArray has mNframes and each frame is of size mWidthPerFrame * mHeightPerFrame
+//A "block" has nFramesPerBlock frames and represents the number of frames to average over
+void TiffU8::binFrames(const int nFramesPerBlock)
+{
+	//nFramesPerBlock must be a multiple of mNframes
+	if (mNframes%nFramesPerBlock != 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames to average over must be a multiple of the total number of frames");
+
+	const int nBlocks{ mNframes / nFramesPerBlock };	//Number of blocks in the stack, each containing nFramesPerBlock frames
+
+	if (mNframes > 1)
+	{
+		const int nPixPerFrame{ mWidthPerFrame * mHeightPerFrame };
+		const int nPixPerBlock{ nPixPerFrame * nFramesPerBlock };
+		unsigned int* sum{ new unsigned int[nBlocks * nPixPerFrame]() };
+
+		//Take the first nFramesPerBlock frames and average them. Then continue averaging every nFramesPerBlock frames until the end of the stack
+		for (int blockIndex = 0; blockIndex < nBlocks; blockIndex++)
+			for (int frameIndex = 0; frameIndex < nFramesPerBlock; frameIndex++)		//Frame index within a block
+				for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)				//Read the individual pixels
+					sum[blockIndex * nPixPerFrame + pixIndex] += mArray[blockIndex * nPixPerBlock + frameIndex * nPixPerFrame + pixIndex];
+
+		//Calculate the average intensity in a block and assign it to mArray
+		for (int blockIndex = 0; blockIndex < nBlocks; blockIndex++)
+			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
+				mArray[blockIndex * nPixPerFrame + pixIndex] = static_cast<U8>(1. * sum[blockIndex * nPixPerFrame + pixIndex] / nFramesPerBlock);
+
+		//Update the number of frames in the stack
+		mNframes = nBlocks;
+		delete[] sum;
 	}
 }
 
@@ -906,5 +940,8 @@ void TiffStack::pushDiffZ(const int indexDiffZ)
 void TiffStack::saveToFile(const std::string filename, OVERRIDE override) const
 {
 	mArrayDiffZ.saveToFile(filename, MULTIPAGE::EN, override);
+
+	//For debugging. For saving mArraySameZ
+	//mArraySameZ.saveToFile(filename, MULTIPAGE::EN, override);
 }
 #pragma endregion "Stack"

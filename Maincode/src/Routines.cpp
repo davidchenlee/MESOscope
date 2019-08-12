@@ -242,23 +242,28 @@ namespace Routines
 		}
 	}
 
-	/*I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the beads' z-position looks
-	almost identical with a difference of maybe only 1 plane (0.5 um)
-	Remember that I do not use MACROS on the stages anymore*/
+	//I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the bead z-position looks almost identical with a difference of maybe only 1 plane (0.5 um)
+	//Remember that I do not use MACROS on the stages anymore*/
 	void contScanZ(const FPGA &fpga)
 	{
+		//REMEMBER THE 0.96 FACTOR IN THE LASER POWER TO COMPENSATE FOR THE POWER TRANSIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		const double laserPowerTransComp{ 0.96 };
+
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const ZSCAN scanDirZ{ ZSCAN::BOTTOMUP };					//Scan direction in the axis STAGEZ
-		const int nFramesCont{ 200 };								//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };					//Scan direction in the axis STAGEZ
+		const int nFramesCont{ 200 * 5 };							//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const double stackDepth{ 100. * um };
+		const double pixelSizeZ{ stackDepth / nFramesCont };
 
 		const double pixelSizeXY{ 0.5 * um };
-		const double stepSizeZ{ 0.5 * um };
+		//const double pixelSizeZ{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		const double stackDepth{ nFramesCont * stepSizeZ };
+		//const double stackDepth{ nFramesCont * pixelSizeZ };
+
 
 		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
 		if (fluorLabel.mWavelength_nm == 750)
@@ -268,7 +273,7 @@ namespace Routines
 			stackCenterXYZ.at(Stage::Z) -= 6 * um;
 
 		//Center the stack
-		////////////////////////////////////stackCenterXYZ.at(Stage::Z) -= nFramesCont * stepSizeZ /2;
+		////////////////////////////////////stackCenterXYZ.at(Stage::Z) -= nFramesCont * pixelSizeZ /2;
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -288,14 +293,14 @@ namespace Routines
 		{
 		case ZSCAN::TOPDOWN:
 			stageZi = stackCenterXYZ.at(Stage::Z);
-			stageZf = stackCenterXYZ.at(Stage::Z) + stackDepth + 20 * stepSizeZ; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
-			laserPi = fluorLabel.mScanPi;
+			stageZf = stackCenterXYZ.at(Stage::Z) + stackDepth + 20 * pixelSizeZ; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+			laserPi = laserPowerTransComp * fluorLabel.mScanPi;
 			laserPf = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			break;
 		case ZSCAN::BOTTOMUP:
 			stageZi = stackCenterXYZ.at(Stage::Z) + stackDepth;
-			stageZf = stackCenterXYZ.at(Stage::Z) - 20 * stepSizeZ;				//Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
-			laserPi = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
+			stageZf = stackCenterXYZ.at(Stage::Z) - 20 * pixelSizeZ;				//Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+			laserPi = laserPowerTransComp * fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			laserPf = fluorLabel.mScanPi;
 			break;
 		}
@@ -316,7 +321,7 @@ namespace Routines
 
 		//STAGES
 		const double3 initialStageXYZ{ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stageZi};		//Initial position of the stages. The sign of stackDepth determines the scanning direction		
-		const double velZ{ stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };
+		const double velZ{ pixelSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };
 		Stage stage{ 5 * mmps, 5 * mmps, velZ, currentSample.mStageSoftPosLimXYZ };								//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 		stage.moveXYZ(initialStageXYZ);
 		stage.waitForMotionToStopAll();
@@ -331,9 +336,12 @@ namespace Routines
 		image.constructImage();
 		image.correctImage(RScanner.mFFOV);
 
+		virtualLaser.closeShutter();	//Close the shutter manually even thought the destructor does it as well because the data processing could take a long time
+
 		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) +
 			"mWpum_x=" + toString(initialStageXYZ.at(Stage::X) / mm, 3) + "_y=" + toString(initialStageXYZ.at(Stage::Y) / mm, 3) +
-			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
+			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZ / mm, 4) };
+		
 		std::cout << "Saving the stack...\n";
 		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
 	}
@@ -1051,16 +1059,16 @@ namespace TestRoutines
 	void tiffU8()
 	{
 		
-		std::string inputFilename{ "Liver_V750nm_Pi=192.0mW_Pinc=1.4mWpum_x=52.500_y=20.000_zi=17.8440_zf=17.8440_Step=0.0010 (2)" };
-		std::string outputFilename{ "correct_" + inputFilename };
+		std::string inputFilename{ "Liver_V750nm_P=184.3mW_Pinc=1.4mWpum_x=52.700_y=20.000_zi=17.8340_zf=17.9360_Step=0.0001" };
+		std::string outputFilename{ "avg_" + inputFilename };
 
 		TiffU8 image{ inputFilename };
 		//image.flattenField(2.0);
 		//image.suppressCrosstalk(0.1);
 		image.binFrames(5);
-		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
 
-		pressAnyKeyToCont();
+		//pressAnyKeyToCont();
 		//std::cout << image.isDark(1) << "\n";
 		//image.splitIntoFrames(10);
 		//image.mirrorOddFrames();

@@ -30,12 +30,12 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::shutter(fpga);
 			//TestRoutines::pockels(fpga);
-			TestRoutines::pockelsRamp(fpga);
+			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
 
 			//TestRoutines::convertI16toVolt();
-			//TestRoutines::tiffU8();
+			TestRoutines::tiffU8();
 			//TestRoutines::ethernetSpeed();
 			//TestRoutines::multithread();
 			//TestRoutines::clipU8();

@@ -137,6 +137,11 @@ void Image::averageEvenOddFrames()
 	mTiff.averageEvenOddFrames();
 }
 
+void Image::binFrames(const int nFramesPerBin)
+{
+	mTiff.binFrames(nFramesPerBin);
+}
+
 //Save each frame in mTiff in a single Tiff page
 void Image::saveTiffSinglePage(std::string filename, const OVERRIDE override) const
 {

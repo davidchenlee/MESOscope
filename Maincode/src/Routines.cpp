@@ -253,7 +253,8 @@ namespace Routines
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };					//Scan direction in the axis STAGEZ
-		const int nFramesCont{ 200 * 5 };							//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const int nFramesPerBin{ 1 };							//
+		const int nFramesCont{ 200 * nFramesPerBin };			//Number of frames for continuous acquisition
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZ{ stackDepth / nFramesCont };
 
@@ -333,10 +334,11 @@ namespace Routines
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(Stage::Z, stageZf);	//Move the stage to trigger the control sequence and data acquisition
 		image.downloadData();
-		image.constructImage();
-		image.correctImage(RScanner.mFFOV);
 
 		virtualLaser.closeShutter();	//Close the shutter manually even thought the destructor does it as well because the data processing could take a long time
+		image.constructImage();
+		image.correctImage(RScanner.mFFOV);
+		image.binFrames(nFramesPerBin);
 
 		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) +
 			"mWpum_x=" + toString(initialStageXYZ.at(Stage::X) / mm, 3) + "_y=" + toString(initialStageXYZ.at(Stage::Y) / mm, 3) +

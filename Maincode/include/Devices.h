@@ -28,6 +28,7 @@ public:
 	void correctImage(const double FFOVfast);
 	void averageFrames();
 	void averageEvenOddFrames();
+	void binFrames(const int nFramesPerBin);
 	void saveTiffSinglePage(std::string filename, const OVERRIDE override) const;
 	void saveTiffMultiPage(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 	bool isDark(const int threshold) const;

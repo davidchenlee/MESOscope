@@ -198,7 +198,7 @@ void FPGA::initializeFpga_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(handle(), NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(FIFOtimeout_tick)));				//FIFOIN timeout
 
 	//TRIGGERS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<int>(MAINTRIG::PC)));					//Main trigger selector (PC, STAGEX, STAGEZ)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::PC)));					//Main trigger selector (PC, STAGEX, STAGEZ)
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));												//Pc trigger signal
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));										//Trigger the FPGA outputs (non-RT trigger)
 
@@ -272,7 +272,7 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 
 	//When the z stage acts as the main trigger (for cont z scanning), the motion monitor of the z stage bounces and therefore false-triggers new acquisitions
 	//Solution: after an acq sequence, wait a certain amount of time before the acq is triggered again (timer implemented in LV)
-	if (mMainTrigger == MAINTRIG::ZSTAGE)
+	if (mMainTrigger == MAINTRIG::STAGEZ || mMainTrigger == MAINTRIG::STAGEX)
 	{
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.handle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postsequenceTimer / us * tickPerUs)));
 		//std::cout << "Z stage as the main trigger\n";
@@ -399,15 +399,16 @@ void RTcontrol::triggerRT() const
 //Enable the stage trigger control sequence and data acquisition
 void RTcontrol::enableStageTrigAcq() const
 {
-	if (mMainTrigger == MAINTRIG::ZSTAGE)
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<int>(MAINTRIG::ZSTAGE)));
+	if (mMainTrigger == MAINTRIG::STAGEZ)
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::STAGEZ)));
+	else if (mMainTrigger == MAINTRIG::STAGEX)
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::STAGEX)));
 }
 
 //Disable the stage trigger control sequence and data acquisition
 void RTcontrol::disableStageTrigAcq() const
 {
-	if (mMainTrigger == MAINTRIG::ZSTAGE)
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<int>(MAINTRIG::PC)));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::PC)));
 }
 
 //Push data from the FPGA to FIFOOUTfpga. Disabled when debugging

@@ -7,6 +7,8 @@ namespace Routines
 {
 	void stepwiseScan(const FPGA &fpga);
 	void contScanZ(const FPGA &fpga);
+	void contScanX(const FPGA &fpga);
+	void contScanXTest(const FPGA &fpga);
 	void sequencer(const FPGA &fpga, const bool run);
 	void liveScan(const FPGA &fpga);
 	//void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice);

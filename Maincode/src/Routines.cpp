@@ -22,11 +22,11 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
-		const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
+		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
@@ -43,10 +43,10 @@ namespace Routines
 
 		//This is because the beads at 750 nm are chromatically shifted
 		if (fluorLabel.mWavelength_nm == 750)
-			stackCenterXYZ.at(Stage::Z) -= 6 * um;
+			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
 		//This is because FIDELITY is chromatically shifted wrt VISION
 		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
-			stackCenterXYZ.at(Stage::Z) -= 4 * um;
+			stackCenterXYZ.at(Stage::ZZ) -= 4 * um;
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -84,14 +84,14 @@ namespace Routines
 		case RUNMODE::SCANZ:
 			//Generate the discrete scan sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / stepSizeZ); iterDiffZ++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z) + iterDiffZ * stepSizeZ });
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::XX), stackCenterXYZ.at(Stage::YY), stackCenterXYZ.at(Stage::ZZ) + iterDiffZ * stepSizeZ });
 			break;
 		case RUNMODE::SCANZCENTERED:
 			//Generate the discrete scan sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / stepSizeZ); iterDiffZ++)
 			{
 			const double halfStackLengthZ{ 0.5 * stackDepthZ };
-			stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z) + iterDiffZ * stepSizeZ - halfStackLengthZ });
+			stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::XX), stackCenterXYZ.at(Stage::YY), stackCenterXYZ.at(Stage::ZZ) + iterDiffZ * stepSizeZ - halfStackLengthZ });
 			}
 				
 			break;
@@ -103,7 +103,7 @@ namespace Routines
 			stepSizeX = 5. * um;
 			//Generate the discrete scan sequence for the stages
 			for (int iterDiffX = 0; iterDiffX < 60; iterDiffX++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::X) + iterDiffX * stepSizeX, stackCenterXYZ.at(Stage::Y), stackCenterXYZ.at(Stage::Z)});
+				stagePositionXYZ.push_back({ stackCenterXYZ.at(Stage::XX) + iterDiffX * stepSizeX, stackCenterXYZ.at(Stage::YY), stackCenterXYZ.at(Stage::ZZ)});
 			break;
 		case RUNMODE::COLLECTLENS:
 			if(multibeam)
@@ -186,10 +186,6 @@ namespace Routines
 			stage.waitForMotionToStopAll();
 			//stage.printPositionXYZ();		//Print the stage position	
 			
-			//Let the stages settle a little longer because of the larger initial step
-			if(iterLocation == 0)
-				Sleep(400);
-
 			virtualLaser.setPower(fluorLabel.mScanPi + iterLocation * stepSizeZ * fluorLabel.mStackPinc);	//Update the laser power
 
 			//Used to optimize the collector lens position
@@ -207,7 +203,7 @@ namespace Routines
 			{
 				//Save individual files
 				filename.append("_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
-					"_x=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::X) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::Y) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::Z) / mm, 4));
+					"_x=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::YY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::ZZ) / mm, 4));
 				std::cout << "Saving the stack...\n";
 				image.saveTiffMultiPage(filename, OVERRIDE::DIS);
 			}
@@ -217,8 +213,8 @@ namespace Routines
 		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
 		{	
 			filename.append( "_Pi=" + toString(fluorLabel.mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) + "mWpum" +
-				"_x=" + toString(stagePositionXYZ.front().at(Stage::X) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(Stage::Y) / mm, 3) +
-				"_zi=" + toString(stagePositionXYZ.front().at(Stage::Z) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(Stage::Z) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) );
+				"_x=" + toString(stagePositionXYZ.front().at(Stage::XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(Stage::YY) / mm, 3) +
+				"_zi=" + toString(stagePositionXYZ.front().at(Stage::ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(Stage::ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) );
 
 			output.binFrames(nSameLocation);							//Divide the images in bins of nSameLocation frames each and return the average of each bin
 			std::cout << "Saving the stack...\n";
@@ -229,9 +225,9 @@ namespace Routines
 		if (acqMode == RUNMODE::SCANXY)
 		{
 			filename.append( "_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
-				"_xi=" + toString(stagePositionXYZ.front().at(Stage::X) / mm, 4) + "_xf=" + toString(stagePositionXYZ.back().at(Stage::X) / mm, 4) +
-				"_y=" + toString(stagePositionXYZ.front().at(Stage::Y) / mm, 3) +
-				"_z=" + toString(stagePositionXYZ.front().at(Stage::Z) / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) );
+				"_xi=" + toString(stagePositionXYZ.front().at(Stage::XX) / mm, 4) + "_xf=" + toString(stagePositionXYZ.back().at(Stage::XX) / mm, 4) +
+				"_y=" + toString(stagePositionXYZ.front().at(Stage::YY) / mm, 3) +
+				"_z=" + toString(stagePositionXYZ.front().at(Stage::ZZ) / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) );
 
 			output.binFrames(nSameLocation);							//Divide the images in bins of nSameLocation frames each and return the average of each bin
 			std::cout << "Saving the stack...\n";
@@ -250,28 +246,27 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };					//Scan direction in the axis STAGEZ
-		const int nFramesPerBin{ 1 };							//
-		const int nFramesCont{ 200 * nFramesPerBin };			//Number of frames for continuous acquisition
-		const double stackDepth{ 100. * um };
-		const double pixelSizeZ{ stackDepth / nFramesCont };
+		const ZSCAN scanDirZ{ ZSCAN::BOTTOMUP };					//Scan direction in the axis STAGEZ
+		const int nFramesPerBin{ 1 };							//For averaging
+		const double stackDepth{ 40. * um };
+		const double pixelSizeZafterBinning{ 0.5 * um  };
 
+		const int nFramesCont{ static_cast<int>(stackDepth / pixelSizeZafterBinning * nFramesPerBin) };		//Number of frames for continuous acquisition
+		const double pixelSizeZbeforeBinning{ stackDepth / nFramesCont };									//pixel size per z frame
 		const double pixelSizeXY{ 0.5 * um };
-		//const double pixelSizeZ{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
-		//const double stackDepth{ nFramesCont * pixelSizeZ };
 
 		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
 		if (fluorLabel.mWavelength_nm == 750)
-			stackCenterXYZ.at(Stage::Z) -= 6 * um;
+			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
 		//This is because FIDELITY is chromatically shifted wrt VISION
 		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
-			stackCenterXYZ.at(Stage::Z) -= 6 * um;
+			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
 
 		//Center the stack
-		////////////////////////////////////stackCenterXYZ.at(Stage::Z) -= nFramesCont * pixelSizeZ /2;
+		////////////////////////////////////stackCenterXYZ.at(Stage::Z) -= nFramesCont * pixelSizeZbeforeBinning /2;
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -290,21 +285,21 @@ namespace Routines
 		switch (scanDirZ)
 		{
 		case ZSCAN::TOPDOWN:
-			stageZi = stackCenterXYZ.at(Stage::Z);
-			stageZf = stackCenterXYZ.at(Stage::Z) + stackDepth + 20 * pixelSizeZ; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+			stageZi = stackCenterXYZ.at(Stage::ZZ);
+			stageZf = stackCenterXYZ.at(Stage::ZZ) + stackDepth + 20 * pixelSizeZbeforeBinning; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
 			laserPi = laserPowerTransComp * fluorLabel.mScanPi;
 			laserPf = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			break;
 		case ZSCAN::BOTTOMUP:
-			stageZi = stackCenterXYZ.at(Stage::Z) + stackDepth;
-			stageZf = stackCenterXYZ.at(Stage::Z) - 20 * pixelSizeZ;				//Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+			stageZi = stackCenterXYZ.at(Stage::ZZ) + stackDepth;
+			stageZf = stackCenterXYZ.at(Stage::ZZ) - 20 * pixelSizeZbeforeBinning;				//Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
 			laserPi = laserPowerTransComp * fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			laserPf = fluorLabel.mScanPi;
 			break;
 		}
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the STAGEZ flag
 
 		//LASER
 		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, laserPf, whichLaser };
@@ -318,18 +313,18 @@ namespace Routines
 		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 
 		//STAGES
-		const double3 initialStageXYZ{ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stageZi};		//Initial position of the stages	
+		const double3 initialStageXYZ{ stackCenterXYZ.at(Stage::XX), stackCenterXYZ.at(Stage::YY), stageZi};		//Initial position of the stages	
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };							
 		stage.moveXYZ(initialStageXYZ);		//Move the stage to the initial position
 		stage.waitForMotionToStopAll();
-		stage.setVelSingle(Stage::Axis::Z, pixelSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix));	//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
+		stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix));		//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 		Image image{ RTcontrol };
 		image.initializeAcq(scanDirZ);
 		std::cout << "Scanning the stack...\n";
-		stage.moveSingle(Stage::Z, stageZf);	//Move the stage to trigger the control sequence and data acquisition
+		stage.moveSingle(Stage::ZZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
 		image.downloadData();
 
 		virtualLaser.closeShutter();	//Close the shutter manually even thought the destructor does it because the data processing could take a long time
@@ -338,11 +333,127 @@ namespace Routines
 		image.binFrames(nFramesPerBin);
 
 		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) +
-			"mWpum_x=" + toString(initialStageXYZ.at(Stage::X) / mm, 3) + "_y=" + toString(initialStageXYZ.at(Stage::Y) / mm, 3) +
-			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZ / mm, 4) };
+			"mWpum_x=" + toString(initialStageXYZ.at(Stage::XX) / mm, 3) + "_y=" + toString(initialStageXYZ.at(Stage::YY) / mm, 3) +
+			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZafterBinning / mm, 4) };
 		
 		std::cout << "Saving the stack...\n";
 		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
+	}
+
+	void contScanX(const FPGA &fpga)
+	{
+		if (multibeam)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": ContX scanning for single beam only");
+
+		//ACQUISITION SETTINGS
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
+		const Laser::ID whichLaser{ Laser::ID::AUTO };						//For averaging
+		const double FOVslow{ 10 * 280. * um };
+		const double pixelSizeX{ 0.5 * um };
+		const double pixelSizeY{ 0.5 * um };//Not used here. For reference purposes
+
+
+		const int width_pix{ 300 };
+		const int height_pix{ static_cast<int>(FOVslow / (2 * pixelSizeX)) };
+
+		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
+		if (fluorLabel.mWavelength_nm == 750)
+			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
+		//This is because FIDELITY is chromatically shifted wrt VISION
+		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
+			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
+
+		double stageXi, stageXf, laserPi, laserPf;
+		stageXi = stackCenterXYZ.at(Stage::XX);
+		stageXf = stackCenterXYZ.at(Stage::XX) + FOVslow + 20 * (2 * pixelSizeX); //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+		laserPi = fluorLabel.mScanPi;
+		laserPf = laserPi;
+
+		//CREATE THE REALTIME CONTROL SEQUENCE
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix, width_pix, 2, FIFOOUT::EN };	//Notice the STAGEX flag
+
+		//LASER
+		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, laserPf, whichLaser };
+
+		//RS
+		const ResonantScanner RScanner{ RTcontrol };
+		RScanner.isRunning();		//Make sure that the RS is running
+
+		//GALVO. Keep them fixed
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, 0, &virtualLaser };
+
+		//STAGES
+		const double3 initialStageXYZ{ stackCenterXYZ };		//Initial position of the stages	
+		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
+		stage.moveXYZ(initialStageXYZ);		//Move the stage to the initial position
+		stage.waitForMotionToStopAll();
+		stage.setVelSingle(Stage::Axis::XX, pixelSizeX / lineclockHalfPeriod);		//Set the vel for imaging
+
+		//EXECUTE THE RT CONTROL SEQUENCE
+		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
+		Image image{ RTcontrol };
+		image.initializeAcq();
+		std::cout << "Scanning the stack...\n";
+		stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger the control sequence and data acquisition
+		image.downloadData();
+
+		virtualLaser.closeShutter();	//Close the shutter manually even thought the destructor does it because the data processing could take a long time
+		image.constructImage();
+		image.correctImage(RScanner.mFFOV);
+
+		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(laserPi / mW, 1) +
+			"mWpum_xi=" + toString(initialStageXYZ.at(Stage::XX) / mm, 3) +
+			"_y=" + toString(initialStageXYZ.at(Stage::YY) / mm, 3) +
+			"_zi=" + toString(initialStageXYZ.at(Stage::ZZ) / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
+
+		std::cout << "Saving the stack...\n";
+		image.saveTiffSinglePage(filename, OVERRIDE::DIS);
+	}
+
+	void contScanXTest(const FPGA &fpga)
+	{
+		if (multibeam)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": ContX scanning for single beam only");
+
+		//ACQUISITION SETTINGS
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
+		const Laser::ID whichLaser{ Laser::ID::AUTO };						//For averaging
+		const double FOVslow{ 10*280. * um };
+		const double pixelSizeX{ 0.5 * um };
+		const double pixelSizeY{ 0.5 * um };
+
+		const int width_pix{ 300 };
+		const int height_pix{ static_cast<int>(FOVslow / (2 * pixelSizeX)) };
+
+		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
+		if (fluorLabel.mWavelength_nm == 750)
+			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
+		//This is because FIDELITY is chromatically shifted wrt VISION
+		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
+			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
+
+		double stageXi, stageXf;
+		stageXi = stackCenterXYZ.at(Stage::XX);
+		stageXf = stackCenterXYZ.at(Stage::XX) + FOVslow + 20 * 2 * pixelSizeX; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+
+		//CREATE THE REALTIME CONTROL SEQUENCE
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, height_pix, width_pix, 2, FIFOOUT::DIS };	//Notice the STAGEX flag
+
+		//GALVO. Keep them fixed
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, 0};
+
+		//STAGES
+		Stage stage{ pixelSizeX / lineclockHalfPeriod, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
+		stage.moveXYZ(stackCenterXYZ);
+		Sleep(2000);
+
+		//EXECUTE THE RT CONTROL SEQUENCE
+		Image image{ RTcontrol };
+		image.initializeAcq();
+		std::cout << "Scanning the stack...\n";
+		stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger the control sequence and data acquisition
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -360,33 +471,33 @@ namespace Routines
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };											//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };														//Sample thickness
-		const double sampleSurfaceZ{ stackCenterXYZ.at(Stage::Z) - nFramesCont * pixelSizeZ / 2 };		//For beads, center the stack around stackCenterXYZ.at(Z)
+		const double sampleSurfaceZ{ stackCenterXYZ.at(Stage::ZZ) - nFramesCont * pixelSizeZ / 2 };		//For beads, center the stack around stackCenterXYZ.at(Z)
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
 		if (multibeam)
 		{
 			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
-			FFOVslowPerBeamlet = static_cast<double>(FFOV.at(Stage::X) / nChanPMT);
+			FFOVslowPerBeamlet = static_cast<double>(FFOV.at(Stage::XX) / nChanPMT);
 		}
 		else //Singlebeam
 		{
 			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
-			FFOVslowPerBeamlet = FFOV.at(Stage::X);
+			FFOVslowPerBeamlet = FFOV.at(Stage::XX);
 		}
 
 		//Create a sequence
 		const Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, pixelSizeZ, nFramesCont, stackOverlap_frac };
 		//Sequence sequece(sample, stack);
-		Sequence sequence{ sample, stack, {stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y)}, { 1, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {STAGEX, STAGEY}
+		Sequence sequence{ sample, stack, {stackCenterXYZ.at(Stage::XX), stackCenterXYZ.at(Stage::YY)}, { 1, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {STAGEX, STAGEY}
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
 		if (run)
 		{
 			//CREATE THE REALTIME CONTROL SEQUENCE
-			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::ZSTAGE, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the ZSTAGE flag
+			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the STAGEZ flag
 
 			//LASER
 			VirtualLaser virtualLaser{ RTcontrol };
@@ -401,9 +512,9 @@ namespace Routines
 
 			//STAGES. Specify the velocity
 			Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-			stage.moveSingle(Stage::Z, sample.mSurfaceZ);	//Move the z stage to the sample surface
+			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
 			stage.waitForMotionToStopAll();
-			stage.setVelSingle(Stage::Axis::Z, pixelSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix));	//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
+			stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix));	//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
@@ -438,12 +549,12 @@ namespace Routines
 
 					image.initializeAcq(static_cast<ZSCAN>(acqStack.mScanDirZ));
 					std::cout << "Scanning the stack...\n";
-					stage.moveSingle(Stage::Z, acqStack.scanZf());					//Move the stage to trigger the control sequence and data acquisition
+					stage.moveSingle(Stage::ZZ, acqStack.scanZf());					//Move the stage to trigger the control sequence and data acquisition
 					image.downloadData();
 					break;
 				case Action::ID::SAV:
 					longName = virtualLaser.currentLaser_s(true) + toString(acqStack.mWavelength_nm, 0) + "nm_Pi=" + toString(acqStack.mScanPi / mW, 1) + "mW_Pf=" + toString(acqStack.scanPf() / mW, 1) + "mW" +
-						"_x=" + toString(stackCenterXY.at(Stage::X) / mm, 3) + "_y=" + toString(stackCenterXY.at(Stage::Y) / mm, 3) +
+						"_x=" + toString(stackCenterXY.at(Stage::XX) / mm, 3) + "_y=" + toString(stackCenterXY.at(Stage::YY) / mm, 3) +
 						"_zi=" + toString(acqStack.mScanZi / mm, 4) + "_zf=" + toString(acqStack.scanZf() / mm, 4) + "_Step=" + toString(pixelSizeZ / mm, 4);
 
 					image.constructImage();
@@ -881,7 +992,7 @@ namespace TestRoutines
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
-		stage.waitForMotionToStopSingle(Stage::Z);
+		stage.waitForMotionToStopSingle(Stage::ZZ);
 
 		std::cout << "Stages final position:" << "\n";
 		stage.printPositionXYZ();
@@ -1289,12 +1400,12 @@ namespace TestRoutines
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 		//Create a sequence
-		Sequence sequence{ currentSample, stack, {stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y)}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
+		Sequence sequence{ currentSample, stack, {stackCenterXYZ.at(Stage::XX), stackCenterXYZ.at(Stage::YY)}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
 		std::vector<double2> locationList{ sequence.generateLocationList() };
 
 		for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationList.size(); iterLocation++)
 		{
-			std::cout << "x = " << locationList.at(iterLocation).at(Stage::X) / mm << "\ty = " << locationList.at(iterLocation).at(Stage::Y) / mm << "\n";
+			std::cout << "x = " << locationList.at(iterLocation).at(Stage::XX) / mm << "\ty = " << locationList.at(iterLocation).at(Stage::YY) / mm << "\n";
 		}
 	}
 
@@ -1308,12 +1419,12 @@ namespace TestRoutines
 		Logger datalog(currentSample.mName + "_locations");
 		datalog.record("dim=3"); //Needed in BigStitcher
 
-		for (int nTile = 0; nTile < nStacksXY.at(Stage::X) * nStacksXY.at(Stage::Y); nTile++)
+		for (int nTile = 0; nTile < nStacksXY.at(Stage::XX) * nStacksXY.at(Stage::YY); nTile++)
 			//for (int nTile = 0; nTile < 180; nTile++)
 		{
 			int2 nXY = nTileToArrayIndices(nTile);
-			int tileShiftX{ -nXY.at(Stage::X) * tileShiftXY_pix.at(Stage::X) };
-			int tileShiftY{ -nXY.at(Stage::Y) * tileShiftXY_pix.at(Stage::Y) };
+			int tileShiftX{ -nXY.at(Stage::XX) * tileShiftXY_pix.at(Stage::XX) };
+			int tileShiftY{ -nXY.at(Stage::YY) * tileShiftXY_pix.at(Stage::YY) };
 			std::string line{ std::to_string(nTile) + ";;(" + std::to_string(tileShiftY) + "," + std::to_string(tileShiftX) + ",0)" };	//In BigStitcher, X is horizontal and Y is vertical
 			//std::string line{ std::to_string(nTile) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(X)) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(Y)) }; //For debugging
 			datalog.record(line);
@@ -1327,12 +1438,12 @@ namespace TestRoutines
 		const int2 nStacksXY{ 30, 28 };
 
 		int nx;
-		int ny{ nTile / nStacksXY.at(Stage::X) };
+		int ny{ nTile / nStacksXY.at(Stage::XX) };
 
 		if (ny % 2)	//ny is odd
-			nx = nStacksXY.at(Stage::X) - nTile % nStacksXY.at(Stage::X) - 1;
+			nx = nStacksXY.at(Stage::XX) - nTile % nStacksXY.at(Stage::XX) - 1;
 		else		//ny is even
-			nx = nTile % nStacksXY.at(Stage::X);
+			nx = nTile % nStacksXY.at(Stage::XX);
 
 		return { nx,ny };
 	}

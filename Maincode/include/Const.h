@@ -27,7 +27,7 @@ namespace Constants
 
 	enum class PMTIN { PMT = false, SIM = true };
 	enum class LINECLOCK { RS = false, FG = true  };
-	enum class MAINTRIG { PC = 0, ZSTAGE = 1 };	//The numbering must match that of LV
+	enum class MAINTRIG { PC = 0, STAGEZ = 1, STAGEX = 2 };	//The numbering must match that of LV
 	enum class FPGARESET { DIS = false, EN = true };
 	enum class FIFOOUT { DIS = false, EN = true  };
 	enum class MULTIPAGE { DIS = false, EN = true };
@@ -87,8 +87,8 @@ namespace Constants
 
 	extern const double postsequenceTimer;
 
-	extern const double	ZstageTrigDelayTopdown;
-	extern const double	ZstageTrigDelayBottomup;
+	extern const double	STAGEZtrigDelayTopdown;
+	extern const double	STAGEZTrigDelayBottomup;
 
 	extern const int nChanPMT;
 	extern const PMTIN photocounterInput;

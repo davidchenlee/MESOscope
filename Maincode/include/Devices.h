@@ -366,7 +366,7 @@ private:
 class Stage
 {
 public:
-	enum Axis { X, Y, Z };
+	enum Axis { XX, YY, ZZ };
 	enum class DOPARAM { TRIGSTEP = 1, AXISNUMBER = 2, TRIGMODE = 3, POLARITY = 7, STARTTHRES = 8, STOPTHRES = 9, TRIGPOS = 10 };
 	enum class DOTRIGMODE { POSDIST = 0, ONTARGET = 2, INMOTION = 6, POSOFFSET = 7 };
 	enum class DIOCHAN { D1 = 1, D2 = 2 };

@@ -54,17 +54,17 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 
 	//Z STAGE. Fine tune the delay of the z-stage trigger for the acq sequence
 	double ZstageTrigDelay{ 0 };
-	if (mRTcontrol.mMainTrigger == MAINTRIG::ZSTAGE)
+	if (mRTcontrol.mMainTrigger == MAINTRIG::STAGEZ)
 	{
 		if (mRTcontrol.mHeightPerBeamletPerFrame_pix == 35)
 		{
 			switch (mScanDir)
 			{
 			case ZSCAN::TOPDOWN:
-				ZstageTrigDelay = ZstageTrigDelayTopdown;
+				ZstageTrigDelay = STAGEZtrigDelayTopdown;
 				break;
 			case ZSCAN::BOTTOMUP:
-				ZstageTrigDelay = ZstageTrigDelayBottomup;
+				ZstageTrigDelay = STAGEZTrigDelayBottomup;
 				break;
 			}
 		}
@@ -81,7 +81,7 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 	}
 
 	//Set the delay for the z-stage triggering the acq sequence
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlU32_ZstageTrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlU32_STAGEZtrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
 
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to be sent to the FPGA
@@ -1924,31 +1924,31 @@ Stage::Stage(const double velX, const double velY, const double velZ, const std:
 
 	//Open the connections to the stage controllers and assign the IDs
 	std::cout << "Establishing connection with the stages\n";
-	mID_XYZ.at(X) = PI_ConnectUSB(stageIDx.c_str());
-	mID_XYZ.at(Y) = PI_ConnectUSB(stageIDy.c_str());
-	mID_XYZ.at(Z) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	mID_XYZ.at(XX) = PI_ConnectUSB(stageIDx.c_str());
+	mID_XYZ.at(YY) = PI_ConnectUSB(stageIDy.c_str());
+	mID_XYZ.at(ZZ) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
 	//mID_XYZ.at(Z) = PI_ConnectUSB(stageIDz.c_str());
 
-	if (mID_XYZ.at(X) < 0)
+	if (mID_XYZ.at(XX) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
 
-	if (mID_XYZ.at(Y) < 0)
+	if (mID_XYZ.at(YY) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
 
-	if (mID_XYZ.at(Z) < 0)
+	if (mID_XYZ.at(ZZ) < 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
 
 	std::cout << "Connection with the stages successfully established\n";
 
 	//Download the current position
-	mPositionXYZ.at(X) = downloadPositionSingle_(X);
-	mPositionXYZ.at(Y) = downloadPositionSingle_(Y);
-	mPositionXYZ.at(Z) = downloadPositionSingle_(Z);
+	mPositionXYZ.at(XX) = downloadPositionSingle_(XX);
+	mPositionXYZ.at(YY) = downloadPositionSingle_(YY);
+	mPositionXYZ.at(ZZ) = downloadPositionSingle_(ZZ);
 
 	//Download the current velocities
-	mVelXYZ.at(X) = downloadVelSingle_(X);
-	mVelXYZ.at(Y) = downloadVelSingle_(Y);
-	mVelXYZ.at(Z) = downloadVelSingle_(Z);
+	mVelXYZ.at(XX) = downloadVelSingle_(XX);
+	mVelXYZ.at(YY) = downloadVelSingle_(YY);
+	mVelXYZ.at(ZZ) = downloadVelSingle_(ZZ);
 
 	configDOtriggers_();				//Configure the stage velocities and DO triggers
 	setVelXYZ({ velX, velY, velZ });	//Set the stage velocities
@@ -1957,9 +1957,9 @@ Stage::Stage(const double velX, const double velY, const double velZ, const std:
 Stage::~Stage()
 {
 	//Close the Connections
-	PI_CloseConnection(mID_XYZ.at(X));
-	PI_CloseConnection(mID_XYZ.at(Y));
-	PI_CloseConnection(mID_XYZ.at(Z));
+	PI_CloseConnection(mID_XYZ.at(XX));
+	PI_CloseConnection(mID_XYZ.at(YY));
+	PI_CloseConnection(mID_XYZ.at(ZZ));
 	//std::cout << "Connection with the stages successfully closed\n";
 }
 
@@ -1971,9 +1971,9 @@ double3 Stage::readPositionXYZ() const
 
 void Stage::printPositionXYZ() const
 {
-	std::cout << "Stage X position = " << mPositionXYZ.at(X) / mm << " mm\n";
-	std::cout << "Stage Y position = " << mPositionXYZ.at(Y) / mm << " mm\n";
-	std::cout << "Stage Z position = " << mPositionXYZ.at(Z) / mm << " mm\n";
+	std::cout << "Stage X position = " << mPositionXYZ.at(XX) / mm << " mm\n";
+	std::cout << "Stage Y position = " << mPositionXYZ.at(YY) / mm << " mm\n";
+	std::cout << "Stage Z position = " << mPositionXYZ.at(ZZ) / mm << " mm\n";
 }
 
 //Retrieve the stage position from the controller
@@ -2009,16 +2009,16 @@ void Stage::moveSingle(const Axis axis, const double position)
 //Move the 3 stages to the requested position
 void Stage::moveXY(const double2 positionXY)
 {
-	moveSingle(X, positionXY.at(X));
-	moveSingle(Y, positionXY.at(Y));
+	moveSingle(XX, positionXY.at(XX));
+	moveSingle(YY, positionXY.at(YY));
 }
 
 //Move the 3 stages to the requested position
 void Stage::moveXYZ(const double3 positionXYZ)
 {
-	moveSingle(X, positionXYZ.at(X));
-	moveSingle(Y, positionXYZ.at(Y));
-	moveSingle(Z, positionXYZ.at(Z));
+	moveSingle(XX, positionXYZ.at(XX));
+	moveSingle(YY, positionXYZ.at(YY));
+	moveSingle(ZZ, positionXYZ.at(ZZ));
 }
 
 bool Stage::isMoving(const Axis axis) const
@@ -2053,13 +2053,13 @@ void Stage::waitForMotionToStopAll() const
 
 	BOOL isMoving_x, isMoving_y, isMoving_z;
 	do {
-		if (!PI_IsMoving(mID_XYZ.at(X), mNstagesPerController, &isMoving_x))
+		if (!PI_IsMoving(mID_XYZ.at(XX), mNstagesPerController, &isMoving_x))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage X");
 
-		if (!PI_IsMoving(mID_XYZ.at(Y), mNstagesPerController, &isMoving_y))
+		if (!PI_IsMoving(mID_XYZ.at(YY), mNstagesPerController, &isMoving_y))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Y");
 
-		if (!PI_IsMoving(mID_XYZ.at(Z), mNstagesPerController, &isMoving_z))
+		if (!PI_IsMoving(mID_XYZ.at(ZZ), mNstagesPerController, &isMoving_z))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Z");
 
 		std::cout << ".";
@@ -2070,9 +2070,9 @@ void Stage::waitForMotionToStopAll() const
 
 void Stage::stopAll() const
 {
-	PI_StopAll(mID_XYZ.at(X));
-	PI_StopAll(mID_XYZ.at(Y));
-	PI_StopAll(mID_XYZ.at(Z));
+	PI_StopAll(mID_XYZ.at(XX));
+	PI_StopAll(mID_XYZ.at(YY));
+	PI_StopAll(mID_XYZ.at(ZZ));
 
 	std::cout << "Stages stopped\n";
 }
@@ -2110,16 +2110,16 @@ void Stage::setVelSingle(const Axis axis, const double vel)
 //Set the velocity of the stage 
 void Stage::setVelXYZ(const double3 velXYZ)
 {
-	setVelSingle(X, velXYZ.at(X));
-	setVelSingle(Y, velXYZ.at(Y));
-	setVelSingle(Z, velXYZ.at(Z));
+	setVelSingle(XX, velXYZ.at(XX));
+	setVelSingle(YY, velXYZ.at(YY));
+	setVelSingle(ZZ, velXYZ.at(ZZ));
 }
 
 void Stage::printVelXYZ() const
 {
-	std::cout << "Stage X vel = " << mVelXYZ.at(X) / mmps << " mm/s\n";
-	std::cout << "Stage Y vel = " << mVelXYZ.at(Y) / mmps << " mm/s\n";
-	std::cout << "Stage Z vel = " << mVelXYZ.at(Z) / mmps << " mm/s\n";
+	std::cout << "Stage X vel = " << mVelXYZ.at(XX) / mmps << " mm/s\n";
+	std::cout << "Stage Y vel = " << mVelXYZ.at(YY) / mmps << " mm/s\n";
+	std::cout << "Stage Z vel = " << mVelXYZ.at(ZZ) / mmps << " mm/s\n";
 }
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
@@ -2197,17 +2197,17 @@ void Stage::printStageConfig(const Axis axis, const DIOCHAN chan) const
 {
 	switch (axis)
 	{
-	case X:
+	case XX:
 		//Only DO1 is wired to the FPGA
 		if (chan != DIOCHAN::D1)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString(axis));
 		break;
-	case Y:
+	case YY:
 		//Only DO1 is wired to the FPGA
 		if (chan != DIOCHAN::D1)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString(axis));
 		break;
-	case Z:
+	case ZZ:
 		//Only DO1 and DO2 are wired to the FPGA
 		if (chan != DIOCHAN::D1 || chan != DIOCHAN::D2)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 and DO2 are currently wired to the FPGA for the stage " + axisToString(axis));
@@ -2238,10 +2238,10 @@ void Stage::printStageConfig(const Axis axis, const DIOCHAN chan) const
 void Stage::configDOtriggers_() const
 {
 
-	//STAGE Y. DO1 (PIN5 of the RS232 connector). DI2 (PIN2 of the RS232 connector). AFAIR, DI1 was not working properly as an an input pin (disabled by the firmware?)
-	const DIOCHAN YDO1{ DIOCHAN::D1 };
-	setDOtriggerEnabled(Y, YDO1, true);																//Enable DO1 output
-	setDOtriggerParamSingle(Y, YDO1, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));	//Configure DO1 as motion monitor
+	//STAGE X. DO1 (PIN5 of the RS232 connector). DI2 (PIN2 of the RS232 connector). AFAIR, DI1 was not working properly as an an input pin (disabled by the firmware?)
+	const DIOCHAN XDO1{ DIOCHAN::D1 };
+	setDOtriggerEnabled(XX, XDO1, true);																//Enable DO1 output
+	setDOtriggerParamSingle(XX, XDO1, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));	//Configure DO1 as motion monitor
 
 
 	//STAGE Z
@@ -2258,19 +2258,19 @@ void Stage::configDOtriggers_() const
 
 	//DO2 TRIGGER: DO2 is set to output HIGH when the stage z is in motion
 	const DIOCHAN ZDO2{ DIOCHAN::D2 };
-	setDOtriggerEnabled(Z, ZDO2, true);																//Enable DO2 output
-	setDOtriggerParamSingle(Z, ZDO2, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));	//Configure DO2 as motion monitor
+	setDOtriggerEnabled(ZZ, ZDO2, true);																//Enable DO2 output
+	setDOtriggerParamSingle(ZZ, ZDO2, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));	//Configure DO2 as motion monitor
 }
 
 std::string Stage::axisToString(const Axis axis) const
 {
 	switch (axis)
 	{
-	case X:
+	case XX:
 		return "X";
-	case Y:
+	case YY:
 		return "Y";
-	case Z:
+	case ZZ:
 		return "Z";
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
@@ -2296,14 +2296,14 @@ void Vibratome::pushStartStopButton() const
 void Vibratome::slice(const double planeToCutZ)
 {
 	mStage.setVelXYZ(mStageConveyingVelXYZ);																		//Change the velocity to move the sample to the vibratome
-	mStage.moveXYZ({ mStageInitialSlicePosXY.at(Stage::X), mStageInitialSlicePosXY.at(Stage::Y), planeToCutZ });	//Position the sample in front of the vibratome's blade
+	mStage.moveXYZ({ mStageInitialSlicePosXY.at(Stage::XX), mStageInitialSlicePosXY.at(Stage::YY), planeToCutZ });	//Position the sample in front of the vibratome's blade
 	mStage.waitForMotionToStopAll();
 
-	mStage.setVelSingle(Stage::Y, mSlicingVel);								//Change the y vel for slicing
+	mStage.setVelSingle(Stage::YY, mSlicingVel);							//Change the y vel for slicing
 	pushStartStopButton();													//Turn on the vibratome
-	mStage.moveSingle(Stage::Y, mStageFinalSlicePosY);						//Slice the sample: move the stage y towards the blade
-	mStage.waitForMotionToStopSingle(Stage::Y);								//Wait until the motion ends
-	mStage.setVelSingle(Stage::Y, mStageConveyingVelXYZ.at(Stage::Y));		//Set back the y vel to move the sample back to the microscope
+	mStage.moveSingle(Stage::YY, mStageFinalSlicePosY);						//Slice the sample: move the stage y towards the blade
+	mStage.waitForMotionToStopSingle(Stage::YY);							//Wait until the motion ends
+	mStage.setVelSingle(Stage::YY, mStageConveyingVelXYZ.at(Stage::YY));	//Set back the y vel to move the sample back to the microscope
 
 	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));				//Move the stage y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
 	//mStage.waitForMotionToStopSingle(Y);									//Wait until the motion ends

@@ -8,8 +8,10 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			Routines::stepwiseScan(fpga);
-			//Routines::contScanZ(fpga);
+			//Routines::stepwiseScan(fpga);
+			Routines::contScanZ(fpga);
+			//Routines::contScanX(fpga);
+			//Routines::contScanXTest(fpga);
 			//Routines::sequencer(fpga, true);
 			//Routines::liveScan(fpga);
 

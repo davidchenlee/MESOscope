@@ -44,6 +44,7 @@ namespace Constants
 															//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered
 	extern const int FIFOtimeout_tick{ 100 };				//Timeout of the all the FIFOS on the FPGA
 	extern const int FIFOINmax{ 32773 };					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the LV implementation on the FPGA!
+	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if a stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
 
 	//POCKELS
 	extern const double pockelsFirstFrameDelay{ 112. * us };//Delay of the Pockels wrt the preframeclock. The pockels is turned on early to avoid transient overshooting
@@ -67,16 +68,13 @@ namespace Constants
 	extern const GALVOcalib rescannerCalibF1040nm{ 0.33 * scannerCalib.voltagePerDistance, 0.065 * V };	//Using Fidelity
 	extern const int PMT16Xchan_int{ 7 }; //[0-15] when using a singlebeam, direct the galvo towards a particular channel of the PMT16X
 
-	//STAGES
-	extern const double postsequenceTimer{ 200 * ms };		//Enabled only if the z stage acts as the main trigger. Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence
-
 	//Delay the z-stage triggering the acq sequence
 	//To fine tune the delay using beads
 	//1. Position the z stage on the plane with beads
-	//2. Do a symmetric scan
+	//2. Do a centered z scan
 	//3. Adjust the delay until the beads appear in the middle of the z-stack
-	extern const double	ZstageTrigDelayTopdown{ 40 * ms };
-	extern const double	ZstageTrigDelayBottomup{ 40 * ms };
+	extern const double	STAGEZtrigDelayTopdown{ 40 * ms };
+	extern const double	STAGEZTrigDelayBottomup{ 40 * ms };
 													
 	//PMT
 	extern const int nChanPMT{ 16 };

@@ -69,6 +69,9 @@ public:
 	void presetFPGAoutput() const;
 	void uploadRT() const;
 	void triggerRT() const;
+	void enableStageTrigAcq() const;
+	void disableStageTrigAcq() const;
+	void enableFIFOOUT() const;
 private:
 	//Private subclass
 	class Pixelclock
@@ -92,7 +95,6 @@ private:
 	void uploadImagingParameters_() const;
 	void uploadFIFOIN_(const VQU32 &vectorOfQueues) const;
 	void triggerNRT_() const;
-	void setStageTrigger_(const bool state) const;
 };
 
 class FPGAexception : public std::runtime_error

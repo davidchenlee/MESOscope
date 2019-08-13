@@ -394,6 +394,28 @@ void RTcontrol::triggerRT() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, true));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));
 }
+
+//Enable the stage trigger control sequence and data acquisition
+void RTcontrol::enableStageTrigAcq() const
+{
+	if (mMainTrigger == MAINTRIG::ZSTAGE)
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, true));
+}
+
+//Disable the stage trigger control sequence and data acquisition
+void RTcontrol::disableStageTrigAcq() const
+{
+	if (mMainTrigger == MAINTRIG::ZSTAGE)
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));
+}
+
+//Push data from the FPGA to FIFOOUTfpga. Disabled when debugging
+void RTcontrol::enableFIFOOUT() const
+{
+	if (mFIFOOUTstate == FIFOOUT::EN)
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
+}
+
 //Push all the elements in 'tailQ' into 'headQ'
 void RTcontrol::concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const
 {
@@ -463,11 +485,6 @@ void RTcontrol::triggerNRT_() const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, true));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));
-}
-
-void RTcontrol::setStageTrigger_(const bool state) const
-{
-
 }
 #pragma endregion "RTcontrol"
 

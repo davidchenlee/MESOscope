@@ -9,16 +9,14 @@ Image::Image(const RTcontrol &RTcontrol) :
 	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 
-	//Trigger the acquisition with the PC or the Z stage. It has to be here and not in the RTcontrol class because the z-trigger has to be turned off in Image destructor to allow positioning the z-stage after every acquisition
-	if (mRTcontrol.mMainTrigger == MAINTRIG::ZSTAGE)
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, true));
+	//Trigger the data acquisition via the stage. It has to be here and not in the RTcontrol class because the trigger has to be turned off by the destructor to allow positioning the stage after acquisition
+	mRTcontrol.enableStageTrigAcq();
 }
 
 Image::~Image()
 {
 	//Turn off the acq trigger by the z stage to allow moving the z stage
-	if (mRTcontrol.mMainTrigger == MAINTRIG::ZSTAGE)
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));
+	mRTcontrol.disableStageTrigAcq();
 
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
 	//I think this is because FIFOOUT used to remain open and clashed with the following call
@@ -48,9 +46,8 @@ void Image::acquire(const bool saveAllPMT)
 //Preset the parameters for the acquisition sequence
 void Image::initializeAcq(const ZSCAN stackScanDir)
 {
-	//Enable pushing data to FIFOOUTfpga. Disable for debugging
-	if (mRTcontrol.mFIFOOUTstate == FIFOOUT::EN)
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
+	//Push data to from the FPGA FIFOOUTfpga. Disabled when debugging
+	mRTcontrol.enableFIFOOUT();
 
 	//Initialize mScanDir
 	mScanDir = stackScanDir;

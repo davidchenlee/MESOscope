@@ -36,15 +36,16 @@ U8* const Image::data() const
 	return mTiff.data();
 }
 
-//Scan a z-stack with individual acquisition triggers plane-by-plane
+//Scan a single frame
 void Image::acquire(const bool saveAllPMT)
 {
 	initializeAcq();
-	mRTcontrol.triggerRT();		//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
+	mRTcontrol.triggerRT();		//Send a signal to the FPGA to trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 	downloadData();
 	constructImage(saveAllPMT);
 }
 
+//Preset the parameters for the acquisition sequence
 void Image::initializeAcq(const ZSCAN stackScanDir)
 {
 	//Enable pushing data to FIFOOUTfpga. Disable for debugging
@@ -83,7 +84,7 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 
 	}
 
-	//Set the delay for tje z-stage triggering the acq sequence
+	//Set the delay for the z-stage triggering the acq sequence
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlU32_ZstageTrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
 
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
@@ -92,6 +93,7 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from the previous run
 }
 
+//Retrieve the data from the FPGA
 void Image::downloadData()
 {
 	if (mRTcontrol.mFIFOOUTstate == FIFOOUT::EN)
@@ -107,6 +109,7 @@ void Image::downloadData()
 	}
 }
 
+//Demultiplex the image
 void Image::constructImage(const bool saveAllPMT)
 {
 	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
@@ -114,6 +117,7 @@ void Image::constructImage(const bool saveAllPMT)
 	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Divide the concatenated image in a stack with nFrames and mirror the odd frames vertically
 }
 
+//Image post processing
 void Image::correctImage(const double FFOVfast)
 {
 	//mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
@@ -137,6 +141,7 @@ void Image::averageEvenOddFrames()
 	mTiff.averageEvenOddFrames();
 }
 
+//Divide the concatenated images into bins of nFramesPerBin frames and return a stack with the average in each bin
 void Image::binFrames(const int nFramesPerBin)
 {
 	mTiff.binFrames(nFramesPerBin);
@@ -154,6 +159,7 @@ void Image::saveTiffMultiPage(std::string filename, const OVERRIDE override) con
 	mTiff.saveToFile(filename, MULTIPAGE::EN, override, mScanDir);
 }
 
+//Output true if the average count is below threshold
 bool Image::isDark(const int threshold) const
 {
 	return mTiff.isDark(threshold);
@@ -292,6 +298,7 @@ void Image::correctInterleaved_()
 	}
 }
 
+//Demultiplex the image
 void Image::demultiplex_(const bool saveAllPMT)
 {	
 	if (multibeam || saveAllPMT)
@@ -327,7 +334,7 @@ void Image::demuxSingleChannel_()
 		}
 	}
 	else
-		;//If PMT16XCHAN::CENTERED, don't do anything
+		;//If PMT16XCHAN::CENTERED, do anything
 }
 
 //Each U32 element in mMultiplexedArrayA and mMultiplexedArrayB has the multiplexed structure:
@@ -377,7 +384,7 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 
 	//Merge all the PMT16X channels into a single image. The strip ordering depends on the scanning direction of the galvos (forward or backwards)
 	if (multibeam)
-		mTiff.mergePMT16Xchannels(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());			//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
+		mTiff.mergePMT16Xchan(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());				//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
 
 	//For debugging
 	if (saveAllPMT)
@@ -726,7 +733,8 @@ Filterwheel::~Filterwheel()
 	mSerial->close();
 }
 
-void Filterwheel::setPosition(const COLOR color)
+//Set the color of the filterwheel
+void Filterwheel::setColor(const COLOR color)
 {
 	const int position{ colorToPosition_(color) };
 
@@ -781,7 +789,7 @@ void Filterwheel::setPosition(const COLOR color)
 	}
 }
 
-//Set the filter color using the laser wavelength
+//Set the filter color by specifying the laser wavelength
 void Filterwheel::setWavelength(const int wavelength_nm)
 {
 	COLOR color;
@@ -795,7 +803,7 @@ void Filterwheel::setWavelength(const int wavelength_nm)
 	else
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The filterwheel wavelength must be in the range [680-1080] nm");
 
-	setPosition(color);
+	setColor(color);
 }
 
 //Download the current filter position
@@ -829,6 +837,7 @@ int Filterwheel::downloadPosition_() const
 	}
 }
 
+//Convert the color of the filter to the wheel position
 int Filterwheel::colorToPosition_(const COLOR color) const
 {
 	for (std::vector<int>::size_type iter = 0; iter < mFWconfig.size(); iter++)
@@ -840,6 +849,7 @@ int Filterwheel::colorToPosition_(const COLOR color) const
 	throw std::runtime_error((std::string)__FUNCTION__ + ": Failure converting color to position");
 }
 
+//Convert the wheel position to the color
 Filterwheel::COLOR Filterwheel::positionToColor_(const int position) const
 {
 	if (position < 1 || position > mNpos)
@@ -848,7 +858,7 @@ Filterwheel::COLOR Filterwheel::positionToColor_(const int position) const
 	return mFWconfig.at(position - 1);
 }
 
-//Convert from enum COLOR to string
+//Convert enum COLOR to string
 std::string Filterwheel::colorToString_(const COLOR color) const
 {
 	std::string colorStr;
@@ -918,6 +928,7 @@ void Laser::printWavelength_nm() const
 	std::cout << laserName + " wavelength is " << mWavelength_nm << " nm\n";
 }
 
+//Set the wavelength of the laser (Vision only)
 void Laser::setWavelength(const int wavelength_nm)
 {
 	switch (mWhichLaser)
@@ -1056,6 +1067,7 @@ int Laser::currentWavelength_nm() const
 	return mWavelength_nm;
 }
 
+//Download the current wavelength of the laser (Vision only)
 int Laser::downloadWavelength_nm_() const
 {
 	switch (mWhichLaser)
@@ -1123,11 +1135,13 @@ Shutter::~Shutter()
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), mWhichShutter, false));
 }
 
+//Set the shutter open or close
 void Shutter::setShutter(const bool state) const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), mWhichShutter, state));
 }
 
+//Open and close the shutter
 void Shutter::pulse(const double pulsewidth) const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), mWhichShutter, true));
@@ -1490,7 +1504,7 @@ void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm
 
 	else //Single beam. Turn both filterwheels concurrently
 	{
-		std::future<void> th1{ std::async(&Filterwheel::setPosition, &mFWexcitation, Filterwheel::COLOR::OPEN) };
+		std::future<void> th1{ std::async(&Filterwheel::setColor, &mFWexcitation, Filterwheel::COLOR::OPEN) };
 		std::future<void> th2{ std::async(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm) };
 
 		try

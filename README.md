@@ -4,7 +4,6 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 - calibrate Fidelity
-- For contZscan, do frame average
 - realign the dichroic and rescanner mounts. Fine tune the galvo parameters
 - cover up the entire the emission path
 - figure out why the FOV of 16X is slightly different from 1X

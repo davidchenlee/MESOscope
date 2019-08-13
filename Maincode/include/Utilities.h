@@ -45,11 +45,11 @@ public:
 	TiffU8(const std::string filename);
 	TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames);
 	TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames);
-	TiffU8(const int width, const int height, const int nFrames);
+	TiffU8(const int width_pix, const int height_pix, const int nFrames);
 	~TiffU8();
 	U8* const data() const;
-	int widthPerFrame() const;
-	int heightPerFrame() const;
+	int widthPerFrame_pix() const;
+	int heightPerFrame_pix() const;
 	int nFrames() const;
 	void splitIntoFrames(const int nFrames);
 	void saveToFile(std::string filename, const MULTIPAGE multipage, const OVERRIDE override = OVERRIDE::DIS, const ZSCAN scanDir = ZSCAN::TOPDOWN) const;
@@ -61,18 +61,29 @@ public:
 	void saveTxt(const std::string fileName) const;
 	void pushImage(const int frameIndex, const U8* inputArray) const;
 	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const U8* inputArray) const;
-	void mergePMT16Xchannels(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
+	void mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
 	void correctRSdistortionGPU(const double FFOVfast);
 	void correctRSdistortionCPU(const double FFOVfast);
 	void suppressCrosstalk(const double crosstalkRatio = 1.0);
 	void flattenField(const double maxScaleFactor = 1.0);
 private:
 	U8* mArray;
-	int mWidthPerFrame;
-	int mHeightPerFrame;
+	int mWidthPerFrame_pix;
+	int mHeightPerFrame_pix;
 	int mNframes;
 	int mBytesPerLine; 
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
+};
+
+class QuickStitcher
+{
+public:
+	QuickStitcher(const int widthPerFrame, const int heightPerFrame, const int2 nArrayDim);
+	void push(const TiffU8 &input, const int2 arrayIndex);
+	void saveToFile(std::string filename) const;
+private:
+	TiffU8 mTiff;
+	int2 mNarrayDim;
 };
 
 /*Obsolete

@@ -126,7 +126,7 @@ public:
 	Filterwheel(Filterwheel&&) = delete;					//Disable move constructor
 	Filterwheel& operator=(Filterwheel&&) = delete;			//Disable move-assignment constructor
 
-	void setPosition(const COLOR color);
+	void setColor(const COLOR color);
 	void setWavelength(const int wavelength_nm);
 private:
 	/* Excitation wheel with the beamsplitters (as of Feb 2019)

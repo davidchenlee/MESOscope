@@ -253,7 +253,7 @@ namespace Routines
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };					//Scan direction in the axis STAGEZ
-		const int nFramesPerBin{ 1 };							//
+		const int nFramesPerBin{ 4 };							//
 		const int nFramesCont{ 200 * nFramesPerBin };			//Number of frames for continuous acquisition
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZ{ stackDepth / nFramesCont };
@@ -321,11 +321,11 @@ namespace Routines
 		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 
 		//STAGES
-		const double3 initialStageXYZ{ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stageZi};		//Initial position of the stages. The sign of stackDepth determines the scanning direction		
-		const double velZ{ pixelSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };
-		Stage stage{ 5 * mmps, 5 * mmps, velZ, currentSample.mStageSoftPosLimXYZ };								//Specify the vel. Duration of a frame = a galvo swing = halfPeriodLineclock * heightPerBeamletPerFrame_pix
-		stage.moveXYZ(initialStageXYZ);
+		const double3 initialStageXYZ{ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stageZi};		//Initial position of the stages	
+		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };							
+		stage.moveXYZ(initialStageXYZ);																			//Move to the initial position
 		stage.waitForMotionToStopAll();
+		stage.setVelSingle(Stage::Axis::Z, pixelSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix));	//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
@@ -335,7 +335,7 @@ namespace Routines
 		stage.moveSingle(Stage::Z, stageZf);	//Move the stage to trigger the control sequence and data acquisition
 		image.downloadData();
 
-		virtualLaser.closeShutter();	//Close the shutter manually even thought the destructor does it as well because the data processing could take a long time
+		virtualLaser.closeShutter();	//Close the shutter manually even thought the destructor does it because the data processing could take a long time
 		image.constructImage();
 		image.correctImage(RScanner.mFFOV);
 		image.binFrames(nFramesPerBin);
@@ -358,12 +358,12 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const double2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };		//Full FOV in the (slow axis, fast axis)
 		const int nFramesCont{ 200 };																	//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };																//Step size in the axis STAGEZ
+		const double pixelSizeZ{ 0.5 * um };															//Step size in the axis STAGEZ
 		const ROI roi{ 11.000 * mm, 34.825 * mm, 11.180 * mm, 35.025 * mm };							//Region of interest {ymin, xmin, ymax, xmax}
 		const double3 stackOverlap_frac{ 0.05, 0.05, 0.05 };											//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };														//Sample thickness
-		const double sampleSurfaceZ{ stackCenterXYZ.at(Stage::Z) - nFramesCont * stepSizeZ / 2 };		//For beads, center the stack around stackCenterXYZ.at(Z)
+		const double sampleSurfaceZ{ stackCenterXYZ.at(Stage::Z) - nFramesCont * pixelSizeZ / 2 };		//For beads, center the stack around stackCenterXYZ.at(Z)
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -380,7 +380,7 @@ namespace Routines
 
 		//Create a sequence
 		const Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
-		const Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
+		const Stack stack{ FFOV, pixelSizeZ, nFramesCont, stackOverlap_frac };
 		//Sequence sequece(sample, stack);
 		Sequence sequence{ sample, stack, {stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y)}, { 1, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {STAGEX, STAGEY}
 		sequence.generateCommandList();
@@ -403,10 +403,10 @@ namespace Routines
 			Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2 };
 
 			//STAGES. Specify the velocity
-			const double velZ{ stepSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix) };
-			Stage stage{ 5 * mmps, 5 * mmps, velZ, currentSample.mStageSoftPosLimXYZ };
+			Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
 			stage.moveSingle(Stage::Z, sample.mSurfaceZ);	//Move the z stage to the sample surface
 			stage.waitForMotionToStopAll();
+			stage.setVelSingle(Stage::Axis::Z, pixelSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix));	//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
@@ -417,7 +417,7 @@ namespace Routines
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
 				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
-				Sequence::Commandline commandline{ sequence.readCommandline(iterCommandline) }; //Implement read-from-file?
+				Sequence::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 				//commandline.printParameters();
 
 				//Stopwatch
@@ -447,7 +447,7 @@ namespace Routines
 				case Action::ID::SAV:
 					longName = virtualLaser.currentLaser_s(true) + toString(acqStack.mWavelength_nm, 0) + "nm_Pi=" + toString(acqStack.mScanPi / mW, 1) + "mW_Pf=" + toString(acqStack.scanPf() / mW, 1) + "mW" +
 						"_x=" + toString(stackCenterXY.at(Stage::X) / mm, 3) + "_y=" + toString(stackCenterXY.at(Stage::Y) / mm, 3) +
-						"_zi=" + toString(acqStack.mScanZi / mm, 4) + "_zf=" + toString(acqStack.scanZf() / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4);
+						"_zi=" + toString(acqStack.mScanZi / mm, 4) + "_zf=" + toString(acqStack.scanZf() / mm, 4) + "_Step=" + toString(pixelSizeZ / mm, 4);
 
 					image.constructImage();
 					//image.correctImage(RScanner.mFFOV);
@@ -1061,16 +1061,27 @@ namespace TestRoutines
 	void tiffU8()
 	{
 		
-		std::string inputFilename{ "Liver_V750nm_P=184.3mW_Pinc=1.4mWpum_x=52.700_y=20.000_zi=17.8340_zf=17.9360_Step=0.0001" };
-		std::string outputFilename{ "avg_" + inputFilename };
+		std::string inputFilename{ "aaa" };
+		std::string outputFilename{ "output_" + inputFilename };
 
 		TiffU8 image{ inputFilename };
 		//image.flattenField(2.0);
-		//image.suppressCrosstalk(0.1);
-		image.binFrames(5);
-		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+		//image.suppressCrosstalk(0.2);
+		//image.binFrames(5);
 
-		//pressAnyKeyToCont();
+		const int width{ 300 };
+		const int height{ 560 };
+
+		QuickStitcher stitched{ width,height, {2,2} };
+		stitched.push(image, { 0,0 });
+		stitched.push(image, { 0,1 });
+		stitched.push(image, { 1,0 });
+		stitched.push(image, { 1,1 });
+		stitched.saveToFile(outputFilename);
+
+		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+
+		pressAnyKeyToCont();
 		//std::cout << image.isDark(1) << "\n";
 		//image.splitIntoFrames(10);
 		//image.mirrorOddFrames();

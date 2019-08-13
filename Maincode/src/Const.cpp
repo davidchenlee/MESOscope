@@ -35,7 +35,7 @@ namespace Constants
 	extern const double usPerTick{ 1. / 160 };				//Time step of the FPGA's clock
 	extern const U32 tMIN_tick{ 2 };						//Min ticks allowed = 2 because DO and AO have a latency of 2 ticks
 	extern const int AO_tMIN{ 2 * us };						//Time step of the analog output. The AO channels has a delay of >1 us 
-	extern const int syncDOtoAO_tick{ 4 * 74 };				//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
+	extern const int DOdelay_tick{ 4 * 74 };				//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
 															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
 															//because I placed the comparison logics for gating AFTER the line counter instead of before
 	extern const int nPreframes{ 4 };						//Number of lineclocks delaying the frameclock (and framegate) wrt the preframeclock (and preframegate)

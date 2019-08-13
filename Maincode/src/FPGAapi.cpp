@@ -176,7 +176,7 @@ void FPGA::close(const FPGARESET reset) const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_Finalize());
 }
 
-NiFpga_Session FPGA::getHandle() const
+NiFpga_Session FPGA::handle() const
 {
 	return mHandle;
 }
@@ -184,58 +184,58 @@ NiFpga_Session FPGA::getHandle() const
 //Load the imaging parameters onto the FPGA. See 'Const.cpp' for the definition of each variable
 void FPGA::initializeFpga_() const
 {
-	if (FIFOtimeout_tick < 0 || syncDOtoAO_tick < 0 || pockelsFirstFrameDelay < 0 || pockelsSecondaryDelay < 0 || scanGalvoDelay < 0 || rescanGalvoDelay < 0 || linegateTimeout < 0)
+	if (FIFOtimeout_tick < 0 || DOdelay_tick < 0 || pockelsFirstFrameDelay < 0 || pockelsSecondaryDelay < 0 || scanGalvoDelay < 0 || rescanGalvoDelay < 0 || linegateTimeout < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 	//PMT simulator for debugging
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(getHandle(), NiFpga_FPGAvi_ControlBool_PhotocounterInputSelector, static_cast<bool>(photocounterInput)));	//Use the PMT simulator as the input of the photocounters
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(getHandle(), NiFpga_FPGAvi_ControlU8_nPMTsim, static_cast<U8>(nPMTsim)));									//Size of PMTsimArray
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(getHandle(), NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, PMTsimArray, nPMTsim));						//Array that simulates the pulses from the PMTs
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(handle(), NiFpga_FPGAvi_ControlBool_PhotocounterInputSelector, static_cast<bool>(photocounterInput)));	//Use the PMT simulator as the input of the photocounters
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(handle(), NiFpga_FPGAvi_ControlU8_nPMTsim, static_cast<U8>(nPMTsim)));									//Size of PMTsimArray
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(handle(), NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, PMTsimArray, nPMTsim));						//Array that simulates the pulses from the PMTs
 
 	//FIFOIN
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(getHandle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTcontrol::RTCHAN::NCHAN)));				//Number of input channels
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));												//Trigger of the control sequence
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(getHandle(), NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(FIFOtimeout_tick)));				//FIFOIN timeout
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(handle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTcontrol::RTCHAN::NCHAN)));				//Number of input channels
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));											//Trigger of the control sequence
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(handle(), NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(FIFOtimeout_tick)));				//FIFOIN timeout
 
 	//TRIGGERS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));																				//Pc trigger signal
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));																	//Z-stage as tigger
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																	//Trigger the FPGA outputs (non-RT trigger)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<int>(MAINTRIG::PC)));					//Main trigger selector (PC, STAGEX, STAGEZ)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));												//Pc trigger signal
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));										//Trigger the FPGA outputs (non-RT trigger)
 
 	//DELAYS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_SyncDOtoAO_tick, static_cast<U32>(syncDOtoAO_tick)));												//DO and AO relative sync
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PockelsFirstFrameDelay_tick, static_cast<U32>(pockelsFirstFrameDelay / us * tickPerUs)));			//Pockels delay wrt the preframeclock (first frame only)
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PockelsFrameDelay_tick, static_cast<U32>(pockelsSecondaryDelay / us * tickPerUs)));				//Pockels delay wrt the preframeclock
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(getHandle(), NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));														//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PreframeclockScanGalvo_tick, static_cast<U32>(scanGalvoDelay / us * tickPerUs)));					//Scan galvo delay wrt the preframeclock
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PreframeclockRescanGalvo_tick, static_cast<U32>(rescanGalvoDelay / us * tickPerUs)));				//Rescan galvo delay wrt the preframeclock
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_DOdelay_tick, static_cast<U32>(DOdelay_tick)));													//Delay DO to sync it with AO
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_PockelsFirstFrameDelay_tick, static_cast<U32>(pockelsFirstFrameDelay / us * tickPerUs)));		//Pockels delay wrt the preframeclock (first frame only)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_PockelsFrameDelay_tick, static_cast<U32>(pockelsSecondaryDelay / us * tickPerUs)));				//Pockels delay wrt the preframeclock
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(handle(), NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));														//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_PreframeclockScanGalvo_tick, static_cast<U32>(scanGalvoDelay / us * tickPerUs)));				//Scan galvo delay wrt the preframeclock
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_PreframeclockRescanGalvo_tick, static_cast<U32>(rescanGalvoDelay / us * tickPerUs)));			//Rescan galvo delay wrt the preframeclock
 
 	if (linegateTimeout <= 2 * lineclockHalfPeriod)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(linegateTimeout / us * tickPerUs)));			//Timeout the trigger of the control sequence
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(linegateTimeout / us * tickPerUs)));						//Timeout the trigger of the control sequence
 
 	//POCKELS CELLS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));											//Enable gating the pockels by framegate. For debugging purposes
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));														//Enable gating the pockels by framegate. For debugging purposes
 
 	//VIBRATOME
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_VTback, false));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_VTforward, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_VTback, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_VTforward, false));
 
 	//Flush the RAM buffers on the FPGA as precaution. 
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
 	//std::cout << "flushBRAMs called\n";	//For debugging
 
 	/*
 	//SHUTTERS. Commented out to allow keeping the shutter on
-	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_Shutter1, false));
-	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_Shutter2, false));
+	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_Shutter1, false));
+	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_Shutter2, false));
 
 	//RESONANT SCANNER. Commented out to allow keeping the RS on
-	checkStatus(__FUNCTION__,  NiFpga_WriteI16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, false));	//Output voltage
-	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_RSenable, false));	//Turn on/off
+	checkStatus(__FUNCTION__,  NiFpga_WriteI16(mFpga.handle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, false));	//Output voltage
+	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSenable, false));	//Turn on/off
 	*/
 }
 #pragma endregion "FPGA"
@@ -274,12 +274,12 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	//Solution: after an acq sequence, wait a certain amount of time before the acq is triggered again (timer implemented in LV)
 	if (mMainTrigger == MAINTRIG::ZSTAGE)
 	{
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.getHandle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postsequenceTimer / us * tickPerUs)));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.handle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postsequenceTimer / us * tickPerUs)));
 		//std::cout << "Z stage as the main trigger\n";
 	}
 	else
 	{
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.getHandle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, 0));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.handle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, 0));
 		//std::cout << "PC as the main trigger\n";
 	}
 }
@@ -356,8 +356,8 @@ void RTcontrol::presetFPGAoutput() const
 {
 	//Read from the FPGA the last voltage in the galvo AO. See the LV implementation
 	std::vector<I16> AOlastVoltage_I16(static_cast<U8>(RTCHAN::NCHAN), 0);
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getHandle(), NiFpga_FPGAvi_IndicatorU16_ScanGalvoMon, &AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::SCANGALVO))));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.getHandle(), NiFpga_FPGAvi_IndicatorU16_RescanGalvoMon, &AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::RESCANGALVO))));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.handle(), NiFpga_FPGAvi_IndicatorU16_ScanGalvoMon, &AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::SCANGALVO))));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.handle(), NiFpga_FPGAvi_IndicatorU16_RescanGalvoMon, &AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::RESCANGALVO))));
 
 	//Create a vector of queues
 	VQU32 vectorOfQueuesForRamp{ static_cast<U8>(RTCHAN::NCHAN) };
@@ -383,37 +383,38 @@ void RTcontrol::presetFPGAoutput() const
 	triggerNRT_();								//Trigger the FPGA outputs (non-RT trigger)
 }
 
+//
 void RTcontrol::uploadRT() const
 {
 	uploadFIFOIN_(mVectorOfQueues);
 }
 
-//Trigger the RT control sequence on the FPGA
+//Trigger the RT control sequence on the FPGA and the data acquisition
 void RTcontrol::triggerRT() const
 {
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, true));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));
 }
 
 //Enable the stage trigger control sequence and data acquisition
 void RTcontrol::enableStageTrigAcq() const
 {
 	if (mMainTrigger == MAINTRIG::ZSTAGE)
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, true));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<int>(MAINTRIG::ZSTAGE)));
 }
 
 //Disable the stage trigger control sequence and data acquisition
 void RTcontrol::disableStageTrigAcq() const
 {
 	if (mMainTrigger == MAINTRIG::ZSTAGE)
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<int>(MAINTRIG::PC)));
 }
 
 //Push data from the FPGA to FIFOOUTfpga. Disabled when debugging
 void RTcontrol::enableFIFOOUT() const
 {
 	if (mFIFOOUTstate == FIFOOUT::EN)
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
 }
 
 //Push all the elements in 'tailQ' into 'headQ'
@@ -432,12 +433,12 @@ void RTcontrol::uploadImagingParameters_() const
 	if (mNframes < 0 || mHeightPerBeamletAllFrames_pix < 0 || mHeightPerBeamletPerFrame_pix < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mFpga.getHandle(), NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(mHeightPerBeamletAllFrames_pix)));		//Total number of lines per beamlet in all the frames
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(mNframes)));								//Number of frames to acquire
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerBeamletPerFrame_pix)));	//Number of lines per beamlet in a frame
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mFpga.handle(), NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(mHeightPerBeamletAllFrames_pix)));		//Total number of lines per beamlet in all the frames
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.handle(), NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(mNframes)));								//Number of frames to acquire
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.handle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerBeamletPerFrame_pix)));	//Number of lines per beamlet in a frame
 
 	//SELECTORS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));		//Lineclock: resonant scanner (RS) or function generator (FG)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));	//Lineclock: resonant scanner (RS) or function generator (FG)
 }
 
 //Send every single queue in 'vectorOfQueue' to the FPGA buffer
@@ -471,20 +472,20 @@ void RTcontrol::uploadFIFOIN_(const VQU32 &vectorOfQueues) const
 		U32 r;							//Elements remaining
 
 		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.getHandle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.handle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
 
 		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
 		//This boolean serves as the master trigger for the entire control sequence
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
 	}
 }
 
 //Trigger the FPGA outputs in a non-realtime way (see the LV implementation)
 void RTcontrol::triggerNRT_() const
 {
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, true));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));
 }
 #pragma endregion "RTcontrol"
 

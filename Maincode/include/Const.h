@@ -27,7 +27,7 @@ namespace Constants
 
 	enum class PMTIN { PMT = false, SIM = true };
 	enum class LINECLOCK { RS = false, FG = true  };
-	enum class MAINTRIG { PC = false, ZSTAGE = true };
+	enum class MAINTRIG { PC = 0, ZSTAGE = 1 };	//The numbering must match that of LV
 	enum class FPGARESET { DIS = false, EN = true };
 	enum class FIFOOUT { DIS = false, EN = true  };
 	enum class MULTIPAGE { DIS = false, EN = true };
@@ -61,7 +61,7 @@ namespace Constants
 	extern const double usPerTick;
 	extern const U32 tMIN_tick;
 	extern const int AO_tMIN;
-	extern const int syncDOtoAO_tick;
+	extern const int DOdelay_tick;
 	extern const int nPreframes;
 
 	extern const double linegateTimeout;

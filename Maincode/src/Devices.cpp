@@ -81,7 +81,7 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 	}
 
 	//Set the delay for the z-stage triggering the acq sequence
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlU32_ZstageTrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlU32_ZstageTrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
 
 	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to be sent to the FPGA
@@ -174,8 +174,8 @@ void Image::FIFOOUTpcGarbageCollector_() const
 	while (true)
 	{
 		//Check if there are elements in FIFOOUTpc
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nElemToReadA));
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nElemToReadB));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nElemToReadA));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nElemToReadB));
 		//std::cout << "FIFOOUTpc cleanup A/B: " << nElemToReadA << "/" << nElemToReadB << "\n";
 		//getchar();
 
@@ -185,13 +185,13 @@ void Image::FIFOOUTpcGarbageCollector_() const
 		if (nElemToReadA > 0)
 		{
 			nElemToReadA = (std::min)(bufSize, nElemToReadA);	//Min between bufSize and nElemToReadA
-			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, nElemToReadA, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
+			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, nElemToReadA, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
 			nElemTotalA += nElemToReadA;
 		}
 		if (nElemToReadB > 0)
 		{
 			nElemToReadB = (std::min)(bufSize, nElemToReadB);	//Min between bufSize and nElemToReadB
-			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, nElemToReadB, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
+			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, nElemToReadB, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
 			nElemTotalB += nElemToReadB;
 		}
 	}
@@ -259,7 +259,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 	if (nElemRead < mRTcontrol.mNpixPerBeamletAllFrames)		//Skip if all the data have already been transferred
 	{
 		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), FIFOOUTpc, buffer, 0, timeout_ms, &nElemToRead));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), FIFOOUTpc, buffer, 0, timeout_ms, &nElemToRead));
 		//std::cout << "Number of elements remaining in FIFOOUT: " << nElemToRead << "\n";	//For debugging
 
 		//If data available in FIFOOUTpc, retrieve it
@@ -270,7 +270,7 @@ void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 F
 				throw std::runtime_error((std::string)__FUNCTION__ + ": Received more FIFO elements than expected");
 
 			//Retrieve the elements in FIFOOUTpc
-			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.getHandle(), FIFOOUTpc, buffer + nElemRead, nElemToRead, timeout_ms, &dummy));
+			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), FIFOOUTpc, buffer + nElemRead, nElemToRead, timeout_ms, &dummy));
 
 			//Keep track of the total number of elements read
 			nElemRead += nElemToRead;
@@ -398,24 +398,24 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
 void Image::startFIFOOUTpc_() const
 {
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StartFifo(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StartFifo(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StartFifo(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StartFifo(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 }
 
 //Configure FIFOOUTpc. Optional according to NI
 void Image::configureFIFOOUTpc_(const U32 depth) const
 {
 	U32 actualDepth;
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
 	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << "\n";
 }
 
 //Stop the connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI
 void Image::stopFIFOOUTpc_() const
 {
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StopFifo(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StopFifo(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StopFifo(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StopFifo(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 	//std::cout << "stopFIFO called\n";
 }
 #pragma endregion "Image"
@@ -454,7 +454,7 @@ void ResonantScanner::setFFOV(const double FFOV)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested FFOV must be in the range [0-" + std::to_string(mVMAX / mVoltagePerDistance / um) + "] um");
 
 	//Upload the control voltage
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::voltageToI16(mControlVoltage)));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::voltageToI16(mControlVoltage)));
 }
 
 //First set the FFOV, then set RSenable on
@@ -462,7 +462,7 @@ void ResonantScanner::turnOn(const double FFOV)
 {
 	setFFOV(FFOV);
 	Sleep(static_cast<DWORD>(mDelay / ms));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
 	std::cout << "RS FFOV successfully set to: " << FFOV / um << " um\n";
 }
 
@@ -471,14 +471,14 @@ void ResonantScanner::turnOnUsingVoltage(const double controlVoltage)
 {
 	setVoltage_(controlVoltage);
 	Sleep(static_cast<DWORD>(mDelay / ms));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
 	std::cout << "RS control voltage successfully set to: " << controlVoltage / V << " V\n";
 }
 
 //First set RSenable off, then set the control voltage to 0
 void ResonantScanner::turnOff()
 {
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_RSrun, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSrun, false));
 	Sleep(static_cast<DWORD>(mDelay / ms));
 	setVoltage_(0);
 	std::cout << "RS successfully turned off" << "\n";
@@ -488,7 +488,7 @@ void ResonantScanner::turnOff()
 double ResonantScanner::downloadControlVoltage() const
 {
 	I16 control_I16;
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
 
 	return FPGAfunc::intToVoltage(control_I16);
 }
@@ -502,7 +502,7 @@ void ResonantScanner::isRunning() const
 	char input_char;
 	while (true)
 	{
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_IndicatorBool_RSisRunning, &isRunning));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadBool(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_IndicatorBool_RSisRunning, &isRunning));
 		if (!isRunning)
 		{
 			std::cout << "RS seems OFF. Press ESC to exit or any other key to try again\n";
@@ -529,7 +529,7 @@ void ResonantScanner::setVoltage_(const double controlVoltage)
 	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;					//Spatial sampling resolution (length/pixel)
 
 	//Upload the control voltage
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::voltageToI16(mControlVoltage)));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::voltageToI16(mControlVoltage)));
 }
 #pragma endregion "Resonant scanner"
 
@@ -1128,23 +1128,23 @@ Shutter::Shutter(const FPGA &fpga, const Laser::ID whichLaser) : mFpga{ fpga }
 Shutter::~Shutter()
 {
 	//This is to prevent keeping the shutter open in case of an exception
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), mWhichShutter, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), mWhichShutter, false));
 }
 
 //Set the shutter open or close
 void Shutter::setShutter(const bool state) const
 {
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), mWhichShutter, state));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), mWhichShutter, state));
 }
 
 //Open and close the shutter
 void Shutter::pulse(const double pulsewidth) const
 {
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), mWhichShutter, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), mWhichShutter, true));
 
 	Sleep(static_cast<DWORD>(pulsewidth/ms));
 
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), mWhichShutter, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), mWhichShutter, false));
 }
 #pragma endregion "Shutters"
 
@@ -2286,11 +2286,11 @@ void Vibratome::pushStartStopButton() const
 {
 	const int pulsewidth{ 100 * ms }; //in ms. It has to be longer than~ 12 ms, otherwise the vibratome is not triggered
 
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_VTstart, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_VTstart, true));
 
 	Sleep(static_cast<DWORD>(pulsewidth / ms));
 
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
 }
 
 void Vibratome::slice(const double planeToCutZ)
@@ -2331,7 +2331,7 @@ void Vibratome::moveHead_(const double duration, const MotionDir motionDir) cons
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected vibratome channel unavailable");
 	}
 
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), selectedChannel, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), selectedChannel, true));
 
 	if (duration >= minDuration)
 		Sleep(static_cast<DWORD>((duration - delay)/ms));
@@ -2340,7 +2340,7 @@ void Vibratome::moveHead_(const double duration, const MotionDir motionDir) cons
 		Sleep(static_cast<DWORD>((minDuration - delay)/ms));
 		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << 1. * minDuration / ms << "ms" << "\n";
 	}
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), selectedChannel, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), selectedChannel, false));
 }
 
 void Vibratome::cutAndRetractDistance(const double distance) const

@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (52.700 - 0.280) * mm, (20.000 )* mm, (17.840) * mm };//Liver TDT
+double3 stackCenterXYZ{ (52.700) * mm, (20.000 )* mm, (17.820) * mm };//Liver TDT
 //double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
 const std::vector<double2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
@@ -24,20 +24,19 @@ namespace Routines
 	{
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
-		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
+		const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const int nFramesCont{ 1 };	
-		const double stackDepthZ{ 100. * um };	//Acquire a stack this deep in the axis STAGEZ
-
+		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the axis STAGEZ
+		const double stepSizeZ{ 1.0 * um };
 	
 		const double pixelSizeXY{ 0.5 * um };
-		const double stepSizeZ{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
@@ -62,10 +61,7 @@ namespace Routines
 			FFOVslowPerBeamlet = FFOVslow;
 		}
 
-		//STAGES
-		std::vector<double3> stagePositionXYZ;
-		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-
+		std::vector<double3> stagePositionXYZ;							//Vector with the sample locations to image
 		int nSameLocation{ 1 };											//Number of frames at the same location
 		double stepSizeX{ 0 };											//Step for lateral scanning
 		bool saveAllPMT{ false };										//Save all PMT16X channels in separate pages in a Tiff
@@ -169,16 +165,18 @@ namespace Routines
 			datalog.record("Resolution Y (galvo) (um/pix) = ", pixelSizeXY / um);
 			datalog.record("\nSTAGE--------------------------------------------------------");
 		}
+		//STAGES
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
+		stage.moveXYZ(stagePositionXYZ.front());	//Move the stage to the initial position
+		stage.waitForMotionToStopAll();
 
 		//CREATE A STACK FOR STORING THE TIFFS
 		const int nLocations{ static_cast<int>(stagePositionXYZ.size()) };
-		//TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nLocations, nSameLocation };
 		TiffU8 output{ widthPerFrame_pix, heightPerFrame_pix, nLocations };
-
+		std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm" };
+		
 		//OPEN THE UNIBLITZ SHUTTERS
 		virtualLaser.openShutter();	//The destructor will close the shutter automatically
-
-		std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm" };
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
@@ -322,7 +320,7 @@ namespace Routines
 		//STAGES
 		const double3 initialStageXYZ{ stackCenterXYZ.at(Stage::X), stackCenterXYZ.at(Stage::Y), stageZi};		//Initial position of the stages	
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };							
-		stage.moveXYZ(initialStageXYZ);																			//Move to the initial position
+		stage.moveXYZ(initialStageXYZ);		//Move the stage to the initial position
 		stage.waitForMotionToStopAll();
 		stage.setVelSingle(Stage::Axis::Z, pixelSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix));	//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 

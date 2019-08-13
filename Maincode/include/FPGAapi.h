@@ -25,7 +25,7 @@ public:
 	FPGA();
 	~FPGA();
 	void close(const FPGARESET reset = FPGARESET::DIS) const;
-	NiFpga_Session getHandle() const;									//Access the handle indirectly to avoid modifying it by mistake
+	NiFpga_Session handle() const;										//Access the handle indirectly to avoid modifying it by mistake
 private:
 	NiFpga_Session mHandle;												//FPGA handle. Non-const to let the FPGA API assign the handle
 	const std::string mBitfile{ bitfilePath + NiFpga_FPGAvi_Bitfile };	//FPGA bitfile location

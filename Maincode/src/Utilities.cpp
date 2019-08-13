@@ -194,9 +194,10 @@ TiffU8::TiffU8(const std::string filename) : mNframes{ 1 }
 	}	
 	//The pointer TIFFTAG_ImageJ can't be cleaned up with delete because it was passed by reference to TIFFGetField()
 
-	std::cout << "Image pixel width = " << mWidthPerFrame_pix << "\n";
-	std::cout << "Image pixel height = " << mHeightPerFrame_pix << "\n";
-	std::cout << "Number of frames = " << mNframes << "\n";
+	//For debugging
+	//std::cout << "Image pixel width = " << mWidthPerFrame_pix << "\n";
+	//std::cout << "Image pixel height = " << mHeightPerFrame_pix << "\n";
+	//std::cout << "Number of frames = " << mNframes << "\n";
 
 	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
@@ -936,28 +937,30 @@ void TiffU8::flattenField(const double maxScaleFactor)
 }
 #pragma endregion "TiffU8"
 
-QuickStitcher::QuickStitcher(const int widthPerFrame, const int heightPerFrame, const int2 nArrayDim) : mTiff{ widthPerFrame * nArrayDim.at(0), heightPerFrame * nArrayDim.at(1), 1 }, mNarrayDim{ nArrayDim }
+QuickStitcher::QuickStitcher(const int widthPerFrame, const int heightPerFrame, const int nMaxRow, const int nMaxCol) : mTiff{ widthPerFrame * nMaxCol, heightPerFrame * nMaxRow, 1 }, mNmaxRow{ nMaxRow }, mNmaxCol{ nMaxCol }
 {
-	if(nArrayDim.at(0) <= 0 || nArrayDim.at(1) <= 0)
+	if(mNmaxRow <= 0 || mNmaxCol <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array dimensions must be > 0");
 }
 
-void QuickStitcher::push(const TiffU8 &input, const int2 arrayIndex)
+//rowIndex from TOP to BOTTOM of the mTiff image. colIndex from LEFT to RIGHT of the mTiff image.
+void QuickStitcher::push(const TiffU8 &tile, const int rowIndex, const int colIndex)
 {
-	if (arrayIndex.at(0) < 0 || arrayIndex.at(1) < 0)
+	if (colIndex < 0 || rowIndex < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array indices must be >= 0");
-	if (arrayIndex.at(0) >= mNarrayDim.at(0))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width array index must be <" + std::to_string(mNarrayDim.at(0)));
-	if (arrayIndex.at(1) >= mNarrayDim.at(0))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The height array index must be <" + std::to_string(mNarrayDim.at(1)));
+	if (colIndex >= mNmaxCol)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width array index must be <" + std::to_string(mNmaxCol));
+	if (rowIndex >= mNmaxRow)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The height array index must be <" + std::to_string(mNmaxRow));
 
-
-	const int colShift_pix{ arrayIndex.at(0) * input.widthPerFrame_pix() };
-	const int rowShift_pix{ arrayIndex.at(1) * input.heightPerFrame_pix() };
+	const int tileWidth_pix{ tile.widthPerFrame_pix() };	//Width of the tile
+	const int tileHeight_pix{ tile.heightPerFrame_pix() };	//Height of the tile
+	const int colShift_pix{ colIndex *  tileWidth_pix };	//In the mTiff image, shift the tile to the right by this many pixels
+	const int rowShift_pix{ rowIndex *  tileHeight_pix };	//In the mTiff image, shift the tile down by this many pixels
 	
-	for (int colIter = 0; colIter < input.widthPerFrame_pix(); colIter++)
-		for (int rowIter = 0; rowIter < input.heightPerFrame_pix(); rowIter++)
-			mTiff.data()[(rowShift_pix + rowIter) * mTiff.widthPerFrame_pix() + (colShift_pix + colIter)] = input.data()[rowIter * input.widthPerFrame_pix() + colIter];
+	for (int colIter = 0; colIter < tileWidth_pix; colIter++)
+		for (int rowIter = 0; rowIter < tileHeight_pix; rowIter++)
+			mTiff.data()[(rowShift_pix + rowIter) * mTiff.widthPerFrame_pix() + (colShift_pix + colIter)] = tile.data()[rowIter * tileWidth_pix + colIter];
 }
 
 void QuickStitcher::saveToFile(std::string filename) const

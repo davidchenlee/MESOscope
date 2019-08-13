@@ -197,13 +197,15 @@ void FPGA::initializeFpga_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));												//Trigger of the control sequence
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(getHandle(), NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(FIFOtimeout_tick)));				//FIFOIN timeout
 
-	//TRIGGERS AND DELAYS
+	//TRIGGERS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));																				//Pc trigger signal
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, false));																	//Z-stage as tigger
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																	//Trigger the FPGA outputs (non-RT trigger)
+
+	//DELAYS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_SyncDOtoAO_tick, static_cast<U32>(syncDOtoAO_tick)));												//DO and AO relative sync
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PockelsFirstFrameDelay_tick, static_cast<U32>(pockelsFirstFrameDelay / us * tickPerUs)));			//Pockels delay wrt the preframeclock (first frame only)
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PockelsFrameDelay_tick, static_cast<U32>(pockelsSecondaryDelay / us * tickPerUs)));				//Pockels delay wrt the preframeclock
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																	//Trigger the FPGA outputs (non-RT trigger)
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(getHandle(), NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));														//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PreframeclockScanGalvo_tick, static_cast<U32>(scanGalvoDelay / us * tickPerUs)));					//Scan galvo delay wrt the preframeclock
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(getHandle(), NiFpga_FPGAvi_ControlU32_PreframeclockRescanGalvo_tick, static_cast<U32>(rescanGalvoDelay / us * tickPerUs)));				//Rescan galvo delay wrt the preframeclock
@@ -241,27 +243,7 @@ void FPGA::initializeFpga_() const
 #pragma region "RTcontrol"
 RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell) : mWidthPerFrame_pix{ widthPerFrame_pix }, mDwell{ dwell }
 {
-	pushUniformDwellTimes();
-}
-
-//The pixel clock is triggered by the line clock (see the LV implementation) after an initial waiting time
-void RTcontrol::Pixelclock::pushUniformDwellTimes()
-{
-	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-	//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (lineclockHalfPeriod-400*125ns)/2
-
-	const double initialWaitingTime{ (lineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
-
-	//Check if the pixelclock overflows the Lineclock
-	if (initialWaitingTime <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
-
-	mPixelclockQ.push_back(FPGAfunc::packU32(FPGAfunc::timeToTick(initialWaitingTime) + mCalibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
-
-	//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
-	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	for (int pix = 0; pix < mWidthPerFrame_pix + 1; pix++)
-		mPixelclockQ.push_back(FPGAfunc::packPixelclockSinglet(mDwell, 1));
+	pushUniformDwellTimes_();
 }
 
 QU32 RTcontrol::Pixelclock::readPixelclock() const
@@ -302,79 +284,27 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	}
 }
 
+//The pixel clock is triggered by the line clock (see the LV implementation) after an initial waiting time
+void RTcontrol::Pixelclock::pushUniformDwellTimes_()
+{
+	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+	//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (lineclockHalfPeriod-400*125ns)/2
+
+	const double initialWaitingTime{ (lineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
+
+	//Check if the pixelclock overflows the Lineclock
+	if (initialWaitingTime <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
+
+	mPixelclockQ.push_back(FPGAfunc::packU32(FPGAfunc::timeToTick(initialWaitingTime) + mCalibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
+
+	//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
+	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
+	for (int pix = 0; pix < mWidthPerFrame_pix + 1; pix++)
+		mPixelclockQ.push_back(FPGAfunc::packPixelclockSinglet(mDwell, 1));
+}
+
 RTcontrol::RTcontrol(const FPGA &fpga) : RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS } {}
-
-//Load the imaging parameters onto the FPGA
-void RTcontrol::uploadImagingParameters_() const
-{
-	if (mNframes < 0 || mHeightPerBeamletAllFrames_pix < 0 || mHeightPerBeamletPerFrame_pix < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
-
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mFpga.getHandle(), NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(mHeightPerBeamletAllFrames_pix)));		//Total number of lines per beamlet in all the frames
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(mNframes)));								//Number of frames to acquire
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerBeamletPerFrame_pix)));	//Number of lines per beamlet in a frame
-
-	//SELECTORS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));		//Lineclock: resonant scanner (RS) or function generator (FG)
-}
-
-
-//Send every single queue in 'vectorOfQueue' to the FPGA buffer
-//For this, concatenate all the individual queues 'vectorOfQueuesForRamp.at(ii)' in the queue 'allQueues'.
-//The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
-//Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
-void RTcontrol::uploadFIFOIN_(const VQU32 &vectorOfQueues) const
-{
-	{
-		QU32 allQueues;		//Create a single long queue
-		for (int chan = 0; chan < static_cast<U8>(RTCHAN::NCHAN); chan++)
-		{
-			allQueues.push_back(vectorOfQueues.at(chan).size());			//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'	
-			for (std::vector<int>::size_type iter = 0; iter != vectorOfQueues.at(chan).size(); iter++)
-				allQueues.push_back(vectorOfQueues.at(chan).at(iter));		//Push VectorOfQueues[i]
-		}
-
-		const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 
-
-		if (sizeFIFOINqueue > FIFOINmax)
-			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
-
-		std::vector<U32> FIFOIN(sizeFIFOINqueue);							//Create a 1D array with the channels concatenated
-		for (int ii = 0; ii < sizeFIFOINqueue; ii++)
-		{
-			FIFOIN.at(ii) = allQueues.front();								//Transfer the queue elements to the array
-			allQueues.pop_front();
-		}
-		allQueues = {};					//Cleanup the queue C++11 style
-
-		U32 r;							//Elements remaining
-
-		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.getHandle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
-
-		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
-		//This boolean serves as the master trigger for the entire control sequence
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
-	}
-}
-
-//Trigger the FPGA outputs in a non-realtime way (see the LV implementation)
-void RTcontrol::triggerNRT_() const
-{
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, true));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));
-}
-
-//Push all the elements in 'tailQ' into 'headQ'
-void RTcontrol::concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const
-{
-	while (!givingQueue.empty())
-	{
-		receivingQueue.push_back(givingQueue.front());
-		givingQueue.pop_front();
-	}
-}
 
 void RTcontrol::pushQueue(const RTCHAN chan, QU32& queue)
 {
@@ -463,6 +393,81 @@ void RTcontrol::triggerRT() const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, true));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));
+}
+//Push all the elements in 'tailQ' into 'headQ'
+void RTcontrol::concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const
+{
+	while (!givingQueue.empty())
+	{
+		receivingQueue.push_back(givingQueue.front());
+		givingQueue.pop_front();
+	}
+}
+
+//Load the imaging parameters onto the FPGA
+void RTcontrol::uploadImagingParameters_() const
+{
+	if (mNframes < 0 || mHeightPerBeamletAllFrames_pix < 0 || mHeightPerBeamletPerFrame_pix < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
+
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mFpga.getHandle(), NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(mHeightPerBeamletAllFrames_pix)));		//Total number of lines per beamlet in all the frames
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(mNframes)));								//Number of frames to acquire
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.getHandle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerBeamletPerFrame_pix)));	//Number of lines per beamlet in a frame
+
+	//SELECTORS
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));		//Lineclock: resonant scanner (RS) or function generator (FG)
+}
+
+//Send every single queue in 'vectorOfQueue' to the FPGA buffer
+//For this, concatenate all the individual queues 'vectorOfQueuesForRamp.at(ii)' in the queue 'allQueues'.
+//The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
+//Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
+void RTcontrol::uploadFIFOIN_(const VQU32 &vectorOfQueues) const
+{
+	{
+		QU32 allQueues;		//Create a single long queue
+		for (int chan = 0; chan < static_cast<U8>(RTCHAN::NCHAN); chan++)
+		{
+			allQueues.push_back(vectorOfQueues.at(chan).size());			//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'	
+			for (std::vector<int>::size_type iter = 0; iter != vectorOfQueues.at(chan).size(); iter++)
+				allQueues.push_back(vectorOfQueues.at(chan).at(iter));		//Push VectorOfQueues[i]
+		}
+
+		const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 
+
+		if (sizeFIFOINqueue > FIFOINmax)
+			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
+
+		std::vector<U32> FIFOIN(sizeFIFOINqueue);							//Create a 1D array with the channels concatenated
+		for (int ii = 0; ii < sizeFIFOINqueue; ii++)
+		{
+			FIFOIN.at(ii) = allQueues.front();								//Transfer the queue elements to the array
+			allQueues.pop_front();
+		}
+		allQueues = {};					//Cleanup the queue C++11 style
+
+		U32 r;							//Elements remaining
+
+		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.getHandle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
+
+		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
+		//This boolean serves as the master trigger for the entire control sequence
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
+	}
+}
+
+//Trigger the FPGA outputs in a non-realtime way (see the LV implementation)
+void RTcontrol::triggerNRT_() const
+{
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));
+}
+
+void RTcontrol::setStageTrigger_(const bool state) const
+{
+
 }
 #pragma endregion "RTcontrol"
 

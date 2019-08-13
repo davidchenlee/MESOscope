@@ -78,12 +78,13 @@ private:
 class QuickStitcher
 {
 public:
-	QuickStitcher(const int widthPerFrame, const int heightPerFrame, const int2 nArrayDim);
-	void push(const TiffU8 &input, const int2 arrayIndex);
+	QuickStitcher(const int widthPerFrame, const int heightPerFrame, const int nMaxRow, const int nMaxCol);
+	void push(const TiffU8 &tile, const int rowIndex, const int colIndex);
 	void saveToFile(std::string filename) const;
 private:
 	TiffU8 mTiff;
-	int2 mNarrayDim;
+	int mNmaxRow;
+	int mNmaxCol;
 };
 
 /*Obsolete

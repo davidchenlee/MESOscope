@@ -9,7 +9,7 @@ Image::Image(const RTcontrol &RTcontrol) :
 	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 
-	//Trigger the acquisition with the PC or the Z stage. It has to be here and not in the RTcontrol class because the z-trigger has to be turned off in the destructor to allow positioning the z-stage after every acquisition
+	//Trigger the acquisition with the PC or the Z stage. It has to be here and not in the RTcontrol class because the z-trigger has to be turned off in Image destructor to allow positioning the z-stage after every acquisition
 	if (mRTcontrol.mMainTrigger == MAINTRIG::ZSTAGE)
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.getHandle(), NiFpga_FPGAvi_ControlBool_ZstageAsTriggerEnable, true));
 }
@@ -81,7 +81,6 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 			if (_getch() == 27)
 				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 		}
-
 	}
 
 	//Set the delay for the z-stage triggering the acq sequence
@@ -1996,7 +1995,6 @@ void Stage::moveSingle(const Axis axis, const double position)
 	//Check if the requested position is within range
 	if (position < mSoftPosLimXYZ.at(axis).at(0) || position > mSoftPosLimXYZ.at(axis).at(1))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the soft limits of the stage " + axisToString(axis));
-
 	if (position < mTravelRangeXYZ.at(axis).at(0) || position > mTravelRangeXYZ.at(axis).at(1))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the physical limits of the stage " + axisToString(axis));
 

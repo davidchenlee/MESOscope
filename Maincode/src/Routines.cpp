@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (52.700 ) * mm, 20.000 * mm, (17.840) * mm };//Liver TDT
+double3 stackCenterXYZ{ (52.700 - 0.280) * mm, (20.000 )* mm, (17.840) * mm };//Liver TDT
 //double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
 const std::vector<double2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
@@ -22,9 +22,9 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
@@ -264,7 +264,6 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
 		//const double stackDepth{ nFramesCont * pixelSizeZ };
-
 
 		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
 		if (fluorLabel.mWavelength_nm == 750)
@@ -1060,26 +1059,39 @@ namespace TestRoutines
 
 	void tiffU8()
 	{
-		
-		std::string inputFilename{ "aaa" };
-		std::string outputFilename{ "output_" + inputFilename };
-
-		TiffU8 image{ inputFilename };
-		//image.flattenField(2.0);
-		//image.suppressCrosstalk(0.2);
-		//image.binFrames(5);
-
+		/*
+		TiffU8 image00{ "00" };
+		TiffU8 image01{ "01" };
+		TiffU8 image10{ "10" };
+		TiffU8 image11{ "11" };
 		const int width{ 300 };
 		const int height{ 560 };
 
-		QuickStitcher stitched{ width,height, {2,2} };
-		stitched.push(image, { 0,0 });
-		stitched.push(image, { 0,1 });
-		stitched.push(image, { 1,0 });
-		stitched.push(image, { 1,1 });
-		stitched.saveToFile(outputFilename);
+		image00.suppressCrosstalk(0.2);
+		image01.suppressCrosstalk(0.2);
+		image10.suppressCrosstalk(0.2);
+		image11.suppressCrosstalk(0.2);
 
-		//image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+		image00.flattenField(2.0);
+		image01.flattenField(2.0);
+		image10.flattenField(2.0);
+		image11.flattenField(2.0);
+
+		QuickStitcher stitched{ width,height, 2,2 };
+		stitched.push(image00, 0, 0);
+		stitched.push(image01, 0, 1);
+		stitched.push(image10, 1, 0);
+		stitched.push(image11, 1, 1);
+		stitched.saveToFile(outputFilename);
+		*/
+
+		std::string inputFilename{ "Liver_V750nm_P=184.3mW_Pinc=1.4mWpum_x=52.420_y=20.000_zi=17.8340_zf=17.9365_Step=0.0001" };
+		std::string outputFilename{ "output_" + inputFilename };
+		TiffU8 image{ inputFilename };
+		image.flattenField(1.5);
+		image.suppressCrosstalk(0.2);
+		//image.binFrames(5);
+		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
 
 		pressAnyKeyToCont();
 		//std::cout << image.isDark(1) << "\n";

@@ -298,7 +298,7 @@ void Sequence::generateCommandList()
 
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mSample.mFluorLabelList.size(); iterWL++)
 		{
-			//The STAGEY sits under the other 2 stages and therefore is slowest to react. For the best performance, iterate over STAGEX often and over STAGEY less often
+			//STAGEY sits under the other 2 stages and, therefore, is the slowest to react. For the best performance, iterate over STAGEX often and over STAGEY less often
 			while (JJ >= 0 && JJ < mStackArrayDimIJ.at(Stage::Y))			//STAGEY direction
 			{
 				while (II >= 0 && II < mStackArrayDimIJ.at(Stage::X))		//STAGEX direction

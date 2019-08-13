@@ -83,7 +83,7 @@ private:
 		int mWidthPerFrame_pix;
 		const int mCalibFine_tick{ -40 };	//Fine tune the relative delay of the pixel clock wrt the line clock. Acquire an averaged image
 											//and align the pixels corresponding to forward and backward scans of the RS
-		void pushUniformDwellTimes();
+		void pushUniformDwellTimes_();
 	};
 
 	VQU32 mVectorOfQueues;
@@ -92,6 +92,7 @@ private:
 	void uploadImagingParameters_() const;
 	void uploadFIFOIN_(const VQU32 &vectorOfQueues) const;
 	void triggerNRT_() const;
+	void setStageTrigger_(const bool state) const;
 };
 
 class FPGAexception : public std::runtime_error

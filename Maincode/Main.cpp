@@ -1,5 +1,6 @@
 #include "Routines.h"
 
+
 int main(int argc, char* argv[])
 {
 	try
@@ -9,7 +10,7 @@ int main(int argc, char* argv[])
 		{
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
-			Routines::contScanZ(fpga);
+			//Routines::contScanZ(fpga);
 			//Routines::contScanX(fpga);
 			//Routines::contScanXTest(fpga);
 			//Routines::sequencer(fpga, true);
@@ -94,14 +95,15 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+
 /*
-//For debugging. Main without calling the fpga, because LV blocks the access to the fpga
+//For debugging. main() without calling the fpga because LV blocks the access to it
 int main(int argc, char* argv[])
 {
 	try
 	{
 		//Make sure that the power supply of the FPGA is up
-		TestRoutines::PMT16Xconfig();
+		//TestRoutines::PMT16Xconfig();
 	}
 	catch (...)
 	{
@@ -110,3 +112,4 @@ int main(int argc, char* argv[])
 	pressAnyKeyToCont();
 }
 */
+

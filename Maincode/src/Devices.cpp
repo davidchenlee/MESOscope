@@ -9,13 +9,14 @@ Image::Image(const RTcontrol &RTcontrol) :
 	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 
-	//Trigger the data acquisition via the stage. It has to be here and not in the RTcontrol class because the trigger has to be turned off by the destructor to allow positioning the stage after acquisition
+	//Enable the stage triggering the control sequence and data acquisition
+	//It has to be here and not in the RTcontrol class because the trigger has to be turned off by the destructor to allow positioning the stage after acquisition
 	mRTcontrol.enableStageTrigAcq();
 }
 
 Image::~Image()
 {
-	//Turn off the acq trigger by the z stage to allow moving the z stage
+	//Disable the stage triggering the control sequence and data acquisition to allow positioning the stage after acquisition
 	mRTcontrol.disableStageTrigAcq();
 
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
@@ -24,7 +25,6 @@ Image::~Image()
 
 	delete[] mMultiplexedArrayA;
 	delete[] mMultiplexedArrayB;
-
 	//std::cout << "Image destructor called\n"; //For debugging
 }
 
@@ -46,47 +46,13 @@ void Image::acquire(const bool saveAllPMT)
 //Preset the parameters for the acquisition sequence
 void Image::initializeAcq(const ZSCAN stackScanDir)
 {
-	//Push data to from the FPGA FIFOOUTfpga. Disabled when debugging
-	mRTcontrol.enableFIFOOUT();
-
-	//Initialize mScanDir
-	mScanDir = stackScanDir;
-
-	//Z STAGE. Fine tune the delay of the z-stage trigger for the acq sequence
-	double ZstageTrigDelay{ 0 };
-	if (mRTcontrol.mMainTrigger == MAINTRIG::STAGEZ)
-	{
-		if (mRTcontrol.mHeightPerBeamletPerFrame_pix == 35)
-		{
-			switch (mScanDir)
-			{
-			case ZSCAN::TOPDOWN:
-				ZstageTrigDelay = STAGEZtrigDelayTopdown;
-				break;
-			case ZSCAN::BOTTOMUP:
-				ZstageTrigDelay = STAGEZTrigDelayBottomup;
-				break;
-			}
-		}
-		else if (mRTcontrol.mHeightPerBeamletPerFrame_pix >= 400)
-			; //Do nothing if mHeightPerFrame_pix is big enough
-		else //ZstageTrigDelay is uncalibrated
-		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": ZstageTrigDelay has not been calibrated for the heightPerFrame = " << mRTcontrol.mHeightPerBeamletPerFrame_pix << " pix\n";
-			std::cerr << "Press any key to continue or ESC to exit\n";
-
-			if (_getch() == 27)
-				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
-		}
-	}
-
-	//Set the delay for the z-stage triggering the acq sequence
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlU32_STAGEZtrigDelay_tick, static_cast<U32>(ZstageTrigDelay / us * tickPerUs)));
-
-	mRTcontrol.presetFPGAoutput();	//Preset the ouput of the FPGA
-	mRTcontrol.uploadRT();			//Load the RT control in mVectorOfQueues to be sent to the FPGA
-	startFIFOOUTpc_();				//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
-	FIFOOUTpcGarbageCollector_();	//Clean up any residual data from the previous run
+	mRTcontrol.enableFIFOOUT();					//Push data to from the FPGA FIFOOUTfpga. It is disabled when debugging
+	mScanDir = stackScanDir;					//Initialize mScanDir
+	mRTcontrol.setStageTrigAcqDelay(mScanDir);	//Set the delay for the stage triggering the control sequence and data acquisition
+	mRTcontrol.presetFPGAoutput();				//Preset the ouput of the FPGA
+	mRTcontrol.uploadRT();						//Load the RT control in mVectorOfQueues to be sent to the FPGA
+	startFIFOOUTpc_();							//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
+	FIFOOUTpcGarbageCollector_();				//Clean up any residual data from the previous run
 }
 
 //Retrieve the data from the FPGA

@@ -7,7 +7,6 @@
 #include "PI_GCS2_DLL.h"
 #include "serial/serial.h"
 #include <memory>					//For smart pointers
-#include <conio.h>					//For _getch()
 #include "Thorlabs.MotionControl.KCube.StepperMotor.h"	//For the Thorlabs stepper
 
 class Image

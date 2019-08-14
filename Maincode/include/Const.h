@@ -63,8 +63,9 @@ namespace Constants
 	extern const int AO_tMIN;
 	extern const int DOdelay_tick;
 	extern const int nPreframes;
-
 	extern const double linegateTimeout;
+	extern const double postsequenceTimer;
+	extern const double stageDebounceTimer;
 	extern const int FIFOtimeout_tick;
 	extern const int FIFOINmax;
 
@@ -85,10 +86,9 @@ namespace Constants
 	extern const GALVOcalib rescannerCalibF1040nm;
 	extern const int PMT16Xchan_int;
 
-	extern const double postsequenceTimer;
-
-	extern const double	STAGEZtrigDelayTopdown;
-	extern const double	STAGEZTrigDelayBottomup;
+	extern const double	STAGEZtrigAcqDelayTopdown;
+	extern const double	STAGEZTrigAcqDelayBottomup;
+	extern const double	STAGEXTrigAcqDelay;
 
 	extern const int nChanPMT;
 	extern const PMTIN photocounterInput;

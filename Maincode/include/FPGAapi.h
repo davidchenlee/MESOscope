@@ -3,6 +3,7 @@
 #include "NiFpga_FPGAvi.h"
 #include "Const.h"
 #include "Utilities.h"
+#include <conio.h>					//For _getch()
 using namespace Constants;
 
 namespace FPGAfunc
@@ -72,6 +73,7 @@ public:
 	void enableStageTrigAcq() const;
 	void disableStageTrigAcq() const;
 	void enableFIFOOUT() const;
+	void setStageTrigAcqDelay(const ZSCAN scanDir) const;
 private:
 	//Private subclass
 	class Pixelclock

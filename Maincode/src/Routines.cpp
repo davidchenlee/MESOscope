@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (52.700) * mm, (20.000 )* mm, (17.820) * mm };//Liver TDT
+double3 stackCenterXYZ{ (53.500) * mm, (20.150 )* mm, (17.820) * mm };//Liver TDT
 //double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
 const std::vector<double2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
@@ -12,7 +12,7 @@ Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
 Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
 Sample fluorSlide{ "fluorBlue", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
-Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 10. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 7. * mW, 0.09 * mWpum }}} };
+Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 10. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 11. * mW, 0.09 * mWpum }}} };
 #endif
 Sample currentSample{ liver };
 
@@ -241,12 +241,12 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//REMEMBER THE 0.96 FACTOR IN THE LASER POWER TO COMPENSATE FOR THE POWER TRANSIENT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		const double laserPowerTransComp{ 0.96 };
+		const double laserPowerInitialTransientCompensation{ 1.0 };
 
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const ZSCAN scanDirZ{ ZSCAN::BOTTOMUP };					//Scan direction in the axis STAGEZ
+		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };					//Scan direction in the axis STAGEZ
 		const int nFramesPerBin{ 1 };							//For averaging
 		const double stackDepth{ 40. * um };
 		const double pixelSizeZafterBinning{ 0.5 * um  };
@@ -287,13 +287,13 @@ namespace Routines
 		case ZSCAN::TOPDOWN:
 			stageZi = stackCenterXYZ.at(Stage::ZZ);
 			stageZf = stackCenterXYZ.at(Stage::ZZ) + stackDepth + 20 * pixelSizeZbeforeBinning; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
-			laserPi = laserPowerTransComp * fluorLabel.mScanPi;
+			laserPi = laserPowerInitialTransientCompensation * fluorLabel.mScanPi;
 			laserPf = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			break;
 		case ZSCAN::BOTTOMUP:
 			stageZi = stackCenterXYZ.at(Stage::ZZ) + stackDepth;
 			stageZf = stackCenterXYZ.at(Stage::ZZ) - 20 * pixelSizeZbeforeBinning;				//Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
-			laserPi = laserPowerTransComp * fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
+			laserPi = laserPowerInitialTransientCompensation * fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			laserPf = fluorLabel.mScanPi;
 			break;
 		}
@@ -348,13 +348,12 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };						//For averaging
-		const double FOVslow{ 10 * 280. * um };
+		const double FOVslow{ 4.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
 		const double pixelSizeY{ 0.5 * um };//Not used here. For reference purposes
 
-
 		const int width_pix{ 300 };
-		const int height_pix{ static_cast<int>(FOVslow / (2 * pixelSizeX)) };
+		const int height_pix{ static_cast<int>(FOVslow / pixelSizeX) };
 
 		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
 		if (fluorLabel.mWavelength_nm == 750)
@@ -365,12 +364,13 @@ namespace Routines
 
 		double stageXi, stageXf, laserPi, laserPf;
 		stageXi = stackCenterXYZ.at(Stage::XX);
-		stageXf = stackCenterXYZ.at(Stage::XX) + FOVslow + 20 * (2 * pixelSizeX); //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+		stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
 		laserPi = fluorLabel.mScanPi;
 		laserPf = laserPi;
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix, width_pix, 2, FIFOOUT::EN };	//Notice the STAGEX flag
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUT::EN };	//Notice the STAGEX flag. The factor of 2 means 2 RS swings per pixel
+																												//Image height = 2 swings times height_pix/2 "frames" = height_pix
 
 		//LASER
 		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, laserPf, whichLaser };
@@ -405,7 +405,7 @@ namespace Routines
 		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(laserPi / mW, 1) +
 			"mWpum_xi=" + toString(initialStageXYZ.at(Stage::XX) / mm, 3) +
 			"_y=" + toString(initialStageXYZ.at(Stage::YY) / mm, 3) +
-			"_zi=" + toString(initialStageXYZ.at(Stage::ZZ) / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
+			"_z=" + toString(initialStageXYZ.at(Stage::ZZ) / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
 
 		std::cout << "Saving the stack...\n";
 		image.saveTiffSinglePage(filename, OVERRIDE::DIS);
@@ -419,7 +419,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };						//For averaging
-		const double FOVslow{ 10*280. * um };
+		const double FOVslow{ 280. * um };
 		const double pixelSizeX{ 0.5 * um };
 		const double pixelSizeY{ 0.5 * um };
 
@@ -435,7 +435,7 @@ namespace Routines
 
 		double stageXi, stageXf;
 		stageXi = stackCenterXYZ.at(Stage::XX);
-		stageXf = stackCenterXYZ.at(Stage::XX) + FOVslow + 20 * 2 * pixelSizeX; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+		stageXf = stackCenterXYZ.at(Stage::XX) + FOVslow + 20 * (2 * pixelSizeX); //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, height_pix, width_pix, 2, FIFOOUT::DIS };	//Notice the STAGEX flag
@@ -447,13 +447,14 @@ namespace Routines
 		//STAGES
 		Stage stage{ pixelSizeX / lineclockHalfPeriod, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
 		stage.moveXYZ(stackCenterXYZ);
-		Sleep(2000);
+		Sleep(200);
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
 		image.initializeAcq();
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger the control sequence and data acquisition
+		Sleep(1000);//the Image destructor will disable the stage triggering
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -806,9 +807,9 @@ namespace TestRoutines
 
 	void pixelclock(const FPGA &fpga)
 	{
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 2, 300, 560, FIFOOUT::DIS }; 	//Create a realtime control sequence
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::STAGEX, 1, 300, 560, FIFOOUT::DIS }; 	//Create a realtime control sequence
 		Image image{ RTcontrol };
-		image.acquire();	//Execute the realtime control sequence and acquire the image
+		image.initializeAcq();	//Execute the realtime control sequence and acquire the image
 		//image.saveTiffSinglePage("output", OVERRIDE::EN);
 	}
 

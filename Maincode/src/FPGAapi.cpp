@@ -188,54 +188,54 @@ void FPGA::initializeFpga_() const
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 	//PMT simulator for debugging
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(handle(), NiFpga_FPGAvi_ControlBool_PhotocounterInputSelector, static_cast<bool>(photocounterInput)));	//Use the PMT simulator as the input of the photocounters
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(handle(), NiFpga_FPGAvi_ControlU8_nPMTsim, static_cast<U8>(nPMTsim)));									//Size of PMTsimArray
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(handle(), NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, PMTsimArray, nPMTsim));						//Array that simulates the pulses from the PMTs
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlBool_PhotocounterInputSelector, static_cast<bool>(photocounterInput)));	//Use the PMT simulator as the input of the photocounters
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_nPMTsim, static_cast<U8>(nPMTsim)));									//Size of PMTsimArray
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mHandle, NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, PMTsimArray, nPMTsim));						//Array that simulates the pulses from the PMTs
 
 	//FIFOIN
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(handle(), NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTcontrol::RTCHAN::NCHAN)));				//Number of input channels
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));											//Trigger of the control sequence
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(handle(), NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(FIFOtimeout_tick)));				//FIFOIN timeout
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mHandle, NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTcontrol::RTCHAN::NCHAN)));				//Number of input channels
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));												//Trigger of the control sequence
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(FIFOtimeout_tick)));				//FIFOIN timeout
 
 	//TRIGGERS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::PC)));					//Main trigger selector (PC, STAGEX, STAGEZ)
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));												//Pc trigger signal
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));										//Trigger the FPGA outputs (non-RT trigger)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PcTrigger, false));													//Pc trigger signal
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));										//Trigger the FPGA outputs (non-RT trigger)
 
 	//DELAYS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_DOdelay_tick, static_cast<U32>(DOdelay_tick)));													//Delay DO to sync it with AO
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_PockelsFirstFrameDelay_tick, static_cast<U32>(pockelsFirstFrameDelay / us * tickPerUs)));		//Pockels delay wrt the preframeclock (first frame only)
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_PockelsFrameDelay_tick, static_cast<U32>(pockelsSecondaryDelay / us * tickPerUs)));				//Pockels delay wrt the preframeclock
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(handle(), NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));														//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_PreframeclockScanGalvo_tick, static_cast<U32>(scanGalvoDelay / us * tickPerUs)));				//Scan galvo delay wrt the preframeclock
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_PreframeclockRescanGalvo_tick, static_cast<U32>(rescanGalvoDelay / us * tickPerUs)));			//Rescan galvo delay wrt the preframeclock
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_DOdelay_tick, static_cast<U32>(DOdelay_tick)));												//Delay DO to sync it with AO
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PockelsFirstFrameDelay_tick, static_cast<U32>(pockelsFirstFrameDelay / us * tickPerUs)));		//Pockels delay wrt the preframeclock (first frame only)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PockelsFrameDelay_tick, static_cast<U32>(pockelsSecondaryDelay / us * tickPerUs)));			//Pockels delay wrt the preframeclock
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mHandle, NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));													//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PreframeclockScanGalvo_tick, static_cast<U32>(scanGalvoDelay / us * tickPerUs)));				//Scan galvo delay wrt the preframeclock
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PreframeclockRescanGalvo_tick, static_cast<U32>(rescanGalvoDelay / us * tickPerUs)));			//Rescan galvo delay wrt the preframeclock
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_StageDebouncerTimer_tick, static_cast<U32>(stageDebounceTimer / us * tickPerUs)));					//Stage motion monitor debouncer
 
 	if (linegateTimeout <= 2 * lineclockHalfPeriod)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(handle(), NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(linegateTimeout / us * tickPerUs)));						//Timeout the trigger of the control sequence
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(linegateTimeout / us * tickPerUs)));					//Timeout the trigger of the control sequence
 
 	//POCKELS CELLS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));														//Enable gating the pockels by framegate. For debugging purposes
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));														//Enable gating the pockels by framegate. For debugging purposes
 
 	//VIBRATOME
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_VTback, false));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_VTforward, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_VTstart, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_VTback, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_VTforward, false));
 
 	//Flush the RAM buffers on the FPGA as precaution. 
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(handle(), NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
 	//std::cout << "flushBRAMs called\n";	//For debugging
 
 	/*
 	//SHUTTERS. Commented out to allow keeping the shutter on
-	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_Shutter1, false));
-	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_Shutter2, false));
+	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_Shutter1, false));
+	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_Shutter2, false));
 
 	//RESONANT SCANNER. Commented out to allow keeping the RS on
-	checkStatus(__FUNCTION__,  NiFpga_WriteI16(mFpga.handle(), NiFpga_FPGAvi_ControlI16_RScontrol_I16, false));	//Output voltage
-	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSenable, false));	//Turn on/off
+	checkStatus(__FUNCTION__,  NiFpga_WriteI16(mHandle, NiFpga_FPGAvi_ControlI16_RScontrol_I16, false));	//Output voltage
+	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_RSenable, false));	//Turn on/off
 	*/
 }
 #pragma endregion "FPGA"
@@ -396,16 +396,23 @@ void RTcontrol::triggerRT() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));
 }
 
-//Enable the stage trigger control sequence and data acquisition
+//Enable the stage trigger control and acquisition sequence
 void RTcontrol::enableStageTrigAcq() const
 {
-	if (mMainTrigger == MAINTRIG::STAGEZ)
+	switch (mMainTrigger)
+	{
+	case MAINTRIG::STAGEZ:
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::STAGEZ)));
-	else if (mMainTrigger == MAINTRIG::STAGEX)
+		break;
+	case MAINTRIG::STAGEX:
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::STAGEX)));
+		break;
+	default:
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::PC)));					//Main trigger selector (PC, STAGEX, STAGEZ)   
+	}
 }
 
-//Disable the stage trigger control sequence and data acquisition
+//Disable the stage triggering the control and acquisition sequence
 void RTcontrol::disableStageTrigAcq() const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::PC)));
@@ -416,6 +423,46 @@ void RTcontrol::enableFIFOOUT() const
 {
 	if (mFIFOOUTstate == FIFOOUT::EN)
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
+}
+
+//Set the delay for the stage triggering the control and acquisition sequence
+void RTcontrol::setStageTrigAcqDelay(const ZSCAN scanDir) const
+{
+	double stageTrigAcqDelay{ 0 };
+	switch (mMainTrigger)
+	{
+	case MAINTRIG::STAGEZ:
+		if (mHeightPerBeamletPerFrame_pix == 35)
+		{
+			switch (scanDir)
+			{
+			case ZSCAN::TOPDOWN:
+				stageTrigAcqDelay = STAGEZtrigAcqDelayTopdown;
+				break;
+			case ZSCAN::BOTTOMUP:
+				stageTrigAcqDelay = STAGEZTrigAcqDelayBottomup;
+				break;
+			}
+		}
+		else if (mHeightPerBeamletPerFrame_pix >= 400)//Do nothing if mHeightPerFrame_pix is big enough
+			;
+		else //Output a warning if stageTrigAcqDelay is uncalibrated
+		{
+			std::cerr << "WARNING in " << __FUNCTION__ << ": The stage trigger delay has not been calibrated for the heightPerFrame = " << mHeightPerBeamletPerFrame_pix << " pix\n";
+			std::cerr << "Press any key to continue or ESC to exit\n";
+
+			if (_getch() == 27)
+				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
+		}
+		break;
+	case MAINTRIG::STAGEX:
+		stageTrigAcqDelay = STAGEXTrigAcqDelay;
+		break;
+	default:
+		double stageTrigAcqDelay = 0;
+	}
+
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.handle(), NiFpga_FPGAvi_ControlU32_StageTrigDelay_tick, static_cast<U32>(stageTrigAcqDelay / us * tickPerUs)));
 }
 
 //Push all the elements in 'tailQ' into 'headQ'

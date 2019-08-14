@@ -5,17 +5,17 @@ namespace FPGAfunc
 	//Convert time to ticks
 	U16 timeToTick(const double t)
 	{
-		const double t_tick{ t / us * tickPerUs };
+		const double t_tick{ t / us * g_tickPerUs };
 
 		if (static_cast<U32>(t_tick) > 0x0000FFFF)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step overflow. Time step cast to the max: " << std::fixed << (std::numeric_limits<U16>::max)() * usPerTick << " us\n";
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step overflow. Time step cast to the max: " << std::fixed << (std::numeric_limits<U16>::max)() * g_usPerTick << " us\n";
 			return (std::numeric_limits<U16>::max)();
 		}
-		else if (static_cast<U32>(t_tick) < tMIN_tick)
+		else if (static_cast<U32>(t_tick) < g_tMin_tick)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step underflow. Time step cast to the min: " << std::fixed << tMIN_tick * usPerTick << " us\n";
-			return tMIN_tick;
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step underflow. Time step cast to the min: " << std::fixed << g_tMin_tick * g_usPerTick << " us\n";
+			return g_tMin_tick;
 		}
 		else
 			return static_cast<U16>(t_tick);
@@ -31,23 +31,23 @@ namespace FPGAfunc
 		//Positive case
 		if (voltage >= 0)
 		{
-			if (voltage > AOmax)
+			if (voltage > g_AOmax)
 			{
-				std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage clipeed to the max: " + std::to_string(AOmax / V) + " V\n";
+				std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage overflow. Voltage clipeed to the max: " + std::to_string(g_AOmax / V) + " V\n";
 				return static_cast<I16>((std::numeric_limits<I16>::max)());
 			}
 			else
-				return static_cast<I16>(voltage / AOmax * (std::numeric_limits<I16>::max)());
+				return static_cast<I16>(voltage / g_AOmax * (std::numeric_limits<I16>::max)());
 		}
 		else //Negative case
 		{
-			if (voltage < -AOmax)
+			if (voltage < -g_AOmax)
 			{
-				std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage clipped to the min: " + std::to_string(-AOmax / V) + " V\n";
+				std::cerr << "WARNING in " << __FUNCTION__ << ": Voltage underflow. Voltage clipped to the min: " + std::to_string(-g_AOmax / V) + " V\n";
 				return static_cast<I16>((std::numeric_limits<I16>::min)());
 			}
 			else
-				return static_cast<I16>(voltage / AOmax * -(std::numeric_limits<I16>::min)());
+				return static_cast<I16>(voltage / g_AOmax * -(std::numeric_limits<I16>::min)());
 		}
 	}
 
@@ -61,10 +61,10 @@ namespace FPGAfunc
 			if (input > (std::numeric_limits<I16>::max)())
 			{
 				std::cerr << "WARNING in " << __FUNCTION__ << ": Input int overflow, _I16_MAX used instead\n";
-				return AOmax / V;
+				return g_AOmax / V;
 			}
 			else
-				return 1. * input / (std::numeric_limits<I16>::max)() * AOmax;
+				return 1. * input / (std::numeric_limits<I16>::max)() * g_AOmax;
 		}
 		else //Negative case
 		{
@@ -72,10 +72,10 @@ namespace FPGAfunc
 			if (input < (std::numeric_limits<I16>::min)())
 			{
 				std::cerr << "WARNING in " << __FUNCTION__ << ": Input int underflow, _I16_MIN used instead\n";
-				return -AOmax / V;
+				return -g_AOmax / V;
 			}
 			else
-				return -1. * input / (std::numeric_limits<I16>::min)()  * AOmax;
+				return -1. * input / (std::numeric_limits<I16>::min)()  * g_AOmax;
 		}
 	}
 
@@ -117,10 +117,10 @@ namespace FPGAfunc
 
 	void linearRamp(QU32 &queue, double timeStep, const double rampLength, const double Vi, const double Vf)
 	{
-		if (timeStep < AO_tMIN)
+		if (timeStep < g_tMinAO)
 		{
-			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN / us << " us\n";
-			timeStep = AO_tMIN;		//Analog Out time increment in us
+			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << g_tMinAO / us << " us\n";
+			timeStep = g_tMinAO;		//Analog Out time increment in us
 		}
 
 		const int nPoints{ static_cast<int>(rampLength / timeStep) };		//Number of points
@@ -184,35 +184,35 @@ NiFpga_Session FPGA::handle() const
 //Load the imaging parameters onto the FPGA. See 'Const.cpp' for the definition of each variable
 void FPGA::initializeFpga_() const
 {
-	if (FIFOtimeout_tick < 0 || DOdelay_tick < 0 || pockelsFirstFrameDelay < 0 || pockelsSecondaryDelay < 0 || scanGalvoDelay < 0 || rescanGalvoDelay < 0 || linegateTimeout < 0)
+	if (g_FIFOtimeout_tick < 0 || g_DOdelay_tick < 0 || g_pockelsFirstFrameDelay < 0 || g_pockelsSecondaryDelay < 0 || g_scanGalvoDelay < 0 || g_rescanGalvoDelay < 0 || g_linegateTimeout < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
 	//PMT simulator for debugging
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlBool_PhotocounterInputSelector, static_cast<bool>(photocounterInput)));	//Use the PMT simulator as the input of the photocounters
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_nPMTsim, static_cast<U8>(nPMTsim)));									//Size of PMTsimArray
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mHandle, NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, PMTsimArray, nPMTsim));						//Array that simulates the pulses from the PMTs
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlBool_PhotocounterInputSelector, static_cast<bool>(g_photocounterInput)));	//Use the PMT simulator as the input of the photocounters
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_nPMTsim, static_cast<U8>(g_nPMTsim)));									//Size of g_PMTsimArray
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mHandle, NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, g_PMTsimArray, g_nPMTsim));					//Array that simulates the pulses from the PMTs
 
 	//FIFOIN
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mHandle, NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTcontrol::RTCHAN::NCHAN)));				//Number of input channels
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));												//Trigger of the control sequence
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(FIFOtimeout_tick)));				//FIFOIN timeout
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(g_FIFOtimeout_tick)));				//FIFOIN timeout
 
 	//TRIGGERS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PcTrigger, false));													//Pc trigger signal
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));										//Trigger the FPGA outputs (non-RT trigger)
 
 	//DELAYS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_DOdelay_tick, static_cast<U32>(DOdelay_tick)));												//Delay DO to sync it with AO
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PockelsFirstFrameDelay_tick, static_cast<U32>(pockelsFirstFrameDelay / us * tickPerUs)));		//Pockels delay wrt the preframeclock (first frame only)
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PockelsFrameDelay_tick, static_cast<U32>(pockelsSecondaryDelay / us * tickPerUs)));			//Pockels delay wrt the preframeclock
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mHandle, NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(nPreframes)));													//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PreframeclockScanGalvo_tick, static_cast<U32>(scanGalvoDelay / us * tickPerUs)));				//Scan galvo delay wrt the preframeclock
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PreframeclockRescanGalvo_tick, static_cast<U32>(rescanGalvoDelay / us * tickPerUs)));			//Rescan galvo delay wrt the preframeclock
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_StageDebouncerTimer_tick, static_cast<U32>(stageDebounceTimer / us * tickPerUs)));					//Stage motion monitor debouncer
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_DOdelay_tick, static_cast<U32>(g_DOdelay_tick)));												//Delay DO to sync it with AO
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PockelsFirstFrameDelay_tick, static_cast<U32>(g_pockelsFirstFrameDelay / us * g_tickPerUs)));	//Pockels delay wrt the preframeclock (first frame only)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PockelsFrameDelay_tick, static_cast<U32>(g_pockelsSecondaryDelay / us * g_tickPerUs)));		//Pockels delay wrt the preframeclock
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mHandle, NiFpga_FPGAvi_ControlI16_Npreframes, static_cast<I16>(g_nPreframes)));													//Number of lineclocks separating the preframeclock(preframegate) and the frameclock (framegate)
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PreframeclockScanGalvo_tick, static_cast<U32>(g_scanGalvoDelay / us * g_tickPerUs)));			//Scan galvo delay wrt the preframeclock
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PreframeclockRescanGalvo_tick, static_cast<U32>(g_rescanGalvoDelay / us * g_tickPerUs)));		//Rescan galvo delay wrt the preframeclock
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_StageDebouncerTimer_tick, static_cast<U32>(g_stageDebounceTimer / us * g_tickPerUs)));		//Stage motion monitor debouncer
 
-	if (linegateTimeout <= 2 * lineclockHalfPeriod)
+	if (g_linegateTimeout <= 2 * g_lineclockHalfPeriod)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(linegateTimeout / us * tickPerUs)));					//Timeout the trigger of the control sequence
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(g_linegateTimeout / us * g_tickPerUs)));				//Timeout the trigger of the control sequence
 
 	//POCKELS CELLS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));														//Enable gating the pockels by framegate. For debugging purposes
@@ -235,7 +235,7 @@ void FPGA::initializeFpga_() const
 
 	//RESONANT SCANNER. Commented out to allow keeping the RS on
 	checkStatus(__FUNCTION__,  NiFpga_WriteI16(mHandle, NiFpga_FPGAvi_ControlI16_RScontrol_I16, false));	//Output voltage
-	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_RSenable, false));	//Turn on/off
+	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_RSenable, false));		//Turn on/off
 	*/
 }
 #pragma endregion "FPGA"
@@ -261,36 +261,20 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	uploadImagingParameters_();
 
 	//Generate a pixelclock
-	const Pixelclock pixelclock(mWidthPerFrame_pix, pixelDwellTime);
+	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
 	mVectorOfQueues.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 
-	//Determine the setpoint for the rescanner. mPMT16Xchan is called by the classes Galvo and Image
-	if (multibeam)
-		mPMT16Xchan = PMT16XCHAN::CENTERED;
-	else
-		mPMT16Xchan = static_cast<RTcontrol::PMT16XCHAN>(PMT16Xchan_int);
-
-	//When the z stage acts as the main trigger (for cont z scanning), the motion monitor of the z stage bounces and therefore false-triggers new acquisitions
-	//Solution: after an acq sequence, wait a certain amount of time before the acq is triggered again (timer implemented in LV)
-	if (mMainTrigger == MAINTRIG::STAGEZ || mMainTrigger == MAINTRIG::STAGEX)
-	{
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.handle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postsequenceTimer / us * tickPerUs)));
-		//std::cout << "Z stage as the main trigger\n";
-	}
-	else
-	{
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.handle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, 0));
-		//std::cout << "PC as the main trigger\n";
-	}
+	setRescannerSetpoint_();
+	setPostSequenceTimer_();
 }
 
 //The pixel clock is triggered by the line clock (see the LV implementation) after an initial waiting time
 void RTcontrol::Pixelclock::pushUniformDwellTimes_()
 {
 	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-	//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (lineclockHalfPeriod-400*125ns)/2
+	//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (g_lineclockHalfPeriod-400*125ns)/2
 
-	const double initialWaitingTime{ (lineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
+	const double initialWaitingTime{ (g_lineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
 
 	//Check if the pixelclock overflows the Lineclock
 	if (initialWaitingTime <= 0)
@@ -323,10 +307,10 @@ void RTcontrol::pushDigitalSinglet(const RTCHAN chan, double timeStep, const boo
 
 void RTcontrol::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override)
 {
-	if (timeStep < AO_tMIN)
+	if (timeStep < g_tMinAO)
 	{
-		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << AO_tMIN / us << " us\n";
-		timeStep = AO_tMIN;
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << g_tMinAO / us << " us\n";
+		timeStep = g_tMinAO;
 	}
 
 	//Clear the current content
@@ -389,30 +373,30 @@ void RTcontrol::uploadRT() const
 	uploadFIFOIN_(mVectorOfQueues);
 }
 
-//Trigger the RT control sequence on the FPGA and the data acquisition
+//Trigger the real-time ctl&acq
 void RTcontrol::triggerRT() const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, true));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));
 }
 
-//Enable the stage trigger control and acquisition sequence
+//Enable the stage trigger ctl&acq sequence
 void RTcontrol::enableStageTrigAcq() const
 {
-	switch (mMainTrigger)
+	switch (mMainTrigger)	//Trigger selector 
 	{
-	case MAINTRIG::STAGEZ:
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::STAGEZ)));
-		break;
 	case MAINTRIG::STAGEX:
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::STAGEX)));
 		break;
+	case MAINTRIG::STAGEZ:
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::STAGEZ)));
+		break;
 	default:
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::PC)));					//Main trigger selector (PC, STAGEX, STAGEZ)   
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::PC)));					
 	}
 }
 
-//Disable the stage triggering the control and acquisition sequence
+//Disable the stage triggering ctl&acq sequence
 void RTcontrol::disableStageTrigAcq() const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::PC)));
@@ -425,22 +409,25 @@ void RTcontrol::enableFIFOOUT() const
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
 }
 
-//Set the delay for the stage triggering the control and acquisition sequence
+//Set the delay for the stage triggering ctl&acq sequence
 void RTcontrol::setStageTrigAcqDelay(const ZSCAN scanDir) const
 {
 	double stageTrigAcqDelay{ 0 };
 	switch (mMainTrigger)
 	{
+	case MAINTRIG::STAGEX:
+		stageTrigAcqDelay = g_STAGEXTrigAcqDelay;
+		break;
 	case MAINTRIG::STAGEZ:
 		if (mHeightPerBeamletPerFrame_pix == 35)
 		{
 			switch (scanDir)
 			{
 			case ZSCAN::TOPDOWN:
-				stageTrigAcqDelay = STAGEZtrigAcqDelayTopdown;
+				stageTrigAcqDelay = g_STAGEZtrigAcqDelayTopdown;
 				break;
 			case ZSCAN::BOTTOMUP:
-				stageTrigAcqDelay = STAGEZTrigAcqDelayBottomup;
+				stageTrigAcqDelay = g_STAGEZTrigAcqDelayBottomup;
 				break;
 			}
 		}
@@ -455,14 +442,11 @@ void RTcontrol::setStageTrigAcqDelay(const ZSCAN scanDir) const
 				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 		}
 		break;
-	case MAINTRIG::STAGEX:
-		stageTrigAcqDelay = STAGEXTrigAcqDelay;
-		break;
 	default:
 		double stageTrigAcqDelay = 0;
 	}
 
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.handle(), NiFpga_FPGAvi_ControlU32_StageTrigDelay_tick, static_cast<U32>(stageTrigAcqDelay / us * tickPerUs)));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.handle(), NiFpga_FPGAvi_ControlU32_StageTrigAcqDelay_tick, static_cast<U32>(stageTrigAcqDelay / us * g_tickPerUs)));
 }
 
 //Push all the elements in 'tailQ' into 'headQ'
@@ -506,7 +490,7 @@ void RTcontrol::uploadFIFOIN_(const VQU32 &vectorOfQueues) const
 
 		const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 
 
-		if (sizeFIFOINqueue > FIFOINmax)
+		if (sizeFIFOINqueue > g_FIFOINmax)
 			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
 
 		std::vector<U32> FIFOIN(sizeFIFOINqueue);							//Create a 1D array with the channels concatenated
@@ -534,6 +518,35 @@ void RTcontrol::triggerNRT_() const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, true));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));
+}
+
+//When the z stage acts as the main trigger (for cont z scanning), the motion monitor of the z stage bounces and therefore false-triggers new acquisitions
+//Solution: after an acq sequence, wait a certain amount of time before the acq is triggered again (timer implemented in LV)
+void RTcontrol::setPostSequenceTimer_() const
+{
+	double postSequenceTimer{ 0 };
+	switch (mMainTrigger)
+	{
+	case MAINTRIG::STAGEZ:
+		postSequenceTimer = g_postSequenceTimer;
+		//std::cout << "Z stage as the main trigger\n";
+		break;
+	case MAINTRIG::STAGEX:
+		postSequenceTimer = g_postSequenceTimer;
+		break;
+	default:
+		postSequenceTimer = 0;
+	}
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mFpga.handle(), NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postSequenceTimer / us * g_tickPerUs)));
+}
+
+//Determine the setpoint for the rescanner. mPMT16Xchan is called by the classes Galvo and Image
+void RTcontrol::setRescannerSetpoint_()
+{
+	if (multibeam)
+		mPMT16Xchan = PMT16XCHAN::CENTERED;
+	else
+		mPMT16Xchan = static_cast<RTcontrol::PMT16XCHAN>(g_PMT16Xchan_int);
 }
 #pragma endregion "RTcontrol"
 
@@ -568,7 +581,7 @@ return getDiscreteTime_us(pix + 1) - getDiscreteTime_us(pix);
 //Calculate the practical dwell time of each pixel, considering that the FPGA has discrete time steps
 double RTcontrol::Pixelclock::calculatePracticalDwellTime_us(const int pix) const
 {
-return round(calculateDwellTime_us(pix) * tickPerUs) / tickPerUs;		// 1/tickPerUs is the time step of the FPGA clock (microseconds per tick)
+return round(calculateDwellTime_us(pix) * g_tickPerUs) / g_tickPerUs;		// 1/g_tickPerUs is the time step of the FPGA clock (microseconds per tick)
 }
 
 

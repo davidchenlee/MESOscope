@@ -645,7 +645,7 @@ void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* input
 	if (heightPerChannelPerFrame < 0 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height per channel must be >= 0");
 
-	const int heightAllChannelsPerFrame{ nChanPMT * heightPerChannelPerFrame };
+	const int heightAllChannelsPerFrame{ g_nChanPMT * heightPerChannelPerFrame };
 	const int heightPerChannelAllFrames{ heightPerChannelPerFrame * mNframes };
 
 	//Even 'frameIndex' (Raster scan the sample from the positive to the negative direction of the x-stage)
@@ -680,15 +680,15 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	const int heightAllFrames{ mHeightPerFrame_pix * mNframes };
 
 	//Start and stop time of the RS scan that define FFOVfast
-	const double t1{ 0.5 * (lineclockHalfPeriod - mWidthPerFrame_pix * pixelDwellTime) };
-	const double t2{ lineclockHalfPeriod - t1 };
+	const double t1{ 0.5 * (g_lineclockHalfPeriod - mWidthPerFrame_pix * g_pixelDwellTime) };
+	const double t2{ g_lineclockHalfPeriod - t1 };
 
 	//The full amplitude of the RS (from turning point to turning point) in um. It is assumed that the laser scans the sample following x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
-	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / lineclockHalfPeriod) - std::cos(PI * t2 / lineclockHalfPeriod)) };
+	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / g_lineclockHalfPeriod) - std::cos(PI * t2 / g_lineclockHalfPeriod)) };
 
 	//Start and stop positions of the RS that define FFOVfast
-	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / lineclockHalfPeriod)) };
-	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / lineclockHalfPeriod)) };
+	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / g_lineclockHalfPeriod)) };
+	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / g_lineclockHalfPeriod)) };
 
 	/*//For debugging
 	std::cout << "t1 (us): " << t1 / us << "\n";
@@ -700,8 +700,8 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	//Normalized variables
 	const float xbar1{ static_cast<float>(x1 / fullScan) };
 	const float xbar2{ static_cast<float>(x2 / fullScan) };
-	const float tbar1{ static_cast<float>(t1 / lineclockHalfPeriod) };
-	const float tbar2{ static_cast<float>(t2 / lineclockHalfPeriod) };
+	const float tbar1{ static_cast<float>(t1 / g_lineclockHalfPeriod) };
+	const float tbar2{ static_cast<float>(t2 / g_lineclockHalfPeriod) };
 	const float PI_float{ static_cast<float>(PI) };
 
 	//Precompute the mapping of the fast coordinate (k)
@@ -826,15 +826,15 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 	U8* correctedArray{ new U8[nPixAllFrames] };
 
 	//Start and stop time of the RS scan that define FFOVfast
-	const double t1{ 0.5 * (lineclockHalfPeriod - mWidthPerFrame_pix * pixelDwellTime) };
-	const double t2{ lineclockHalfPeriod - t1 };
+	const double t1{ 0.5 * (g_lineclockHalfPeriod - mWidthPerFrame_pix * g_pixelDwellTime) };
+	const double t2{ g_lineclockHalfPeriod - t1 };
 
 	//The full amplitude of the RS (from turning point to turning point) in um
-	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / lineclockHalfPeriod) - std::cos(PI * t2 / lineclockHalfPeriod)) };
+	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / g_lineclockHalfPeriod) - std::cos(PI * t2 / g_lineclockHalfPeriod)) };
 
 	//Start and stop positions of the RS that define the FFOVfast
-	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / lineclockHalfPeriod)) };
-	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / lineclockHalfPeriod)) };
+	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / g_lineclockHalfPeriod)) };
+	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / g_lineclockHalfPeriod)) };
 
 	/*//For debugging
 	std::cout << "t1 (us): " << t1 / us << "\n";
@@ -846,8 +846,8 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 	//Normalized variables
 	const float xbar1{ static_cast<float>(x1 / fullScan) };
 	const float xbar2{ static_cast<float>(x2 / fullScan) };
-	const float tbar1{ static_cast<float>(t1 / lineclockHalfPeriod) };
-	const float tbar2{ static_cast<float>(t2 / lineclockHalfPeriod) };
+	const float tbar1{ static_cast<float>(t1 / g_lineclockHalfPeriod) };
+	const float tbar2{ static_cast<float>(t2 / g_lineclockHalfPeriod) };
 	const float PI_float{ static_cast<float>(PI) };
 
 	// precompute the mapping of the fast coordinate (k)
@@ -886,7 +886,7 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The crosstalk ratio must be in the range [0, 1.0]");
 
 	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };			//Number of pixels in a single frame
-	const int nPixStrip{ mWidthPerFrame_pix * mHeightPerFrame_pix / nChanPMT };	//Number of pixels in a strip
+	const int nPixStrip{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
 	U8* correctedArray{ new U8[nPixPerFrame * mNframes] };
 
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
@@ -897,11 +897,11 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 				mArray[frameIndex * nPixPerFrame + pixIndex] - crosstalkRatio * mArray[frameIndex * nPixPerFrame + nPixStrip + pixIndex]);
 
 			//Last channel
-			correctedArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex] = clipU8dual(
-				mArray[frameIndex * nPixPerFrame + (nChanPMT - 1) * nPixStrip + pixIndex] - crosstalkRatio * mArray[frameIndex * nPixPerFrame + (nChanPMT - 2) * nPixStrip + pixIndex]);
+			correctedArray[frameIndex * nPixPerFrame + (g_nChanPMT - 1) * nPixStrip + pixIndex] = clipU8dual(
+				mArray[frameIndex * nPixPerFrame + (g_nChanPMT - 1) * nPixStrip + pixIndex] - crosstalkRatio * mArray[frameIndex * nPixPerFrame + (g_nChanPMT - 2) * nPixStrip + pixIndex]);
 
 			//All channels in between
-			for (int chanIndex = 1; chanIndex < nChanPMT - 1; chanIndex++)
+			for (int chanIndex = 1; chanIndex < g_nChanPMT - 1; chanIndex++)
 				correctedArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(
 					mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]
 					- crosstalkRatio * ( mArray[frameIndex * nPixPerFrame + (chanIndex - 1) * nPixStrip + pixIndex] + mArray[frameIndex * nPixPerFrame + (chanIndex + 1) * nPixStrip + pixIndex] ));
@@ -917,10 +917,10 @@ void TiffU8::flattenField(const double maxScaleFactor)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The scale factor must be >= 1.0");
 
 	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };			//Number of pixels in a single frame
-	const int nPixStrip{ mWidthPerFrame_pix * mHeightPerFrame_pix / nChanPMT };	//Number of pixels in a strip
-	std::vector<double> upscaleVector(nChanPMT);
+	const int nPixStrip{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
+	std::vector<double> upscaleVector(g_nChanPMT);
 
-	for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
+	for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
 	{
 		const double aux{ 1 +  (std::sqrt(maxScaleFactor) - 1) * std::abs(chanIndex/7.5 - 1)};
 		upscaleVector.at(chanIndex) = aux * aux;
@@ -932,7 +932,7 @@ void TiffU8::flattenField(const double maxScaleFactor)
 
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
 		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
-			for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
+			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
 				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(upscaleVector.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
 }
 #pragma endregion "TiffU8"

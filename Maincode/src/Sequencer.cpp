@@ -269,7 +269,7 @@ Sequence::Sequence(Sample sample, const Stack stack, const double2 stackCenterXY
 	//Initialize the z-stage with the position of the surface of the sample
 	mScanZi = mSample.mSurfaceZ;
 
-	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(Stage::XX) * mStackArrayDimIJ.at(Stage::YY) };									//Total number of stacks in a vibratome slice
+	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.at(Stage::XX) * mStackArrayDimIJ.at(Stage::YY) };								//Total number of stacks in a vibratome slice
 	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * mNtotalStacksPerVibratomeSlice };	//Total number of stacks in the entire sample. mNtotalSlices is fixed at 1
 
 	//Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice

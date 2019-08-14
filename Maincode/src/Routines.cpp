@@ -52,8 +52,8 @@ namespace Routines
 		double FFOVslowPerBeamlet;
 		if (multibeam)
 		{
-			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
-			FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
+			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / g_nChanPMT);
+			FFOVslowPerBeamlet = static_cast<double>(FFOVslow / g_nChanPMT);
 		}
 		else//Singlebeam. When using a fluorescent slide, set selectScanFFOV = 0 and PMT16Xchan_int = PMT16XCHAN::CENTERED to let the laser scan over the PMT16X channels
 		{
@@ -143,17 +143,17 @@ namespace Routines
 			datalog.record("Immersion medium = ", currentSample.mImmersionMedium);
 			datalog.record("Correction collar = ", currentSample.mObjectiveCollar);
 			datalog.record("\nFPGA---------------------------------------------------------");
-			datalog.record("FPGA clock (MHz) = ", tickPerUs);
+			datalog.record("FPGA clock (MHz) = ", g_tickPerUs);
 			datalog.record("\nLASER--------------------------------------------------------");
 			datalog.record("Laser used = ", virtualLaser.currentLaser_s());
 			datalog.record("Laser wavelength (nm) = ", virtualLaser.currentWavelength_nm());
 			datalog.record("Laser power first frame (mW) = ", fluorLabel.mScanPi / mW);
 			datalog.record("Laser power increase (mW/um) = ", fluorLabel.mStackPinc / mWpum);
-			datalog.record("Laser repetition period (us) = ", laserPulsePeriod / us);
+			datalog.record("Laser repetition period (us) = ", g_laserPulsePeriod / us);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
-			datalog.record("RS period (us) = ", 2 * lineclockHalfPeriod / us);
-			datalog.record("Pixel dwell time (us) = ", pixelDwellTime / us);
+			datalog.record("RS period (us) = ", 2 * g_lineclockHalfPeriod / us);
+			datalog.record("Pixel dwell time (us) = ", g_pixelDwellTime / us);
 			datalog.record("RS fill factor = ", RScanner.mFillFactor);
 			datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
 			datalog.record("\nIMAGE--------------------------------------------------------");
@@ -272,8 +272,8 @@ namespace Routines
 		double FFOVslowPerBeamlet;
 		if (multibeam)
 		{
-			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
-			FFOVslowPerBeamlet = static_cast<double>(FFOVslow / nChanPMT);
+			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / g_nChanPMT);
+			FFOVslowPerBeamlet = static_cast<double>(FFOVslow / g_nChanPMT);
 		}
 		else//Singlebeam
 		{
@@ -317,14 +317,14 @@ namespace Routines
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };							
 		stage.moveXYZ(initialStageXYZ);		//Move the stage to the initial position
 		stage.waitForMotionToStopAll();
-		stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix));		//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
+		stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));		//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 		Image image{ RTcontrol };
 		image.initializeAcq(scanDirZ);
 		std::cout << "Scanning the stack...\n";
-		stage.moveSingle(Stage::ZZ, stageZf);	//Move the stage to trigger the control sequence and data acquisition
+		stage.moveSingle(Stage::ZZ, stageZf);	//Move the stage to trigger ctl&acq
 		image.downloadData();
 
 		virtualLaser.closeShutter();	//Close the shutter manually even thought the destructor does it because the data processing could take a long time
@@ -347,7 +347,7 @@ namespace Routines
 
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
-		const Laser::ID whichLaser{ Laser::ID::AUTO };						//For averaging
+		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const double FOVslow{ 4.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
 		const double pixelSizeY{ 0.5 * um };//Not used here. For reference purposes
@@ -384,18 +384,18 @@ namespace Routines
 		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, 0, &virtualLaser };
 
 		//STAGES
-		const double3 initialStageXYZ{ stackCenterXYZ };		//Initial position of the stages	
+		const double3 initialStageXYZ{ stackCenterXYZ };									//Initial position of the stages	
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-		stage.moveXYZ(initialStageXYZ);		//Move the stage to the initial position
+		stage.moveXYZ(initialStageXYZ);														//Move the stage to the initial position
 		stage.waitForMotionToStopAll();
-		stage.setVelSingle(Stage::Axis::XX, pixelSizeX / lineclockHalfPeriod);		//Set the vel for imaging
+		stage.setVelSingle(Stage::Axis::XX, pixelSizeX / g_lineclockHalfPeriod);			//Set the vel for imaging
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 		Image image{ RTcontrol };
 		image.initializeAcq();
 		std::cout << "Scanning the stack...\n";
-		stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger the control sequence and data acquisition
+		stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger ctl&acq
 		image.downloadData();
 
 		virtualLaser.closeShutter();	//Close the shutter manually even thought the destructor does it because the data processing could take a long time
@@ -409,52 +409,6 @@ namespace Routines
 
 		std::cout << "Saving the stack...\n";
 		image.saveTiffSinglePage(filename, OVERRIDE::DIS);
-	}
-
-	void contScanXTest(const FPGA &fpga)
-	{
-		if (multibeam)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": ContX scanning for single beam only");
-
-		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
-		const Laser::ID whichLaser{ Laser::ID::AUTO };						//For averaging
-		const double FOVslow{ 280. * um };
-		const double pixelSizeX{ 0.5 * um };
-		const double pixelSizeY{ 0.5 * um };
-
-		const int width_pix{ 300 };
-		const int height_pix{ static_cast<int>(FOVslow / (2 * pixelSizeX)) };
-
-		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
-		if (fluorLabel.mWavelength_nm == 750)
-			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
-		//This is because FIDELITY is chromatically shifted wrt VISION
-		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
-			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
-
-		double stageXi, stageXf;
-		stageXi = stackCenterXYZ.at(Stage::XX);
-		stageXf = stackCenterXYZ.at(Stage::XX) + FOVslow + 20 * (2 * pixelSizeX); //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
-
-		//CREATE THE REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, height_pix, width_pix, 2, FIFOOUT::DIS };	//Notice the STAGEX flag
-
-		//GALVO. Keep them fixed
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, 0};
-
-		//STAGES
-		Stage stage{ pixelSizeX / lineclockHalfPeriod, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-		stage.moveXYZ(stackCenterXYZ);
-		Sleep(200);
-
-		//EXECUTE THE RT CONTROL SEQUENCE
-		Image image{ RTcontrol };
-		image.initializeAcq();
-		std::cout << "Scanning the stack...\n";
-		stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger the control sequence and data acquisition
-		Sleep(1000);//the Image destructor will disable the stage triggering
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -478,8 +432,8 @@ namespace Routines
 		double FFOVslowPerBeamlet;
 		if (multibeam)
 		{
-			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
-			FFOVslowPerBeamlet = static_cast<double>(FFOV.at(Stage::XX) / nChanPMT);
+			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / g_nChanPMT);
+			FFOVslowPerBeamlet = static_cast<double>(FFOV.at(Stage::XX) / g_nChanPMT);
 		}
 		else //Singlebeam
 		{
@@ -515,7 +469,7 @@ namespace Routines
 			Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
 			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);	//Move the z stage to the sample surface
 			stage.waitForMotionToStopAll();
-			stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZ / (lineclockHalfPeriod * heightPerBeamletPerFrame_pix));	//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
+			stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZ / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));	//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
@@ -550,7 +504,7 @@ namespace Routines
 
 					image.initializeAcq(static_cast<ZSCAN>(acqStack.mScanDirZ));
 					std::cout << "Scanning the stack...\n";
-					stage.moveSingle(Stage::ZZ, acqStack.scanZf());					//Move the stage to trigger the control sequence and data acquisition
+					stage.moveSingle(Stage::ZZ, acqStack.scanZf());					//Move the stage to trigger ctl&acq
 					image.downloadData();
 					break;
 				case Action::ID::SAV:
@@ -584,7 +538,7 @@ namespace Routines
 	{
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
-		const int nFramesCont{ 1 };									//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 1 };									//Number of frames for continuous acquisition
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -614,7 +568,7 @@ namespace Routines
 			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
 			image.acquire();									//Execute the RT control sequence and acquire the image
-			image.averageFrames();								//Average the frames acquired via continuous XY acquisition
+			image.averageFrames();								//Average the frames acquired via continuous acquisition
 			image.correctImage(RScanner.mFFOV);
 			image.saveTiffSinglePage("Untitled", OVERRIDE::EN);	//Save individual files
 			Sleep(700);
@@ -633,7 +587,7 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 	const double pixelSizeXY{ 0.5 * um };
 	const int widthPerFrame_pix{ 300 };
 	const int heightPerFrame_pix{ 560 };
-	const int nFramesCont{ 1 };											//Number of frames for continuous XY acquisition
+	const int nFramesCont{ 1 };											//Number of frames for continuous acquisition
 	const double FFOVfast{ widthPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 	const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
@@ -685,11 +639,11 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 		datalog.record("Immersion medium = ", currentSample.mImmersionMedium);
 		datalog.record("Correction collar = ", currentSample.mObjectiveCollar);
 		datalog.record("\nFPGA---------------------------------------------------------");
-		datalog.record("FPGA clock (MHz) = ", tickPerUs);
+		datalog.record("FPGA clock (MHz) = ", g_tickPerUs);
 		datalog.record("\nSCAN---------------------------------------------------------");
 		datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
-		datalog.record("RS period (us) = ", 2 * lineclockHalfPeriod / us);
-		datalog.record("Pixel dwell time (us) = ", pixelDwellTime / us);
+		datalog.record("RS period (us) = ", 2 * g_lineclockHalfPeriod / us);
+		datalog.record("Pixel dwell time (us) = ", g_pixelDwellTime / us);
 		datalog.record("RS fill factor = ", RScanner.mFillFactor);
 		datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
 		datalog.record("\nIMAGE--------------------------------------------------------");
@@ -862,7 +816,7 @@ namespace TestRoutines
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
-		const int nFramesCont{ 30 };											//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 30 };											//Number of frames for continuous acquisition
 		const double3 stagePositionXYZ{ 35.05 * mm, 10.40 * mm, 18.204 * mm };	//Stage initial position
 
 		//STAGES
@@ -893,7 +847,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+		image.acquire();		//Execute the RT control sequence and acquire the image via continuous acquisition
 		image.averageEvenOddFrames();
 		image.saveTiffMultiPage("Untitled", OVERRIDE::DIS);
 	}
@@ -1036,6 +990,53 @@ namespace TestRoutines
 		//stage.printStageConfig(Z, DOchan);
 	}
 
+	//Test triggering ctl&acq sequence with the stage x
+	void contScanXTest(const FPGA &fpga)
+	{
+		if (multibeam)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": ContX scanning for single beam only");
+
+		//ACQUISITION SETTINGS
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
+		const Laser::ID whichLaser{ Laser::ID::AUTO };						//For averaging
+		const double FOVslow{ 280. * um };
+		const double pixelSizeX{ 0.5 * um };
+		const double pixelSizeY{ 0.5 * um };
+
+		const int width_pix{ 300 };
+		const int height_pix{ static_cast<int>(FOVslow / (2 * pixelSizeX)) };
+
+		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
+		if (fluorLabel.mWavelength_nm == 750)
+			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
+		//This is because FIDELITY is chromatically shifted wrt VISION
+		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
+			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
+
+		double stageXi, stageXf;
+		stageXi = stackCenterXYZ.at(Stage::XX);
+		stageXf = stackCenterXYZ.at(Stage::XX) + FOVslow - 0.100 * mm; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+
+		//CREATE THE REALTIME CONTROL SEQUENCE
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, height_pix, width_pix, 2, FIFOOUT::DIS };	//Notice the STAGEX flag
+
+		//GALVO. Keep them fixed
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, 0 };
+
+		//STAGES
+		Stage stage{ pixelSizeX / g_lineclockHalfPeriod, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
+		stage.moveXYZ(stackCenterXYZ);
+		Sleep(200);
+
+		//EXECUTE THE RT CONTROL SEQUENCE
+		Image image{ RTcontrol };
+		image.initializeAcq();
+		std::cout << "Scanning the stack...\n";
+		stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger ctl&acq
+		Sleep(1000);//the Image destructor will disable the stage triggering
+	}
+
 	void shutter(const FPGA &fpga)
 	{
 		//CREATE A REALTIME CONTROL SEQUENCE
@@ -1083,7 +1084,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
-		const int nFramesCont{ 200 };			//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 200 };			//Number of frames for continuous acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
@@ -1102,7 +1103,7 @@ namespace TestRoutines
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire();		//Execute the RT control sequence and acquire the image via continuous XY acquisition
+		image.acquire();		//Execute the RT control sequence and acquire the image via continuous acquisition
 	}
 
 	void lasers(const FPGA &fpga)
@@ -1169,32 +1170,20 @@ namespace TestRoutines
 
 	void tiffU8()
 	{
-		/*
-		TiffU8 image00{ "00" };
-		TiffU8 image01{ "01" };
-		TiffU8 image10{ "10" };
-		TiffU8 image11{ "11" };
+		
+		std::string outputFilename{ "output" };
+		TiffU8 image00{ "01" };
+		TiffU8 image01{ "02" };
 		const int width{ 300 };
-		const int height{ 560 };
+		const int height{ 8000 };
 
-		image00.suppressCrosstalk(0.2);
-		image01.suppressCrosstalk(0.2);
-		image10.suppressCrosstalk(0.2);
-		image11.suppressCrosstalk(0.2);
-
-		image00.flattenField(2.0);
-		image01.flattenField(2.0);
-		image10.flattenField(2.0);
-		image11.flattenField(2.0);
-
-		QuickStitcher stitched{ width,height, 2,2 };
+		QuickStitcher stitched{ width,height, 1,2 };
 		stitched.push(image00, 0, 0);
 		stitched.push(image01, 0, 1);
-		stitched.push(image10, 1, 0);
-		stitched.push(image11, 1, 1);
 		stitched.saveToFile(outputFilename);
-		*/
+		
 
+		/*
 		std::string inputFilename{ "Liver_V750nm_P=184.3mW_Pinc=1.4mWpum_x=52.420_y=20.000_zi=17.8340_zf=17.9365_Step=0.0001" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
@@ -1202,6 +1191,7 @@ namespace TestRoutines
 		image.suppressCrosstalk(0.2);
 		//image.binFrames(5);
 		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+		*/
 
 		pressAnyKeyToCont();
 		//std::cout << image.isDark(1) << "\n";
@@ -1492,7 +1482,7 @@ namespace TestRoutines
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const int nFramesCont{ 1 };										//Number of frames for continuous XY acquisition
+		const int nFramesCont{ 1 };										//Number of frames for continuous acquisition
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
 		const int wavelength_nm{ 750 };
 

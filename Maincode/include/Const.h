@@ -52,50 +52,50 @@ namespace Constants
 	extern const int mW;
 	extern const double mWpum;
 
-	extern const double laserPulsePeriod;
-	extern const double pixelDwellTime;
-	extern const double lineclockHalfPeriod;
+	extern const double g_laserPulsePeriod;
+	extern const double g_pixelDwellTime;
+	extern const double g_lineclockHalfPeriod;
 	
-	extern const int AOmax;
-	extern const int tickPerUs;
-	extern const double usPerTick;
-	extern const U32 tMIN_tick;
-	extern const int AO_tMIN;
-	extern const int DOdelay_tick;
-	extern const int nPreframes;
-	extern const double linegateTimeout;
-	extern const double postsequenceTimer;
-	extern const double stageDebounceTimer;
-	extern const int FIFOtimeout_tick;
-	extern const int FIFOINmax;
+	extern const int g_AOmax;
+	extern const int g_tickPerUs;
+	extern const double g_usPerTick;
+	extern const U32 g_tMin_tick;
+	extern const int g_tMinAO;
+	extern const int g_DOdelay_tick;
+	extern const int g_nPreframes;
+	extern const double g_linegateTimeout;
+	extern const double g_postSequenceTimer;
+	extern const double g_stageDebounceTimer;
+	extern const int g_FIFOtimeout_tick;
+	extern const int g_FIFOINmax;
 
-	extern const double pockelsFirstFrameDelay;
-	extern const double pockelsSecondaryDelay;
+	extern const double g_pockelsFirstFrameDelay;
+	extern const double g_pockelsSecondaryDelay;
 
 	struct GALVOcalib
 	{
 		double voltagePerDistance;
 		double voltageOffset;
 	};
-	extern const double scanGalvoDelay;
-	extern const double rescanGalvoDelay;
-	extern const GALVOcalib scannerCalib;
-	extern const GALVOcalib rescannerCalibV750nm;
-	extern const GALVOcalib rescannerCalibV920nm;
-	extern const GALVOcalib rescannerCalibV1040nm;
-	extern const GALVOcalib rescannerCalibF1040nm;
-	extern const int PMT16Xchan_int;
+	extern const double g_scanGalvoDelay;
+	extern const double g_rescanGalvoDelay;
+	extern const GALVOcalib g_scannerCalib;
+	extern const GALVOcalib g_rescannerCalibV750nm;
+	extern const GALVOcalib g_rescannerCalibV920nm;
+	extern const GALVOcalib g_rescannerCalibV1040nm;
+	extern const GALVOcalib g_rescannerCalibF1040nm;
+	extern const int g_PMT16Xchan_int;
 
-	extern const double	STAGEZtrigAcqDelayTopdown;
-	extern const double	STAGEZTrigAcqDelayBottomup;
-	extern const double	STAGEXTrigAcqDelay;
+	extern const double	g_STAGEZtrigAcqDelayTopdown;
+	extern const double	g_STAGEZTrigAcqDelayBottomup;
+	extern const double	g_STAGEXTrigAcqDelay;
 
-	extern const int nChanPMT;
-	extern const PMTIN photocounterInput;
-	extern const int nPMTsim;
-	extern const U8 PMTsimArray[];
+	extern const int g_nChanPMT;
+	extern const PMTIN g_photocounterInput;
+	extern const int g_nPMTsim;
+	extern const U8 g_PMTsimArray[];
 
-	extern const double cLensPos750nm;
-	extern const double cLensPos920nm;
-	extern const double cLensPos1040nm;
+	extern const double g_cLensPos750nm;
+	extern const double g_cLensPos920nm;
+	extern const double g_cLensPos1040nm;
 }

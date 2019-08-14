@@ -4,19 +4,19 @@
 
 //When multiplexing, create a mTiff to store 16 strips of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(const RTcontrol &RTcontrol) :
-	mRTcontrol{ RTcontrol }, mTiff{ mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * (nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes }
+	mRTcontrol{ RTcontrol }, mTiff{ mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * (g_nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes }
 {
 	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 
-	//Enable the stage triggering the control sequence and data acquisition
+	//Enable the stage triggering ctl&acq
 	//It has to be here and not in the RTcontrol class because the trigger has to be turned off by the destructor to allow positioning the stage after acquisition
 	mRTcontrol.enableStageTrigAcq();
 }
 
 Image::~Image()
 {
-	//Disable the stage triggering the control sequence and data acquisition to allow positioning the stage after acquisition
+	//Disable the stage triggering ctl&acq to allow positioning the stage after acquisition
 	mRTcontrol.disableStageTrigAcq();
 
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
@@ -48,7 +48,7 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 {
 	mRTcontrol.enableFIFOOUT();					//Push data to from the FPGA FIFOOUTfpga. It is disabled when debugging
 	mScanDir = stackScanDir;					//Initialize mScanDir
-	mRTcontrol.setStageTrigAcqDelay(mScanDir);	//Set the delay for the stage triggering the control sequence and data acquisition
+	mRTcontrol.setStageTrigAcqDelay(mScanDir);	//Set the delay for the stage triggering ctl&acq
 	mRTcontrol.presetFPGAoutput();				//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();						//Load the RT control in mVectorOfQueues to be sent to the FPGA
 	startFIFOOUTpc_();							//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
@@ -352,7 +352,7 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 	if (saveAllPMT)
 	{
 		//Save all PMT16X channels in separate pages in a Tiff
-		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , nChanPMT * mRTcontrol.mNframes };
+		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , g_nChanPMT * mRTcontrol.mNframes };
 		stack.pushImage(static_cast<int>(RTcontrol::PMT16XCHAN::CH00), static_cast<int>(RTcontrol::PMT16XCHAN::CH07), CountA.data());
 		stack.pushImage(static_cast<int>(RTcontrol::PMT16XCHAN::CH08), static_cast<int>(RTcontrol::PMT16XCHAN::CH15), CountB.data());
 
@@ -390,7 +390,7 @@ void Image::stopFIFOOUTpc_() const
 ResonantScanner::ResonantScanner(const RTcontrol &RTcontrol) : mRTcontrol{ RTcontrol }
 {	
 	//Calculate the spatial fill factor
-	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * pixelDwellTime / lineclockHalfPeriod };
+	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * g_pixelDwellTime / g_lineclockHalfPeriod };
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
@@ -521,7 +521,7 @@ void PMT16X::readAllGain() const
 
 	//Print out the gains
 	std::cout << "PMT16X gains:\n";
-	for (int ii = 0; ii < nChanPMT; ii++)
+	for (int ii = 0; ii < g_nChanPMT; ii++)
 		std::cout << "Gain CH" << ii << " (0-255) = " << static_cast<int>(parameters.at(ii + 1)) << "\n";
 }
 
@@ -529,7 +529,7 @@ void PMT16X::setSingleGain(const RTcontrol::PMT16XCHAN chan, const int gain) con
 {
 	//Check that the inputVector parameters are within range
 	if (chan < RTcontrol::PMT16XCHAN::CH00 || chan > RTcontrol::PMT16XCHAN::CH15)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X channel number out of range [1-" + std::to_string(nChanPMT) + "]");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X channel number out of range [1-" + std::to_string(g_nChanPMT) + "]");
 
 	if (gain < 0 || gain > 255)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain out of range [0-255]");
@@ -575,10 +575,10 @@ void PMT16X::setAllGain(const int gain) const
 void PMT16X::setAllGain(std::vector<uint8_t> gains) const
 {
 	//Check that the inputVector parameters are within range
-	if (gains.size() != nChanPMT)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Gain array must have " + std::to_string(nChanPMT) + " elements");
+	if (gains.size() != g_nChanPMT)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Gain array must have " + std::to_string(g_nChanPMT) + " elements");
 
-	for (int ii = 0; ii < nChanPMT; ii++)
+	for (int ii = 0; ii < g_nChanPMT; ii++)
 		if (gains.at(ii) < 0 || gains.at(ii) > 255)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ":  PMT16X gain #" + std::to_string(ii) + " out of range [0-255]");
 
@@ -592,7 +592,7 @@ void PMT16X::setAllGain(std::vector<uint8_t> gains) const
 
 	//Print out the gains
 	std::cout << "PMT16X gains successfully set to:\n";
-	for (int ii = 1; ii <= nChanPMT; ii++)
+	for (int ii = 1; ii <= g_nChanPMT; ii++)
 		std::cout << "Gain #" << ii << " (0-255) = " << static_cast<int>(parameters.at(ii)) << "\n";
 
 }
@@ -791,7 +791,7 @@ int Filterwheel::downloadPosition_() const
 		//RxBuffer.erase(std::remove(RxBuffer.begin(), RxBuffer.end(), '\n'), RxBuffer.end());
 
 		//std::cout << "RxBuffer: " << RxBuffer << "\n";	//For debugging
-		return std::stoi(RxBuffer);					//convert string to int
+		return std::stoi(RxBuffer);							//convert string to int
 	}
 	catch (const serial::IOException)
 	{
@@ -1169,7 +1169,7 @@ void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const 
 
 void PockelsCell::voltageToZero() const
 {
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, AO_tMIN, 0 * V);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, g_tMinAO, 0 * V);
 }
 
 //Linearly scale the pockels voltage from the first to the last frame
@@ -1430,13 +1430,13 @@ void VirtualLaser::CollectorLens::set(const int wavelength_nm)
 	switch (wavelength_nm)
 	{
 	case 750:
-		mStepper.move(cLensPos750nm);
+		mStepper.move(g_cLensPos750nm);
 		break;
 	case 920:
-		mStepper.move(cLensPos920nm);
+		mStepper.move(g_cLensPos920nm);
 		break;
 	case 1040:
-		mStepper.move(cLensPos1040nm);
+		mStepper.move(g_cLensPos1040nm);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The collector lens position has not been calibrated for the wavelength " + std::to_string(wavelength_nm));
@@ -1737,8 +1737,8 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 	switch (mWhichGalvo)//which GALVO
 	{
 	case RTcontrol::RTCHAN::SCANGALVO:
-		mVoltagePerDistance = scannerCalib.voltagePerDistance;
-		mVoltageOffset = scannerCalib.voltageOffset;
+		mVoltagePerDistance = g_scannerCalib.voltagePerDistance;
+		mVoltageOffset = g_scannerCalib.voltageOffset;
 
 		//For debugging
 		//std::cout << "Scanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
@@ -1758,16 +1758,16 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 			switch (wavelength_nm)
 			{
 			case 750:
-				mVoltagePerDistance = rescannerCalibV750nm.voltagePerDistance;
-				mVoltageOffset = rescannerCalibV750nm.voltageOffset;
+				mVoltagePerDistance = g_rescannerCalibV750nm.voltagePerDistance;
+				mVoltageOffset = g_rescannerCalibV750nm.voltageOffset;
 				break;
 			case 920:
-				mVoltagePerDistance = rescannerCalibV920nm.voltagePerDistance;
-				mVoltageOffset = rescannerCalibV920nm.voltageOffset;
+				mVoltagePerDistance = g_rescannerCalibV920nm.voltagePerDistance;
+				mVoltageOffset = g_rescannerCalibV920nm.voltageOffset;
 				break;
 			case 1040:
-				mVoltagePerDistance = rescannerCalibV1040nm.voltagePerDistance;
-				mVoltageOffset = rescannerCalibV1040nm.voltageOffset;
+				mVoltagePerDistance = g_rescannerCalibV1040nm.voltagePerDistance;
+				mVoltageOffset = g_rescannerCalibV1040nm.voltageOffset;
 				break;
 			default:
 				throw std::invalid_argument((std::string)__FUNCTION__ + ": The galvo has not been calibrated for the wavelength " + std::to_string(wavelength_nm) + " nm");
@@ -1777,8 +1777,8 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 			switch (wavelength_nm)
 			{
 			case 1040:
-				mVoltagePerDistance = rescannerCalibF1040nm.voltagePerDistance;
-				mVoltageOffset = rescannerCalibF1040nm.voltageOffset;
+				mVoltagePerDistance = g_rescannerCalibF1040nm.voltagePerDistance;
+				mVoltageOffset = g_rescannerCalibF1040nm.voltageOffset;
 				break;
 			default:
 				throw std::invalid_argument((std::string)__FUNCTION__ + ": FIDELITY only supports the wavelength 1040 nm\n");
@@ -1845,7 +1845,7 @@ double Galvo::beamletIndex_(RTcontrol::PMT16XCHAN PMT16Xchan_int) const
 
 void Galvo::voltageToZero() const
 {
-	mRTcontrol.pushAnalogSinglet(mWhichGalvo, AO_tMIN, 0 * V);
+	mRTcontrol.pushAnalogSinglet(mWhichGalvo, g_tMinAO, 0 * V);
 }
 
 void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
@@ -1876,7 +1876,7 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 		timeStep = 8. * us;
 
 	//The position offset allows to compensate for the slight axis misalignment of the rescanner
-	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
+	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, g_lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
 		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal, override);
 }
 #pragma endregion "Galvo"

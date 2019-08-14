@@ -23,8 +23,8 @@ public:
 	void acquire(const bool saveAllPMT = false);
 	void initializeAcq(const ZSCAN scanDir = ZSCAN::TOPDOWN);
 	void downloadData();
-	void constructImage(const bool saveAllPMT = false);
-	void constructImageStrip(const SCANDIRX scanDirX);
+	void formImage(const bool saveAllPMT = false);
+	void formImageVerticalStrip(const XSCAN scanDirX);
 	void correctImage(const double FFOVfast);
 	void averageFrames();
 	void averageEvenOddFrames();

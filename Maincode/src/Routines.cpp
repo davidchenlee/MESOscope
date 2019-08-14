@@ -281,26 +281,26 @@ namespace Routines
 			FFOVslowPerBeamlet = FFOVslow;
 		}
 
-		//Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+		//Note the extra travel in z to avoid nonlinearity at the end of the stage scan
 		double stageZi, stageZf, laserPi, laserPf;
 		switch (scanDirZ)
 		{
-		case ZSCAN::TOPDOWN:
+		case ZSCAN::TOPDOWN://The stage z moves upward
 			stageZi = stackCenterXYZ.at(Stage::ZZ);
-			stageZf = stackCenterXYZ.at(Stage::ZZ) + stackDepth + 20 * pixelSizeZbeforeBinning; 
+			stageZf = stackCenterXYZ.at(Stage::ZZ) + stackDepth + (20 * pixelSizeZbeforeBinning); 
 			laserPi = laserPowerInitialTransientCompensation * fluorLabel.mScanPi;
 			laserPf = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			break;
-		case ZSCAN::BOTTOMUP:
+		case ZSCAN::BOTTOMUP://The stage z moves downward
 			stageZi = stackCenterXYZ.at(Stage::ZZ) + stackDepth;
-			stageZf = stackCenterXYZ.at(Stage::ZZ) - 20 * pixelSizeZbeforeBinning;
+			stageZf = stackCenterXYZ.at(Stage::ZZ) - (20 * pixelSizeZbeforeBinning);
 			laserPi = laserPowerInitialTransientCompensation * fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			laserPf = fluorLabel.mScanPi;
 			break;
 		}
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the STAGEZ flag
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Note the STAGEZ flag
 
 		//LASER
 		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, laserPf, whichLaser };
@@ -329,7 +329,7 @@ namespace Routines
 		image.downloadData();
 
 		virtualLaser.closeShutter();	//Close the shutter manually even though the destructor does it because the data processing could take a long time
-		image.constructImage();
+		image.formImage();
 		image.correctImage(RScanner.mFFOV);
 		image.binFrames(nFramesPerBin);
 
@@ -341,6 +341,47 @@ namespace Routines
 		image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
 
+	//Note the extra travel to avoid nonlinearity at the end of the stage scan
+	double giveXi(const double FOVslow, const XSCAN scanDirX)
+	{
+		switch (scanDirX)
+		{
+		case XSCAN::LEFT2RIGHT://The stage x moves to the left when facing the microscope. Therefore, the sample is imaged from left to right
+			return stackCenterXYZ.at(Stage::XX);
+		case XSCAN::RIGHT2LEFT://The stage x moves to the right when facing the microscope. Therefore, the sample is imaged from right to left
+			return stackCenterXYZ.at(Stage::XX) - FOVslow;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + "aaa");
+		}
+	}
+
+	//Note the extra travel to avoid nonlinearity at the end of the stage scan
+	double giveXf(const double FOVslow, const XSCAN scanDirX)
+	{
+		switch (scanDirX)
+		{
+		case XSCAN::LEFT2RIGHT://The stage x moves to the left when facing the microscope. Therefore, the sample is imaged from left to right
+			return stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm;
+		case XSCAN::RIGHT2LEFT://The stage x moves to the right when facing the microscope. Therefore, the sample is imaged from right to left
+			return stackCenterXYZ.at(Stage::XX) + 0.100 * mm;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + "aaa");
+		}
+	}
+
+	XSCAN changeScanDir(XSCAN scanDirX)
+	{
+		switch (scanDirX)
+		{
+		case XSCAN::LEFT2RIGHT:
+			return XSCAN::RIGHT2LEFT;
+		case XSCAN::RIGHT2LEFT:
+			return XSCAN::LEFT2RIGHT;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + "aaa");
+		}
+	}
+
 	void contScanX(const FPGA &fpga)
 	{
 		if (multibeam)
@@ -349,7 +390,8 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const SCANDIRX scanDirX{SCANDIRX::NEG};
+		const XSCAN scanDirX{XSCAN::LEFT2RIGHT};
+		//const XSCAN scanDirX{ XSCAN::RIGHT2LEFT };
 		const double FOVslow{ 4.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
 		const double pixelSizeY{ 0.5 * um };//Not used here. For reference purposes
@@ -364,27 +406,15 @@ namespace Routines
 		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
 			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
 
-		//Notice the extra travel to avoid nonlinearity at the end of the stage scan
-		double stageXi, stageXf;
-		switch (scanDirX)
-		{
-		case SCANDIRX::POS:
-			stageXi = stackCenterXYZ.at(Stage::XX);
-			stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm;
-				break;
-		case SCANDIRX::NEG:
-			stageXi = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm;
-			stageXf = stackCenterXYZ.at(Stage::XX);
-			break;
-		default:
-			;
-		}
+		std::vector<double2> stagePositionYZ;							//Vector with the sample locations to image
+		for (int iterLocation = 0; iterLocation < 4; iterLocation++)
+			stagePositionYZ.push_back({ stackCenterXYZ.at(Stage::YY) - iterLocation * 0.150 * mm, stackCenterXYZ.at(Stage::ZZ) });
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
 		//Image height = 2 (two galvo scanner swings)
 		//nFrames = height_pix/2
 		//Therefore, the total height of the final image = height_pix
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUT::EN };	//Notice the STAGEX flag. The factor of 2 means 2 RS swings per pixel																									
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUT::EN };	//Note the STAGEX flag. The factor of 2 means 2 RS swings per pixel																									
 
 		//LASER
 		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, fluorLabel.mScanPi, fluorLabel.mScanPi, whichLaser }; //Note that the initial and final laser powers are the same
@@ -398,30 +428,47 @@ namespace Routines
 		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, 0, &virtualLaser };
 
 		//STAGES
+		double stageXi = giveXi(FOVslow, scanDirX);
+		double stageXf;
+		const double3 initialStageXYZ{ stageXi, stackCenterXYZ.at(Stage::YY), stackCenterXYZ.at(Stage::ZZ) };
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-		stage.moveXYZ({ stageXi, stackCenterXYZ.at(Stage::YY), stackCenterXYZ.at(Stage::ZZ) });		//Move the stage to the initial position
+		stage.moveXYZ(initialStageXYZ);		//Move the stage to the initial position
 		stage.waitForMotionToStopAll();
-		stage.setVelSingle(Stage::Axis::XX, pixelSizeX / g_lineclockHalfPeriod);			//Set the vel for imaging
-		Sleep(1000);
+		stage.setVelSingle(Stage::Axis::XX, pixelSizeX / g_lineclockHalfPeriod);					//Set the vel for imaging
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
-		Image image{ RTcontrol };
-		image.initializeAcq();
-		std::cout << "Scanning the stack...\n";
-		stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger ctl&acq
-		image.downloadData();
 
-		virtualLaser.closeShutter();	//Close the shutter manually even though the destructor does it because the data processing could take a long time
-		image.constructImageStrip(scanDirX);
+		//ACQUIRE FRAMES AT DIFFERENT Zs
+		const int nLocations{ static_cast<int>(stagePositionYZ.size()) };
+		XSCAN iterScanDirX{ scanDirX };
+		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
+		{
+			stageXi = giveXi(FOVslow, iterScanDirX);
+			stageXf = giveXf(FOVslow, iterScanDirX);
 
-		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPi / mW, 1) +
-			"mWpum_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
-			"_y=" + toString(stackCenterXYZ.at(Stage::YY) / mm, 3) +
-			"_z=" + toString(stackCenterXYZ.at(Stage::ZZ) / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
+			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations << "\n";
+			stage.moveXYZ({ stageXi, stagePositionYZ.at(iterLocation).at(0), stagePositionYZ.at(iterLocation).at(1) });
+			stage.waitForMotionToStopAll();
 
-		std::cout << "Saving the stack...\n";
-		image.save(filename, TIFFSTRUCT::SINGLEPAGE, OVERRIDE::DIS);
+			Image image{ RTcontrol };
+			image.initializeAcq();
+
+			std::cout << "Scanning the stack...\n";
+			stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger ctl&acq
+			image.downloadData();
+			image.formImageVerticalStrip(scanDirX);
+
+			const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPi / mW, 1) +
+				"mWpum_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
+				"_y=" + toString(stagePositionYZ.at(iterLocation).at(0) / mm, 3) +
+				"_z=" + toString(stagePositionYZ.at(iterLocation).at(1) / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
+
+			std::cout << "Saving the stack...\n";
+			image.save(filename, TIFFSTRUCT::SINGLEPAGE, OVERRIDE::DIS);
+
+			changeScanDir(iterScanDirX);
+		}
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -465,7 +512,7 @@ namespace Routines
 		if (run)
 		{
 			//CREATE THE REALTIME CONTROL SEQUENCE
-			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Notice the STAGEZ flag
+			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Note the STAGEZ flag
 
 			//LASER
 			VirtualLaser virtualLaser{ RTcontrol };
@@ -525,7 +572,7 @@ namespace Routines
 						"_x=" + toString(stackCenterXY.at(Stage::XX) / mm, 3) + "_y=" + toString(stackCenterXY.at(Stage::YY) / mm, 3) +
 						"_zi=" + toString(acqStack.mScanZi / mm, 4) + "_zf=" + toString(acqStack.scanZf() / mm, 4) + "_Step=" + toString(pixelSizeZ / mm, 4);
 
-					image.constructImage();
+					image.formImage();
 					//image.correctImage(RScanner.mFFOV);
 					image.save(longName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 					break;
@@ -1029,16 +1076,16 @@ namespace TestRoutines
 		if (0)//Increase STAGEX position
 		{
 			stageXi = stackCenterXYZ.at(Stage::XX);
-			stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+			stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm; //Note the extra travel in z to avoid nonlinearity at the end of the stage scan
 		}
 		else //Dicrease STAGEX position
 		{
 			stageXi = stackCenterXYZ.at(Stage::XX);
-			stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+			stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm; //Note the extra travel in z to avoid nonlinearity at the end of the stage scan
 		}
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUT::DIS };	//Notice the STAGEX flag
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUT::DIS };	//Note the STAGEX flag
 
 		//GALVO. Keep them fixed
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
@@ -1055,7 +1102,7 @@ namespace TestRoutines
 		image.initializeAcq();
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger ctl&acq
-		Sleep(2000);//the Image destructor will disable the stage triggering
+		Sleep(2000);							//Wait to avoid the Image destructor disabling the stage triggering
 	}
 
 	void shutter(const FPGA &fpga)
@@ -1191,16 +1238,19 @@ namespace TestRoutines
 
 	void tiffU8()
 	{
-		
+		const int width{ 300 };
+		const int height{ 8000 };
 		std::string outputFilename{ "output" };
 		TiffU8 image00{ "01" };
 		TiffU8 image01{ "02" };
-		const int width{ 300 };
-		const int height{ 8000 };
+		TiffU8 image03{ "03" };
+		TiffU8 image04{ "04" };
 
-		QuickStitcher stitched{ width,height, 1,2 };
+		QuickStitcher stitched{ width,height, 1,4 };
 		stitched.push(image00, 0, 0);
 		stitched.push(image01, 0, 1);
+		stitched.push(image03, 0, 2);
+		stitched.push(image04, 0, 3);
 		stitched.saveToFile(outputFilename);
 		
 

@@ -40,7 +40,7 @@ void Image::acquire(const bool saveAllPMT)
 	initializeAcq();
 	mRTcontrol.triggerRT();		//Send a signal to the FPGA to trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
 	downloadData();
-	constructImage(saveAllPMT);
+	formImage(saveAllPMT);
 }
 
 //Preset the parameters for the acquisition sequence
@@ -73,25 +73,25 @@ void Image::downloadData()
 }
 
 //Demultiplex the image
-void Image::constructImage(const bool saveAllPMT)
+void Image::formImage(const bool saveAllPMT)
 {
 	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
 	demultiplex_(saveAllPMT);	//Copy the chuncks of data to mTiff
 	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Mirror the odd frames vertically
 }
 
-//To perform continuous scan in x. Different from Image::constructImage() because of the way the image is formed
+//To perform continuous scan in x. Different from Image::formImage() because of the way the image is formed
 //Each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and there are many frames, with mNframes = 'half the height of the final image'
-void Image::constructImageStrip(const SCANDIRX scanDirX)
+void Image::formImageVerticalStrip(const XSCAN scanDirX)
 {
 	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
 	demultiplex_(false);		//Copy the chuncks of data to mTiff
 	
 	switch (scanDirX)
 	{
-	case SCANDIRX::NEG:
+	case XSCAN::RIGHT2LEFT:
 		mTiff.mergeFrames();	//Merge all the frames in a single image
-		mTiff.mirror();			//Mirror the image if a reversed scan is performed
+		mTiff.mirror();			//Mirror the entire image if a reversed scan was performed
 		break;
 	default:
 		;
@@ -1985,7 +1985,7 @@ void Stage::moveSingle(const Axis axis, const double position)
 	}
 }
 
-//Move the 3 stages to the requested position
+//Move the 2 stages to the requested position
 void Stage::moveXY(const double2 positionXY)
 {
 	moveSingle(XX, positionXY.at(XX));

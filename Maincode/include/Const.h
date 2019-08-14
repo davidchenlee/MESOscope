@@ -25,18 +25,18 @@ namespace Constants
 	typedef std::array<double, 2> double2;		//array of 2 doubles
 	typedef std::array <double, 4> ROI;			//ROI = {ymin, xmin, ymax, xmax}
 
-	enum class PMTIN { PMT = false, SIM = true };//casted
-	enum class LINECLOCK { RS = false, FG = true  };//casted
+	enum class PMTIN { PMT = false, SIM = true };			//casted
+	enum class LINECLOCK { RS = false, FG = true  };		//casted
 	enum class MAINTRIG { PC = 0, STAGEZ = 1, STAGEX = 2 };	//The numbering must match that of LV
-	enum class FPGARESET { DIS = false, EN = true };//casted
-	enum class FIFOOUT { DIS = false, EN = true  };//casted
+	enum class FPGARESET { DIS = false, EN = true };		//casted
+	enum class FIFOOUT { DIS = false, EN = true  };			//casted
 	enum class TIFFSTRUCT { SINGLEPAGE, MULTIPAGE };
 	enum class OVERRIDE { DIS, EN };
 	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANXY, COLLECTLENS };
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};
 	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};
-	enum class ZSCAN { BOTTOMUP = -1, TOPDOWN = 1};//Direction of imaging (TOPDOWN = stage z moves up. BOTTOMUP = stage z moves down)
-	enum class SCANDIRX { NEG = -1, POS = 1};
+	enum class ZSCAN { BOTTOMUP = -1, TOPDOWN = 1};				//Direction of imaging of the sample (TOPDOWN = stage z moves upward. BOTTOMUP = stage z moves downward)
+	enum class XSCAN { RIGHT2LEFT = -1, LEFT2RIGHT = 1};		//Direction of imaging of the sample (RIGHT2LEFT  = stage x moves to the left when facing the microscope. LEFT2RIGHT = stage x moves to the right)
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;

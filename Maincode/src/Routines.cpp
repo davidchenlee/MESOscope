@@ -280,19 +280,20 @@ namespace Routines
 			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 			FFOVslowPerBeamlet = FFOVslow;
 		}
-		
+
+		//Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
 		double stageZi, stageZf, laserPi, laserPf;
 		switch (scanDirZ)
 		{
 		case ZSCAN::TOPDOWN:
 			stageZi = stackCenterXYZ.at(Stage::ZZ);
-			stageZf = stackCenterXYZ.at(Stage::ZZ) + stackDepth + 20 * pixelSizeZbeforeBinning; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+			stageZf = stackCenterXYZ.at(Stage::ZZ) + stackDepth + 20 * pixelSizeZbeforeBinning; 
 			laserPi = laserPowerInitialTransientCompensation * fluorLabel.mScanPi;
 			laserPf = fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			break;
 		case ZSCAN::BOTTOMUP:
 			stageZi = stackCenterXYZ.at(Stage::ZZ) + stackDepth;
-			stageZf = stackCenterXYZ.at(Stage::ZZ) - 20 * pixelSizeZbeforeBinning;				//Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+			stageZf = stackCenterXYZ.at(Stage::ZZ) - 20 * pixelSizeZbeforeBinning;
 			laserPi = laserPowerInitialTransientCompensation * fluorLabel.mScanPi + stackDepth * fluorLabel.mStackPinc;
 			laserPf = fluorLabel.mScanPi;
 			break;
@@ -362,18 +363,25 @@ namespace Routines
 		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
 			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
 
-		double stageXi, stageXf, laserPi, laserPf;
-		stageXi = stackCenterXYZ.at(Stage::XX);
-		stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
-		laserPi = fluorLabel.mScanPi;
-		laserPf = laserPi;
+		//Notice the extra travel to avoid nonlinearity at the end of the stage scan
+		double stageXi, stageXf;
+		if (1)//Increase STAGEX position
+		{
+			stageXi = stackCenterXYZ.at(Stage::XX);
+			stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm; 
+		}
+		else //Dicrease STAGEX position
+		{
+			stageXi = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm;
+			stageXf = stackCenterXYZ.at(Stage::XX);
+		}
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUT::EN };	//Notice the STAGEX flag. The factor of 2 means 2 RS swings per pixel
 																												//Image height = 2 swings times height_pix/2 "frames" = height_pix
 
 		//LASER
-		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, laserPf, whichLaser };
+		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, fluorLabel.mScanPi, fluorLabel.mScanPi, whichLaser }; //Note that the initial and final laser powers are the same
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -384,11 +392,11 @@ namespace Routines
 		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, 0, &virtualLaser };
 
 		//STAGES
-		const double3 initialStageXYZ{ stackCenterXYZ };									//Initial position of the stages	
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-		stage.moveXYZ(initialStageXYZ);														//Move the stage to the initial position
+		stage.moveXYZ({ stageXi, stackCenterXYZ.at(Stage::YY), stackCenterXYZ.at(Stage::ZZ) });		//Move the stage to the initial position
 		stage.waitForMotionToStopAll();
 		stage.setVelSingle(Stage::Axis::XX, pixelSizeX / g_lineclockHalfPeriod);			//Set the vel for imaging
+		Sleep(1000);
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
@@ -402,10 +410,10 @@ namespace Routines
 		image.constructImage();
 		image.correctImage(RScanner.mFFOV);
 
-		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(laserPi / mW, 1) +
-			"mWpum_xi=" + toString(initialStageXYZ.at(Stage::XX) / mm, 3) +
-			"_y=" + toString(initialStageXYZ.at(Stage::YY) / mm, 3) +
-			"_z=" + toString(initialStageXYZ.at(Stage::ZZ) / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
+		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPi / mW, 1) +
+			"mWpum_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
+			"_y=" + toString(stackCenterXYZ.at(Stage::YY) / mm, 3) +
+			"_z=" + toString(stackCenterXYZ.at(Stage::ZZ) / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
 
 		std::cout << "Saving the stack...\n";
 		image.saveTiffSinglePage(filename, OVERRIDE::DIS);
@@ -991,7 +999,7 @@ namespace TestRoutines
 	}
 
 	//Test triggering ctl&acq sequence with the stage x
-	void contScanXTest(const FPGA &fpga)
+	void stageXcontScan(const FPGA &fpga)
 	{
 		if (multibeam)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": ContX scanning for single beam only");
@@ -999,12 +1007,12 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };						//For averaging
-		const double FOVslow{ 280. * um };
+		const double FOVslow{ 4. * mm };
 		const double pixelSizeX{ 0.5 * um };
 		const double pixelSizeY{ 0.5 * um };
 
 		const int width_pix{ 300 };
-		const int height_pix{ static_cast<int>(FOVslow / (2 * pixelSizeX)) };
+		const int height_pix{ static_cast<int>(FOVslow / pixelSizeX) };
 
 		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
 		if (fluorLabel.mWavelength_nm == 750)
@@ -1014,11 +1022,19 @@ namespace TestRoutines
 			stackCenterXYZ.at(Stage::ZZ) -= 6 * um;
 
 		double stageXi, stageXf;
-		stageXi = stackCenterXYZ.at(Stage::XX);
-		stageXf = stackCenterXYZ.at(Stage::XX) + FOVslow - 0.100 * mm; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+		if (0)//Increase STAGEX position
+		{
+			stageXi = stackCenterXYZ.at(Stage::XX);
+			stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+		}
+		else //Dicrease STAGEX position
+		{
+			stageXi = stackCenterXYZ.at(Stage::XX);
+			stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm; //Notice the extra travel in z to avoid nonlinearity at the end of the stage scan
+		}
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, height_pix, width_pix, 2, FIFOOUT::DIS };	//Notice the STAGEX flag
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUT::DIS };	//Notice the STAGEX flag
 
 		//GALVO. Keep them fixed
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
@@ -1026,15 +1042,16 @@ namespace TestRoutines
 
 		//STAGES
 		Stage stage{ pixelSizeX / g_lineclockHalfPeriod, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-		stage.moveXYZ(stackCenterXYZ);
-		Sleep(200);
+		stage.moveXYZ({ stageXi, stackCenterXYZ.at(Stage::YY), stackCenterXYZ.at(Stage::ZZ) });
+		stage.waitForMotionToStopAll();
+		Sleep(1000);
 
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
 		image.initializeAcq();
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger ctl&acq
-		Sleep(1000);//the Image destructor will disable the stage triggering
+		Sleep(2000);//the Image destructor will disable the stage triggering
 	}
 
 	void shutter(const FPGA &fpga)

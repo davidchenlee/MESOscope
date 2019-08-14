@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
-			//Routines::contScanX(fpga);
+			Routines::contScanX(fpga);
 			//Routines::sequencer(fpga, true);
 			//Routines::liveScan(fpga);
 
@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();
-			//TestRoutines::contScanX(fpga);
+			//TestRoutines::stageXcontScan(fpga);
 
 			//TestRoutines::shutter(fpga);
 			//TestRoutines::pockels(fpga);
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::virtualLasers(fpga);
 
 			//TestRoutines::convertI16toVolt();
-			TestRoutines::tiffU8();
+			//TestRoutines::tiffU8();
 			//TestRoutines::ethernetSpeed();
 			//TestRoutines::multithread();
 			//TestRoutines::clipU8();
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::photobleach(fpga);
 			//TestRoutines::generateLocationsForBigStitcher();
 
-			//pressAnyKeyToCont();
+			pressAnyKeyToCont();
 		}
 		catch (const std::invalid_argument &e)
 		{

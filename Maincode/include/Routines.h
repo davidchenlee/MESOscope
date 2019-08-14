@@ -33,7 +33,7 @@ namespace TestRoutines
 	//Stages
 	void stagePosition();
 	void stageConfig();
-	void contScanX(const FPGA &fpga);
+	void stageXcontScan(const FPGA &fpga);
 
 	//Lasers
 	void shutter(const FPGA &fpga);

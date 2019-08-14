@@ -64,9 +64,10 @@ void Image::downloadData()
 		{
 			readFIFOOUTpc_();			//Read the data received in FIFOOUTpc
 		}
-		catch (const ImageException &e) //Notify the exception and continue with the next iteration
+		catch (const ImageException &e) 
 		{
 			std::cerr << "An ImageException has occurred in: " << e.what() << "\n";
+			//throw;//Do not terminate the entire sequence. Notify the exception and continue with the next iteration
 		}
 	}
 }

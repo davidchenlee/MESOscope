@@ -402,7 +402,7 @@ void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const O
 	std::cout << "Successfully saved: " << filename << ".tif\n";
 }
 
-//The galvo (vectical axis of the image) performs bi-directional scanning and the data is saved in a concatenated image
+//The galvo (vectical axis of the image) performs bi-directional scanning and the images from different frames are concatenated
 //Divide the concatenated images in a stack of nFrames and mirror the odd frames vertically
 void TiffU8::mirrorOddFrames()
 {

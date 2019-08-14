@@ -54,16 +54,14 @@ namespace Constants
 	//GALVOS
 	extern const double g_scanGalvoDelay{ 150 * us };								//Adjust 'g_scanGalvoDelay' until the bead position in a fordward scan coincides with that of a backward scan
 	extern const double g_rescanGalvoDelay{ 0. * us };								//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
-	extern const GALVOcalib g_scannerCalib{ 0.02417210 * V / um , 0.0 * V };		//Calibration factor of the scan galvo. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
+	extern const GALVOcalib g_scannerCalib{ 0.02417210 * V / um , 0.0 * V };		//Calibration factor and offset of the scan galvo. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
 
 	//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission fixed at the detector
 	//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the tiffs in all the PMT channels
 	//The beads should show up in the selected channel only
-	//Adjust 'mVoltagePerDistance' until all the beads show up in the same selected PMT16X channel
-	//Adjust 'mRescanVoltageOffset' to center the beads on the selected PMT16X channel
-	//By increasing mVoltagePerDistance, the top beads in a Tiff appear first, then the bottom ones
-	//A positive mVoltageOffset steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
-	extern const GALVOcalib g_rescannerCalibV750nm{ 0.303   * g_scannerCalib.voltagePerDistance, 0.035 * V };
+	//Adjust 'mVoltagePerDistance' until all the beads show up in the same selected PMT16X channel. For a larger value, the top beads in a Tiff appear first, then the bottom ones
+	//Adjust 'mVoltageOffset' to center the beads on the selected PMT16X channel. A larger value steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
+	extern const GALVOcalib g_rescannerCalibV750nm{ 0.303 * g_scannerCalib.voltagePerDistance, 0.035 * V };
 	extern const GALVOcalib g_rescannerCalibV920nm{ 0.310 * g_scannerCalib.voltagePerDistance, 0.065 * V };
 	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.33 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//Using Vision
 	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.33 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//Using Fidelity

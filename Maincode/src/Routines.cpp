@@ -205,7 +205,7 @@ namespace Routines
 				filename.append("_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
 					"_x=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::YY) / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).at(Stage::ZZ) / mm, 4));
 				std::cout << "Saving the stack...\n";
-				image.saveTiffMultiPage(filename, OVERRIDE::DIS);
+				image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 			}
 			output.pushImage(iterLocation, image.data());
 		}
@@ -218,7 +218,7 @@ namespace Routines
 
 			output.binFrames(nSameLocation);							//Divide the images in bins of nSameLocation frames each and return the average of each bin
 			std::cout << "Saving the stack...\n";
-			output.saveToFile(filename, MULTIPAGE::EN, OVERRIDE::DIS);	//Save the scanZ to file
+			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);	//Save the scanZ to file
 			pressESCforEarlyTermination();
 		}
 
@@ -231,7 +231,7 @@ namespace Routines
 
 			output.binFrames(nSameLocation);							//Divide the images in bins of nSameLocation frames each and return the average of each bin
 			std::cout << "Saving the stack...\n";
-			output.saveToFile(filename, MULTIPAGE::EN, OVERRIDE::DIS);	//Save the scanXY to file
+			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);	//Save the scanXY to file
 			pressESCforEarlyTermination();
 		}
 	}
@@ -338,7 +338,7 @@ namespace Routines
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZafterBinning / mm, 4) };
 		
 		std::cout << "Saving the stack...\n";
-		image.saveTiffMultiPage(filename, OVERRIDE::DIS);
+		image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
 
 	void contScanX(const FPGA &fpga)
@@ -408,7 +408,6 @@ namespace Routines
 
 		virtualLaser.closeShutter();	//Close the shutter manually even thought the destructor does it because the data processing could take a long time
 		image.constructImage();
-		image.correctImage(RScanner.mFFOV);
 
 		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPi / mW, 1) +
 			"mWpum_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
@@ -416,7 +415,7 @@ namespace Routines
 			"_z=" + toString(stackCenterXYZ.at(Stage::ZZ) / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
 
 		std::cout << "Saving the stack...\n";
-		image.saveTiffSinglePage(filename, OVERRIDE::DIS);
+		image.save(filename, TIFFSTRUCT::SINGLEPAGE, OVERRIDE::DIS);
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -522,7 +521,7 @@ namespace Routines
 
 					image.constructImage();
 					//image.correctImage(RScanner.mFFOV);
-					image.saveTiffMultiPage(longName, OVERRIDE::DIS);
+					image.save(longName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 					break;
 				case Action::ID::CUT://Move the stage to the vibratome and then cut a slice off
 					double3 stagePositionXYZ{ commandline.mCommand.cutSlice.mBladePositionXY };
@@ -578,7 +577,7 @@ namespace Routines
 			image.acquire();									//Execute the RT control sequence and acquire the image
 			image.averageFrames();								//Average the frames acquired via continuous acquisition
 			image.correctImage(RScanner.mFFOV);
-			image.saveTiffSinglePage("Untitled", OVERRIDE::EN);	//Save individual files
+			image.save("Untitled", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);	//Save individual files
 			Sleep(700);
 
 			pressESCforEarlyTermination();						//Early termination if ESC is pressed
@@ -772,7 +771,6 @@ namespace TestRoutines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::STAGEX, 1, 300, 560, FIFOOUT::DIS }; 	//Create a realtime control sequence
 		Image image{ RTcontrol };
 		image.initializeAcq();	//Execute the realtime control sequence and acquire the image
-		//image.saveTiffSinglePage("output", OVERRIDE::EN);
 	}
 
 	//Generate a long digital pulse and check the frameDuration with the oscilloscope
@@ -857,7 +855,7 @@ namespace TestRoutines
 		Image image{ RTcontrol };
 		image.acquire();		//Execute the RT control sequence and acquire the image via continuous acquisition
 		image.averageEvenOddFrames();
-		image.saveTiffMultiPage("Untitled", OVERRIDE::DIS);
+		image.save("Untitled", TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
 
 	void resonantScanner(const FPGA &fpga)
@@ -1207,7 +1205,7 @@ namespace TestRoutines
 		image.flattenField(1.5);
 		image.suppressCrosstalk(0.2);
 		//image.binFrames(5);
-		image.saveToFile(outputFilename, MULTIPAGE::EN, OVERRIDE::EN);
+		image.saveToFile(outputFilename, TIFFSTRUCT::EN, OVERRIDE::EN);
 		*/
 
 		pressAnyKeyToCont();
@@ -1250,7 +1248,7 @@ namespace TestRoutines
 
 		//overriding the file saving has some overhead
 		//Splitting the stackDiffZ into a page structure (by assigning nFramesCont = 200 in saveToFile) gives a large overhead
-		image.saveToFile(filename, MULTIPAGE::DIS, OVERRIDE::EN);
+		image.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
 
 		//Stop the stopwatch
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
@@ -1518,7 +1516,7 @@ namespace TestRoutines
 		//EXECUTE THE RT CONTROL SEQUENCE
 		Image image{ RTcontrol };
 		image.acquire();			//Execute the RT control sequence and acquire the image
-		image.saveTiffMultiPage("SingleChannel", OVERRIDE::EN);
+		image.save("SingleChannel", TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 	}
 
 	void vibratome(const FPGA &fpga)

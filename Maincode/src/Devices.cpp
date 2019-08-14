@@ -76,8 +76,8 @@ void Image::downloadData()
 void Image::constructImage(const bool saveAllPMT)
 {
 	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
-	demultiplex_(saveAllPMT);	//Move the chuncks of data to the buffer array
-	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Divide the concatenated image in a stack with nFrames and mirror the odd frames vertically
+	demultiplex_(saveAllPMT);	//Copy the chuncks of data to mTiff
+	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Mirror the odd frames vertically
 }
 
 //Image post processing
@@ -110,16 +110,10 @@ void Image::binFrames(const int nFramesPerBin)
 	mTiff.binFrames(nFramesPerBin);
 }
 
-//Save each frame in mTiff in a single Tiff page
-void Image::saveTiffSinglePage(std::string filename, const OVERRIDE override) const
+//Save each frame in mTiff in either a single Tiff page or different Tiff pages
+void Image::save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const
 {
-	mTiff.saveToFile(filename, MULTIPAGE::DIS, override, mScanDir);
-}
-
-//Save each frame in mTiff in a different Tiff page
-void Image::saveTiffMultiPage(std::string filename, const OVERRIDE override) const
-{
-	mTiff.saveToFile(filename, MULTIPAGE::EN, override, mScanDir);
+	mTiff.saveToFile(filename, pageStructure, override, mScanDir);
 }
 
 //Output true if the average count is below threshold
@@ -358,7 +352,7 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 		stack.pushImage(static_cast<int>(RTcontrol::PMT16XCHAN::CH08), static_cast<int>(RTcontrol::PMT16XCHAN::CH15), CountB.data());
 
 		std::string PMT16Xchan_s{ std::to_string(static_cast<int>(mRTcontrol.mPMT16Xchan)) };
-		stack.saveToFile("AllChannels PMT16Xchan=" + PMT16Xchan_s, MULTIPAGE::EN, OVERRIDE::DIS);
+		stack.saveToFile("AllChannels PMT16Xchan=" + PMT16Xchan_s, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
 }
 

@@ -200,7 +200,7 @@ TiffU8::TiffU8(const std::string filename) : mNframes{ 1 }
 	//std::cout << "Number of frames = " << mNframes << "\n";
 
 	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
 	//Length in memory of one row of pixel in the image. Targeting 'U8' only. Alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
 	mBytesPerLine = mWidthPerFrame_pix * sizeof(U8);	
@@ -236,7 +236,7 @@ TiffU8::TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPe
 	mWidthPerFrame_pix(widthPerFrame), mHeightPerFrame_pix(heightPerFrame), mNframes(nFrames), mBytesPerLine(widthPerFrame * sizeof(U8))
 {
 	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
 	const int nPixAllFrames{ mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes };
 	mArray = new U8[nPixAllFrames];
@@ -250,7 +250,7 @@ TiffU8::TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const
 	mWidthPerFrame_pix(widthPerFrame), mHeightPerFrame_pix(heightPerFrame), mNframes(nFrames), mBytesPerLine(widthPerFrame * sizeof(U8))
 {
 	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
 	const int nPixAllFrames{ mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes };
 	mArray = new U8[nPixAllFrames];
@@ -264,7 +264,7 @@ TiffU8::TiffU8(const int widthPerFrame_pix, const int heightPerFrame_pix, const 
 	mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mNframes(nFrames), mBytesPerLine(widthPerFrame_pix * sizeof(U8))
 {
 	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
 	mArray = new U8[mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes]();
 }
@@ -299,19 +299,19 @@ int TiffU8::nFrames() const
 void TiffU8::splitIntoFrames(const int nFrames)
 {
 	if (nFrames <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame number must be > 0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame number must be >0");
 
 	mNframes = nFrames;
 	mHeightPerFrame_pix = mHeightPerFrame_pix / nFrames;
 }
 
 //Divide the concatenated images in a stack of nFrames and save it (the microscope concatenates all the images and hands over a long image that has to be resized into individual images)
-void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const OVERRIDE override, const ZSCAN scanDir) const
+void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const ZSCAN scanDir) const
 {
 	int width_pix, height_pix, nFrames;
 
 	//Multi page structure
-	if (multipage == MULTIPAGE::EN)
+	if (tiffStruct == TIFFSTRUCT::MULTIPAGE)
 	{
 		nFrames = mNframes;
 		width_pix = mWidthPerFrame_pix;
@@ -402,16 +402,12 @@ void TiffU8::saveToFile(std::string filename, const MULTIPAGE multipage, const O
 	std::cout << "Successfully saved: " << filename << ".tif\n";
 }
 
-//The galvo (vectical axis of the image) performs bi-directional scanning and the images from different frames are concatenated
-//Divide the concatenated images in a stack of nFrames and mirror the odd frames vertically
+//Mirror the odd frames (the frame index starts from 0) vertically because the galvo (vectical axis of the image) performs bi-directional scanning and the images from different frames are concatenated
 void TiffU8::mirrorOddFrames()
 {
 	if (mNframes > 1)
 	{
-		U8 *buffer{ (U8*)_TIFFmalloc(mBytesPerLine) };		//Buffer used to store a row of pixels
-
-		if (buffer == NULL) //Check that the buffer memory was allocated
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory");
+		U8 *buffer = new U8[mBytesPerLine];		//Buffer used to store a row of pixels
 
 		for (int frameIndex = 1; frameIndex < mNframes; frameIndex += 2)
 		{
@@ -425,8 +421,34 @@ void TiffU8::mirrorOddFrames()
 				std::memcpy(&mArray[moneMei*mBytesPerLine], buffer, mBytesPerLine);
 			}
 		}
-		_TIFFfree(buffer);	//Release the memory
+		delete[] buffer;	//Release the memory
 	}
+}
+
+void TiffU8::resize()
+{
+	mHeightPerFrame_pix = mNframes * mHeightPerFrame_pix;
+	mNframes = 1;
+}
+
+//Mirror the entire array mArray vertically
+void TiffU8::mirror(const int height_pix)
+{
+	if (height_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel height must be >0");
+
+	U8 *buffer = new U8[mBytesPerLine];		//Buffer used to store a row of pixels
+
+	//Swap the first and last rows of the sub-image, then do the second and second last rows, etc
+	for (int rowIndex = 0; rowIndex < height_pix / 2; rowIndex++)
+	{
+		const int eneTene{ rowIndex };						//Swap this row
+		const int moneMei{ height_pix - rowIndex - 1 };		//With this one
+		std::memcpy(buffer, &mArray[eneTene*mBytesPerLine], mBytesPerLine);
+		std::memcpy(&mArray[eneTene*mBytesPerLine], &mArray[moneMei*mBytesPerLine], mBytesPerLine);
+		std::memcpy(&mArray[moneMei*mBytesPerLine], buffer, mBytesPerLine);
+	}
+	delete[] buffer;	//Release the memory
 }
 
 //The galvo (vectical axis of the image) performs bi-directional scanning and the data is saved in a long image (vertical strip)
@@ -965,7 +987,7 @@ void QuickStitcher::push(const TiffU8 &tile, const int rowIndex, const int colIn
 
 void QuickStitcher::saveToFile(std::string filename) const
 {
-	mTiff.saveToFile(filename, MULTIPAGE::DIS, OVERRIDE::EN, ZSCAN::TOPDOWN);
+	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN, ZSCAN::TOPDOWN);
 }
 
 /*Obsolete
@@ -990,10 +1012,10 @@ void TiffStack::pushDiffZ(const int indexDiffZ)
 
 void TiffStack::saveToFile(const std::string filename, OVERRIDE override) const
 {
-	mArrayDiffZ.saveToFile(filename, MULTIPAGE::EN, override);
+	mArrayDiffZ.saveToFile(filename, TIFFSTRUCT::EN, override);
 
 	//For debugging. Save mArraySameZ
-	//mArraySameZ.saveToFile(filename, MULTIPAGE::EN, override);
+	//mArraySameZ.saveToFile(filename, TIFFSTRUCT::EN, override);
 }
 #pragma endregion "Stack"
 */

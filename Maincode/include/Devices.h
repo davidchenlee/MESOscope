@@ -28,8 +28,7 @@ public:
 	void averageFrames();
 	void averageEvenOddFrames();
 	void binFrames(const int nFramesPerBin);
-	void saveTiffSinglePage(std::string filename, const OVERRIDE override) const;
-	void saveTiffMultiPage(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+	void save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const;
 	bool isDark(const int threshold) const;
 private:
 	const RTcontrol &mRTcontrol;			//Const because the variables referenced by mRTcontrol are not changed by the methods in this class

@@ -68,16 +68,15 @@ namespace Constants
 	extern const int g_PMT16Xchan_int{ 7 }; //[0-15] when using a singlebeam, direct the galvo towards a particular channel of the PMT16X
 
 	//STAGES
-	//Delay the z-stage triggering the acq sequence
-	//To fine tune the delay using beads
+	//Stage Z
+	//To fine tune using beads
 	//1. Position the z stage on the plane with beads
 	//2. Do a centered z scan
 	//3. Adjust the delay until the beads appear in the middle of the z-stack
-	//Stage Z
-	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };
+	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };		//Delay the z stage triggering the acq sequence
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };
 	//Stage X
-	extern const double	g_STAGEXTrigAcqDelay{ 30 * ms };
+	extern const double	g_STAGEXTrigAcqDelay{ 25.5 * ms };			//Delay the z stage triggering the acq sequence. Tune to match the forward and backward scans. It has NOT been fine-tuned with beads
 													
 	//PMT
 	extern const int g_nChanPMT{ 16 };

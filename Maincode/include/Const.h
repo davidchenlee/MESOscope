@@ -35,7 +35,8 @@ namespace Constants
 	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANXY, COLLECTLENS };
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};
 	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};
-	enum class ZSCAN { BOTTOMUP = -1, TOPDOWN = 1};
+	enum class ZSCAN { BOTTOMUP = -1, TOPDOWN = 1};//Direction of imaging (TOPDOWN = stage z moves up. BOTTOMUP = stage z moves down)
+	enum class SCANDIRX { NEG = -1, POS = 1};
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;

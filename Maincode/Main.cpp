@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::photobleach(fpga);
 			//TestRoutines::generateLocationsForBigStitcher();
 
-			pressAnyKeyToCont();
+			//pressAnyKeyToCont();
 		}
 		catch (const std::invalid_argument &e)
 		{

@@ -425,25 +425,23 @@ void TiffU8::mirrorOddFrames()
 	}
 }
 
-void TiffU8::resize()
+//Merge all the frames in a single image
+void TiffU8::mergeFrames()
 {
 	mHeightPerFrame_pix = mNframes * mHeightPerFrame_pix;
 	mNframes = 1;
 }
 
 //Mirror the entire array mArray vertically
-void TiffU8::mirror(const int height_pix)
+void TiffU8::mirror()
 {
-	if (height_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel height must be >0");
-
 	U8 *buffer = new U8[mBytesPerLine];		//Buffer used to store a row of pixels
 
 	//Swap the first and last rows of the sub-image, then do the second and second last rows, etc
-	for (int rowIndex = 0; rowIndex < height_pix / 2; rowIndex++)
+	for (int rowIndex = 0; rowIndex < mHeightPerFrame_pix / 2; rowIndex++)
 	{
-		const int eneTene{ rowIndex };						//Swap this row
-		const int moneMei{ height_pix - rowIndex - 1 };		//With this one
+		const int eneTene{ rowIndex };									//Swap this row
+		const int moneMei{ mHeightPerFrame_pix - rowIndex - 1 };		//With this one
 		std::memcpy(buffer, &mArray[eneTene*mBytesPerLine], mBytesPerLine);
 		std::memcpy(&mArray[eneTene*mBytesPerLine], &mArray[moneMei*mBytesPerLine], mBytesPerLine);
 		std::memcpy(&mArray[moneMei*mBytesPerLine], buffer, mBytesPerLine);

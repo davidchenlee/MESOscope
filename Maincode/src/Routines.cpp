@@ -246,7 +246,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };					//Scan direction in the axis STAGEZ
+		const ZSCAN scanDirZ{ ZSCAN::TOPDOWN };					//Scan direction for imaging in z
 		const int nFramesPerBin{ 1 };							//For averaging
 		const double stackDepth{ 40. * um };
 		const double pixelSizeZafterBinning{ 0.5 * um  };
@@ -328,7 +328,7 @@ namespace Routines
 		stage.moveSingle(Stage::ZZ, stageZf);	//Move the stage to trigger ctl&acq
 		image.downloadData();
 
-		virtualLaser.closeShutter();	//Close the shutter manually even thought the destructor does it because the data processing could take a long time
+		virtualLaser.closeShutter();	//Close the shutter manually even though the destructor does it because the data processing could take a long time
 		image.constructImage();
 		image.correctImage(RScanner.mFFOV);
 		image.binFrames(nFramesPerBin);
@@ -349,6 +349,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
+		const SCANDIRX scanDirX{SCANDIRX::NEG};
 		const double FOVslow{ 4.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
 		const double pixelSizeY{ 0.5 * um };//Not used here. For reference purposes
@@ -365,20 +366,25 @@ namespace Routines
 
 		//Notice the extra travel to avoid nonlinearity at the end of the stage scan
 		double stageXi, stageXf;
-		if (1)//Increase STAGEX position
+		switch (scanDirX)
 		{
+		case SCANDIRX::POS:
 			stageXi = stackCenterXYZ.at(Stage::XX);
-			stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm; 
-		}
-		else //Dicrease STAGEX position
-		{
+			stageXf = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm;
+				break;
+		case SCANDIRX::NEG:
 			stageXi = stackCenterXYZ.at(Stage::XX) - FOVslow - 0.100 * mm;
 			stageXf = stackCenterXYZ.at(Stage::XX);
+			break;
+		default:
+			;
 		}
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUT::EN };	//Notice the STAGEX flag. The factor of 2 means 2 RS swings per pixel
-																												//Image height = 2 swings times height_pix/2 "frames" = height_pix
+		//Image height = 2 (two galvo scanner swings)
+		//nFrames = height_pix/2
+		//Therefore, the total height of the final image = height_pix
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUT::EN };	//Notice the STAGEX flag. The factor of 2 means 2 RS swings per pixel																									
 
 		//LASER
 		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, fluorLabel.mScanPi, fluorLabel.mScanPi, whichLaser }; //Note that the initial and final laser powers are the same
@@ -406,8 +412,8 @@ namespace Routines
 		stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger ctl&acq
 		image.downloadData();
 
-		virtualLaser.closeShutter();	//Close the shutter manually even thought the destructor does it because the data processing could take a long time
-		image.constructImage();
+		virtualLaser.closeShutter();	//Close the shutter manually even though the destructor does it because the data processing could take a long time
+		image.constructImageStrip(scanDirX);
 
 		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPi / mW, 1) +
 			"mWpum_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +

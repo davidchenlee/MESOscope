@@ -24,6 +24,7 @@ public:
 	void initializeAcq(const ZSCAN scanDir = ZSCAN::TOPDOWN);
 	void downloadData();
 	void constructImage(const bool saveAllPMT = false);
+	void constructImageStrip(const SCANDIRX scanDirX);
 	void correctImage(const double FFOVfast);
 	void averageFrames();
 	void averageEvenOddFrames();

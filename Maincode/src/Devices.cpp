@@ -80,6 +80,24 @@ void Image::constructImage(const bool saveAllPMT)
 	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Mirror the odd frames vertically
 }
 
+//To perform continuous scan in x. Different from Image::constructImage() because of the way the image is formed
+//Each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and there are many frames, with mNframes = 'half the height of the final image'
+void Image::constructImageStrip(const SCANDIRX scanDirX)
+{
+	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
+	demultiplex_(false);		//Copy the chuncks of data to mTiff
+	
+	switch (scanDirX)
+	{
+	case SCANDIRX::NEG:
+		mTiff.mergeFrames();	//Merge all the frames in a single image
+		mTiff.mirror();			//Mirror the image if a reversed scan is performed
+		break;
+	default:
+		;
+	}
+}
+
 //Image post processing
 void Image::correctImage(const double FFOVfast)
 {

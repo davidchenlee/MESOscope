@@ -54,8 +54,8 @@ public:
 	void splitIntoFrames(const int nFrames);
 	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override = OVERRIDE::DIS, const ZSCAN scanDir = ZSCAN::TOPDOWN) const;
 	void mirrorOddFrames();
-	void resize();
-	void mirror(const int height_pix);
+	void mergeFrames();
+	void mirror();
 	void averageEvenOddFrames();
 	void averageFrames();
 	void binFrames(const int nFramesPerBin);

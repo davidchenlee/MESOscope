@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (51.500) * mm, (22.300 )* mm, (17.780) * mm };//Liver TDT
+double3 stackCenterXYZ{ (51.500) * mm, (18.300 )* mm, (17.780) * mm };//Liver TDT
 //double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
 const std::vector<double2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
@@ -244,9 +244,9 @@ namespace Routines
 
 		switch (scanDirZ)
 		{
-		case SCANZ::TOPDOWN:
+		case SCANZ::UPWARD:
 			return posMin;
-		case SCANZ::BOTTOMUP:
+		case SCANZ::DOWNWARD:
 			return posMin + travel;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
@@ -261,9 +261,9 @@ namespace Routines
 		const double travelOverhead{ 0.010 * mm }; 	//Travel overhead to avoid the nonlinearity at the end of the stage scan
 		switch (scanDirZ)
 		{
-		case SCANZ::TOPDOWN:
+		case SCANZ::UPWARD:
 			return posMin + travel + travelOverhead;
-		case SCANZ::BOTTOMUP:
+		case SCANZ::DOWNWARD:
 			return posMin - travelOverhead;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
@@ -278,9 +278,9 @@ namespace Routines
 
 		switch (scanDirZ)
 		{
-		case SCANZ::TOPDOWN:
+		case SCANZ::UPWARD:
 			return powerMin;
-		case SCANZ::BOTTOMUP:
+		case SCANZ::DOWNWARD:
 			return powerMin + powerInc;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
@@ -294,9 +294,9 @@ namespace Routines
 
 		switch (scanDirZ)
 		{
-		case SCANZ::TOPDOWN:
+		case SCANZ::UPWARD:
 			return powerMin + powerInc;
-		case SCANZ::BOTTOMUP:
+		case SCANZ::DOWNWARD:
 			return powerMin;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
@@ -311,7 +311,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const SCANZ scanDirZ{ SCANZ::TOPDOWN };					//Scan direction for imaging in z
+		const SCANZ scanDirZ{ SCANZ::UPWARD };					//Scan direction for imaging in z
 		const int nFramesPerBin{ 1 };							//For averaging
 		const double stackDepth{ 40. * um };
 		const double pixelSizeZafterBinning{ 0.5 * um  };
@@ -399,9 +399,9 @@ namespace Routines
 
 		switch (scanDirX)
 		{
-		case SCANX::LEFTRIGHT://The sample is imaged from left to right (when facing the microscope, the stage x moves from right to left)
+		case SCANX::LEFT://LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
 			return positionCenter + travel / 2;
-		case SCANX::RIGHTLEFT://The sample is imaged from right to left (when facing the microscope, the stage x moves from left to right)
+		case SCANX::RIGHT://RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
 			return positionCenter - travel / 2;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
@@ -417,9 +417,9 @@ namespace Routines
 		const double travelOverhead{ 0.100 * mm }; 	//Travel overhead to avoid the nonlinearity at the end of the stage scan
 		switch (scanDirX)
 		{
-		case SCANX::LEFTRIGHT:		//The sample is imaged from left to right (when facing the microscope, the stage x moves from right to left)
+		case SCANX::LEFT://LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
 			return positionCenter - travel / 2 - travelOverhead;
-		case SCANX::RIGHTLEFT:		//The sample is imaged from right to left (when facing the microscope, the stage x moves from left to right)
+		case SCANX::RIGHT://RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
 			return positionCenter + travel / 2 + travelOverhead;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
@@ -430,10 +430,10 @@ namespace Routines
 	{
 		switch (scanDirX)
 		{
-		case SCANX::LEFTRIGHT:
-			return SCANX::RIGHTLEFT;
-		case SCANX::RIGHTLEFT:
-			return SCANX::LEFTRIGHT;
+		case SCANX::LEFT:
+			return SCANX::RIGHT;
+		case SCANX::RIGHT:
+			return SCANX::LEFT;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
 		}
@@ -447,9 +447,9 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const SCANX scanDirX{SCANX::LEFTRIGHT};
-		//const SCANX scanDirX{ SCANX::RIGHTLEFT };
-		const int nCol{ 56 };
+		const SCANX scanDirX{SCANX::LEFT};
+		//const SCANX scanDirX{ SCANX::RIGHT };
+		const int nCol{ 2 };//56
 		const double FOVslow{ 4.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
 
@@ -516,7 +516,7 @@ namespace Routines
 			image.formImageVerticalStrip(scanDirX);
 
 			//image.save("aaa", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::DIS);
-			TiffU8 tmp{ image.data(), width_pix, height_pix, 1 };
+			TiffU8 tmp{ image.data(), width_pix, height_pix };//I tried to access mTiff in image directly but it gives me an error
 			stitchedImage.push(tmp, 0, iterLocation);
 
 			changeScanDir(iterScanDirX);
@@ -1260,10 +1260,10 @@ namespace TestRoutines
 		RTcontrol RTcontrol{ fpga };
 		Image image{ RTcontrol };
 		//image.save("empty", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
-		//image.formImageVerticalStrip(SCANX::LEFTRIGHT);
+		//image.formImageVerticalStrip(SCANX::LEFT);
 
 
-		TiffU8 asd{ image.data(), 300, 560, 1 };
+		TiffU8 asd{ image.data(), 300, 560 };
 		//std::cout << image.tiff().widthPerFrame_pix() << "\n";
 		//std::cout << image.tiff().heightPerFrame_pix() << "\n";
 

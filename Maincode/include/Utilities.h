@@ -43,16 +43,16 @@ class TiffU8
 {
 public:
 	TiffU8(const std::string filename);
-	TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames);
-	TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames);
-	TiffU8(const int width_pix, const int height_pix, const int nFrames);
+	TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames = 1);
+	TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames = 1);
+	TiffU8(const int width_pix, const int height_pix, const int nFrames = 1);
 	~TiffU8();
 	U8* const data() const;
 	int widthPerFrame_pix() const;
 	int heightPerFrame_pix() const;
 	int nFrames() const;
 	void splitIntoFrames(const int nFrames);
-	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override = OVERRIDE::DIS, const SCANZ scanDir = SCANZ::TOPDOWN) const;
+	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override = OVERRIDE::DIS, const SCANZ scanDir = SCANZ::UPWARD) const;
 	void mirrorOddFrames();
 	void mergeFrames();
 	void mirror();

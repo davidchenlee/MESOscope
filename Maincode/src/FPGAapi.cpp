@@ -423,10 +423,10 @@ void RTcontrol::setStageTrigAcqDelay(const SCANZ scanDir) const
 		{
 			switch (scanDir)
 			{
-			case SCANZ::TOPDOWN:
+			case SCANZ::UPWARD:
 				stageTrigAcqDelay = g_STAGEZtrigAcqDelayTopdown;
 				break;
-			case SCANZ::BOTTOMUP:
+			case SCANZ::DOWNWARD:
 				stageTrigAcqDelay = g_STAGEZTrigAcqDelayBottomup;
 				break;
 			}

@@ -21,7 +21,7 @@ public:
 
 	U8* const data() const;
 	void acquire(const bool saveAllPMT = false);
-	void initializeAcq(const SCANZ scanDir = SCANZ::TOPDOWN);
+	void initializeAcq(const SCANZ scanDir = SCANZ::UPWARD);
 	void downloadData();
 	void formImage(const bool saveAllPMT = false);
 	void formImageVerticalStrip(const SCANX scanDirX);
@@ -36,7 +36,7 @@ private:
 	U32* mMultiplexedArrayA;				//Buffer array to read FIFOOUTpc A
 	U32* mMultiplexedArrayB;				//Buffer array to read FIFOOUTpc B
 	TiffU8 mTiff;							//Tiff that stores the content of mMultiplexedArrayA and mMultiplexedArrayB
-	SCANZ mScanDir{ SCANZ::TOPDOWN };
+	SCANZ mScanDir{ SCANZ::UPWARD };
 
 	void collectFIFOOUTpcGarbage_() const;
 	void readFIFOOUTpc_();

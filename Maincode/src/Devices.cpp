@@ -91,7 +91,7 @@ void Image::formImageVerticalStrip(const SCANX scanDirX)
 	//Mirror the entire image if a reversed scan was performed
 	switch (scanDirX)
 	{
-	case SCANX::RIGHTLEFT:
+	case SCANX::RIGHT:
 		mTiff.mirror();			
 		break;
 	}

@@ -351,11 +351,11 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 	int frameIndex, lastFrame;
 	switch (scanDir)
 	{
-	case SCANZ::TOPDOWN:	//Forward saving: first frame at the top of the stack
+	case SCANZ::UPWARD:	//Forward saving: first frame at the top of the stack
 		frameIndex = 0;
 		lastFrame = nFrames - 1;
 		break;
-	case SCANZ::BOTTOMUP:	//Reverse saving: first frame at the bottom of the stack
+	case SCANZ::DOWNWARD:	//Reverse saving: first frame at the bottom of the stack
 		frameIndex = nFrames - 1;
 		lastFrame = 0;
 		break;
@@ -393,7 +393,7 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 		if (frameIndex == lastFrame)
 			break;
 
-		frameIndex += static_cast<int>(scanDir); //Increasing iterator for TOPDOWN. Decreasing for BOTTOMUP
+		frameIndex += static_cast<int>(scanDir); //Increasing iterator for UPWARD. Decreasing for DOWNWARD
 	} while (true);
 
 	_TIFFfree(buffer);		//Destroy the buffer
@@ -1034,7 +1034,7 @@ void QuickStitcher::push(const TiffU8 &tile, const int rowIndex, const int colIn
 
 void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) const
 {
-	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANZ::TOPDOWN);
+	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANZ::UPWARD);
 }
 
 /*Obsolete

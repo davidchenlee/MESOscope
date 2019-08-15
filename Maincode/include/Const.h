@@ -36,9 +36,13 @@ namespace Constants
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};
 	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};
 
-	//Imaging direction wrt the image formation and NOT wrt the stage motion. 
-	enum class SCANZ { BOTTOMUP = -1, TOPDOWN = 1};			//TOPDOWN = stage z moves upward/ BOTTOMUP = stage z moves downward
-	enum class SCANX { RIGHTLEFT = -1, LEFTRIGHT = 1};		//RIGHTLEFT  = stage x moves to the left when facing the microscope/ LEFTRIGHT = stage x moves to the right
+	//The scan directions are wrt the direction of motion of the stages. 
+	enum class SCANZ { DOWNWARD = -1, UPWARD = 1};	//DOWNWARD: the stage z moves downward (the sample is scanned from bottom to top)
+													//UPWARD: the stage z moves upward (the sample is scanned from top to bottom)
+	enum class SCANX { LEFT, RIGHT};				//RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
+													//LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
+	enum class SCANY { OUTWARD, INWARD };			//OUTWARD: the stage y moves away from the optical table
+													//INWARD: the stage y moves to the center of the optical table
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;

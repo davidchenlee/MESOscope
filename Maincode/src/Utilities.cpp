@@ -306,7 +306,7 @@ void TiffU8::splitIntoFrames(const int nFrames)
 }
 
 //Divide the concatenated images in a stack of nFrames and save it (the microscope concatenates all the images and hands over a long image that has to be resized into individual images)
-void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const ZSCAN scanDir) const
+void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const SCANZ scanDir) const
 {
 	int width_pix, height_pix, nFrames;
 
@@ -351,11 +351,11 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 	int frameIndex, lastFrame;
 	switch (scanDir)
 	{
-	case ZSCAN::TOPDOWN:	//Forward saving: first frame at the top of the stack
+	case SCANZ::TOPDOWN:	//Forward saving: first frame at the top of the stack
 		frameIndex = 0;
 		lastFrame = nFrames - 1;
 		break;
-	case ZSCAN::BOTTOMUP:	//Reverse saving: first frame at the bottom of the stack
+	case SCANZ::BOTTOMUP:	//Reverse saving: first frame at the bottom of the stack
 		frameIndex = nFrames - 1;
 		lastFrame = 0;
 		break;
@@ -649,7 +649,7 @@ void TiffU8::saveToTxt(const std::string filename) const
 }
 
 //Specify the frame to push. The frame index starts from 0
-void TiffU8::pushImage(const int frameIndex, const U8* inputArray) const
+void TiffU8::pushImage(const U8* inputArray, const int frameIndex) const
 {
 	if (frameIndex < 0 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be >= 0");
@@ -660,7 +660,7 @@ void TiffU8::pushImage(const int frameIndex, const U8* inputArray) const
 }
 
 //Specify the frame interval to push. The frame index starts from 0
-void TiffU8::pushImage(const int firstFrameIndex, const int lastFrameIndex, const U8* inputArray) const
+void TiffU8::pushImage(const U8* inputArray, const int firstFrameIndex, const int lastFrameIndex) const
 {
 	if (firstFrameIndex < 0 || lastFrameIndex < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be >= 0");
@@ -1006,7 +1006,7 @@ void TiffU8::flattenField(const double maxScaleFactor)
 }
 #pragma endregion "TiffU8"
 
-QuickStitcher::QuickStitcher(const int widthPerFrame, const int heightPerFrame, const int nRow, const int nCol) : mTiff{ widthPerFrame * nCol, heightPerFrame * nRow, 1 }, mNrow{ nRow }, mNcol{ nCol }
+QuickStitcher::QuickStitcher(const int tileWidth, const int tileHeight, const int nRow, const int nCol) : mTiff{ tileWidth * nCol, tileHeight * nRow, 1 }, mNrow{ nRow }, mNcol{ nCol }
 {
 	if(mNrow <= 0 || mNcol <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array dimensions must be > 0");
@@ -1032,9 +1032,9 @@ void QuickStitcher::push(const TiffU8 &tile, const int rowIndex, const int colIn
 			mTiff.data()[(rowShift_pix + iterRow) * mTiff.widthPerFrame_pix() + (colShift_pix + iterCol)] = tile.data()[iterRow * tileWidth_pix + iterCol];
 }
 
-void QuickStitcher::saveToFile(std::string filename) const
+void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) const
 {
-	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN, ZSCAN::TOPDOWN);
+	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANZ::TOPDOWN);
 }
 
 /*Obsolete
@@ -1052,7 +1052,7 @@ void TiffStack::pushSameZ(const int indexSameZ, const U8* data)
 //Temporary hack: make a duplicate of mArraySameZ and calculate the average on it
 void TiffStack::pushDiffZ(const int indexDiffZ)
 {
-	TiffU8 avgTiff{ mArraySameZ.data(), mArraySameZ.widthPerFrame(), mArraySameZ.heightPerFrame(), mArraySameZ.nFrames() }; //Make a copy of mArraySameZ
+	TiffU8 avgTiff{ mArraySameZ.data(), mArraySameZ.widthPerTile(), mArraySameZ.heightPerTile(), mArraySameZ.nFrames() }; //Make a copy of mArraySameZ
 	avgTiff.averageFrames();																								//Average the images with the same Z
 	mArrayDiffZ.pushImage(indexDiffZ, avgTiff.data());
 }

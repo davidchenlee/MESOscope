@@ -52,7 +52,7 @@ public:
 	int heightPerFrame_pix() const;
 	int nFrames() const;
 	void splitIntoFrames(const int nFrames);
-	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override = OVERRIDE::DIS, const ZSCAN scanDir = ZSCAN::TOPDOWN) const;
+	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override = OVERRIDE::DIS, const SCANZ scanDir = SCANZ::TOPDOWN) const;
 	void mirrorOddFrames();
 	void mergeFrames();
 	void mirror();
@@ -62,8 +62,8 @@ public:
 	bool isDark(const double threshold) const;
 	std::vector<bool> isDark(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const;
 	void saveToTxt(const std::string fileName) const;
-	void pushImage(const int frameIndex, const U8* inputArray) const;
-	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const U8* inputArray) const;
+	void pushImage(const U8* inputArray, const int frameIndex) const;
+	void pushImage(const U8* inputArray, const int firstFrameIndex, const int lastFrameIndex) const;
 	void mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
 	void correctRSdistortionGPU(const double FFOVfast);
 	void correctRSdistortionCPU(const double FFOVfast);
@@ -81,9 +81,9 @@ private:
 class QuickStitcher
 {
 public:
-	QuickStitcher(const int widthPerFrame, const int heightPerFrame, const int nRow, const int nCol);
+	QuickStitcher(const int tileWidth, const int tileHeight, const int nRow, const int nCol);
 	void push(const TiffU8 &tile, const int rowIndex, const int colIndex);
-	void saveToFile(std::string filename) const;
+	void saveToFile(std::string filename, const OVERRIDE override) const;
 private:
 	TiffU8 mTiff;
 	int mNrow;

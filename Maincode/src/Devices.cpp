@@ -44,7 +44,7 @@ void Image::acquire(const bool saveAllPMT)
 }
 
 //Preset the parameters for the acquisition sequence
-void Image::initializeAcq(const ZSCAN stackScanDir)
+void Image::initializeAcq(const SCANZ stackScanDir)
 {
 	mRTcontrol.enableFIFOOUT();					//Push data to from the FPGA FIFOOUTfpga. It is disabled when debugging
 	mScanDir = stackScanDir;					//Initialize mScanDir
@@ -82,16 +82,16 @@ void Image::formImage(const bool saveAllPMT)
 
 //To perform continuous scan in x. Different from Image::formImage() because of the way the image is formed
 //Each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and mNframes = half the pixel height of the final image
-void Image::formImageVerticalStrip(const XSCAN scanDirX)
+void Image::formImageVerticalStrip(const SCANX scanDirX)
 {
 	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
 	demultiplex_(false);		//Copy the chuncks of data to mTiff
-	
+	mTiff.mergeFrames();		//Set mNframes = 1 to treat mArray as a single image	
+
 	//Mirror the entire image if a reversed scan was performed
 	switch (scanDirX)
 	{
-	case XSCAN::RIGHT2LEFT:
-		mTiff.mergeFrames();	//Set mNframes = 1 to treat mArray as a single image
+	case SCANX::RIGHTLEFT:
 		mTiff.mirror();			
 		break;
 	}
@@ -365,8 +365,8 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 	{
 		//Save all PMT16X channels in separate pages in a Tiff
 		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , g_nChanPMT * mRTcontrol.mNframes };
-		stack.pushImage(static_cast<int>(RTcontrol::PMT16XCHAN::CH00), static_cast<int>(RTcontrol::PMT16XCHAN::CH07), CountA.data());
-		stack.pushImage(static_cast<int>(RTcontrol::PMT16XCHAN::CH08), static_cast<int>(RTcontrol::PMT16XCHAN::CH15), CountB.data());
+		stack.pushImage(CountA.data(), static_cast<int>(RTcontrol::PMT16XCHAN::CH00), static_cast<int>(RTcontrol::PMT16XCHAN::CH07));
+		stack.pushImage(CountB.data(), static_cast<int>(RTcontrol::PMT16XCHAN::CH08), static_cast<int>(RTcontrol::PMT16XCHAN::CH15));
 
 		std::string PMT16Xchan_s{ std::to_string(static_cast<int>(mRTcontrol.mPMT16Xchan)) };
 		stack.saveToFile("AllChannels PMT16Xchan=" + PMT16Xchan_s, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);

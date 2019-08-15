@@ -410,7 +410,7 @@ void RTcontrol::enableFIFOOUT() const
 }
 
 //Set the delay for the stage triggering ctl&acq sequence
-void RTcontrol::setStageTrigAcqDelay(const ZSCAN scanDir) const
+void RTcontrol::setStageTrigAcqDelay(const SCANZ scanDir) const
 {
 	double stageTrigAcqDelay{ 0 };
 	switch (mMainTrigger)
@@ -423,10 +423,10 @@ void RTcontrol::setStageTrigAcqDelay(const ZSCAN scanDir) const
 		{
 			switch (scanDir)
 			{
-			case ZSCAN::TOPDOWN:
+			case SCANZ::TOPDOWN:
 				stageTrigAcqDelay = g_STAGEZtrigAcqDelayTopdown;
 				break;
-			case ZSCAN::BOTTOMUP:
+			case SCANZ::BOTTOMUP:
 				stageTrigAcqDelay = g_STAGEZTrigAcqDelayBottomup;
 				break;
 			}

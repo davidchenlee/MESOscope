@@ -1368,7 +1368,7 @@ namespace TestRoutines
 		const int nTileRow{ image.heightPerFrame_pix() / tileHeight_pix };
 
 
-		image.isDark(0.01, tileWidth_pix, tileHeight_pix);
+		image.isDark(0.004, tileWidth_pix, tileHeight_pix);
 		//image.isDark(0.01);
 
 		pressAnyKeyToCont();

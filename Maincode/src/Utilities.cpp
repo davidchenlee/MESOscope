@@ -506,7 +506,7 @@ void TiffU8::averageFrames()
 	}
 }
 
-//Divide the concatenated images into bins of nFramesPerBin frames and return a stack with the average in each bin
+//Take every nFramesPerBin frames in mArray and bin them. To be used by continuous scanning
 void TiffU8::binFrames(const int nFramesPerBin)
 {
 	//nFramesPerBin must be a divisor of mNframes
@@ -558,9 +558,9 @@ bool TiffU8::isDark(const double threshold) const
 
 	std::vector<int> vectOfSums;										//Vector of the sum for each quadrant
 	//Start scanning the tiles from the top-left corner of the image
-	//Scan down through the first colum, then go back to the top and continue with the next columns
-	for (int iterTileCol = 0; iterTileCol < 2; iterTileCol++)
-		for (int iterTileRow = 0; iterTileRow < 2; iterTileRow++)
+	//Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
+	for (int iterTileRow = 0; iterTileRow < 2; iterTileRow++)
+		for (int iterTileCol = 0; iterTileCol < 2; iterTileCol++)
 		{
 			int sum{ 0 };
 			for (int rowIndex = iterTileRow * halfHeight; rowIndex < (iterTileRow + 1) * halfHeight; rowIndex++)
@@ -570,8 +570,8 @@ bool TiffU8::isDark(const double threshold) const
 		}
 
 	const double sumTL{ 1. * vectOfSums.at(0) / nPixQuad };	//Average count top-left
-	const double sumBL{ 1. * vectOfSums.at(1) / nPixQuad };	//Average count bottom-left
-	const double sumTR{ 1. * vectOfSums.at(2) / nPixQuad };	//Average count top-right
+	const double sumTR{ 1. * vectOfSums.at(1) / nPixQuad };	//Average count top-right
+	const double sumBL{ 1. * vectOfSums.at(2) / nPixQuad };	//Average count bottom-left
 	const double sumBR{ 1. * vectOfSums.at(3) / nPixQuad };	//Average count bottom-right
 
 	//For debuging
@@ -584,7 +584,7 @@ bool TiffU8::isDark(const double threshold) const
 }
 
 //I need a function with input a large image and the tile size, and output an array of bools corresponding to the tiles
-bool TiffU8::isDark(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const
+std::vector<bool> TiffU8::isDark(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
@@ -599,9 +599,9 @@ bool TiffU8::isDark(const double threshold, const int tileWidth_pix, const int t
 
 	std::vector<double> vecOfAvgs;
 	//Start scanning the tiles from the top-left corner of the image
-	//Scan down through the first colum, then go back to the top and continue with the next columns
-	for (int iterTileCol = 0; iterTileCol < nTileCol; iterTileCol++)
-		for (int iterTileRow = 0; iterTileRow < nTileRow; iterTileRow++)
+	//Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
+	for (int iterTileRow = 0; iterTileRow < nTileRow; iterTileRow++)
+		for (int iterTileCol = 0; iterTileCol < nTileCol; iterTileCol++)
 		{
 			int sum{ 0 };
 			for (int rowIndex = iterTileRow * tileHeight_pix; rowIndex < (iterTileRow + 1) * tileHeight_pix; rowIndex++)
@@ -619,14 +619,25 @@ bool TiffU8::isDark(const double threshold, const int tileWidth_pix, const int t
 	}
 
 	//For debugging
-	for (std::vector<int>::size_type iter = 0; iter != nTileRow; iter++)
+	for (std::vector<int>::size_type iter = 0; iter != nTileCol; iter++)
 		std::cout << "avg count: " << vecOfAvgs.at(iter) << "\tis dark?: " << vecOfisDark.at(iter) << "\n";
 
-	return 0;
+	std::ofstream fileHandle;									//Create output file
+	fileHandle.open(folderPath + "ArrayOfisDark.txt");			//Open the file
+	for (int iterTileRow = 0; iterTileRow < nTileRow; iterTileRow++)
+	{
+		//Iterate over the colums
+		for (int iterTileCol = 0; iterTileCol < nTileCol; iterTileCol++)
+			fileHandle << vecOfisDark.at(iterTileRow * nTileCol + iterTileCol) << "\t";
+		fileHandle << "\n";	//End the row
+	}
+	fileHandle.close();											//Close the txt file
+
+	return vecOfisDark;
 }
 
 //Save mArray as a text file
-void TiffU8::saveTxt(const std::string filename) const
+void TiffU8::saveToTxt(const std::string filename) const
 {
 	std::ofstream fileHandle;									//Create output file
 	fileHandle.open(folderPath + filename + ".txt");			//Open the file

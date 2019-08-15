@@ -60,8 +60,8 @@ public:
 	void averageFrames();
 	void binFrames(const int nFramesPerBin);
 	bool isDark(const double threshold) const;
-	bool isDark(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const;
-	void saveTxt(const std::string fileName) const;
+	std::vector<bool> isDark(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const;
+	void saveToTxt(const std::string fileName) const;
 	void pushImage(const int frameIndex, const U8* inputArray) const;
 	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const U8* inputArray) const;
 	void mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;

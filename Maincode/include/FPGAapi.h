@@ -73,7 +73,7 @@ public:
 	void enableStageTrigAcq() const;
 	void disableStageTrigAcq() const;
 	void enableFIFOOUT() const;
-	void setStageTrigAcqDelay(const SCANZ scanDir) const;
+	void setStageTrigAcqDelay(const SCANDIR scanDir) const;
 private:
 	//Private subclass
 	class Pixelclock

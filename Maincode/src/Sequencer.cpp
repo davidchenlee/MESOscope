@@ -285,7 +285,6 @@ Sequence::Commandline Sequence::readCommandline(const int iterCommandLine) const
 	return mCommandList.at(iterCommandLine);
 }
 
-
 //Generate a scan pattern and use the vibratome to slice the sample
 void Sequence::generateCommandList()
 {

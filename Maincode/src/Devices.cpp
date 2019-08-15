@@ -44,7 +44,7 @@ void Image::acquire(const bool saveAllPMT)
 }
 
 //Preset the parameters for the acquisition sequence
-void Image::initializeAcq(const SCANZ stackScanDir)
+void Image::initializeAcq(const SCANDIR stackScanDir)
 {
 	mRTcontrol.enableFIFOOUT();					//Push data to from the FPGA FIFOOUTfpga. It is disabled when debugging
 	mScanDir = stackScanDir;					//Initialize mScanDir
@@ -82,7 +82,7 @@ void Image::formImage(const bool saveAllPMT)
 
 //To perform continuous scan in x. Different from Image::formImage() because of the way the image is formed
 //Each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and mNframes = half the pixel height of the final image
-void Image::formImageVerticalStrip(const SCANX scanDirX)
+void Image::formImageVerticalStrip(const SCANDIR scanDirX)
 {
 	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
 	demultiplex_(false);		//Copy the chuncks of data to mTiff
@@ -91,7 +91,7 @@ void Image::formImageVerticalStrip(const SCANX scanDirX)
 	//Mirror the entire image if a reversed scan was performed
 	switch (scanDirX)
 	{
-	case SCANX::RIGHT:
+	case SCANDIR::RIGHTWARD:
 		mTiff.mirror();			
 		break;
 	}

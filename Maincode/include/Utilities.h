@@ -24,6 +24,14 @@ template<class T> inline U8 clipU8dual(const T x);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
 double multiply16X(const double input);
+int SCANDIRtoInt(const SCANDIR scanDir);
+SCANDIR reverseSCANDIR(SCANDIR scanDirX);
+double detInitialPos(const double posMin, const double travel, const SCANDIR scanDirZ);
+double detFinalPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDirZ);
+double returnInitialPos(const double positionCenter, const double travel, const SCANDIR scanDirX);
+double returnFinalPos(const double positionCenter, const double travel, const SCANDIR scanDirX);
+double detInitialLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDirZ);
+double detFinalLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDirZ);
 
 //For saving the parameters to a text file
 class Logger
@@ -52,7 +60,7 @@ public:
 	int heightPerFrame_pix() const;
 	int nFrames() const;
 	void splitIntoFrames(const int nFrames);
-	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override = OVERRIDE::DIS, const SCANZ scanDir = SCANZ::UPWARD) const;
+	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override = OVERRIDE::DIS, const SCANDIR scanDirZ = SCANDIR::UPWARD) const;
 	void mirrorOddFrames();
 	void mergeFrames();
 	void mirror();

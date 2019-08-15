@@ -114,6 +114,147 @@ double multiply16X(const double input)
 	return 16 * input;
 }
 
+int SCANDIRtoInt(const SCANDIR scanDir)
+{
+	switch (scanDir)
+	{
+	case SCANDIR::RIGHTWARD:
+	case SCANDIR::INWARD:
+	case SCANDIR::UPWARD:
+		return +1;
+	case SCANDIR::LEFTWARD:
+	case SCANDIR::OUTWARD:
+	case SCANDIR::DOWNWARD:
+		return -1;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
+	}
+}
+
+SCANDIR reverseSCANDIR(SCANDIR scanDirX)
+{
+	switch (scanDirX)
+	{
+		//STAGEX
+	case SCANDIR::LEFTWARD:
+		return SCANDIR::RIGHTWARD;
+	case SCANDIR::RIGHTWARD:
+		return SCANDIR::LEFTWARD;
+		//STAGEY
+	case SCANDIR::OUTWARD:
+		return SCANDIR::INWARD;
+	case SCANDIR::INWARD:
+		return SCANDIR::OUTWARD;
+		//STAGEZ
+	case SCANDIR::DOWNWARD:
+		return SCANDIR::UPWARD;
+	case SCANDIR::UPWARD:
+		return SCANDIR::DOWNWARD;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
+double detInitialPos(const double posMin, const double travel, const SCANDIR scanDirZ)
+{
+	if (travel <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
+
+	switch (scanDirZ)
+	{
+	case SCANDIR::UPWARD:
+		return posMin;
+	case SCANDIR::DOWNWARD:
+		return posMin + travel;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
+//Travel overhead to avoid the nonlinearity at the end of the stage scan
+double detFinalPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDirZ)
+{
+	if (travel <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
+	
+	switch (scanDirZ)
+	{
+	case SCANDIR::UPWARD:
+		return posMin + travel + travelOverhead;
+	case SCANDIR::DOWNWARD:
+		return posMin - travelOverhead;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
+//Initial position of the stage
+double returnInitialPos(const double positionCenter, const double travel, const SCANDIR scanDirX)
+{
+	if (travel <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
+
+	switch (scanDirX)
+	{
+	case SCANDIR::RIGHTWARD://RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
+		return positionCenter - travel / 2;
+	case SCANDIR::LEFTWARD://LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
+		return positionCenter + travel / 2;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
+//Final position of the stage
+double returnFinalPos(const double positionCenter, const double travel, const SCANDIR scanDirX)
+{
+	if (travel <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
+
+	const double travelOverhead{ 0.100 * mm }; 	//Travel overhead to avoid the nonlinearity at the end of the stage scan
+	switch (scanDirX)
+	{
+	case SCANDIR::RIGHTWARD://RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
+		return positionCenter + travel / 2 + travelOverhead;
+	case SCANDIR::LEFTWARD://LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
+		return positionCenter - travel / 2 - travelOverhead;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
+double detInitialLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDirZ)
+{
+	if (powerMin < 0 || powerInc < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
+
+	switch (scanDirZ)
+	{
+	case SCANDIR::UPWARD:
+		return powerMin;
+	case SCANDIR::DOWNWARD:
+		return powerMin + powerInc;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
+double detFinalLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDirZ)
+{
+	if (powerMin < 0 || powerInc < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
+
+	switch (scanDirZ)
+	{
+	case SCANDIR::UPWARD:
+		return powerMin + powerInc;
+	case SCANDIR::DOWNWARD:
+		return powerMin;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
 #pragma region "Logger"
 Logger::Logger(const std::string filename)
 {
@@ -305,8 +446,10 @@ void TiffU8::splitIntoFrames(const int nFrames)
 	mHeightPerFrame_pix = mHeightPerFrame_pix / nFrames;
 }
 
+
+
 //Divide the concatenated images in a stack of nFrames and save it (the microscope concatenates all the images and hands over a long image that has to be resized into individual images)
-void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const SCANZ scanDir) const
+void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const SCANDIR scanDirZ) const
 {
 	int width_pix, height_pix, nFrames;
 
@@ -349,13 +492,13 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 
 	//Choose whether to save the first frame at the top or bottom of the stack
 	int frameIndex, lastFrame;
-	switch (scanDir)
+	switch (scanDirZ)
 	{
-	case SCANZ::UPWARD:	//Forward saving: first frame at the top of the stack
+	case SCANDIR::UPWARD:	//Forward saving: the first frame is at the top of the stack
 		frameIndex = 0;
 		lastFrame = nFrames - 1;
 		break;
-	case SCANZ::DOWNWARD:	//Reverse saving: first frame at the bottom of the stack
+	case SCANDIR::DOWNWARD:	//Reverse saving: the first frame is at the bottom of the stack
 		frameIndex = nFrames - 1;
 		lastFrame = 0;
 		break;
@@ -393,7 +536,7 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 		if (frameIndex == lastFrame)
 			break;
 
-		frameIndex += static_cast<int>(scanDir); //Increasing iterator for UPWARD. Decreasing for DOWNWARD
+		frameIndex += SCANDIRtoInt(scanDirZ); //Increasing iterator for UPWARD. Decreasing for DOWNWARD
 	} while (true);
 
 	_TIFFfree(buffer);		//Destroy the buffer
@@ -1034,7 +1177,7 @@ void QuickStitcher::push(const TiffU8 &tile, const int rowIndex, const int colIn
 
 void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) const
 {
-	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANZ::UPWARD);
+	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
 }
 
 /*Obsolete

@@ -3,7 +3,7 @@
 #include <vector>
 #include <array>
 
-#define multibeam 0			//Multibeam or singlebeam
+#define multibeam 0			//Multibeam or singlebeam. *cast
 #define pockelsAutoOff 1	//For debugging purposes. In LV, let 'framegate' gate the output of the pockels cell
 
 namespace Constants
@@ -33,16 +33,18 @@ namespace Constants
 	enum class TIFFSTRUCT { SINGLEPAGE, MULTIPAGE };
 	enum class OVERRIDE { DIS, EN };
 	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANXY, COLLECTLENS };
-	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};
-	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};
+	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};	//*cast
+	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};						//*cast
 
-	//The scan directions are wrt the direction of motion of the stages. 
-	enum class SCANZ { DOWNWARD = -1, UPWARD = 1};	//DOWNWARD: the stage z moves downward (the sample is scanned from bottom to top)
-													//UPWARD: the stage z moves upward (the sample is scanned from top to bottom)
-	enum class SCANX { LEFT, RIGHT};				//RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
-													//LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
-	enum class SCANY { OUTWARD, INWARD };			//OUTWARD: the stage y moves away from the optical table
-													//INWARD: the stage y moves to the center of the optical table
+	//The scan directions are wrt the direction of motion of the stages
+	//DOWNWARD: the stage z moves downward (the sample is scanned from bottom to top)
+	//UPWARD: the stage z moves upward (the sample is scanned from top to bottom)
+	//RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
+	//LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
+	//OUTWARD: the stage y moves away from the optical table
+	//INWARD: the stage y moves to the center of the optical table
+	enum class SCANDIR { LEFTWARD, RIGHTWARD, OUTWARD, INWARD, DOWNWARD, UPWARD };
+	typedef std::array<SCANDIR, 3> SCANDIR3;
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;

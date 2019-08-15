@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
 			Routines::contScanX(fpga);
-			//Routines::sequencer(fpga, true);
+			//Routines::sequencer(fpga, false);
 			//Routines::liveScan(fpga);
 
 			//TESTS

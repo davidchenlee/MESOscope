@@ -21,10 +21,10 @@ public:
 
 	U8* const data() const;
 	void acquire(const bool saveAllPMT = false);
-	void initializeAcq(const SCANZ scanDir = SCANZ::UPWARD);
+	void initializeAcq(const SCANDIR scanDirZ = SCANDIR::UPWARD);
 	void downloadData();
 	void formImage(const bool saveAllPMT = false);
-	void formImageVerticalStrip(const SCANX scanDirX);
+	void formImageVerticalStrip(const SCANDIR scanDirX);
 	void correctImage(const double FFOVfast);
 	void averageFrames();
 	void averageEvenOddFrames();
@@ -36,7 +36,7 @@ private:
 	U32* mMultiplexedArrayA;				//Buffer array to read FIFOOUTpc A
 	U32* mMultiplexedArrayB;				//Buffer array to read FIFOOUTpc B
 	TiffU8 mTiff;							//Tiff that stores the content of mMultiplexedArrayA and mMultiplexedArrayB
-	SCANZ mScanDir{ SCANZ::UPWARD };
+	SCANDIR mScanDir{ SCANDIR::UPWARD };
 
 	void collectFIFOOUTpcGarbage_() const;
 	void readFIFOOUTpc_();
@@ -366,7 +366,7 @@ class Stage
 {
 public:
 	enum Axis { XX, YY, ZZ };
-	enum class DOPARAM { TRIGSTEP = 1, AXISNUMBER = 2, TRIGMODE = 3, POLARITY = 7, STARTTHRES = 8, STOPTHRES = 9, TRIGPOS = 10 };
+	enum class DOPARAM { TRIGSTEP = 1, AXISNUMBER = 2, TRIGMODE = 3, POLARITY = 7, STARTTHRES = 8, STOPTHRES = 9, TRIGPOS = 10 };		//*cast
 	enum class DOTRIGMODE { POSDIST = 0, ONTARGET = 2, INMOTION = 6, POSOFFSET = 7 };
 	enum class DIOCHAN { D1 = 1, D2 = 2 };
 	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };				//Travel range set by the physical limits of the stage

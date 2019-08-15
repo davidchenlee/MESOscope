@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (51.500) * mm, (18.300 )* mm, (17.780) * mm };//Liver TDT
+double3 stackCenterXYZ{ (51.500) * mm, (18.300 )* mm, (17.765) * mm };//Liver TDT
 //double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
 const std::vector<double2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
@@ -216,7 +216,7 @@ namespace Routines
 				"_x=" + toString(stagePositionXYZ.front().at(Stage::XX) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(Stage::YY) / mm, 3) +
 				"_zi=" + toString(stagePositionXYZ.front().at(Stage::ZZ) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(Stage::ZZ) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) );
 
-			output.binFrames(nSameLocation);							//Divide the images in bins of nSameLocation frames each and return the average of each bin
+			output.binFrames(nSameLocation);									//Divide the images in bins of nSameLocation frames each and return the average of each bin
 			std::cout << "Saving the stack...\n";
 			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);	//Save the scanZ to file
 			pressESCforEarlyTermination();
@@ -236,74 +236,6 @@ namespace Routines
 		}
 	}
 
-
-	double detInitialPos(const double posMin, const double travel, const SCANZ scanDirZ)
-	{
-		if (travel <= 0)
-			throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
-
-		switch (scanDirZ)
-		{
-		case SCANZ::UPWARD:
-			return posMin;
-		case SCANZ::DOWNWARD:
-			return posMin + travel;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-		}
-	}
-
-	double detFinalPos(const double posMin, const double travel, const SCANZ scanDirZ)
-	{
-		if (travel <= 0)
-			throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
-
-		const double travelOverhead{ 0.010 * mm }; 	//Travel overhead to avoid the nonlinearity at the end of the stage scan
-		switch (scanDirZ)
-		{
-		case SCANZ::UPWARD:
-			return posMin + travel + travelOverhead;
-		case SCANZ::DOWNWARD:
-			return posMin - travelOverhead;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-		}
-	}
-
-
-	double detInitialLaserPower(const double powerMin, const double powerInc, const SCANZ scanDirZ)
-	{
-		if (powerMin < 0 || powerInc < 0)
-			throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
-
-		switch (scanDirZ)
-		{
-		case SCANZ::UPWARD:
-			return powerMin;
-		case SCANZ::DOWNWARD:
-			return powerMin + powerInc;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-		}
-	}
-
-	double detFinalLaserPower(const double powerMin, const double powerInc, const SCANZ scanDirZ)
-	{
-		if (powerMin < 0 || powerInc < 0)
-			throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
-
-		switch (scanDirZ)
-		{
-		case SCANZ::UPWARD:
-			return powerMin + powerInc;
-		case SCANZ::DOWNWARD:
-			return powerMin;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-		}
-	}
-
-
 	//I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the bead z-position looks almost identical with a difference of maybe only 1 plane (0.5 um)
 	//Remember that I do not use MACROS on the stages anymore*/
 	void contScanZ(const FPGA &fpga)
@@ -311,7 +243,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const SCANZ scanDirZ{ SCANZ::UPWARD };					//Scan direction for imaging in z
+		const SCANDIR scanDirZ{ SCANDIR::UPWARD };			//Scan direction for imaging in z
 		const int nFramesPerBin{ 1 };							//For averaging
 		const double stackDepth{ 40. * um };
 		const double pixelSizeZafterBinning{ 0.5 * um  };
@@ -364,7 +296,7 @@ namespace Routines
 
 		//STAGES
 		const double stageZi = detInitialPos(stackCenterXYZ.at(Stage::ZZ), stackDepth, scanDirZ);
-		const double stageZf = detFinalPos(stackCenterXYZ.at(Stage::ZZ), stackDepth, scanDirZ);
+		const double stageZf = detFinalPos(stackCenterXYZ.at(Stage::ZZ), stackDepth, 0.010 * mm, scanDirZ);
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };							
 		stage.moveXYZ({ stackCenterXYZ.at(Stage::XX), stackCenterXYZ.at(Stage::YY), stageZi });		//Move the stage to the initial position
 		stage.waitForMotionToStopAll();
@@ -391,54 +323,6 @@ namespace Routines
 		image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
 
-	//Initial position of the stage
-	double returnInitialPos(const double positionCenter, const double travel, const SCANX scanDirX)
-	{
-		if(travel <= 0)
-			throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
-
-		switch (scanDirX)
-		{
-		case SCANX::LEFT://LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
-			return positionCenter + travel / 2;
-		case SCANX::RIGHT://RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
-			return positionCenter - travel / 2;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-		}
-	}
-
-	//Final position of the stage
-	double returnFinalPos(const double positionCenter, const double travel, const SCANX scanDirX)
-	{
-		if (travel <= 0)
-			throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
-
-		const double travelOverhead{ 0.100 * mm }; 	//Travel overhead to avoid the nonlinearity at the end of the stage scan
-		switch (scanDirX)
-		{
-		case SCANX::LEFT://LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
-			return positionCenter - travel / 2 - travelOverhead;
-		case SCANX::RIGHT://RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
-			return positionCenter + travel / 2 + travelOverhead;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-		}
-	}
-
-	SCANX changeScanDir(SCANX scanDirX)
-	{
-		switch (scanDirX)
-		{
-		case SCANX::LEFT:
-			return SCANX::RIGHT;
-		case SCANX::RIGHT:
-			return SCANX::LEFT;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-		}
-	}
-
 	void contScanX(const FPGA &fpga)
 	{
 		if (multibeam)
@@ -447,8 +331,8 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const SCANX scanDirX{SCANX::LEFT};
-		//const SCANX scanDirX{ SCANX::RIGHT };
+		const SCANDIR scanDirX{SCANDIR::LEFTWARD };
+		//const SCANDIR scanDirX{ SCANDIR::RIGHTWARD };
 		const int nCol{ 2 };//56
 		const double FOVslow{ 4.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
@@ -495,7 +379,7 @@ namespace Routines
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		const int nLocations{ static_cast<int>(stagePositionY.size()) };
-		SCANX iterScanDirX{ scanDirX };		//Stage scan direction
+		SCANDIR iterScanDirX{ scanDirX };		//Stage scan direction
 		QuickStitcher stitchedImage{ width_pix, height_pix, 1, nCol };
 		double stageXf;						//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
@@ -519,7 +403,7 @@ namespace Routines
 			TiffU8 tmp{ image.data(), width_pix, height_pix };//I tried to access mTiff in image directly but it gives me an error
 			stitchedImage.push(tmp, 0, iterLocation);
 
-			changeScanDir(iterScanDirX);
+			reverseSCANDIR(iterScanDirX);
 		}
 			const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPi / mW, 1) +
 				"mWpum_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
@@ -620,7 +504,7 @@ namespace Routines
 					virtualLaser.openShutter();										//Re-open the Uniblitz shutter if closed by the pockels destructor
 					rescanner.reconfigure(&virtualLaser);							//The calibration of the rescanner depends on the laser and wavelength being used
 
-					image.initializeAcq(static_cast<SCANZ>(acqStack.mScanDirZ));
+					image.initializeAcq(static_cast<SCANDIR>(acqStack.mScanDirZ));
 					std::cout << "Scanning the stack...\n";
 					stage.moveSingle(Stage::ZZ, acqStack.scanZf());					//Move the stage to trigger ctl&acq
 					image.downloadData();
@@ -1260,7 +1144,7 @@ namespace TestRoutines
 		RTcontrol RTcontrol{ fpga };
 		Image image{ RTcontrol };
 		//image.save("empty", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
-		//image.formImageVerticalStrip(SCANX::LEFT);
+		//image.formImageVerticalStrip(SCANDIRX::LEFT);
 
 
 		TiffU8 asd{ image.data(), 300, 560 };

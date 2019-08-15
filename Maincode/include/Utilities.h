@@ -59,7 +59,8 @@ public:
 	void averageEvenOddFrames();
 	void averageFrames();
 	void binFrames(const int nFramesPerBin);
-	bool isDark(const int threshold) const;
+	bool isDark(const double threshold) const;
+	bool isDark(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const;
 	void saveTxt(const std::string fileName) const;
 	void pushImage(const int frameIndex, const U8* inputArray) const;
 	void pushImage(const int firstFrameIndex, const int lastFrameIndex, const U8* inputArray) const;
@@ -80,13 +81,13 @@ private:
 class QuickStitcher
 {
 public:
-	QuickStitcher(const int widthPerFrame, const int heightPerFrame, const int nMaxRow, const int nMaxCol);
+	QuickStitcher(const int widthPerFrame, const int heightPerFrame, const int nRow, const int nCol);
 	void push(const TiffU8 &tile, const int rowIndex, const int colIndex);
 	void saveToFile(std::string filename) const;
 private:
 	TiffU8 mTiff;
-	int mNmaxRow;
-	int mNmaxCol;
+	int mNrow;
+	int mNcol;
 };
 
 /*Obsolete

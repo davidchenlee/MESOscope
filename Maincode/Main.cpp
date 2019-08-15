@@ -38,10 +38,11 @@ int main(int argc, char* argv[])
 			//TestRoutines::virtualLasers(fpga);
 
 			//TestRoutines::convertI16toVolt();
-			TestRoutines::tiffU8();
+			//TestRoutines::tiffU8();
 			//TestRoutines::ethernetSpeed();
 			//TestRoutines::multithread();
 			//TestRoutines::clipU8();
+			TestRoutines::locateSample();
 
 			//TestRoutines::sequencerConcurrentTest();
 			//TestRoutines::locationSequence();

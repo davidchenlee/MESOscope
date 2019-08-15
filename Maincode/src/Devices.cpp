@@ -295,7 +295,7 @@ void Image::demuxSingleChannel_()
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
-			const int upscaled{ mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayA[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
+			const int upscaled{ mRTcontrol.mUpscalingFactor * ((mMultiplexedArrayA[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
 			(mTiff.data())[pixIndex] = clipU8top(upscaled);																		//Clip if overflow
 		}
 	}
@@ -304,7 +304,7 @@ void Image::demuxSingleChannel_()
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
-			const int upscaled{ mRTcontrol.mUpscaleFactor * ((mMultiplexedArrayB[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
+			const int upscaled{ mRTcontrol.mUpscalingFactor * ((mMultiplexedArrayB[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
 			(mTiff.data())[pixIndex] = clipU8top(upscaled);																		//Clip if overflow
 		}
 	}
@@ -347,12 +347,12 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{
 			//Buffer A (CH00-CH07)
-			const int upscaledA{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };			//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			const int upscaledA{ mRTcontrol.mUpscalingFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };		//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
 			(CountA.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledA);		//Clip if overflow
 			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;										//Shift 4 places to the right for the next iteration
 
 			//Buffer B (CH08-CH15)
-			const int upscaledB{ mRTcontrol.mUpscaleFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };			//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			const int upscaledB{ mRTcontrol.mUpscalingFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };		//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
 			(CountB.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledB);		//Clip if overflow
 			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;										//Shift 4 places to the right for the next iteration
 		}

@@ -49,6 +49,7 @@ namespace TestRoutines
 	void ethernetSpeed();
 	void multithread();
 	void clipU8();
+	void locateSample();
 
 	//Sequence
 	void sequencerConcurrentTest();

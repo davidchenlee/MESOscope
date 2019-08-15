@@ -158,7 +158,7 @@ namespace Routines
 			datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
 			datalog.record("\nIMAGE--------------------------------------------------------");
 			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
-			datalog.record("Upscaling factor = ", RTcontrol.mUpscaleFactor);
+			datalog.record("Upscaling factor = ", RTcontrol.mUpscalingFactor);
 			datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
 			datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
 			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
@@ -708,7 +708,7 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 		datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
 		datalog.record("\nIMAGE--------------------------------------------------------");
 		datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
-		datalog.record("Upscaling factor = ", RTcontrol.mUpscaleFactor);
+		datalog.record("Upscaling factor = ", RTcontrol.mUpscalingFactor);
 		datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
 		datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
 		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
@@ -1350,6 +1350,27 @@ namespace TestRoutines
 		int input{ 260 };
 		U8 output{ clipU8top(input) };
 		std::cout << (int)output << "\n";
+		pressAnyKeyToCont();
+	}
+
+	void locateSample()
+	{
+
+
+
+
+		std::string outputFilename{ "output" };
+		TiffU8 image{ "stitched" };
+
+		const int tileWidth_pix{ 300 };
+		const int tileHeight_pix{ 400 };
+		const int nTileCol{ image.widthPerFrame_pix() / tileWidth_pix };
+		const int nTileRow{ image.heightPerFrame_pix() / tileHeight_pix };
+
+
+		image.isDark(0.01, tileWidth_pix, tileHeight_pix);
+		//image.isDark(0.01);
+
 		pressAnyKeyToCont();
 	}
 

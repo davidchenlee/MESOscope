@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			//Routines::stepwiseScan(fpga);
+			Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
 			//Routines::contScanX(fpga);
 			//Routines::sequencer(fpga, true);
@@ -29,7 +29,6 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();
-			//TestRoutines::stageXcontScan(fpga);
 
 			//TestRoutines::shutter(fpga);
 			//TestRoutines::pockels(fpga);
@@ -42,7 +41,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::ethernetSpeed();
 			//TestRoutines::multithread();
 			//TestRoutines::clipU8();
-			TestRoutines::locateSample();
+			//TestRoutines::locateSample();
 
 			//TestRoutines::sequencerConcurrentTest();
 			//TestRoutines::locationSequence();

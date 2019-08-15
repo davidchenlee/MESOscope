@@ -76,11 +76,11 @@ namespace Constants
 	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };		//Delay the z stage triggering the acq sequence
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };
 	//Stage X
-	extern const double	g_STAGEXTrigAcqDelay{18 * ms };			//Delay the z stage triggering the acq sequence. Tune to match the forward and backward scans. It has NOT been fine-tuned with beads
+	extern const double	g_STAGEXTrigAcqDelay{18 * ms };				//Delay the z stage triggering the acq sequence. Tune to match the forward and backward scans. It has NOT been fine-tuned with beads
 													
 	//PMT
 	extern const int g_nChanPMT{ 16 };
-	extern const PMTIN g_photocounterInput{ PMTIN::PMT };			//PMT (PMT) or simulated PMT (SIM)
+	extern const PMTIN g_photocounterInput{ PMTIN::PMT };			//PMT or simulated PMT
 
 	//Simulate the PMT pulses. The PMT simulator implemented in the LV changes from 0 to 1 or vice versa every time there is a 1 in the array
 	//In LV, the clock of the photocounters is currently 120MHz = 8.333 ns. Use the same clock for the simulator.
@@ -90,7 +90,7 @@ namespace Constants
 										  1, 1, 1, 1, 1, 1, 1, 0, 0, 1 };
 
 	//COLLECTOR LENS
-	extern const double g_cLensPos750nm{ 0.0 * mm };
+	extern const double g_cLensPos750nm{ 10.0 * mm };
 	extern const double g_cLensPos920nm{ 6.0 * mm };
 	extern const double g_cLensPos1040nm{ 0.5 * mm };
 }

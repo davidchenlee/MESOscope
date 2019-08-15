@@ -38,7 +38,7 @@ private:
 	TiffU8 mTiff;							//Tiff that stores the content of mMultiplexedArrayA and mMultiplexedArrayB
 	ZSCAN mScanDir;
 
-	void FIFOOUTpcGarbageCollector_() const;
+	void collectFIFOOUTpcGarbage_() const;
 	void readFIFOOUTpc_();
 	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);
 	void correctInterleaved_();

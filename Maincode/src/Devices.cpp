@@ -52,7 +52,7 @@ void Image::initializeAcq(const ZSCAN stackScanDir)
 	mRTcontrol.presetFPGAoutput();				//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();						//Load the RT control in mVectorOfQueues to be sent to the FPGA
 	startFIFOOUTpc_();							//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
-	FIFOOUTpcGarbageCollector_();				//Clean up any residual data from the previous run
+	collectFIFOOUTpcGarbage_();					//Clean up any residual data from the previous run
 }
 
 //Retrieve the data from the FPGA
@@ -81,20 +81,19 @@ void Image::formImage(const bool saveAllPMT)
 }
 
 //To perform continuous scan in x. Different from Image::formImage() because of the way the image is formed
-//Each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and there are many frames, with mNframes = 'half the height of the final image'
+//Each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and mNframes = half the pixel height of the final image
 void Image::formImageVerticalStrip(const XSCAN scanDirX)
 {
 	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
 	demultiplex_(false);		//Copy the chuncks of data to mTiff
 	
+	//Mirror the entire image if a reversed scan was performed
 	switch (scanDirX)
 	{
 	case XSCAN::RIGHT2LEFT:
-		mTiff.mergeFrames();	//Merge all the frames in a single image
-		mTiff.mirror();			//Mirror the entire image if a reversed scan was performed
+		mTiff.mergeFrames();	//Set mNframes = 1 to treat mArray as a single image
+		mTiff.mirror();			
 		break;
-	default:
-		;
 	}
 }
 
@@ -141,7 +140,7 @@ bool Image::isDark(const int threshold) const
 }
 
 //Flush the residual data in FIFOOUTpc from the previous run, if any
-void Image::FIFOOUTpcGarbageCollector_() const
+void Image::collectFIFOOUTpcGarbage_() const
 {
 	const U32 timeout_ms{ 100 };
 	const U32 bufSize{ 10000 };

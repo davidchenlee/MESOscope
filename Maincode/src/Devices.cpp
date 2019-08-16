@@ -1888,7 +1888,7 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 #pragma endregion "Galvo"
 
 #pragma region "Stages"
-Stage::Stage(const double velX, const double velY, const double velZ, const std::vector<double2> stageSoftPosLimXYZ) : mSoftPosLimXYZ{ stageSoftPosLimXYZ }
+Stage::Stage(const double velX, const double velY, const double velZ, const std::vector<LIMIT2> stageSoftPosLimXYZ) : mSoftPosLimXYZ{ stageSoftPosLimXYZ }
 {
 	const std::string stageIDx{ "116049107" };	//X-stage (V-551.4B)
 	const std::string stageIDy{ "116049105" };	//Y-stage (V-551.2B)
@@ -1913,14 +1913,14 @@ Stage::Stage(const double velX, const double velY, const double velZ, const std:
 	std::cout << "Connection with the stages successfully established\n";
 
 	//Download the current position
-	mPositionXYZ.at(XX) = downloadPositionSingle_(XX);
-	mPositionXYZ.at(YY) = downloadPositionSingle_(YY);
-	mPositionXYZ.at(ZZ) = downloadPositionSingle_(ZZ);
+	mPositionXYZ.XX = downloadPositionSingle_(XX);
+	mPositionXYZ.YY = downloadPositionSingle_(YY);
+	mPositionXYZ.ZZ = downloadPositionSingle_(ZZ);
 
 	//Download the current velocities
-	mVelXYZ.at(XX) = downloadVelSingle_(XX);
-	mVelXYZ.at(YY) = downloadVelSingle_(YY);
-	mVelXYZ.at(ZZ) = downloadVelSingle_(ZZ);
+	mVelXYZ.XX = downloadVelSingle_(XX);
+	mVelXYZ.YY = downloadVelSingle_(YY);
+	mVelXYZ.ZZ = downloadVelSingle_(ZZ);
 
 	configDOtriggers_();				//Configure the stage velocities and DO triggers
 	setVelXYZ({ velX, velY, velZ });	//Set the stage velocities
@@ -1936,16 +1936,72 @@ Stage::~Stage()
 }
 
 //Recall the current position for the 3 stages
-double3 Stage::readPositionXYZ() const
+POSITION3 Stage::readPositionXYZ() const
 {
 	return mPositionXYZ;
 }
 
 void Stage::printPositionXYZ() const
 {
-	std::cout << "Stage X position = " << mPositionXYZ.at(XX) / mm << " mm\n";
-	std::cout << "Stage Y position = " << mPositionXYZ.at(YY) / mm << " mm\n";
-	std::cout << "Stage Z position = " << mPositionXYZ.at(ZZ) / mm << " mm\n";
+	std::cout << "Stage X position = " << mPositionXYZ.XX / mm << " mm\n";
+	std::cout << "Stage Y position = " << mPositionXYZ.YY / mm << " mm\n";
+	std::cout << "Stage Z position = " << mPositionXYZ.ZZ / mm << " mm\n";
+}
+
+double Stage::readCurrentPosition_(const Axis axis) const
+{
+	switch (axis)
+	{
+	case XX:
+		return mPositionXYZ.XX;
+	case YY:
+		return mPositionXYZ.YY;
+	case ZZ:
+		return mPositionXYZ.ZZ;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
+	}
+}
+
+void Stage::setCurrentPosition_(const Axis axis, const double position)
+{
+	switch(axis)
+	{
+	case XX:
+		mPositionXYZ.XX = position;
+	case YY:
+		mPositionXYZ.YY = position;
+	case ZZ:
+		mPositionXYZ.ZZ = position;
+	}
+}
+
+double Stage::readCurrentVelocity_(const Axis axis) const
+{
+	switch (axis)
+	{
+	case XX:
+		return mVelXYZ.XX;
+	case YY:
+		return mVelXYZ.YY;
+	case ZZ:
+		return mVelXYZ.ZZ;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
+	}
+}
+
+void Stage::setCurrentVelocity_(const Axis axis, const double velocity)
+{
+	switch (axis)
+	{
+	case XX:
+		mVelXYZ.XX = velocity;
+	case YY:
+		mVelXYZ.YY = velocity;
+	case ZZ:
+		mVelXYZ.ZZ = velocity;
+	}
 }
 
 //Retrieve the stage position from the controller
@@ -1962,35 +2018,35 @@ double Stage::downloadPositionSingle_(const Axis axis)
 void Stage::moveSingle(const Axis axis, const double position)
 {
 	//Check if the requested position is within range
-	if (position < mSoftPosLimXYZ.at(axis).at(0) || position > mSoftPosLimXYZ.at(axis).at(1))
+	if (position < mSoftPosLimXYZ.at(axis).MIN || position > mSoftPosLimXYZ.at(axis).MAX)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the soft limits of the stage " + axisToString(axis));
-	if (position < mTravelRangeXYZ.at(axis).at(0) || position > mTravelRangeXYZ.at(axis).at(1))
+	if (position < mTravelRangeXYZ.at(axis).MIN || position > mTravelRangeXYZ.at(axis).MAX)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the physical limits of the stage " + axisToString(axis));
 
 	//Move the stage
-	if (mPositionXYZ.at(axis) != position) //Move only if the requested position is different from the current position
+	if (readCurrentPosition_(axis) != position) //Move only if the requested position is different from the current position
 	{
 		const double position_mm{ position / mm };								//Divide by mm to convert from implicit to explicit units
 		if (!PI_MOV(mID_XYZ.at(axis), mNstagesPerController, &position_mm))		//~14 ms to execute this function
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString(axis) + " to the target position (maybe hardware limits?)");
 
-		mPositionXYZ.at(axis) = position;
+		setCurrentPosition_(axis, position);
 	}
 }
 
 //Move the 2 stages to the requested position
-void Stage::moveXY(const double2 positionXY)
+void Stage::moveXY(const POSITION2 positionXY)
 {
-	moveSingle(XX, positionXY.at(XX));
-	moveSingle(YY, positionXY.at(YY));
+	moveSingle(XX, positionXY.XX);
+	moveSingle(YY, positionXY.YY);
 }
 
 //Move the 3 stages to the requested position
-void Stage::moveXYZ(const double3 positionXYZ)
+void Stage::moveXYZ(const POSITION3 positionXYZ)
 {
-	moveSingle(XX, positionXYZ.at(XX));
-	moveSingle(YY, positionXYZ.at(YY));
-	moveSingle(ZZ, positionXYZ.at(ZZ));
+	moveSingle(XX, positionXYZ.XX);
+	moveSingle(YY, positionXYZ.YY);
+	moveSingle(ZZ, positionXYZ.ZZ);
 }
 
 bool Stage::isMoving(const Axis axis) const
@@ -2068,30 +2124,30 @@ void Stage::setVelSingle(const Axis axis, const double vel)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be >0 for the stage " + axisToString(axis));
 
 	//Update the vel if different
-	if (mVelXYZ.at(axis) != vel)
+	if (readCurrentVelocity_(axis) != vel)
 	{
 		const double vel_mmps{ vel / mmps };		//Divide by mmps to convert implicit to explicit units
 		if (!PI_VEL(mID_XYZ.at(axis), mNstagesPerController, &vel_mmps))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString(axis));
 
-		mVelXYZ.at(axis) = vel;
+		setCurrentVelocity_(axis, vel);
 		//std::cout << "stage vel updated\n"; //For debugging
 	}
 }
 
 //Set the velocity of the stage 
-void Stage::setVelXYZ(const double3 velXYZ)
+void Stage::setVelXYZ(const VELOCITY3 velXYZ)
 {
-	setVelSingle(XX, velXYZ.at(XX));
-	setVelSingle(YY, velXYZ.at(YY));
-	setVelSingle(ZZ, velXYZ.at(ZZ));
+	setVelSingle(XX, velXYZ.XX);
+	setVelSingle(YY, velXYZ.YY);
+	setVelSingle(ZZ, velXYZ.ZZ);
 }
 
 void Stage::printVelXYZ() const
 {
-	std::cout << "Stage X vel = " << mVelXYZ.at(XX) / mmps << " mm/s\n";
-	std::cout << "Stage Y vel = " << mVelXYZ.at(YY) / mmps << " mm/s\n";
-	std::cout << "Stage Z vel = " << mVelXYZ.at(ZZ) / mmps << " mm/s\n";
+	std::cout << "Stage X vel = " << mVelXYZ.XX / mmps << " mm/s\n";
+	std::cout << "Stage Y vel = " << mVelXYZ.YY / mmps << " mm/s\n";
+	std::cout << "Stage Z vel = " << mVelXYZ.ZZ / mmps << " mm/s\n";
 }
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
@@ -2128,10 +2184,10 @@ void Stage::setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const do
 	if (triggerStep <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be >0");
 
-	if (startThreshold < mTravelRangeXYZ.at(axis).at(0) || startThreshold > mTravelRangeXYZ.at(axis).at(1))
+	if (startThreshold < mTravelRangeXYZ.at(axis).MIN || startThreshold > mTravelRangeXYZ.at(axis).MAX)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The start position is out of the physical limits of the stage " + axisToString(axis));
 
-	if (stopThreshold < mTravelRangeXYZ.at(axis).at(0) || stopThreshold > mTravelRangeXYZ.at(axis).at(1))
+	if (stopThreshold < mTravelRangeXYZ.at(axis).MIN || stopThreshold > mTravelRangeXYZ.at(axis).MAX)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stop position is out of the physical limits of the stage " + axisToString(axis));
 
 
@@ -2268,14 +2324,14 @@ void Vibratome::pushStartStopButton() const
 void Vibratome::slice(const double planeToCutZ)
 {
 	mStage.setVelXYZ(mStageConveyingVelXYZ);																		//Change the velocity to move the sample to the vibratome
-	mStage.moveXYZ({ mStageInitialSlicePosXY.at(Stage::XX), mStageInitialSlicePosXY.at(Stage::YY), planeToCutZ });	//Position the sample in front of the vibratome's blade
+	mStage.moveXYZ({ mStageInitialSlicePosXY.XX, mStageInitialSlicePosXY.YY, planeToCutZ });	//Position the sample in front of the vibratome's blade
 	mStage.waitForMotionToStopAll();
 
 	mStage.setVelSingle(Stage::YY, mSlicingVel);							//Change the y vel for slicing
 	pushStartStopButton();													//Turn on the vibratome
 	mStage.moveSingle(Stage::YY, mStageFinalSlicePosY);						//Slice the sample: move the stage y towards the blade
 	mStage.waitForMotionToStopSingle(Stage::YY);							//Wait until the motion ends
-	mStage.setVelSingle(Stage::YY, mStageConveyingVelXYZ.at(Stage::YY));	//Set back the y vel to move the sample back to the microscope
+	mStage.setVelSingle(Stage::YY, mStageConveyingVelXYZ.YY);	//Set back the y vel to move the sample back to the microscope
 
 	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));				//Move the stage y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
 	//mStage.waitForMotionToStopSingle(Y);									//Wait until the motion ends

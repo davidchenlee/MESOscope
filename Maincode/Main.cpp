@@ -9,9 +9,9 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			//Routines::stepwiseScan(fpga);
+			Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
-			Routines::contScanX(fpga);
+			//Routines::contScanX(fpga);
 			//Routines::sequencer(fpga, false);
 			//Routines::liveScan(fpga);
 

@@ -95,7 +95,7 @@ private:
 
 	void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
 	void uploadImagingParameters_() const;
-	void uploadFIFOIN_(const VQU32 &vec_queue) const;
+	void uploadFIFOIN_(const VQU32 &queue_vec) const;
 	void triggerNRT_() const;
 	void setPostSequenceTimer_() const;
 	void setRescannerSetpoint_();

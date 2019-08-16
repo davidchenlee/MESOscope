@@ -26,12 +26,10 @@ void pressESCforEarlyTermination();
 double multiply16X(const double input);
 int SCANDIRtoInt(const SCANDIR scanDir);
 SCANDIR reverseSCANDIR(SCANDIR scanDirX);
-double detInitialPos(const double posMin, const double travel, const SCANDIR scanDirZ);
-double detFinalPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDirZ);
-double returnInitialPos(const double positionCenter, const double travel, const SCANDIR scanDirX);
-double returnFinalPos(const double positionCenter, const double travel, const SCANDIR scanDirX);
-double detInitialLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDirZ);
-double detFinalLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDirZ);
+double detInitialPos(const double posMin, const double travel, const SCANDIR scanDir);
+double detFinalPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
+double detInitialLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDir);
+double detFinalLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDir);
 
 //For saving the parameters to a text file
 class Logger

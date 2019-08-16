@@ -368,25 +368,25 @@ public:
 	enum class DOPARAM { TRIGSTEP = 1, AXISNUMBER = 2, TRIGMODE = 3, POLARITY = 7, STARTTHRES = 8, STOPTHRES = 9, TRIGPOS = 10 };		//*cast
 	enum class DOTRIGMODE { POSDIST = 0, ONTARGET = 2, INMOTION = 6, POSOFFSET = 7 };
 	enum class DIOCHAN { D1 = 1, D2 = 2 };
-	const std::vector<double2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };				//Travel range set by the physical limits of the stage
-	Stage(const double velX, const double velY, const double velZ, const std::vector<double2> stageSoftPosLimXYZ = { {0,0},{0,0},{0,0} });
+	const std::vector<LIMIT2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };				//Travel range set by the physical limits of the stage
+	Stage(const double velX, const double velY, const double velZ, const std::vector<LIMIT2> stageSoftPosLimXYZ = { {0,0},{0,0},{0,0} });
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor
 	Stage& operator=(const Stage&) = delete;	//Disable assignment-constructor
 	Stage(Stage&&) = delete;					//Disable move constructor
 	Stage& operator=(Stage&&) = delete;			//Disable move-assignment constructor
 
-	double3 readPositionXYZ() const;
+	POSITION3 readPositionXYZ() const;
 	void printPositionXYZ() const;
 	void moveSingle(const Axis stage, const double position);
-	void moveXY(const double2 positionXY);
-	void moveXYZ(const double3 positionXYZ);
+	void moveXY(const POSITION2 positionXY);
+	void moveXYZ(const POSITION3 positionXYZ);
 	bool isMoving(const Axis axis) const;
 	void waitForMotionToStopSingle(const Axis axis) const;
 	void waitForMotionToStopAll() const;
 	void stopAll() const;
 	void setVelSingle(const Axis axis, const double vel);
-	void setVelXYZ(const double3 vel);
+	void setVelXYZ(const VELOCITY3 vel);
 	void printVelXYZ() const;
 	void setDOtriggerParamSingle(const Axis axis, const DIOCHAN DIOchan, const DOPARAM triggerParamID, const double value) const;
 	void setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const;
@@ -398,11 +398,14 @@ private:
 	const int mBaud_z{ 38400 };
 	int3 mID_XYZ;												//Controller IDs
 	const char mNstagesPerController[2]{ "1" };					//Number of stages per controller (currently 1)
-	double3 mPositionXYZ;										//Absolute position of the stages
-	double3 mVelXYZ;											//Velocity of the stages
-	std::vector<double2> mSoftPosLimXYZ{ {0,0},{0,0},{0,0} };	//Travel soft limits (may differ from the hard limits stored in the internal memory of the stages)
+	POSITION3 mPositionXYZ;										//Absolute position of the stages
+	VELOCITY3 mVelXYZ;											//Velocity of the stages
+	std::vector<LIMIT2> mSoftPosLimXYZ{ {0,0},{0,0},{0,0} };	//Travel soft limits (may differ from the hard limits stored in the internal memory of the stages)
 																//Initialized with invalid values (lower limit = upper limit) for safety. It must be overridden by the constructor
-
+	double readCurrentPosition_(const Axis axis) const;
+	void setCurrentPosition_(const Axis axis, const double position);
+	double readCurrentVelocity_(const Axis axis) const;
+	void setCurrentVelocity_(const Axis axis, const double velocity);
 	double downloadPositionSingle_(const Axis axis);
 	double downloadVelSingle_(const Axis axis) const;
 	double downloadDOtriggerParamSingle_(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID) const;
@@ -413,7 +416,7 @@ private:
 class Vibratome
 {
 public:
-	const double2 mStageInitialSlicePosXY{ -53. * mm, 8. * mm };	//Position the stages in front oh the vibratome's blade
+	const POSITION2 mStageInitialSlicePosXY{ -53. * mm, 8. * mm };	//Position the stages in front oh the vibratome's blade
 	const double mStageFinalSlicePosY{ 27. * mm };					//Final position of the y stage after slicing
 	
 	Vibratome(const FPGA &fpga, Stage &stage);
@@ -429,7 +432,7 @@ private:
 	Stage &mStage;
 
 	const double mSlicingVel{ 0.5 * mmps };											//Move the y stage at this velocity for slicing
-	const double3 mStageConveyingVelXYZ{ 10. * mmps, 10.  *mmps, 0.5 * mmps };		//Transport the sample between the objective and vibratome at this velocity
+	const VELOCITY3 mStageConveyingVelXYZ{ 10. * mmps, 10.  *mmps, 0.5 * mmps };		//Transport the sample between the objective and vibratome at this velocity
 	//enum MotionDir { BACKWARD = -1, FORWARD = 1 };
 	//double mCuttingSpeed{ 0.5 * mmps };		//Speed of the vibratome for cutting (manual setting)
 	//double mMovingSpeed{ 2.495 * mmps };	//Measured moving speed of the head: 52.4 mm in 21 seconds = 2.495 mm/s. Set by hardware. Cannot be changed

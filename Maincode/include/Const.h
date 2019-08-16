@@ -17,13 +17,18 @@ namespace Constants
 	typedef uint32_t	U32;
 	typedef int64_t		I64;
 	typedef uint64_t	U64;
-	typedef std::deque<U32> QU32;				//Queue of unsigned integers
-	typedef std::vector<QU32> VQU32;			//Vector of queues of unsigned integers
-	typedef std::array<double, 3> double3;		//array of 3 doubles. Arrays allow pre-defining their size. Vectors do not
-	typedef std::array<int, 3> int3;			//array of 3 ints
-	typedef std::array<int, 2> int2;			//array of 3 ints
-	typedef std::array<double, 2> double2;		//array of 2 doubles
-	typedef std::array <double, 4> ROI;			//ROI = {ymin, xmin, ymax, xmax}
+	typedef std::deque<U32> QU32;							//Queue of unsigned integers
+	typedef std::vector<QU32> VQU32;						//Vector of queues of unsigned integers
+	typedef std::array<int, 3> int3;						//array of 3 ints
+	struct INDICES2 { int II; int JJ; };
+	struct POSITION2 { double XX; double YY; };
+	struct POSITION3 { double XX; double YY; double ZZ; };
+	struct VELOCITY3 { double XX; double YY; double ZZ; };
+	struct FFOV2 { double XX; double YY; };
+	struct LIMIT2 { double MIN; double MAX; };
+	struct ROI4 { double YMIN; double XMIN; double YMAX;  double XMAX; };	//Region of interest
+	struct SAMPLESIZE3 { double XX; double YY; double ZZ; };					//Sample size
+	struct TILEOVERLAP4 { double XX; double YY; double ZZ; };				//Tile overlap fraction
 
 	enum class PMTIN { PMT = false, SIM = true };			//*cast
 	enum class LINECLOCK { RS = false, FG = true  };		//*cast
@@ -34,7 +39,6 @@ namespace Constants
 	enum class OVERRIDE { DIS, EN };
 	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANXY, COLLECTLENS };
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};	//*cast
-	enum ROIindices { YMIN = 0, XMIN = 1, YMAX = 2, XMAX = 3};						//*cast
 
 	//The scan directions are wrt the direction of motion of the stages
 	//DOWNWARD: the stage z moves downward (the sample is scanned from bottom to top)
@@ -81,11 +85,7 @@ namespace Constants
 	extern const double g_pockelsFirstFrameDelay;
 	extern const double g_pockelsSecondaryDelay;
 
-	struct GALVOcalib
-	{
-		double voltagePerDistance;
-		double voltageOffset;
-	};
+	struct GALVOcalib {	double voltagePerDistance; double voltageOffset; };
 	extern const double g_scanGalvoDelay;
 	extern const double g_rescanGalvoDelay;
 	extern const GALVOcalib g_scannerCalib;

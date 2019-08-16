@@ -155,16 +155,18 @@ SCANDIR reverseSCANDIR(SCANDIR scanDirX)
 	}
 }
 
-double detInitialPos(const double posMin, const double travel, const SCANDIR scanDirZ)
+double detInitialPos(const double posMin, const double travel, const SCANDIR scanDir)
 {
 	if (travel <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
 
-	switch (scanDirZ)
+	switch (scanDir)
 	{
 	case SCANDIR::UPWARD:
+	case SCANDIR::RIGHTWARD:
 		return posMin;
 	case SCANDIR::DOWNWARD:
+	case SCANDIR::LEFTWARD:
 		return posMin + travel;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
@@ -172,52 +174,19 @@ double detInitialPos(const double posMin, const double travel, const SCANDIR sca
 }
 
 //Travel overhead to avoid the nonlinearity at the end of the stage scan
-double detFinalPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDirZ)
+double detFinalPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
 {
 	if (travel <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
 	
-	switch (scanDirZ)
+	switch (scanDir)
 	{
 	case SCANDIR::UPWARD:
+	case SCANDIR::RIGHTWARD:
 		return posMin + travel + travelOverhead;
 	case SCANDIR::DOWNWARD:
+	case SCANDIR::LEFTWARD:
 		return posMin - travelOverhead;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-	}
-}
-
-//Initial position of the stage
-double returnInitialPos(const double positionCenter, const double travel, const SCANDIR scanDirX)
-{
-	if (travel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
-
-	switch (scanDirX)
-	{
-	case SCANDIR::RIGHTWARD://RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
-		return positionCenter - travel / 2;
-	case SCANDIR::LEFTWARD://LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
-		return positionCenter + travel / 2;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-	}
-}
-
-//Final position of the stage
-double returnFinalPos(const double positionCenter, const double travel, const SCANDIR scanDirX)
-{
-	if (travel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
-
-	const double travelOverhead{ 0.100 * mm }; 	//Travel overhead to avoid the nonlinearity at the end of the stage scan
-	switch (scanDirX)
-	{
-	case SCANDIR::RIGHTWARD://RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
-		return positionCenter + travel / 2 + travelOverhead;
-	case SCANDIR::LEFTWARD://LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
-		return positionCenter - travel / 2 - travelOverhead;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
 	}

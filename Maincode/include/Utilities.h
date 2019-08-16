@@ -89,11 +89,11 @@ private:
 class QuickStitcher
 {
 public:
-	QuickStitcher(const int tileWidth, const int tileHeight, const int nRow, const int nCol);
+	QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nRow, const int nCol);
 	void push(const TiffU8 &tile, const int rowIndex, const int colIndex);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
 private:
-	TiffU8 mTiff;
+	TiffU8 mStitchedTiff;
 	int mNrow;
 	int mNcol;
 };

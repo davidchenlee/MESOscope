@@ -1122,12 +1122,55 @@ namespace TestRoutines
 		std::cout << "volt to I16 to volt: " << FPGAfunc::intToVoltage(FPGAfunc::voltageToI16(0)) << "\n";
 	}
 
-	void tiffU8(const FPGA &fpga)
+	void correctImage()
 	{
+		
+		std::string inputFilename{ "Liver_V750nm_P=184.3mW_Pinc=1.4mWpum_x=52.420_y=20.000_zi=17.8340_zf=17.9365_Step=0.0001" };
+		std::string outputFilename{ "output_" + inputFilename };
+		TiffU8 image{ inputFilename };
+		//image.correctRSdistortionGPU(200. * um);	
+		image.flattenField(1.5);
+		image.suppressCrosstalk(0.2);
+		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+
+		//image.binFrames(5);
+		//image.splitIntoFrames(10);
+		//image.mirrorOddFrames();
+		//image.averageEvenOddFrames();
+		//std::cout << image.isDark(1) << "\n";
+
 		/*
+		//Declare and start a stopwatch
+		double duration;
+		auto t_start{ std::chrono::high_resolution_clock::now() };
+		//Stop the stopwatch
+		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+		std::cout << "Elapsed time: " << duration << " ms" << "\n";
+		*/
+		pressAnyKeyToCont();
+	}
+
+	void quickStitcher(const FPGA &fpga)
+	{
+		//RTcontrol RTcontrol{ fpga };
+		//Image image{ RTcontrol };
+		//image.save("empty", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
+		//image.formImageVerticalStrip(SCANDIRX::LEFT);
+
+		//TiffU8 asd{ image.data(), 300, 560 };
+		//std::cout << image.tiff().widthPerFrame_pix() << "\n";
+		//std::cout << image.tiff().heightPerFrame_pix() << "\n";
+
+
+		
+		//Declare and start a stopwatch
+		double duration;
+		auto t_start{ std::chrono::high_resolution_clock::now() };
+
+		
+		std::string outputFilename{ "stitched" };
 		const int width{ 300 };
 		const int height{ 8000 };
-		std::string outputFilename{ "output" };
 		TiffU8 image00{ "01" };
 		TiffU8 image01{ "02" };
 		TiffU8 image03{ "03" };
@@ -1139,50 +1182,53 @@ namespace TestRoutines
 		stitched.push(image03, 0, 2);
 		stitched.push(image04, 0, 3);
 		stitched.saveToFile(outputFilename, OVERRIDE::DIS);
-		*/
 
-		RTcontrol RTcontrol{ fpga };
-		Image image{ RTcontrol };
-		//image.save("empty", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
-		//image.formImageVerticalStrip(SCANDIRX::LEFT);
-
-
-		TiffU8 asd{ image.data(), 300, 560 };
-		//std::cout << image.tiff().widthPerFrame_pix() << "\n";
-		//std::cout << image.tiff().heightPerFrame_pix() << "\n";
-
-		QuickStitcher stitched{ 300, 560, 1, 1 };
-		stitched.push(asd, 0, 0);
-		//pressAnyKeyToCont();
-
-		/*
-		std::string inputFilename{ "Liver_V750nm_P=184.3mW_Pinc=1.4mWpum_x=52.420_y=20.000_zi=17.8340_zf=17.9365_Step=0.0001" };
-		std::string outputFilename{ "output_" + inputFilename };
-		TiffU8 image{ inputFilename };
-		image.flattenField(1.5);
-		image.suppressCrosstalk(0.2);
-		//image.binFrames(5);
-		image.saveToFile(outputFilename, TIFFSTRUCT::EN, OVERRIDE::EN);
-		*/
-
-
-		//std::cout << image.isDark(1) << "\n";
-		//image.splitIntoFrames(10);
-		//image.mirrorOddFrames();
-		//image.averageEvenOddFrames();
-		//image.Test();
-		//image.correctRSdistortionGPU(200. * um);
-
-
-
-		/*
-		//Declare and start a stopwatch
-		double duration;
-		auto t_start{ std::chrono::high_resolution_clock::now() };
 		//Stop the stopwatch
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
-		*/
+
+		pressAnyKeyToCont();
+
+	}
+
+	void vectorOfObjects()
+	{
+
+		class A
+		{
+		public:
+			A()
+			{
+				mArray = new int[10];
+			}
+			//Copy-constructor
+			A(const A&) {}
+
+			//Assignment-constructor
+			A& operator=(const A&) {}
+
+			//move contructor
+			A(A&& input) : mArray{ input.mArray }
+			{
+				input.mArray = nullptr;
+			}
+			//Move assignment
+			A& operator=(A&& a)
+			{}
+
+			~A()
+			{
+				delete[] mArray;
+			}
+		private:
+			int* mArray;
+		};
+
+		std::unique_ptr<A> a = std::make_unique<A>();
+		//std::vector<std::unique_ptr<A>> vec;
+		//vec.push_back(a);
+
+		pressAnyKeyToCont();
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely

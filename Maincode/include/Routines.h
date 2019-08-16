@@ -44,7 +44,9 @@ namespace TestRoutines
 
 	//Data management
 	void convertI16toVolt();
-	void tiffU8(const FPGA &fpga);
+	void correctImage();
+	void quickStitcher(const FPGA &fpga);
+	void vectorOfObjects();
 	void ethernetSpeed();
 	void multithread();
 	void clipU8();

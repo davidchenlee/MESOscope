@@ -374,7 +374,7 @@ TiffU8::TiffU8(const std::string filename) : mNframes{ 1 }
 
 //Construct a Tiff from an array
 TiffU8::TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames) :
-	mWidthPerFrame_pix(widthPerFrame), mHeightPerFrame_pix(heightPerFrame), mNframes(nFrames), mBytesPerLine(widthPerFrame * sizeof(U8))
+	mWidthPerFrame_pix{ widthPerFrame }, mHeightPerFrame_pix{ heightPerFrame }, mNframes{ nFrames }, mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) }
 {
 	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
@@ -388,7 +388,7 @@ TiffU8::TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPe
 
 //Construct a Tiff from a vector
 TiffU8::TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames) :
-	mWidthPerFrame_pix(widthPerFrame), mHeightPerFrame_pix(heightPerFrame), mNframes(nFrames), mBytesPerLine(widthPerFrame * sizeof(U8))
+	mWidthPerFrame_pix{ widthPerFrame }, mHeightPerFrame_pix{ heightPerFrame }, mNframes{ nFrames }, mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) }
 {
 	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
@@ -402,7 +402,7 @@ TiffU8::TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const
 
 //Construct a new Tiff by allocating memory and initialize it to zero for safety
 TiffU8::TiffU8(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nFrames) :
-	mWidthPerFrame_pix(widthPerFrame_pix), mHeightPerFrame_pix(heightPerFrame_pix), mNframes(nFrames), mBytesPerLine(widthPerFrame_pix * sizeof(U8))
+	mWidthPerFrame_pix{ widthPerFrame_pix }, mHeightPerFrame_pix{ heightPerFrame_pix }, mNframes{ nFrames }, mBytesPerLine{ static_cast<int>(widthPerFrame_pix * sizeof(U8)) }
 {
 	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
@@ -1149,13 +1149,18 @@ void TiffU8::flattenField(const double maxScaleFactor)
 }
 #pragma endregion "TiffU8"
 
-QuickStitcher::QuickStitcher(const int tileWidth, const int tileHeight, const int nRow, const int nCol) : mTiff{ tileWidth * nCol, tileHeight * nRow, 1 }, mNrow{ nRow }, mNcol{ nCol }
+QuickStitcher::QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nRow, const int nCol) : mStitchedTiff{ tileWidth_pix * nCol, tileHeight_pix * nRow, 1 }, mNrow{ nRow }, mNcol{ nCol }
 {
+	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile width and height must be > 0");
+
 	if(mNrow <= 0 || mNcol <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array dimensions must be > 0");
+
+
 }
 
-//rowIndex from TOP to BOTTOM of the mTiff image. colIndex from LEFT to RIGHT of the mTiff image.
+//rowIndex = 0, 1, 2, ... from TOP to BOTTOM and colIndex = 0, 1, 2, ... from LEFT to RIGHT of the mTiff image.
 void QuickStitcher::push(const TiffU8 &tile, const int rowIndex, const int colIndex)
 {
 	if (colIndex < 0 || rowIndex < 0)
@@ -1169,15 +1174,23 @@ void QuickStitcher::push(const TiffU8 &tile, const int rowIndex, const int colIn
 	const int tileHeight_pix{ tile.heightPerFrame_pix() };	//Height of the tile
 	const int colShift_pix{ colIndex *  tileWidth_pix };	//In the mTiff image, shift the tile to the right by this many pixels
 	const int rowShift_pix{ rowIndex *  tileHeight_pix };	//In the mTiff image, shift the tile down by this many pixels
-	
+	const int tileBytesPerRow{ static_cast<int>(tileWidth_pix * sizeof(U8)) };										//Bytes per row of the input tile
+	const int stitchedTiffBytesPerRow{ static_cast<int>(mStitchedTiff.widthPerFrame_pix() * sizeof(U8)) };			//Bytes per row of the stitched image
+
+	/*
+	//Transfer the data from the input tile to mStitchedTiff. Old way: copy pixel by pixel
 	for (int iterCol = 0; iterCol < tileWidth_pix; iterCol++)
 		for (int iterRow = 0; iterRow < tileHeight_pix; iterRow++)
-			mTiff.data()[(rowShift_pix + iterRow) * mTiff.widthPerFrame_pix() + (colShift_pix + iterCol)] = tile.data()[iterRow * tileWidth_pix + iterCol];
+			mStitchedTiff.data()[(rowShift_pix + iterRow) * mStitchedTiff.widthPerFrame_pix() + colShift_pix + iterCol] = tile.data()[iterRow * tileWidth_pix + iterCol];*/
+
+	//Transfer the data from the input tile to mStitchedTiff. New way: copy row by row
+	for (int iterRow = 0; iterRow < tileHeight_pix; iterRow++)
+		std::memcpy(&mStitchedTiff.data()[(rowShift_pix + iterRow) * stitchedTiffBytesPerRow + colShift_pix * sizeof(U8)], &tile.data()[iterRow * tileBytesPerRow], tileBytesPerRow);
 }
 
 void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) const
 {
-	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
+	mStitchedTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
 }
 
 /*Obsolete

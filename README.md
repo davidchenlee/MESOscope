@@ -3,7 +3,7 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- calibrate Fidelity
+- maybe switch to smart pointers for the data. Check the overhead
 - realign the dichroic and rescanner mounts. Fine tune the galvo parameters
 - cover up the entire the emission path
 - figure out why the FOV of 16X is slightly different from 1X
@@ -17,6 +17,7 @@ Code in C++ for controlling the NI USB-7852R card
 - I detected that, when the FPGA resets at the end of the code, the shutter #2 is triggered. I see a small voltage on the scope, like ~50mV that seems to be enough to trigger the shutter
 
 ### Hardware
+- calibrate Fidelity
 - Screw down the PMT16X
 - Test cooling down the PMT16X
 

@@ -116,19 +116,19 @@ private:
 	Sample mSample;							//Sample
 	const Stack mStack;						//Stack
 	std::vector<Commandline> mCommandList;
-	const int3 mInitialScanDir{ 1, 1, 1 };	//Initial scan directions wrt the axis STAGEX, STAGEY, and STAGEZ					
+	const SCANDIR3 mInitialScanDirnew{ SCANDIR::RIGHTWARD, SCANDIR::INWARD, SCANDIR::UPWARD };//Initial scan directions wrt the axis STAGEX, STAGEY, and STAGEZ	
+
 	ROI4 mROIeff;							//Slightly larger than the requested area: mSample.mROI
 	int mStackCounter{ 0 };					//Count the number of stacks
 	int mSliceCounter{ 0 };					//Count the number of the slices
 	INDICES2 mStackArrayDimIJ;				//Dimension of the array of stacks
-	int3 mScanDir{ mInitialScanDir };		//Scan directions wrt the axis STAGEX, STAGEY, and STAGEZ
+	SCANDIR3 mScanDirnew{ mInitialScanDirnew };//Scan directions wrt the axis STAGEX, STAGEY, and STAGEZ
 	double mScanZi;							//Initial z-stage position for a stack-scan
 	double mPlaneToSliceZ{ 0 };				//Height of the plane to cut	
 	int mNtotalSlices{ 1 };					//Number of vibratome slices in the entire sample
 
 	double calculateStackInitialPower_(const double Ptop, const double stackPinc, const int scanDirZ, const double stackDepth);
 	POSITION2 stackIndicesToStackCenter_(const INDICES2 stackArrayIndicesIJ) const;
-	void reverseStageScanDirection_(const Stage::Axis axis);
 	void resetStageScanDirections_();
 	SAMPLESIZE3 effectiveSize_() const;
 	void moveStage_(const INDICES2 stackIJ);

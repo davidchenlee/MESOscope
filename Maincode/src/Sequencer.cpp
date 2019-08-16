@@ -289,7 +289,6 @@ Sequence::Commandline Sequence::readCommandline(const int iterCommandLine) const
 void Sequence::generateCommandList()
 {
 	std::cout << "Generating the command list..." << "\n";
-
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
 		int II{ 0 }, JJ{ 0 };			//Reset the stack indices after every cut
@@ -297,7 +296,7 @@ void Sequence::generateCommandList()
 
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mSample.mFluorLabelList.size(); iterWL++)
 		{
-			//STAGEY sits under the other 2 stages and, therefore, is the slowest to react. For the best performance, iterate over STAGEX often and over STAGEY less often
+			//The stage y is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over STAGEX often and over STAGEY less often
 			while (JJ >= 0 && JJ < mStackArrayDimIJ.JJ)			//STAGEY direction
 			{
 				while (II >= 0 && II < mStackArrayDimIJ.II)		//STAGEX direction
@@ -305,19 +304,15 @@ void Sequence::generateCommandList()
 					moveStage_({ II, JJ });
 					acqStack_(iterWL);
 					saveStack_();
-					II += mScanDir.at(Stage::XX);		//Increase the iterator in the axis STAGE X
+					II += SCANDIRtoInt(mScanDirnew.XX);	//Increase/decrease the iterator in the axis STAGEX
 				}
-
-				//Initialize the next cycle by going back in the axis STAGEX one step and switching the scanning direction
-				II -= mScanDir.at(Stage::XX);
-				reverseStageScanDirection_(Stage::XX);
-				JJ += mScanDir.at(Stage::YY);	//Increase the iterator in the axis STAGEY
-			}
-			//Initialize the next cycle by going back in the axis STAGEY one step and switching the scanning direction
-			JJ -= mScanDir.at(Stage::YY);
-			reverseStageScanDirection_(Stage::YY);
+				II -= SCANDIRtoInt(mScanDirnew.XX);		//Re-inizitialize II by going back one step to start from 0 or mStackArrayDimIJ.II - 1
+				reverseSCANDIR(mScanDirnew.XX);			//Reverse the scanning direction
+				JJ += SCANDIRtoInt(mScanDirnew.YY);		//Increase/decrease the iterator in the axis STAGEY
+			}	
+			JJ -= SCANDIRtoInt(mScanDirnew.YY);			//Re-inizitialize JJ by going back one step to start from 0 or mStackArrayDimIJ.JJ - 1
+			reverseSCANDIR(mScanDirnew.YY);				//Reverse the scanning direction
 		}
-
 		//Only need to cut the sample 'nVibratomeSlices -1' times
 		if (iterSlice < mNtotalSlices - 1)
 			cutSlice_();
@@ -334,7 +329,7 @@ std::vector<POSITION2> Sequence::generateLocationList()
 	int II{ 0 }, JJ{ 0 };			//Reset the stack indices after every cut
 	resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
 
-	//The y-stage is the slowest to react because it sits under of other 2 stages. For the best performance, iterate over STAGEX often and over STAGEY less often
+	//The stage y is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over STAGEX often and over STAGEY less often
 	while (JJ >= 0 && JJ < mStackArrayDimIJ.JJ)			//STAGEY direction
 	{
 		while (II >= 0 && II < mStackArrayDimIJ.II)		//STAGEX direction
@@ -343,17 +338,14 @@ std::vector<POSITION2> Sequence::generateLocationList()
 			locationList.push_back(stackCenterXY);
 
 			//std::cout << "x = " << stackCenterXY.at(X) / mm << "\ty = " << stackCenterXY.at(Y) / mm << "\n";		//For debugging
-			II += mScanDir.at(Stage::XX);		//Increase the iterator in the axis STAGEX
+			II += SCANDIRtoInt(mScanDirnew.XX);	//Increase/decrease the iterator in the axis STAGEX
 		}
-
-		//Initialize the next cycle by going back in the axis STAGEX one step and switching the scanning direction
-		II -= mScanDir.at(Stage::XX);
-		reverseStageScanDirection_(Stage::XX);
-		JJ += mScanDir.at(Stage::YY);	//Increase the iterator in the axis STAGEY
+		II -= SCANDIRtoInt(mScanDirnew.XX);		//Re-inizitialize II by going back one step to start from 0 or mStackArrayDimIJ.II - 1
+		reverseSCANDIR(mScanDirnew.XX);			//Reverse the scanning direction
+		JJ += SCANDIRtoInt(mScanDirnew.YY);		//Increase/decrease the iterator in the axis STAGEY
 	}
-	//Initialize the next cycle by going back in the axis STAGEY one step and switching the scanning direction
-	JJ -= mScanDir.at(Stage::YY);
-	reverseStageScanDirection_(Stage::YY);
+	JJ -= SCANDIRtoInt(mScanDirnew.YY);			//Re-inizitialize JJ by going back one step to start from 0 or mStackArrayDimIJ.JJ - 1
+	reverseSCANDIR(mScanDirnew.YY);				//Reverse the scanning direction
 
 	return locationList;
 }
@@ -371,7 +363,7 @@ Stack Sequence::stack() const
 void Sequence::printSequenceParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "SEQUENCER ************************************************************\n";
-	*fileHandle << "Stages initial scan direction {STAGEX,STAGEY, STAGEZ} = {" << mInitialScanDir.at(Stage::XX) << ", " << mInitialScanDir.at(Stage::YY) << ", " << mInitialScanDir.at(Stage::ZZ) << "}\n";
+	*fileHandle << "Stages initial scan direction {STAGEX,STAGEY, STAGEZ} = {" << SCANDIRtoInt(mInitialScanDirnew.XX) << ", " << SCANDIRtoInt(mInitialScanDirnew.YY) << ", " << SCANDIRtoInt(mInitialScanDirnew.ZZ) << "}\n";
 	*fileHandle << std::setprecision(4);
 	*fileHandle << "Effective ROI [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROIeff.YMIN / mm << ", " << mROIeff.XMIN / mm << ", " << mROIeff.YMAX / mm << ", " << mROIeff.XMAX / mm << "]\n";
 	*fileHandle << "Effective sample size (STAGEX, STAGEY, STAGEZ) (mm) = (" << effectiveSize_().XX / mm << ", " << effectiveSize_().YY / mm << ", " << effectiveSize_().ZZ / mm << ")\n";
@@ -436,25 +428,9 @@ POSITION2 Sequence::stackIndicesToStackCenter_(const INDICES2 stackArrayIndicesI
 	return stagePositionXY;
 }
 
-void Sequence::reverseStageScanDirection_(const Stage::Axis axis)
-{
-	switch (axis)
-	{
-	case Stage::XX:
-		mScanDir.at(Stage::XX) *= -1;
-		break;
-	case Stage::YY:
-		mScanDir.at(Stage::YY) *= -1;
-		break;
-	case Stage::ZZ:
-		mScanDir.at(Stage::ZZ) *= -1;
-		break;
-	}
-}
-
 void Sequence::resetStageScanDirections_()
 {
-	mScanDir = mInitialScanDir;
+	mScanDirnew = mInitialScanDirnew;
 }
 
 //Convert a ROI = {ymin, xmin, ymax, xmax} to the equivalent sample size in the axis STAGEX and STAGEY
@@ -481,19 +457,19 @@ void Sequence::acqStack_(const int iterWL)
 	const FluorLabelList::FluorLabel fluorLabel{ mSample.mFluorLabelList.at(iterWL) };
 
 	//Determine if the initial laser power is the lowest (top of the stack) or the highest (bottom of the stack)
-	const double scanPi = calculateStackInitialPower_(fluorLabel.mScanPi, fluorLabel.mStackPinc, mScanDir.at(Stage::ZZ), mStack.mDepth);
+	const double scanPi = calculateStackInitialPower_(fluorLabel.mScanPi, fluorLabel.mStackPinc, SCANDIRtoInt(mScanDirnew.ZZ), mStack.mDepth);
 
 	Commandline commandline;
 	commandline.mAction = Action::ID::ACQ;
-	commandline.mCommand.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mScanDir.at(Stage::ZZ), mScanZi, mStack.mDepth, scanPi, fluorLabel.mStackPinc };
+	commandline.mCommand.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, SCANDIRtoInt(mScanDirnew.ZZ), mScanZi, mStack.mDepth, scanPi, fluorLabel.mStackPinc };
 
 	mCommandList.push_back(commandline);
 	mStackCounter++;	//Count the number of stacks acquired
 	mCommandCounter++;	//Count the number of commands
 
 	//Update the parameters for the next iteration
-	mScanZi += mScanDir.at(Stage::ZZ) * mStack.mDepth;		//Next initial z-scan position
-	reverseStageScanDirection_(Stage::ZZ);					//Switch the scanning direction in the axis STAGEZ
+	mScanZi += SCANDIRtoInt(mScanDirnew.ZZ) * mStack.mDepth;		//Next initial z-scan position
+	reverseSCANDIR(mScanDirnew.ZZ);									//Switch the scanning direction in the axis STAGEZ
 }
 
 void Sequence::saveStack_()

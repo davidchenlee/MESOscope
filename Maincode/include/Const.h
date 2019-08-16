@@ -20,6 +20,16 @@ namespace Constants
 	typedef std::deque<U32> QU32;							//Queue of unsigned integers
 	typedef std::vector<QU32> VQU32;						//Vector of queues of unsigned integers
 	typedef std::array<int, 3> int3;						//array of 3 ints
+
+	//The scan directions are wrt the direction of motion of the stages
+	//DOWNWARD: the stage z moves downward (the sample is scanned from bottom to top)
+	//UPWARD: the stage z moves upward (the sample is scanned from top to bottom)
+	//RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
+	//LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
+	//OUTWARD: the stage y moves away from the optical table
+	//INWARD: the stage y moves to the center of the optical table
+	enum class SCANDIR { LEFTWARD, RIGHTWARD, OUTWARD, INWARD, DOWNWARD, UPWARD };
+	struct SCANDIR3 { SCANDIR XX;  SCANDIR YY; SCANDIR ZZ; };
 	struct INDICES2 { int II; int JJ; };
 	struct POSITION2 { double XX; double YY; };
 	struct POSITION3 { double XX; double YY; double ZZ; };
@@ -39,16 +49,6 @@ namespace Constants
 	enum class OVERRIDE { DIS, EN };
 	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANXY, COLLECTLENS };
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};	//*cast
-
-	//The scan directions are wrt the direction of motion of the stages
-	//DOWNWARD: the stage z moves downward (the sample is scanned from bottom to top)
-	//UPWARD: the stage z moves upward (the sample is scanned from top to bottom)
-	//RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
-	//LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
-	//OUTWARD: the stage y moves away from the optical table
-	//INWARD: the stage y moves to the center of the optical table
-	enum class SCANDIR { LEFTWARD, RIGHTWARD, OUTWARD, INWARD, DOWNWARD, UPWARD };
-	typedef std::array<SCANDIR, 3> SCANDIR3;
 
 	extern const std::string folderPath;
 	extern const std::string bitfilePath;

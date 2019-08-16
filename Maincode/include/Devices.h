@@ -369,6 +369,7 @@ public:
 	enum class DOTRIGMODE { POSDIST = 0, ONTARGET = 2, INMOTION = 6, POSOFFSET = 7 };
 	enum class DIOCHAN { D1 = 1, D2 = 2 };
 	const std::vector<LIMIT2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };				//Travel range set by the physical limits of the stage
+
 	Stage(const double velX, const double velY, const double velZ, const std::vector<LIMIT2> stageSoftPosLimXYZ = { {0,0},{0,0},{0,0} });
 	~Stage();
 	Stage(const Stage&) = delete;				//Disable copy-constructor
@@ -396,7 +397,8 @@ public:
 private:
 	const int mPort_z{ 4 };										//COM port
 	const int mBaud_z{ 38400 };
-	int3 mID_XYZ;												//Controller IDs
+	int3 mHandleXYZ;											//Stage handler
+	//struct HANDLE { int XX; int YY; int ZZ; } mHandleXYZ;
 	const char mNstagesPerController[2]{ "1" };					//Number of stages per controller (currently 1)
 	POSITION3 mPositionXYZ;										//Absolute position of the stages
 	VELOCITY3 mVelXYZ;											//Velocity of the stages
@@ -410,7 +412,7 @@ private:
 	double downloadVelSingle_(const Axis axis) const;
 	double downloadDOtriggerParamSingle_(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID) const;
 	void configDOtriggers_() const;
-	std::string axisToString(const Axis axis) const;
+	std::string axisToString_(const Axis axis) const;
 };
 
 class Vibratome

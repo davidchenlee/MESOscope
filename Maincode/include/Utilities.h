@@ -25,7 +25,7 @@ void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
 double multiply16X(const double input);
 int SCANDIRtoInt(const SCANDIR scanDir);
-SCANDIR reverseSCANDIR(SCANDIR scanDirX);
+void reverseSCANDIR(SCANDIR &scanDir);
 double detInitialPos(const double posMin, const double travel, const SCANDIR scanDir);
 double detFinalPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
 double detInitialLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDir);

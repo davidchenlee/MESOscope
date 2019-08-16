@@ -131,25 +131,32 @@ int SCANDIRtoInt(const SCANDIR scanDir)
 	}
 }
 
-SCANDIR reverseSCANDIR(SCANDIR scanDirX)
+//Switch the scan direction. It is important to pass scanDir by reference to be able to modify it
+void reverseSCANDIR(SCANDIR &scanDir)
 {
-	switch (scanDirX)
+	switch (scanDir)
 	{
-		//STAGEX
+	//STAGEX
 	case SCANDIR::LEFTWARD:
-		return SCANDIR::RIGHTWARD;
+		scanDir =  SCANDIR::RIGHTWARD;
+		break;
 	case SCANDIR::RIGHTWARD:
-		return SCANDIR::LEFTWARD;
-		//STAGEY
+		scanDir =  SCANDIR::LEFTWARD;
+		break;
+	//STAGEY
 	case SCANDIR::OUTWARD:
-		return SCANDIR::INWARD;
+		scanDir =  SCANDIR::INWARD;
+		break;
 	case SCANDIR::INWARD:
-		return SCANDIR::OUTWARD;
-		//STAGEZ
+		scanDir =  SCANDIR::OUTWARD;
+		break;
+	//STAGEZ
 	case SCANDIR::DOWNWARD:
-		return SCANDIR::UPWARD;
+		scanDir =  SCANDIR::UPWARD;
+		break;
 	case SCANDIR::UPWARD:
-		return SCANDIR::DOWNWARD;
+		scanDir =  SCANDIR::DOWNWARD;
+		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
 	}

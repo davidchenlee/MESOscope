@@ -397,8 +397,8 @@ public:
 private:
 	const int mPort_z{ 4 };										//COM port
 	const int mBaud_z{ 38400 };
-	int3 mHandleXYZ;											//Stage handler
-	//struct HANDLE { int XX; int YY; int ZZ; } mHandleXYZ;
+	std::array<int, 3> mHandleXYZ;								//Stage handler
+
 	const char mNstagesPerController[2]{ "1" };					//Number of stages per controller (currently 1)
 	POSITION3 mPositionXYZ;										//Absolute position of the stages
 	VELOCITY3 mVelXYZ;											//Velocity of the stages

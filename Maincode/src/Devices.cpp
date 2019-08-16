@@ -9,14 +9,14 @@ Image::Image(const RTcontrol &RTcontrol) :
 	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 
-	//Enable the stage triggering ctl&acq
+	//Enable the stage triggering the ctl&acq sequence
 	//It has to be here and not in the RTcontrol class because the trigger has to be turned off by the destructor to allow positioning the stage after acquisition
 	mRTcontrol.enableStageTrigAcq();
 }
 
 Image::~Image()
 {
-	//Disable the stage triggering ctl&acq to allow positioning the stage after acquisition
+	//Disable the stage triggering the ctl&acq sequence to allow positioning the stage after acquisition
 	mRTcontrol.disableStageTrigAcq();
 
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
@@ -48,7 +48,7 @@ void Image::initializeAcq(const SCANDIR stackScanDir)
 {
 	mRTcontrol.enableFIFOOUT();					//Push data to from the FPGA FIFOOUTfpga. It is disabled when debugging
 	mScanDir = stackScanDir;					//Initialize mScanDir
-	mRTcontrol.setStageTrigAcqDelay(mScanDir);	//Set the delay for the stage triggering ctl&acq
+	mRTcontrol.setStageTrigAcqDelay(mScanDir);	//Set the delay for the stage triggering the ctl&acq sequence
 	mRTcontrol.presetFPGAoutput();				//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();						//Load the RT control in mVec_queue to be sent to the FPGA
 	startFIFOOUTpc_();							//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated

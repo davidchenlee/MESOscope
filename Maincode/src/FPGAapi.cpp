@@ -335,7 +335,7 @@ void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double 
 	FPGAfunc::linearRamp(mVec_queue.at(static_cast<U8>(chan)), timeStep, rampLength, Vi, Vf);
 }
 
-//Preset the FPGA output with the first value in the RT control sequence to avoid discontinuities at the start of the sequence
+//Set the FPGA output to the first value of the RT control sequence to avoid any discontinuities at the start of the sequence
 void RTcontrol::presetFPGAoutput() const
 {
 	//Read from the FPGA the last voltage in the galvo AO. See the LV implementation
@@ -343,44 +343,45 @@ void RTcontrol::presetFPGAoutput() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.handle(), NiFpga_FPGAvi_IndicatorU16_ScanGalvoMon, &AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::SCANGALVO))));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.handle(), NiFpga_FPGAvi_IndicatorU16_RescanGalvoMon, &AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::RESCANGALVO))));
 
-	//Create a vector of queues
+	//Create a vector of queues for the ramps
 	VQU32 vec_queue{ static_cast<U8>(RTCHAN::NCHAN) };
-	for (int chan = 1; chan < static_cast<U8>(RTCHAN::NCHAN); chan++) //chan > 0 means that the pixelclock is kept empty
+	for (int iterChan = 1; iterChan < static_cast<U8>(RTCHAN::NCHAN); iterChan++) //the pixelclock (chan = 0) is kept empty
 	{
-		if (mVec_queue.at(chan).size() != 0)
+		if (mVec_queue.at(iterChan).size() != 0)
 		{
 			//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
-			if ((chan == static_cast<U8>(RTCHAN::SCANGALVO) || chan == static_cast<U8>(RTCHAN::RESCANGALVO)))	//Only do GALVO1 and GALVO2 for now
+			if ((iterChan == static_cast<U8>(RTCHAN::SCANGALVO) || iterChan == static_cast<U8>(RTCHAN::RESCANGALVO)))	//Only do GALVO1 and GALVO2 for now
 			{
-				const double Vi = FPGAfunc::intToVoltage(AOlastVoltage_I16.at(chan));							//Last element of the last RT control sequence
-				const double Vf = FPGAfunc::intToVoltage(static_cast<I16>(mVec_queue.at(chan).front()));		//First element of the new RT control sequence
+				const double Vi = FPGAfunc::intToVoltage(AOlastVoltage_I16.at(iterChan));							//Last element of the last RT control sequence
+				const double Vf = FPGAfunc::intToVoltage(static_cast<I16>(mVec_queue.at(iterChan).front()));		//First element of the new RT control sequence
 
 				//For debugging
 				//std::cout << Vi << "\n";
 				//std::cout << Vf << "\n";
 
-				FPGAfunc::linearRamp(vec_queue.at(chan), 10 * us, 5 * ms, Vi, Vf);
+				FPGAfunc::linearRamp(vec_queue.at(iterChan), 10 * us, 5 * ms, Vi, Vf);
 			}
 		}
 	}
-	uploadFIFOIN_(vec_queue);		//Load the ramp on the FPGA
-	triggerNRT_();								//Trigger the FPGA outputs (non-RT trigger)
+	uploadFIFOIN_(vec_queue);		//Load the ramp to the FPGA
+	triggerNRT_();					//Trigger the ramp via non-RT trigger
+	Sleep(10);						//Give the FPGA enought time to settle, otherwise the main sequence that follows may get messed up
+									//(I realized this after running VS in release-mode, which connects faster to the FPGA than in debug-mode)
 }
 
-//
 void RTcontrol::uploadRT() const
 {
 	uploadFIFOIN_(mVec_queue);
 }
 
-//Trigger the real-time ctl&acq
+//Trigger the real-time the ctl&acq sequence
 void RTcontrol::triggerRT() const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, true));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));
 }
 
-//Enable the stage trigger ctl&acq sequence
+//Enable the stage trigger the ctl&acq sequence
 void RTcontrol::enableStageTrigAcq() const
 {
 	switch (mMainTrigger)	//Trigger selector 
@@ -396,7 +397,7 @@ void RTcontrol::enableStageTrigAcq() const
 	}
 }
 
-//Disable the stage triggering ctl&acq sequence
+//Disable the stage triggering the ctl&acq sequence
 void RTcontrol::disableStageTrigAcq() const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::PC)));
@@ -409,7 +410,7 @@ void RTcontrol::enableFIFOOUT() const
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
 }
 
-//Set the delay for the stage triggering ctl&acq sequence
+//Set the delay for the stage triggering the ctl&acq sequence
 void RTcontrol::setStageTrigAcqDelay(const SCANDIR scanDir) const
 {
 	double stageTrigAcqDelay{ 0 };
@@ -477,15 +478,15 @@ void RTcontrol::uploadImagingParameters_() const
 //For this, concatenate all the individual queues 'vec_queue.at(ii)' in the queue 'allQueues'.
 //The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
 //Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
-void RTcontrol::uploadFIFOIN_(const VQU32 &vec_queue) const
+void RTcontrol::uploadFIFOIN_(const VQU32 &queue_vec) const
 {
 	{
 		QU32 allQueues;		//Create a single long queue
 		for (int chan = 0; chan < static_cast<U8>(RTCHAN::NCHAN); chan++)
 		{
-			allQueues.push_back(vec_queue.at(chan).size());			//Push the number of elements in each individual queue ii, 'vec_queue.at(ii)'	
-			for (std::vector<int>::size_type iter = 0; iter != vec_queue.at(chan).size(); iter++)
-				allQueues.push_back(vec_queue.at(chan).at(iter));		//Push vec_queue[i]
+			allQueues.push_back(queue_vec.at(chan).size());					//Push the number of elements in each individual queue ii, 'vec_queue.at(ii)'	
+			for (std::vector<int>::size_type iter = 0; iter != queue_vec.at(chan).size(); iter++)
+				allQueues.push_back(queue_vec.at(chan).at(iter));			//Push vec_queue[i]
 		}
 
 		const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 
@@ -513,7 +514,7 @@ void RTcontrol::uploadFIFOIN_(const VQU32 &vec_queue) const
 	}
 }
 
-//Trigger the FPGA outputs in a non-realtime way (see the LV implementation)
+//Trigger the FPGA control sequence (see the LV implementation)
 void RTcontrol::triggerNRT_() const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, true));

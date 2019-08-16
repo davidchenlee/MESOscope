@@ -1,6 +1,5 @@
 #include "Routines.h"
 
-
 int main(int argc, char* argv[])
 {
 	try
@@ -12,7 +11,7 @@ int main(int argc, char* argv[])
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
 			//Routines::contScanX(fpga);
-			Routines::sequencer(fpga, false);
+			//Routines::sequencer(fpga, false);
 			//Routines::liveScan(fpga);
 
 			//TESTS
@@ -37,7 +36,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::virtualLasers(fpga);
 
 			//TestRoutines::convertI16toVolt();
-			//TestRoutines::correctImage();
+			TestRoutines::correctImage();
 			//TestRoutines::quickStitcher(fpga);
 			//TestRoutines::isDark();
 			//TestRoutines::ethernetSpeed();

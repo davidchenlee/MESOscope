@@ -22,8 +22,8 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
@@ -32,7 +32,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const int nFramesCont{ 1 };	
+		const int nFramesCont{ 10 };	
 		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the axis STAGEZ
 		const double stepSizeZ{ 1.0 * um };
 	
@@ -309,7 +309,7 @@ namespace Routines
 		Image image{ RTcontrol };
 		image.initializeAcq(scanDirZ);
 		std::cout << "Scanning the stack...\n";
-		stage.moveSingle(Stage::ZZ, stageZf);	//Move the stage to trigger ctl&acq
+		stage.moveSingle(Stage::ZZ, stageZf);	//Move the stage to trigger the ctl&acq sequence
 		image.downloadData();
 
 		virtualLaser.closeShutter();	//Close the shutter manually even though the destructor does it because the data processing could take a long time
@@ -398,7 +398,7 @@ namespace Routines
 			Image image{ RTcontrol };
 			image.initializeAcq();
 			std::cout << "Scanning the stack...\n";
-			stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger ctl&acq
+			stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger the ctl&acq sequence
 			image.downloadData();
 			image.formImageVerticalStrip(scanDirX);
 
@@ -509,7 +509,7 @@ namespace Routines
 
 					image.initializeAcq(static_cast<SCANDIR>(acqStack.mScanDirZ));
 					std::cout << "Scanning the stack...\n";
-					stage.moveSingle(Stage::ZZ, acqStack.scanZf());					//Move the stage to trigger ctl&acq
+					stage.moveSingle(Stage::ZZ, acqStack.scanZf());					//Move the stage to trigger the ctl&acq sequence
 					image.downloadData();
 					break;
 				case Action::ID::SAV:
@@ -874,7 +874,7 @@ namespace TestRoutines
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
-		const int nFramesCont{ 10 };
+		const int nFramesCont{ 1 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
@@ -887,6 +887,7 @@ namespace TestRoutines
 		//Execute the realtime control sequence and acquire the image
 		Image image{ RTcontrol };
 		image.acquire();		//Execute the RT control sequence
+		pressAnyKeyToCont();
 	}
 
 	//Test the synchronization of the 2 galvos and the laser
@@ -1128,11 +1129,11 @@ namespace TestRoutines
 	void correctImage()
 	{
 		
-		std::string inputFilename{ "Liver_V750nm_P=184.3mW_Pinc=1.4mWpum_x=52.420_y=20.000_zi=17.8340_zf=17.9365_Step=0.0001" };
+		std::string inputFilename{ "Liver_V750nm_P=192.0mW_x=51.500_y=18.300_z=17.7640" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		//image.correctRSdistortionGPU(200. * um);	
-		image.flattenField(1.5);
+		//image.flattenField(1.5);
 		image.suppressCrosstalk(0.2);
 		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 

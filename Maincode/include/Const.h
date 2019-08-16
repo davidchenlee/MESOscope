@@ -3,7 +3,7 @@
 #include <vector>
 #include <array>
 
-#define multibeam 0			//Multibeam or singlebeam. *cast
+#define multibeam 0		//Multibeam or singlebeam. *cast
 #define pockelsAutoOff 1	//For debugging purposes. In LV, let 'framegate' gate the output of the pockels cell
 
 namespace Constants
@@ -19,7 +19,6 @@ namespace Constants
 	typedef uint64_t	U64;
 	typedef std::deque<U32> QU32;							//Queue of unsigned integers
 	typedef std::vector<QU32> VQU32;						//Vector of queues of unsigned integers
-	typedef std::array<int, 3> int3;						//array of 3 ints
 
 	//The scan directions are wrt the direction of motion of the stages
 	//DOWNWARD: the stage z moves downward (the sample is scanned from bottom to top)

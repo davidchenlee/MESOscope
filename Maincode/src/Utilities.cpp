@@ -661,6 +661,7 @@ void TiffU8::binFrames(const int nFramesPerBin)
 	}
 }
 
+/*
 //Calculate the max and min tile coordinates in the image to obtain the sample contour
 std::vector<bool> TiffU8::maxMin_(std::vector<bool> input, const int nRow, const int nCol)
 {
@@ -669,8 +670,8 @@ std::vector<bool> TiffU8::maxMin_(std::vector<bool> input, const int nRow, const
 	std::vector<int> vec_indexMax;
 	for (std::vector<int>::size_type iter = 0; iter != input.size(); iter++)
 		;
-
 }
+*/
 
 //Flood fill the sample contour
 

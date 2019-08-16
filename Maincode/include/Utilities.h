@@ -67,8 +67,7 @@ public:
 	void averageEvenOddFrames();
 	void averageFrames();
 	void binFrames(const int nFramesPerBin);
-	bool isDark(const double threshold) const;
-	std::vector<bool> isDark(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const;
+	std::vector<bool> giveBoolMap(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const;
 	void saveToTxt(const std::string fileName) const;
 	void pushImage(const U8* inputArray, const int frameIndex) const;
 	void pushImage(const U8* inputArray, const int firstFrameIndex, const int lastFrameIndex) const;
@@ -84,6 +83,8 @@ private:
 	int mNframes;
 	int mBytesPerLine; 
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
+	double giveTileAverage_(const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const;
+	std::vector<bool> maxMin_(std::vector<bool> input, const int nRow, const int nCol);
 };
 
 class QuickStitcher

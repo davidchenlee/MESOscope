@@ -685,98 +685,77 @@ void TiffU8::binFrames(const int nFramesPerBin)
 	}
 }
 
-//Take the top frame of the stack and return true if it's dark. Divide the image in quadrants for a better sensitivity
-bool TiffU8::isDark(const double threshold) const
+//Calculate the max and min tile coordinates in the image to obtain the sample contour
+std::vector<bool> TiffU8::maxMin_(std::vector<bool> input, const int nRow, const int nCol)
 {
-	if (threshold < 0  || threshold > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
+	mWidthPerFrame_pix;
+	std::vector<int> vec_indexMin;
+	std::vector<int> vec_indexMax;
+	for (std::vector<int>::size_type iter = 0; iter != input.size(); iter++)
+		;
 
-	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
-	const int nPix{ mWidthPerFrame_pix * mHeightPerFrame_pix };		//Number of pixels in the entire image
-	const double nPixQuad{ 1. * nPix / 4 };							//Number of pixels in a quadrant
-
-	//Divide the image in 4 quadrants
-	const int halfwidth{ mWidthPerFrame_pix / 2 };
-	const int halfHeight{ mHeightPerFrame_pix / 2 };
-
-	std::vector<int> vectOfSums;										//Vector of the sum for each quadrant
-	//Start scanning the tiles from the top-left corner of the image
-	//Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
-	for (int iterTileRow = 0; iterTileRow < 2; iterTileRow++)
-		for (int iterTileCol = 0; iterTileCol < 2; iterTileCol++)
-		{
-			int sum{ 0 };
-			for (int rowIndex = iterTileRow * halfHeight; rowIndex < (iterTileRow + 1) * halfHeight; rowIndex++)
-				for (int colIndex = iterTileCol * halfwidth; colIndex < (iterTileCol + 1) * halfwidth; colIndex++)
-					sum += mArray[rowIndex * mWidthPerFrame_pix + colIndex];
-			vectOfSums.push_back(sum);
-		}
-
-	const double sumTL{ 1. * vectOfSums.at(0) / nPixQuad };	//Average count top-left
-	const double sumTR{ 1. * vectOfSums.at(1) / nPixQuad };	//Average count top-right
-	const double sumBL{ 1. * vectOfSums.at(2) / nPixQuad };	//Average count bottom-left
-	const double sumBR{ 1. * vectOfSums.at(3) / nPixQuad };	//Average count bottom-right
-
-	//For debuging
-	std::cout << "Average count TL = " << sumTL << "\n";
-	std::cout << "Average count TR = " << sumTR << "\n";
-	std::cout << "Average count BL = " << sumBL << "\n";
-	std::cout << "Average count BR = " << sumBR << "\n";
-
-	return (sumTL < threshold_255 && sumTR < threshold_255 && sumBL < threshold_255 && sumBR < threshold_255);
 }
 
-//I need a function with input a large image and the tile size, and output an array of bools corresponding to the tiles
-std::vector<bool> TiffU8::isDark(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const
+//Flood fill the sample contour
+
+
+//Return the average
+double TiffU8::giveTileAverage_(const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const
+{
+	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
+
+	if (tileWidth_pix < 0 || tileHeight_pix < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row and column indices must be >=0");
+
+	const int nPixPerTile{ tileWidth_pix * tileHeight_pix };		//Number of pixels in a tile
+
+	int sum{ 0 };
+	for (int rowIndex = tileRowIndex * tileHeight_pix; rowIndex < (tileRowIndex + 1) * tileHeight_pix; rowIndex++)
+		for (int colIndex = tileColIndex * tileWidth_pix; colIndex < (tileColIndex + 1) * tileWidth_pix; colIndex++)
+			sum += mArray[rowIndex * mWidthPerFrame_pix + colIndex];
+	return sum / nPixPerTile;
+}
+
+//Divide the large image into tiles of size tileWidth_pix * tileHeight_pix and return an array of tiles indicating if the tile NOT dark dark
+std::vector<bool> TiffU8::giveBoolMap(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
 
-	if (tileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of rows must be >0");
+	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
 
-	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
-	const int nPixPerTile{ tileWidth_pix * tileHeight_pix };		//Number of pixels in a tile
 	const int nTileCol{ mWidthPerFrame_pix / tileWidth_pix };		//Number of tile-colums
 	const int nTileRow{ mHeightPerFrame_pix / tileHeight_pix };		//Number of tile-rows
 
-	std::vector<double> vecOfAvgs;
-	//Start scanning the tiles from the top-left corner of the image
-	//Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
+	std::vector<double> vec_avg;
+	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
 	for (int iterTileRow = 0; iterTileRow < nTileRow; iterTileRow++)
 		for (int iterTileCol = 0; iterTileCol < nTileCol; iterTileCol++)
-		{
-			int sum{ 0 };
-			for (int rowIndex = iterTileRow * tileHeight_pix; rowIndex < (iterTileRow + 1) * tileHeight_pix; rowIndex++)
-				for (int colIndex = iterTileCol * tileWidth_pix; colIndex < (iterTileCol + 1) * tileWidth_pix; colIndex++)
-					sum += mArray[rowIndex * mWidthPerFrame_pix + colIndex];
-			vecOfAvgs.push_back(sum);
-		}
+			vec_avg.push_back(giveTileAverage_(tileWidth_pix, tileHeight_pix, iterTileRow, iterTileCol));
 
-	//Calculate the average count by dividing the sum by the number of pixels in a tile
-	std::vector<bool> vecOfisDark;
-	for (std::vector<int>::size_type iter = 0; iter != vecOfAvgs.size(); iter++)
-	{
-		vecOfAvgs.at(iter) /= nPixPerTile;
-		vecOfisDark.push_back(vecOfAvgs.at(iter) < threshold_255);
-	}
+	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
+	std::vector<bool> vec_isBright;
+	for (std::vector<int>::size_type iter = 0; iter != vec_avg.size(); iter++)
+		vec_isBright.push_back(vec_avg.at(iter) >= threshold_255);
 
 	//For debugging
-	for (std::vector<int>::size_type iter = 0; iter != nTileCol; iter++)
-		std::cout << "avg count: " << vecOfAvgs.at(iter) << "\tis dark?: " << vecOfisDark.at(iter) << "\n";
+	//for (std::vector<int>::size_type iter = 0; iter != nTileCol; iter++)
+		//std::cout << "avg count: " << vec_avg.at(iter) << "\tis dark?: " << vec_isBright.at(iter) << "\n";
 
 	std::ofstream fileHandle;									//Create output file
-	fileHandle.open(folderPath + "ArrayOfisDark.txt");			//Open the file
+	fileHandle.open(folderPath + "ArrayOfTiles.txt");			//Open the file
 	for (int iterTileRow = 0; iterTileRow < nTileRow; iterTileRow++)
 	{
 		//Iterate over the colums
 		for (int iterTileCol = 0; iterTileCol < nTileCol; iterTileCol++)
-			fileHandle << vecOfisDark.at(iterTileRow * nTileCol + iterTileCol) << "\t";
+			fileHandle << vec_isBright.at(iterTileRow * nTileCol + iterTileCol);
 		fileHandle << "\n";	//End the row
 	}
 	fileHandle.close();											//Close the txt file
 
-	return vecOfisDark;
+	return vec_isBright;
 }
 
 //Save mArray as a text file
@@ -1130,34 +1109,33 @@ void TiffU8::flattenField(const double maxScaleFactor)
 
 	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };				//Number of pixels in a single frame
 	const int nPixStrip{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
-	std::vector<double> vecOfUpscalingFactors(g_nChanPMT);
+	std::vector<double> vec_upscalingFactors(g_nChanPMT);
 
 	for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
 	{
 		const double aux{ 1 +  (std::sqrt(maxScaleFactor) - 1) * std::abs(chanIndex/7.5 - 1)};
-		vecOfUpscalingFactors.at(chanIndex) = aux * aux;
+		vec_upscalingFactors.at(chanIndex) = aux * aux;
 	}
 
 	//For debugging
 	//for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
-	//	std::cout << vecOfUpscalingFactors.at(chanIndex) << "\n";
+	//	std::cout << vec_upscalingFactors.at(chanIndex) << "\n";
 
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
 		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
-				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(vecOfUpscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
+				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
 }
 #pragma endregion "TiffU8"
 
-QuickStitcher::QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nRow, const int nCol) : mStitchedTiff{ tileWidth_pix * nCol, tileHeight_pix * nRow, 1 }, mNrow{ nRow }, mNcol{ nCol }
+//tileWidth_pix: tile width, tileHeight_pix: tile height, nTileRow: number of tile-rows in the stitched image, nTileCol: number of tile-columns in the stitched image
+QuickStitcher::QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nTileRow, const int nTileCol) : mStitchedTiff{ tileWidth_pix * nTileCol, tileHeight_pix * nTileRow, 1 }, mNrow{ nTileRow }, mNcol{ nTileCol }
 {
 	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile width and height must be > 0");
 
 	if(mNrow <= 0 || mNcol <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array dimensions must be > 0");
-
-
 }
 
 //rowIndex = 0, 1, 2, ... from TOP to BOTTOM and colIndex = 0, 1, 2, ... from LEFT to RIGHT of the mTiff image.
@@ -1221,4 +1199,47 @@ void TiffStack::saveToFile(const std::string filename, OVERRIDE override) const
 	//mArraySameZ.saveToFile(filename, TIFFSTRUCT::EN, override);
 }
 #pragma endregion "Stack"
+*/
+
+/*
+//Take the top frame of the stack and return true if it's dark. Divide the image in quadrants for a better sensitivity
+bool TiffU8::isDark(const double threshold) const
+{
+	if (threshold < 0  || threshold > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
+
+	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
+	const int nPix{ mWidthPerFrame_pix * mHeightPerFrame_pix };		//Number of pixels in the entire image
+	const double nPixQuad{ 1. * nPix / 4 };							//Number of pixels in a quadrant
+
+	//Divide the image in 4 quadrants
+	const int halfwidth{ mWidthPerFrame_pix / 2 };
+	const int halfHeight{ mHeightPerFrame_pix / 2 };
+
+	std::vector<int> vec_sum;										//Vector of the sum for each quadrant
+	//Start scanning the tiles from the top-left corner of the image
+	//Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
+	for (int iterTileRow = 0; iterTileRow < 2; iterTileRow++)
+		for (int iterTileCol = 0; iterTileCol < 2; iterTileCol++)
+		{
+			int sum{ 0 };
+			for (int rowIndex = iterTileRow * halfHeight; rowIndex < (iterTileRow + 1) * halfHeight; rowIndex++)
+				for (int colIndex = iterTileCol * halfwidth; colIndex < (iterTileCol + 1) * halfwidth; colIndex++)
+					sum += mArray[rowIndex * mWidthPerFrame_pix + colIndex];
+			vec_sum.push_back(sum);
+		}
+
+	const double sumTL{ 1. * vec_sum.at(0) / nPixQuad };	//Average count top-left
+	const double sumTR{ 1. * vec_sum.at(1) / nPixQuad };	//Average count top-right
+	const double sumBL{ 1. * vec_sum.at(2) / nPixQuad };	//Average count bottom-left
+	const double sumBR{ 1. * vec_sum.at(3) / nPixQuad };	//Average count bottom-right
+
+	//For debuging
+	std::cout << "Average count TL = " << sumTL << "\n";
+	std::cout << "Average count TR = " << sumTR << "\n";
+	std::cout << "Average count BL = " << sumBL << "\n";
+	std::cout << "Average count BR = " << sumBR << "\n";
+
+	return (sumTL < threshold_255 && sumTR < threshold_255 && sumBL < threshold_255 && sumBR < threshold_255);
+}
 */

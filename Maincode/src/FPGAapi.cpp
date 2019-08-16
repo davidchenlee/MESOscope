@@ -252,7 +252,7 @@ QU32 RTcontrol::Pixelclock::readPixelclock() const
 }
 
 RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUT FIFOOUTstate) :
-	mVectorOfQueues{ static_cast<U8>(RTCHAN::NCHAN) }, mFpga{ fpga }, mLineclockInput{ lineclockInput }, mMainTrigger{ mainTrigger }, mNframes{ nFrames },
+	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) }, mFpga{ fpga }, mLineclockInput{ lineclockInput }, mMainTrigger{ mainTrigger }, mNframes{ nFrames },
 	mWidthPerFrame_pix{ widthPerFrame_pix }, mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }, mFIFOOUTstate{ FIFOOUTstate }
 {
 	//Set the imaging parameters
@@ -262,7 +262,7 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 
 	//Generate a pixelclock
 	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
-	mVectorOfQueues.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
+	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 
 	setRescannerSetpoint_();
 	setPostSequenceTimer_();
@@ -292,17 +292,17 @@ RTcontrol::RTcontrol(const FPGA &fpga) : RTcontrol{ fpga, LINECLOCK::FG , MAINTR
 
 void RTcontrol::pushQueue(const RTCHAN chan, QU32& queue)
 {
-	concatenateQueues_(mVectorOfQueues.at(static_cast<U8>(chan)), queue);
+	concatenateQueues_(mVec_queue.at(static_cast<U8>(chan)), queue);
 }
 
 void RTcontrol::clearQueue(const RTCHAN chan)
 {
-	mVectorOfQueues.at(static_cast<U8>(chan)).clear();
+	mVec_queue.at(static_cast<U8>(chan)).clear();
 }
 
 void RTcontrol::pushDigitalSinglet(const RTCHAN chan, double timeStep, const bool DO)
 {
-	mVectorOfQueues.at(static_cast<U8>(chan)).push_back(FPGAfunc::packDigitalSinglet(timeStep, DO));
+	mVec_queue.at(static_cast<U8>(chan)).push_back(FPGAfunc::packDigitalSinglet(timeStep, DO));
 }
 
 void RTcontrol::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override)
@@ -315,24 +315,24 @@ void RTcontrol::pushAnalogSinglet(const RTCHAN chan, double timeStep, const doub
 
 	//Clear the current content
 	if (override == OVERRIDE::EN)
-		mVectorOfQueues.at(static_cast<U8>(chan)).clear();
+		mVec_queue.at(static_cast<U8>(chan)).clear();
 
-	mVectorOfQueues.at(static_cast<U8>(chan)).push_back(FPGAfunc::packAnalogSinglet(timeStep, AO));
+	mVec_queue.at(static_cast<U8>(chan)).push_back(FPGAfunc::packAnalogSinglet(timeStep, AO));
 }
 
 //Push a fixed-point number. For scaling the pockels cell output
 void RTcontrol::pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor)
 {
-	mVectorOfQueues.at(static_cast<U8>(chan)).push_back(static_cast<U32>(doubleToFx2p14(scalingFactor)));
+	mVec_queue.at(static_cast<U8>(chan)).push_back(static_cast<U32>(doubleToFx2p14(scalingFactor)));
 }
 
 void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override)
 {
 	//Clear the current content
 	if (override == OVERRIDE::EN)
-		mVectorOfQueues.at(static_cast<U8>(chan)).clear();
+		mVec_queue.at(static_cast<U8>(chan)).clear();
 
-	FPGAfunc::linearRamp(mVectorOfQueues.at(static_cast<U8>(chan)), timeStep, rampLength, Vi, Vf);
+	FPGAfunc::linearRamp(mVec_queue.at(static_cast<U8>(chan)), timeStep, rampLength, Vi, Vf);
 }
 
 //Preset the FPGA output with the first value in the RT control sequence to avoid discontinuities at the start of the sequence
@@ -344,33 +344,33 @@ void RTcontrol::presetFPGAoutput() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.handle(), NiFpga_FPGAvi_IndicatorU16_RescanGalvoMon, &AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::RESCANGALVO))));
 
 	//Create a vector of queues
-	VQU32 vectorOfQueuesForRamp{ static_cast<U8>(RTCHAN::NCHAN) };
+	VQU32 vec_queue{ static_cast<U8>(RTCHAN::NCHAN) };
 	for (int chan = 1; chan < static_cast<U8>(RTCHAN::NCHAN); chan++) //chan > 0 means that the pixelclock is kept empty
 	{
-		if (mVectorOfQueues.at(chan).size() != 0)
+		if (mVec_queue.at(chan).size() != 0)
 		{
 			//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 			if ((chan == static_cast<U8>(RTCHAN::SCANGALVO) || chan == static_cast<U8>(RTCHAN::RESCANGALVO)))	//Only do GALVO1 and GALVO2 for now
 			{
 				const double Vi = FPGAfunc::intToVoltage(AOlastVoltage_I16.at(chan));							//Last element of the last RT control sequence
-				const double Vf = FPGAfunc::intToVoltage(static_cast<I16>(mVectorOfQueues.at(chan).front()));	//First element of the new RT control sequence
+				const double Vf = FPGAfunc::intToVoltage(static_cast<I16>(mVec_queue.at(chan).front()));		//First element of the new RT control sequence
 
 				//For debugging
 				//std::cout << Vi << "\n";
 				//std::cout << Vf << "\n";
 
-				FPGAfunc::linearRamp(vectorOfQueuesForRamp.at(chan), 10 * us, 5 * ms, Vi, Vf);
+				FPGAfunc::linearRamp(vec_queue.at(chan), 10 * us, 5 * ms, Vi, Vf);
 			}
 		}
 	}
-	uploadFIFOIN_(vectorOfQueuesForRamp);		//Load the ramp on the FPGA
+	uploadFIFOIN_(vec_queue);		//Load the ramp on the FPGA
 	triggerNRT_();								//Trigger the FPGA outputs (non-RT trigger)
 }
 
 //
 void RTcontrol::uploadRT() const
 {
-	uploadFIFOIN_(mVectorOfQueues);
+	uploadFIFOIN_(mVec_queue);
 }
 
 //Trigger the real-time ctl&acq
@@ -473,19 +473,19 @@ void RTcontrol::uploadImagingParameters_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));	//Lineclock: resonant scanner (RS) or function generator (FG)
 }
 
-//Send every single queue in 'vectorOfQueue' to the FPGA buffer
-//For this, concatenate all the individual queues 'vectorOfQueuesForRamp.at(ii)' in the queue 'allQueues'.
+//Send every single queue in 'vec_queue' to the FPGA buffer
+//For this, concatenate all the individual queues 'vec_queue.at(ii)' in the queue 'allQueues'.
 //The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
 //Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
-void RTcontrol::uploadFIFOIN_(const VQU32 &vectorOfQueues) const
+void RTcontrol::uploadFIFOIN_(const VQU32 &vec_queue) const
 {
 	{
 		QU32 allQueues;		//Create a single long queue
 		for (int chan = 0; chan < static_cast<U8>(RTCHAN::NCHAN); chan++)
 		{
-			allQueues.push_back(vectorOfQueues.at(chan).size());			//Push the number of elements in each individual queue ii, 'VectorOfQueues.at(ii)'	
-			for (std::vector<int>::size_type iter = 0; iter != vectorOfQueues.at(chan).size(); iter++)
-				allQueues.push_back(vectorOfQueues.at(chan).at(iter));		//Push VectorOfQueues[i]
+			allQueues.push_back(vec_queue.at(chan).size());			//Push the number of elements in each individual queue ii, 'vec_queue.at(ii)'	
+			for (std::vector<int>::size_type iter = 0; iter != vec_queue.at(chan).size(); iter++)
+				allQueues.push_back(vec_queue.at(chan).at(iter));		//Push vec_queue[i]
 		}
 
 		const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 

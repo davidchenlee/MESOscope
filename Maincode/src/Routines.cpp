@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-double3 stackCenterXYZ{ (51.500) * mm, (18.300 )* mm, (17.765) * mm };//Liver TDT
+double3 stackCenterXYZ{ (51.500) * mm, (18.300 )* mm, (17.770) * mm };//Liver TDT
 //double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
 const std::vector<double2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
@@ -333,7 +333,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirX{SCANDIR::LEFTWARD };
 		//const SCANDIR scanDirX{ SCANDIR::RIGHTWARD };
-		const int nCol{ 2 };//56
+		const int nCol{ 1 };//56
 		const double FOVslow{ 4.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
 
@@ -1137,7 +1137,6 @@ namespace TestRoutines
 		//image.splitIntoFrames(10);
 		//image.mirrorOddFrames();
 		//image.averageEvenOddFrames();
-		//std::cout << image.isDark(1) << "\n";
 
 		/*
 		//Declare and start a stopwatch
@@ -1161,13 +1160,6 @@ namespace TestRoutines
 		//std::cout << image.tiff().widthPerFrame_pix() << "\n";
 		//std::cout << image.tiff().heightPerFrame_pix() << "\n";
 
-
-		
-		//Declare and start a stopwatch
-		double duration;
-		auto t_start{ std::chrono::high_resolution_clock::now() };
-
-		
 		std::string outputFilename{ "stitched" };
 		const int width{ 300 };
 		const int height{ 8000 };
@@ -1183,12 +1175,16 @@ namespace TestRoutines
 		stitched.push(image04, 0, 3);
 		stitched.saveToFile(outputFilename, OVERRIDE::DIS);
 
-		//Stop the stopwatch
-		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-		std::cout << "Elapsed time: " << duration << " ms" << "\n";
+		pressAnyKeyToCont();
+	}
+
+	void isDark()
+	{
+		std::string inputFilename{ "Liver_V750nm_P=7.0mWpum_xi=53.500_xf=49.400_y=22.300_z=17.7840_Step=0.0005" };
+		TiffU8 image{ inputFilename };
+		image.giveBoolMap(0.004, 300, 400);
 
 		pressAnyKeyToCont();
-
 	}
 
 	void vectorOfObjects()
@@ -1310,7 +1306,7 @@ namespace TestRoutines
 		const int nTileCol{ image.widthPerFrame_pix() / tileWidth_pix };
 		const int nTileRow{ image.heightPerFrame_pix() / tileHeight_pix };
 
-		image.isDark(0.004, tileWidth_pix, tileHeight_pix);
+		image.giveBoolMap(0.004, tileWidth_pix, tileHeight_pix);
 		//image.isDark(0.01);
 
 		pressAnyKeyToCont();

@@ -91,11 +91,11 @@ private:
 		void pushUniformDwellTimes_();
 	};
 
-	VQU32 mVectorOfQueues;
+	VQU32 mVec_queue;
 
 	void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
 	void uploadImagingParameters_() const;
-	void uploadFIFOIN_(const VQU32 &vectorOfQueues) const;
+	void uploadFIFOIN_(const VQU32 &vec_queue) const;
 	void triggerNRT_() const;
 	void setPostSequenceTimer_() const;
 	void setRescannerSetpoint_();

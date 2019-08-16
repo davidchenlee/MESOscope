@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
-			//Routines::contScanX(fpga);
+			Routines::contScanX(fpga);
 			//Routines::sequencer(fpga, false);
 			//Routines::liveScan(fpga);
 
@@ -38,7 +38,8 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::convertI16toVolt();
 			//TestRoutines::correctImage();
-			TestRoutines::quickStitcher(fpga);
+			//TestRoutines::quickStitcher(fpga);
+			//TestRoutines::isDark();
 			//TestRoutines::ethernetSpeed();
 			//TestRoutines::multithread();
 			//TestRoutines::clipU8();

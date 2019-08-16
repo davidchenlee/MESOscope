@@ -46,6 +46,7 @@ namespace TestRoutines
 	void convertI16toVolt();
 	void correctImage();
 	void quickStitcher(const FPGA &fpga);
+	void isDark();
 	void vectorOfObjects();
 	void ethernetSpeed();
 	void multithread();

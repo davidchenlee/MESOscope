@@ -50,7 +50,7 @@ void Image::initializeAcq(const SCANDIR stackScanDir)
 	mScanDir = stackScanDir;					//Initialize mScanDir
 	mRTcontrol.setStageTrigAcqDelay(mScanDir);	//Set the delay for the stage triggering ctl&acq
 	mRTcontrol.presetFPGAoutput();				//Preset the ouput of the FPGA
-	mRTcontrol.uploadRT();						//Load the RT control in mVectorOfQueues to be sent to the FPGA
+	mRTcontrol.uploadRT();						//Load the RT control in mVec_queue to be sent to the FPGA
 	startFIFOOUTpc_();							//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
 	collectFIFOOUTpcGarbage_();					//Clean up any residual data from the previous run
 }
@@ -131,12 +131,6 @@ void Image::binFrames(const int nFramesPerBin)
 void Image::save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const
 {
 	mTiff.saveToFile(filename, pageStructure, override, mScanDir);
-}
-
-//Output true if the average count is below threshold
-bool Image::isDark(const int threshold) const
-{
-	return mTiff.isDark(threshold);
 }
 
 //Flush the residual data in FIFOOUTpc from the previous run, if any

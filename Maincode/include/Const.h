@@ -3,7 +3,7 @@
 #include <vector>
 #include <array>
 
-#define multibeam 0		//Multibeam or singlebeam. *cast
+#define multibeam 1			//Multibeam or singlebeam. *cast
 #define pockelsAutoOff 1	//For debugging purposes. In LV, let 'framegate' gate the output of the pockels cell
 
 namespace Constants
@@ -17,8 +17,8 @@ namespace Constants
 	typedef uint32_t	U32;
 	typedef int64_t		I64;
 	typedef uint64_t	U64;
-	typedef std::deque<U32> QU32;							//Queue of unsigned integers
-	typedef std::vector<QU32> VQU32;						//Vector of queues of unsigned integers
+	typedef std::deque<U32> QU32;			//Queue of unsigned integers
+	typedef std::vector<QU32> VQU32;		//Vector of queues of unsigned integers
 
 	//The scan directions are wrt the direction of motion of the stages
 	//DOWNWARD: the stage z moves downward (the sample is scanned from bottom to top)
@@ -36,14 +36,14 @@ namespace Constants
 	struct FFOV2 { double XX; double YY; };
 	struct LIMIT2 { double MIN; double MAX; };
 	struct ROI4 { double YMIN; double XMIN; double YMAX;  double XMAX; };	//Region of interest
-	struct SAMPLESIZE3 { double XX; double YY; double ZZ; };					//Sample size
+	struct SAMPLESIZE3 { double XX; double YY; double ZZ; };				//Sample size
 	struct TILEOVERLAP4 { double XX; double YY; double ZZ; };				//Tile overlap fraction
 
 	enum class PMTIN { PMT = false, SIM = true };			//*cast
 	enum class LINECLOCK { RS = false, FG = true  };		//*cast
 	enum class MAINTRIG { PC = 0, STAGEZ = 1, STAGEX = 2 };	//The numbering must match that of LV
 	enum class FPGARESET { DIS = false, EN = true };		//*cast
-	enum class FIFOOUT { DIS = false, EN = true  };			//*cast
+	enum class FIFOOUTfpga { DIS = false, EN = true  };		//*cast
 	enum class TIFFSTRUCT { SINGLEPAGE, MULTIPAGE };
 	enum class OVERRIDE { DIS, EN };
 	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANXY, COLLECTLENS };

@@ -8,8 +8,8 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			//Routines::stepwiseScan(fpga);
-			//Routines::contScanZ(fpga);
+			Routines::stepwiseScan(fpga);
+			///Routines::contScanZ(fpga);
 			//Routines::contScanX(fpga);
 			//Routines::sequencer(fpga, false);
 			//Routines::liveScan(fpga);
@@ -36,13 +36,15 @@ int main(int argc, char* argv[])
 			//TestRoutines::virtualLasers(fpga);
 
 			//TestRoutines::convertI16toVolt();
-			TestRoutines::correctImage();
-			//TestRoutines::quickStitcher(fpga);
-			//TestRoutines::isDark();
 			//TestRoutines::ethernetSpeed();
 			//TestRoutines::multithread();
 			//TestRoutines::clipU8();
+
+			//TestRoutines::correctImage();
+			//TestRoutines::quickStitcher(fpga);
 			//TestRoutines::locateSample();
+			//TestRoutines::isDark();
+			//TestRoutines::vectorOfObjects();
 
 			//TestRoutines::sequencerConcurrentTest();
 			//TestRoutines::locationSequence();

@@ -251,9 +251,9 @@ QU32 RTcontrol::Pixelclock::readPixelclock() const
 	return mPixelclockQ;
 }
 
-RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUT FIFOOUTstate) :
+RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUTfpga FIFOOUTFPGAstate) :
 	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) }, mFpga{ fpga }, mLineclockInput{ lineclockInput }, mMainTrigger{ mainTrigger }, mNframes{ nFrames },
-	mWidthPerFrame_pix{ widthPerFrame_pix }, mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }, mFIFOOUTstate{ FIFOOUTstate }
+	mWidthPerFrame_pix{ widthPerFrame_pix }, mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }, mFIFOOUTfpgaState{ FIFOOUTFPGAstate }
 {
 	//Set the imaging parameters
 	mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
@@ -288,7 +288,7 @@ void RTcontrol::Pixelclock::pushUniformDwellTimes_()
 		mPixelclockQ.push_back(FPGAfunc::packPixelclockSinglet(mDwell, 1));
 }
 
-RTcontrol::RTcontrol(const FPGA &fpga) : RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS } {}
+RTcontrol::RTcontrol(const FPGA &fpga) : RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUTfpga::DIS } {}
 
 void RTcontrol::pushQueue(const RTCHAN chan, QU32& queue)
 {
@@ -336,7 +336,7 @@ void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double 
 }
 
 //Set the FPGA output to the first value of the RT control sequence to avoid any discontinuities at the start of the sequence
-void RTcontrol::presetFPGAoutput() const
+void RTcontrol::presetFPGA() const
 {
 	//Read from the FPGA the last voltage in the galvo AO. See the LV implementation
 	std::vector<I16> AOlastVoltage_I16(static_cast<U8>(RTCHAN::NCHAN), 0);
@@ -365,7 +365,7 @@ void RTcontrol::presetFPGAoutput() const
 	}
 	uploadFIFOIN_(vec_queue);		//Load the ramp to the FPGA
 	triggerNRT_();					//Trigger the ramp via non-RT trigger
-	Sleep(10);						//Give the FPGA enought time to settle, otherwise the main sequence that follows may get messed up
+	Sleep(100);						//Give the FPGA enought time to settle (> 5 ms) to avoid presetFPGA() clashing with the subsequent call of uploadRT()
 									//(I realized this after running VS in release-mode, which connects faster to the FPGA than in debug-mode)
 }
 
@@ -403,10 +403,10 @@ void RTcontrol::disableStageTrigAcq() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mFpga.handle(), NiFpga_FPGAvi_ControlU8_MainTriggerSelector, static_cast<U8>(MAINTRIG::PC)));
 }
 
-//Push data from the FPGA to FIFOOUTfpga. Disabled when debugging
-void RTcontrol::enableFIFOOUT() const
+//Enable the FPGA to push the photocounts to FIFOOUTfpga. Disabled when debugging
+void RTcontrol::enableFIFOOUTfpga() const
 {
-	if (mFIFOOUTstate == FIFOOUT::EN)
+	if (mFIFOOUTfpgaState == FIFOOUTfpga::EN)
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
 }
 
@@ -548,6 +548,11 @@ void RTcontrol::setRescannerSetpoint_()
 		mPMT16Xchan = PMT16XCHAN::CENTERED;
 	else
 		mPMT16Xchan = static_cast<RTcontrol::PMT16XCHAN>(g_PMT16Xchan_int);
+}
+
+void RTcontrol::PMTchanToInt_() const
+{
+
 }
 #pragma endregion "RTcontrol"
 

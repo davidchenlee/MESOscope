@@ -47,6 +47,7 @@ private:
 	void startFIFOOUTpc_() const;
 	void configureFIFOOUTpc_(const U32 depth) const;
 	void stopFIFOOUTpc_() const;
+	void triggerRT_() const;
 };
 
 class ImageException : public std::runtime_error
@@ -358,7 +359,7 @@ private:
 	double mVoltagePerDistance;
 	double mVoltageOffset;
 	double mPosMax;
-	double beamletIndex_(RTcontrol::PMT16XCHAN PMT16Xchan_int) const;
+	double beamletIndex_() const;
 };
 
 class Stage

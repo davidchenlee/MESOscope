@@ -20,7 +20,7 @@ Image::~Image()
 	mRTcontrol.disableStageTrigAcq();
 
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
-	//I think this is because FIFOOUT used to remain open and clashed with the following call
+	//I think this is because FIFOOUTpc used to remain open and clashed with the following call
 	stopFIFOOUTpc_();
 
 	delete[] mMultiplexedArrayA;
@@ -37,19 +37,19 @@ U8* const Image::data() const
 //Scan a single frame
 void Image::acquire(const bool saveAllPMT)
 {
-	initializeAcq();
-	mRTcontrol.triggerRT();		//Send a signal to the FPGA to trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
-	downloadData();
-	formImage(saveAllPMT);
+	initializeAcq();		//Preset the parameters for the acquisition sequence
+	triggerRT_();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
+	downloadData();			//Retrieve the data from the FPGA
+	formImage(saveAllPMT);	//Demultiplex the image
 }
 
 //Preset the parameters for the acquisition sequence
 void Image::initializeAcq(const SCANDIR stackScanDir)
 {
-	mRTcontrol.enableFIFOOUT();					//Push data to from the FPGA FIFOOUTfpga. It is disabled when debugging
+	mRTcontrol.enableFIFOOUTfpga();				//Push data to from the FPGA FIFOOUTfpga. It is disabled when debugging
 	mScanDir = stackScanDir;					//Initialize mScanDir
 	mRTcontrol.setStageTrigAcqDelay(mScanDir);	//Set the delay for the stage triggering the ctl&acq sequence
-	mRTcontrol.presetFPGAoutput();				//Preset the ouput of the FPGA
+	mRTcontrol.presetFPGA();					//Preset the ouput of the FPGA
 	mRTcontrol.uploadRT();						//Load the RT control in mVec_queue to be sent to the FPGA
 	startFIFOOUTpc_();							//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
 	collectFIFOOUTpcGarbage_();					//Clean up any residual data from the previous run
@@ -58,7 +58,7 @@ void Image::initializeAcq(const SCANDIR stackScanDir)
 //Retrieve the data from the FPGA
 void Image::downloadData()
 {
-	if (mRTcontrol.mFIFOOUTstate == FIFOOUT::EN)
+	if (mRTcontrol.mFIFOOUTfpgaState == FIFOOUTfpga::EN)
 	{
 		try
 		{
@@ -80,8 +80,8 @@ void Image::formImage(const bool saveAllPMT)
 	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Mirror the odd frames vertically
 }
 
-//To perform continuous scan in x. Different from Image::formImage() because of the way the image is formed
-//Each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and mNframes = half the pixel height of the final image
+//To perform continuous scan in x. Different from Image::formImage() because
+//each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and mNframes = half the pixel height of the final image
 void Image::formImageVerticalStrip(const SCANDIR scanDirX)
 {
 	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
@@ -190,10 +190,8 @@ void Image::readFIFOOUTpc_()
 	int timeout_iter{ 200 };							//Timeout the whileloop if the data transfer fails
 	int nullReadCounterA{ 0 }, nullReadCounterB{ 0 };	//Null reading counters
 
-	//FIFOOUT
 	int nElemTotalA{ 0 }; 					//Total number of elements read from FIFOOUTpc A
 	int nElemTotalB{ 0 }; 					//Total number of elements read from FIFOOUTpc B
-	
 	while (nElemTotalA < mRTcontrol.mNpixPerBeamletAllFrames || nElemTotalB < mRTcontrol.mNpixPerBeamletAllFrames)
 	{
 		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
@@ -389,6 +387,12 @@ void Image::stopFIFOOUTpc_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StopFifo(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StopFifo(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
 	//std::cout << "stopFIFO called\n";
+}
+
+//Send a signal to the FPGA to trigger the RT control.
+void Image::triggerRT_() const
+{
+	mRTcontrol.triggerRT();
 }
 #pragma endregion "Image"
 
@@ -1799,16 +1803,16 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 		//std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
 
 		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
-		positionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + beamletIndex_(mRTcontrol.mPMT16Xchan) * mInterBeamletDistance * mVoltagePerDistance,	OVERRIDE::EN);
+		positionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + beamletIndex_() * mInterBeamletDistance * mVoltagePerDistance,	OVERRIDE::EN);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 	}
 }
 
-double Galvo::beamletIndex_(RTcontrol::PMT16XCHAN PMT16Xchan_int) const
+double Galvo::beamletIndex_() const
 {
-	switch (PMT16Xchan_int)
+	switch (mRTcontrol.mPMT16Xchan)
 	{
 	case RTcontrol::PMT16XCHAN::CH00:
 		return 7.5;
@@ -1872,16 +1876,15 @@ void Galvo::positionLinearRamp(const double timeStep, const double rampLength, c
 //Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with a fixed z)
 void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset, const OVERRIDE override) const
 {
-	//Limit the number of steps for long ramps
-	//Currently, the bottleneck is the buffer of the galvos on the fpga because it only supports 5000 elements
-	//For timeStep = 2 us, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned
+	//Limit the number of steps for long ramps because the buffer of the galvos on the fpga currently only supports 5000 elements
+	//For timeStep = 2 us, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned in a single frame
 	double timeStep;
 	if (mRTcontrol.mHeightPerBeamletPerFrame_pix <= 100)
 		timeStep = 2. * us;
 	else
 		timeStep = 8. * us;
 
-	//The position offset allows to compensate for the slight axis misalignment of the rescanner
+	//The position offset allows to compensate for the axis misalignment of the rescanner wrt the PMT
 	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, g_lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
 		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal, override);
 }

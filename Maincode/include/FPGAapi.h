@@ -44,7 +44,7 @@ public:
 	const FPGA &mFpga;
 	LINECLOCK mLineclockInput;											//Resonant scanner (RS) or Function generator (FG)
 	MAINTRIG mMainTrigger;												//Trigger the acquisition with the z stage: enable (0), disable (1)
-	FIFOOUT mFIFOOUTstate;												//Enable or disable the fpga FIFOOUT
+	FIFOOUTfpga mFIFOOUTfpgaState;										//Enable or disable the FIFOOUTfpga on the FPGA
 	const double mPulsesPerPix{ g_pixelDwellTime / g_laserPulsePeriod };//Max number of laser pulses per pixel
 	const U8 mUpscalingFactor{ static_cast<U8>(255 / mPulsesPerPix) };	//Upscale 4-bit counts to 8-bit range [0-255] for compatibility with ImageJ's standards
 	int mWidthPerFrame_pix;												//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
@@ -54,7 +54,7 @@ public:
 	int mNpixPerBeamletAllFrames;										//Total number of pixels per beamlet in all the frames
 	PMT16XCHAN mPMT16Xchan;												//PMT16X channel to be used
 
-	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUT FIFOOUTstate);
+	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUTfpga FIFOOUTfpgaState);
 	RTcontrol(const FPGA &fpga);
 	RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 	RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
@@ -67,12 +67,12 @@ public:
 	void pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override = OVERRIDE::DIS);
 	void pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor);
 	void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override);
-	void presetFPGAoutput() const;
+	void presetFPGA() const;
 	void uploadRT() const;
 	void triggerRT() const;
 	void enableStageTrigAcq() const;
 	void disableStageTrigAcq() const;
-	void enableFIFOOUT() const;
+	void enableFIFOOUTfpga() const;
 	void setStageTrigAcqDelay(const SCANDIR scanDir) const;
 private:
 	//Private subclass
@@ -99,6 +99,7 @@ private:
 	void triggerNRT_() const;
 	void setPostSequenceTimer_() const;
 	void setRescannerSetpoint_();
+	void PMTchanToInt_() const;
 };
 
 class FPGAexception : public std::runtime_error

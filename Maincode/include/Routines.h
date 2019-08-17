@@ -44,14 +44,16 @@ namespace TestRoutines
 
 	//Data management
 	void convertI16toVolt();
-	void correctImage();
-	void quickStitcher(const FPGA &fpga);
-	void isDark();
-	void vectorOfObjects();
 	void ethernetSpeed();
 	void multithread();
 	void clipU8();
+
+	//Postprocessing
+	void correctImage();
+	void quickStitcher(const FPGA &fpga);
 	void locateSample();
+	void isDark();
+	void vectorOfObjects();
 
 	//Sequence
 	void sequencerConcurrentTest();

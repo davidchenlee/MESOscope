@@ -22,8 +22,8 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
@@ -32,7 +32,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const int nFramesCont{ 10 };	
+		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the axis STAGEZ
 		const double stepSizeZ{ 1.0 * um };
 	
@@ -121,7 +121,7 @@ namespace Routines
 		}
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };
 
 		//LASER
 		VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, whichLaser };
@@ -280,7 +280,7 @@ namespace Routines
 		}
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Note the STAGEZ flag
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };	//Note the STAGEZ flag
 
 		//LASER
 		const double laserPi = detInitialLaserPower(fluorLabel.mScanPi, stackDepth * fluorLabel.mStackPinc, scanDirZ);
@@ -356,7 +356,7 @@ namespace Routines
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
 		//The Image height is 2 (two galvo scanner swings) and nFrames is height_pix/2. Therefore, the total height of the final image is height_pix
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUT::EN };	//Note the STAGEX flag																								
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUTfpga::EN };	//Note the STAGEX flag																								
 
 		//LASER
 		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, fluorLabel.mScanPi, fluorLabel.mScanPi, whichLaser }; //Note that the initial and final laser powers are the same
@@ -457,7 +457,7 @@ namespace Routines
 		if (run)
 		{
 			//CREATE THE REALTIME CONTROL SEQUENCE
-			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };	//Note the STAGEZ flag
+			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };	//Note the STAGEZ flag
 
 			//LASER
 			VirtualLaser virtualLaser{ RTcontrol };
@@ -550,7 +550,7 @@ namespace Routines
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUTfpga::EN };
 
 		//LASER
 		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, Laser::ID::VISION };
@@ -618,7 +618,7 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 	const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 	//CREATE A REALTIME CONTROL SEQUENCE
-	RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
+	RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };
 
 	//RS
 	const ResonantScanner RScanner{ RTcontrol };
@@ -766,7 +766,7 @@ namespace TestRoutines
 
 	void pixelclock(const FPGA &fpga)
 	{
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::STAGEX, 1, 300, 560, FIFOOUT::DIS }; 	//Create a realtime control sequence
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::STAGEX, 1, 300, 560, FIFOOUTfpga::DIS }; 	//Create a realtime control sequence
 		Image image{ RTcontrol };
 		image.initializeAcq();	//Execute the realtime control sequence and acquire the image
 	}
@@ -827,7 +827,7 @@ namespace TestRoutines
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUTfpga::EN };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -877,7 +877,7 @@ namespace TestRoutines
 		const int nFramesCont{ 1 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUTfpga::DIS };
 
 		//GALVOS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
@@ -919,7 +919,7 @@ namespace TestRoutines
 		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the axis STAGEZ
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUT::EN };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };
 
 		//LASER
 		const int wavelength_nm{ 750 };
@@ -1045,7 +1045,7 @@ namespace TestRoutines
 		const int nFramesCont{ 200 };			//Number of frames for continuous acquisition
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::DIS };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUTfpga::DIS };
 
 		//POCKELS CELL
 		const int wavelength_nm{ 750 };
@@ -1096,7 +1096,7 @@ namespace TestRoutines
 		laser.setWavelength(920);
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 100, 300, 400, FIFOOUT::DIS };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 100, 300, 400, FIFOOUTfpga::DIS };
 
 		//RS
 		ResonantScanner RScanner{ RTcontrol };
@@ -1124,111 +1124,6 @@ namespace TestRoutines
 		std::cout << "volt to I16: " << FPGAfunc::voltageToI16(-10) << "\n";
 		std::cout << "int to volt: " << FPGAfunc::intToVoltage(-32768) << "\n";
 		std::cout << "volt to I16 to volt: " << FPGAfunc::intToVoltage(FPGAfunc::voltageToI16(0)) << "\n";
-	}
-
-	void correctImage()
-	{
-		
-		std::string inputFilename{ "Liver_V750nm_P=192.0mW_x=51.500_y=18.300_z=17.7640" };
-		std::string outputFilename{ "output_" + inputFilename };
-		TiffU8 image{ inputFilename };
-		//image.correctRSdistortionGPU(200. * um);	
-		//image.flattenField(1.5);
-		image.suppressCrosstalk(0.2);
-		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-
-		//image.binFrames(5);
-		//image.splitIntoFrames(10);
-		//image.mirrorOddFrames();
-		//image.averageEvenOddFrames();
-
-		/*
-		//Declare and start a stopwatch
-		double duration;
-		auto t_start{ std::chrono::high_resolution_clock::now() };
-		//Stop the stopwatch
-		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-		std::cout << "Elapsed time: " << duration << " ms" << "\n";
-		*/
-		pressAnyKeyToCont();
-	}
-
-	void quickStitcher(const FPGA &fpga)
-	{
-		//RTcontrol RTcontrol{ fpga };
-		//Image image{ RTcontrol };
-		//image.save("empty", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
-		//image.formImageVerticalStrip(SCANDIRX::LEFT);
-
-		//TiffU8 asd{ image.data(), 300, 560 };
-		//std::cout << image.tiff().widthPerFrame_pix() << "\n";
-		//std::cout << image.tiff().heightPerFrame_pix() << "\n";
-
-		std::string outputFilename{ "stitched" };
-		const int width{ 300 };
-		const int height{ 8000 };
-		TiffU8 image00{ "01" };
-		TiffU8 image01{ "02" };
-		TiffU8 image03{ "03" };
-		TiffU8 image04{ "04" };
-
-		QuickStitcher stitched{ width,height, 1, 4 };
-		stitched.push(image00, 0, 0);
-		stitched.push(image01, 0, 1);
-		stitched.push(image03, 0, 2);
-		stitched.push(image04, 0, 3);
-		stitched.saveToFile(outputFilename, OVERRIDE::DIS);
-
-		pressAnyKeyToCont();
-	}
-
-	void isDark()
-	{
-		std::string inputFilename{ "Liver_V750nm_P=7.0mWpum_xi=53.500_xf=49.400_y=22.300_z=17.7840_Step=0.0005" };
-		TiffU8 image{ inputFilename };
-		image.giveBoolMap(0.004, 300, 400);
-
-		pressAnyKeyToCont();
-	}
-
-	void vectorOfObjects()
-	{
-
-		class A
-		{
-		public:
-			A()
-			{
-				mArray = new int[10];
-			}
-			//Copy-constructor
-			A(const A&) {}
-
-			//Assignment-constructor
-			A& operator=(const A&) {}
-
-			//move contructor
-			A(A&& input) : mArray{ input.mArray }
-			{
-				input.mArray = nullptr;
-			}
-			//Move assignment
-			A& operator=(A&& a)
-			{}
-
-			~A()
-			{
-				delete[] mArray;
-			}
-		private:
-			int* mArray;
-		};
-
-		std::unique_ptr<A> a = std::make_unique<A>();
-		//std::vector<std::unique_ptr<A>> vec;
-		//vec.push_back(a);
-
-		pressAnyKeyToCont();
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely
@@ -1300,6 +1195,62 @@ namespace TestRoutines
 		pressAnyKeyToCont();
 	}
 
+	void correctImage()
+	{
+
+		std::string inputFilename{ "Liver_V750nm_P=192.0mW_x=51.500_y=18.300_z=17.7640" };
+		std::string outputFilename{ "output_" + inputFilename };
+		TiffU8 image{ inputFilename };
+		//image.correctRSdistortionGPU(200. * um);	
+		//image.flattenField(1.5);
+		image.suppressCrosstalk(0.2);
+		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+
+		//image.binFrames(5);
+		//image.splitIntoFrames(10);
+		//image.mirrorOddFrames();
+		//image.averageEvenOddFrames();
+
+		/*
+		//Declare and start a stopwatch
+		double duration;
+		auto t_start{ std::chrono::high_resolution_clock::now() };
+		//Stop the stopwatch
+		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+		std::cout << "Elapsed time: " << duration << " ms" << "\n";
+		*/
+		pressAnyKeyToCont();
+	}
+
+	void quickStitcher(const FPGA &fpga)
+	{
+		//RTcontrol RTcontrol{ fpga };
+		//Image image{ RTcontrol };
+		//image.save("empty", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
+		//image.formImageVerticalStrip(SCANDIRX::LEFT);
+
+		//TiffU8 asd{ image.data(), 300, 560 };
+		//std::cout << image.tiff().widthPerFrame_pix() << "\n";
+		//std::cout << image.tiff().heightPerFrame_pix() << "\n";
+
+		std::string outputFilename{ "stitched" };
+		const int width{ 300 };
+		const int height{ 8000 };
+		TiffU8 image00{ "01" };
+		TiffU8 image01{ "02" };
+		TiffU8 image03{ "03" };
+		TiffU8 image04{ "04" };
+
+		QuickStitcher stitched{ width,height, 1, 4 };
+		stitched.push(image00, 0, 0);
+		stitched.push(image01, 0, 1);
+		stitched.push(image03, 0, 2);
+		stitched.push(image04, 0, 3);
+		stitched.saveToFile(outputFilename, OVERRIDE::DIS);
+
+		pressAnyKeyToCont();
+	}
+
 	void locateSample()
 	{
 		std::string outputFilename{ "output" };
@@ -1312,6 +1263,35 @@ namespace TestRoutines
 
 		image.giveBoolMap(0.004, tileWidth_pix, tileHeight_pix);
 		//image.isDark(0.01);
+
+		pressAnyKeyToCont();
+	}
+
+	void isDark()
+	{
+		std::string inputFilename{ "Liver_V750nm_P=7.0mWpum_xi=53.500_xf=49.400_y=22.300_z=17.7840_Step=0.0005" };
+		TiffU8 image{ inputFilename };
+		image.giveBoolMap(0.004, 300, 400);
+
+		pressAnyKeyToCont();
+	}
+
+	void vectorOfObjects()
+	{
+		class A
+		{
+		public:
+			A(const int dummy)
+			{
+				mArray = new int[10];
+			}
+		private:
+			int* mArray;
+		};
+
+		std::vector<A> aaa{ A{2} };
+		A a{ 1 };
+		aaa.push_back(a);
 
 		pressAnyKeyToCont();
 	}
@@ -1522,7 +1502,7 @@ namespace TestRoutines
 		const int wavelength_nm{ 750 };
 
 		//CREATE A REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUT::EN };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUTfpga::EN };
 
 		//LASER
 		const double laserPower{ 30. * mW };

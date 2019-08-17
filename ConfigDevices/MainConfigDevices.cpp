@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 		FPGA fpga;	//Open a FPGA connection
 		try
 		{
-			RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 1, 300, 560, FIFOOUT::DIS };
+			RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, 1, 300, 560, FIFOOUTfpga::DIS };
 			ResonantScanner RS{ RTcontrol };
 			Laser vision{ Laser::ID::VISION };
 			Laser fidelity{ Laser::ID::FIDELITY };

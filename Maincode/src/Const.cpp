@@ -76,7 +76,7 @@ namespace Constants
 	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };		//Delay the z stage triggering the acq sequence
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };
 	//Stage X
-	extern const double	g_STAGEXTrigAcqDelay{18 * ms };				//Delay the z stage triggering the acq sequence. Tune to match the forward and backward scans. It has NOT been fine-tuned with beads
+	extern const double	g_STAGEXTrigAcqDelay{20.5 * ms };				//Delay the z stage triggering the acq sequence. Tune to match the forward and backward scans. It has NOT been fine-tuned with beads
 													
 	//PMT
 	extern const int g_nChanPMT{ 16 };

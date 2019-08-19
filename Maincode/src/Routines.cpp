@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (51.500) * mm, (18.300 )* mm, (17.740) * mm };//Liver TDT
+POSITION3 stackCenterXYZ{ (51.000) * mm, (22.300 )* mm, (17.740) * mm };//Liver TDT
 //double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
 const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
@@ -22,15 +22,15 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the axis STAGEZ
@@ -333,9 +333,9 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const SCANDIR scanDirX{SCANDIR::LEFTWARD };
-		//const SCANDIR scanDirX{ SCANDIR::RIGHTWARD };
-		const int nCol{ 1 };//56
+		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
+		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };//Initial scan direction of stage x
+		const int nCol{ 56 };//56
 		const double FOVslow{ 4.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
 
@@ -352,7 +352,7 @@ namespace Routines
 		//LOCATIONS on the sample to image
 		std::vector<double> stagePositionY;
 		for (int iterLocation = 0; iterLocation < nCol; iterLocation++)
-			stagePositionY.push_back( stackCenterXYZ.YY - iterLocation * 0.150 * mm );
+			stagePositionY.push_back( stackCenterXYZ.YY - iterLocation * 0.150 * mm );//for now, only pushing strip to the right works (moving the stage to the left)
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
 		//The Image height is 2 (two galvo scanner swings) and nFrames is height_pix/2. Therefore, the total height of the final image is height_pix
@@ -371,7 +371,7 @@ namespace Routines
 
 		//STAGES
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-		double stageXi = detInitialPos(stackCenterXYZ.XX - FOVslow / 2, FOVslow, scanDirX);			//Initial x position
+		double stageXi = detInitialPos(stackCenterXYZ.XX - FOVslow / 2, FOVslow, iterScanDirX);		//Initial x position
 		stage.moveXYZ({ stageXi, stackCenterXYZ.YY, stackCenterXYZ.ZZ });							//Move the stage to the initial position
 		stage.waitForMotionToStopAll();
 		Sleep(500);
@@ -382,7 +382,6 @@ namespace Routines
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		const int nLocations{ static_cast<int>(stagePositionY.size()) };
-		SCANDIR iterScanDirX{ scanDirX };		//Stage scan direction
 		QuickStitcher stitchedImage{ width_pix, height_pix, 1, nCol };
 		double stageXf;						//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
@@ -400,11 +399,11 @@ namespace Routines
 			std::cout << "Scanning the stack...\n";
 			stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger the ctl&acq sequence
 			image.downloadData();
-			image.formImageVerticalStrip(scanDirX);
+			image.formImageVerticalStrip(iterScanDirX);
 
 			//image.save("aaa", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::DIS);
 			TiffU8 tmp{ image.data(), width_pix, height_pix };//I tried to access mTiff in image directly but it gives me an error
-			stitchedImage.push(tmp, 0, iterLocation);
+			stitchedImage.push(tmp, 0, iterLocation);//for now, only pushing strip to the right works
 
 			reverseSCANDIR(iterScanDirX);
 		}
@@ -1029,7 +1028,7 @@ namespace TestRoutines
 		//PockelsCell pockels{ pockelsFidelity };
 		pockels.pushPowerSinglet(8 * us, 100. * mW, OVERRIDE::DIS);
 		//pockels.pushPowerSinglet(8 * us, 0 * mW, OVERRIDE::DIS);
-		//pockels.pushVoltageSinglet(8 * us, 5.5 * V, OVERRIDE::DIS);
+		//pockels.pushVoltageSinglet(8 * us, 2.0 * V, OVERRIDE::DIS);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		Image image{ RTcontrol };

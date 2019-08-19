@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
-			//Routines::contScanX(fpga);
+			Routines::contScanX(fpga);
 			//Routines::sequencer(fpga, false);
 			//Routines::liveScan(fpga);
 
@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::stageConfig();
 
 			//TestRoutines::shutter(fpga);
-			TestRoutines::pockels(fpga);
+			//TestRoutines::pockels(fpga);
 			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
@@ -48,6 +48,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::sequencerConcurrentTest();
 			//TestRoutines::locationSequence();
+			//TestRoutines::generateLocationsForBigStitcher();
 
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);
@@ -57,7 +58,6 @@ int main(int argc, char* argv[])
 			//TestRoutines::filterwheel();
 			//TestRoutines::collectorLens();
 			//TestRoutines::photobleach(fpga);
-			//TestRoutines::generateLocationsForBigStitcher();
 
 			//pressAnyKeyToCont();
 		}

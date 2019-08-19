@@ -1151,7 +1151,7 @@ PockelsCell::PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const La
 
 	//Initialize the power softlimit
 #if multibeam
-	mMaxPower = 1000 * mW;//Multibeam		
+	mMaxPower = 1600 * mW;//Multibeam		
 #else	
 	mMaxPower = 150 * mW;//Singlebeam	
 #endif
@@ -1254,9 +1254,10 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 }
 */
 
+// power = powerAmplitude * sin( angularFreq * (V - Vphase))^2 + powerMin;
 double PockelsCell::laserpowerToVolt_(const double power) const
 {
-	double amplitude, angularFreq, phase;		//Calibration parameters
+	double powerAmplitude, powerMin, angularFreq, Vphase;		//Calibration parameters
 
 	//VISION
 	switch (mPockelsRTchan)
@@ -1265,19 +1266,23 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 		switch (mWavelength_nm)
 		{
 		case 750:
-			amplitude = 1600.0 * mW;
+			powerAmplitude = 1600.0 * mW;
+			powerMin = 0 * mW;
 			angularFreq = 0.624 / V;
-			phase = 0.019 * V;
+			Vphase = 0.019 * V;
+
 			break;
 		case 920:
-			amplitude = 1089.0 * mW;
+			powerAmplitude = 1089.0 * mW;
+			powerMin = 0 * mW;
 			angularFreq = 0.507 / V;
-			phase = -0.088 * V;
+			Vphase = -0.088 * V;
 			break;
 		case 1040:
-			amplitude = 388.0 * mW;
+			powerAmplitude = 388.0 * mW;
+			powerMin = 0 * mW;
 			angularFreq = 0.447 / V;
-			phase = 0.038 * V;
+			Vphase = 0.038 * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
@@ -1286,19 +1291,23 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 
 		//FIDELITY
 	case RTcontrol::RTCHAN::FIDELITY:
-		amplitude = 1600 * mW;
-		angularFreq = 0.276 / V;
-		phase = -0.049 * V;
+		powerAmplitude = 1601 * mW;
+		powerMin = 23.0 * mW;
+		angularFreq = 0.284 / V;
+		Vphase = -0.193 * V;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
 	}
 
-	double arg{ sqrt(power / amplitude) };
+	if (power < powerMin)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser min power is " + std::to_string(powerMin) + " mW");
+
+	double arg{ sqrt( (power - powerMin) / powerAmplitude) };
 	if (arg > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The argument of asin must be <= 1");
 
-	return asin(arg) / angularFreq + phase;
+	return asin(arg) / angularFreq + Vphase;
 }
 #pragma endregion "Pockels cells"
 

@@ -3,12 +3,11 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- figure out why the FOV of 16X is slightly different from 1X
 - how to deal with vector of objects containing pointer-arrays?
-- maybe switch to smart pointers for the data. Check the overhead
-- (20190812->) Implement suppressCrosstalk() flattenField() on the GPU
+- Implement suppressCrosstalk() flattenField() on the GPU
 - Multithread demuxAllChannels_()
 - Do a post-sequence clean up routine to set the pockels outputs to 0
+- maybe switch to smart pointers for the data. Check the overhead
 - For the vibratome, show a progress bar for the slicing sequence
 - Maybe install VTK to display tiff images
 
@@ -28,3 +27,5 @@ Code in C++ for controlling the NI USB-7852R card
 - Use an apodizing filter to make the fluorescence emission even for the different beamlets
 - Use a grid mask on the PMT16X to reduce the crosstalk
 - Use motorized actuator on the mirrors that align the Ti-Sapphire laser to the microscope because the laser beam slightly wanders with the wavelength tuning
+- Set up the beads next to the sample holder permanently
+- Use a lower power pockels for Fidelity to have a finer control

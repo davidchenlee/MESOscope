@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (51.500) * mm, (18.300 )* mm, (17.770) * mm };//Liver TDT
+POSITION3 stackCenterXYZ{ (51.500) * mm, (18.300 )* mm, (17.740) * mm };//Liver TDT
 //double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
 const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
@@ -22,15 +22,15 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the axis STAGEZ
@@ -1027,14 +1027,14 @@ namespace TestRoutines
 
 		PockelsCell pockels{ pockelsFidelity };
 		//PockelsCell pockels{ pockelsFidelity };
-		pockels.pushPowerSinglet(8 * us, 300. * mW, OVERRIDE::DIS);
-		//pockels.pushPowerSinglet(8 * us, 0 * mW);
-		//pockels.pushVoltageSinglet(8 * us, 5.5 * V);
+		pockels.pushPowerSinglet(8 * us, 100. * mW, OVERRIDE::DIS);
+		//pockels.pushPowerSinglet(8 * us, 0 * mW, OVERRIDE::DIS);
+		//pockels.pushVoltageSinglet(8 * us, 5.5 * V, OVERRIDE::DIS);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		Image image{ RTcontrol };
 		image.acquire();
-		pressAnyKeyToCont();
+		//pressAnyKeyToCont();
 	}
 
 	void pockelsRamp(const FPGA &fpga)
@@ -1198,12 +1198,13 @@ namespace TestRoutines
 	void correctImage()
 	{
 
-		std::string inputFilename{ "Liver_V750nm_P=192.0mW_x=51.500_y=18.300_z=17.7640" };
+		std::string inputFilename{ "noCrosstalk_Liver_V750nm_P=192.0mW_x=51.500_y=18.300_z=17.7640" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
+		image.correct16XFOVslow(1);
 		//image.correctRSdistortionGPU(200. * um);	
 		//image.flattenField(1.5);
-		image.suppressCrosstalk(0.2);
+		//image.suppressCrosstalk(0.2);
 		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 		//image.binFrames(5);

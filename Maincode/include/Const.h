@@ -39,11 +39,11 @@ namespace Constants
 	struct SAMPLESIZE3 { double XX; double YY; double ZZ; };				//Sample size
 	struct TILEOVERLAP4 { double XX; double YY; double ZZ; };				//Tile overlap fraction
 
-	enum class PMTIN { PMT = false, SIM = true };			//*cast
-	enum class LINECLOCK { RS = false, FG = true  };		//*cast
-	enum class MAINTRIG { PC = 0, STAGEZ = 1, STAGEX = 2 };	//The numbering must match that of LV
-	enum class FPGARESET { DIS = false, EN = true };		//*cast
-	enum class FIFOOUTfpga { DIS = false, EN = true  };		//*cast
+	enum class PMTIN { PMT = false, SIM = true };							//*cast
+	enum class LINECLOCK { RS = false, FG = true  };						//*cast
+	enum class MAINTRIG { PC = 0, STAGEZ = 1, STAGEX = 2 };					//The numbering must match that of LV
+	enum class FPGARESET { DIS = false, EN = true };
+	enum class FIFOOUTfpga { DIS = false, EN = true  };						//*cast
 	enum class TIFFSTRUCT { SINGLEPAGE, MULTIPAGE };
 	enum class OVERRIDE { DIS, EN };
 	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANXY, COLLECTLENS };
@@ -100,7 +100,7 @@ namespace Constants
 
 	extern const int g_nChanPMT;
 	extern const PMTIN g_photocounterInput;
-	extern const int g_nPMTsim;
+	extern const U8 g_nPMTsim;
 	extern const U8 g_PMTsimArray[];
 
 	extern const double g_cLensPos750nm;

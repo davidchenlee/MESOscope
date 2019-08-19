@@ -335,11 +335,11 @@ TiffU8::TiffU8(const std::string filename) : mNframes{ 1 }
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
 	{
 		//Read the tiff one strip at a time
-		for (int rowIndex = 0; rowIndex < mHeightPerFrame_pix; rowIndex++)
+		for (int iterRow = 0; iterRow < mHeightPerFrame_pix; iterRow++)
 		{
-			if (TIFFReadScanline(tiffHandle, buffer, rowIndex, 0) < 0)
+			if (TIFFReadScanline(tiffHandle, buffer, iterRow, 0) < 0)
 				break;
-			std::memcpy(&mArray[(frameIndex * mHeightPerFrame_pix + rowIndex) * mBytesPerLine], buffer, mBytesPerLine);
+			std::memcpy(&mArray[(frameIndex * mHeightPerFrame_pix + iterRow) * mBytesPerLine], buffer, mBytesPerLine);
 		}
 		TIFFReadDirectory(tiffHandle);
 	}
@@ -501,10 +501,10 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, TIFFTAG_ImageJ.c_str());
 
 		//Write a frame to the file one strip at a time
-		for (int rowIndex = 0; rowIndex < height_pix; rowIndex++)
+		for (int iterRow = 0; iterRow < height_pix; iterRow++)
 		{
-			std::memcpy(buffer, &mArray[(frameIndex * height_pix + rowIndex) * mBytesPerLine], mBytesPerLine);
-			if (TIFFWriteScanline(tiffHandle, buffer, rowIndex, 0) < 0)
+			std::memcpy(buffer, &mArray[(frameIndex * height_pix + iterRow) * mBytesPerLine], mBytesPerLine);
+			if (TIFFWriteScanline(tiffHandle, buffer, iterRow, 0) < 0)
 				break;
 		}
 		TIFFWriteDirectory(tiffHandle); //Create a page structure. This gives a large overhead
@@ -531,10 +531,10 @@ void TiffU8::mirrorOddFrames()
 		for (int frameIndex = 1; frameIndex < mNframes; frameIndex += 2)
 		{
 			//Swap the first and last rows of the sub-image, then do the second and second last rows, etc
-			for (int rowIndex = 0; rowIndex < mHeightPerFrame_pix / 2; rowIndex++)
+			for (int iterRow = 0; iterRow < mHeightPerFrame_pix / 2; iterRow++)
 			{
-				const int eneTene{ frameIndex * mHeightPerFrame_pix + rowIndex };				//Swap this row
-				const int moneMei{ (frameIndex + 1) * mHeightPerFrame_pix - rowIndex - 1 };		//With this one
+				const int eneTene{ frameIndex * mHeightPerFrame_pix + iterRow };				//Swap this row
+				const int moneMei{ (frameIndex + 1) * mHeightPerFrame_pix - iterRow - 1 };		//With this one
 				std::memcpy(buffer, &mArray[eneTene*mBytesPerLine], mBytesPerLine);
 				std::memcpy(&mArray[eneTene*mBytesPerLine], &mArray[moneMei*mBytesPerLine], mBytesPerLine);
 				std::memcpy(&mArray[moneMei*mBytesPerLine], buffer, mBytesPerLine);
@@ -557,10 +557,10 @@ void TiffU8::mirror()
 	U8 *buffer = new U8[mBytesPerLine];		//Buffer used to store a row of pixels
 
 	//Swap the first and last rows of the sub-image, then do the second and second last rows, etc
-	for (int rowIndex = 0; rowIndex < mHeightPerFrame_pix / 2; rowIndex++)
+	for (int IterRow = 0; IterRow < mHeightPerFrame_pix / 2; IterRow++)
 	{
-		const int eneTene{ rowIndex };									//Swap this row
-		const int moneMei{ mHeightPerFrame_pix - rowIndex - 1 };		//With this one
+		const int eneTene{ IterRow };									//Swap this row
+		const int moneMei{ mHeightPerFrame_pix - IterRow - 1 };		//With this one
 		std::memcpy(buffer, &mArray[eneTene*mBytesPerLine], mBytesPerLine);
 		std::memcpy(&mArray[eneTene*mBytesPerLine], &mArray[moneMei*mBytesPerLine], mBytesPerLine);
 		std::memcpy(&mArray[moneMei*mBytesPerLine], buffer, mBytesPerLine);
@@ -688,9 +688,9 @@ double TiffU8::giveTileAverage_(const int tileWidth_pix, const int tileHeight_pi
 	const int nPixPerTile{ tileWidth_pix * tileHeight_pix };		//Number of pixels in a tile
 
 	int sum{ 0 };
-	for (int rowIndex = tileRowIndex * tileHeight_pix; rowIndex < (tileRowIndex + 1) * tileHeight_pix; rowIndex++)
-		for (int colIndex = tileColIndex * tileWidth_pix; colIndex < (tileColIndex + 1) * tileWidth_pix; colIndex++)
-			sum += mArray[rowIndex * mWidthPerFrame_pix + colIndex];
+	for (int iterRow = tileRowIndex * tileHeight_pix; iterRow < (tileRowIndex + 1) * tileHeight_pix; iterRow++)
+		for (int iterCol = tileColIndex * tileWidth_pix; iterCol < (tileColIndex + 1) * tileWidth_pix; iterCol++)
+			sum += mArray[iterRow * mWidthPerFrame_pix + iterCol];
 	return sum / nPixPerTile;
 }
 
@@ -837,7 +837,7 @@ void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* input
 }
 
 //Correct the image distortion induced by the nonlinear scanning of the RS
-//Correction code based on Martin's algorithm, https://github.com/mpicbg-csbd/scancorrect, mweigert@mpi-cbg.de
+//Code based on Martin's algorithm, https://github.com/mpicbg-csbd/scancorrect, mweigert@mpi-cbg.de
 //OpenCL code based on http://simpleopencl.blogspot.com/2013/06/tutorial-simple-start-with-opencl-and-c.html
 void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 {
@@ -949,7 +949,7 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	queue.finish();
 
 	//Read correctedArray from the device
-	unsigned char* correctedArray{ new unsigned char[nPixAllFrames] };
+	unsigned char* correctedArray = new unsigned char[nPixAllFrames];
 	queue.enqueueReadBuffer(buffer_correctedArray, CL_TRUE, 0, sizeof(unsigned char) * nPixAllFrames, correctedArray);
 
 	double debugger;
@@ -984,14 +984,14 @@ inline U8 interpolateU8(float lam, const U8  &val1, const U8 &val2)
 }
 
 //Correct the image distortion induced by the nonlinear scanning of the RS
-//Correction code based on Martin's algorithm, https://github.com/mpicbg-csbd/scancorrect, mweigert@mpi-cbg.de
+//Code based on Martin's algorithm, https://github.com/mpicbg-csbd/scancorrect, mweigert@mpi-cbg.de
 void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 {
 	if (FFOVfast <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
 
 	const int nPixAllFrames{ mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes };
-	U8* correctedArray{ new U8[nPixAllFrames] };
+	U8* correctedArray = new U8[nPixAllFrames];
 
 	//Start and stop time of the RS scan that define FFOVfast
 	const double t1{ 0.5 * (g_lineclockHalfPeriod - mWidthPerFrame_pix * g_pixelDwellTime) };
@@ -1019,7 +1019,7 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 	const float PI_float{ static_cast<float>(PI) };
 
 	// precompute the mapping of the fast coordinate (k)
-	float *kk_precomputed{ new float[mWidthPerFrame_pix] };
+	float *kk_precomputed = new float[mWidthPerFrame_pix];
 	for (int k = 0; k < mWidthPerFrame_pix; k++) {
 		const float x{ 1.f * k / (mWidthPerFrame_pix - 1.f) };
 		const float a{ 1.f - 2 * xbar1 - 2 * (xbar2 - xbar1) * x };
@@ -1029,19 +1029,56 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 	}
 	
 # pragma omp parallel for schedule(dynamic)
-	for (int rowIndex = 0; rowIndex < mHeightPerFrame_pix * mNframes; rowIndex++) {
+	for (int iterRow = 0; iterRow < mHeightPerFrame_pix * mNframes; iterRow++) {
 		for (int k = 0; k < mWidthPerFrame_pix; k++) {
 			const float kk_float{ kk_precomputed[k] };
 			const int kk{ static_cast<int>(std::floor(kk_float)) };
 			const int kk1{ clip(kk, 0, mWidthPerFrame_pix - 1) };
 			const int kk2{ clip(kk + 1, 0, mWidthPerFrame_pix - 1) };
-			const U8 value1{ mArray[rowIndex * mWidthPerFrame_pix + kk1] };	//Read from the input array
-			const U8 value2{ mArray[rowIndex * mWidthPerFrame_pix + kk2] };	//Read from the input array
-			correctedArray[rowIndex * mWidthPerFrame_pix + k] = interpolateU8(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
+			const U8 value1{ mArray[iterRow * mWidthPerFrame_pix + kk1] };	//Read from the input array
+			const U8 value2{ mArray[iterRow * mWidthPerFrame_pix + kk2] };	//Read from the input array
+			correctedArray[iterRow * mWidthPerFrame_pix + k] = interpolateU8(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
 		}
 	}
 
 	delete[] kk_precomputed;
+	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
+	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
+}
+
+void TiffU8::correct16XFOVslow(const double FFOVslow)
+{
+	if (FFOVslow <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
+
+	const int nPixAllFrames{ mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes };
+	U8* correctedArray = new U8[nPixAllFrames];
+
+	//Normalized variables
+	const float xbar2{ 1.007f };
+	const float xbar1{ 1.f - xbar2 };
+
+	// precompute the mapping of the slow coordinate (k)
+	float *kk_precomputed = new float[mHeightPerFrame_pix];
+	for (int k = 0; k < mHeightPerFrame_pix; k++) {
+		const float x{ 1.f * k / (mHeightPerFrame_pix - 1.f) };
+		const float xnew{ xbar1 + (xbar2 - xbar1) * x };
+		kk_precomputed[k] = xnew * (mHeightPerFrame_pix - 1.f);
+	}
+
+//# pragma omp parallel for schedule(dynamic)
+	for (int iterCol = 0; iterCol < mWidthPerFrame_pix; iterCol++) {
+		for (int k = 0; k < mHeightPerFrame_pix; k++) {
+			const float kk_float{ kk_precomputed[k] };
+			const int kk{ static_cast<int>(std::floor(kk_float)) };
+			const int kk1{ clip(kk, 0, mHeightPerFrame_pix - 1) };
+			const int kk2{ clip(kk + 1, 0, mHeightPerFrame_pix - 1) };
+			const U8 value1{ mArray[kk1 * mWidthPerFrame_pix + iterCol] };	//Read from the input array
+			const U8 value2{ mArray[kk2 * mWidthPerFrame_pix + iterCol] };	//Read from the input array
+			correctedArray[k * mWidthPerFrame_pix + iterCol] = interpolateU8(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
+		}
+	}
+
 	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
@@ -1200,9 +1237,9 @@ bool TiffU8::isDark(const double threshold) const
 		for (int iterTileCol = 0; iterTileCol < 2; iterTileCol++)
 		{
 			int sum{ 0 };
-			for (int rowIndex = iterTileRow * halfHeight; rowIndex < (iterTileRow + 1) * halfHeight; rowIndex++)
-				for (int colIndex = iterTileCol * halfwidth; colIndex < (iterTileCol + 1) * halfwidth; colIndex++)
-					sum += mArray[rowIndex * mWidthPerFrame_pix + colIndex];
+			for (int iterRow = iterTileRow * halfHeight; iterRow < (iterTileRow + 1) * halfHeight; iterRow++)
+				for (int iterCol = iterTileCol * halfwidth; iterCol < (iterTileCol + 1) * halfwidth; iterCol++)
+					sum += mArray[iterRow * mWidthPerFrame_pix + iterCol];
 			vec_sum.push_back(sum);
 		}
 

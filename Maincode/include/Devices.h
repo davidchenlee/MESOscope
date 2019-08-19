@@ -359,7 +359,7 @@ private:
 	double mVoltagePerDistance;
 	double mVoltageOffset;
 	double mPosMax;
-	double beamletIndex_() const;
+	double singlebeamVoltageOffset() const;
 };
 
 class Stage

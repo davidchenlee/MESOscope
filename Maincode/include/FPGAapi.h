@@ -39,7 +39,7 @@ class RTcontrol
 {
 public:
 	enum class RTCHAN { PIXELCLOCK, SCANGALVO, RESCANGALVO, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };				//NCHAN = number of RT channels available including the channel for the pixelclock
-	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED };		//*cast
+	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED };		//*cast but not relevant, only for debugging
 
 	const FPGA &mFpga;
 	LINECLOCK mLineclockInput;											//Resonant scanner (RS) or Function generator (FG)
@@ -99,7 +99,6 @@ private:
 	void triggerNRT_() const;
 	void setPostSequenceTimer_() const;
 	void setRescannerSetpoint_();
-	void PMTchanToInt_() const;
 };
 
 class FPGAexception : public std::runtime_error

@@ -166,8 +166,16 @@ void FPGA::close(const FPGARESET reset) const
 {
 	//Closes the session to the FPGA. The FPGA resets (Re-downloads the FPGA bitstream to the target, the outputs go to zero)
 	//unless either another session is still open or you use the NiFpga_CloseAttribute_NoResetIfLastSession attribute.
-	//0 resets, 1 does not reset
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_Close(mHandle, !static_cast<bool>(reset)));
+	uint32_t resetFlag;
+	switch (reset)
+	{
+	case FPGARESET::EN:
+		resetFlag = 0;
+		break;
+	case FPGARESET::DIS:
+		resetFlag = 1;
+	}
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_Close(mHandle, resetFlag));	//Arg of NiFpga_Close(): 0 to resets, 1 does not reset
 
 	if (reset == FPGARESET::EN)
 		std::cout << "The FPGA has been successfully reset\n";
@@ -189,7 +197,7 @@ void FPGA::initializeFpga_() const
 
 	//PMT simulator for debugging
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlBool_PhotocounterInputSelector, static_cast<bool>(g_photocounterInput)));	//Use the PMT simulator as the input of the photocounters
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_nPMTsim, static_cast<U8>(g_nPMTsim)));									//Size of g_PMTsimArray
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_nPMTsim, g_nPMTsim));													//Size of g_PMTsimArray
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mHandle, NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, g_PMTsimArray, g_nPMTsim));					//Array that simulates the pulses from the PMTs
 
 	//FIFOIN
@@ -365,7 +373,7 @@ void RTcontrol::presetFPGA() const
 	}
 	uploadFIFOIN_(vec_queue);		//Load the ramp to the FPGA
 	triggerNRT_();					//Trigger the ramp via non-RT trigger
-	Sleep(100);						//Give the FPGA enought time to settle (> 5 ms) to avoid presetFPGA() clashing with the subsequent call of uploadRT()
+	Sleep(10);						//Give the FPGA enought time to settle (> 5 ms) to avoid presetFPGA() clashing with the subsequent call of uploadRT()
 									//(I realized this after running VS in release-mode, which connects faster to the FPGA than in debug-mode)
 }
 
@@ -548,11 +556,6 @@ void RTcontrol::setRescannerSetpoint_()
 		mPMT16Xchan = PMT16XCHAN::CENTERED;
 	else
 		mPMT16Xchan = static_cast<RTcontrol::PMT16XCHAN>(g_PMT16Xchan_int);
-}
-
-void RTcontrol::PMTchanToInt_() const
-{
-
 }
 #pragma endregion "RTcontrol"
 

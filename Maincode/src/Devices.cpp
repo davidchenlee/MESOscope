@@ -1286,7 +1286,7 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 
 		//FIDELITY
 	case RTcontrol::RTCHAN::FIDELITY:
-		amplitude = 1000 * mW;
+		amplitude = 1600 * mW;
 		angularFreq = 0.276 / V;
 		phase = -0.049 * V;
 		break;
@@ -1803,54 +1803,73 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 		//std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
 
 		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
-		positionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + beamletIndex_() * mInterBeamletDistance * mVoltagePerDistance,	OVERRIDE::EN);
+		positionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + singlebeamVoltageOffset(), OVERRIDE::EN);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 	}
 }
 
-double Galvo::beamletIndex_() const
+double Galvo::singlebeamVoltageOffset() const
 {
+	double beamletIndex;
 	switch (mRTcontrol.mPMT16Xchan)
 	{
 	case RTcontrol::PMT16XCHAN::CH00:
-		return 7.5;
+		beamletIndex =  7.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH01:
-		return 6.5;
+		beamletIndex = 6.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH02:
-		return 5.5;
+		beamletIndex = 5.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH03:
-		return 4.5;
+		beamletIndex = 4.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH04:
-		return 3.5;
+		beamletIndex = 3.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH05:
-		return 2.5;
+		beamletIndex = 2.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH06:
-		return 1.5;
+		beamletIndex = 1.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH07:
-		return 0.5;
+		beamletIndex = 0.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH08:
-		return -0.5;
+		beamletIndex = -0.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH09:
-		return -1.5;
+		beamletIndex = -1.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH10:
-		return -2.5;
+		beamletIndex = -2.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH11:
-		return -3.5;
+		beamletIndex = -3.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH12:
-		return -4.5;
+		beamletIndex = -4.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH13:
-		return -5.5;
+		beamletIndex = -5.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH14:
-		return -6.5;
+		beamletIndex = -6.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CH15:
-		return -7.5;
+		beamletIndex = -7.5;
+		break;
 	case RTcontrol::PMT16XCHAN::CENTERED:
-		return 0.0;
+		beamletIndex = 0.0;//No offset ("centered") for multibeam
+		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected PMT16X channel unavailable");
 	}
+	return beamletIndex * mInterBeamletDistance * mVoltagePerDistance;
 }
 
 void Galvo::voltageToZero() const

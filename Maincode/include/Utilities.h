@@ -28,8 +28,8 @@ int SCANDIRtoInt(const SCANDIR scanDir);
 void reverseSCANDIR(SCANDIR &scanDir);
 double detInitialPos(const double posMin, const double travel, const SCANDIR scanDir);
 double detFinalPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
-double detInitialLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDir);
-double detFinalLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDir);
+double detInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
+double detFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
 
 //For saving the parameters to a text file
 class Logger

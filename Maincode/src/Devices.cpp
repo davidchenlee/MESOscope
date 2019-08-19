@@ -46,13 +46,12 @@ void Image::acquire(const bool saveAllPMT)
 //Preset the parameters for the acquisition sequence
 void Image::initializeAcq(const SCANDIR stackScanDir)
 {
-	mRTcontrol.enableFIFOOUTfpga();				//Push data to from the FPGA FIFOOUTfpga. It is disabled when debugging
-	mScanDir = stackScanDir;					//Initialize mScanDir
-	mRTcontrol.setStageTrigAcqDelay(mScanDir);	//Set the delay for the stage triggering the ctl&acq sequence
-	mRTcontrol.presetFPGA();					//Preset the ouput of the FPGA
-	mRTcontrol.uploadRT();						//Load the RT control in mVec_queue to be sent to the FPGA
-	startFIFOOUTpc_();							//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
-	collectFIFOOUTpcGarbage_();					//Clean up any residual data from the previous run
+	mRTcontrol.enableFIFOOUTfpga();		//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
+	iniStageContScan_(stackScanDir);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
+	mRTcontrol.runFPGAiniRamp();		//Preset the ouput of the FPGA and load the FPGA with the RT control sequence
+	mRTcontrol.uploadRT();				//Upload the main RT control sequence to the FPGA
+	startFIFOOUTpc_();					//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
+	collectFIFOOUTpcGarbage_();			//Clean up any residual data from the previous run
 }
 
 //Retrieve the data from the FPGA
@@ -84,8 +83,9 @@ void Image::formImage(const bool saveAllPMT)
 //each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and mNframes = half the pixel height of the final image
 void Image::formImageVerticalStrip(const SCANDIR scanDirX)
 {
+	const bool saveAllPMT{ false };
 	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
-	demultiplex_(false);		//Copy the chuncks of data to mTiff
+	demultiplex_(saveAllPMT);	//Copy the chuncks of data to mTiff
 	mTiff.mergeFrames();		//Set mNframes = 1 to treat mArray as a single image	
 
 	//Mirror the entire image if a reversed scan was performed
@@ -131,6 +131,12 @@ void Image::binFrames(const int nFramesPerBin)
 void Image::save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const
 {
 	mTiff.saveToFile(filename, pageStructure, override, mScanDir);
+}
+
+void Image::iniStageContScan_(const SCANDIR stackScanDir)
+{
+	mScanDir = stackScanDir;					//Initialize mScanDir to set the stage-trigger delay and stack-saving order
+	mRTcontrol.setStageTrigAcqDelay(mScanDir);	//Set the delay for the stage triggering the ctl&acq sequence
 }
 
 //Flush the residual data in FIFOOUTpc from the previous run, if any
@@ -404,16 +410,16 @@ ResonantScanner::ResonantScanner(const RTcontrol &RTcontrol) : mRTcontrol{ RTcon
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
-		mFillFactor = sin(PI / 2 * temporalFillFactor);						//Note that the fill factor doesn't depend on the RS amplitude
-																			//because the RS period is always the same and independent of the amplitude
+		mFillFactor = sin(PI / 2 * temporalFillFactor);					//Note that the fill factor doesn't depend on the RS amplitude
+																		//because the RS period is always the same and independent of the amplitude
 
-	//std::cout << "Fill factor = " << mFillFactor << "\n";					//For debugging
+	//std::cout << "Fill factor = " << mFillFactor << "\n";				//For debugging
 
 	//Download the current control voltage from the FPGA and update the scan parameters
-	mControlVoltage = downloadControlVoltage();								//Control voltage
-	mFullScan = mControlVoltage / mVoltagePerDistance;						//Full scan FOV = distance between the turning points
-	mFFOV = mFullScan * mFillFactor;										//FFOV
-	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;						//Spatial sampling resolution (length/pixel)
+	mControlVoltage = downloadControlVoltage();							//Control voltage
+	mFullScan = mControlVoltage / mVoltagePerDistance;					//Full scan FOV = distance between the turning points
+	mFFOV = mFullScan * mFillFactor;									//FFOV
+	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;					//Spatial sampling resolution (length/pixel)
 }
 
 //Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
@@ -2293,7 +2299,7 @@ void Stage::printStageConfig(const Axis axis, const DIOCHAN chan) const
 	std::cout << "Vel = " << vel / mmps << " mm/s\n\n";
 }
 
-//DO1 and DO2 of STAGEZ are used to trigger the stack acquisition. Currently only DO2 is used as trigger. See the implementation on LV
+//DO1 and DO2 of z-stage are used to trigger the stack acquisition. Currently only DO2 is used as trigger. See the implementation on LV
 void Stage::configDOtriggers_() const
 {
 

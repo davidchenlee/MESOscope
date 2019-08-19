@@ -35,8 +35,9 @@ private:
 	U32* mMultiplexedArrayA;				//Buffer array to read FIFOOUTpc A
 	U32* mMultiplexedArrayB;				//Buffer array to read FIFOOUTpc B
 	TiffU8 mTiff;							//Tiff that stores the content of mMultiplexedArrayA and mMultiplexedArrayB
-	SCANDIR mScanDir{ SCANDIR::UPWARD };
+	SCANDIR mScanDir{ SCANDIR::UPWARD };	//Scan direction of the stage for continuous scan
 
+	void iniStageContScan_(const SCANDIR stackScanDir);
 	void collectFIFOOUTpcGarbage_() const;
 	void readFIFOOUTpc_();
 	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);

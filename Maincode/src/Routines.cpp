@@ -1,7 +1,7 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (51.000) * mm, (22.300 )* mm, (17.740) * mm };//Liver TDT
+POSITION3 stackCenterXYZ{ (51.000) * mm, (17.300 )* mm, (17.740) * mm };//Liver TDT
 //double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
 const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
@@ -24,16 +24,16 @@ namespace Routines
 	{
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the starting position
-		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the axis STAGEZ stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
-		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the axis STAGEX stepwise
+		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
+		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the x-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const int nFramesCont{ 1 };	
-		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the axis STAGEZ
+		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the z-stage axis
 		const double stepSizeZ{ 1.0 * um };
 	
 		const double pixelSizeXY{ 0.5 * um };
@@ -335,7 +335,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };//Initial scan direction of stage x
-		const int nCol{ 56 };//56
+		const int nCol{ 4 };//56
 		const double FOVslow{ 4.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
 
@@ -352,7 +352,7 @@ namespace Routines
 		//LOCATIONS on the sample to image
 		std::vector<double> stagePositionY;
 		for (int iterLocation = 0; iterLocation < nCol; iterLocation++)
-			stagePositionY.push_back( stackCenterXYZ.YY - iterLocation * 0.150 * mm );//for now, only pushing strip to the right works (moving the stage to the left)
+			stagePositionY.push_back( stackCenterXYZ.YY - iterLocation * 0.150 * mm );//for now, only stacking strips to the right works (i.e. move the stage to the left)
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
 		//The Image height is 2 (two galvo scanner swings) and nFrames is height_pix/2. Therefore, the total height of the final image is height_pix
@@ -425,7 +425,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
 		const int nFramesCont{ 200 };																	//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double pixelSizeZ{ 0.5 * um };															//Step size in the axis STAGEZ
+		const double pixelSizeZ{ 0.5 * um };															//Step size in the z-stage axis
 		const ROI4 roi{ 11.000 * mm, 34.825 * mm, 11.180 * mm, 35.025 * mm };							//Region of interest {ymin, xmin, ymax, xmax}
 		const TILEOVERLAP4 stackOverlap_frac{ 0.05, 0.05, 0.05 };										//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
@@ -449,7 +449,7 @@ namespace Routines
 		const Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, pixelSizeZ, nFramesCont, stackOverlap_frac };
 		//Sequence sequece(sample, stack);
-		Sequence sequence{ sample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 10, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {STAGEX, STAGEY}
+		Sequence sequence{ sample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 10, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {x-stage, y-stage}
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
@@ -610,8 +610,8 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 
 	//STACK
 	const FFOV2 FFOV{ FFOVslow, FFOVfast };								//Full FOV in the (slow axis, fast axis)
-	const double stepSizeZ{ 1.0 * um };									//Step size in the axis STAGEZ
-	const double stackDepthZ{ 40. * um };								//Acquire a stack this deep in the axis STAGEZ
+	const double stepSizeZ{ 1.0 * um };									//Step size in the z-stage axis
+	const double stackDepthZ{ 40. * um };								//Acquire a stack this deep in the z-stage axis
 	const int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
 	const double3 stackOverlap_frac{ 0.03, 0.03, 0.03 };				//Stack overlap
 	const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
@@ -915,7 +915,7 @@ namespace TestRoutines
 #endif
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the axis STAGEZ
+		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the z-stage axis
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };
@@ -1319,7 +1319,7 @@ namespace TestRoutines
 		const int heightPerFrame_pix{ 400 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };
 		const int nFramesCont{ 80 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };										//Step size in the axis STAGEZ
+		const double stepSizeZ{ 0.5 * um };										//Step size in the z-stage axis
 		const ROI4 roi{ 9.950 * mm, 34.850 * mm, 10.150 * mm, 35.050 * mm };	//Region of interest {ymin, xmin, ymax, xmax}
 		const TILEOVERLAP4 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };							//height to cut above the bottom of the stack
@@ -1400,7 +1400,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const FFOV2 FFOV{ 200. * um, 150. * um };
 		const int nDiffZ{ 100 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };									//Step size in the axis STAGEZ
+		const double stepSizeZ{ 0.5 * um };									//Step size in the z-stage axis
 		const TILEOVERLAP4 stackOverlap_frac{ 0.05, 0.05, 0.05 };			//Stack overlap
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 

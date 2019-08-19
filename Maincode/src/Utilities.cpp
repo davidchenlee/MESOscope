@@ -136,21 +136,21 @@ void reverseSCANDIR(SCANDIR &scanDir)
 {
 	switch (scanDir)
 	{
-	//STAGEX
+	//x-stage
 	case SCANDIR::LEFTWARD:
 		scanDir =  SCANDIR::RIGHTWARD;
 		break;
 	case SCANDIR::RIGHTWARD:
 		scanDir =  SCANDIR::LEFTWARD;
 		break;
-	//STAGEY
+	//y-stage
 	case SCANDIR::OUTWARD:
 		scanDir =  SCANDIR::INWARD;
 		break;
 	case SCANDIR::INWARD:
 		scanDir =  SCANDIR::OUTWARD;
 		break;
-	//STAGEZ
+	//z-stage
 	case SCANDIR::DOWNWARD:
 		scanDir =  SCANDIR::UPWARD;
 		break;
@@ -199,9 +199,11 @@ double detFinalPos(const double posMin, const double travel, const double travel
 	}
 }
 
-double detInitialLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDirZ)
+//The initial laser power for scanning a stack depends on whether the stack is imaged from the top down or from the bottom up
+//totalPowerInc is the total increase and NOT the increase per unit of length
+double detInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
 {
-	if (powerMin < 0 || powerInc < 0)
+	if (powerMin < 0 || totalPowerInc < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
 
 	switch (scanDirZ)
@@ -209,21 +211,22 @@ double detInitialLaserPower(const double powerMin, const double powerInc, const 
 	case SCANDIR::UPWARD:
 		return powerMin;
 	case SCANDIR::DOWNWARD:
-		return powerMin + powerInc;
+		return powerMin + totalPowerInc;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
 	}
 }
 
-double detFinalLaserPower(const double powerMin, const double powerInc, const SCANDIR scanDirZ)
+//totalPowerInc is the total increase and NOT the increase per unit of length
+double detFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
 {
-	if (powerMin < 0 || powerInc < 0)
+	if (powerMin < 0 || totalPowerInc < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
 
 	switch (scanDirZ)
 	{
 	case SCANDIR::UPWARD:
-		return powerMin + powerInc;
+		return powerMin + totalPowerInc;
 	case SCANDIR::DOWNWARD:
 		return powerMin;
 	default:

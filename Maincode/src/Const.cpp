@@ -42,7 +42,7 @@ namespace Constants
 															//This is for triggering the pockels and rescanner slightly earlier and adjusting the timing by via delay
 	extern const double g_linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
 															//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered
-	extern const double g_postSequenceTimer{ 200 * ms };	//Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence. Enabled only if a stage acts as the main trigger
+	extern const double g_postSequenceTimer{ 100 * ms };	//Time after the sequence ends because the motion monitor of the z stage bounces and false-triggers the acq sequence. Enabled only if a stage acts as the main trigger
 	extern const double g_stageDebounceTimer{ 20. * ms};	//Stage motion monitor debouncer
 	extern const int g_FIFOtimeout_tick{ 100 };				//Timeout of the all the FIFOS on the FPGA
 	extern const int g_FIFOINmax{ 32773 };					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the LV implementation on the FPGA!
@@ -76,7 +76,8 @@ namespace Constants
 	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };		//Delay the z stage triggering the acq sequence
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };
 	//Stage X
-	extern const double	g_STAGEXTrigAcqDelay{20.5 * ms };				//Delay the z stage triggering the acq sequence. Tune to match the forward and backward scans. It has NOT been fine-tuned with beads
+	extern const double	g_STAGEXTrigAcqDelay{18.0 * ms };				//Delay the z stage triggering the acq sequence to match the forward and backward scans
+																		//Currently, the delay depends on the FOV in the x-stage axis
 													
 	//PMT
 	extern const int g_nChanPMT{ 16 };

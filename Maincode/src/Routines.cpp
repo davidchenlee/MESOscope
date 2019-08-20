@@ -1,20 +1,20 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (38.800) * mm, (20.700)* mm, (20.095 * mm ) };
+POSITION3 stackCenterXYZ{ (38.500) * mm, (25.000)* mm, (20.180 * mm ) };
 const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 25. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
-Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(12. * mW), multiply16X(0.09 * mWpum) } }} };
-//Sample liverDAPI{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "DAPI", 750, multiply16X(12. * mW), multiply16X(0.09 * mWpum) } }} };
+Sample liver{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(12. * mW), multiply16X(0.09 * mWpum) } }} };
+//Sample liverDAPI{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "DAPI", 750, multiply16X(12. * mW), multiply16X(0.09 * mWpum) } }} };
 
 #else
-Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
-Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
-Sample fluorSlide{ "fluorBlue", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
-Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
+Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
+Sample beads05um{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
+Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
+Sample liver{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
 //Sample liverDAPI{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{ "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
 #endif
 Sample currentSample{ liver };
@@ -331,15 +331,15 @@ namespace Routines
 	void contScanX(const FPGA &fpga)
 	{
 		if (multibeam)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Continuous x-stage scanning for single beam only");
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Continuous x-stage scanning available for single beam only");
 
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };//Initial scan direction of stage x
-		const int nCol{ 1 };//56
-		const double FOVslow{ 7.0 * mm };
+		const int nCol{ 47 };//
+		const double FOVslow{ 4.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
 
 		const int width_pix{ 300 };
@@ -395,8 +395,8 @@ namespace Routines
 			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations << "\n";
 			stage.moveXY({ stageXi, stagePositionY.at(iterLocation) });
 			stage.waitForMotionToStopAll();
-			Sleep(100);//IMPORTANT!!! Give more time to Image to upload the sequence
 
+			Sleep(300);//If the stage triggers the ctl&acq too soon, the acq will fail
 			Image image{ RTcontrol };
 			image.initializeAcq();
 			std::cout << "Scanning the stack...\n";
@@ -1525,7 +1525,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (22.600) * mm };
+		const double slicePlaneZ{ (22.600 + 0.100) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

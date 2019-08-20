@@ -54,7 +54,7 @@ void Image::initializeAcq(const SCANDIR stackScanDir)
 	mRTcontrol.uploadRT();				//Upload the main RT control sequence to the FPGA
 	startFIFOOUTpc_();					//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
 	collectFIFOOUTpcGarbage_();			//Clean up any residual data from the previous run
-	Sleep(20);							//When continuous scanning, collectFIFOOUTpcGarbage() is being called late. Maybe this will fix it
+	//Sleep(20);							//When continuous scanning, collectFIFOOUTpcGarbage() is being called late. Maybe this will fix it
 }
 
 //Retrieve the data from the FPGA

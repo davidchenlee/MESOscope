@@ -48,10 +48,13 @@ void Image::initializeAcq(const SCANDIR stackScanDir)
 {
 	mRTcontrol.enableFIFOOUTfpga();		//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
 	iniStageContScan_(stackScanDir);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
-	mRTcontrol.runFPGAiniRamp();		//Preset the ouput of the FPGA and load the FPGA with the RT control sequence
+	mRTcontrol.FPGAinitializationRamp();//Preset the ouput of the FPGA and load the FPGA with the RT control sequence
+	Sleep(10);							//Give the FPGA enough time to settle (> 5 ms) to avoid FPGAinitializationRamp() clashing with the subsequent call of uploadRT()
+										//(I realized this after running VS in release-mode, which connects faster to the FPGA than in debug-mode)
 	mRTcontrol.uploadRT();				//Upload the main RT control sequence to the FPGA
 	startFIFOOUTpc_();					//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
 	collectFIFOOUTpcGarbage_();			//Clean up any residual data from the previous run
+	Sleep(20);							//When continuous scanning, collectFIFOOUTpcGarbage() is being called late. Maybe this will fix it
 }
 
 //Retrieve the data from the FPGA
@@ -1584,9 +1587,12 @@ void VirtualLaser::CombinedLasers::tuneLaserWavelength(const int wavelength_nm)
 	if (mCurrentLaser == Laser::ID::VISION)
 		mVision.setWavelength(wavelength_nm);
 
-	//Update the pockels handler to initialize or update the laser power
-	//The pockels destructor is made to close the uniblitz shutter automatically for switching from VISION to FIDELITY or viceversa without photobleaching the sample, and also for tuning VISION's wavelength
-	mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));
+	//For the first call, assign a pointer to mPockelsPtr. For the subsequent calls, destroy the pockels object when switching wavelengths (including switching between lasers) to avoid photobleaching the sample (the pockels
+	//destructor closes the shutter)
+	if(mPockelsPtr == nullptr)
+		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));
+	else if(currentWavelength_nm() != wavelength_nm)
+		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));
 }
 
 void VirtualLaser::CombinedLasers::setPower(const double initialPower, const double finalPower) const
@@ -2360,7 +2366,7 @@ void Vibratome::pushStartStopButton() const
 
 void Vibratome::slice(const double planeToCutZ)
 {
-	mStage.setVelXYZ(mStageConveyingVelXYZ);																		//Change the velocity to move the sample to the vibratome
+	mStage.setVelXYZ(mStageConveyingVelXYZ);													//Change the velocity to move the sample to the vibratome
 	mStage.moveXYZ({ mStageInitialSlicePosXY.XX, mStageInitialSlicePosXY.YY, planeToCutZ });	//Position the sample in front of the vibratome's blade
 	mStage.waitForMotionToStopAll();
 
@@ -2368,7 +2374,7 @@ void Vibratome::slice(const double planeToCutZ)
 	pushStartStopButton();													//Turn on the vibratome
 	mStage.moveSingle(Stage::YY, mStageFinalSlicePosY);						//Slice the sample: move the stage y towards the blade
 	mStage.waitForMotionToStopSingle(Stage::YY);							//Wait until the motion ends
-	mStage.setVelSingle(Stage::YY, mStageConveyingVelXYZ.YY);	//Set back the y vel to move the sample back to the microscope
+	mStage.setVelSingle(Stage::YY, mStageConveyingVelXYZ.YY);				//Set back the y vel to move the sample back to the microscope
 
 	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));				//Move the stage y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
 	//mStage.waitForMotionToStopSingle(Y);									//Wait until the motion ends

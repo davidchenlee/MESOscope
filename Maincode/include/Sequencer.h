@@ -89,7 +89,9 @@ public:
 			Action::MoveStage moveStage;
 			Action::AcqStack acqStack;
 			Action::CutSlice cutSlice;
-		} mCommand;
+		} mParam;
+
+		Commandline(const Action::ID action);
 
 		std::string printHeader() const;
 		std::string printHeaderUnits() const;

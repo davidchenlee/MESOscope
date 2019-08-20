@@ -175,6 +175,7 @@ class Laser
 public:
 	enum class ID { VISION, FIDELITY, AUTO };
 	std::string laserName;
+
 	Laser(const ID whichLaser);
 	~Laser();
 	Laser(const Laser&) = delete;				//Disable copy-constructor
@@ -420,7 +421,7 @@ private:
 class Vibratome
 {
 public:
-	const POSITION2 mStageInitialSlicePosXY{ -53. * mm, 8. * mm };	//Position the stages in front oh the vibratome's blade
+	const POSITION2 mStageInitialSlicePosXY{ -60. * mm, 8. * mm };	//Position the stages in front oh the vibratome's blade
 	const double mStageFinalSlicePosY{ 27. * mm };					//Final position of the y stage after slicing
 	
 	Vibratome(const FPGA &fpga, Stage &stage);

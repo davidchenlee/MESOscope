@@ -344,7 +344,7 @@ void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double 
 }
 
 //Ramp up or down the AO for the scanner and rescanner from the current voltage to the first value of the control sequence in mVec_queue to avoid any discontinuities at the start of the sequence
-void RTcontrol::runFPGAiniRamp() const
+void RTcontrol::FPGAinitializationRamp() const
 {
 	//Read the current voltage of the AOs for the scanner and rescanner. See the LV implementation
 	std::vector<I16> AOlastVoltage_I16(static_cast<U8>(RTCHAN::NCHAN), 0);
@@ -360,8 +360,8 @@ void RTcontrol::runFPGAiniRamp() const
 			//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 			if ((iterChan == static_cast<U8>(RTCHAN::SCANGALVO) || iterChan == static_cast<U8>(RTCHAN::RESCANGALVO)))	//Only do GALVO1 and GALVO2 for now
 			{
-				const double Vi = FPGAfunc::intToVoltage(AOlastVoltage_I16.at(iterChan));							//Current voltage of the AO outputs
-				const double Vf = FPGAfunc::intToVoltage(static_cast<I16>(mVec_queue.at(iterChan).front()));		//First element of the new RT control sequence
+				const double Vi = FPGAfunc::intToVoltage(AOlastVoltage_I16.at(iterChan));								//Current voltage of the AO outputs
+				const double Vf = FPGAfunc::intToVoltage(static_cast<I16>(mVec_queue.at(iterChan).front()));			//First element of the new RT control sequence
 
 				FPGAfunc::linearRamp(vec_queue.at(iterChan), 10 * us, 5 * ms, Vi, Vf);
 				//For debugging
@@ -372,8 +372,6 @@ void RTcontrol::runFPGAiniRamp() const
 	}
 	uploadFIFOIN_(vec_queue);		//Upload the initialization ramp to the FPGA
 	triggerNRT_();					//Trigger the initialization ramp via non-RT trigger
-	Sleep(10);						//Give the FPGA enought time to settle (> 5 ms) to avoid runFPGAiniRamp() clashing with the subsequent call of uploadRT()
-									//(I realized this after running VS in release-mode, which connects faster to the FPGA than in debug-mode)
 }
 
 //Upload the main RT control sequence to the FPGA

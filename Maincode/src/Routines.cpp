@@ -1,18 +1,21 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (51.000) * mm, (17.300 )* mm, (17.740) * mm };//Liver TDT
-//double3 stackCenterXYZ{ (32.000) * mm, 19.100 * mm, (17.520 + 0.020) * mm };//Liver WT
+POSITION3 stackCenterXYZ{ (38.800) * mm, (20.700)* mm, (20.095 * mm ) };
 const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
+const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 25. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
-Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(60. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(12. * mW), multiply16X(0.09 * mWpum) } }} };
+Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(12. * mW), multiply16X(0.09 * mWpum) } }} };
+//Sample liverDAPI{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "DAPI", 750, multiply16X(12. * mW), multiply16X(0.09 * mWpum) } }} };
+
 #else
 Sample beads4um{ "Beads4um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
 Sample beads05um{ "Beads1um", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
 Sample fluorSlide{ "fluorBlue", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
-Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 10. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 7. * mW, 0.09 * mWpum }}} };
+Sample liver{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
+//Sample liverDAPI{ "Liver", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{ "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
 #endif
 Sample currentSample{ liver };
 
@@ -23,8 +26,8 @@ namespace Routines
 	void stepwiseScan(const FPGA &fpga)
 	{
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the x-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
@@ -246,7 +249,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };			//Scan direction for imaging in z
 		const int nFramesPerBin{ 1 };							//For averaging
-		const double stackDepth{ 40. * um };
+		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 0.5 * um  };
 
 		const int nFramesCont{ static_cast<int>(stackDepth / pixelSizeZafterBinning * nFramesPerBin) };		//Number of frames for continuous acquisition
@@ -314,8 +317,8 @@ namespace Routines
 
 		virtualLaser.closeShutter();	//Close the shutter manually even though the destructor does it because the data processing could take a long time
 		image.formImage();
-		image.correctImage(RScanner.mFFOV);
 		image.binFrames(nFramesPerBin);
+		image.correctImage(RScanner.mFFOV);
 
 		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) +
 			"mWpum_x=" + toString(stackCenterXYZ.XX / mm, 3) + "_y=" + toString(stackCenterXYZ.YY / mm, 3) +
@@ -335,8 +338,8 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };//Initial scan direction of stage x
-		const int nCol{ 4 };//56
-		const double FOVslow{ 4.0 * mm };
+		const int nCol{ 1 };//56
+		const double FOVslow{ 7.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
 
 		const int width_pix{ 300 };
@@ -427,10 +430,11 @@ namespace Routines
 		const int nFramesCont{ 200 };																	//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double pixelSizeZ{ 0.5 * um };															//Step size in the z-stage axis
 		const ROI4 roi{ 11.000 * mm, 34.825 * mm, 11.180 * mm, 35.025 * mm };							//Region of interest {ymin, xmin, ymax, xmax}
-		const TILEOVERLAP4 stackOverlap_frac{ 0.05, 0.05, 0.05 };										//Stack overlap
+		const TILEOVERLAP4 stackOverlap_frac{ 0.03, 0.03, 0.03 };										//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };														//Sample thickness
-		const double sampleSurfaceZ{ stackCenterXYZ.ZZ - nFramesCont * pixelSizeZ / 2 };				//For beads, center the stack around stackCenterXYZ.at(Z)
+		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
+		//for BEADS -----> //const double sampleSurfaceZ{ stackCenterXYZ.ZZ - nFramesCont * pixelSizeZ / 2 };				//For beads, center the stack around stackCenterXYZ.at(Z)
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -449,7 +453,7 @@ namespace Routines
 		const Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, pixelSizeZ, nFramesCont, stackOverlap_frac };
 		//Sequence sequece(sample, stack);
-		Sequence sequence{ sample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 10, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {x-stage, y-stage}
+		Sequence sequence{ sample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 2, 2 } }; //The last 2 parameters: stack center and number of stacks in axes {x-stage, y-stage}
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
@@ -493,15 +497,15 @@ namespace Routines
 				switch (commandline.mAction)
 				{
 				case Action::ID::MOV://Move the x and y stages to mStackCenterXY
-					stackCenterXY = commandline.mCommand.moveStage.mStackCenterXY;
+					stackCenterXY = commandline.mParam.moveStage.mStackCenterXY;
 					stage.moveXY(stackCenterXY);
 					stage.waitForMotionToStopAll();
 					break;
 				case Action::ID::ACQ://Acquire a stack
-					Action::AcqStack acqStack{ commandline.mCommand.acqStack };
+					Action::AcqStack acqStack{ commandline.mParam.acqStack };
 
-					//Update the laser parameters if needed
-					virtualLaser.configure(acqStack.mWavelength_nm);				//When switching pockels, the class destructor closes the uniblitz shutter
+					//Update the laser parameters
+					virtualLaser.configure(acqStack.mWavelength_nm);				//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
 					virtualLaser.setPower(acqStack.mScanPi, acqStack.scanPf());
 					virtualLaser.openShutter();										//Re-open the Uniblitz shutter if closed by the pockels destructor
 					rescanner.reconfigure(&virtualLaser);							//The calibration of the rescanner depends on the laser and wavelength being used
@@ -521,7 +525,7 @@ namespace Routines
 					image.save(longName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 					break;
 				case Action::ID::CUT://Move the stage to the vibratome and then cut a slice off
-					POSITION3 stagePositionXYZ{ commandline.mCommand.cutSlice.mBladePositionXY };
+					POSITION3 stagePositionXYZ{ commandline.mParam.cutSlice.mBladePositionXY };
 					//IMPLEMENT THE SLICING HERE!
 					break;
 				default:
@@ -1419,7 +1423,7 @@ namespace TestRoutines
 	void generateLocationsForBigStitcher()
 	{
 		// X is vertical and Y is horizontal, to match the directions of the XYZ stage
-		const INDICES2 nStacksIJ{ 30, 28 };
+		const INDICES2 nStacksIJ{ 2, 2 };
 		const int tileShiftX_pix{ 543 };
 		const int tileShiftY_pix{ 291 };
 
@@ -1441,7 +1445,7 @@ namespace TestRoutines
 	//Snake pattern starting from the bottom right of the sample and going up
 	INDICES2 nTileToArrayIndices(const int nTile)
 	{
-		const INDICES2 nStacksXY{ 30, 28 };
+		const INDICES2 nStacksXY{ 2, 2 };
 
 		int nx;
 		int ny{ nTile / nStacksXY.II };
@@ -1521,14 +1525,14 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (23.640 + 0.050) * mm };
+		const double slicePlaneZ{ (22.600) * mm };
 
-		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };
 		vibratome.slice(slicePlaneZ);
 
-		const POSITION3 samplePosition{ 0. * mm, 0. * mm, slicePlaneZ };
-		stage.moveXYZ(stackCenterXYZ);
+		const POSITION3 samplePosition{ 0. * mm, 23. * mm, slicePlaneZ };
+		stage.moveXYZ(samplePosition);
 	}
 
 	void filterwheel()

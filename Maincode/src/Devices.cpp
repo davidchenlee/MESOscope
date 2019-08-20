@@ -46,6 +46,8 @@ void Image::acquire(const bool saveAllPMT)
 //Preset the parameters for the acquisition sequence
 void Image::initializeAcq(const SCANDIR stackScanDir)
 {
+	mTiff.setNframes(mRTcontrol.mNframes);//Ugly hack for running the sequencer. binFrames() changes mNframes of mTiff. Reset it back
+
 	mRTcontrol.enableFIFOOUTfpga();		//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
 	iniStageContScan_(stackScanDir);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
 	mRTcontrol.FPGAinitializationRamp();//Preset the ouput of the FPGA and load the FPGA with the RT control sequence
@@ -1577,22 +1579,22 @@ void VirtualLaser::CombinedLasers::isLaserInternalShutterOpen() const
 void VirtualLaser::CombinedLasers::tuneLaserWavelength(const int wavelength_nm)
 {
 	//Select the laser to be used: VISION or FIDELITY
-	mCurrentLaser = autoSelectLaser_(wavelength_nm);
+	Laser::ID newLaser = autoSelectLaser_(wavelength_nm);
 
 	std::stringstream msg;
-	msg << "Using " << laserNameToString_(mCurrentLaser) << " at " << wavelength_nm << " nm\n";
+	msg << "Using " << laserNameToString_(newLaser) << " at " << wavelength_nm << " nm\n";
 	std::cout << msg.str();
 
+	if(mPockelsPtr == nullptr)	//For the first call, assign a pointer to mPockelsPtr
+		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, newLaser));
+	else if(currentWavelength_nm() != wavelength_nm || mCurrentLaser != newLaser)//For the subsequent calls, destroy the pockels object when switching wavelengths (including switching between lasers) to avoid photobleaching the sample (the pockels destructor closes the shutter)
+		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, newLaser));
+
 	//If VISION is selected, set the new wavelength
-	if (mCurrentLaser == Laser::ID::VISION)
+	if (newLaser == Laser::ID::VISION)
 		mVision.setWavelength(wavelength_nm);
 
-	//For the first call, assign a pointer to mPockelsPtr. For the subsequent calls, destroy the pockels object when switching wavelengths (including switching between lasers) to avoid photobleaching the sample (the pockels
-	//destructor closes the shutter)
-	if(mPockelsPtr == nullptr)
-		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));
-	else if(currentWavelength_nm() != wavelength_nm)
-		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, mCurrentLaser));
+	mCurrentLaser = newLaser;
 }
 
 void VirtualLaser::CombinedLasers::setPower(const double initialPower, const double finalPower) const

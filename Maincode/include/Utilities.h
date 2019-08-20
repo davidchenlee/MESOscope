@@ -75,6 +75,7 @@ public:
 	void correct16XFOVslow(const double FFOVfast);
 	void suppressCrosstalk(const double crosstalkRatio = 1.0);
 	void flattenField(const double maxScaleFactor = 1.0);
+	void setNframes(const int nFrames);
 private:
 	U8* mArray;
 	int mWidthPerFrame_pix;

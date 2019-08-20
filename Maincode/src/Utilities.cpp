@@ -637,7 +637,7 @@ void TiffU8::binFrames(const int nFramesPerBin)
 
 	//nFramesPerBin must be a divisor of mNframes
 	if (mNframes%nFramesPerBin != 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The bin size  must be a divisor of the total number of frames " + std::to_string(mNframes));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The bin size must be a divisor of the total number of frames " + std::to_string(mNframes));
 
 	//If mNframes = 1, there is only a single image. If nFramesPerBin = 1, no average is performed and the stack remains the same
 	if (mNframes > 1 && nFramesPerBin > 1)
@@ -1142,6 +1142,12 @@ void TiffU8::flattenField(const double maxScaleFactor)
 		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
 				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
+}
+
+//To be called by Image::initializeAcq() as an ugly hack
+void TiffU8::setNframes(const int nFrames)
+{
+	mNframes = nFrames;
 }
 #pragma endregion "TiffU8"
 

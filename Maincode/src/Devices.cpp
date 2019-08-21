@@ -531,7 +531,7 @@ PMT16X::~PMT16X()
 	mSerial->close();
 }
 
-void PMT16X::readAllGain() const
+void PMT16X::readAllGains() const
 {
 	std::vector<uint8_t> parameters{ sendCommand_({'I'}) };
 
@@ -631,12 +631,12 @@ void PMT16X::suppressGainsLinearly(const double scaleFactor, const RTcontrol::PM
 	std::vector<uint8_t> gains(g_nChanPMT, static_cast<uint8_t>(std::round(gainMin)));
 
 	//Line interpolating CH00-CH07
-	for (int iterChan = 0; iterChan < PMT16XCHANtoInt_(lowerChan) + 1; iterChan++)
-		gains.at(iterChan) = static_cast<uint8_t>(std::round( -lowerSlope * iterChan + gainMax));
+	for (int chanIndex = 0; chanIndex < PMT16XCHANtoInt_(lowerChan) + 1; chanIndex++)
+		gains.at(chanIndex) = static_cast<uint8_t>(std::round( -lowerSlope * chanIndex + gainMax));
 	
 	//Line interpolating  CH08-CH15
-	for (int iterChan = PMT16XCHANtoInt_(higherChan); iterChan < g_nChanPMT; iterChan++)
-		gains.at(iterChan) = static_cast<uint8_t>(std::round( higherSlope * (iterChan - (g_nChanPMT - 1)) + gainMax));
+	for (int chanIndex = PMT16XCHANtoInt_(higherChan); chanIndex < g_nChanPMT; chanIndex++)
+		gains.at(chanIndex) = static_cast<uint8_t>(std::round( higherSlope * (chanIndex - (g_nChanPMT - 1)) + gainMax));
 
 	//For debugging
 	//for (int iterChan = 0; iterChan < g_nChanPMT; iterChan++)

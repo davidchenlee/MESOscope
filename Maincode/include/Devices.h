@@ -97,7 +97,7 @@ public:
 	PMT16X(PMT16X&&) = delete;					//Disable move constructor
 	PMT16X& operator=(PMT16X&&) = delete;		//Disable move-assignment constructor
 
-	void readAllGain() const;
+	void readAllGains() const;
 	void setSingleGain(const RTcontrol::PMT16XCHAN chan, const int gain) const;
 	void setAllGainToZero() const;
 	void setAllGains(const int gain) const;

@@ -1118,6 +1118,37 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
 
+void TiffU8::flattenField(const double scaleFactor, const int lowerChan, const int higherChan)
+{
+	if (scaleFactor < 1.0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The scale factor must be >= 1.0");
+
+	const double lowerSlope{ (scaleFactor - 1.0) / lowerChan };
+	const double higherSlope{ (scaleFactor - 1.0) / ((g_nChanPMT - 1) - higherChan) };
+
+
+	std::vector<double> vec_upscalingFactors(g_nChanPMT, 1.0);
+
+	for (int chanIndex = 0; chanIndex <= lowerChan; chanIndex++)
+		vec_upscalingFactors.at(chanIndex) = -lowerSlope * chanIndex + scaleFactor;
+
+	for (int chanIndex = higherChan; chanIndex < g_nChanPMT; chanIndex++)
+		vec_upscalingFactors.at(chanIndex) = higherSlope * (chanIndex - (g_nChanPMT - 1)) + scaleFactor;
+
+	//For debugging
+	//for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
+		//std::cout << "upscaling " << chanIndex << " = " << vec_upscalingFactors.at(chanIndex) << "\n";
+
+
+	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };				//Number of pixels in a single frame
+	const int nPixStrip{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
+	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
+		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
+			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
+				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
+}
+
+/*
 //Upscale the channel n = 0, 1, ..., 15 by (1 + (sqrt(factor) - 1) * |n/7.5 - 1|)^2
 void TiffU8::flattenField(const double maxScaleFactor)
 {
@@ -1143,6 +1174,8 @@ void TiffU8::flattenField(const double maxScaleFactor)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
 				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
 }
+*/
+
 
 //To be called by Image::initializeAcq() as an ugly hack
 void TiffU8::setNframes(const int nFrames)

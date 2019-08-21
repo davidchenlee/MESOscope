@@ -1,14 +1,14 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (45.000 * mm), (20.000)* mm, (18.835 * mm ) };
+POSITION3 stackCenterXYZ{ (45.000 * mm), (20.300)* mm, (18.835 * mm ) };
 const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.09 * mWpum) } }} };
-Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(70. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(60. * mW), multiply16X(0.40 * mWpum) } }} };
+Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(60. * mW), multiply16X(0.40 * mWpum) } }} };
 
 #else
 //Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
@@ -25,11 +25,8 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//PMT16X PMT;
-		//PMT.suppressGainsLinearly(1.0, RTcontrol::PMT16XCHAN::CH04, RTcontrol::PMT16XCHAN::CH11);
-
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the x-stage axis stepwise
@@ -253,7 +250,7 @@ namespace Routines
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in z
 		const int nFramesPerBin{ 2 };																	//For binning
 		const double stackDepth{ 100. * um };
-		const double pixelSizeZafterBinning{ 0.5 * um  };
+		const double pixelSizeZafterBinning{ 1.0 * um  };
 
 		const int nFrames{ static_cast<int>(stackDepth / pixelSizeZafterBinning * nFramesPerBin) };		//Number of frames BEFORE binning for continuous acquisition
 		const double pixelSizeZbeforeBinning{ stackDepth / nFrames };									//Pixel size per z frame
@@ -426,7 +423,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const int nFramesPerBin{ 2 };																	//Number of frames for continuous acquisition
 		const double stackDepth{ 100. * um };
-		const double pixelSizeZafterBinning{ 0.5 * um };												//Step size in the z-stage axis
+		const double pixelSizeZafterBinning{ 1.0 * um };												//Step size in the z-stage axis
 		
 		const int nFramesAfterBinning{ static_cast<int>(stackDepth / pixelSizeZafterBinning) };
 		const int nFramesBeforeBinning{ nFramesAfterBinning * nFramesPerBin };							//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail														
@@ -1209,13 +1206,13 @@ namespace TestRoutines
 	void correctImage()
 	{
 
-		std::string inputFilename{ "Liver20190812_02_F1040nm_Pi=1120.0mW_Pinc=0.0mWpum_x=45.000_y=20.000_zi=18.8310_zf=18.8310_Step=0.0010 (2)" };
+		std::string inputFilename{ "Liver20190812_02_F1040nm_P=800.0mW_Pinc=0.0mWpum_x=45.000_y=20.300_zi=18.8290_zf=18.9390_Step=0.0010 (2)" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		//image.correct16XFOVslow(1);
 		//image.correctRSdistortionGPU(200. * um);	
-		image.flattenField(2.0);
-		//image.suppressCrosstalk(0.2);
+		//image.flattenField(2.0, 4, 11);
+		image.suppressCrosstalk(0.2);
 		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 		//image.binFrames(5);
@@ -1231,7 +1228,7 @@ namespace TestRoutines
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 		*/
-		//pressAnyKeyToCont();
+		pressAnyKeyToCont();
 	}
 
 	void quickStitcher(const FPGA &fpga)
@@ -1473,9 +1470,9 @@ namespace TestRoutines
 		//pmt.setSingleGain(PMT16XCHAN::CH00, 170);
 		//PMT.setAllGains(255);
 		//PMT.readTemp();
-		//PMT.readAllGain();
+		PMT.readAllGains();
 		
-		PMT.suppressGainsLinearly(0.4, RTcontrol::PMT16XCHAN::CH05, RTcontrol::PMT16XCHAN::CH10);
+		//PMT.suppressGainsLinearly(0.4, RTcontrol::PMT16XCHAN::CH05, RTcontrol::PMT16XCHAN::CH10);
 		
 		/*
 		//To make the count from all the channels similar,

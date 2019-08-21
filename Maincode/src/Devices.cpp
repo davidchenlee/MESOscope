@@ -56,7 +56,7 @@ void Image::initializeAcq(const SCANDIR stackScanDir)
 	mRTcontrol.uploadRT();				//Upload the main RT control sequence to the FPGA
 	startFIFOOUTpc_();					//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
 	collectFIFOOUTpcGarbage_();			//Clean up any residual data from the previous run
-	//Sleep(20);							//When continuous scanning, collectFIFOOUTpcGarbage() is being called late. Maybe this will fix it
+	//Sleep(20);						//When continuous scanning, collectFIFOOUTpcGarbage() is being called late. Maybe this will fix it
 }
 
 //Retrieve the data from the FPGA
@@ -1212,6 +1212,9 @@ void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
 	//Push the scaling factors
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1 + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
+
+	//Enable scaling the pockels on the FPGA (see the LV implementation)
+	mRTcontrol.enablePockelsScaling();
 }
 
 //Linearly scale the laser power from the first to the last frame
@@ -1238,6 +1241,9 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 		//Push the scaling factors for the frames
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1 + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
 	}
+
+	//Enable scaling the pockels on the FPGA (see the LV implementation)
+	mRTcontrol.enablePockelsScaling();
 }
 
 void PockelsCell::setShutter(const bool state) const

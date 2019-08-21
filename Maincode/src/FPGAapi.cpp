@@ -223,7 +223,8 @@ void FPGA::initializeFpga_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(g_linegateTimeout / us * g_tickPerUs)));				//Timeout the trigger of the control sequence
 
 	//POCKELS CELLS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));														//Enable gating the pockels by framegate. For debugging purposes
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));														//Enable or disable gating the pockels by framegate. For debugging purposes
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsScalingFactorEnable, false));														//Enable or disable scaling the pockels output. Disabled by default
 
 	//VIBRATOME
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_VTstart, false));
@@ -416,7 +417,13 @@ void RTcontrol::enableFIFOOUTfpga() const
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
 }
 
-//Set the delay for the stage triggering the ctl&acq sequence
+void RTcontrol::enablePockelsScaling() const
+{
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_PockelsScalingFactorEnable, true));
+}
+	
+
+//Set the delay for the stages triggering the ctl&acq sequence
 void RTcontrol::setStageTrigAcqDelay(const SCANDIR scanDir) const
 {
 	double stageTrigAcqDelay{ 0 };

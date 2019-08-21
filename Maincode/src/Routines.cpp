@@ -1,22 +1,21 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (39.450) * mm, (23.300)* mm, (20.910 * mm ) };
+POSITION3 stackCenterXYZ{ (45.000 * mm), (23.000)* mm, (18.825 * mm ) };
 const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
-//Sample liver{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.09 * mWpum) } }} };
-Sample liverDAPITDT{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.09 * mWpum) } }} };
-Sample liverDAPI{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.09 * mWpum) } }} };
+//Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.09 * mWpum) } }} };
+Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(60. * mW), multiply16X(0.40 * mWpum) } }} };
 
 #else
-Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
-Sample beads05um{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
-Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
-Sample liver{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
-Sample liverDAPI{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{{ "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
+//Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
+//Sample beads05um{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
+//Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
+//Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
+Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "DAPI", 750, 50. * mW, 0.40 * mWpum }}} };
 #endif
 Sample currentSample{ liverDAPITDT };
 
@@ -26,15 +25,15 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the x-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the z-stage axis
@@ -249,7 +248,7 @@ namespace Routines
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };			//Scan direction for imaging in z
-		const int nFramesPerBin{ 1 };							//For averaging
+		const int nFramesPerBin{ 1 };						//For averaging
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 0.5 * um  };
 
@@ -335,7 +334,7 @@ namespace Routines
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Continuous x-stage scanning available for single beam only");
 
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };//Initial scan direction of stage x
@@ -460,7 +459,7 @@ namespace Routines
 		const Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, pixelSizeZafterBinning, nFramesAfterBinning, stackOverlap_frac };
 		//Sequence sequece(sample, stack);
-		Sequence sequence{ sample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 1, 1 } }; //The last 2 parameters: stack center and number of stacks in axes {x-stage, y-stage}
+		Sequence sequence{ sample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 2, 2 } }; //The last 2 parameters: stack center and number of stacks in axes {x-stage, y-stage}
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
@@ -493,7 +492,6 @@ namespace Routines
 			POSITION2 stackCenterXY;
 			std::string longName;
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
-				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
 				Sequence::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 				//commandline.printParameters();
@@ -1218,13 +1216,13 @@ namespace TestRoutines
 	void correctImage()
 	{
 
-		std::string inputFilename{ "Liver20190812_01_F1040nm_P=800.0mW_Pinc=0.0mWpum_x=39.500_y=23.100_zi=20.9440_zf=21.0540_Step=0.0005 (2)" };
+		std::string inputFilename{ "Liver20190812_02_F1040nm_P=800.0mW_Pinc=0.0mWpum_x=45.000_y=20.000_zi=18.8640_zf=18.9740_Step=0.0005 (1)" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		//image.correct16XFOVslow(1);
 		//image.correctRSdistortionGPU(200. * um);	
 		image.flattenField(2.0);
-		image.suppressCrosstalk(0.2);
+		//image.suppressCrosstalk(0.2);
 		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 		//image.binFrames(5);
@@ -1542,7 +1540,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (22.000) * mm };
+		const double slicePlaneZ{ (20.000) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

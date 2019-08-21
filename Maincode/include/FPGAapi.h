@@ -73,6 +73,7 @@ public:
 	void enableStageTrigAcq() const;
 	void disableStageTrigAcq() const;
 	void enableFIFOOUTfpga() const;
+	void enablePockelsScaling() const;
 	void setStageTrigAcqDelay(const SCANDIR scanDir) const;
 private:
 	//Private subclass

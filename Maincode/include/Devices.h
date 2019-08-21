@@ -100,8 +100,9 @@ public:
 	void readAllGain() const;
 	void setSingleGain(const RTcontrol::PMT16XCHAN chan, const int gain) const;
 	void setAllGainToZero() const;
-	void setAllGain(const int gain) const;
-	void setAllGain(std::vector<uint8_t> gains) const;
+	void setAllGains(const int gain) const;
+	void setAllGains(std::vector<uint8_t> gains) const;
+	void suppressGainsLinearly(const double scaleFactor, const RTcontrol::PMT16XCHAN lowerChan, const RTcontrol::PMT16XCHAN higherChan) const;
 	void readTemp() const;
 private:
 	std::unique_ptr<serial::Serial> mSerial;
@@ -112,6 +113,7 @@ private:
 
 	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index) const;		//The PMT requires a sumcheck. Refer to the manual
 	std::vector<uint8_t> sendCommand_(std::vector<uint8_t> command) const;
+	int PMT16XCHANtoInt_(const RTcontrol::PMT16XCHAN chan) const;
 };
 
 class Filterwheel

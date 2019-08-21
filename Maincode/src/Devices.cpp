@@ -578,7 +578,7 @@ void PMT16X::setAllGainToZero() const
 		std::cout << "All PMT16X gains successfully set to 0\n";
 }
 
-void PMT16X::setAllGain(const int gain) const
+void PMT16X::setAllGains(const int gain) const
 {
 	if (gain < 0 || gain > 255)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X gain must be in the range [0-255]");
@@ -593,7 +593,7 @@ void PMT16X::setAllGain(const int gain) const
 		std::cout << "Warning in " + (std::string)__FUNCTION__ + ": CheckSum mismatch\n";
 }
 
-void PMT16X::setAllGain(std::vector<uint8_t> gains) const
+void PMT16X::setAllGains(std::vector<uint8_t> gains) const
 {
 	//Check that the inputVector parameters are within range
 	if (gains.size() != g_nChanPMT)
@@ -615,7 +615,34 @@ void PMT16X::setAllGain(std::vector<uint8_t> gains) const
 	std::cout << "PMT16X gains successfully set to:\n";
 	for (int ii = 1; ii <= g_nChanPMT; ii++)
 		std::cout << "Gain #" << ii << " (0-255) = " << static_cast<int>(parameters.at(ii)) << "\n";
+}
 
+void PMT16X::suppressGainsLinearly(const double scaleFactor, const RTcontrol::PMT16XCHAN lowerChan, const RTcontrol::PMT16XCHAN higherChan) const
+{
+	//Check that the inputVector parameters are within range
+	if (scaleFactor < 0 || scaleFactor > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The scale factor must be in the range [0-1.0]");
+
+	const int gainMax{ 255 };
+	const double gainMin{ scaleFactor * gainMax };
+	const double lowerSlope{ (gainMax - gainMin) / (PMT16XCHANtoInt_(lowerChan)) };
+	const double higherSlope{ (gainMax - gainMin) / ((g_nChanPMT - 1) - PMT16XCHANtoInt_(higherChan)) };
+
+	std::vector<uint8_t> gains(g_nChanPMT, static_cast<uint8_t>(std::round(gainMin)));
+
+	//Line interpolating CH00-CH07
+	for (int iterChan = 0; iterChan < PMT16XCHANtoInt_(lowerChan) + 1; iterChan++)
+		gains.at(iterChan) = static_cast<uint8_t>(std::round( -lowerSlope * iterChan + gainMax));
+	
+	//Line interpolating  CH08-CH15
+	for (int iterChan = PMT16XCHANtoInt_(higherChan); iterChan < g_nChanPMT; iterChan++)
+		gains.at(iterChan) = static_cast<uint8_t>(std::round( higherSlope * (iterChan - (g_nChanPMT - 1)) + gainMax));
+
+	//For debugging
+	//for (int iterChan = 0; iterChan < g_nChanPMT; iterChan++)
+	//	std::cout << "gain " << iterChan << "= " << (int)gains.at(iterChan) << "\n";	
+
+	setAllGains(gains);
 }
 
 void PMT16X::readTemp() const
@@ -666,6 +693,47 @@ std::vector<uint8_t> PMT16X::sendCommand_(std::vector<uint8_t> command_array) co
 	//printHex(RxBuffer); //For debugging
 
 	return RxBuffer;
+}
+
+int PMT16X::PMT16XCHANtoInt_(const RTcontrol::PMT16XCHAN chan) const
+{
+	switch (chan)
+	{
+	case RTcontrol::PMT16XCHAN::CH00:
+		return 0;
+	case RTcontrol::PMT16XCHAN::CH01:
+		return 1;
+	case RTcontrol::PMT16XCHAN::CH02:
+		return 2;
+	case RTcontrol::PMT16XCHAN::CH03:
+		return 3;
+	case RTcontrol::PMT16XCHAN::CH04:
+		return 4;
+	case RTcontrol::PMT16XCHAN::CH05:
+		return 5;
+	case RTcontrol::PMT16XCHAN::CH06:
+		return 6;
+	case RTcontrol::PMT16XCHAN::CH07:
+		return 7;
+	case RTcontrol::PMT16XCHAN::CH08:
+		return 8;
+	case RTcontrol::PMT16XCHAN::CH09:
+		return 9;
+	case RTcontrol::PMT16XCHAN::CH10:
+		return 10;
+	case RTcontrol::PMT16XCHAN::CH11:
+		return 11;
+	case RTcontrol::PMT16XCHAN::CH12:
+		return 12;
+	case RTcontrol::PMT16XCHAN::CH13:
+		return 13;
+	case RTcontrol::PMT16XCHAN::CH14:
+		return 14;
+	case RTcontrol::PMT16XCHAN::CH15:
+		return 15;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected PMT16X channel unavailable");
+	}
 }
 
 //Return the sumcheck of all the elements in the array

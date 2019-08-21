@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
-			Routines::contScanX(fpga);
+			//Routines::contScanX(fpga);
 			//Routines::sequencer(fpga, 1);
 			//Routines::liveScan(fpga);
 
@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::fineTuneScanGalvo(fpga);
 			//TestRoutines::resonantScanner(fpga);
 			//TestRoutines::galvosSync(fpga);
+			//TestRoutines::gavosLaserSync(fpga);
 
 			//TestRoutines::stagePosition();
 			//TestRoutines::stageConfig();
@@ -34,13 +35,14 @@ int main(int argc, char* argv[])
 			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
+			//TestRoutines::photobleach(fpga);
 
 			//TestRoutines::convertI16toVolt();
 			//TestRoutines::ethernetSpeed();
 			//TestRoutines::multithread();
 			//TestRoutines::clipU8();
 
-			//TestRoutines::correctImage();
+			TestRoutines::correctImage();
 			//TestRoutines::quickStitcher(fpga);
 			//TestRoutines::locateSample();
 			//TestRoutines::isDark();
@@ -52,12 +54,10 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);
-			//TestRoutines::gavosLaserSync(fpga);
 
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();
 			//TestRoutines::collectorLens();
-			//TestRoutines::photobleach(fpga);
 
 			//pressAnyKeyToCont();
 		}

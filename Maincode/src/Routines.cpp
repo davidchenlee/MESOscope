@@ -1,14 +1,14 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (45.000 * mm), (23.000)* mm, (18.825 * mm ) };
+POSITION3 stackCenterXYZ{ (45.000 * mm), (20.000)* mm, (18.835 * mm ) };
 const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.09 * mWpum) } }} };
-Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(60. * mW), multiply16X(0.40 * mWpum) } }} };
+Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(70. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(60. * mW), multiply16X(0.40 * mWpum) } }} };
 
 #else
 //Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
@@ -25,6 +25,9 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
+		//PMT16X PMT;
+		//PMT.suppressGainsLinearly(1.0, RTcontrol::PMT16XCHAN::CH04, RTcontrol::PMT16XCHAN::CH11);
+
 		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
@@ -33,7 +36,7 @@ namespace Routines
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the z-stage axis
@@ -196,9 +199,9 @@ namespace Routines
 			if (acqMode == RUNMODE::COLLECTLENS)
 				virtualLaser.moveCollectorLens(cLensPosIni + iterLocation * cLensStep);
 
-			//EXECUTE THE RT CONTROL SEQUENCE
+			//EXECUTE THE CONTROL SEQUENCE
 			Image image{ RTcontrol };
-			image.acquire(saveAllPMT);				//Execute the RT control sequence and acquire the image
+			image.acquire(saveAllPMT);				//Execute the control sequence and acquire the image
 			image.averageFrames();					//Average the frames imaged via continuous acquisition
 			//image.averageEvenOddFrames();
 			image.correctImage(RScanner.mFFOV);
@@ -248,7 +251,7 @@ namespace Routines
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in z
-		const int nFramesPerBin{ 1 };																	//For binning
+		const int nFramesPerBin{ 2 };																	//For binning
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 0.5 * um  };
 
@@ -307,7 +310,7 @@ namespace Routines
 		Sleep(500);
 		stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));		//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 
-		//EXECUTE THE RT CONTROL SEQUENCE
+		//EXECUTE THE CONTROL SEQUENCE
 		virtualLaser.openShutter();				//Open the shutter. The destructor will close the shutter automatically
 		Image image{ RTcontrol };
 		image.initializeAcq(scanDirZ);
@@ -380,13 +383,12 @@ namespace Routines
 		Sleep(500);
 		stage.setVelSingle(Stage::Axis::XX, pixelSizeX / g_lineclockHalfPeriod);					//Set the vel for imaging
 
-		//EXECUTE THE RT CONTROL SEQUENCE
 		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		const int nLocations{ static_cast<int>(stagePositionY.size()) };
 		QuickStitcher stitchedImage{ width_pix, height_pix, 1, nCol };
-		double stageXf;						//Stage final position
+		double stageXf;		//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
 			stageXi = detInitialPos(stackCenterXYZ.XX - FOVslow / 2, FOVslow, iterScanDirX);
@@ -484,12 +486,10 @@ namespace Routines
 			stage.waitForMotionToStopAll();
 			stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));	//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 
-			//EXECUTE THE RT CONTROL SEQUENCE
-			Image image{ RTcontrol };
-
 			//Read the commands line by line
 			POSITION2 stackCenterXY;
 			std::string longName;
+			Image image{ RTcontrol };
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
 			{
 				Sequence::Commandline commandline{ sequence.readCommandline(iterCommandline) };
@@ -585,12 +585,11 @@ namespace Routines
 
 		while (true)
 		{
-			virtualLaser.setPower(fluorLabel.mScanPi);			//Set the laser power
+			virtualLaser.setPower(fluorLabel.mScanPi);	//Set the laser power
 
-			//EXECUTE THE RT CONTROL SEQUENCE
 			Image image{ RTcontrol };
-			image.acquire();									//Execute the RT control sequence and acquire the image
-			image.averageFrames();								//Average the frames acquired via continuous acquisition
+			image.acquire();							//Execute the control sequence and acquire the image
+			image.averageFrames();						//Average the frames acquired via continuous acquisition
 			image.correctImage(RScanner.mFFOV);
 			image.save("Untitled", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);	//Save individual files
 			Sleep(700);
@@ -713,9 +712,8 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 				//Update the laser power
 				virtualLaser.setPower(fluorLabelList.at(iterWL).mScanPi + iterDiffZ * stepSizeZ * fluorLabelList.at(iterWL).mStackPinc);
 
-				//EXECUTE THE RT CONTROL SEQUENCE
 				Image image{ RTcontrol };
-				image.acquire();							//Execute the RT control sequence and acquire the image
+				image.acquire();							//Execute the control sequence and acquire the image
 				image.averageFrames();						//Average the frames acquired via continuous acquisition
 				image.correctImage(RScanner.mFFOV);
 				tiffStack.pushSameZ(0, image.data());
@@ -842,6 +840,8 @@ namespace TestRoutines
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
+		stage.moveXYZ(stagePositionXYZ);
+		stage.waitForMotionToStopAll();
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUTfpga::EN };
@@ -859,16 +859,10 @@ namespace TestRoutines
 		const double P{ 25. * mW };		//Laser power
 		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, P, P, Laser::ID::FIDELITY };
 
-		//ACQUIRE FRAMES AT DIFFERENT Zs
-		stage.moveXYZ(stagePositionXYZ);
-		stage.waitForMotionToStopAll();
-
-		//OPEN THE UNIBLITZ SHUTTERS
-		virtualLaser.openShutter();	//The destructor will close the shutter automatically
-
-		//EXECUTE THE RT CONTROL SEQUENCE
+		//CONTROL SEQUENCE
+		virtualLaser.openShutter();	//Open the uniblitz shutter. The destructor will close the shutter automatically
 		Image image{ RTcontrol };
-		image.acquire();		//Execute the RT control sequence and acquire the image via continuous acquisition
+		image.acquire();			//Execute the control sequence and acquire the image via continuous acquisition
 		image.averageEvenOddFrames();
 		image.save("Untitled", TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
@@ -901,9 +895,9 @@ namespace TestRoutines
 		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
 		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2 };
 
-		//Execute the realtime control sequence and acquire the image
+		//Execute the control sequence and acquire the image
 		Image image{ RTcontrol };
-		image.acquire();		//Execute the RT control sequence
+		image.acquire();
 		pressAnyKeyToCont();
 	}
 
@@ -947,9 +941,9 @@ namespace TestRoutines
 		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, wavelength_nm };
 
-		//EXECUTE THE RT CONTROL SEQUENCE
+		//EXECUTE THE CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire();			//Execute the RT control sequence and acquire the image
+		image.acquire();
 	}
 
 	void stagePosition()
@@ -1076,9 +1070,9 @@ namespace TestRoutines
 		//pockels.pushVoltageSinglet(8* us, 0.5 * V);
 		//pockels.voltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
 
-		//EXECUTE THE RT CONTROL SEQUENCE
+		//EXECUTE THE CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire();		//Execute the RT control sequence and acquire the image via continuous acquisition
+		image.acquire();
 	}
 
 	void lasers(const FPGA &fpga)
@@ -1101,9 +1095,9 @@ namespace TestRoutines
 		const double laserPower{ 50. * mW };
 		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, Laser::ID::VISION };
 
-		//EXECUTE THE RT CONTROL SEQUENCE
+		//EXECUTE THE CONTROL SEQUENCE
 		//Image image{ RTcontrol };
-		//image.acquire();					//Execute the RT control sequence
+		//image.acquire();
 	}
 
 	//Photobleach a line along the fast axis (RS) on the sample
@@ -1131,7 +1125,7 @@ namespace TestRoutines
 		Image image{ RTcontrol };
 		image.acquire();
 
-		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the RT sequence
+		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the sequence
 		pressAnyKeyToCont();
 		pockels.setShutter(false);
 	}
@@ -1215,7 +1209,7 @@ namespace TestRoutines
 	void correctImage()
 	{
 
-		std::string inputFilename{ "Liver20190812_02_F1040nm_P=800.0mW_Pinc=0.0mWpum_x=45.000_y=20.000_zi=18.8640_zf=18.9740_Step=0.0005 (1)" };
+		std::string inputFilename{ "Liver20190812_02_F1040nm_Pi=1120.0mW_Pinc=0.0mWpum_x=45.000_y=20.000_zi=18.8310_zf=18.8310_Step=0.0010 (2)" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		//image.correct16XFOVslow(1);
@@ -1477,10 +1471,12 @@ namespace TestRoutines
 		PMT16X PMT;
 
 		//pmt.setSingleGain(PMT16XCHAN::CH00, 170);
-	
-		//PMT.setAllGain(255);
+		//PMT.setAllGains(255);
 		//PMT.readTemp();
-		PMT.readAllGain();
+		//PMT.readAllGain();
+		
+		PMT.suppressGainsLinearly(0.4, RTcontrol::PMT16XCHAN::CH05, RTcontrol::PMT16XCHAN::CH10);
+		
 		/*
 		//To make the count from all the channels similar,
 		//rescan with frequency = 100 Hz and amplitude = 1.5V (which is larger than the size of the PMT16X
@@ -1494,7 +1490,7 @@ namespace TestRoutines
 			255,	//CH05
 			255,	//CH06
 			255,	//CH07
-			255,	//CH08, this channel presents the lowest signal. For some reason 255 gives a lower signal than 200
+			255,	//CH08
 			255,	//CH09
 			255,	//CH10
 			255,	//CH11
@@ -1531,9 +1527,9 @@ namespace TestRoutines
 		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2, &virtualLaser };
 		//Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 
-		//EXECUTE THE RT CONTROL SEQUENCE
+		//EXECUTE THE CONTROL SEQUENCE
 		Image image{ RTcontrol };
-		image.acquire();			//Execute the RT control sequence and acquire the image
+		image.acquire();
 		image.save("SingleChannel", TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 	}
 

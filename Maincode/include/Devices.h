@@ -60,9 +60,9 @@ public:
 class ResonantScanner
 {
 public:
-	double mFillFactor;									//Fill factor: how much of an RS swing is covered by the pixels
-	double mFFOV;										//Current FFOV
-	double mSampRes;									//Spatial sampling resolution (length/pixel)
+	double mFillFactor;		//Fill factor: how much of an RS swing is covered by the pixels
+	double mFFOV;			//Current FFOV
+	double mSampRes;		//Spatial sampling resolution (length/pixel)
 
 	ResonantScanner(const RTcontrol &RTcontrol);
 	ResonantScanner(const ResonantScanner&) = delete;				//Disable copy-constructor

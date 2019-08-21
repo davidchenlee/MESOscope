@@ -201,7 +201,7 @@ double detFinalPos(const double posMin, const double travel, const double travel
 
 //The initial laser power for scanning a stack depends on whether the stack is imaged from the top down or from the bottom up
 //totalPowerInc is the total increase and NOT the increase per unit of length
-double detInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
+double giveInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
 {
 	if (powerMin < 0 || totalPowerInc < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
@@ -218,7 +218,7 @@ double detInitialLaserPower(const double powerMin, const double totalPowerInc, c
 }
 
 //totalPowerInc is the total increase and NOT the increase per unit of length
-double detFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
+double giveFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
 {
 	if (powerMin < 0 || totalPowerInc < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");

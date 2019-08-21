@@ -510,10 +510,10 @@ void ResonantScanner::setVoltage_(const double controlVoltage)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested voltage must be in the range [0-" + std::to_string(mVMAX) + "] V" );
 
 	//Update the scan parameters
-	mControlVoltage = controlVoltage;									//Control voltage
-	mFullScan = controlVoltage / mVoltagePerDistance;					//Full scan FOV
-	mFFOV = mFullScan * mFillFactor;									//FFOV
-	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;					//Spatial sampling resolution (length/pixel)
+	mControlVoltage = controlVoltage;							//Control voltage
+	mFullScan = controlVoltage / mVoltagePerDistance;			//Full scan FOV
+	mFFOV = mFullScan * mFillFactor;							//FFOV
+	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;			//Spatial sampling resolution (length/pixel)
 
 	//Upload the control voltage
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::voltageToI16(mControlVoltage)));
@@ -1591,9 +1591,11 @@ void VirtualLaser::CombinedLasers::tuneLaserWavelength(const int wavelength_nm)
 	msg << "Using " << laserNameToString_(newLaser) << " at " << wavelength_nm << " nm\n";
 	std::cout << msg.str();
 
-	if(mPockelsPtr == nullptr)	//For the first call, assign a pointer to mPockelsPtr
+	//For the first call, assign a pointer to mPockelsPtr
+	if(mPockelsPtr == nullptr)	
 		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, newLaser));
-	else if(currentWavelength_nm() != wavelength_nm || mCurrentLaser != newLaser)//For the subsequent calls, destroy the pockels object when switching wavelengths (including switching between lasers) to avoid photobleaching the sample (the pockels destructor closes the shutter)
+	//For the subsequent calls, destroy the pockels object when switching wavelengths (including switching between lasers) to avoid photobleaching the sample (the pockels destructor closes the shutter)
+	else if(currentWavelength_nm() != wavelength_nm || mCurrentLaser != newLaser)
 		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, newLaser));
 
 	//If VISION is selected, set the new wavelength
@@ -2077,7 +2079,7 @@ void Stage::moveSingle(const Axis axis, const double position)
 	//Move the stage
 	if (readCurrentPosition_(axis) != position) //Move only if the requested position is different from the current position
 	{
-		const double position_mm{ position / mm };								//Divide by mm to convert from implicit to explicit units
+		const double position_mm{ position / mm };									//Divide by mm to convert from implicit to explicit units
 		if (!PI_MOV(mHandleXYZ.at(axis), mNstagesPerController, &position_mm))		//~14 ms to execute this function
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString_(axis) + " to the target position (maybe hardware limits?)");
 

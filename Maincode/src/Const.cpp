@@ -81,12 +81,12 @@ namespace Constants
 													
 	//PMT
 	extern const int g_nChanPMT{ 16 };
-	extern const PMTIN g_photocounterInput{ PMTIN::PMT };			//PMT or simulated PMT
+	extern const PMTIN g_photocounterInput{ PMTIN::PMT };				//PMT or simulated PMT
 
 	//Simulate the PMT pulses. The PMT simulator implemented in the LV changes from 0 to 1 or vice versa every time there is a 1 in the array
 	//In LV, the clock of the photocounters is currently 120MHz = 8.333 ns. Use the same clock for the simulator.
 	//Given the current pixel dwell time of 162.5 ns, the max number of pulses is g_pixelDwellTime/g_usPerTick = 162.5 ns/ 8.333 ns = 19.5 pulses
-	extern const U8 g_nPMTsim{ 20 };								//Size of g_PMTsimArray. IMPORTANT: the size of g_PMTsimArray in LV has to be changed manually (dynamical allocation not allowed) and after that the LV code has to be recompiled
+	extern const U8 g_nPMTsim{ 20 };									//Size of g_PMTsimArray. IMPORTANT: the size of g_PMTsimArray in LV has to be changed manually (dynamical allocation not allowed) and after that the LV code has to be recompiled
 	extern const U8 g_PMTsimArray[g_nPMTsim]{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 										  1, 1, 1, 1, 1, 1, 1, 0, 0, 1 };
 

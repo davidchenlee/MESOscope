@@ -131,7 +131,7 @@ namespace Routines
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();					//Make sure that the RS is running
+		RScanner.isRunning();					//To make sure that the RS is running
 
 		//GALVOS
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
@@ -233,7 +233,7 @@ namespace Routines
 				"_y=" + toString(stagePositionXYZ.front().YY / mm, 3) +
 				"_z=" + toString(stagePositionXYZ.front().ZZ / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) );
 
-			output.binFrames(nSameLocation);							//Divide the images in bins of nSameLocation frames each and return the average of each bin
+			output.binFrames(nSameLocation);									//Divide the images in bins of nSameLocation frames each and return the average of each bin
 			std::cout << "Saving the stack...\n";
 			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);	//Save the scanXY to file
 			pressESCforEarlyTermination();
@@ -245,19 +245,19 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const SCANDIR scanDirZ{ SCANDIR::UPWARD };			//Scan direction for imaging in z
-		const int nFramesPerBin{ 1 };						//For averaging
+		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in z
+		const int nFramesPerBin{ 1 };																	//For binning
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 0.5 * um  };
 
-		const int nFramesCont{ static_cast<int>(stackDepth / pixelSizeZafterBinning * nFramesPerBin) };		//Number of frames for continuous acquisition
-		const double pixelSizeZbeforeBinning{ stackDepth / nFramesCont };									//pixel size per z frame
+		const int nFrames{ static_cast<int>(stackDepth / pixelSizeZafterBinning * nFramesPerBin) };		//Number of frames BEFORE binning for continuous acquisition
+		const double pixelSizeZbeforeBinning{ stackDepth / nFrames };									//Pixel size per z frame
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };										//Full FOV in the slow axis
 
 		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
 		if (fluorLabel.mWavelength_nm == 750)
@@ -283,16 +283,16 @@ namespace Routines
 		}
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };	//Note the STAGEZ flag
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFrames, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };	//Note the STAGEZ flag
 
 		//LASER
-		const double laserPi = detInitialLaserPower(fluorLabel.mScanPi, stackDepth * fluorLabel.mStackPinc, scanDirZ);
-		const double laserPf = detFinalLaserPower(fluorLabel.mScanPi, stackDepth * fluorLabel.mStackPinc, scanDirZ);
+		const double laserPi = giveInitialLaserPower(fluorLabel.mScanPi, stackDepth * fluorLabel.mStackPinc, scanDirZ);
+		const double laserPf = giveFinalLaserPower(fluorLabel.mScanPi, stackDepth * fluorLabel.mStackPinc, scanDirZ);
 		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, laserPf, whichLaser };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();		//Make sure that the RS is running
+		RScanner.isRunning();		//To make sure that the RS is running
 
 		//GALVOS
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
@@ -308,14 +308,14 @@ namespace Routines
 		stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));		//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 
 		//EXECUTE THE RT CONTROL SEQUENCE
-		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
+		virtualLaser.openShutter();				//Open the shutter. The destructor will close the shutter automatically
 		Image image{ RTcontrol };
 		image.initializeAcq(scanDirZ);
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(Stage::ZZ, stageZf);	//Move the stage to trigger the ctl&acq sequence
 		image.downloadData();
 
-		virtualLaser.closeShutter();	//Close the shutter manually even though the destructor does it because the data processing could take a long time
+		virtualLaser.closeShutter();			//Close the shutter manually even though the destructor does it because the post-processing could take a long time
 		image.formImage();
 		image.binFrames(nFramesPerBin);
 		image.correctImage(RScanner.mFFOV);
@@ -334,10 +334,10 @@ namespace Routines
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Continuous x-stage scanning available for single beam only");
 
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
-		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };//Initial scan direction of stage x
+		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };												//Initial scan direction of stage x
 		const int nCol{ 47 };//47
 		const double FOVslow{ 10.0 * mm };
 		const double pixelSizeX{ 0.5 * um };
@@ -355,10 +355,10 @@ namespace Routines
 		//LOCATIONS on the sample to image
 		std::vector<double> stagePositionY;
 		for (int iterLocation = 0; iterLocation < nCol; iterLocation++)
-			stagePositionY.push_back( stackCenterXYZ.YY - iterLocation * 0.150 * mm );//for now, only stacking strips to the right works (i.e. move the stage to the left)
+			stagePositionY.push_back( stackCenterXYZ.YY - iterLocation * 0.150 * mm );//for now, only allowed to stack strips to the right (i.e. only allowed to move the stage to the left)
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		//The Image height is 2 (two galvo scanner swings) and nFrames is height_pix/2. Therefore, the total height of the final image is height_pix
+		//The Image height is 2 (two galvo scanner swings) and nFrames is height_pix/2. The total height of the final image is therefore height_pix
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUTfpga::EN };	//Note the STAGEX flag																								
 
 		//LASER
@@ -366,7 +366,7 @@ namespace Routines
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();		//Make sure that the RS is running
+		RScanner.isRunning();		//To make sure that the RS is running
 
 		//GALVOS. Keep them fixed at 0
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
@@ -396,17 +396,16 @@ namespace Routines
 			stage.moveXY({ stageXi, stagePositionY.at(iterLocation) });
 			stage.waitForMotionToStopAll();
 
-			Sleep(300);//If the stage triggers the ctl&acq too soon, the acq will fail
+			Sleep(300);					//Avoid the iterations be too close to each other, otherwise the x-stage will fail to trigger the ctl&acq sequecnce. This might be because of g_postSequenceTimer
 			Image image{ RTcontrol };
 			image.initializeAcq();
 			std::cout << "Scanning the stack...\n";
-			stage.moveSingle(Stage::XX, stageXf);	//Move the stage to trigger the ctl&acq sequence
+			stage.moveSingle(Stage::XX, stageXf);						//Move the stage to trigger the ctl&acq sequence
 			image.downloadData();
 			image.formImageVerticalStrip(iterScanDirX);
 
-			//image.save("aaa", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::DIS);
-			TiffU8 tmp{ image.data(), width_pix, height_pix };//I tried to access mTiff in image directly but it gives me an error
-			stitchedImage.push(tmp, 0, iterLocation);//for now, only pushing strip to the right works
+			TiffU8 tmp{ image.data(), width_pix, height_pix };			//I tried to access mTiff in image directly but it gives me an error
+			stitchedImage.push(tmp, 0, iterLocation);					//for now, only allowed to stack up strips to the right
 
 			reverseSCANDIR(iterScanDirX);
 		}
@@ -423,13 +422,13 @@ namespace Routines
 	void sequencer(const FPGA &fpga, const bool run)
 	{
 		//ACQUISITION SETTINGS
-		const int nFramesPerBin{ 4 };		//Number of frames for continuous acquisition
+		const int nFramesPerBin{ 2 };																	//Number of frames for continuous acquisition
 		const double stackDepth{ 100. * um };
-		const double pixelSizeZafterBinning{ 0.5 * um };//Step size in the z-stage axis
+		const double pixelSizeZafterBinning{ 0.5 * um };												//Step size in the z-stage axis
 		
 		const int nFramesAfterBinning{ static_cast<int>(stackDepth / pixelSizeZafterBinning) };
-		const int nFramesBeforeBinnng{ nFramesAfterBinning * nFramesPerBin };					//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail														
-		const double pixelSizeZbeforeBinning{ stackDepth / nFramesBeforeBinnng };
+		const int nFramesBeforeBinning{ nFramesAfterBinning * nFramesPerBin };							//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail														
+		const double pixelSizeZbeforeBinning{ stackDepth / nFramesBeforeBinning };
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -466,14 +465,14 @@ namespace Routines
 		if (run)
 		{
 			//CREATE THE REALTIME CONTROL SEQUENCE
-			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesBeforeBinnng, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };	//Note the STAGEZ flag
+			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesBeforeBinning, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };	//Note the STAGEZ flag
 
 			//LASER
 			VirtualLaser virtualLaser{ RTcontrol };
 
 			//RS
 			const ResonantScanner RScanner{ RTcontrol };
-			RScanner.isRunning();		//Make sure that the RS is running
+			RScanner.isRunning();		//To make sure that the RS is running
 
 			//GALVOS
 			const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
@@ -561,11 +560,11 @@ namespace Routines
 	{
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
-		const int nFramesCont{ 1 };									//Number of frames for continuous acquisition
+		const int nFramesCont{ 1 };															//Number of frames for continuous acquisition
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };	//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };							//Full FOV in the slow axis
 
 		//CREATE A REALTIME CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUTfpga::EN };
@@ -575,7 +574,7 @@ namespace Routines
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();					//Make sure that the RS is running
+		RScanner.isRunning();					//To make sure that the RS is running
 
 		//GALVOS
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
@@ -640,7 +639,7 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 
 	//RS
 	const ResonantScanner RScanner{ RTcontrol };
-	RScanner.isRunning();					//Make sure that the RS is running
+	RScanner.isRunning();					//To make sure that the RS is running
 
 	//LASER
 	VirtualLaser virtualLaser{ RTcontrol, ID::VISION };
@@ -849,7 +848,7 @@ namespace TestRoutines
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();		//Make sure that the RS is running
+		RScanner.isRunning();		//To make sure that the RS is running
 
 		//GALVOS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
@@ -898,7 +897,7 @@ namespace TestRoutines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUTfpga::DIS };
 
 		//GALVOS
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Scan duration in the slow axis
 		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
 		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2 };
 
@@ -1118,7 +1117,7 @@ namespace TestRoutines
 
 		//RS
 		ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();		//Make sure that the RS is running
+		RScanner.isRunning();		//To make sure that the RS is running
 
 		//GALVO. Keep the galvo fixed to bleach a line on the sample
 		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };

@@ -446,7 +446,7 @@ void Sequence::acqStack_(const int iterWL)
 	const FluorLabelList::FluorLabel fluorLabel{ mSample.mFluorLabelList.at(iterWL) };
 
 	//Determine if the initial laser power is the lowest (top of the stack) or the highest (bottom of the stack)
-	const double scanPi = detInitialLaserPower(fluorLabel.mScanPi, fluorLabel.mStackPinc * mStack.mDepth, mIterScanDirXYZ.ZZ);
+	const double scanPi = giveInitialLaserPower(fluorLabel.mScanPi, fluorLabel.mStackPinc * mStack.mDepth, mIterScanDirXYZ.ZZ);
 
 	Commandline commandline{ Action::ID::ACQ };
 	commandline.mParam.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mScanZi, mStack.mDepth, scanPi, fluorLabel.mStackPinc };

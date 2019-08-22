@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
-			//Routines::contScanX(fpga);
+			Routines::contScanX(fpga);
 			//Routines::sequencer(fpga, 1);
 			//Routines::liveScan(fpga);
 
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::multithread();
 			//TestRoutines::clipU8();
 
-			TestRoutines::correctImage();
+			//TestRoutines::correctImage();
 			//TestRoutines::quickStitcher(fpga);
 			//TestRoutines::locateSample();
 			//TestRoutines::isDark();

@@ -109,8 +109,8 @@ void Image::correctImage(const double FFOVfast)
 
 	if (multibeam)
 	{
-		//mTiff.suppressCrosstalk(0.1);
-		//mTiff.flattenField(2.0);
+		//mTiff.flattenField(2.0, 4, 11);
+		//mTiff.suppressCrosstalk(0.2);
 	}
 }
 

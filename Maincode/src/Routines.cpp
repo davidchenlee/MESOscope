@@ -1,21 +1,21 @@
 #include "Routines.h"
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (45.000 * mm), (20.300)* mm, (18.835 * mm ) };
+POSITION3 stackCenterXYZ{ (47.700 - 1.500) * mm, (19.600 - 1.050)* mm, (20.080 * mm ) };
 const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.09 * mWpum) } }} };
-Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(60. * mW), multiply16X(0.40 * mWpum) } }} };
+Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(25. * mW), multiply16X(0.3 * mWpum) } }} };
 
 #else
 //Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
 //Sample beads05um{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
 //Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
-Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "DAPI", 750, 50. * mW, 0.40 * mWpum }}} };
+Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{{"TDT", 1040, 40. * mW, 0.0 * mWpum } , { "DAPI", 750, 20. * mW, 0.2 * mWpum }}} };
 #endif
 Sample currentSample{ liverDAPITDT };
 
@@ -25,8 +25,8 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the x-stage axis stepwise
@@ -35,7 +35,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const int nFramesCont{ 1 };	
+		const int nFramesCont{ 4 };	
 		const double stackDepthZ{ 40. * um };	//Acquire a stack this deep in the z-stage axis
 		const double stepSizeZ{ 1.0 * um };
 	
@@ -238,6 +238,7 @@ namespace Routines
 			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);	//Save the scanXY to file
 			pressESCforEarlyTermination();
 		}
+		//pressAnyKeyToCont();
 	}
 
 	//I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the bead z-position looks almost identical with a difference of maybe only 1 plane (0.5 um)
@@ -245,15 +246,15 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };			//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in z
-		const int nFramesPerBin{ 2 };																	//For binning
+		const int nFramesPerBin{ 4 };																	//For binning
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um  };
 
-		const int nFrames{ static_cast<int>(stackDepth / pixelSizeZafterBinning * nFramesPerBin) };		//Number of frames BEFORE binning for continuous acquisition
-		const double pixelSizeZbeforeBinning{ stackDepth / nFrames };									//Pixel size per z frame
+		const int nFrames{ static_cast<int>(nFramesPerBin * stackDepth / pixelSizeZafterBinning) };		//Number of frames BEFORE binning for continuous acquisition
+		const double pixelSizeZbeforeBinning{ pixelSizeZafterBinning / nFramesPerBin };					//Pixel size per z frame
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -337,13 +338,15 @@ namespace Routines
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
-		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };												//Initial scan direction of stage x
-		const int nCol{ 47 };//47
-		const double FOVslow{ 10.0 * mm };
-		const double pixelSizeX{ 0.5 * um };
+		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };												//Initial scan direction of stage 
+		const double totalWidth{ 0.150 * mm };													//Total width of the stitched image
 
-		const int width_pix{ 300 };
-		const int height_pix{ static_cast<int>(FOVslow / pixelSizeX) };
+		const double tileWidth{ 150. * um };													//Width of 1 strip (tile)
+		const int nCol{ static_cast<int>(std::ceil(totalWidth / tileWidth)) };					//Number of columns in the stitched image
+		const int tileWidth_pix{ 300 };															//Number of pixel width in a tile (strip)
+		const double totalHeight{ 10.0 * mm };													//Total height of the stitched image = height of the tile (strip). If changed, the x-stage timing must be recalibrated
+		const double pixelSizeX{ 0.5 * um };
+		const int totalHeight_pix{ static_cast<int>(totalHeight / pixelSizeX) };				//Total pixel height in the stitched image
 
 		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
 		if (fluorLabel.mWavelength_nm == 750)
@@ -355,11 +358,11 @@ namespace Routines
 		//LOCATIONS on the sample to image
 		std::vector<double> stagePositionY;
 		for (int iterLocation = 0; iterLocation < nCol; iterLocation++)
-			stagePositionY.push_back( stackCenterXYZ.YY - iterLocation * 0.150 * mm );//for now, only allowed to stack strips to the right (i.e. only allowed to move the stage to the left)
+			stagePositionY.push_back( stackCenterXYZ.YY + totalWidth /2 - iterLocation * tileWidth);	//for now, only allowed to stack strips to the right (i.e. only allowed to move the stage to the left)
 
 		//CREATE THE REALTIME CONTROL SEQUENCE
-		//The Image height is 2 (two galvo scanner swings) and nFrames is height_pix/2. The total height of the final image is therefore height_pix
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, height_pix/2, width_pix, 2, FIFOOUTfpga::EN };	//Note the STAGEX flag																								
+		//The Image height is 2 (two galvo scanner swings) and nFrames is totalHeight_pix/2. The total height of the final image is therefore totalHeight_pix
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, totalHeight_pix/2, tileWidth_pix, 2, FIFOOUTfpga::EN };	//Note the STAGEX flag																								
 
 		//LASER
 		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, fluorLabel.mScanPi, fluorLabel.mScanPi, whichLaser }; //Note that the initial and final laser powers are the same
@@ -374,8 +377,8 @@ namespace Routines
 
 		//STAGES
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-		double stageXi = detInitialPos(stackCenterXYZ.XX - FOVslow / 2, FOVslow, iterScanDirX);		//Initial x position
-		stage.moveXYZ({ stageXi, stackCenterXYZ.YY, stackCenterXYZ.ZZ });							//Move the stage to the initial position
+		double stageXi = detInitialPos(stackCenterXYZ.XX - totalHeight / 2, totalHeight, iterScanDirX);		//Initial x position
+		stage.moveXYZ({ stageXi, stackCenterXYZ.YY, stackCenterXYZ.ZZ });											//Move the stage to the initial position
 		stage.waitForMotionToStopAll();
 		Sleep(500);
 		stage.setVelSingle(Stage::Axis::XX, pixelSizeX / g_lineclockHalfPeriod);					//Set the vel for imaging
@@ -384,12 +387,12 @@ namespace Routines
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		const int nLocations{ static_cast<int>(stagePositionY.size()) };
-		QuickStitcher stitchedImage{ width_pix, height_pix, 1, nCol };
+		QuickStitcher stitchedImage{ tileWidth_pix, totalHeight_pix, 1, nCol };
 		double stageXf;		//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
-			stageXi = detInitialPos(stackCenterXYZ.XX - FOVslow / 2, FOVslow, iterScanDirX);
-			stageXf = detFinalPos(stackCenterXYZ.XX - FOVslow / 2, FOVslow, 0.100 * mm, iterScanDirX);
+			stageXi = detInitialPos(stackCenterXYZ.XX - totalHeight / 2, totalHeight, iterScanDirX);
+			stageXf = detFinalPos(stackCenterXYZ.XX - totalHeight / 2, totalHeight, 0.100 * mm, iterScanDirX);
 
 			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations << "\n";
 			stage.moveXY({ stageXi, stagePositionY.at(iterLocation) });
@@ -403,7 +406,7 @@ namespace Routines
 			image.downloadData();
 			image.formImageVerticalStrip(iterScanDirX);
 
-			TiffU8 tmp{ image.data(), width_pix, height_pix };			//I tried to access mTiff in image directly but it gives me an error
+			TiffU8 tmp{ image.data(), tileWidth_pix, totalHeight_pix };			//I tried to access mTiff in image directly but it gives me an error
 			stitchedImage.push(tmp, 0, iterLocation);					//for now, only allowed to stack up strips to the right
 
 			reverseSCANDIR(iterScanDirX);
@@ -421,7 +424,7 @@ namespace Routines
 	void sequencer(const FPGA &fpga, const bool run)
 	{
 		//ACQUISITION SETTINGS
-		const int nFramesPerBin{ 2 };																	//Number of frames for continuous acquisition
+		const int nFramesPerBin{ 4 };																	//Number of frames for continuous acquisition
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um };												//Step size in the z-stage axis
 		
@@ -1206,7 +1209,7 @@ namespace TestRoutines
 	void correctImage()
 	{
 
-		std::string inputFilename{ "Liver20190812_02_F1040nm_P=800.0mW_Pinc=0.0mWpum_x=45.000_y=20.300_zi=18.8290_zf=18.9390_Step=0.0010 (2)" };
+		std::string inputFilename{ "Liver20190812_02_V750nm_P=400.0mW_Pinc=4.8mWpum_x=46.200_y=18.550_zi=20.0540_zf=20.1640_Step=0.0010" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		//image.correct16XFOVslow(1);
@@ -1242,6 +1245,8 @@ namespace TestRoutines
 		//std::cout << image.tiff().widthPerFrame_pix() << "\n";
 		//std::cout << image.tiff().heightPerFrame_pix() << "\n";
 
+
+		/*
 		std::string outputFilename{ "stitched" };
 		const int width{ 300 };
 		const int height{ 8000 };
@@ -1255,6 +1260,16 @@ namespace TestRoutines
 		stitched.push(image01, 0, 1);
 		stitched.push(image03, 0, 2);
 		stitched.push(image04, 0, 3);
+		stitched.saveToFile(outputFilename, OVERRIDE::DIS);
+		*/
+		std::string outputFilename{ "stitched" };
+		const int width{ 300 };
+		const int height{ 8000 };
+		TiffU8 image00{ "Tile_01" };
+		TiffU8 image01{ "Tile_02" };
+		QuickStitcher stitched{ width,height, 2, 1 };
+		stitched.push(image00, 0, 0);
+		stitched.push(image01, 1, 0);
 		stitched.saveToFile(outputFilename, OVERRIDE::DIS);
 
 		pressAnyKeyToCont();
@@ -1532,7 +1547,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (20.000) * mm };
+		const double slicePlaneZ{ (21.200) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

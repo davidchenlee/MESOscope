@@ -5,6 +5,7 @@ Code in C++ for controlling the NI USB-7852R card
 ### C++
 - how to deal with vector of objects containing pointer-arrays?
 - Implement suppressCrosstalk() flattenField() on the GPU
+- Fix the hack mTiff.setNframes(mRTcontrol.mNframes) in Image::initializeAcq()
 - Multithread demuxAllChannels_()
 - Do a post-sequence clean up routine to set the pockels outputs to 0
 - maybe switch to smart pointers for the data. Check the overhead

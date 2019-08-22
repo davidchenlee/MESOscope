@@ -1139,7 +1139,6 @@ void TiffU8::flattenField(const double scaleFactor, const int lowerChan, const i
 	//for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
 		//std::cout << "upscaling " << chanIndex << " = " << vec_upscalingFactors.at(chanIndex) << "\n";
 
-
 	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };				//Number of pixels in a single frame
 	const int nPixStrip{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)

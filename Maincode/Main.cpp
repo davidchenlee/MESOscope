@@ -58,8 +58,6 @@ int main(int argc, char* argv[])
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();
 			//TestRoutines::collectorLens();
-
-			//pressAnyKeyToCont();
 		}
 		catch (const std::invalid_argument &e)
 		{

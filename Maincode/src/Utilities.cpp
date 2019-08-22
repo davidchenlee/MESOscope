@@ -108,6 +108,21 @@ void pressESCforEarlyTermination()
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 }
 
+void pressAnyKeyToContOrESCtoExit()
+{
+	char input_char;
+	while (true)
+	{
+		std::cout << "\nPress any key to continue or ESC to exit\n";
+		input_char = _getch();
+
+		if (input_char == 27)
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
+		else
+			break;//Break the while loop
+	}
+}
+
 //Used to increase the laser power 16 times
 double multiply16X(const double input)
 {

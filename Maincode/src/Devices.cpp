@@ -105,13 +105,19 @@ void Image::formImageVerticalStrip(const SCANDIR scanDirX)
 //Image post processing
 void Image::correctImage(const double FFOVfast)
 {
-	//mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
+	mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 
 	if (multibeam)
 	{
-		//mTiff.flattenField(2.0, 4, 11);
-		//mTiff.suppressCrosstalk(0.2);
+		mTiff.flattenField(2.0, 4, 11);
+		mTiff.suppressCrosstalk(0.2);
 	}
+}
+
+//Correct the image distortion induced by the nonlinear scanning of the RS
+void Image::correctRSdistortion(const double FFOVfast)
+{
+	mTiff.correctRSdistortionGPU(FFOVfast);		
 }
 
 //Divide the concatenated image in a stack of nFrames and calculate the average over all the frames
@@ -833,8 +839,9 @@ void Filterwheel::setColor(const COLOR color)
 			{
 				//Thread-safe message
 				std::stringstream msg;
-				msg << "WARNING: " << mFilterwheelName << " might not be in the correct position " << position << "\n";
+				msg << "WARNING: " << mFilterwheelName << " is in the incorrect position " << position << "\n";
 				std::cout << msg.str();
+				pressAnyKeyToContOrESCtoExit();
 			}
 		}
 		catch (const serial::IOException)

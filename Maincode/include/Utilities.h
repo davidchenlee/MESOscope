@@ -9,6 +9,7 @@
 #include <tiffio.h>					//Tiff files				
 #include <windows.h>				//For using the ESC key
 #include <CL/cl.hpp>				//OpenCL
+#include <conio.h>					//For _getch()
 using namespace Constants;
 
 std::string doesFileExist(const std::string filename);
@@ -23,6 +24,7 @@ template<class T> inline U8 clipU8top(const T x);
 template<class T> inline U8 clipU8dual(const T x);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
+void pressAnyKeyToContOrESCtoExit();
 double multiply16X(const double input);
 int SCANDIRtoInt(const SCANDIR scanDir);
 void reverseSCANDIR(SCANDIR &scanDir);

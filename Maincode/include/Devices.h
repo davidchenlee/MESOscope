@@ -26,6 +26,7 @@ public:
 	void formImage(const bool saveAllPMT = false);
 	void formImageVerticalStrip(const SCANDIR scanDirX);
 	void correctImage(const double FFOVfast);
+	void correctRSdistortion(const double FFOVfast);
 	void averageFrames();
 	void averageEvenOddFrames();
 	void binFrames(const int nFramesPerBin);

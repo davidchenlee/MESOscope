@@ -1118,20 +1118,29 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
 
+//Upscale the pixel counts for the lower and higher channels of the PMT16X. The channel indices go from 0 to g_nChanPMT-1
+//The upscaling factor follows a linear interpolation
 void TiffU8::flattenField(const double scaleFactor, const int lowerChan, const int higherChan)
 {
-	if (scaleFactor < 1.0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The scale factor must be >= 1.0");
+	if (scaleFactor < 1.0 || scaleFactor > 3.0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The scale factor must be in the range [1.0-3.0]");
 
-	const double lowerSlope{ (scaleFactor - 1.0) / lowerChan };
-	const double higherSlope{ (scaleFactor - 1.0) / ((g_nChanPMT - 1) - higherChan) };
+	if (lowerChan > higherChan)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The lower channel index must be < than the higher channel index");
 
+	if (lowerChan >= g_nChanPMT || higherChan >= g_nChanPMT)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The lower channel index must be < than the higher channel index");
 
-	std::vector<double> vec_upscalingFactors(g_nChanPMT, 1.0);
+	const double lowerSlope{ (scaleFactor - 1.0) / lowerChan };							//Interpolation slope for the lower channels
+	const double higherSlope{ (scaleFactor - 1.0) / ((g_nChanPMT - 1) - higherChan) };	//Interpolation slope for the higer channels
 
+	std::vector<double> vec_upscalingFactors(g_nChanPMT, 1.0);							//Vector of gains
+
+	//Lower channels: from CH00 to lowerChan
 	for (int chanIndex = 0; chanIndex <= lowerChan; chanIndex++)
 		vec_upscalingFactors.at(chanIndex) = -lowerSlope * chanIndex + scaleFactor;
 
+	//Higher channels: from higherChan to CH15
 	for (int chanIndex = higherChan; chanIndex < g_nChanPMT; chanIndex++)
 		vec_upscalingFactors.at(chanIndex) = higherSlope * (chanIndex - (g_nChanPMT - 1)) + scaleFactor;
 
@@ -1139,23 +1148,24 @@ void TiffU8::flattenField(const double scaleFactor, const int lowerChan, const i
 	//for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
 		//std::cout << "upscaling " << chanIndex << " = " << vec_upscalingFactors.at(chanIndex) << "\n";
 
-	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };				//Number of pixels in a single frame
-	const int nPixStrip{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
+	//Upscale mArray
+	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };							//Number of pixels in a single frame
+	const int nPixPerFramePerBeamlet{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
-		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
+		for (int pixIndex = 0; pixIndex < nPixPerFramePerBeamlet; pixIndex++)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
-				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
+				mArray[frameIndex * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + pixIndex] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + pixIndex]);
 }
 
-/*
+/*Old way of doing the field flattening
 //Upscale the channel n = 0, 1, ..., 15 by (1 + (sqrt(factor) - 1) * |n/7.5 - 1|)^2
 void TiffU8::flattenField(const double maxScaleFactor)
 {
 	if (maxScaleFactor < 1.0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The scale factor must be >= 1.0");
 
-	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };				//Number of pixels in a single frame
-	const int nPixStrip{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
+	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };							//Number of pixels in a single frame
+	const int nPixPerFramePerBeamlet{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
 	std::vector<double> vec_upscalingFactors(g_nChanPMT);
 
 	for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
@@ -1169,9 +1179,9 @@ void TiffU8::flattenField(const double maxScaleFactor)
 	//	std::cout << vec_upscalingFactors.at(chanIndex) << "\n";
 
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
-		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
+		for (int pixIndex = 0; pixIndex < nPixPerFramePerBeamlet; pixIndex++)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
-				mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]);
+				mArray[frameIndex * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + pixIndex] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + pixIndex]);
 }
 */
 

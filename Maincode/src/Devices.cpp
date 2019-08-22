@@ -617,24 +617,28 @@ void PMT16X::setAllGains(std::vector<uint8_t> gains) const
 		std::cout << "Gain #" << ii << " (0-255) = " << static_cast<int>(parameters.at(ii)) << "\n";
 }
 
-void PMT16X::suppressGainsLinearly(const double scaleFactor, const RTcontrol::PMT16XCHAN lowerChan, const RTcontrol::PMT16XCHAN higherChan) const
+//Suppress the gain of the middle channels of the PMT16X by suppressFactor. Do a linear interpolation towards the lower and higher channels
+void PMT16X::suppressGainsLinearly(const double suppressFactor, const RTcontrol::PMT16XCHAN lowerChan, const RTcontrol::PMT16XCHAN higherChan) const
 {
 	//Check that the inputVector parameters are within range
-	if (scaleFactor < 0 || scaleFactor > 1)
+	if (suppressFactor < 0 || suppressFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The scale factor must be in the range [0-1.0]");
 
-	const int gainMax{ 255 };
-	const double gainMin{ scaleFactor * gainMax };
-	const double lowerSlope{ (gainMax - gainMin) / (PMT16XCHANtoInt_(lowerChan)) };
-	const double higherSlope{ (gainMax - gainMin) / ((g_nChanPMT - 1) - PMT16XCHANtoInt_(higherChan)) };
+	if (lowerChan > higherChan)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The lower channel index must be < than the higher channel index");
 
-	std::vector<uint8_t> gains(g_nChanPMT, static_cast<uint8_t>(std::round(gainMin)));
+	const uint8_t gainMax{ 255 };																			//Max gain of the PMT16X channels
+	const double gainMin{ suppressFactor * gainMax };														//Gain of the mid PMT16X channels
+	const double lowerSlope{ (gainMax - gainMin) / (PMT16XCHANtoInt_(lowerChan)) };							//Interpolation slope for the lower channels
+	const double higherSlope{ (gainMax - gainMin) / ((g_nChanPMT - 1) - PMT16XCHANtoInt_(higherChan)) };	//Interpolation slope for the higher channels
 
-	//Line interpolating CH00-CH07
+	std::vector<uint8_t> gains(g_nChanPMT, static_cast<uint8_t>(std::round(gainMin)));						//Vector of gains
+
+	//Line interpolation lower channles: from CH00 to lowerChan
 	for (int chanIndex = 0; chanIndex < PMT16XCHANtoInt_(lowerChan) + 1; chanIndex++)
 		gains.at(chanIndex) = static_cast<uint8_t>(std::round( -lowerSlope * chanIndex + gainMax));
 	
-	//Line interpolating  CH08-CH15
+	//Line interpolation higher channels: from higherChan to CH15
 	for (int chanIndex = PMT16XCHANtoInt_(higherChan); chanIndex < g_nChanPMT; chanIndex++)
 		gains.at(chanIndex) = static_cast<uint8_t>(std::round( higherSlope * (chanIndex - (g_nChanPMT - 1)) + gainMax));
 
@@ -642,7 +646,7 @@ void PMT16X::suppressGainsLinearly(const double scaleFactor, const RTcontrol::PM
 	//for (int iterChan = 0; iterChan < g_nChanPMT; iterChan++)
 	//	std::cout << "gain " << iterChan << "= " << (int)gains.at(iterChan) << "\n";	
 
-	setAllGains(gains);
+	setAllGains(gains);			//upload the gains to the PMT16X
 }
 
 void PMT16X::readTemp() const

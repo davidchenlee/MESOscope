@@ -1217,8 +1217,7 @@ void Shutter::pulse(const double pulsewidth) const
 #pragma region "Pockels cells"
 //Curently, the output of the pockels cell is gated on the FPGA side: the output is HIGH when 'framegate' is HIGH
 //Each Uniblitz shutter goes with a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
-PockelsCell::PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID laserSelector) :
-	mRTcontrol{ RTcontrol }, mWavelength_nm{ wavelength_nm }, mShutter{ mRTcontrol.mFpga, laserSelector }
+PockelsCell::PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID laserSelector) : mRTcontrol{ RTcontrol }, mWavelength_nm{ wavelength_nm }, mShutter{ mRTcontrol.mFpga, laserSelector }
 {
 	if (laserSelector != Laser::ID::VISION && laserSelector != Laser::ID::FIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");

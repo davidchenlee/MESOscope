@@ -1,6 +1,6 @@
 #include "Routines.h"
 const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
-const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
+const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
 POSITION3 stackCenterXYZ{ (46.200) * mm, (20.600)* mm, (20.200) * mm };
@@ -8,10 +8,15 @@ POSITION3 stackCenterXYZ{ (46.200) * mm, (20.600)* mm, (20.200) * mm };
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.09 * mWpum) } }} };
-Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(70. * mW), multiply16X(0.1 * mWpum) } , { "DAPI", 750, multiply16X(25. * mW), multiply16X(0.3 * mWpum) } }} };
+Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
+					{{ {"TDT", 1040, multiply16X(70. * mW), multiply16X(0.1 * mWpum), 4 } ,
+					   { "DAPI", 750, multiply16X(25. * mW), multiply16X(0.3 * mWpum), 2 } }} };
 
 #else
-Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{{"TDT", 1040, 30. * mW, 0.05 * mWpum } , { "DAPI", 750, 20. * mW, 0.2 * mWpum }}} };
+Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
+					{{{"TDT", 1040, 30. * mW, 0.05 * mWpum } ,
+					  { "DAPI", 750, 20. * mW, 0.2 * mWpum }}} };
+
 //Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
 //Sample beads05um{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
 //Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
@@ -25,15 +30,15 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the x-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const int nFramesCont{ 4 };	
 		const double stackDepthZ{ 40. * um };								//Stack deepth in the z-stage axis
@@ -174,11 +179,13 @@ namespace Routines
 				//Save individual files
 				filename.append("_P=" + toString(fluorLabel.mScanPi / mW, 1) + "mW" +
 					"_x=" + toString(stagePositionXYZ.at(iterLocation).XX / mm, 3) + "_y=" + toString(stagePositionXYZ.at(iterLocation).YY / mm, 3) + "_z=" + toString(stagePositionXYZ.at(iterLocation).ZZ / mm, 4) + 
-					"_avg=1");
+					"_avg=" + toString(nFramesCont, 0));
 				std::cout << "Saving the stack...\n";
 				image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 			}
 			output.pushImage(image.data(), iterLocation);
+
+			pressESCforEarlyTermination();
 		}
 
 		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
@@ -253,7 +260,7 @@ namespace Routines
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };			//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in z
-		const int nFramesPerBin{ 4 };																	//For binning
+		const int nFramesPerBin{ 2 };																	//For binning
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um  };
 
@@ -418,6 +425,7 @@ namespace Routines
 			stitchedImage.push(tmp, 0, iterLocation);					//for now, only allowed to stack up strips to the right
 
 			reverseSCANDIR(iterScanDirX);
+			pressESCforEarlyTermination();
 		}
 			const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPi / mW, 1) +
 				"mWpum_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
@@ -476,6 +484,15 @@ namespace Routines
 
 		if (run)
 		{
+
+			//STAGES. Specify the velocity
+			Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
+			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);												//Move the z stage to the sample surface
+			stage.waitForMotionToStopAll();
+
+			//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
+			stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
+
 			//CREATE THE REALTIME CONTROL SEQUENCE
 			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesBeforeBinning, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };	//Note the STAGEZ flag
 
@@ -490,12 +507,6 @@ namespace Routines
 			const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
 			Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2 };
 
-			//STAGES. Specify the velocity
-			Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);												//Move the z stage to the sample surface
-			stage.waitForMotionToStopAll();
-			stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));	//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
-
 			//Read the commands line by line
 			POSITION2 stackCenterXY;
 			std::string longName;
@@ -504,9 +515,6 @@ namespace Routines
 			{
 				Sequence::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 				//commandline.printParameters();
-
-				//Stopwatch
-				//auto t_start{ std::chrono::high_resolution_clock::now() };
 
 				int wavelength_nm;//
 				double scanZi, scanZf, scanPi, scanPf;
@@ -543,7 +551,7 @@ namespace Routines
 						"_x=" + toString(stackCenterXY.XX / mm, 3) + 
 						"_y=" + toString(stackCenterXY.YY / mm, 3) +
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) +
-						"_Step=" + toString(pixelSizeZafterBinning / mm, 4) + "+bin=" + toString(nFramesPerBin, 0);
+						"_Step=" + toString(pixelSizeZafterBinning / mm, 4) + "_bin=" + toString(nFramesPerBin, 0);
 
 					image.formImage();
 					image.binFrames(nFramesPerBin);
@@ -557,7 +565,8 @@ namespace Routines
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
 				}//switch
 
-				//Stop the stopwatch
+				//Stopwatch
+				//auto t_start{ std::chrono::high_resolution_clock::now() };
 				//double duration{ std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count() };
 				//std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
@@ -1220,7 +1229,7 @@ namespace TestRoutines
 	void correctImage()
 	{
 
-		std::string inputFilename{ "F1040nm_Pi=1280.0mW_Pf=1120.0mW_x=46.452_y=20.600_zi=20.2800_zf=20.1800_Step=0.0010" };
+		std::string inputFilename{ "Liver20190812_02_V750nm_P=400.0mW_Pinc=4.8mWpum_x=46.200_y=20.600_zi=20.1940_zf=20.3040_Step=0.0010_bin=4 (1)" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		//image.correct16XFOVslow(1);

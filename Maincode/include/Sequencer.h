@@ -11,6 +11,7 @@ struct FluorLabelList	//Create a list of fluorescent labels
 		int mWavelength_nm;			//Laser wavelength
 		double mScanPi;				//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
 		double mStackPinc;			//Laser power increase per unit of distance in the z-stage axis
+		int nBin{ 1 };
 	};
 	std::vector<FluorLabel> mFluorLabelList;
 	FluorLabelList(const std::vector<FluorLabel> fluorLabelList);

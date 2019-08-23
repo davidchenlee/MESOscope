@@ -67,6 +67,8 @@ namespace Constants
 	extern const double g_laserPulsePeriod;
 	extern const double g_pixelDwellTime;
 	extern const double g_lineclockHalfPeriod;
+	extern const double g_pulsesPerPix;
+	extern const U8 g_upscalingFactor;
 	
 	extern const int g_AOmax;
 	extern const int g_tickPerUs;

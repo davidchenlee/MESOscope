@@ -1,7 +1,6 @@
 #include "Devices.h"
 
 #pragma region "Image"
-
 //When multiplexing, create a mTiff to store 16 strips of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(const RTcontrol &RTcontrol) :
 	mRTcontrol{ RTcontrol },
@@ -304,8 +303,8 @@ void Image::demuxSingleChannel_()
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
-			const int upscaled{ mRTcontrol.mUpscalingFactor * ((mMultiplexedArrayA[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.data())[pixIndex] = clipU8top(upscaled);																		//Clip if overflow
+			const int upscaled{ g_upscalingFactor * ((mMultiplexedArrayA[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
+			(mTiff.data())[pixIndex] = clipU8top(upscaled);																//Clip if overflow
 		}
 	}
 	//Demultiplex mMultiplexedArrayB (CH08-CH15). Each U32 element in mMultiplexedArrayB has the multiplexed structure | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
@@ -313,8 +312,8 @@ void Image::demuxSingleChannel_()
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
-			const int upscaled{ mRTcontrol.mUpscalingFactor * ((mMultiplexedArrayB[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.data())[pixIndex] = clipU8top(upscaled);																		//Clip if overflow
+			const int upscaled{ g_upscalingFactor * ((mMultiplexedArrayB[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
+			(mTiff.data())[pixIndex] = clipU8top(upscaled);																//Clip if overflow
 		}
 	}
 	else
@@ -356,12 +355,12 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{
 			//Buffer A (CH00-CH07)
-			const int upscaledA{ mRTcontrol.mUpscalingFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };		//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			const int upscaledA{ g_upscalingFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };					//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
 			(CountA.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledA);		//Clip if overflow
 			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;										//Shift 4 places to the right for the next iteration
 
 			//Buffer B (CH08-CH15)
-			const int upscaledB{ mRTcontrol.mUpscalingFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };		//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			const int upscaledB{ g_upscalingFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };					//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
 			(CountB.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledB);		//Clip if overflow
 			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;										//Shift 4 places to the right for the next iteration
 		}
@@ -1756,7 +1755,7 @@ Laser::ID VirtualLaser::CombinedLasers::autoSelectLaser_(const int wavelength_nm
 #pragma endregion "CombinedLasers"
 
 //The constructor established a connection with the 2 lasers.
-//VirtualLaser::configure() and VirtualLaser::setPower() must be called afterwards otherwise some class members will no be initialized properly
+//VirtualLaser::configure() and VirtualLaser::setPower() must be called after this constructor!! otherwise some class members will no be properly initialized
 VirtualLaser::VirtualLaser(const Laser::ID whichLaser) :
 	mCombinedLasers{ whichLaser }
 {}

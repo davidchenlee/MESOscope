@@ -263,9 +263,11 @@ QU32 RTcontrol::Pixelclock::readPixelclock() const
 }
 
 RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUTfpga FIFOOUTFPGAstate) :
-	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },
-	mFpga{ fpga }, mLineclockInput{ lineclockInput },
-	mMainTrigger{ mainTrigger }, mNframes{ nFrames },
+	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },	//Initialize the number of queues in the vector
+	mFpga{ fpga },
+	mLineclockInput{ lineclockInput },
+	mMainTrigger{ mainTrigger },
+	mNframes{ nFrames },
 	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
 	mFIFOOUTfpgaState{ FIFOOUTFPGAstate }
@@ -279,8 +281,8 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
 	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 
-	setRescannerSetpoint_();
 	setPostSequenceTimer_();
+	setRescannerSetpoint_();
 }
 
 //The pixel clock is triggered by the line clock (see the LV implementation) after an initial waiting time

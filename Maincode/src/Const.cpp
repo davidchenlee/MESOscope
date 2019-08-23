@@ -29,6 +29,10 @@ namespace Constants
 															//The forward and backward times differ slightly and the difference depends on the scanning amplitude
 															//For example, forward = 63.14 us, backwards = 62.99 us, diff = 150 ns (i.e., ~ 1 pixel)
 															//The measured RS period (126.1 us) seems to be independent of the scanning amplitude
+	extern const double g_pulsesPerPix{ g_pixelDwellTime / g_laserPulsePeriod };//Max number of laser pulses per pixel
+	extern const U8 g_upscalingFactor{ static_cast<U8>(255 / g_pulsesPerPix) };	//Upscale 4-bit counts to 8-bit range [0-255] for compatibility with ImageJ's standards
+
+
 	//FPGA
 	extern const int g_AOmax{ 10 * V };						//Max voltage of the AOs
 	extern const int g_tickPerUs{ 160 };					//Number of ticks in 1 us. It corresponds to the FPGA's clock

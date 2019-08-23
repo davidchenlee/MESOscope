@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (46.200) * mm, (20.600)* mm, (20.200) * mm };
+POSITION3 stackCenterXYZ{ (46.200) * mm, (20.600)* mm, (20.250) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
@@ -191,7 +191,7 @@ namespace Routines
 
 		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
 		{	
-			filename.append( "_Pi=" + toString(fluorLabel.mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) + "mWpum" +
+			filename.append( "_Pi=" + toString(fluorLabel.mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 2) + "mWpum" +
 				"_x=" + toString(stagePositionXYZ.front().XX / mm, 3) + "_y=" + toString(stagePositionXYZ.front().YY / mm, 3) +
 				"_zi=" + toString(stagePositionXYZ.front().ZZ / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().ZZ / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) + 
 				"_avg=" + toString(nFramesCont * nSameLocation, 0) );
@@ -240,8 +240,8 @@ namespace Routines
 			datalog.record("nFramesCont = ", nFramesCont);
 			datalog.record("nSameLocation= ", nSameLocation);
 			datalog.record("\nIMAGE--------------------------------------------------------");
-			datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
-			datalog.record("Upscaling factor = ", RTcontrol.mUpscalingFactor);
+			datalog.record("Max count per pixel = ", g_pulsesPerPix);
+			datalog.record("Upscaling factor = ", g_upscalingFactor);
 			datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
 			datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
 			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
@@ -335,7 +335,7 @@ namespace Routines
 		image.binFrames(nFramesPerBin);
 		//image.correctImage(RScanner.mFFOV);
 
-		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 1) +
+		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 2) +
 			"mWpum_x=" + toString(stackCenterXYZ.XX / mm, 3) + "_y=" + toString(stackCenterXYZ.YY / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZafterBinning / mm, 4) +
 			"_bin=" + toString(nFramesPerBin, 0) };
@@ -447,7 +447,7 @@ namespace Routines
 		//for beads, center the stack around stackCenterXYZ.at(Z) -----> //const double sampleSurfaceZ{ stackCenterXYZ.ZZ - nFramesCont * pixelSizeZ / 2 };
 
 		//ACQUISITION SETTINGS
-		const int nFramesPerBin{ 4 };																	//Number of frames for continuous acquisition
+		const int nFramesPerBin{ 2 };																	//Number of frames for continuous acquisition
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um };												//Step size in the z-stage axis
 		
@@ -464,7 +464,6 @@ namespace Routines
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };														//Sample thickness
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
-
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -489,11 +488,12 @@ namespace Routines
 
 		if (run)
 		{
-
 			//STAGES. Specify the velocity
 			Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
 			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);												//Move the z stage to the sample surface
 			stage.waitForMotionToStopAll();
+			//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
+			stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
 
 			//LASER
 			VirtualLaser virtualLaser;
@@ -501,11 +501,8 @@ namespace Routines
 			//CREATE THE REALTIME CONTROL SEQUENCE
 			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesBeforeBinning, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };
 
-			//RS
-			const ResonantScanner RScanner{ RTcontrol };
-			RScanner.isRunning();																		//To make sure that the RS is running
-
-			//GALVOS
+			//SCANNERS
+			//const ResonantScanner RScanner{ RTcontrol };
 			const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
 			Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2 };
 
@@ -536,9 +533,6 @@ namespace Routines
 					scanPf = acqStack.scanPf();
 					scanZi = acqStack.mScanZi;
 					scanZf = acqStack.scanZf();
-
-					//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
-					stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
 
 					//Update the laser parameters
 					virtualLaser.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
@@ -694,8 +688,8 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 		datalog.record("RS fill factor = ", RScanner.mFillFactor);
 		datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
 		datalog.record("\nIMAGE--------------------------------------------------------");
-		datalog.record("Max count per pixel = ", RTcontrol.mPulsesPerPix);
-		datalog.record("Upscaling factor = ", RTcontrol.mUpscalingFactor);
+		datalog.record("Max count per pixel = ", RTcontrol.g_pulsesPerPix);
+		datalog.record("Upscaling factor = ", RTcontrol.g_upscalingFactor);
 		datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
 		datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
 		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
@@ -751,7 +745,7 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 
 			//Save the stackDiffZ to file
 			std::string shortName{ "Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iterWL).mName + "_Tile" + std::to_string(iterLocation + 1) };
-			std::string longName{ currentSample.mName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(fluorLabelList.at(iterWL).mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabelList.at(iterWL).mStackPinc / mWpum, 1) + "mWpum" +
+			std::string longName{ currentSample.mName + "_" + toString(wavelength_nm, 0) + "nm_Pi=" + toString(fluorLabelList.at(iterWL).mScanPi / mW, 1) + "mW_Pinc=" + toString(fluorLabelList.at(iterWL).mStackPinc / mWpum, 2) + "mWpum" +
 				"_x=" + toString(stagePositionXYZ.front().at(X) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(Y) / mm, 3) +
 				"_zi=" + toString(stagePositionXYZ.front().at(Z) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(Z) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
 
@@ -1310,14 +1304,14 @@ namespace TestRoutines
 	void locateSample()
 	{
 		std::string outputFilename{ "output" };
-		TiffU8 image{ "stitched" };
+		TiffU8 image{ "Liver20190812_02_F1040nm_P=30.0mWpum_xi=51.200_xf=41.100_yi=23.100_yf=18.150_z=20.2440_Step=0.0005" };
 
 		const int tileWidth_pix{ 300 };
 		const int tileHeight_pix{ 400 };
 		const int nTileCol{ image.widthPerFrame_pix() / tileWidth_pix };
 		const int nTileRow{ image.heightPerFrame_pix() / tileHeight_pix };
 
-		image.giveBoolMap(0.004, tileWidth_pix, tileHeight_pix);
+		image.giveBoolMap(0.010, tileWidth_pix, tileHeight_pix);
 		//image.isDark(0.01);
 
 		pressAnyKeyToCont();

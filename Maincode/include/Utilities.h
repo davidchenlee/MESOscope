@@ -86,7 +86,6 @@ private:
 	int mBytesPerLine; 
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
 	double giveTileAverage_(const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const;
-	std::vector<bool> maxMin_(std::vector<bool> input, const int nRow, const int nCol);
 };
 
 class QuickStitcher

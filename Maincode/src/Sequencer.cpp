@@ -1,7 +1,9 @@
 #include "Sequencer.h"
 
 #pragma region "FluorLabelList"
-FluorLabelList::FluorLabelList(const std::vector<FluorLabel> fluorLabelList) : mFluorLabelList{ fluorLabelList } {}
+FluorLabelList::FluorLabelList(const std::vector<FluorLabel> fluorLabelList) :
+	mFluorLabelList{ fluorLabelList }
+{}
 
 std::size_t FluorLabelList::size() const
 {
@@ -46,7 +48,12 @@ FluorLabelList::FluorLabel FluorLabelList::findFluorLabel(const std::string fluo
 
 #pragma region "Sample"
 Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorLabelList fluorLabelList) :
-	mName{ sampleName }, mImmersionMedium{ immersionMedium }, mObjectiveCollar{ objectiveCollar }, mStageSoftPosLimXYZ{ stageSoftPosLimXYZ }, mFluorLabelList{ fluorLabelList }{}
+	mName{ sampleName },
+	mImmersionMedium{ immersionMedium },
+	mObjectiveCollar{ objectiveCollar },
+	mStageSoftPosLimXYZ{ stageSoftPosLimXYZ },
+	mFluorLabelList{ fluorLabelList }
+{}
 
 Sample::Sample(const Sample& sample, ROI4 roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :
 	mName{ sample.mName }, mImmersionMedium{ sample.mImmersionMedium }, mObjectiveCollar{ sample.mObjectiveCollar }, mFluorLabelList{ sample.mFluorLabelList }, mROIrequest{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
@@ -93,7 +100,10 @@ void Sample::printParams(std::ofstream *fileHandle) const
 
 #pragma region "Stack"
 Stack::Stack(const FFOV2 FFOV, const double stepSizeZ, const int nFrames, const TILEOVERLAP4 overlap_frac) :
-	mFFOV{ FFOV }, mStepSizeZ{ stepSizeZ }, mDepth{ stepSizeZ *  nFrames }, mOverlap_frac{ overlap_frac }
+	mFFOV{ FFOV },
+	mStepSizeZ{ stepSizeZ },
+	mDepth{ stepSizeZ *  nFrames },
+	mOverlap_frac{ overlap_frac }
 {
 	if (FFOV.XX <= 0 || FFOV.YY <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
@@ -125,7 +135,9 @@ void Stack::printParams(std::ofstream *fileHandle) const
 #pragma endregion "Stack"
 
 #pragma region "Commandline"
-Sequence::Commandline::Commandline(const Action::ID action) : mAction{ action } {}
+Sequence::Commandline::Commandline(const Action::ID action) :
+	mAction{ action }
+{}
 
 std::string Sequence::Commandline::printHeader() const
 {
@@ -221,7 +233,9 @@ std::string Sequence::Commandline::actionToString_(const Action::ID action) cons
 
 #pragma region "Sequence"
 //Constructor using the sample's ROI. The number of stacks is calculated automatically based on the FFOV
-Sequence::Sequence(const Sample sample, const Stack stack) : mSample{ sample }, mStack{ stack }
+Sequence::Sequence(const Sample sample, const Stack stack) :
+	mSample{ sample },
+	mStack{ stack }
 {
 	//Initialize the z-stage with the position of the surface of the sample and the height of the plane to slice
 	mScanZi = mSample.mSurfaceZ;

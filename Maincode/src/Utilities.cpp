@@ -278,7 +278,8 @@ void Logger::record(const std::string description, const std::string input)
 
 #pragma region "TiffU8"
 //Construct a tiff from a file
-TiffU8::TiffU8(const std::string filename) : mNframes{ 1 }
+TiffU8::TiffU8(const std::string filename) :
+	mNframes{ 1 }
 {
 	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "r") };
 
@@ -1209,7 +1210,10 @@ void TiffU8::setNframes(const int nFrames)
 #pragma endregion "TiffU8"
 
 //tileWidth_pix: tile width, tileHeight_pix: tile height, nTileRow: number of tile-rows in the stitched image, nTileCol: number of tile-columns in the stitched image
-QuickStitcher::QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nTileRow, const int nTileCol) : mStitchedTiff{ tileWidth_pix * nTileCol, tileHeight_pix * nTileRow, 1 }, mNrow{ nTileRow }, mNcol{ nTileCol }
+QuickStitcher::QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nTileRow, const int nTileCol) :
+	mStitchedTiff{ tileWidth_pix * nTileCol, tileHeight_pix * nTileRow, 1 },
+	mNrow{ nTileRow },
+	mNcol{ nTileCol }
 {
 	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile width and height must be > 0");
@@ -1254,7 +1258,11 @@ void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) co
 /*Obsolete
 #pragma region "Stack"
 TiffStack::TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ) :
-	mArrayDiffZ(widthPerFrame_pix, heightPerFrame_pix, nDiffZ), mArraySameZ(widthPerFrame_pix, heightPerFrame_pix, nSameZ) {}
+	mArrayDiffZ(widthPerFrame_pix,
+	heightPerFrame_pix, nDiffZ),
+	mArraySameZ(widthPerFrame_pix,
+	heightPerFrame_pix, nSameZ)
+{}
 
 void TiffStack::pushSameZ(const int indexSameZ, const U8* data)
 {

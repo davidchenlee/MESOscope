@@ -116,7 +116,6 @@ public:
 	void printSequenceParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
 private:
-
 	Sample mSample;								//Sample
 	const Stack mStack;							//Stack
 	std::vector<Commandline> mCommandList;

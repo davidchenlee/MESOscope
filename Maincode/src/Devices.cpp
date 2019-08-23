@@ -4,7 +4,8 @@
 
 //When multiplexing, create a mTiff to store 16 strips of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(const RTcontrol &RTcontrol) :
-	mRTcontrol{ RTcontrol }, mTiff{ mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * (g_nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes }
+	mRTcontrol{ RTcontrol },
+	mTiff{ mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * (g_nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes }
 {
 	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
 	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
@@ -414,7 +415,8 @@ void Image::triggerRT_() const
 #pragma endregion "Image"
 
 #pragma region "Resonant scanner"
-ResonantScanner::ResonantScanner(const RTcontrol &RTcontrol) : mRTcontrol{ RTcontrol }
+ResonantScanner::ResonantScanner(const RTcontrol &RTcontrol) :
+	mRTcontrol{ RTcontrol }
 {	
 	//Calculate the spatial fill factor
 	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * g_pixelDwellTime / g_lineclockHalfPeriod };
@@ -527,10 +529,9 @@ void ResonantScanner::setVoltage_(const double controlVoltage)
 #pragma endregion "Resonant scanner"
 
 #pragma region "PMT16X"
-PMT16X::PMT16X()
-{
-	mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(static_cast<int>(mPort)), mBaud, serial::Timeout::simpleTimeout(mTimeout/ms)));
-}
+PMT16X::PMT16X() :
+	mSerial{ std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(static_cast<int>(mPort)), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms))) }
+{}
 
 PMT16X::~PMT16X()
 {
@@ -759,7 +760,8 @@ uint8_t PMT16X::sumCheck_(const std::vector<uint8_t> charArray, const int nEleme
 
 
 #pragma region "Filterwheel"
-Filterwheel::Filterwheel(const ID whichFilterwheel) : mWhichFilterwheel{ whichFilterwheel }
+Filterwheel::Filterwheel(const ID whichFilterwheel) :
+	mWhichFilterwheel{ whichFilterwheel }
 {
 	switch (whichFilterwheel)
 	{
@@ -949,7 +951,8 @@ std::string Filterwheel::colorToString_(const COLOR color) const
 #pragma endregion "Filterwheel"
 
 #pragma region "Laser"
-Laser::Laser(const ID whichLaser) : mWhichLaser{ whichLaser }
+Laser::Laser(const ID whichLaser) :
+	mWhichLaser{ whichLaser }
 {
 	switch (mWhichLaser)
 	{
@@ -1176,7 +1179,8 @@ int Laser::downloadWavelength_nm_() const
 
 #pragma region "Shutters"
 //To control the Uniblitz shutters
-Shutter::Shutter(const FPGA &fpga, const Laser::ID whichLaser) : mFpga{ fpga }
+Shutter::Shutter(const FPGA &fpga, const Laser::ID whichLaser) :
+	mFpga{ fpga }
 {
 	switch (whichLaser)
 	{
@@ -1217,7 +1221,10 @@ void Shutter::pulse(const double pulsewidth) const
 #pragma region "Pockels cells"
 //Curently, the output of the pockels cell is gated on the FPGA side: the output is HIGH when 'framegate' is HIGH
 //Each Uniblitz shutter goes with a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
-PockelsCell::PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID laserSelector) : mRTcontrol{ RTcontrol }, mWavelength_nm{ wavelength_nm }, mShutter{ mRTcontrol.mFpga, laserSelector }
+PockelsCell::PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID laserSelector) :
+	mRTcontrol{ RTcontrol },
+	mWavelength_nm{ wavelength_nm },
+	mShutter{ mRTcontrol.mFpga, laserSelector }
 {
 	if (laserSelector != Laser::ID::VISION && laserSelector != Laser::ID::FIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
@@ -1407,7 +1414,8 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 #pragma endregion "Pockels cells"
 
 #pragma region "StepperActuator"
-StepperActuator::StepperActuator(const char* serialNumber) : mSerialNumber{ serialNumber }
+StepperActuator::StepperActuator(const char* serialNumber) :
+	mSerialNumber{ serialNumber }
 {	
 	//Build list of connected device
 	if (TLI_BuildDeviceList() == 0)
@@ -1558,7 +1566,10 @@ void VirtualLaser::CollectorLens::set(const int wavelength_nm)
 }
 
 #pragma region "VirtualFilterWheel"
-VirtualLaser::VirtualFilterWheel::VirtualFilterWheel() : mFWexcitation{ Filterwheel::ID::EXC }, mFWdetection{ Filterwheel::ID::DET } {}
+VirtualLaser::VirtualFilterWheel::VirtualFilterWheel() :
+	mFWexcitation{ Filterwheel::ID::EXC },
+	mFWdetection{ Filterwheel::ID::DET }
+{}
 
 void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm)
 {
@@ -1597,7 +1608,11 @@ void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm
 #pragma endregion "VirtualFilterWheel"
 
 #pragma region "CombinedLasers"
-VirtualLaser::CombinedLasers::CombinedLasers(const Laser::ID whichLaser) : mWhichLaser{ whichLaser }, mVision{ Laser::ID::VISION }, mFidelity{ Laser::ID::FIDELITY } {}
+VirtualLaser::CombinedLasers::CombinedLasers(const Laser::ID whichLaser) :
+	mWhichLaser{ whichLaser },
+	mVision{ Laser::ID::VISION },
+	mFidelity{ Laser::ID::FIDELITY }
+{}
 
 //Which laser is currently being used
 Laser::ID VirtualLaser::CombinedLasers::currentLaser() const
@@ -1742,7 +1757,9 @@ Laser::ID VirtualLaser::CombinedLasers::autoSelectLaser_(const int wavelength_nm
 
 //The constructor established a connection with the 2 lasers.
 //VirtualLaser::configure() and VirtualLaser::setPower() must be called afterwards otherwise some class members will no be initialized properly
-VirtualLaser::VirtualLaser(const Laser::ID whichLaser) : mCombinedLasers{ whichLaser } {}
+VirtualLaser::VirtualLaser(const Laser::ID whichLaser) :
+	mCombinedLasers{ whichLaser }
+{}
 
 //Which laser is currently being used
 Laser::ID VirtualLaser::currentLaser() const
@@ -1819,7 +1836,10 @@ void VirtualLaser::moveCollectorLens(const double position)
 #pragma endregion "VirtualLaser"
 
 #pragma region "Galvo"
-Galvo::Galvo(RTcontrol &RTcontrol, const RTcontrol::RTCHAN whichGalvo, const double posMax, const VirtualLaser *virtualLaser) : mRTcontrol{ RTcontrol }, mWhichGalvo{ whichGalvo }, mPosMax{ posMax }
+Galvo::Galvo(RTcontrol &RTcontrol, const RTcontrol::RTCHAN whichGalvo, const double posMax, const VirtualLaser *virtualLaser) :
+	mRTcontrol{ RTcontrol },
+	mWhichGalvo{ whichGalvo },
+	mPosMax{ posMax }
 {
 	reconfigure(virtualLaser);
 }
@@ -2008,7 +2028,8 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 #pragma endregion "Galvo"
 
 #pragma region "Stages"
-Stage::Stage(const double velX, const double velY, const double velZ, const std::vector<LIMIT2> stageSoftPosLimXYZ) : mSoftPosLimXYZ{ stageSoftPosLimXYZ }
+Stage::Stage(const double velX, const double velY, const double velZ, const std::vector<LIMIT2> stageSoftPosLimXYZ) :
+	mSoftPosLimXYZ{ stageSoftPosLimXYZ }
 {
 	const std::string stageIDx{ "116049107" };	//X-stage (V-551.4B)
 	const std::string stageIDy{ "116049105" };	//Y-stage (V-551.2B)
@@ -2427,7 +2448,10 @@ std::string Stage::axisToString_(const Axis axis) const
 #pragma endregion "Stages"
 
 #pragma region "Vibratome"
-Vibratome::Vibratome(const FPGA &fpga, Stage &stage) : mFpga{ fpga }, mStage{ stage } {}
+Vibratome::Vibratome(const FPGA &fpga, Stage &stage) :
+	mFpga{ fpga },
+	mStage{ stage }
+{}
 
 //Start or stop running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
 void Vibratome::pushStartStopButton() const

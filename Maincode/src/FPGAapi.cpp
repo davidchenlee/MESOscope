@@ -250,7 +250,9 @@ void FPGA::initializeFpga_() const
 #pragma endregion "FPGA"
 
 #pragma region "RTcontrol"
-RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell) : mWidthPerFrame_pix{ widthPerFrame_pix }, mDwell{ dwell }
+RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell) :
+	mWidthPerFrame_pix{ widthPerFrame_pix },
+	mDwell{ dwell }
 {
 	pushUniformDwellTimes_();
 }
@@ -261,8 +263,12 @@ QU32 RTcontrol::Pixelclock::readPixelclock() const
 }
 
 RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUTfpga FIFOOUTFPGAstate) :
-	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) }, mFpga{ fpga }, mLineclockInput{ lineclockInput }, mMainTrigger{ mainTrigger }, mNframes{ nFrames },
-	mWidthPerFrame_pix{ widthPerFrame_pix }, mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }, mFIFOOUTfpgaState{ FIFOOUTFPGAstate }
+	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },
+	mFpga{ fpga }, mLineclockInput{ lineclockInput },
+	mMainTrigger{ mainTrigger }, mNframes{ nFrames },
+	mWidthPerFrame_pix{ widthPerFrame_pix },
+	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
+	mFIFOOUTfpgaState{ FIFOOUTFPGAstate }
 {
 	//Set the imaging parameters
 	mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
@@ -297,7 +303,9 @@ void RTcontrol::Pixelclock::pushUniformDwellTimes_()
 		mPixelclockQ.push_back(FPGAfunc::packPixelclockSinglet(mDwell, 1));
 }
 
-RTcontrol::RTcontrol(const FPGA &fpga) : RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUTfpga::DIS } {}
+RTcontrol::RTcontrol(const FPGA &fpga) :
+	RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUTfpga::DIS }
+{}
 
 void RTcontrol::pushQueue(const RTCHAN chan, QU32& queue)
 {

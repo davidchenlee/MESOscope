@@ -30,9 +30,9 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the x-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
@@ -40,7 +40,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const int nFramesCont{ 4 };	
+		const int nFramesCont{ 2 };	
 		const double stackDepthZ{ 40. * um };								//Stack deepth in the z-stage axis
 		const double stepSizeZ{ 1.0 * um };
 	
@@ -128,7 +128,8 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };
 
 		//LASER
-		VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, whichLaser };
+		VirtualLaser virtualLaser{ whichLaser };
+		virtualLaser.configure(RTcontrol, fluorLabel.mWavelength_nm);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -300,7 +301,9 @@ namespace Routines
 		//LASER
 		const double laserPi = giveInitialLaserPower(fluorLabel.mScanPi, stackDepth * fluorLabel.mStackPinc, scanDirZ);
 		const double laserPf = giveFinalLaserPower(fluorLabel.mScanPi, stackDepth * fluorLabel.mStackPinc, scanDirZ);
-		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, laserPi, laserPf, whichLaser };
+		VirtualLaser virtualLaser{ whichLaser };
+		virtualLaser.configure(RTcontrol, fluorLabel.mWavelength_nm);
+		virtualLaser.setPower(laserPi, laserPf);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -377,7 +380,9 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, totalHeight_pix/2, tileWidth_pix, 2, FIFOOUTfpga::EN };																								
 
 		//LASER
-		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, fluorLabel.mScanPi, fluorLabel.mScanPi, whichLaser }; //Note that the initial and final laser powers are the same
+		VirtualLaser virtualLaser{ whichLaser };
+		virtualLaser.configure(RTcontrol, fluorLabel.mWavelength_nm);
+		virtualLaser.setPower(fluorLabel.mScanPi);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -478,7 +483,7 @@ namespace Routines
 		const Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, pixelSizeZafterBinning, nFramesAfterBinning, stackOverlap_frac };
 		//Sequence sequece(sample, stack);
-		Sequence sequence{ sample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 2, 2 } };			//The last 2 parameters: stack center and number of stacks in axes {x-stage, y-stage}
+		Sequence sequence{ sample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 1, 1 } };			//The last 2 parameters: stack center and number of stacks in axes {x-stage, y-stage}
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
@@ -490,14 +495,11 @@ namespace Routines
 			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);												//Move the z stage to the sample surface
 			stage.waitForMotionToStopAll();
 
-			//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
-			stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
+			//LASER
+			VirtualLaser virtualLaser;
 
 			//CREATE THE REALTIME CONTROL SEQUENCE
-			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesBeforeBinning, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };	//Note the STAGEZ flag
-
-			//LASER
-			VirtualLaser virtualLaser{ RTcontrol };
+			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, nFramesBeforeBinning, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };
 
 			//RS
 			const ResonantScanner RScanner{ RTcontrol };
@@ -517,7 +519,7 @@ namespace Routines
 				//commandline.printParameters();
 
 				int wavelength_nm;//
-				double scanZi, scanZf, scanPi, scanPf;
+				double scanZi, scanZf, scanPi, scanPf;	//These parameters must be accessible to the different actions
 				switch (commandline.mAction)
 				{
 				case Action::ID::MOV://Move the x and y stages to mStackCenterXY
@@ -535,15 +537,18 @@ namespace Routines
 					scanZi = acqStack.mScanZi;
 					scanZf = acqStack.scanZf();
 
+					//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
+					stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
+
 					//Update the laser parameters
-					virtualLaser.configure(wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
+					virtualLaser.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
 					virtualLaser.setPower(scanPi, scanPf);
-					virtualLaser.openShutter();					//Re-open the Uniblitz shutter if closed by the pockels destructor
-					rescanner.reconfigure(&virtualLaser);		//The calibration of the rescanner depends on the laser and wavelength being used
+					virtualLaser.openShutter();								//Re-open the Uniblitz shutter if closed by the pockels destructor
+					rescanner.reconfigure(&virtualLaser);					//The calibration of the rescanner depends on the laser and wavelength being used
 
 					image.initializeAcq(acqStack.mScanDirZ);
 					std::cout << "Scanning the stack...\n";
-					stage.moveSingle(Stage::ZZ, scanZf);		//Move the stage to trigger the ctl&acq sequence
+					stage.moveSingle(Stage::ZZ, scanZf);					//Move the stage to trigger the ctl&acq sequence
 					image.downloadData();
 					break;
 				case Action::ID::SAV:
@@ -590,7 +595,8 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUTfpga::EN };
 
 		//LASER
-		const VirtualLaser virtualLaser{ RTcontrol, fluorLabel.mWavelength_nm, Laser::ID::VISION };
+		VirtualLaser virtualLaser{ Laser::ID::VISION };
+		virtualLaser.configure(RTcontrol, fluorLabel.mWavelength_nm);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -876,8 +882,10 @@ namespace TestRoutines
 
 		//LASER
 		const int wavelength_nm{ 1040 };
-		const double P{ 25. * mW };		//Laser power
-		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, P, P, Laser::ID::FIDELITY };
+		const double laserPower{ 25. * mW };		//Laser power
+		VirtualLaser virtualLaser{ Laser::ID::FIDELITY };
+		virtualLaser.configure(RTcontrol, wavelength_nm);
+		virtualLaser.setPower(laserPower);
 
 		//CONTROL SEQUENCE
 		virtualLaser.openShutter();	//Open the uniblitz shutter. The destructor will close the shutter automatically
@@ -954,7 +962,9 @@ namespace TestRoutines
 
 		//LASER
 		const int wavelength_nm{ 750 };
-		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, selectPower, selectPower, Laser::ID::VISION };
+		VirtualLaser virtualLaser{ Laser::ID::VISION };
+		virtualLaser.configure(RTcontrol, wavelength_nm);
+		virtualLaser.setPower(selectPower);
 
 		//GALVOS
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
@@ -1079,8 +1089,8 @@ namespace TestRoutines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerFrame_pix, FIFOOUTfpga::DIS };
 
 		//POCKELS CELL
-		const int wavelength_nm{ 750 };
-		PockelsCell pockels{ RTcontrol, wavelength_nm, Laser::ID::VISION };
+		const int wavelength_nm{ 1040 };
+		PockelsCell pockels{ RTcontrol, wavelength_nm, Laser::ID::FIDELITY };
 		const double Pi{ 192. * mW }, Pf{ 336. * mW };
 		//pockels.pushPowerSinglet(400 * us, Pf, OVERRIDE::EN);
 		pockels.powerLinearScaling(0.96 * Pi, Pf);			//Linearly scale the laser power from the first to the last frame
@@ -1113,7 +1123,9 @@ namespace TestRoutines
 
 		const int wavelength_nm{ 1040 };
 		const double laserPower{ 50. * mW };
-		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, Laser::ID::VISION };
+		VirtualLaser virtualLaser{ Laser::ID::VISION };
+		virtualLaser.configure(RTcontrol, wavelength_nm);
+		virtualLaser.setPower(laserPower);
 
 		//EXECUTE THE CONTROL SEQUENCE
 		//Image image{ RTcontrol };
@@ -1552,7 +1564,9 @@ namespace TestRoutines
 
 		//LASER
 		const double laserPower{ 30. * mW };
-		const VirtualLaser virtualLaser{ RTcontrol, wavelength_nm, laserPower, laserPower, Laser::ID::VISION };
+		VirtualLaser virtualLaser{ Laser::ID::VISION };
+		virtualLaser.configure(RTcontrol, wavelength_nm);
+		virtualLaser.setPower(laserPower);
 
 		//GALVOS
 		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };

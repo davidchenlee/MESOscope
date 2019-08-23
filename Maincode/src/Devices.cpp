@@ -1597,7 +1597,7 @@ void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm
 #pragma endregion "VirtualFilterWheel"
 
 #pragma region "CombinedLasers"
-VirtualLaser::CombinedLasers::CombinedLasers(RTcontrol &RTcontrol, const Laser::ID whichLaser) : mRTcontrol{ RTcontrol }, mWhichLaser{ whichLaser }, mVision{ Laser::ID::VISION }, mFidelity{ Laser::ID::FIDELITY } {}
+VirtualLaser::CombinedLasers::CombinedLasers(const Laser::ID whichLaser) : mWhichLaser{ whichLaser }, mVision{ Laser::ID::VISION }, mFidelity{ Laser::ID::FIDELITY } {}
 
 //Which laser is currently being used
 Laser::ID VirtualLaser::CombinedLasers::currentLaser() const
@@ -1659,8 +1659,8 @@ void VirtualLaser::CombinedLasers::isLaserInternalShutterOpen() const
 	}//whileloop
 }
 
-//Tune the laser wavelength (for VISION only)
-void VirtualLaser::CombinedLasers::tuneLaserWavelength(const int wavelength_nm)
+//Change the laser wavelength (tune Vision or switching lasers accordingly) and switch pockels
+void VirtualLaser::CombinedLasers::setWavelength(RTcontrol &RTcontrol, const int wavelength_nm)
 {
 	//Select the laser to be used: VISION or FIDELITY
 	Laser::ID newLaser = autoSelectLaser_(wavelength_nm);
@@ -1671,10 +1671,10 @@ void VirtualLaser::CombinedLasers::tuneLaserWavelength(const int wavelength_nm)
 
 	//For the first call, assign a pointer to mPockelsPtr
 	if(mPockelsPtr == nullptr)	
-		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, newLaser));
-	//For the subsequent calls, destroy the pockels object when switching wavelengths (including switching between lasers) to avoid photobleaching the sample (the pockels destructor closes the shutter)
+		mPockelsPtr.reset(new PockelsCell(RTcontrol, wavelength_nm, newLaser));
+	//For the subsequent calls, destroy the pockels object when switching wavelengths (including switching lasers) to avoid photobleaching the sample (the pockels destructor closes the shutter)
 	else if(currentWavelength_nm() != wavelength_nm || mCurrentLaser != newLaser)
-		mPockelsPtr.reset(new PockelsCell(mRTcontrol, wavelength_nm, newLaser));
+		mPockelsPtr.reset(new PockelsCell(RTcontrol, wavelength_nm, newLaser));
 
 	//If VISION is selected, set the new wavelength
 	if (newLaser == Laser::ID::VISION)
@@ -1740,23 +1740,9 @@ Laser::ID VirtualLaser::CombinedLasers::autoSelectLaser_(const int wavelength_nm
 }
 #pragma endregion "CombinedLasers"
 
-VirtualLaser::VirtualLaser(RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const Laser::ID whichLaser) : mCombinedLasers{ RTcontrol, whichLaser }
-{
-	//Tune the laser wavelength, set the excitation and emission filterwheels, and position the collector lens concurrently
-	configure(wavelength_nm);		
-
-	//Set the laser power
-	setPower(initialPower, finalPower);
-}
-
-VirtualLaser::VirtualLaser(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID whichLaser) : mCombinedLasers{ RTcontrol, whichLaser }
-{
-	//Tune the laser wavelength, set the excitation and emission filterwheels, and position the collector lens concurrently
-	configure(wavelength_nm);
-}
-
-//This constructor requires to call VirtualLaser::configure() and VirtualLaser::setPower() manually, otherwise some class members will no be initialized properly
-VirtualLaser::VirtualLaser(RTcontrol &RTcontrol, const Laser::ID whichLaser) : mCombinedLasers{ RTcontrol, whichLaser } {}
+//The constructor established a connection with the 2 lasers.
+//VirtualLaser::configure() and VirtualLaser::setPower() must be called afterwards otherwise some class members will no be initialized properly
+VirtualLaser::VirtualLaser(const Laser::ID whichLaser) : mCombinedLasers{ whichLaser } {}
 
 //Which laser is currently being used
 Laser::ID VirtualLaser::currentLaser() const
@@ -1775,11 +1761,11 @@ int VirtualLaser::currentWavelength_nm() const
 }
 
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
-void VirtualLaser::configure(const int wavelength_nm)
+void VirtualLaser::configure(RTcontrol &RTcontrol, const int wavelength_nm)
 {
-	std::future<void> th1{ std::async(&CombinedLasers::tuneLaserWavelength, &mCombinedLasers, wavelength_nm) };			//Tune the laser wavelength
-	std::future<void> th2{ std::async(&VirtualFilterWheel::turnFilterwheels_, &mVirtualFilterWheel, wavelength_nm) };	//Set the filterwheels
-	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };							//Set the collector lens position
+	std::future<void> th1{ std::async(&CombinedLasers::setWavelength, &mCombinedLasers, std::ref(RTcontrol), std::ref(wavelength_nm)) };	//Tune the laser wavelength
+	std::future<void> th2{ std::async(&VirtualFilterWheel::turnFilterwheels_, &mVirtualFilterWheel, wavelength_nm) };						//Set the filterwheels
+	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };												//Set the collector lens position
 
 	try
 	{
@@ -1791,9 +1777,6 @@ void VirtualLaser::configure(const int wavelength_nm)
 	{
 		throw;
 	}
-
-	//Check if the laser internal shutter is open
-	mCombinedLasers.isLaserInternalShutterOpen();
 }
 
 void VirtualLaser::setPower(const double laserPower) const
@@ -1812,11 +1795,17 @@ void VirtualLaser::powerLinearScaling(const double Pi, const double Pf) const
 	mCombinedLasers.powerLinearScaling(Pi, Pf);
 }
 
+//Open the Uniblitz shutter
 void VirtualLaser::openShutter() const
 {
+	//Check if the laser internal shutter is open
+	mCombinedLasers.isLaserInternalShutterOpen();
+
+	//Open the Uniblitz shutter
 	mCombinedLasers.openShutter();
 }
 
+//Close the Uniblitz shutter
 void VirtualLaser::closeShutter() const
 {
 	mCombinedLasers.closeShutter();

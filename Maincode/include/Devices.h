@@ -267,9 +267,7 @@ private:
 class VirtualLaser
 {
 public:
-	VirtualLaser(RTcontrol &RTcontrol, const int wavelength_nm, const double initialPower, const double finalPower, const Laser::ID whichLaser);
-	VirtualLaser(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID whichLaser = Laser::ID::AUTO);
-	VirtualLaser(RTcontrol &RTcontrol, const Laser::ID whichLaser = Laser::ID::AUTO);
+	VirtualLaser(const Laser::ID whichLaser = Laser::ID::AUTO);
 	VirtualLaser(const VirtualLaser&) = delete;				//Disable copy-constructor
 	VirtualLaser& operator=(const VirtualLaser&) = delete;	//Disable assignment-constructor
 	VirtualLaser(VirtualLaser&&) = delete;					//Disable move constructor
@@ -278,7 +276,7 @@ public:
 	Laser::ID currentLaser() const;
 	std::string currentLaser_s(const bool justTheNameInitials = false) const;
 	int currentWavelength_nm() const;
-	void configure(const int wavelength_nm);
+	void configure(RTcontrol &RTcontrol, const int wavelength_nm);
 	void setPower(const double laserPower) const;
 	void setPower(const double initialPower, const double finalPower) const;
 	void powerLinearScaling(const double Pi, const double Pf) const;
@@ -299,12 +297,12 @@ private:
 	class CombinedLasers
 	{
 	public:
-		CombinedLasers(RTcontrol &RTcontrol, const Laser::ID whichLaser = Laser::ID::AUTO);
+		CombinedLasers(const Laser::ID whichLaser = Laser::ID::AUTO);
 		Laser::ID currentLaser() const;
 		std::string currentLaser_s(const bool justTheNameInitials) const;
 		int currentWavelength_nm() const;
 		void isLaserInternalShutterOpen() const;
-		void tuneLaserWavelength(const int wavelength_nm);
+		void setWavelength(RTcontrol &RTcontrol, const int wavelength_nm);
 		void setPower(const double initialPower, const double finalPower) const;
 		void powerLinearScaling(const double Pi, const double Pf) const;
 		void openShutter() const;
@@ -314,7 +312,7 @@ private:
 		Laser::ID mCurrentLaser;						//Current laser in use: VISION or FIDELITY
 		Laser mVision;
 		Laser mFidelity;
-		RTcontrol &mRTcontrol;
+		//RTcontrol &mRTcontrol;
 		std::unique_ptr <PockelsCell> mPockelsPtr;		//Create a pockels handle dynamically. Alternatively, I could create a fixed handle for each wavelength used
 		const double mPockelTimeStep{ 8. * us };		//Time step for the RT pockels command
 

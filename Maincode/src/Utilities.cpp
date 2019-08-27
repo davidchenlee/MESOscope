@@ -1209,7 +1209,7 @@ void TiffU8::setNframes(const int nFrames)
 }
 #pragma endregion "TiffU8"
 
-//tileWidth_pix: tile width, tileHeight_pix: tile height, nTileRow: number of tile-rows in the stitched image, nTileCol: number of tile-columns in the stitched image
+//tileWidth_pix = tile width, tileHeight_pix = tile height, nTileRow = number of tile-rows in the stitched image, nTileCol = number of tile-columns in the stitched image
 QuickStitcher::QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nTileRow, const int nTileCol) :
 	mStitchedTiff{ tileWidth_pix * nTileCol, tileHeight_pix * nTileRow, 1 },
 	mNrow{ nTileRow },

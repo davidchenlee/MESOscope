@@ -55,22 +55,24 @@ Sample::Sample(const std::string sampleName, const std::string immersionMedium, 
 	mFluorLabelList{ fluorLabelList }
 {}
 
-Sample::Sample(const Sample& sample, ROI4 roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset) :
-	mName{ sample.mName }, mImmersionMedium{ sample.mImmersionMedium }, mObjectiveCollar{ sample.mObjectiveCollar }, mFluorLabelList{ sample.mFluorLabelList }, mROIrequest{ roi }, mSurfaceZ{ sampleSurfaceZ }, mCutAboveBottomOfStack{ sliceOffset }
+Sample::Sample(const Sample& sample, const POSITION2 centerXY, const SAMPLESIZE3 sizeXYZ, const double sampleSurfaceZ, const double sliceOffset) :
+	mName{ sample.mName },
+	mImmersionMedium{ sample.mImmersionMedium },
+	mObjectiveCollar{ sample.mObjectiveCollar },
+	mFluorLabelList{ sample.mFluorLabelList },
+	mCenterXY{ centerXY },
+	mSizeRequest{ sizeXYZ },
+	mSurfaceZ{ sampleSurfaceZ },
+	mCutAboveBottomOfStack{ sliceOffset }
 {
-	//Convert input ROI4 = {ymin, xmin, ymax, xmax} to the equivalent sample length in the x-stage and y-stage axes
-	mSizeRequest.XX = mROIrequest.XMAX - mROIrequest.XMIN;
-	mSizeRequest.YY = mROIrequest.YMAX - mROIrequest.YMIN;
-	mSizeRequest.ZZ = sampleLengthZ;
+	if (mSizeRequest.XX <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length X must be >0");
 
-	if (mSizeRequest.XX <= 0 || mSizeRequest.YY <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": invalid ROI");
-
-	if (mSizeRequest.ZZ <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Z must be positive");
+	if (mSizeRequest.YY <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Y must be >0");
 
 	if (mCutAboveBottomOfStack < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be positive");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be >=0");
 }
 
 FluorLabelList::FluorLabel Sample::findFluorLabel(const std::string fluorLabel) const
@@ -85,12 +87,12 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "Immersion medium = " << mImmersionMedium << "\n";
 	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Requested ROI [STAGEYmin, STAGEXmin, STAGEYmax, STAGEXmax] (mm) = [" << mROIrequest.YMIN / mm << ", " << mROIrequest.XMIN / mm << ", " << mROIrequest.YMAX / mm << ", " << mROIrequest.XMAX / mm << "]\n";
-	*fileHandle << "Requested sample size (STAGEX, STAGEY, STAGEZ) (mm) = (" << mSizeRequest.XX / mm << ", " << mSizeRequest.YY / mm << ", " << mSizeRequest.ZZ / mm << ")\n\n";
+	*fileHandle << "Sample center (stageX, stageY, stageZ) (mm) = (" << mSizeRequest.XX / mm << ", " << mSizeRequest.YY / mm << ", " << mSizeRequest.ZZ / mm << ")\n";
+	*fileHandle << "Requested sample size (stageX, stageY, stageZ) (mm) = (" << mSizeRequest.XX / mm << ", " << mSizeRequest.YY / mm << ", " << mSizeRequest.ZZ / mm << ")\n\n";
 
 	*fileHandle << "SLICE ************************************************************\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Blade position (STAGEX, STAGEY) (mm) = (" << mBladePositionXY.XX / mm << ", " << mBladePositionXY.YY / mm << ")\n";
+	*fileHandle << "Blade position (stageX, stageY) (mm) = (" << mBladePositionXY.XX / mm << ", " << mBladePositionXY.YY / mm << ")\n";
 	*fileHandle << std::setprecision(1);
 	*fileHandle << "Blade-focal plane vertical offset (um) = " << mBladeFocalplaneOffsetZ / um << "\n";
 	*fileHandle << "Cut above the bottom of the stack (um) = " << mCutAboveBottomOfStack / um << "\n";
@@ -114,16 +116,18 @@ Stack::Stack(const FFOV2 FFOV, const double stepSizeZ, const int nFrames, const 
 	if (mDepth <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth must be positive");
 
-	if (mOverlap_frac.XX < 0 || mOverlap_frac.YY < 0 || mOverlap_frac.ZZ < 0
-		|| mOverlap_frac.XX > 0.2 || mOverlap_frac.YY > 0.2 || mOverlap_frac.ZZ > 0.2)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-0.2]");
+	if (mOverlap_frac.XX < 0 || mOverlap_frac.YY < 0 || mOverlap_frac.XX > 0.2 || mOverlap_frac.YY > 0.2 )
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap in XY must be in the range [0-0.2]");
+
+	if (mOverlap_frac.ZZ < 0 || mOverlap_frac.ZZ > 0.5)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap in Z must be in the range [0-0.5]");
 }
 
 void Stack::printParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "STACK ************************************************************\n";
 	*fileHandle << std::setprecision(1);
-	*fileHandle << "FOV (STAGEX, STAGEY) (um) = (" << mFFOV.XX / um << ", " << mFFOV.YY / um << ")\n";
+	*fileHandle << "FOV (stageX, stageY) (um) = (" << mFFOV.XX / um << ", " << mFFOV.YY / um << ")\n";
 	*fileHandle << "Step size Z (um) = " << mStepSizeZ / um << "\n";
 	*fileHandle << "Stack depth (um) = " << mDepth / um << "\n";
 	*fileHandle << std::setprecision(2);
@@ -135,21 +139,21 @@ void Stack::printParams(std::ofstream *fileHandle) const
 #pragma endregion "Stack"
 
 #pragma region "Commandline"
-Sequence::Commandline::Commandline(const Action::ID action) :
+Sequencer::Commandline::Commandline(const Action::ID action) :
 	mAction{ action }
 {}
 
-std::string Sequence::Commandline::printHeader() const
+std::string Sequencer::Commandline::printHeader() const
 {
-	return 	"Action\tSlice#\tStackIJ\t(STAGEX,STAGEY)\tStack#\tWavlen\tDirZ\tSTAGEZ<\tSTAGEZ>\tP<\tP>";
+	return 	"Action\tSlice#\tStackIJ\t(stageX,stageY)\tStack#\tWavlen\tDirZ\tstageZ<\tstageZ>\tP<\tP>";
 }
 
-std::string Sequence::Commandline::printHeaderUnits() const
+std::string Sequencer::Commandline::printHeaderUnits() const
 {
 	return "\t\t(mm,mm)\t\t\tnm\t\tmm\tmm\tmW\tmW";
 }
 
-void Sequence::Commandline::printToFile(std::ofstream *fileHandle) const
+void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 {
 	switch (mAction)
 	{
@@ -185,7 +189,7 @@ void Sequence::Commandline::printToFile(std::ofstream *fileHandle) const
 	}
 }
 
-void Sequence::Commandline::printParameters() const
+void Sequencer::Commandline::printParameters() const
 {
 	switch (mAction)
 	{
@@ -213,7 +217,7 @@ void Sequence::Commandline::printParameters() const
 	}
 }
 
-std::string Sequence::Commandline::actionToString_(const Action::ID action) const
+std::string Sequencer::Commandline::actionToString_(const Action::ID action) const
 {
 	switch (action)
 	{
@@ -231,101 +235,50 @@ std::string Sequence::Commandline::actionToString_(const Action::ID action) cons
 }
 #pragma endregion "Commandline"
 
-#pragma region "Sequence"
+#pragma region "Sequencer"
 //Constructor using the sample's ROI. The number of stacks is calculated automatically based on the FFOV
-Sequence::Sequence(const Sample sample, const Stack stack) :
+Sequencer::Sequencer(const Sample sample, const Stack stack) :
 	mSample{ sample },
 	mStack{ stack }
 {
-	//Initialize the z-stage with the position of the surface of the sample and the height of the plane to slice
-	mScanZi = mSample.mSurfaceZ;
-	mPlaneToSliceZ = mScanZi + mStack.mDepth - mSample.mCutAboveBottomOfStack;
-
-	//Calculate the number of stacks in the x-stage and y-stage axes based on the sample size and stack FFOV
-	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
-	mStackArrayDimIJ.II = static_cast<int>(std::ceil(  1/(1- mStack.mOverlap_frac.XX) * (mSample.mSizeRequest.XX / mStack.mFFOV.XX - 1) + 1  ));		//Number of stacks in the x-stage axis
-	mStackArrayDimIJ.JJ = static_cast<int>(std::ceil(  1/(1- mStack.mOverlap_frac.YY) * (mSample.mSizeRequest.YY / mStack.mFFOV.YY - 1) + 1  ));		//Number of stacks in the y-stage axis
-
-	//Calculate the effective ROI covered by the stacks, which might be slightly larger than the sample's ROI
-	mROIeff.XMAX = mSample.mROIrequest.XMAX;
-	mROIeff.YMAX = mSample.mROIrequest.YMAX;
-	mROIeff.XMIN = mSample.mROIrequest.XMAX - mStack.mFFOV.XX  * ((1 - mStack.mOverlap_frac.XX) * mStackArrayDimIJ.II + 0.5);
-	mROIeff.YMIN = mSample.mROIrequest.YMAX - mStack.mFFOV.YY  * ((1 - mStack.mOverlap_frac.YY) * mStackArrayDimIJ.JJ + 0.5);
-
-	//Calculate the total number of stacks in a vibratome slice and in the entire sample
-	mNtotalSlices = static_cast<int>(std::ceil(  1 / (1 - mStack.mOverlap_frac.ZZ) * (mSample.mSizeRequest.ZZ / mStack.mDepth - 1) + 1  ));		//Total number of slices in the entire sample
-	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.II * mStackArrayDimIJ.JJ };														//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * mNtotalStacksPerVibratomeSlice };	//Total number of stacks in the entire sample
-
-	//Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
-	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
-
-	//Check that cutAboveBottomOfStack is greater than the stack z-overlap
-	const double stackOverlapZ{ mStack.mOverlap_frac.ZZ * mStack.mDepth };	//Dummy local variable
-	if (mSample.mCutAboveBottomOfStack < stackOverlapZ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": 'cutAboveBottomOfStack' must be greater than the stack z-overlap " + toString(stackOverlapZ / um, 1) + " um");
-
+	initializeVibratomeSlice_();
+	initializeStackArrayDimIJ_();	//Calculate the number of stacks in the x-stage and y-stage axes based on the sample size and the stack FFOV
+	initializeEffectiveROI_();		//Calculate the effective ROI covered by the stacks, which might be slightly larger than the requested ROI
+	reserveMemoryBlock_();			//Reserve memory for speed
 }
 
-//Constructor using the initial stack center and number of stacks. To be used without slicing
-Sequence::Sequence(Sample sample, const Stack stack, const POSITION2 stackCenterXY, const INDICES2 stackArrayDimIJ) : mSample{ sample }, mStack{ stack }, mStackArrayDimIJ{ stackArrayDimIJ }
-{
-	if (stackArrayDimIJ.II <= 0 || stackArrayDimIJ.JJ <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack array dimension must be >=1");
-
-	//Calculate the effective ROI covered by the stacks
-	//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 )
-	mROIeff.XMAX = stackCenterXY.XX + mStack.mFFOV.XX / 2;
-	mROIeff.YMAX = stackCenterXY.YY + mStack.mFFOV.YY / 2;
-	mROIeff.XMIN = mROIeff.XMAX - mStack.mFFOV.XX * ((1 - mStack.mOverlap_frac.XX) * (mStackArrayDimIJ.II - 1) + 1);
-	mROIeff.YMIN = mROIeff.YMAX - mStack.mFFOV.YY * ((1 - mStack.mOverlap_frac.YY) * (mStackArrayDimIJ.JJ - 1) + 1);
-
-	//Initialize the z-stage with the position of the surface of the sample
-	mScanZi = mSample.mSurfaceZ;
-
-	const int mNtotalStacksPerVibratomeSlice{ mStackArrayDimIJ.II * mStackArrayDimIJ.JJ };														//Total number of stacks in a vibratome slice
-	const int mNtotalStackEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * mNtotalStacksPerVibratomeSlice };	//Total number of stacks in the entire sample. mNtotalSlices is fixed at 1
-
-	//Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
-	mCommandList.reserve(3 * mNtotalStackEntireSample + mNtotalSlices - 1);
-
-	//Set these unused parameters to 0 to avoid any confusion when printing the parameters to text
-	mSample.mROIrequest = { 0, 0, 0, 0 };
-	mSample.mSizeRequest = { 0, 0, 0 };
-}
-
-Sequence::Commandline Sequence::readCommandline(const int iterCommandLine) const
+Sequencer::Commandline Sequencer::readCommandline(const int iterCommandLine) const
 {
 	return mCommandList.at(iterCommandLine);
 }
 
 //Generate a scan pattern and use the vibratome to slice the sample
-void Sequence::generateCommandList()
+void Sequencer::generateCommandList()
 {
 	std::cout << "Generating the command list..." << "\n";
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
-		int II{ 0 }, JJ{ 0 };			//Reset the stack indices after every cut
-		resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
+		initializeIteratorIJ_();		//Reset the stack iterator after every cut
+		resetStageScanDirections_();	//Reset the scan directions of the stages after every cut
 
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mSample.mFluorLabelList.size(); iterWL++)
 		{
-			//The stage y is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
-			while (JJ >= 0 && JJ < mStackArrayDimIJ.JJ)			//y-stage direction
+			//The y-stage is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
+			while (mJJ >= 0 && mJJ < mStackArrayDimIJ.JJ)		//y-stage direction. JJ iterates from 0 to mStackArrayDimIJ.JJ
 			{
-				while (II >= 0 && II < mStackArrayDimIJ.II)		//x-stage direction
+				while (mII >= 0 && mII < mStackArrayDimIJ.II)	//x-stage direction. II iterates back and forth between 0 and mStackArrayDimIJ.II
 				{
-					moveStage_({ II, JJ });
+					moveStage_({ mII, mJJ });
 					acqStack_(iterWL);
 					saveStack_();
-					II += SCANDIRtoInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the x-stage axis
+					mII -= SCANDIRtoInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the x-stage axis
 				}
-				II -= SCANDIRtoInt(mIterScanDirXYZ.XX);		//Re-inizitialize II by going back one step to start from 0 or mStackArrayDimIJ.II - 1
-				reverseSCANDIR(mIterScanDirXYZ.XX);			//Reverse the scanning direction
-				JJ += SCANDIRtoInt(mIterScanDirXYZ.YY);		//Increase/decrease the iterator in the y-stage axis
-			}	
-			JJ -= SCANDIRtoInt(mIterScanDirXYZ.YY);			//Re-inizitialize JJ by going back one step to start from 0 or mStackArrayDimIJ.JJ - 1
-			reverseSCANDIR(mIterScanDirXYZ.YY);				//Reverse the scanning direction
+				mII += SCANDIRtoInt(mIterScanDirXYZ.XX);		//Re-initialize II by going back one step to start from 0 or mStackArrayDimIJ.II - 1
+				reverseSCANDIR(mIterScanDirXYZ.XX);				//Reverse the scanning direction
+				mJJ -= SCANDIRtoInt(mIterScanDirXYZ.YY);		//Increase/decrease the iterator in the y-stage axis
+			}
+			mJJ += SCANDIRtoInt(mIterScanDirXYZ.YY);			//Re-initialize JJ by going back one step to start from 0 or mStackArrayDimIJ.JJ - 1
+			reverseSCANDIR(mIterScanDirXYZ.YY);					//Reverse the scanning direction
 		}
 		//Only need to cut the sample 'nVibratomeSlices -1' times
 		if (iterSlice < mNtotalSlices - 1)
@@ -336,7 +289,7 @@ void Sequence::generateCommandList()
 /*
 //Like generateCommandList() but instead of a list of command, Generate a list of locations to be called by frameByFrameZscanTilingXY()
 //Note that this sequence does not use the vibratome
-std::vector<POSITION2> Sequence::generateLocationList()
+std::vector<POSITION2> Sequencer::generateLocationList()
 {
 	std::vector<POSITION2> locationList;
 	//std::cout << "Generating the location list..." << "\n";
@@ -355,45 +308,45 @@ std::vector<POSITION2> Sequence::generateLocationList()
 			std::cout << "x = " << stackCenterXY.XX / mm << "\ty = " << stackCenterXY.YY / mm << "\n";		//For debugging
 			II += SCANDIRtoInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the x-stage axis
 		}
-		II -= SCANDIRtoInt(mIterScanDirXYZ.XX);		//Re-inizitialize II by going back one step to start from 0 or mStackArrayDimIJ.II - 1
+		II -= SCANDIRtoInt(mIterScanDirXYZ.XX);		//Re-initialize II by going back one step to start from 0 or mStackArrayDimIJ.II - 1
 		reverseSCANDIR(mIterScanDirXYZ.XX);			//Reverse the scanning direction
 		JJ += SCANDIRtoInt(mIterScanDirXYZ.YY);		//Increase/decrease the iterator in the y-stage axis
 	}
-	JJ -= SCANDIRtoInt(mIterScanDirXYZ.YY);			//Re-inizitialize JJ by going back one step to start from 0 or mStackArrayDimIJ.JJ - 1
+	JJ -= SCANDIRtoInt(mIterScanDirXYZ.YY);			//Re-initialize JJ by going back one step to start from 0 or mStackArrayDimIJ.JJ - 1
 	reverseSCANDIR(mIterScanDirXYZ.YY);				//Reverse the scanning direction
 
 	return locationList;
 }
 */
 
-int Sequence::size() const
+int Sequencer::size() const
 {
 	return mCommandCounter;
 }
 
-Stack Sequence::stack() const
+Stack Sequencer::stack() const
 {
 	return mStack;
 }
 
-void Sequence::printSequenceParams(std::ofstream *fileHandle) const
+void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "SEQUENCER ************************************************************\n";
-	*fileHandle << "Stages initial scan direction {STAGEX,STAGEY, STAGEZ} = {" << SCANDIRtoInt(mInitialScanDirXYZ.XX) << ", " << SCANDIRtoInt(mInitialScanDirXYZ.YY) << ", " << SCANDIRtoInt(mInitialScanDirXYZ.ZZ) << "}\n";
+	*fileHandle << "Stages initial scan direction {stageX, stageY, stageZ} = {" << SCANDIRtoInt(mInitialScanDirXYZ.XX) << ", " << SCANDIRtoInt(mInitialScanDirXYZ.YY) << ", " << SCANDIRtoInt(mInitialScanDirXYZ.ZZ) << "}\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Effective ROI [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROIeff.YMIN / mm << ", " << mROIeff.XMIN / mm << ", " << mROIeff.YMAX / mm << ", " << mROIeff.XMAX / mm << "]\n";
-	*fileHandle << "Effective sample size (STAGEX, STAGEY, STAGEZ) (mm) = (" << effectiveSizeXYZ_().XX / mm << ", " << effectiveSizeXYZ_().YY / mm << ", " << effectiveSizeXYZ_().ZZ / mm << ")\n";
-	*fileHandle << "Sample surface position STAGEZ (mm) = " << mSample.mSurfaceZ / mm << "\n";
+	*fileHandle << "Effective ROI (stage positions) [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROIeff.YMIN / mm << ", " << mROIeff.XMIN / mm << ", " << mROIeff.YMAX / mm << ", " << mROIeff.XMAX / mm << "]\n";
+	*fileHandle << "Effective sample size (stageX, stageY, stageZ) (mm) = (" << effectiveSizeXYZ_().XX / mm << ", " << effectiveSizeXYZ_().YY / mm << ", " << effectiveSizeXYZ_().ZZ / mm << ")\n";
+	*fileHandle << "Z position of the surface of the sample (mm) = " << mSample.mSurfaceZ / mm << "\n";
 	*fileHandle << std::setprecision(0);
 	*fileHandle << "Total # tissue slices = " << mNtotalSlices << "\n";
-	*fileHandle << "StackArray dim (STAGEX,STAGEY) = (" << mStackArrayDimIJ.II << ", " << mStackArrayDimIJ.JJ << ")\n";
+	*fileHandle << "StackArray dim (stageX, stageY) = (" << mStackArrayDimIJ.II << ", " << mStackArrayDimIJ.JJ << ")\n";
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
 	*fileHandle << "\n";
 }
 
 //Print the commandlist to file
-void Sequence::printToFile(const std::string fileName) const
+void Sequencer::printToFile(const std::string fileName) const
 {
 	std::ofstream *fileHandle{ new std::ofstream(folderPath + fileName + ".txt") };
 
@@ -422,44 +375,130 @@ void Sequence::printToFile(const std::string fileName) const
 	fileHandle->close();
 }
 
-//The first stack center is L/2 away from the ROI's edge. The next center is at (1-a)*L away from the first center, where a*L is the stack overlap
-POSITION2 Sequence::stackIndicesToStackCenter_(const INDICES2 stackArrayIndicesIJ) const
+void Sequencer::initializeVibratomeSlice_()
 {
-	const double overlapX_frac{ mStack.mOverlap_frac.XX };
-	const double overlapY_frac{ mStack.mOverlap_frac.YY };
+	mScanZi = mSample.mSurfaceZ; 	//Initialize the z-stage with the position of the surface of the sample
 
+	mPlaneToSliceZ = mScanZi + mStack.mDepth - mSample.mCutAboveBottomOfStack;
+
+	const int nZZ{ static_cast<int>(1 + std::ceil(1 / (1 - mStack.mOverlap_frac.ZZ) * (mSample.mSizeRequest.ZZ / mStack.mDepth - 1))) };
+	if (nZZ > 1)
+		mNtotalSlices = nZZ;		//Total number of vibratome slices in the entire sample
+	else
+		mNtotalSlices = 1;
+}
+
+//Calculate the number of stacks in the x-stage and y-stage axes based on the sample size and the stack FFOV
+//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
+void Sequencer::initializeStackArrayDimIJ_()
+{
+	const int nXX{ static_cast<int>(std::ceil(1 + 1 / (1 - mStack.mOverlap_frac.XX) * (mSample.mSizeRequest.XX / mStack.mFFOV.XX - 1))) };
+	const int nYY{ static_cast<int>(std::ceil(1 + 1 / (1 - mStack.mOverlap_frac.YY) * (mSample.mSizeRequest.YY / mStack.mFFOV.YY - 1))) };
+
+	if (nXX > 1)
+		mStackArrayDimIJ.II = nXX;		//Number of stacks in the x-stage axis
+	else
+		mStackArrayDimIJ.II = 1;
+
+	if (nYY > 1)
+		mStackArrayDimIJ.JJ = nYY;		//Number of stacks in the y-stage axis	
+	else
+		mStackArrayDimIJ.JJ = 1;
+}
+
+//Calculate the effective ROI =  { YMIN, XMIN, YMAX, XMAX } covered by the stacks
+void Sequencer::initializeEffectiveROI_()
+{
+	const POSITION2 stackCenterMin = stackIndicesToStackCenter_({ 0, 0 });
+	const POSITION2 stackCenterMax = stackIndicesToStackCenter_({ mStackArrayDimIJ.II - 1, mStackArrayDimIJ.JJ - 1 });
+	mROIeff.XMAX = stackCenterMin.XX + mStack.mFFOV.XX / 2;
+	mROIeff.YMAX = stackCenterMin.YY + mStack.mFFOV.YY / 2;
+	mROIeff.XMIN = stackCenterMax.XX - mStack.mFFOV.XX / 2;
+	mROIeff.YMIN = stackCenterMax.YY - mStack.mFFOV.YY / 2;
+}
+
+//Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
+void Sequencer::reserveMemoryBlock_()
+{
+	const int nTotalStacksPerVibratomeSlice{ mStackArrayDimIJ.II * mStackArrayDimIJ.JJ };													//Total number of stacks in a vibratome slice
+	const int nTotalStackEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * nTotalStacksPerVibratomeSlice };	//Total number of stacks in the entire sample. mNtotalSlices is fixed at 1
+	mCommandList.reserve(3 * nTotalStackEntireSample + mNtotalSlices - 1);
+}
+
+POSITION2 Sequencer::stackIndicesToStackCenter_(const INDICES2 stackIndexIJ) const
+{
+	if (stackIndexIJ.II < 0 || stackIndexIJ.II >= mStackArrayDimIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack index II must be in the range [0-" + toString(mStackArrayDimIJ.II, 0) + "]");
+
+	if (stackIndexIJ.JJ < 0 || stackIndexIJ.JJ >= mStackArrayDimIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack index JJ must be in the range [0-" + toString(mStackArrayDimIJ.JJ, 0) + "]");
+
+	//The first stack center is FFOV/2 away from the ROI's edge. The next center is at (1-a)*FFOV away from the first center, where a*L is the stack overlap
 	POSITION2 stagePositionXY;
-	stagePositionXY.XX = mROIeff.XMAX - mStack.mFFOV.XX  * ((1 - overlapX_frac) * stackArrayIndicesIJ.II + 0.5);
-	stagePositionXY.YY = mROIeff.YMAX - mStack.mFFOV.YY  * ((1 - overlapY_frac) * stackArrayIndicesIJ.JJ + 0.5);
+	stagePositionXY.XX = mSample.mCenterXY.XX - mStack.mFFOV.XX  * ((1 - mStack.mOverlap_frac.XX) * (stackIndexIJ.II - (mStackArrayDimIJ.II - 1) / 2));
+	stagePositionXY.YY = mSample.mCenterXY.YY - mStack.mFFOV.YY  * ((1 - mStack.mOverlap_frac.YY) * (stackIndexIJ.JJ - (mStackArrayDimIJ.JJ - 1) / 2));
 
 	return stagePositionXY;
 }
 
-void Sequence::resetStageScanDirections_()
+//Reset the iterators mII and mJJ to the initial values
+void Sequencer::initializeIteratorIJ_()
+{
+	switch (mIterScanDirXYZ.XX)
+	{
+	case SCANDIR::RIGHTWARD:	//The x-stage moves to the right, therefore, the sample is imaged from right to left
+		mII = mStackArrayDimIJ.II - 1;
+		break;
+	case SCANDIR::LEFTWARD:		//The x-stage moves to the left, therefore, the sample is imaged from left to right
+		mII = 0;
+		break;
+	}
+	switch (mIterScanDirXYZ.YY)
+	{
+	case SCANDIR::INWARD:		//The y-stage moves inward, therefore, the sample is imaged from "inside" to "outside" of the microscope
+		mJJ = mStackArrayDimIJ.JJ - 1;
+		break;
+	case SCANDIR::OUTWARD:		//The y-stage moves outward, therefore, the sample is imaged from "outside" to "inside" of the microscope
+		mJJ = 0;
+		break;
+	}
+}
+
+void Sequencer::resetStageScanDirections_()
 {
 	mIterScanDirXYZ = mInitialScanDirXYZ;
 }
 
 //Convert a ROI = {ymin, xmin, ymax, xmax} to the equivalent sample size in the x-stage and y-stage axes
-SAMPLESIZE3 Sequence::effectiveSizeXYZ_() const
+SAMPLESIZE3 Sequencer::effectiveSizeXYZ_() const
 {
 	return { mROIeff.XMAX - mROIeff.XMIN, mROIeff.YMAX - mROIeff.YMIN, mStack.mDepth * ((1 - mStack.mOverlap_frac.ZZ) * (mNtotalSlices - 1) + 1) };
 }
 
-void Sequence::moveStage_(const INDICES2 stackIJ)
+void Sequencer::moveStage_(const INDICES2 stackIndexIJ)
 {
-	const POSITION2 stackCenterXY = stackIndicesToStackCenter_(stackIJ);
+	if (stackIndexIJ.II < 0 || stackIndexIJ.II >= mStackArrayDimIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack index II must be in the range [0-" + toString(mStackArrayDimIJ.II, 0) + "]");
+
+	if (stackIndexIJ.JJ < 0 || stackIndexIJ.JJ >= mStackArrayDimIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack index JJ must be in the range [0-" + toString(mStackArrayDimIJ.JJ, 0) + "]");
+
+	const POSITION2 stackCenterXY = stackIndicesToStackCenter_(stackIndexIJ);
 
 	Commandline commandline{ Action::ID::MOV };
-	commandline.mParam.moveStage = { mSliceCounter, stackIJ, stackCenterXY };
+	commandline.mParam.moveStage = { mSliceCounter, stackIndexIJ, stackCenterXY };
 	mCommandList.push_back(commandline);
 	mCommandCounter++;	//Count the number of commands
 }
 
-void Sequence::acqStack_(const int iterWL)
+void Sequencer::acqStack_(const int wavelengthIndex)
 {
+	if (wavelengthIndex < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength index must be >=0");
+
+
 	//Read the corresponding laser configuration
-	const FluorLabelList::FluorLabel fluorLabel{ mSample.mFluorLabelList.at(iterWL) };
+	const FluorLabelList::FluorLabel fluorLabel{ mSample.mFluorLabelList.at(wavelengthIndex) };
 
 	Commandline commandline{ Action::ID::ACQ };
 	commandline.mParam.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mScanZi, mStack.mDepth, fluorLabel.mScanPmin, fluorLabel.mStackPinc };
@@ -471,14 +510,14 @@ void Sequence::acqStack_(const int iterWL)
 	reverseSCANDIR(mIterScanDirXYZ.ZZ);								//Reverse the scanning direction in the z-stage axis
 }
 
-void Sequence::saveStack_()
+void Sequencer::saveStack_()
 {
 	Commandline commandline{ Action::ID::SAV };
 	mCommandList.push_back(commandline);
 	mCommandCounter++;	//Count the number of commands
 }
 
-void Sequence::cutSlice_()
+void Sequencer::cutSlice_()
 {
 	//Move the sample to face the vibratome blade. Note the additional offset in the z-stage axis
 	const POSITION3 samplePositionXYZ{ mSample.mBladePositionXY.XX, mSample.mBladePositionXY.YY, mPlaneToSliceZ + mSample.mBladeFocalplaneOffsetZ };
@@ -489,7 +528,7 @@ void Sequence::cutSlice_()
 	mSliceCounter++;	//Count the number of vibratome slices
 	mCommandCounter++;	//Count the number of commands
 
-	//Increase the height of the z-stage and the height of the plane to be cut for the next iteration		
+	//Increase the height of the z-stage and the height of the plane to be cut in the next iteration		
 	//Because of the overlap, the effective stack depth is (1-a)*stackDepth, where a*stackDepth is the overlap
 	mScanZi += (1 - mStack.mOverlap_frac.ZZ) * mStack.mDepth;
 	mPlaneToSliceZ += (1 - mStack.mOverlap_frac.ZZ) * mStack.mDepth;

@@ -544,7 +544,7 @@ void RTcontrol::triggerNRT_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));
 }
 
-//When the z stage acts as the main trigger (for cont z scanning), the motion monitor of the z stage bounces and therefore false-triggers new acquisitions
+//When the Z stage acts as the main trigger (for cont z scanning), the motion monitor of the Z stage bounces and therefore false-triggers new acquisitions
 //Solution: after an acq sequence, wait a certain amount of time before the acq is triggered again (timer implemented in LV)
 void RTcontrol::setPostSequenceTimer_() const
 {

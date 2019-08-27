@@ -43,7 +43,7 @@ public:
 
 	const FPGA &mFpga;
 	LINECLOCK mLineclockInput;											//Resonant scanner (RS) or Function generator (FG)
-	MAINTRIG mMainTrigger;												//Trigger the acquisition with the z stage: enable (0), disable (1)
+	MAINTRIG mMainTrigger;												//Trigger the acquisition with the Z stage: enable (0), disable (1)
 	FIFOOUTfpga mFIFOOUTfpgaState;										//Enable or disable the FIFOOUTfpga on the FPGA
 	int mWidthPerFrame_pix;												//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
 	int mHeightPerBeamletPerFrame_pix;									//Height in pixels of a single beamlet in a single frame (galvo axis)

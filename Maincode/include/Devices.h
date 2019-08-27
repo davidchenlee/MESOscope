@@ -423,7 +423,7 @@ class Vibratome
 {
 public:
 	const POSITION2 mStageInitialSlicePosXY{ -53. * mm, 6. * mm };	//Position the stages in front oh the vibratome's blade
-	const double mStageFinalSlicePosY{ 27. * mm };					//Final position of the y stage after slicing
+	const double mStageFinalSlicePosY{ 27. * mm };					//Final position of the Y stage after slicing
 	
 	Vibratome(const FPGA &fpga, Stage &stage);
 	Vibratome(const Vibratome&) = delete;							//Disable copy-constructor
@@ -437,8 +437,8 @@ private:
 	const FPGA &mFpga;
 	Stage &mStage;
 
-	const double mSlicingVel{ 0.5 * mmps };											//Move the y stage at this velocity for slicing
-	const VELOCITY3 mStageConveyingVelXYZ{ 10. * mmps, 10.  *mmps, 0.5 * mmps };		//Transport the sample between the objective and vibratome at this velocity
+	const double mSlicingVel{ 0.5 * mmps };											//Move the Y stage at this velocity for slicing
+	const VELOCITY3 mStageConveyingVelXYZ{ 10. * mmps, 10.  *mmps, 0.5 * mmps };	//Transport the sample between the objective and vibratome at this velocity
 	//enum MotionDir { BACKWARD = -1, FORWARD = 1 };
 	//double mCuttingSpeed{ 0.5 * mmps };		//Speed of the vibratome for cutting (manual setting)
 	//double mMovingSpeed{ 2.495 * mmps };	//Measured moving speed of the head: 52.4 mm in 21 seconds = 2.495 mm/s. Set by hardware. Cannot be changed

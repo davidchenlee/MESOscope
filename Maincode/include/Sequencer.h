@@ -26,9 +26,9 @@ struct Sample
 {
 	std::string mName;
 	std::string mImmersionMedium;
-	std::string mObjectiveCollar;						
-	ROI4 mROIrequest{ 0, 0, 0, 0 };							//Requested ROI4 across the entire sample { YMIN, XMIN, YMAX, XMAX };
-	SAMPLESIZE3 mSizeRequest{ 0, 0, 0 };					//Requested sample size in the x-stage, y-stage, and z-stage axes
+	std::string mObjectiveCollar;	
+	POSITION2 mCenterXY;									//Sample center (stageX, stageY)
+	SAMPLESIZE3 mSizeRequest{ 0, 0, 0 };					//Requested sample size (stageX, stageY, stageZ)
 	double mSurfaceZ{ -1. * mm };
 	FluorLabelList mFluorLabelList;
 	std::vector<LIMIT2> mStageSoftPosLimXYZ;				//Soft position limits of the stages
@@ -38,7 +38,7 @@ struct Sample
 	double mCutAboveBottomOfStack{ 0. * um };				//Specify at what height of the overlapping volume to cut
 
 	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorLabelList fluorLabelList = { {} });
-	Sample(const Sample& sample, ROI4 roi, const double sampleLengthZ, const double sampleSurfaceZ, const double sliceOffset);
+	Sample(const Sample& sample, const POSITION2 centerXY, const SAMPLESIZE3 sizeXYZ, const double sampleSurfaceZ, const double sliceOffset);
 	FluorLabelList::FluorLabel findFluorLabel(const std::string fluorLabel) const;
 	void printParams(std::ofstream *fileHandle) const;
 };
@@ -76,7 +76,7 @@ namespace Action
 	};
 }
 
-class Sequence	//A list of commands that forms a full sequence
+class Sequencer	//A list of commands that forms a full sequence
 {
 public:
 	class Commandline	//Single commands
@@ -98,12 +98,11 @@ public:
 	private:
 		std::string actionToString_(const Action::ID action) const;
 	};
-	Sequence(const Sample sample, const Stack stack);
-	Sequence(Sample sample, const Stack stack, const POSITION2 stackCenterXY, const INDICES2 stackArrayDimIJ);
-	Sequence(const Sequence&) = delete;				//Disable copy-constructor
-	Sequence& operator=(const Sequence&) = delete;	//Disable assignment-constructor
-	Sequence(Sequence&&) = delete;					//Disable move constructor
-	Sequence& operator=(Sequence&&) = delete;		//Disable move-assignment constructor
+	Sequencer(const Sample sample, const Stack stack);
+	Sequencer(const Sequencer&) = delete;					//Disable copy-constructor
+	Sequencer& operator=(const Sequencer&) = delete;		//Disable assignment-constructor
+	Sequencer(Sequencer&&) = delete;						//Disable move constructor
+	Sequencer& operator=(Sequencer&&) = delete;				//Disable move-assignment constructor
 
 	Commandline readCommandline(const int iterCommandline) const;
 	void generateCommandList();
@@ -113,25 +112,35 @@ public:
 	void printSequenceParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
 private:
-	Sample mSample;								//Sample
-	const Stack mStack;							//Stack
+	Sample mSample;											//Sample
+	const Stack mStack;										//Stack
 	std::vector<Commandline> mCommandList;
+	int mII;												//Iterator for the x-stage
+	int mJJ;												//Iterator for the y-stage
 	int mCommandCounter{ 0 };
-	const SCANDIR3 mInitialScanDirXYZ{ SCANDIR::RIGHTWARD, SCANDIR::INWARD, SCANDIR::UPWARD };		//Initial scan directions wrt the x-stage, y-stage, and z-stage axes	
-	ROI4 mROIeff;									//Slightly larger than the requested area: mSample.mROI
-	int mStackCounter{ 0 };							//Count the number of stacks
-	int mSliceCounter{ 0 };							//Count the number of the slices
-	INDICES2 mStackArrayDimIJ;						//Dimension of the array of stacks
-	SCANDIR3 mIterScanDirXYZ{ mInitialScanDirXYZ };	//Scan directions wrt the x-stage, y-stage, and z-stage axes	
-	double mScanZi;									//Initial z-stage position for a stack-scan
-	double mPlaneToSliceZ{ 0 };						//Height of the plane to cut	
-	int mNtotalSlices{ 1 };							//Number of vibratome slices in the entire sample
 
-	POSITION2 stackIndicesToStackCenter_(const INDICES2 stackArrayIndicesIJ) const;
+	const SCANDIR3 mInitialScanDirXYZ{ SCANDIR::LEFTWARD,	//Initial scan directions wrt the x-stage, y-stage, and z-stage axes (the imaging has the opposite direction)
+										SCANDIR::OUTWARD,
+										SCANDIR::UPWARD };
+	ROI4 mROIeff;											//Slightly larger than the requested area: mSample.mROI
+	int mStackCounter{ 0 };									//Count the number of stacks
+	int mSliceCounter{ 0 };									//Count the number of the slices
+	INDICES2 mStackArrayDimIJ;								//Dimension of the array of stacks
+	SCANDIR3 mIterScanDirXYZ{ mInitialScanDirXYZ };			//Scan directions wrt the x-stage, y-stage, and z-stage axes	
+	double mScanZi;											//Initial z-stage position for a stack-scan
+	double mPlaneToSliceZ{ 0 };								//Height of the plane to cut	
+	int mNtotalSlices;										//Number of vibratome slices in the entire sample
+
+	void initializeVibratomeSlice_();
+	void initializeStackArrayDimIJ_();
+	void initializeEffectiveROI_();
+	void reserveMemoryBlock_();
+	POSITION2 stackIndicesToStackCenter_(const INDICES2 stackIndexIJ) const;
+	void initializeIteratorIJ_();
 	void resetStageScanDirections_();
 	SAMPLESIZE3 effectiveSizeXYZ_() const;
 	void moveStage_(const INDICES2 stackIJ);
-	void acqStack_(const int iterWL);
+	void acqStack_(const int wavelengthIndex);
 	void saveStack_();
 	void cutSlice_();
 };

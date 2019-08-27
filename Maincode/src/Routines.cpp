@@ -458,11 +458,9 @@ namespace Routines
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-
-		const ROI4 roi{ 11.000 * mm, 34.825 * mm, 11.180 * mm, 35.025 * mm };							//Region of interest {ymin, xmin, ymax, xmax}
-		const TILEOVERLAP4 stackOverlap_frac{ 0.10, 0.05, 0.05 };										//Stack overlap
+		const SAMPLESIZE3 sampleSize{ 10.0 * mm, 10.0 * mm, 10.00 * mm };
+		const TILEOVERLAP4 stackOverlap_frac{ 0.10, 0.05, 0.50 };										//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
-		const double sampleLengthZ{ 0.300 * mm };														//Sample thickness
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
 
 		int heightPerBeamletPerFrame_pix;
@@ -479,10 +477,9 @@ namespace Routines
 		}
 
 		//Create a sequence
-		const Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
+		const Sample sample{ currentSample, {stackCenterXYZ.XX, stackCenterXYZ.YY}, sampleSize, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, pixelSizeZafterBinning, nFramesAfterBinning, stackOverlap_frac };
-		//Sequence sequece(sample, stack);
-		Sequence sequence{ sample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 2, 2 } };			//The last 2 parameters: stack center and number of stacks in axes {x-stage, y-stage}
+		Sequencer sequence{ sample, stack };
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
 
@@ -490,7 +487,7 @@ namespace Routines
 		{
 			//STAGES. Specify the velocity
 			Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);												//Move the z stage to the sample surface
+			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);												//Move the Z stage to the sample surface
 			stage.waitForMotionToStopAll();
 			//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 			stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
@@ -513,14 +510,14 @@ namespace Routines
 			Image image{ RTcontrol };
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
 			{
-				Sequence::Commandline commandline{ sequence.readCommandline(iterCommandline) };
+				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 				//commandline.printParameters();
 
 				int wavelength_nm;//
 				double scanZi, scanZf, scanPi, scanPf;	//These parameters must be accessible to the different actions
 				switch (commandline.mAction)
 				{
-				case Action::ID::MOV://Move the x and y stages to mStackCenterXY
+				case Action::ID::MOV://Move the X and Y stages to mStackCenterXY
 					stackCenterXY = commandline.mParam.moveStage.mStackCenterXY;
 					stage.moveXY(stackCenterXY);
 					stage.waitForMotionToStopAll();
@@ -573,7 +570,7 @@ namespace Routines
 				//std::cout << "Elapsed time: " << duration << " ms" << "\n";				
 			}//for
 		}//if
-		pressAnyKeyToCont();
+		//pressAnyKeyToCont();
 	}
 
 	//Image the sample non-stop. Use the PI program to move the stages manually
@@ -666,7 +663,7 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 	VirtualLaser virtualLaser{ RTcontrol, ID::VISION };
 
 	//Create a location list
-	Sequence sequence{ currentSample, stack, {stackCenterXYZ.at(X), stackCenterXYZ.at(Y)}, nStacksIJ };
+	Sequencer sequence{ currentSample, stack, {stackCenterXYZ.at(X), stackCenterXYZ.at(Y)}, nStacksIJ };
 	std::vector<POSITION2> locationListXY{ sequence.generateLocationList() };
 
 	//STAGES
@@ -1026,9 +1023,9 @@ namespace TestRoutines
 
 		//const Stage::DOPARAM triggerParam{ Stage::DOPARAM::TRIGSTEP };
 		//stage.downloadDOtriggerParamSingle_(Z, DOchan , triggerParam);
-		//std::cout << "x stage vel: " << stage.downloadVelSingle_(X) / mmps << " mm/s" << "\n";
-		//std::cout << "y stage vel: " << stage.downloadVelSingle_(Y) / mmps << " mm/s" << "\n";
-		//std::cout << "z stage vel: " << stage.downloadVelSingle_(Z) / mmps << " mm/s" << "\n";
+		//std::cout << "X stage vel: " << stage.downloadVelSingle_(X) / mmps << " mm/s" << "\n";
+		//std::cout << "Y stage vel: " << stage.downloadVelSingle_(Y) / mmps << " mm/s" << "\n";
+		//std::cout << "Z stage vel: " << stage.downloadVelSingle_(Z) / mmps << " mm/s" << "\n";
 		//stage.printStageConfig(Z, DOchan);
 	}
 
@@ -1372,17 +1369,16 @@ namespace TestRoutines
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };
 		const int nFramesCont{ 80 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };										//Step size in the z-stage axis
-		const ROI4 roi{ 9.950 * mm, 34.850 * mm, 10.150 * mm, 35.050 * mm };	//Region of interest {ymin, xmin, ymax, xmax}
 		const TILEOVERLAP4 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };							//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };								//Sample thickness
 		const double sampleSurfaceZ{ 18.471 * mm };
 
-		Sample sample{ currentSample, roi, sampleLengthZ, sampleSurfaceZ, cutAboveBottomOfStack };
+		Sample sample{ currentSample,  {stackCenterXYZ.XX, stackCenterXYZ.YY}, {10. * mm, 10. * mm, sampleLengthZ}, sampleSurfaceZ, cutAboveBottomOfStack };
 		Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
 
 		//Create a sequence
-		Sequence sequence{ sample, stack };
+		Sequencer sequence{ sample, stack };
 		sequence.generateCommandList();
 		sequence.printToFile("CommandlistLight");
 
@@ -1395,7 +1391,7 @@ namespace TestRoutines
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
 				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
-				Sequence::Commandline commandline{ sequence.readCommandline(iterCommandline) }; //Implement read-from-file?
+				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) }; //Implement read-from-file?
 				//commandline.printParameters();
 
 				switch (commandline.mAction)
@@ -1457,7 +1453,7 @@ namespace TestRoutines
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 		//Create a sequence
-		Sequence sequence{ currentSample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
+		Sequencer sequence{ currentSample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
 		std::vector<POSITION2> locationList{ sequence.generateLocationList() };
 
 		for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationList.size(); iterLocation++)

@@ -57,7 +57,7 @@ namespace TestRoutines
 
 	//Sequence
 	void sequencerConcurrentTest();
-	void locationSequence();
+	//void locationSequence();
 	void generateLocationsForBigStitcher();
 	INDICES2 nTileToArrayIndices(const int nTile);
 

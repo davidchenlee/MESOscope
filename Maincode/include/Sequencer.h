@@ -9,7 +9,7 @@ struct FluorLabelList	//Create a list of fluorescent labels
 	{
 		std::string mName{ "" };	//Fluorescent label name
 		int mWavelength_nm;			//Laser wavelength
-		double mScanPi;				//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
+		double mScanPmin;				//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
 		double mStackPinc;			//Laser power increase per unit of distance in the z-stage axis
 		int nBin{ 1 };
 	};
@@ -65,14 +65,11 @@ namespace Action
 	struct AcqStack {
 		int mStackNumber;
 		int mWavelength_nm;
-		SCANDIR mScanDirZ;		//UPWARD for z-stage moving up (top-down imaging) or DOWNWARD for z-stage moving down (bottom-up imaging)
-		double mScanZi;			//Initial z position of a stack-scan
+		SCANDIR mScanDirZ;		//THIS IS NOT READ BY THE SEQUENCER ANYMORE!!
+		double mScanZmin;		//Min z position of a stack-scan
 		double mStackDepth;		//Stack depth or thickness
-		double mScanPi;			//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
+		double mScanPmin;		//Min laser power of the stack-scan (at the top of the stack)
 		double mStackPinc;		//Laser power increase in the z-stage axis per unit of distance
-
-		double scanZf() const { return  mScanZi + SCANDIRtoInt(mScanDirZ) * mStackDepth; };
-		double scanPf() const { return mScanPi + SCANDIRtoInt(mScanDirZ) * mStackDepth * mStackPinc; };
 	};
 	struct CutSlice {
 		POSITION3 mBladePositionXY;		//Position the sample facing the vibratome blade
@@ -110,7 +107,7 @@ public:
 
 	Commandline readCommandline(const int iterCommandline) const;
 	void generateCommandList();
-	std::vector<POSITION2> generateLocationList();
+	//std::vector<POSITION2> generateLocationList();
 	int size() const;
 	Stack stack() const;
 	void printSequenceParams(std::ofstream *fileHandle) const;

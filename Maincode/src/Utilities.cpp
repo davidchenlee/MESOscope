@@ -177,7 +177,7 @@ void reverseSCANDIR(SCANDIR &scanDir)
 	}
 }
 
-double detInitialPos(const double posMin, const double travel, const SCANDIR scanDir)
+double determineInitialScanPos(const double posMin, const double travel, const SCANDIR scanDir)
 {
 	if (travel <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
@@ -196,7 +196,7 @@ double detInitialPos(const double posMin, const double travel, const SCANDIR sca
 }
 
 //Travel overhead to avoid the nonlinearity at the end of the stage scan
-double detFinalPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
+double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
 {
 	if (travel <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
@@ -216,7 +216,7 @@ double detFinalPos(const double posMin, const double travel, const double travel
 
 //The initial laser power for scanning a stack depends on whether the stack is imaged from the top down or from the bottom up
 //totalPowerInc is the total increase and NOT the increase per unit of length
-double giveInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
+double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
 {
 	if (powerMin < 0 || totalPowerInc < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
@@ -233,7 +233,7 @@ double giveInitialLaserPower(const double powerMin, const double totalPowerInc, 
 }
 
 //totalPowerInc is the total increase and NOT the increase per unit of length
-double giveFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
+double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
 {
 	if (powerMin < 0 || totalPowerInc < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
@@ -696,7 +696,7 @@ std::vector<bool> TiffU8::maxMin_(std::vector<bool> input, const int nRow, const
 
 
 //Return the average
-double TiffU8::giveTileAverage_(const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const
+double TiffU8::determineTileAverage_(const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const
 {
 	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
@@ -714,7 +714,7 @@ double TiffU8::giveTileAverage_(const int tileWidth_pix, const int tileHeight_pi
 }
 
 //Divide the large image into tiles of size tileWidth_pix * tileHeight_pix and return an array of tiles indicating if the tile NOT dark dark
-std::vector<bool> TiffU8::giveBoolMap(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const
+std::vector<bool> TiffU8::determineBoolMap(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
@@ -729,7 +729,7 @@ std::vector<bool> TiffU8::giveBoolMap(const double threshold, const int tileWidt
 	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
 	for (int iterTileRow = 0; iterTileRow < nTileRow; iterTileRow++)
 		for (int iterTileCol = 0; iterTileCol < nTileCol; iterTileCol++)
-			vec_avg.push_back(giveTileAverage_(tileWidth_pix, tileHeight_pix, iterTileRow, iterTileCol));
+			vec_avg.push_back(determineTileAverage_(tileWidth_pix, tileHeight_pix, iterTileRow, iterTileCol));
 
 	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
 	std::vector<bool> vec_isBright;

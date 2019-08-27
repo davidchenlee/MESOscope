@@ -28,10 +28,10 @@ void pressAnyKeyToContOrESCtoExit();
 double multiply16X(const double input);
 int SCANDIRtoInt(const SCANDIR scanDir);
 void reverseSCANDIR(SCANDIR &scanDir);
-double detInitialPos(const double posMin, const double travel, const SCANDIR scanDir);
-double detFinalPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
-double giveInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
-double giveFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
+double determineInitialScanPos(const double posMin, const double travel, const SCANDIR scanDir);
+double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
+double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
+double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
 
 //For saving the parameters to a text file
 class Logger
@@ -67,7 +67,7 @@ public:
 	void averageEvenOddFrames();
 	void averageFrames();
 	void binFrames(const int nFramesPerBin);
-	std::vector<bool> giveBoolMap(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const;
+	std::vector<bool> determineBoolMap(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const;
 	void saveToTxt(const std::string fileName) const;
 	void pushImage(const U8* inputArray, const int frameIndex) const;
 	void pushImage(const U8* inputArray, const int firstFrameIndex, const int lastFrameIndex) const;
@@ -85,7 +85,7 @@ private:
 	int mNframes;
 	int mBytesPerLine; 
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
-	double giveTileAverage_(const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const;
+	double determineTileAverage_(const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const;
 };
 
 class QuickStitcher

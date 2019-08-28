@@ -25,6 +25,16 @@ Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", Conta
 Sample currentSample{ liverDAPITDT };
 
 
+double determineChromaticShift(const int wavelength_nm, const Laser::ID whichLaser)
+{
+	//This is because the beads at 750 nm are chromatically shifted
+	if (wavelength_nm == 750)
+		return 6 * um;
+
+	//This is because FIDELITY is chromatically shifted wrt VISION
+	if (wavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
+		return 4 * um;
+}
 
 
 namespace Routines
@@ -51,12 +61,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
-		//This is because the beads at 750 nm are chromatically shifted
-		if (fluorLabel.mWavelength_nm == 750)
-			stackCenterXYZ.ZZ -= 6 * um;
-		//This is because FIDELITY is chromatically shifted wrt VISION
-		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
-			stackCenterXYZ.ZZ -= 4 * um;
+		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -275,12 +280,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };										//Full FOV in the slow axis
 
-		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
-		if (fluorLabel.mWavelength_nm == 750)
-			stackCenterXYZ.ZZ -= 6 * um;
-		//This is because FIDELITY is chromatically shifted wrt VISION
-		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
-			stackCenterXYZ.ZZ -= 4 * um;
+		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
 
 		//Center the stack
 		////////////////////////////////////stackCenterXYZ.at(Stage::Z) -= nFramesCont * pixelSizeZbeforeBinning /2;
@@ -368,12 +368,7 @@ namespace Routines
 		const double pixelSizeX{ 0.5 * um };
 		const int totalHeight_pix{ static_cast<int>(totalHeight / pixelSizeX) };				//Total pixel height in the stitched image
 
-		//This is because the beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm
-		if (fluorLabel.mWavelength_nm == 750)
-			stackCenterXYZ.ZZ -= 6 * um;
-		//This is because FIDELITY is chromatically shifted wrt VISION
-		if (fluorLabel.mWavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
-			stackCenterXYZ.ZZ -= 6 * um;
+		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
 
 		//LOCATIONS on the sample to image
 		std::vector<double> stagePositionY;

@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::locationSequence();
 			//TestRoutines::generateLocationsForBigStitcher();
 
-			TestRoutines::PMT16Xconfig();
+			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);
 
 			//TestRoutines::vibratome(fpga);

@@ -6,7 +6,6 @@ Code in C++ for controlling the NI USB-7852R card
 - implement exp scaling for the pockels
 - how to deal with vector of objects containing pointer-arrays?
 - Implement suppressCrosstalk() flattenField() on the GPU
-- Fix the hack mTiff.setNframes(mRTcontrol.mNframes) in Image::initializeAcq()
 - Multithread demuxAllChannels_()
 - Do a post-sequence clean up routine to set the pockels outputs to 0
 - maybe switch to smart pointers for the data. Check the overhead
@@ -17,7 +16,6 @@ Code in C++ for controlling the NI USB-7852R card
 - I detected that, when the FPGA resets at the end of the code, the shutter #2 is triggered. I see a small voltage on the scope, like ~50mV that seems to be enough to trigger the shutter
 
 ### Hardware
-- cover up the entire the emission path
 - realign the dichroic and rescanner mounts. Fine tune the galvo parameters
 - calibrate Fidelity
 - Screw down the PMT16X

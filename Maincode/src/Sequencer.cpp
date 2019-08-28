@@ -505,7 +505,7 @@ void Sequencer::acqStack_(const int wavelengthIndex)
 	const FluorLabelList::FluorLabel fluorLabel{ mSample.mFluorLabelList.at(wavelengthIndex) };
 
 	Commandline commandline{ Action::ID::ACQ };
-	commandline.mParam.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mScanZi, mStack.mDepth, fluorLabel.mScanPmin, fluorLabel.mStackPinc };
+	commandline.mParam.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mScanZi, mStack.mDepth, fluorLabel.mScanPmin, fluorLabel.mStackPinc, fluorLabel.nFramesBinning };
 	mCommandList.push_back(commandline);
 	mStackCounter++;	//Count the number of stacks acquired
 	mCommandCounter++;	//Count the number of commands

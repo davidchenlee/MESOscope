@@ -19,20 +19,18 @@ U8* const Image::data() const
 }
 
 //Demultiplex the image
-void Image::form(const bool saveAllPMT)
+void Image::acquire(const bool saveAllPMT)
 {
-	correctInterleaved();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines
 	demultiplex_(saveAllPMT);	//Copy the chuncks of data to mTiff
 	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Mirror the odd frames vertically
 }
 
-//To perform continuous scan in x. Different from Image::form() because
+//To perform continuous scan in x. Different from Image::acquire() because
 //each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and mNframes = half the pixel height of the final image
-void Image::formVerticalStrip(const SCANDIR scanDirX)
+void Image::acquireVerticalStrip(const SCANDIR scanDirX)
 {
 	const bool saveAllPMT{ false };
 
-	correctInterleaved();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines
 	demultiplex_(saveAllPMT);	//Copy the chuncks of data to mTiff
 	mTiff.mergeFrames();		//Set mNframes = 1 to treat mArray as a single image	
 
@@ -87,17 +85,7 @@ void Image::save(std::string filename, const TIFFSTRUCT pageStructure, const OVE
 	mTiff.saveToFile(filename, pageStructure, override, mRTcontrol.mScanDir);
 }
 
-//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample
-void Image::correctInterleaved()
-{
-	//std::reverse(bufferA + lineIndex * mRTcontrol.mWidthPerFrame_pix, bufferA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
-	//reverses all the pixels between and including the indices 'lineIndex * widthPerFrame_pix' and '(lineIndex + 1) * widthPerFrame_pix - 1'
-	for (int lineIndex = 0; lineIndex < mRTcontrol.mHeightPerBeamletAllFrames_pix; lineIndex += 2)
-	{
-		std::reverse(mRTcontrol.dataBufferA() + lineIndex * mRTcontrol.mWidthPerFrame_pix, mRTcontrol.dataBufferA() + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix);
-		std::reverse(mRTcontrol.dataBufferB() + lineIndex * mRTcontrol.mWidthPerFrame_pix, mRTcontrol.dataBufferB() + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix);
-	}
-}
+
 
 //Demultiplex the image
 void Image::demultiplex_(const bool saveAllPMT)
@@ -144,8 +132,8 @@ void Image::demuxSingleChannel_()
 void Image::demuxAllChannels_(const bool saveAllPMT)
 {
 	//Use 2 separate arrays to allow parallelization in the future
-	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH00-CH07
-	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, 8 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH08-CH15
+	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, g_nChanPMT / 2 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH00-CH07
+	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, g_nChanPMT / 2 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH08-CH15
 
 	/*Iterate over all the pixels and frames (all the frames are concatenated in a single-long image), demultiplex the counts, and store them in CountA and CountB
 	CountA = |CH00 f1|
@@ -170,7 +158,7 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 	*/
 
 	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
-		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
+		for (int chanIndex = 0; chanIndex < g_nChanPMT / 2; chanIndex++)
 		{
 			//Buffer A (CH00-CH07)
 			const int upscaledA{ g_upscalingFactor * ((mRTcontrol.dataBufferA())[pixIndex] & 0x0000000F) };			//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel

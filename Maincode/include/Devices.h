@@ -20,8 +20,8 @@ public:
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
 	U8* const data() const;
-	void form(const bool saveAllPMT = false);
-	void formVerticalStrip(const SCANDIR scanDirX);
+	void acquire(const bool saveAllPMT = false);
+	void acquireVerticalStrip(const SCANDIR scanDirX);
 	void correct(const double FFOVfast);
 	void correctRSdistortion(const double FFOVfast);
 	void averageFrames();
@@ -29,10 +29,9 @@ public:
 	void binFrames(const int nFramesPerBin);
 	void save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const;
 private:
-	const RTcontrol &mRTcontrol;			//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
-	TiffU8 mTiff;							//Tiff that stores the content of bufferA and bufferB
+	const RTcontrol &mRTcontrol;				//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
+	TiffU8 mTiff;								//Tiff that stores the content of bufferA and bufferB
 
-	void correctInterleaved();
 	void demultiplex_(const bool saveAllPMT);
 	void demuxSingleChannel_();
 	void demuxAllChannels_(const bool saveAllPMT);
@@ -209,7 +208,7 @@ public:
 	void powerLinearScaling(const double Pi, const double Pf) const;
 	void setShutter(const bool state) const;
 private:
-	RTcontrol &mRTcontrol;						//Non-const because some methods in this class change the variables referenced by mRTcontrol						
+	RTcontrol &mRTcontrol;						//Non-const because the laser power is pushed into the queues in RTcontrol						
 	RTcontrol::RTCHAN mPockelsRTchan;
 	RTcontrol::RTCHAN mScalingRTchan;
 	int mWavelength_nm;							//Laser wavelength

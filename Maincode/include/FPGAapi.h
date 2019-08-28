@@ -44,7 +44,7 @@ public:
 	const FPGA &mFpga;
 	LINECLOCK mLineclockInput;							//Resonant scanner (RS) or Function generator (FG)
 	MAINTRIG mMainTrigger;								//Trigger the acquisition with the Z stage: enable (0), disable (1)
-	FIFOOUTfpga mFIFOOUTfpgaState;						//Enable or disable the FIFOOUTfpga on the FPGA
+	FIFOOUTfpga mEnableFIFOOUTfpga;						//Enable or disable the FIFOOUTfpga on the FPGA
 	SCANDIR mScanDir{ SCANDIR::UPWARD };				//Scan direction of the stage for continuous scan
 	PMT16XCHAN mPMT16Xchan;								//PMT16X channel to be used
 	int mWidthPerFrame_pix;								//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
@@ -53,8 +53,8 @@ public:
 	int mHeightPerBeamletAllFrames_pix;					//Total number of lines per beamlet in all the frames
 	int mNpixPerBeamletAllFrames;						//Total number of pixels per beamlet in all the frames
 
-	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUTfpga FIFOOUTfpgaState);
-	RTcontrol(const FPGA &fpga);
+	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const int nFrames);
+	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix);
 	~RTcontrol();
 	RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 	RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
@@ -75,8 +75,9 @@ public:
 	void enableFIFOOUTfpga() const;
 	void enablePockelsScaling() const;
 	void setStageTrigAcqDelay(const SCANDIR scanDir) const;
-	void acquire();
-	void initializeAcq(const SCANDIR scanDirZ = SCANDIR::UPWARD);
+	void setNframes(const int nFrames);
+	void run();
+	void initialize(const SCANDIR scanDirZ = SCANDIR::UPWARD);
 	void downloadData();
 	U32* dataBufferA() const;
 	U32* dataBufferB() const;
@@ -108,12 +109,13 @@ private:
 	void startFIFOOUTpc_() const;
 	void configureFIFOOUTpc_(const U32 depth) const;
 	void stopFIFOOUTpc_() const;
-	void setRescannerSetpoint_();
+	PMT16XCHAN determineRescannerSetpoint_();
 	void iniStageContScan_(const SCANDIR stackScanDir);
 	void triggerRT_() const;
 	void collectFIFOOUTpcGarbage_() const;
 	void readFIFOOUTpc_();
 	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);
+	void correctInterleaved_();
 	void setPostSequenceTimer_() const;
 };
 

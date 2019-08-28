@@ -834,10 +834,11 @@ void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* input
 
 	const int heightAllChannelsPerFrame{ g_nChanPMT * heightPerChannelPerFrame };
 	const int heightPerChannelAllFrames{ heightPerChannelPerFrame * mNframes };
+	const int nChanPMThalf{ g_nChanPMT / 2 };
 
 	//Even 'frameIndex' (Raster scan the sample from the positive to the negative direction of the x-stage)
 	for (int frameIndex = 0; frameIndex < mNframes; frameIndex += 2)
-		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
+		for (int chanIndex = 0; chanIndex < nChanPMThalf; chanIndex++)
 		{
 			//CH00-CH07
 			std::memcpy(&mArray[((15 - chanIndex) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
@@ -846,12 +847,12 @@ void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* input
 		}
 	//Odd 'frameIndex' (Raster scan the sample from the negative to the positive direction of the x-stage)
 	for (int frameIndex = 1; frameIndex < mNframes; frameIndex += 2)
-		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
+		for (int chanIndex = 0; chanIndex < nChanPMThalf; chanIndex++)
 		{
 			//CH00-CH07
 			std::memcpy(&mArray[(chanIndex * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
 			//CH08-CH15
-			std::memcpy(&mArray[((chanIndex + 8) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
+			std::memcpy(&mArray[((chanIndex + nChanPMThalf) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
 		}
 }
 
@@ -1200,12 +1201,6 @@ void TiffU8::flattenField(const double maxScaleFactor)
 				mArray[frameIndex * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + pixIndex] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + pixIndex]);
 }
 */
-
-//To be called by Image::initializeAcq() as an ugly hack
-void TiffU8::setNframes(const int nFrames)
-{
-	mNframes = nFrames;
-}
 #pragma endregion "TiffU8"
 
 //tileWidth_pix = tile width, tileHeight_pix = tile height, nTileRow = number of tile-rows in the stitched image, nTileCol = number of tile-columns in the stitched image

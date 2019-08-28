@@ -262,58 +262,47 @@ QU32 RTcontrol::Pixelclock::readPixelclock() const
 	return mPixelclockQ;
 }
 
-RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUTfpga FIFOOUTFPGAstate) :
-	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },	//Initialize the number of queues in the vector
+RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const int nFrames) :
+	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },	//Initialize the size the vector containing the queues (= # of queues)
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
 	mMainTrigger{ mainTrigger },
-	mNframes{ nFrames },
+	mEnableFIFOOUTfpga{ enableFIFOOUTfpga },
+	mPMT16Xchan{ determineRescannerSetpoint_() },
 	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
-	mFIFOOUTfpgaState{ FIFOOUTFPGAstate }
+	mNframes{ nFrames },
+	mHeightPerBeamletAllFrames_pix{ mHeightPerBeamletPerFrame_pix * mNframes },
+	mNpixPerBeamletAllFrames{ mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix }
 {
-	//Set the imaging parameters
+	uploadImagingParameters_();
+}
+
+//This constructor is meant to be used with RTcontrol::setNframes(const int nFrames)
+RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix):
+	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },
+	mFpga{ fpga },
+	mLineclockInput{ lineclockInput },
+	mMainTrigger{ mainTrigger },
+	mEnableFIFOOUTfpga{ enableFIFOOUTfpga },
+	mPMT16Xchan{ determineRescannerSetpoint_() },
+	mWidthPerFrame_pix{ widthPerFrame_pix },
+	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }
+{}
+
+//Set the imaging parameters
+void RTcontrol::setNframes(const int nFrames)
+{
+	mNframes = nFrames;
 	mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
 	mNpixPerBeamletAllFrames = mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix;
 	uploadImagingParameters_();
-
-	bufferA = new U32[mNpixPerBeamletAllFrames];
-	bufferB = new U32[mNpixPerBeamletAllFrames];
-
-	//Generate a pixelclock
-	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
-	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
-
-	setPostSequenceTimer_();
-	setRescannerSetpoint_();
 }
-
-//The pixel clock is triggered by the line clock (see the LV implementation) after an initial waiting time
-void RTcontrol::Pixelclock::pushUniformDwellTimes_()
-{
-	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
-	//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (g_lineclockHalfPeriod-400*125ns)/2
-
-	const double initialWaitingTime{ (g_lineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
-
-	//Check if the pixelclock overflows the Lineclock
-	if (initialWaitingTime <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
-
-	mPixelclockQ.push_back(FPGAfunc::packU32(FPGAfunc::timeToTick(initialWaitingTime) + mCalibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
-
-	//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
-	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
-	for (int pix = 0; pix < mWidthPerFrame_pix + 1; pix++)
-		mPixelclockQ.push_back(FPGAfunc::packPixelclockSinglet(mDwell, 1));
-}
-
-RTcontrol::RTcontrol(const FPGA &fpga) :
-	RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, 1, 300, 560, FIFOOUTfpga::DIS }
-{}
 
 RTcontrol::~RTcontrol()
 {
+	std::cout << "RTcontrol destructor called\n"; //For debugging
+
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
 	//I think this is because FIFOOUTpc used to remain open and clashed with the subsequent call
 	stopFIFOOUTpc_();
@@ -436,7 +425,7 @@ void RTcontrol::disableStageTrigAcq() const
 //Enable the FPGA to push the photocounts to FIFOOUTfpga. Disabled when debugging
 void RTcontrol::enableFIFOOUTfpga() const
 {
-	if (mFIFOOUTfpgaState == FIFOOUTfpga::EN)
+	if (mEnableFIFOOUTfpga == FIFOOUTfpga::EN)
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
 }
 
@@ -486,16 +475,24 @@ void RTcontrol::setStageTrigAcqDelay(const SCANDIR scanDir) const
 }
 
 //Scan a single frame
-void RTcontrol::acquire()
+void RTcontrol::run()
 {
-	initializeAcq();		//Preset the parameters for the acquisition sequence
-	triggerRT_();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
-	downloadData();			//Retrieve the data from the FPGA
+	initialize();		//Preset the parameters for the acquisition sequence
+	triggerRT_();		//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
+	downloadData();		//Retrieve the data from the FPGA
 }
 
 //Preset the parameters for the acquisition sequence
-void RTcontrol::initializeAcq(const SCANDIR stackScanDir)
+void RTcontrol::initialize(const SCANDIR stackScanDir)
 {
+	bufferA = new U32[mNpixPerBeamletAllFrames];
+	bufferB = new U32[mNpixPerBeamletAllFrames];
+
+	//Generate a pixelclock
+	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
+	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
+
+	setPostSequenceTimer_();
 	enableFIFOOUTfpga();				//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
 	iniStageContScan_(stackScanDir);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
 	FPGAinitializationRamp();			//Preset the ouput of the FPGA and load the FPGA with the RT control sequence
@@ -511,7 +508,7 @@ void RTcontrol::initializeAcq(const SCANDIR stackScanDir)
 //Retrieve the data from the FPGA
 void RTcontrol::downloadData()
 {
-	if (mFIFOOUTfpgaState == FIFOOUTfpga::EN)
+	if (mEnableFIFOOUTfpga == FIFOOUTfpga::EN)
 	{
 		try
 		{
@@ -523,7 +520,10 @@ void RTcontrol::downloadData()
 			//throw;//Do not terminate the entire sequence. Notify the exception and continue with the next iteration
 		}
 	}
-	disableStageTrigAcq();//Disable the stage triggering the ctl&acq sequence to allow positioning the stage after acquisition
+	correctInterleaved_();				//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines
+										//In case of pipelining, remove it from RTcontrol::initialize() and call it separately
+
+	disableStageTrigAcq();				//Disable the stage triggering the ctl&acq sequence to allow positioning the stage after acquisition
 }
 
 U32* RTcontrol::dataBufferA() const
@@ -534,6 +534,26 @@ U32* RTcontrol::dataBufferA() const
 U32* RTcontrol::dataBufferB() const
 {
 	return bufferB;
+}
+
+//The pixel clock is triggered by the line clock (see the LV implementation) after an initial waiting time
+void RTcontrol::Pixelclock::pushUniformDwellTimes_()
+{
+	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+	//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (g_lineclockHalfPeriod-400*125ns)/2
+
+	const double initialWaitingTime{ (g_lineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
+
+	//Check if the pixelclock overflows the Lineclock
+	if (initialWaitingTime <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
+
+	mPixelclockQ.push_back(FPGAfunc::packU32(FPGAfunc::timeToTick(initialWaitingTime) + mCalibFine_tick - mLatency_tick, 0));	 //DO NOT use packDigitalSinglet because the pixelclock has a different latency from DO
+
+	//Generate the pixel clock. When HIGH is pushed, the pixel clock switches its state, which corresponds to a pixel delimiter (boolean switching is implemented on the FPGA)
+	//Npixels+1 because there is one more pixel delimiter than number of pixels. The last time step is irrelevant
+	for (int pix = 0; pix < mWidthPerFrame_pix + 1; pix++)
+		mPixelclockQ.push_back(FPGAfunc::packPixelclockSinglet(mDwell, 1));
 }
 
 //Push all the elements in 'tailQ' into 'headQ'
@@ -632,12 +652,12 @@ void RTcontrol::stopFIFOOUTpc_() const
 }
 
 //Determine the setpoint for the rescanner. mPMT16Xchan is called by the classes Galvo and Image
-void RTcontrol::setRescannerSetpoint_()
+RTcontrol::PMT16XCHAN RTcontrol::determineRescannerSetpoint_()
 {
 	if (multibeam)
-		mPMT16Xchan = PMT16XCHAN::CENTERED;
+		return PMT16XCHAN::CENTERED;
 	else
-		mPMT16Xchan = static_cast<RTcontrol::PMT16XCHAN>(g_PMT16Xchan_int);
+		return static_cast<RTcontrol::PMT16XCHAN>(g_PMT16Xchan_int);
 }
 
 void RTcontrol::iniStageContScan_(const SCANDIR stackScanDir)
@@ -767,6 +787,19 @@ void RTcontrol::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU
 		}
 		else
 			nullReadCounter++;		//keep track of the null reads
+	}
+}
+
+//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample
+//For cleaner coding, do not move this function to the Image class since it modify a member of the RTcontrol class
+void RTcontrol::correctInterleaved_()
+{
+	//std::reverse(bufferA + lineIndex * mRTcontrol.mWidthPerFrame_pix, bufferA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
+	//reverses all the pixels between and including the indices 'lineIndex * widthPerFrame_pix' and '(lineIndex + 1) * widthPerFrame_pix - 1'
+	for (int lineIndex = 0; lineIndex < mHeightPerBeamletAllFrames_pix; lineIndex += 2)
+	{
+		std::reverse(bufferA + lineIndex * mWidthPerFrame_pix, bufferA + (lineIndex + 1) * mWidthPerFrame_pix);
+		std::reverse(bufferB + lineIndex * mWidthPerFrame_pix, bufferB + (lineIndex + 1) * mWidthPerFrame_pix);
 	}
 }
 

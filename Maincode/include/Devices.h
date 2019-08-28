@@ -1,12 +1,12 @@
 #pragma once
 #include <future>
-#include <fstream>					//file management
-#include <ctime>					//Clock()
-#include <algorithm>				//std::max and std::min
+#include <fstream>										//file management
+#include <ctime>										//Clock()
+#include <algorithm>									//std::max and std::min
 #include "FPGAapi.h"
 #include "PI_GCS2_DLL.h"
 #include "serial/serial.h"
-#include <memory>					//For smart pointers
+#include <memory>										//For smart pointers
 #include "Thorlabs.MotionControl.KCube.StepperMotor.h"	//For the Thorlabs stepper
 
 class Image
@@ -20,12 +20,9 @@ public:
 	Image& operator=(Image&&) = delete;			//Disable move-assignment constructor
 
 	U8* const data() const;
-	void acquire(const bool saveAllPMT = false);
-	void initializeAcq(const SCANDIR scanDirZ = SCANDIR::UPWARD);
-	void downloadData();
-	void formImage(const bool saveAllPMT = false);
-	void formImageVerticalStrip(const SCANDIR scanDirX);
-	void correctImage(const double FFOVfast);
+	void form(const bool saveAllPMT = false);
+	void formVerticalStrip(const SCANDIR scanDirX);
+	void correct(const double FFOVfast);
 	void correctRSdistortion(const double FFOVfast);
 	void averageFrames();
 	void averageEvenOddFrames();
@@ -33,29 +30,12 @@ public:
 	void save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const;
 private:
 	const RTcontrol &mRTcontrol;			//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
-	U32* mMultiplexedArrayA;				//Buffer array to read FIFOOUTpc A
-	U32* mMultiplexedArrayB;				//Buffer array to read FIFOOUTpc B
-	TiffU8 mTiff;							//Tiff that stores the content of mMultiplexedArrayA and mMultiplexedArrayB
-	SCANDIR mScanDir{ SCANDIR::UPWARD };	//Scan direction of the stage for continuous scan
+	TiffU8 mTiff;							//Tiff that stores the content of bufferA and bufferB
 
-	void iniStageContScan_(const SCANDIR stackScanDir);
-	void collectFIFOOUTpcGarbage_() const;
-	void readFIFOOUTpc_();
-	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);
-	void correctInterleaved_();
+	void correctInterleaved();
 	void demultiplex_(const bool saveAllPMT);
 	void demuxSingleChannel_();
 	void demuxAllChannels_(const bool saveAllPMT);
-	void startFIFOOUTpc_() const;
-	void configureFIFOOUTpc_(const U32 depth) const;
-	void stopFIFOOUTpc_() const;
-	void triggerRT_() const;
-};
-
-class ImageException : public std::runtime_error
-{
-public:
-	ImageException(const std::string& message) : std::runtime_error(message.c_str()) {}
 };
 
 class ResonantScanner

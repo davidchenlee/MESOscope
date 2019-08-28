@@ -1201,7 +1201,6 @@ void TiffU8::flattenField(const double maxScaleFactor)
 }
 */
 
-
 //To be called by Image::initializeAcq() as an ugly hack
 void TiffU8::setNframes(const int nFrames)
 {

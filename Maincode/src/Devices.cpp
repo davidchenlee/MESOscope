@@ -5,26 +5,10 @@
 Image::Image(const RTcontrol &RTcontrol) :
 	mRTcontrol{ RTcontrol },
 	mTiff{ mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * (g_nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes }
-{
-	mMultiplexedArrayA = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
-	mMultiplexedArrayB = new U32[mRTcontrol.mNpixPerBeamletAllFrames];
-
-	//Enable the stage triggering the ctl&acq sequence
-	//It has to be here and not in the RTcontrol class because the trigger has to be turned off by the destructor to allow positioning the stage after acquisition
-	mRTcontrol.enableStageTrigAcq();
-}
+{}
 
 Image::~Image()
 {
-	//Disable the stage triggering the ctl&acq sequence to allow positioning the stage after acquisition
-	mRTcontrol.disableStageTrigAcq();
-
-	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
-	//I think this is because FIFOOUTpc used to remain open and clashed with the following call
-	stopFIFOOUTpc_();
-
-	delete[] mMultiplexedArrayA;
-	delete[] mMultiplexedArrayB;
 	//std::cout << "Image destructor called\n"; //For debugging
 }
 
@@ -34,62 +18,21 @@ U8* const Image::data() const
 	return mTiff.data();
 }
 
-//Scan a single frame
-void Image::acquire(const bool saveAllPMT)
-{
-	initializeAcq();		//Preset the parameters for the acquisition sequence
-	triggerRT_();			//Trigger the RT control. If triggered too early, FIFOOUTfpga will probably overflow
-	downloadData();			//Retrieve the data from the FPGA
-	formImage(saveAllPMT);	//Demultiplex the image
-}
-
-//Preset the parameters for the acquisition sequence
-void Image::initializeAcq(const SCANDIR stackScanDir)
-{
-	mTiff.setNframes(mRTcontrol.mNframes);//Ugly hack for running the sequencer. binFrames() changes mNframes of mTiff. Reset it back
-
-	mRTcontrol.enableFIFOOUTfpga();		//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
-	iniStageContScan_(stackScanDir);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
-	mRTcontrol.FPGAinitializationRamp();//Preset the ouput of the FPGA and load the FPGA with the RT control sequence
-	Sleep(10);							//Give the FPGA enough time to settle (> 5 ms) to avoid FPGAinitializationRamp() clashing with the subsequent call of uploadRT()
-										//(I realized this after running VS in release-mode, which connects faster to the FPGA than in debug-mode)
-	mRTcontrol.uploadRT();				//Upload the main RT control sequence to the FPGA
-	startFIFOOUTpc_();					//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
-	collectFIFOOUTpcGarbage_();			//Clean up any residual data from the previous run
-	//Sleep(20);						//When continuous scanning, collectFIFOOUTpcGarbage() is being called late. Maybe this will fix it
-}
-
-//Retrieve the data from the FPGA
-void Image::downloadData()
-{
-	if (mRTcontrol.mFIFOOUTfpgaState == FIFOOUTfpga::EN)
-	{
-		try
-		{
-			readFIFOOUTpc_();			//Read the data received in FIFOOUTpc
-		}
-		catch (const ImageException &e) 
-		{
-			std::cerr << "An ImageException has occurred in: " << e.what() << "\n";
-			//throw;//Do not terminate the entire sequence. Notify the exception and continue with the next iteration
-		}
-	}
-}
-
 //Demultiplex the image
-void Image::formImage(const bool saveAllPMT)
+void Image::form(const bool saveAllPMT)
 {
-	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
+	correctInterleaved();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines
 	demultiplex_(saveAllPMT);	//Copy the chuncks of data to mTiff
 	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Mirror the odd frames vertically
 }
 
-//To perform continuous scan in x. Different from Image::formImage() because
+//To perform continuous scan in x. Different from Image::form() because
 //each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and mNframes = half the pixel height of the final image
-void Image::formImageVerticalStrip(const SCANDIR scanDirX)
+void Image::formVerticalStrip(const SCANDIR scanDirX)
 {
 	const bool saveAllPMT{ false };
-	correctInterleaved_();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines.
+
+	correctInterleaved();		//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines
 	demultiplex_(saveAllPMT);	//Copy the chuncks of data to mTiff
 	mTiff.mergeFrames();		//Set mNframes = 1 to treat mArray as a single image	
 
@@ -103,7 +46,7 @@ void Image::formImageVerticalStrip(const SCANDIR scanDirX)
 }
 
 //Image post processing
-void Image::correctImage(const double FFOVfast)
+void Image::correct(const double FFOVfast)
 {
 	mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 
@@ -141,143 +84,18 @@ void Image::binFrames(const int nFramesPerBin)
 //Save each frame in mTiff in either a single Tiff page or different Tiff pages
 void Image::save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const
 {
-	mTiff.saveToFile(filename, pageStructure, override, mScanDir);
-}
-
-void Image::iniStageContScan_(const SCANDIR stackScanDir)
-{
-	mScanDir = stackScanDir;					//Initialize mScanDir to set the stage-trigger delay and stack-saving order
-	mRTcontrol.setStageTrigAcqDelay(mScanDir);	//Set the delay for the stage triggering the ctl&acq sequence
-}
-
-//Flush the residual data in FIFOOUTpc from the previous run, if any
-void Image::collectFIFOOUTpcGarbage_() const
-{
-	const U32 timeout_ms{ 100 };
-	const U32 bufSize{ 10000 };
-
-	U32 dummy;
-	U32* garbage{ new U32[bufSize] };
-	U32 nElemToReadA{ 0 }, nElemToReadB{ 0 };			//Elements to read from FIFOOUTpc A and B
-	int nElemTotalA{ 0 }, nElemTotalB{ 0 }; 			//Total number of elements read from FIFOOUTpc A and B
-	while (true)
-	{
-		//Check if there are elements in FIFOOUTpc
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, 0, timeout_ms, &nElemToReadA));
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, 0, timeout_ms, &nElemToReadB));
-		//std::cout << "FIFOOUTpc cleanup A/B: " << nElemToReadA << "/" << nElemToReadB << "\n";
-		//getchar();
-
-		if (nElemToReadA == 0 && nElemToReadB == 0)
-			break;
-
-		if (nElemToReadA > 0)
-		{
-			nElemToReadA = (std::min)(bufSize, nElemToReadA);	//Min between bufSize and nElemToReadA
-			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, nElemToReadA, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
-			nElemTotalA += nElemToReadA;
-		}
-		if (nElemToReadB > 0)
-		{
-			nElemToReadB = (std::min)(bufSize, nElemToReadB);	//Min between bufSize and nElemToReadB
-			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, nElemToReadB, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
-			nElemTotalB += nElemToReadB;
-		}
-	}
-	if (nElemTotalA > 0 || nElemTotalB > 0)
-		std::cout << "FIFOOUTpc garbage collector called. Number of elements cleaned up in FIFOOUTpc A/B: " << nElemTotalA << "/" << nElemTotalB << "\n";
-}
-
-//Read the data in FIFOOUTpc
-void Image::readFIFOOUTpc_()
-{
-	//TODO: save the data concurrently
-	//I ran a test and found that two 32-bit FIFOOUTfpga have a larger bandwidth than a single 64 - bit FIFOOUTfpga
-	//Test if the bandwidth can be increased by using 'NiFpga_AcquireFifoReadElementsU32'.Ref: http://zone.ni.com/reference/en-XX/help/372928G-01/capi/functions_fifo_read_acquire/
-	//pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
-	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
-
-	/*
-	//Declare and start a stopwatch [2]
-	double duration;
-	auto t_start{ std::chrono::high_resolution_clock::now() };
-	*/
-	
-	const int readFifoWaitingTime_ms{ 5 };				//Waiting time between each iteration
-	int timeout_iter{ 200 };							//Timeout the whileloop if the data transfer fails
-	int nullReadCounterA{ 0 }, nullReadCounterB{ 0 };	//Null reading counters
-
-	int nElemTotalA{ 0 }; 					//Total number of elements read from FIFOOUTpc A
-	int nElemTotalB{ 0 }; 					//Total number of elements read from FIFOOUTpc B
-	while (nElemTotalA < mRTcontrol.mNpixPerBeamletAllFrames || nElemTotalB < mRTcontrol.mNpixPerBeamletAllFrames)
-	{
-		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
-
-		readChunk_(nElemTotalA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mMultiplexedArrayA, nullReadCounterA);	//FIFOOUTpc A
-		readChunk_(nElemTotalB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mMultiplexedArrayB, nullReadCounterB);	//FIFOOUTpc B
-
-		if (nullReadCounterA > timeout_iter && nullReadCounterB > timeout_iter)
-			throw ImageException((std::string)__FUNCTION__ + ": FIFO null-reading timeout");
-
-		//std::cout << "FIFO A: " << nElemTotalA << "\tFIFO B: " << nElemTotalB << "\n";	//For debugging
-		//std::cout << "nullReadCounter A: " << nullReadCounterA << "\tnullReadCounter: " << nullReadCounterB << "\n";	//For debugging
-	}
-
-	/*
-	//Stop the stopwatch
-	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "Elapsed time: " << duration << " ms" << "\n";
-	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * mRTcontrol.mNpixAllFrames / duration / 1000 << " Mbps" << "\n"; //2 FIFOOUTs of 32 bits each
-	std::cout << "Total of elements read: " << nElemTotalA << "\t" << nElemTotalB << "\n"; //Print out the total number of elements read
-	*/
-
-	//If all the expected data is NOT read successfully
-	if (nElemTotalA <mRTcontrol.mNpixPerBeamletAllFrames || nElemTotalB < mRTcontrol.mNpixPerBeamletAllFrames)
-		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFO elements than expected");
-}
-
-//Read a chunk of data in the FIFOpc
-void Image::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &nullReadCounter)
-{
-	U32 dummy;
-	U32 nElemToRead{ 0 };				//Elements remaining in FIFOOUTpc
-	const U32 timeout_ms{ 100 };		//FIFOOUTpc timeout
-
-	if (nElemRead < mRTcontrol.mNpixPerBeamletAllFrames)		//Skip if all the data have already been transferred
-	{
-		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), FIFOOUTpc, buffer, 0, timeout_ms, &nElemToRead));
-		//std::cout << "Number of elements remaining in FIFOOUT: " << nElemToRead << "\n";	//For debugging
-
-		//If data available in FIFOOUTpc, retrieve it
-		if (nElemToRead > 0)
-		{
-			//If more data than expected
-			if (static_cast<int>(nElemRead + nElemToRead) > mRTcontrol.mNpixPerBeamletAllFrames)
-				throw std::runtime_error((std::string)__FUNCTION__ + ": Received more FIFO elements than expected");
-
-			//Retrieve the elements in FIFOOUTpc
-			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mRTcontrol.mFpga.handle(), FIFOOUTpc, buffer + nElemRead, nElemToRead, timeout_ms, &dummy));
-
-			//Keep track of the total number of elements read
-			nElemRead += nElemToRead;
-
-			nullReadCounter = 0;	//Reset the iteration counter
-		}
-		else
-			nullReadCounter++;		//keep track of the null reads
-	}
+	mTiff.saveToFile(filename, pageStructure, override, mRTcontrol.mScanDir);
 }
 
 //The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample
-void Image::correctInterleaved_()
+void Image::correctInterleaved()
 {
-	//std::reverse(mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
+	//std::reverse(bufferA + lineIndex * mRTcontrol.mWidthPerFrame_pix, bufferA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
 	//reverses all the pixels between and including the indices 'lineIndex * widthPerFrame_pix' and '(lineIndex + 1) * widthPerFrame_pix - 1'
 	for (int lineIndex = 0; lineIndex < mRTcontrol.mHeightPerBeamletAllFrames_pix; lineIndex += 2)
 	{
-		std::reverse(mMultiplexedArrayA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix);
-		std::reverse(mMultiplexedArrayB + lineIndex * mRTcontrol.mWidthPerFrame_pix, mMultiplexedArrayB + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix);
+		std::reverse(mRTcontrol.dataBufferA() + lineIndex * mRTcontrol.mWidthPerFrame_pix, mRTcontrol.dataBufferA() + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix);
+		std::reverse(mRTcontrol.dataBufferB() + lineIndex * mRTcontrol.mWidthPerFrame_pix, mRTcontrol.dataBufferB() + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix);
 	}
 }
 
@@ -293,36 +111,36 @@ void Image::demultiplex_(const bool saveAllPMT)
 //Singlebeam. Only readn and process the data from a single channel for speed
 void Image::demuxSingleChannel_()
 {
-	//Shift mMultiplexedArrayA and  mMultiplexedArrayB to the right a number of bits depending on the PMT channel to be read
-	//For mMultiplexedArrayA, shift 0 bits for CH00, 4 bits for CH01, 8 bits for CH02, etc...
+	//Shift bufferA and  bufferB to the right a number of bits depending on the PMT channel to be read
+	//For bufferA, shift 0 bits for CH00, 4 bits for CH01, 8 bits for CH02, etc...
 	//For mMultiplexedArrayAB, shift 0 bits for CH08, 4 bits for CH09, 8 bits for CH10, etc...
 	const unsigned int nBitsToShift{ 4 * static_cast<unsigned int>(mRTcontrol.mPMT16Xchan) };
 
-	//Demultiplex mMultiplexedArrayA (CH00-CH07). Each U32 element in mMultiplexedArrayA has the multiplexed structure | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
+	//Demultiplex bufferA (CH00-CH07). Each U32 element in bufferA has the multiplexed structure | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
 	if (mRTcontrol.mPMT16Xchan >= RTcontrol::PMT16XCHAN::CH00 && mRTcontrol.mPMT16Xchan <= RTcontrol::PMT16XCHAN::CH07)
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
-			const int upscaled{ g_upscalingFactor * ((mMultiplexedArrayA[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.data())[pixIndex] = clipU8top(upscaled);																//Clip if overflow
+			const int upscaled{ g_upscalingFactor * (((mRTcontrol.dataBufferA())[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
+			(mTiff.data())[pixIndex] = clipU8top(upscaled);																		//Clip if overflow
 		}
 	}
-	//Demultiplex mMultiplexedArrayB (CH08-CH15). Each U32 element in mMultiplexedArrayB has the multiplexed structure | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
+	//Demultiplex bufferB (CH08-CH15). Each U32 element in bufferB has the multiplexed structure | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
 	else if (mRTcontrol.mPMT16Xchan >= RTcontrol::PMT16XCHAN::CH08 && mRTcontrol.mPMT16Xchan <= RTcontrol::PMT16XCHAN::CH15)
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
-			const int upscaled{ g_upscalingFactor * ((mMultiplexedArrayB[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.data())[pixIndex] = clipU8top(upscaled);																//Clip if overflow
+			const int upscaled{ g_upscalingFactor * (((mRTcontrol.dataBufferB())[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
+			(mTiff.data())[pixIndex] = clipU8top(upscaled);																		//Clip if overflow
 		}
 	}
 	else
 		;//If PMT16XCHAN::CENTERED, do anything
 }
 
-//Each U32 element in mMultiplexedArrayA and mMultiplexedArrayB has the multiplexed structure:
-//mMultiplexedArrayA[i] =  | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
-//mMultiplexedArrayB[i] =  | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
+//Each U32 element in bufferA and bufferB has the multiplexed structure:
+//bufferA[i] =  | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
+//bufferB[i] =  | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
 void Image::demuxAllChannels_(const bool saveAllPMT)
 {
 	//Use 2 separate arrays to allow parallelization in the future
@@ -355,14 +173,14 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 		for (int chanIndex = 0; chanIndex < 8; chanIndex++)
 		{
 			//Buffer A (CH00-CH07)
-			const int upscaledA{ g_upscalingFactor * (mMultiplexedArrayA[pixIndex] & 0x0000000F) };					//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			const int upscaledA{ g_upscalingFactor * ((mRTcontrol.dataBufferA())[pixIndex] & 0x0000000F) };			//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
 			(CountA.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledA);		//Clip if overflow
-			mMultiplexedArrayA[pixIndex] = mMultiplexedArrayA[pixIndex] >> 4;										//Shift 4 places to the right for the next iteration
+			(mRTcontrol.dataBufferA())[pixIndex] = (mRTcontrol.dataBufferA())[pixIndex] >> 4;						//Shift 4 places to the right for the next iteration
 
 			//Buffer B (CH08-CH15)
-			const int upscaledB{ g_upscalingFactor * (mMultiplexedArrayB[pixIndex] & 0x0000000F) };					//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			const int upscaledB{ g_upscalingFactor * ((mRTcontrol.dataBufferB())[pixIndex] & 0x0000000F) };			//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
 			(CountB.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledB);		//Clip if overflow
-			mMultiplexedArrayB[pixIndex] = mMultiplexedArrayB[pixIndex] >> 4;										//Shift 4 places to the right for the next iteration
+			(mRTcontrol.dataBufferB())[pixIndex] = (mRTcontrol.dataBufferB())[pixIndex] >> 4;						//Shift 4 places to the right for the next iteration
 		}
 
 	//Merge all the PMT16X channels into a single image. The strip ordering depends on the scanning direction of the galvos (forward or backwards)
@@ -381,36 +199,6 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 		stack.saveToFile("AllChannels PMT16Xchan=" + PMT16Xchan_s, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
 }
-
-//Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
-void Image::startFIFOOUTpc_() const
-{
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StartFifo(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StartFifo(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
-}
-
-//Configure FIFOOUTpc. Optional according to NI
-void Image::configureFIFOOUTpc_(const U32 depth) const
-{
-	U32 actualDepth;
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, depth, &actualDepth));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ConfigureFifo2(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, depth, &actualDepth));
-	std::cout << "ActualDepth a: " << actualDepth << "\t" << "ActualDepth b: " << actualDepth << "\n";
-}
-
-//Stop the connection between FIFOOUTpc and FIFOOUTfpga. Optional according to NI
-void Image::stopFIFOOUTpc_() const
-{
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StopFifo(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_StopFifo(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb));
-	//std::cout << "stopFIFO called\n";
-}
-
-//Send a signal to the FPGA to trigger the RT control.
-void Image::triggerRT_() const
-{
-	mRTcontrol.triggerRT();
-}
 #pragma endregion "Image"
 
 #pragma region "Resonant scanner"
@@ -422,7 +210,7 @@ ResonantScanner::ResonantScanner(const RTcontrol &RTcontrol) :
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
-		mFillFactor = sin(1. * PI / 2 * temporalFillFactor);					//Note that the fill factor doesn't depend on the RS amplitude
+		mFillFactor = sin(1. * PI / 2 * temporalFillFactor);			//Note that the fill factor doesn't depend on the RS amplitude
 																		//because the RS period is always the same and independent of the amplitude
 
 	//std::cout << "Fill factor = " << mFillFactor << "\n";				//For debugging

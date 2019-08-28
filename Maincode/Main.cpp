@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
-			Routines::contScanX(fpga);
+			//Routines::contScanX(fpga);
 			//Routines::sequencer(fpga, 0);
 			//Routines::liveScan(fpga);
 
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::locationSequence();
 			//TestRoutines::generateLocationsForBigStitcher();
 
-			//TestRoutines::PMT16Xconfig();
+			TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);
 
 			//TestRoutines::vibratome(fpga);
@@ -104,13 +104,13 @@ int main(int argc, char* argv[])
 	try
 	{
 		//Make sure that the power supply of the FPGA is up
-		//TestRoutines::PMT16Xconfig();
+		TestRoutines::PMT16Xconfig();
 	}
 	catch (...)
 	{
 		std::cout << "An error has occurred" << "\n";
 	}
-	pressAnyKeyToCont();
 }
 */
+
 

@@ -42,18 +42,20 @@ public:
 	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED };		//*cast but not relevant, only for debugging
 
 	const FPGA &mFpga;
-	LINECLOCK mLineclockInput;											//Resonant scanner (RS) or Function generator (FG)
-	MAINTRIG mMainTrigger;												//Trigger the acquisition with the Z stage: enable (0), disable (1)
-	FIFOOUTfpga mFIFOOUTfpgaState;										//Enable or disable the FIFOOUTfpga on the FPGA
-	int mWidthPerFrame_pix;												//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
-	int mHeightPerBeamletPerFrame_pix;									//Height in pixels of a single beamlet in a single frame (galvo axis)
-	int mNframes;														//Number of frames to acquire
-	int mHeightPerBeamletAllFrames_pix;									//Total number of lines per beamlet in all the frames
-	int mNpixPerBeamletAllFrames;										//Total number of pixels per beamlet in all the frames
-	PMT16XCHAN mPMT16Xchan;												//PMT16X channel to be used
+	LINECLOCK mLineclockInput;							//Resonant scanner (RS) or Function generator (FG)
+	MAINTRIG mMainTrigger;								//Trigger the acquisition with the Z stage: enable (0), disable (1)
+	FIFOOUTfpga mFIFOOUTfpgaState;						//Enable or disable the FIFOOUTfpga on the FPGA
+	SCANDIR mScanDir{ SCANDIR::UPWARD };				//Scan direction of the stage for continuous scan
+	PMT16XCHAN mPMT16Xchan;								//PMT16X channel to be used
+	int mWidthPerFrame_pix;								//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
+	int mHeightPerBeamletPerFrame_pix;					//Height in pixels of a single beamlet in a single frame (galvo axis)
+	int mNframes;										//Number of frames to acquire
+	int mHeightPerBeamletAllFrames_pix;					//Total number of lines per beamlet in all the frames
+	int mNpixPerBeamletAllFrames;						//Total number of pixels per beamlet in all the frames
 
 	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const int nFrames, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const FIFOOUTfpga FIFOOUTfpgaState);
 	RTcontrol(const FPGA &fpga);
+	~RTcontrol();
 	RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 	RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
 	RTcontrol(RTcontrol&&) = delete;					//Disable move constructor
@@ -73,6 +75,11 @@ public:
 	void enableFIFOOUTfpga() const;
 	void enablePockelsScaling() const;
 	void setStageTrigAcqDelay(const SCANDIR scanDir) const;
+	void acquire();
+	void initializeAcq(const SCANDIR scanDirZ = SCANDIR::UPWARD);
+	void downloadData();
+	U32* dataBufferA() const;
+	U32* dataBufferB() const;
 private:
 	//Private subclass
 	class Pixelclock
@@ -91,17 +98,33 @@ private:
 	};
 
 	VQU32 mVec_queue;
+	U32* bufferA;		//Buffer array to read FIFOOUTpc A
+	U32* bufferB;		//Buffer array to read FIFOOUTpc B
 
 	void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
 	void uploadImagingParameters_() const;
 	void uploadFIFOIN_(const VQU32 &queue_vec) const;
 	void triggerNRT_() const;
-	void setPostSequenceTimer_() const;
+	void startFIFOOUTpc_() const;
+	void configureFIFOOUTpc_(const U32 depth) const;
+	void stopFIFOOUTpc_() const;
 	void setRescannerSetpoint_();
+	void iniStageContScan_(const SCANDIR stackScanDir);
+	void triggerRT_() const;
+	void collectFIFOOUTpcGarbage_() const;
+	void readFIFOOUTpc_();
+	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);
+	void setPostSequenceTimer_() const;
 };
 
 class FPGAexception : public std::runtime_error
 {
 public:
 	FPGAexception(const std::string& message) : std::runtime_error(message.c_str()) {}
+};
+
+class ImageException : public std::runtime_error
+{
+public:
+	ImageException(const std::string& message) : std::runtime_error(message.c_str()) {}
 };

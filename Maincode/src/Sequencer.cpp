@@ -22,13 +22,13 @@ FluorLabelList::FluorLabel FluorLabelList::at(const int index) const
 
 void FluorLabelList::printParams(std::ofstream *fileHandle) const
 {
-	*fileHandle << "ID ************************************************************\n";
+	*fileHandle << "LASERS ************************************************************\n";
 
 	for (std::vector<int>::size_type iterWL = 0; iterWL != mFluorLabelList.size(); iterWL++)
 	{
-		*fileHandle << "Wavelength (nm) = " << mFluorLabelList.at(iterWL).mWavelength_nm <<
-			"\nPower (mW) = " << mFluorLabelList.at(iterWL).mScanPmin / mW <<
-			"\nPower increase (mW/um) = " << mFluorLabelList.at(iterWL).mStackPinc / mWpum << "\n";
+		*fileHandle << "Wavelength = " << mFluorLabelList.at(iterWL).mWavelength_nm <<
+			" nm\nPower = " << mFluorLabelList.at(iterWL).mScanPmin / mW <<
+			" mW\nPower increase = " << mFluorLabelList.at(iterWL).mStackPinc / mWpum << " mW/um\n";
 	}
 	*fileHandle << "\n";
 }
@@ -87,15 +87,15 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "Immersion medium = " << mImmersionMedium << "\n";
 	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Sample center (stageX, stageY, stageZ) (mm) = (" << mSizeRequest.XX / mm << ", " << mSizeRequest.YY / mm << ", " << mSizeRequest.ZZ / mm << ")\n";
-	*fileHandle << "Requested sample size (stageX, stageY, stageZ) (mm) = (" << mSizeRequest.XX / mm << ", " << mSizeRequest.YY / mm << ", " << mSizeRequest.ZZ / mm << ")\n\n";
+	*fileHandle << "Sample center (stageX, stageY, stageZ) = (" << mSizeRequest.XX / mm << " mm, " << mSizeRequest.YY / mm << " mm, " << mSizeRequest.ZZ / mm << " mm)\n";
+	*fileHandle << "Requested sample size (stageX, stageY, stageZ) = (" << mSizeRequest.XX / mm << " mm, " << mSizeRequest.YY / mm << " mm, " << mSizeRequest.ZZ / mm << " mm)\n\n";
 
 	*fileHandle << "SLICE ************************************************************\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Blade position (stageX, stageY) (mm) = (" << mBladePositionXY.XX / mm << ", " << mBladePositionXY.YY / mm << ")\n";
+	*fileHandle << "Blade position (stageX, stageY) = (" << mBladePositionXY.XX / mm << " mm, " << mBladePositionXY.YY / mm << " mm)\n";
 	*fileHandle << std::setprecision(1);
-	*fileHandle << "Blade-focal plane vertical offset (um) = " << mBladeFocalplaneOffsetZ / um << "\n";
-	*fileHandle << "Cut above the bottom of the stack (um) = " << mCutAboveBottomOfStack / um << "\n";
+	*fileHandle << "Blade-focal plane vertical offset = " << mBladeFocalplaneOffsetZ / um << " um\n";
+	*fileHandle << "Cut above the bottom of the stack = " << mCutAboveBottomOfStack / um << " um\n";
 	*fileHandle << "\n";
 }
 #pragma endregion "Sample"
@@ -127,13 +127,13 @@ void Stack::printParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "STACK ************************************************************\n";
 	*fileHandle << std::setprecision(1);
-	*fileHandle << "FOV (stageX, stageY) (um) = (" << mFFOV.XX / um << ", " << mFFOV.YY / um << ")\n";
-	*fileHandle << "Step size Z (um) = " << mStepSizeZ / um << "\n";
-	*fileHandle << "Stack depth (um) = " << mDepth / um << "\n";
+	*fileHandle << "FOV (stageX, stageY) = (" << mFFOV.XX / um << " um, " << mFFOV.YY / um << " um)\n";
+	*fileHandle << "Step size Z = " << mStepSizeZ / um << " um\n";
+	*fileHandle << "Stack depth = " << mDepth / um << " um\n";
 	*fileHandle << std::setprecision(2);
-	*fileHandle << "Stack overlap (frac) = (" << mOverlap_frac.XX << ", " << mOverlap_frac.YY << ", " << mOverlap_frac.ZZ << ")\n";
+	*fileHandle << "Stack overlap = (" << mOverlap_frac.XX << ", " << mOverlap_frac.YY << ", " << mOverlap_frac.ZZ << ") (frac)\n";
 	*fileHandle << std::setprecision(1);
-	*fileHandle << "Stack overlap (um) = (" << mOverlap_frac.XX * mFFOV.XX / um << ", " << mOverlap_frac.YY * mFFOV.YY / um << ", " << mOverlap_frac.ZZ * mDepth << ")\n";
+	*fileHandle << "Stack overlap = (" << mOverlap_frac.XX * mFFOV.XX / um << " um, " << mOverlap_frac.YY * mFFOV.YY / um << " um, " << mOverlap_frac.ZZ * mDepth << " um)\n";
 	*fileHandle << "\n";
 }
 #pragma endregion "Stack"
@@ -180,8 +180,8 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 	case Action::ID::CUT:
 		*fileHandle << actionToString_(mAction);
 		*fileHandle << std::setprecision(3);
-		*fileHandle << "\t************Sample facing the vibratome at (mm) = ";
-		*fileHandle << "(" << mParam.cutSlice.mBladePositionXY.XX / mm << "," << mParam.cutSlice.mBladePositionXY.YY / mm << "," << mParam.cutSlice.mBladePositionXY.ZZ / mm << ")";
+		*fileHandle << "\t************Sample facing the vibratome at = ";
+		*fileHandle << "(" << mParam.cutSlice.mBladePositionXY.XX / mm << "," << mParam.cutSlice.mBladePositionXY.YY / mm << "," << mParam.cutSlice.mBladePositionXY.ZZ / mm << ") mm";
 		*fileHandle << "**************************************************************\n";
 		break;
 	default:
@@ -197,14 +197,14 @@ void Sequencer::Commandline::printParameters() const
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
 		std::cout << "Vibratome slice number = " << mParam.moveStage.mSliceNumber << "\n";
 		std::cout << "Stack ij = (" << mParam.moveStage.mStackIJ.II << "," << mParam.moveStage.mStackIJ.JJ << ")\n";
-		std::cout << "Stack center (mm,mm) = (" << mParam.moveStage.mStackCenterXY.XX / mm << "," << mParam.moveStage.mStackCenterXY.YY / mm << ")\n\n";
+		std::cout << "Stack center (stageX, stageY) = (" << mParam.moveStage.mStackCenterXY.XX / mm << "," << mParam.moveStage.mStackCenterXY.YY / mm << ") mm\n\n";
 		break;
 	case Action::ID::ACQ:
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
-		std::cout << "wavelength (nm) = " << mParam.acqStack.mWavelength_nm << "\n";
+		std::cout << "wavelength = " << mParam.acqStack.mWavelength_nm << " nm\n";
 		std::cout << "scanDirZ = " << SCANDIRtoInt(mParam.acqStack.mScanDirZ) << "\n";
-		std::cout << "scanZmin (mm) / stackDepth (mm) = " << mParam.acqStack.mScanZmin / mm << "/" << mParam.acqStack.mStackDepth << "\n";
-		std::cout << "scanPmin (mW) / stackPdiff (mW/um) = " << mParam.acqStack.mScanPmin / mW << "/" << mParam.acqStack.mStackPinc / mWpum << "\n\n";
+		std::cout << "scanZmin / stackDepth = " << mParam.acqStack.mScanZmin / mm << " mm/" << mParam.acqStack.mStackDepth << " mm\n";
+		std::cout << "scanPmin / stackPdiff = " << mParam.acqStack.mScanPmin / mW << " mW/" << mParam.acqStack.mStackPinc / mWpum << " (mW/um)\n\n";
 		break;
 	case Action::ID::SAV:
 		std::cout << "The command is " << actionToString_(mAction) << "\n";
@@ -334,15 +334,19 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 	*fileHandle << "SEQUENCER ************************************************************\n";
 	*fileHandle << "Stages initial scan direction {stageX, stageY, stageZ} = {" << SCANDIRtoInt(mInitialScanDirXYZ.XX) << ", " << SCANDIRtoInt(mInitialScanDirXYZ.YY) << ", " << SCANDIRtoInt(mInitialScanDirXYZ.ZZ) << "}\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Effective ROI (stage positions) [YMIN, XMIN, YMAX, XMAX] (mm) = [" << mROIeff.YMIN / mm << ", " << mROIeff.XMIN / mm << ", " << mROIeff.YMAX / mm << ", " << mROIeff.XMAX / mm << "]\n";
-	*fileHandle << "Effective sample size (stageX, stageY, stageZ) (mm) = (" << effectiveSizeXYZ_().XX / mm << ", " << effectiveSizeXYZ_().YY / mm << ", " << effectiveSizeXYZ_().ZZ / mm << ")\n";
-	*fileHandle << "Z position of the surface of the sample (mm) = " << mSample.mSurfaceZ / mm << "\n";
+	*fileHandle << "Effective ROI (stage positions) [YMIN, XMIN, YMAX, XMAX] = [" << mROIeff.YMIN / mm << " mm, " << mROIeff.XMIN / mm << " mm, " << mROIeff.YMAX / mm << " mm, " << mROIeff.XMAX / mm << " mm]\n";
+	*fileHandle << "Effective sample size (stageX, stageY, stageZ) = (" << effectiveSizeXYZ_().XX / mm << " mm, " << effectiveSizeXYZ_().YY / mm << " mm, " << effectiveSizeXYZ_().ZZ / mm << " mm)\n";
+	*fileHandle << "Z position of the surface of the sample = " << mSample.mSurfaceZ / mm << " mm\n";
 	*fileHandle << std::setprecision(0);
 	*fileHandle << "Total # tissue slices = " << mNtotalSlices << "\n";
 	*fileHandle << "StackArray dim (stageX, stageY) = (" << mStackArrayDimIJ.II << ", " << mStackArrayDimIJ.JJ << ")\n";
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
-	*fileHandle << "\n";
+
+	const double imagingTimePerStack{ g_lineclockHalfPeriod * (560. / 35) * (mStack.mDepth / mStack.mStepSizeZ) };
+	const double totalImagingTime_hours{ mStackCounter * imagingTimePerStack / seconds / 3600.};
+	*fileHandle << "Runtime per stack = " << imagingTimePerStack / ms << " ms (pixelwidth manually input)\n";
+	*fileHandle << "Estimated total runtime (multibeam + pipelining) = " << totalImagingTime_hours << " hrs (pixelwidth manually input)\n\n";
 }
 
 //Print the commandlist to file
@@ -363,7 +367,7 @@ void Sequencer::printToFile(const std::string fileName) const
 		*fileHandle << "Act#\t" + mCommandList.front().printHeader() + "\n";
 		*fileHandle << "\t\t" + mCommandList.front().printHeaderUnits() + "\n";
 	}
-
+	
 	for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != mCommandList.size(); iterCommandline++)
 		//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != 3*(3 * 3 * mStackArrayDimIJ.at(X) * mStackArrayDimIJ.at(Y)+1) + 2 ; iterCommandline++) //For debugging
 	{
@@ -381,7 +385,7 @@ void Sequencer::initializeVibratomeSlice_()
 
 	mPlaneToSliceZ = mScanZi + mStack.mDepth - mSample.mCutAboveBottomOfStack;
 
-	const int nZZ{ static_cast<int>(1 + std::ceil(1 / (1 - mStack.mOverlap_frac.ZZ) * (mSample.mSizeRequest.ZZ / mStack.mDepth - 1))) };
+	const int nZZ{ static_cast<int>(1 + std::ceil(1. / (1 - mStack.mOverlap_frac.ZZ) * (mSample.mSizeRequest.ZZ / mStack.mDepth - 1))) };
 	if (nZZ > 1)
 		mNtotalSlices = nZZ;		//Total number of vibratome slices in the entire sample
 	else
@@ -392,8 +396,8 @@ void Sequencer::initializeVibratomeSlice_()
 //If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
 void Sequencer::initializeStackArrayDimIJ_()
 {
-	const int nXX{ static_cast<int>(std::ceil(1 + 1 / (1 - mStack.mOverlap_frac.XX) * (mSample.mSizeRequest.XX / mStack.mFFOV.XX - 1))) };
-	const int nYY{ static_cast<int>(std::ceil(1 + 1 / (1 - mStack.mOverlap_frac.YY) * (mSample.mSizeRequest.YY / mStack.mFFOV.YY - 1))) };
+	const int nXX{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlap_frac.XX) * (mSample.mSizeRequest.XX / mStack.mFFOV.XX - 1))) };
+	const int nYY{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlap_frac.YY) * (mSample.mSizeRequest.YY / mStack.mFFOV.YY - 1))) };
 
 	if (nXX > 1)
 		mStackArrayDimIJ.II = nXX;		//Number of stacks in the x-stage axis

@@ -3,6 +3,7 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
+- implement exp scaling for the pockels
 - how to deal with vector of objects containing pointer-arrays?
 - Implement suppressCrosstalk() flattenField() on the GPU
 - Fix the hack mTiff.setNframes(mRTcontrol.mNframes) in Image::initializeAcq()

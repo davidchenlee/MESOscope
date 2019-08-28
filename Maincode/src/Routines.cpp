@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (46.200) * mm, (20.600)* mm, (20.100) * mm };
+POSITION3 stackCenterXYZ{ (46.200) * mm, (20.600)* mm, (20.190) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
@@ -258,7 +258,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };			//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };			//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in z
 		const int nFramesPerBin{ 2 };																	//For binning
@@ -354,10 +354,10 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };												//Initial scan direction of stage 
-		const double totalWidth{ 0.3 * mm };													//Total width of the stitched image
+		const double totalWidth{ 7.0 * mm };													//Total width of the stitched image
 
 		const double tileWidth{ 150. * um };													//Width of 1 strip (long vertical tile)
-		const int nCol{ static_cast<int>(std::ceil(totalWidth / tileWidth)) };					//Number of columns in the stitched image
+		const int nCol{ static_cast<int>(std::ceil(1. * totalWidth / tileWidth)) };				//Number of columns in the stitched image
 		const int tileWidth_pix{ 300 };															//Number of pixel width in a strip (long vertical tile)
 		const double totalHeight{ 36 * 0.280 * mm };//10.080 mm									//Total height of the stitched image = height of the strip (long vertical tile). If changed, the x-stage timing must be recalibrated
 		const double pixelSizeX{ 0.5 * um };
@@ -459,7 +459,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
 		const SAMPLESIZE3 sampleSize{ 10.0 * mm, 10.0 * mm, 10.00 * mm };
-		const TILEOVERLAP4 stackOverlap_frac{ 0.10, 0.05, 0.50 };										//Stack overlap
+		const TILEOVERLAP4 stackOverlap_frac{ 0.10, 0.05, 0.40 };										//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
 
@@ -570,7 +570,7 @@ namespace Routines
 				//std::cout << "Elapsed time: " << duration << " ms" << "\n";				
 			}//for
 		}//if
-		//pressAnyKeyToCont();
+		pressAnyKeyToCont();
 	}
 
 	//Image the sample non-stop. Use the PI program to move the stages manually

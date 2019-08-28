@@ -29,7 +29,7 @@ struct Sample
 	std::string mObjectiveCollar;	
 	POSITION2 mCenterXY;									//Sample center (stageX, stageY)
 	SAMPLESIZE3 mSizeRequest{ 0, 0, 0 };					//Requested sample size (stageX, stageY, stageZ)
-	double mSurfaceZ{ -1. * mm };
+	double mSurfaceZ;
 	FluorLabelList mFluorLabelList;
 	std::vector<LIMIT2> mStageSoftPosLimXYZ;				//Soft position limits of the stages
 

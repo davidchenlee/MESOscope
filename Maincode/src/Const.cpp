@@ -12,10 +12,10 @@ namespace Constants
 	extern const double PI{ 3.1415926535897 };
 	extern const int us{ 1 };								//Microsecond
 	extern const int ms{ 1000 * us };						//Millisecond
-	extern const int sec{ 1000 * ms };						//Second
+	extern const int seconds{ 1000 * ms };					//Second
 	extern const int um{ 1 };								//Micron	
 	extern const int mm{ 1000 * um };						//Millimeter
-	extern const double mmps{ 1. * mm / sec };				//Millimeters per second
+	extern const double mmps{ 1. * mm / seconds };			//Millimeters per second
 	extern const int V{ 1 };								//Volt
 	extern const int mW{ 1 };								//Milliwatt
 	extern const double mWpum{ 1. * mW / um };				//mW per micron

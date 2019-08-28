@@ -164,7 +164,7 @@ private:
 	const int mBaud{ 115200 };
 	const int mTimeout{ 150 * ms };
 	const int mNpos{ 6 };						//Number of filter positions
-	const double mTurningSpeed{ 0.8 / sec };	//The measured filterwheel turning speed is ~ 1 position/s. Choose a slightly smaller value
+	const double mTurningSpeed{ 0.8 / seconds };	//The measured filterwheel turning speed is ~ 1 position/s. Choose a slightly smaller value
 	const int mRxBufSize{ 256 };				//Serial buffer size
 
 	int downloadPosition_() const;
@@ -198,7 +198,7 @@ private:
 	COM  mPort;
 	int mBaud;
 	const int mTimeout{ 100 * ms };
-	const double mTuningSpeed{ 35. / sec };		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
+	const double mTuningSpeed{ 35. / seconds };		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
 	const int mRxBufSize{ 256 };				//Serial buffer size
 
 	int downloadWavelength_nm_() const;
@@ -258,7 +258,7 @@ private:
 	double mPosition;
 
 	const char* mSerialNumber;									//Each Thorlabs actuator has a unique serial number
-	const double mCalib{ 26000000/(12.9442 * mm) };				//Calibration factor to convert mm to the actuator's internal units
+	const double mCalib{ 26000000./(12.9442 * mm) };			//Calibration factor to convert mm to the actuator's internal units
 	const std::vector<double> mPosLimit{ 0. * mm, 13. * mm };
 	const int mVel_iu{ 323449856 };								//Equivalent to 3 mm/s
 	const int mAcc_iu{ 11041 };									//Equivalent to 0.5 mm/s^2
@@ -440,7 +440,7 @@ private:
 	const double mSlicingVel{ 0.5 * mmps };											//Move the Y stage at this velocity for slicing
 	const VELOCITY3 mStageConveyingVelXYZ{ 10. * mmps, 10.  *mmps, 0.5 * mmps };	//Transport the sample between the objective and vibratome at this velocity
 	//enum MotionDir { BACKWARD = -1, FORWARD = 1 };
-	//double mCuttingSpeed{ 0.5 * mmps };		//Speed of the vibratome for cutting (manual setting)
+	//double mCuttingSpeed{ 0.5 * mmps };	//Speed of the vibratome for cutting (manual setting)
 	//double mMovingSpeed{ 2.495 * mmps };	//Measured moving speed of the head: 52.4 mm in 21 seconds = 2.495 mm/s. Set by hardware. Cannot be changed
 	//double mTravelRange{ 52.4 * mm };		//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
 	//void moveHead_(const double duration, const MotionDir motionDir) const;

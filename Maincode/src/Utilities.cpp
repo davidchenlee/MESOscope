@@ -710,7 +710,7 @@ double TiffU8::determineTileAverage_(const int tileWidth_pix, const int tileHeig
 	for (int iterRow = tileRowIndex * tileHeight_pix; iterRow < (tileRowIndex + 1) * tileHeight_pix; iterRow++)
 		for (int iterCol = tileColIndex * tileWidth_pix; iterCol < (tileColIndex + 1) * tileWidth_pix; iterCol++)
 			sum += mArray[iterRow * mWidthPerFrame_pix + iterCol];
-	return sum / nPixPerTile;
+	return 1. * sum / nPixPerTile;
 }
 
 //Divide the large image into tiles of size tileWidth_pix * tileHeight_pix and return an array of tiles indicating if the tile NOT dark dark
@@ -871,7 +871,7 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	const double t2{ g_lineclockHalfPeriod - t1 };
 
 	//The full amplitude of the RS (from turning point to turning point) in um. It is assumed that the laser scans the sample following x(t) = 0.5 * fullScan ( 1 - cos (2 * PI * f * t) )
-	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / g_lineclockHalfPeriod) - std::cos(PI * t2 / g_lineclockHalfPeriod)) };
+	const double fullScan{ 2. * FFOVfast / (std::cos(PI * t1 / g_lineclockHalfPeriod) - std::cos(PI * t2 / g_lineclockHalfPeriod)) };
 
 	//Start and stop positions of the RS that define FFOVfast
 	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / g_lineclockHalfPeriod)) };
@@ -1017,7 +1017,7 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 	const double t2{ g_lineclockHalfPeriod - t1 };
 
 	//The full amplitude of the RS (from turning point to turning point) in um
-	const double fullScan{ 2 * FFOVfast / (std::cos(PI * t1 / g_lineclockHalfPeriod) - std::cos(PI * t2 / g_lineclockHalfPeriod)) };
+	const double fullScan{ 2. * FFOVfast / (std::cos(PI * t1 / g_lineclockHalfPeriod) - std::cos(PI * t2 / g_lineclockHalfPeriod)) };
 
 	//Start and stop positions of the RS that define the FFOVfast
 	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / g_lineclockHalfPeriod)) };

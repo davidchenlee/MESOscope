@@ -422,7 +422,7 @@ ResonantScanner::ResonantScanner(const RTcontrol &RTcontrol) :
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
-		mFillFactor = sin(PI / 2 * temporalFillFactor);					//Note that the fill factor doesn't depend on the RS amplitude
+		mFillFactor = sin(1. * PI / 2 * temporalFillFactor);					//Note that the fill factor doesn't depend on the RS amplitude
 																		//because the RS period is always the same and independent of the amplitude
 
 	//std::cout << "Fill factor = " << mFillFactor << "\n";				//For debugging
@@ -1295,7 +1295,7 @@ void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
 
 	//Push the scaling factors
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
-		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1 + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
+		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1. + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
 	mRTcontrol.enablePockelsScaling();
@@ -1323,7 +1323,7 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 		
 		//Push the scaling factors for the frames
-		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1 + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
+		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1. + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
 	}
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)

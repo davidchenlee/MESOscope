@@ -316,9 +316,18 @@ void ResonantScanner::setVoltage_(const double controlVoltage)
 #pragma endregion "Resonant scanner"
 
 #pragma region "PMT16X"
-PMT16X::PMT16X() :
-	mSerial{ std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(static_cast<int>(mPort)), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms))) }
-{}
+PMT16X::PMT16X()	
+{
+	try
+	{
+		mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(static_cast<int>(mPort)), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms)));
+	}
+	catch (const serial::IOException)
+	{
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failure communicating with the PMT16X");
+	}
+
+}
 
 PMT16X::~PMT16X()
 {
@@ -544,7 +553,6 @@ uint8_t PMT16X::sumCheck_(const std::vector<uint8_t> charArray, const int nEleme
 	return sum;
 }
 #pragma endregion "PMT16X"
-
 
 #pragma region "Filterwheel"
 Filterwheel::Filterwheel(const ID whichFilterwheel) :

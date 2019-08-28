@@ -273,9 +273,18 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
 	mNframes{ nFrames },
 	mHeightPerBeamletAllFrames_pix{ mHeightPerBeamletPerFrame_pix * mNframes },
-	mNpixPerBeamletAllFrames{ mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix }
+	mNpixPerBeamletAllFrames{ mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix },
+	mBufferA{ nullptr },
+	mBufferB{ nullptr }
 {
 	uploadImagingParameters_();
+
+	mBufferA = new U32[mNpixPerBeamletAllFrames];
+	mBufferB = new U32[mNpixPerBeamletAllFrames];
+
+	//Generate a pixelclock
+	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
+	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
 //This constructor is meant to be used with RTcontrol::setNframes(const int nFrames)
@@ -287,7 +296,9 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	mEnableFIFOOUTfpga{ enableFIFOOUTfpga },
 	mPMT16Xchan{ determineRescannerSetpoint_() },
 	mWidthPerFrame_pix{ widthPerFrame_pix },
-	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }
+	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
+	mBufferA{ nullptr },
+	mBufferB{ nullptr }
 {}
 
 //Set the imaging parameters
@@ -297,18 +308,25 @@ void RTcontrol::setNframes(const int nFrames)
 	mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
 	mNpixPerBeamletAllFrames = mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix;
 	uploadImagingParameters_();
+
+	mBufferA = new U32[mNpixPerBeamletAllFrames];
+	mBufferB = new U32[mNpixPerBeamletAllFrames];
+
+	//Generate a pixelclock
+	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
+	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
 RTcontrol::~RTcontrol()
 {
-	std::cout << "RTcontrol destructor called\n"; //For debugging
+	//std::cout << "RTcontrol destructor called\n"; //For debugging
 
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
 	//I think this is because FIFOOUTpc used to remain open and clashed with the subsequent call
 	stopFIFOOUTpc_();
 
-	delete[] bufferA;
-	delete[] bufferB;
+	delete[] mBufferA;
+	delete[] mBufferB;
 }
 
 void RTcontrol::pushQueue(const RTCHAN chan, QU32& queue)
@@ -485,13 +503,6 @@ void RTcontrol::run()
 //Preset the parameters for the acquisition sequence
 void RTcontrol::initialize(const SCANDIR stackScanDir)
 {
-	bufferA = new U32[mNpixPerBeamletAllFrames];
-	bufferB = new U32[mNpixPerBeamletAllFrames];
-
-	//Generate a pixelclock
-	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
-	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
-
 	setPostSequenceTimer_();
 	enableFIFOOUTfpga();				//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
 	iniStageContScan_(stackScanDir);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
@@ -528,12 +539,12 @@ void RTcontrol::downloadData()
 
 U32* RTcontrol::dataBufferA() const
 {
-	return bufferA;
+	return mBufferA;
 }
 
 U32* RTcontrol::dataBufferB() const
 {
-	return bufferB;
+	return mBufferB;
 }
 
 //The pixel clock is triggered by the line clock (see the LV implementation) after an initial waiting time
@@ -734,8 +745,8 @@ void RTcontrol::readFIFOOUTpc_()
 	{
 		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
 
-		readChunk_(nElemTotalA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, bufferA, nullReadCounterA);	//FIFOOUTpc A
-		readChunk_(nElemTotalB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, bufferB, nullReadCounterB);	//FIFOOUTpc B
+		readChunk_(nElemTotalA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufferA, nullReadCounterA);	//FIFOOUTpc A
+		readChunk_(nElemTotalB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufferB, nullReadCounterB);	//FIFOOUTpc B
 
 		if (nullReadCounterA > timeout_iter && nullReadCounterB > timeout_iter)
 			throw ImageException((std::string)__FUNCTION__ + ": FIFO null-reading timeout");
@@ -794,12 +805,12 @@ void RTcontrol::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU
 //For cleaner coding, do not move this function to the Image class since it modify a member of the RTcontrol class
 void RTcontrol::correctInterleaved_()
 {
-	//std::reverse(bufferA + lineIndex * mRTcontrol.mWidthPerFrame_pix, bufferA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
+	//std::reverse(mBufferA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mBufferA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
 	//reverses all the pixels between and including the indices 'lineIndex * widthPerFrame_pix' and '(lineIndex + 1) * widthPerFrame_pix - 1'
 	for (int lineIndex = 0; lineIndex < mHeightPerBeamletAllFrames_pix; lineIndex += 2)
 	{
-		std::reverse(bufferA + lineIndex * mWidthPerFrame_pix, bufferA + (lineIndex + 1) * mWidthPerFrame_pix);
-		std::reverse(bufferB + lineIndex * mWidthPerFrame_pix, bufferB + (lineIndex + 1) * mWidthPerFrame_pix);
+		std::reverse(mBufferA + lineIndex * mWidthPerFrame_pix, mBufferA + (lineIndex + 1) * mWidthPerFrame_pix);
+		std::reverse(mBufferB + lineIndex * mWidthPerFrame_pix, mBufferB + (lineIndex + 1) * mWidthPerFrame_pix);
 	}
 }
 

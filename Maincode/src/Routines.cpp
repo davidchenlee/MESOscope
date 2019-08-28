@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (46.350) * mm, (20.600)* mm, (20.170) * mm };
+POSITION3 stackCenterXYZ{ (46.350) * mm, (19.600)* mm, (20.394) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
@@ -24,7 +24,7 @@ Sample liverTDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", Container
 //Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
 #endif
-Sample currentSample{ liverDAPITDT };
+Sample currentSample{ liverTDT };
 
 
 double determineChromaticShift(const int wavelength_nm, const Laser::ID whichLaser)
@@ -360,7 +360,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };												//Initial scan direction of stage 
-		const double totalWidth{ 0.30 * mm };													//Total width of the stitched image
+		const double totalWidth{ 5.0 * mm };													//Total width of the stitched image
 
 		const double tileWidth{ 150. * um };													//Width of 1 strip (long vertical tile)
 		const int nCol{ static_cast<int>(std::ceil(1. * totalWidth / tileWidth)) };				//Number of columns in the stitched image
@@ -378,7 +378,8 @@ namespace Routines
 
 		//CONTROL SEQUENCE
 		//The Image height is 2 (two galvo scanner swings) and nFrames is totalHeight_pix/2. The total height of the final image is therefore totalHeight_pix. Note the STAGEX flag
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, tileWidth_pix, 2, totalHeight_pix / 2 };
+		const int nFrames{ 2 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, tileWidth_pix, nFrames, totalHeight_pix / 2 };
 
 		//LASER
 		VirtualLaser virtualLaser{ whichLaser };
@@ -520,7 +521,6 @@ namespace Routines
 					break;
 				case Action::ID::ACQ://Acquire a stack
 					Action::AcqStack acqStack{ commandline.mParam.acqStack };
-
 					{
 						//Set the number of frames to sample considering that binning will be performed
 						nFramesBinning = acqStack.nFrameBinning;
@@ -1027,11 +1027,13 @@ namespace TestRoutines
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
 		const Stage::DIOCHAN DOchan{ Stage::DIOCHAN::D1 };
 
-		//std::cout << "Stages initial position:" << "\n";
+		//std::cout << "Stages initial position: \n";
 		//stage.printPositionXYZ();
+		std::cout << "Before vel: \n";
+		stage.setVelSingle(Stage::Axis::ZZ, 0.4 * mmps);
 
-		std::cout << "Stages initial vel:" << "\n";
-		stage.printVelXYZ();
+		//std::cout << "Stages initial vel: \n";
+		//stage.printVelXYZ();
 
 		//stage.isDOtriggerEnabled(Z, DOchan);
 		//stage.setDOtriggerEnabled(Z, DOchan , true);
@@ -1593,7 +1595,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (21.300) * mm };
+		const double slicePlaneZ{ (21.400) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

@@ -30,7 +30,7 @@ public:
 	void save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const;
 private:
 	const RTcontrol &mRTcontrol;				//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
-	TiffU8 mTiff;								//Tiff that stores the content of bufferA and bufferB
+	TiffU8 mTiff;								//Tiff that stores the content of mBufferA and mBufferB
 
 	void demultiplex_(const bool saveAllPMT);
 	void demuxSingleChannel_();

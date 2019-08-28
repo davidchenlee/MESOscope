@@ -99,12 +99,12 @@ void Image::demultiplex_(const bool saveAllPMT)
 //Singlebeam. Only readn and process the data from a single channel for speed
 void Image::demuxSingleChannel_()
 {
-	//Shift bufferA and  bufferB to the right a number of bits depending on the PMT channel to be read
-	//For bufferA, shift 0 bits for CH00, 4 bits for CH01, 8 bits for CH02, etc...
+	//Shift mBufferA and  mBufferB to the right a number of bits depending on the PMT channel to be read
+	//For mBufferA, shift 0 bits for CH00, 4 bits for CH01, 8 bits for CH02, etc...
 	//For mMultiplexedArrayAB, shift 0 bits for CH08, 4 bits for CH09, 8 bits for CH10, etc...
 	const unsigned int nBitsToShift{ 4 * static_cast<unsigned int>(mRTcontrol.mPMT16Xchan) };
 
-	//Demultiplex bufferA (CH00-CH07). Each U32 element in bufferA has the multiplexed structure | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
+	//Demultiplex mBufferA (CH00-CH07). Each U32 element in mBufferA has the multiplexed structure | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
 	if (mRTcontrol.mPMT16Xchan >= RTcontrol::PMT16XCHAN::CH00 && mRTcontrol.mPMT16Xchan <= RTcontrol::PMT16XCHAN::CH07)
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
@@ -113,7 +113,7 @@ void Image::demuxSingleChannel_()
 			(mTiff.data())[pixIndex] = clipU8top(upscaled);																		//Clip if overflow
 		}
 	}
-	//Demultiplex bufferB (CH08-CH15). Each U32 element in bufferB has the multiplexed structure | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
+	//Demultiplex mBufferB (CH08-CH15). Each U32 element in mBufferB has the multiplexed structure | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
 	else if (mRTcontrol.mPMT16Xchan >= RTcontrol::PMT16XCHAN::CH08 && mRTcontrol.mPMT16Xchan <= RTcontrol::PMT16XCHAN::CH15)
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
@@ -126,9 +126,9 @@ void Image::demuxSingleChannel_()
 		;//If PMT16XCHAN::CENTERED, do anything
 }
 
-//Each U32 element in bufferA and bufferB has the multiplexed structure:
-//bufferA[i] =  | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
-//bufferB[i] =  | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
+//Each U32 element in mBufferA and mBufferB has the multiplexed structure:
+//mBufferA[i] =  | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
+//mBufferB[i] =  | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
 void Image::demuxAllChannels_(const bool saveAllPMT)
 {
 	//Use 2 separate arrays to allow parallelization in the future

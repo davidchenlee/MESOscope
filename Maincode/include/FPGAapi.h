@@ -99,8 +99,8 @@ private:
 	};
 
 	VQU32 mVec_queue;
-	U32* bufferA;		//Buffer array to read FIFOOUTpc A
-	U32* bufferB;		//Buffer array to read FIFOOUTpc B
+	U32* mBufferA;		//Buffer array to read FIFOOUTpc A
+	U32* mBufferB;		//Buffer array to read FIFOOUTpc B
 
 	void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
 	void uploadImagingParameters_() const;

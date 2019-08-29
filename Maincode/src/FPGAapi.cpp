@@ -195,6 +195,46 @@ void FPGA::setLineclock(const LINECLOCK lineclockInput) const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(lineclockInput)));
 }
 
+//Send every single queue in 'vec_queue' to the FPGA buffer
+//For this, concatenate all the individual queues 'vec_queue.at(ii)' in the queue 'allQueues'.
+//The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
+//Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
+void FPGA::uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const
+{
+	{
+		QU32 allQueues;		//Create a single long queue
+		for (int chan = 0; chan < nChan; chan++)
+		{
+			allQueues.push_back(queue_vec.at(chan).size());					//Push the number of elements in each individual queue ii, 'vec_queue.at(ii)'	
+			for (std::vector<int>::size_type iter = 0; iter != queue_vec.at(chan).size(); iter++)
+				allQueues.push_back(queue_vec.at(chan).at(iter));			//Push vec_queue[i]
+		}
+
+		const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 
+
+		if (sizeFIFOINqueue > g_FIFOINmax)
+			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
+
+		std::vector<U32> FIFOIN(sizeFIFOINqueue);							//Create a 1D array with the channels concatenated
+		for (int ii = 0; ii < sizeFIFOINqueue; ii++)
+		{
+			FIFOIN.at(ii) = allQueues.front();								//Transfer the queue elements to the array
+			allQueues.pop_front();
+		}
+		allQueues = {};					//Cleanup the queue C++11 style
+
+		U32 r;							//Elements remaining
+
+		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mHandle, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
+
+		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
+		//This boolean serves as the master trigger for the entire control sequence
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
+	}
+}
+
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
 void FPGA::startFIFOOUTpc() const
 {
@@ -277,7 +317,7 @@ void FPGA::enablePockelsScaling() const
 }
 
 //Enable the stage trigger the ctl&acq sequence
-void FPGA::enableStageTrigAcq(const MAINTRIG mainTrigger) const
+void FPGA::setStageTrigAcq(const MAINTRIG mainTrigger) const
 {
 	switch (mainTrigger)	//Trigger selector 
 	{
@@ -336,6 +376,38 @@ void FPGA::setStageTrigAcqDelay(const MAINTRIG mainTrigger, const int heightPerB
 	}
 
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_StageTrigAcqDelay_tick, static_cast<U32>(stageTrigAcqDelay / us * g_tickPerUs)));
+}
+
+//Load the imaging parameters onto the FPGA
+void FPGA::uploadImagingParameters(const int heightPerBeamletAllFrames_pix, const int heightPerBeamletPerFrame_pix, const int nFrames) const
+{
+	if (heightPerBeamletAllFrames_pix <= 0 || heightPerBeamletPerFrame_pix <= 0 || nFrames <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
+
+	//IMAGING PARAMETERS
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(heightPerBeamletAllFrames_pix)));		//Total number of lines per beamlet in all the frames
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mHandle, NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(heightPerBeamletPerFrame_pix)));	//Number of lines per beamlet in a frame
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mHandle, NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(nFrames)));								//Number of frames to acquire
+}
+
+//When the Z stage acts as the main trigger (for cont z scanning), the motion monitor of the Z stage bounces and therefore false-triggers new acquisitions
+//Solution: after an acq sequence, wait a certain amount of time before the acq is triggered again (timer implemented in LV)
+void FPGA::setPostSequenceTimer(const MAINTRIG mainTrigger) const
+{
+	double postSequenceTimer{ 0 };
+	switch (mainTrigger)
+	{
+	case MAINTRIG::STAGEZ:
+		postSequenceTimer = g_postSequenceTimer;
+		//std::cout << "Z stage as the main trigger\n";
+		break;
+	case MAINTRIG::STAGEX:
+		postSequenceTimer = g_postSequenceTimer;
+		break;
+	default:
+		postSequenceTimer = 0;
+	}
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postSequenceTimer / us * g_tickPerUs)));
 }
 
 //Load the imaging parameters onto the FPGA. See 'Const.cpp' for the definition of each variable
@@ -583,12 +655,12 @@ void RTcontrol::initialize(const SCANDIR stackScanDir)
 	iniStageContScan_(stackScanDir);				//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
 	presetScannerPosition();						//Preset the scanner positions
 	Sleep(10);										//Give the FPGA enough time to settle (> 5 ms) to avoid presetScannerPosition() clashing with the subsequent call of uploadControlSequence()
-													//(I realized this after running VS in release-mode, which connects faster to the FPGA than in debug-mode)
+													//(I realized this after running VS in release mode, which communicate faster with the FPGA than the debug mode)
 	uploadControlSequence();						//Upload the control sequence to the FPGA
 
 	mFpga.startFIFOOUTpc();							//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the control sequence to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
 	mFpga.collectFIFOOUTpcGarbage_();				//Clean up any residual data from the previous run
-	mFpga.enableStageTrigAcq(mMainTrigger);			//Enable the stage triggering the ctl&acq sequence
+	mFpga.setStageTrigAcq(mMainTrigger);			//Enable the stage triggering the ctl&acq sequence
 	//Sleep(20);									//When continuous scanning, collectFIFOOUTpcGarbage() is being called late. Maybe this will fix it
 }
 	
@@ -658,58 +730,6 @@ void RTcontrol::concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) cons
 	{
 		receivingQueue.push_back(givingQueue.front());
 		givingQueue.pop_front();
-	}
-}
-
-//Load the imaging parameters onto the FPGA
-void FPGA::uploadImagingParameters(const int heightPerBeamletAllFrames_pix, const int heightPerBeamletPerFrame_pix, const int nFrames) const
-{
-	if (heightPerBeamletAllFrames_pix <= 0 || heightPerBeamletPerFrame_pix <= 0 || nFrames <= 0 )
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
-
-	//IMAGING PARAMETERS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(heightPerBeamletAllFrames_pix)));		//Total number of lines per beamlet in all the frames
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mHandle, NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(heightPerBeamletPerFrame_pix)));	//Number of lines per beamlet in a frame
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mHandle, NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(nFrames)));								//Number of frames to acquire
-}
-
-//Send every single queue in 'vec_queue' to the FPGA buffer
-//For this, concatenate all the individual queues 'vec_queue.at(ii)' in the queue 'allQueues'.
-//The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
-//Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
-void FPGA::uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const
-{
-	{
-		QU32 allQueues;		//Create a single long queue
-		for (int chan = 0; chan < nChan; chan++)
-		{
-			allQueues.push_back(queue_vec.at(chan).size());					//Push the number of elements in each individual queue ii, 'vec_queue.at(ii)'	
-			for (std::vector<int>::size_type iter = 0; iter != queue_vec.at(chan).size(); iter++)
-				allQueues.push_back(queue_vec.at(chan).at(iter));			//Push vec_queue[i]
-		}
-
-		const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 
-
-		if (sizeFIFOINqueue > g_FIFOINmax)
-			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
-
-		std::vector<U32> FIFOIN(sizeFIFOINqueue);							//Create a 1D array with the channels concatenated
-		for (int ii = 0; ii < sizeFIFOINqueue; ii++)
-		{
-			FIFOIN.at(ii) = allQueues.front();								//Transfer the queue elements to the array
-			allQueues.pop_front();
-		}
-		allQueues = {};					//Cleanup the queue C++11 style
-
-		U32 r;							//Elements remaining
-
-		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mHandle, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
-
-		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
-		//This boolean serves as the master trigger for the entire control sequence
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
 	}
 }
 
@@ -819,26 +839,6 @@ void RTcontrol::correctInterleaved_()
 		std::reverse(mBufferA + lineIndex * mWidthPerFrame_pix, mBufferA + (lineIndex + 1) * mWidthPerFrame_pix);
 		std::reverse(mBufferB + lineIndex * mWidthPerFrame_pix, mBufferB + (lineIndex + 1) * mWidthPerFrame_pix);
 	}
-}
-
-//When the Z stage acts as the main trigger (for cont z scanning), the motion monitor of the Z stage bounces and therefore false-triggers new acquisitions
-//Solution: after an acq sequence, wait a certain amount of time before the acq is triggered again (timer implemented in LV)
-void FPGA::setPostSequenceTimer(const MAINTRIG mainTrigger) const
-{
-	double postSequenceTimer{ 0 };
-	switch (mainTrigger)
-	{
-	case MAINTRIG::STAGEZ:
-		postSequenceTimer = g_postSequenceTimer;
-		//std::cout << "Z stage as the main trigger\n";
-		break;
-	case MAINTRIG::STAGEX:
-		postSequenceTimer = g_postSequenceTimer;
-		break;
-	default:
-		postSequenceTimer = 0;
-	}
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postSequenceTimer / us * g_tickPerUs)));
 }
 #pragma endregion "RTcontrol"
 

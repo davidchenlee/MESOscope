@@ -1,9 +1,9 @@
 #include "Routines.h"
 const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
-const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
+const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (46.350) * mm, (19.600)* mm, (20.324) * mm };
+POSITION3 stackCenterXYZ{ (44.000) * mm, (21.000)* mm, (16.600) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
@@ -15,7 +15,7 @@ Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", Conta
 #else
 Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
 					{{{"TDT", 1040, 30. * mW, 0.05 * mWpum, 4 } ,
-					  { "DAPI", 750, 20. * mW, 0.2 * mWpum, 2 }}} };
+					  { "DAPI", 750, 12. * mW, 0.2 * mWpum, 2 }}} };
 Sample liverTDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
 					{{{"TDT", 1040, 30. * mW, 0.05 * mWpum, 4 }}} };
 
@@ -24,7 +24,7 @@ Sample liverTDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", Container
 //Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
 #endif
-Sample currentSample{ liverTDT };
+Sample currentSample{ liverDAPITDT };
 
 
 double determineChromaticShift(const int wavelength_nm, const Laser::ID whichLaser)
@@ -52,9 +52,9 @@ namespace Routines
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const int nFramesCont{ 2 };	
+		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 40. * um };								//Stack deepth in the z-stage axis
 		const double stepSizeZ{ 1.0 * um };
 	
@@ -268,10 +268,10 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };				//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in z
-		const int nFramesBinning{ 2 };																	//For binning
+		const int nFramesBinning{ 1 };																	//For binning
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um  };
 
@@ -348,6 +348,8 @@ namespace Routines
 		
 		std::cout << "Saving the stack...\n";
 		image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+
+		//pressAnyKeyToCont();
 	}
 
 	void contScanX(const FPGA &fpga)
@@ -356,11 +358,11 @@ namespace Routines
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Continuous x-stage scanning available for single beam only");
 
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };		//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };												//Initial scan direction of stage 
-		const double totalWidth{ 5.0 * mm };													//Total width of the stitched image
+		const double totalWidth{ 10.0 * mm };													//Total width of the stitched image
 
 		const double tileWidth{ 150. * um };													//Width of 1 strip (long vertical tile)
 		const int nCol{ static_cast<int>(std::ceil(1. * totalWidth / tileWidth)) };				//Number of columns in the stitched image
@@ -503,13 +505,12 @@ namespace Routines
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
-				//commandline.printParameters();
 
 				//SCANNERS
 				const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
 				Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2 };
 
-				//These parameters must be accessible to the different cases
+				//These parameters must be accessible to all the cases
 				int wavelength_nm, nFramesBinning;
 				double scanZi, scanZf, scanPi, scanPf;
 				switch (commandline.mAction)
@@ -522,7 +523,7 @@ namespace Routines
 				case Action::ID::ACQ://Acquire a stack
 					Action::AcqStack acqStack{ commandline.mParam.acqStack };
 					{
-						//Set the number of frames to sample considering that binning will be performed
+						//Set the number of frames considering that binning will be performed
 						nFramesBinning = acqStack.nFrameBinning;
 						const int nFramesBeforeBinning{ nFramesAfterBinning * nFramesBinning };													
 						RTcontrol.setNumberOfFrames(nFramesBeforeBinning);
@@ -617,9 +618,9 @@ namespace Routines
 		{
 			virtualLaser.setPower(fluorLabel.mScanPmin);	//Set the laser power
 
-			RTcontrol.run();							//Execute the control sequence and acquire the image
+			RTcontrol.run();
 			Image image{ RTcontrol };
-			image.acquire();							
+			image.acquire();							//Execute the control sequence
 			image.averageFrames();						//Average the frames acquired via continuous acquisition
 			//image.correct(RScanner.mFFOV);
 			image.save("Untitled", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);	//Save individual files
@@ -628,6 +629,7 @@ namespace Routines
 			pressESCforEarlyTermination();						//Early termination if ESC is pressed
 		}
 	}
+}//namespace
 
 //Photobleach the sample with the resonant scanner to see how much the sample moves after slicing
 //I bleach with the RS and not the galvo or the stages because this way the RS is kept on the entire time while bleaching and imaging
@@ -674,7 +676,7 @@ namespace TestRoutines
 	void pixelclock(const FPGA &fpga)
 	{
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, FIFOOUTfpga::DIS, 300, 560, 1 }; 	//Create the control sequence
-		RTcontrol.run();	//Execute the control sequence
+		RTcontrol.run();																				//Execute the control sequence
 	}
 
 	//Generate a long digital pulse and check the frameDuration with the oscilloscope
@@ -957,10 +959,10 @@ namespace TestRoutines
 		const int wavelength_nm{ 1040 };
 		PockelsCell pockels{ RTcontrol, wavelength_nm, Laser::ID::FIDELITY };
 		const double Pi{ 192. * mW }, Pf{ 336. * mW };
+		//const double Pi{ 30. * mW }, Pf{ 60. * mW };
 		//pockels.pushPowerSinglet(400 * us, Pf, OVERRIDE::EN);
-		//pockels.powerLinearScaling(0.96 * Pi, Pf);			//Linearly scale the laser power from the first to the last frame
+		pockels.powerLinearScaling(Pi, Pf);			//Linearly scale the laser power from the first to the last frame
 		//pockels.powerLinearScaling(0.96 * Pf, Pi);
-		pockels.powerExponentialScaling(Pi, (1. * um) / (300. * um));
 
 		//Test the voltage setpoint
 		//pockels.pushVoltageSinglet(8* us, 0.5 * V);
@@ -1442,7 +1444,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (21.400) * mm };
+		const double slicePlaneZ{ (17.700) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

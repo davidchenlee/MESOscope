@@ -3,7 +3,7 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-- implement exp scaling for the pockels
+- Fix exp scaling the pockels. The problem is that for very low powers, the scaling exceeds the max = 4.0
 - how to deal with vector of objects containing pointer-arrays?
 - Implement suppressCrosstalk() flattenField() on the GPU
 - Multithread demuxAllChannels_()
@@ -20,6 +20,7 @@ Code in C++ for controlling the NI USB-7852R card
 - calibrate Fidelity
 - Screw down the PMT16X
 - Test cooling down the PMT16X
+
 
 ### Things that could be improved in the future
 - Mount the collector lens on the detector platform

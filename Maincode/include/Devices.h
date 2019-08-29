@@ -206,7 +206,7 @@ public:
 	void voltageToZero() const;
 	void voltageLinearScaling(const double Vi, const double Vf) const;
 	void powerLinearScaling(const double Pi, const double Pf) const;
-	void powerExponentialScaling(const double Pi, const double scalingRate) const;
+	//void powerExponentialScaling(const double Pi, const double scalingRate) const;
 	void setShutter(const bool state) const;
 private:
 	RTcontrol &mRTcontrol;						//Non-const because the laser power is pushed into the queues in RTcontrol						
@@ -259,7 +259,6 @@ public:
 	void configure(RTcontrol &RTcontrol, const int wavelength_nm);
 	void setPower(const double laserPower) const;
 	void setPower(const double initialPower, const double finalPower) const;
-	void powerLinearScaling(const double Pi, const double Pf) const;
 	void openShutter() const;
 	void closeShutter() const;
 	void moveCollectorLens(const double position);
@@ -283,8 +282,7 @@ private:
 		int currentWavelength_nm() const;
 		void isLaserInternalShutterOpen() const;
 		void setWavelength(RTcontrol &RTcontrol, const int wavelength_nm);
-		void setPower(const double initialPower, const double finalPower) const;
-		void powerLinearScaling(const double Pi, const double Pf) const;
+		void setPower(const double Pi, const double Pf) const;
 		void openShutter() const;
 		void closeShutter() const;
 	private:
@@ -402,8 +400,8 @@ private:
 class Vibratome
 {
 public:
-	const POSITION2 mStageInitialSlicePosXY{ -53. * mm, 6. * mm };	//Position the stages in front oh the vibratome's blade
-	const double mStageFinalSlicePosY{ 27. * mm };					//Final position of the Y stage after slicing
+	const POSITION2 mStageInitialSlicePosXY{ -53. * mm, 2. * mm };	//Position the stages in front oh the vibratome's blade
+	const double mStageFinalSlicePosY{ 20. * mm };					//Final position of the Y stage after slicing
 	
 	Vibratome(const FPGA &fpga, Stage &stage);
 	Vibratome(const Vibratome&) = delete;							//Disable copy-constructor

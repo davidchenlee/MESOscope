@@ -1114,7 +1114,7 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 	mRTcontrol.mFpga.enablePockelsScaling();
 }
 
-
+/*
 //If the exp decay length of the fluorescence is L and there is stepZ per frame, then scalingRate = stepZ / L
 //Typically, L = 200 um  and stepZ = 1 um, therefore scalingRate = 0.005
 void PockelsCell::powerExponentialScaling(const double Pi, const double scalingRate) const
@@ -1144,7 +1144,7 @@ void PockelsCell::powerExponentialScaling(const double Pi, const double scalingR
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
 	mRTcontrol.mFpga.enablePockelsScaling();
 }
-
+*/
 
 void PockelsCell::setShutter(const bool state) const
 {
@@ -1513,20 +1513,15 @@ void VirtualLaser::CombinedLasers::setWavelength(RTcontrol &RTcontrol, const int
 	mCurrentLaser = newLaser;
 }
 
-void VirtualLaser::CombinedLasers::setPower(const double initialPower, const double finalPower) const
+//Linearly scale the laser power from the first to the last frame
+void VirtualLaser::CombinedLasers::setPower(const double Pi, const double Pf) const
 {
 	//Set the initial laser power
-	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, initialPower, OVERRIDE::EN);
+	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pi, OVERRIDE::EN);
 
 	//Linearly scale the laser power across the frames
-	if (finalPower != initialPower)
-		mPockelsPtr->powerLinearScaling(initialPower, finalPower);
-}
-
-//Linearly scale the laser power from the first to the last frame
-void VirtualLaser::CombinedLasers::powerLinearScaling(const double Pi, const double Pf) const
-{
-	mPockelsPtr->powerLinearScaling(Pi, Pf);
+	if (Pf != Pi)
+		mPockelsPtr->powerLinearScaling(Pi, Pf);
 }
 
 void VirtualLaser::CombinedLasers::openShutter() const
@@ -1619,12 +1614,6 @@ void VirtualLaser::setPower(const double laserPower) const
 void VirtualLaser::setPower(const double initialPower, const double finalPower) const
 {
 	mCombinedLasers.setPower(initialPower, finalPower);
-}
-
-//Linearly scale the laser power from the first to the last frame
-void VirtualLaser::powerLinearScaling(const double Pi, const double Pf) const
-{
-	mCombinedLasers.powerLinearScaling(Pi, Pf);
 }
 
 //Open the Uniblitz shutter

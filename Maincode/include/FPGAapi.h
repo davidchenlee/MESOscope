@@ -36,7 +36,7 @@ public:
 	void triggerAOext() const;
 	void enableFIFOOUTfpga(const FIFOOUTfpga enableFIFOOUTfpga) const;
 	void enablePockelsScaling() const;
-	void enableStageTrigAcq(const MAINTRIG mainTrigger) const;
+	void setStageTrigAcq(const MAINTRIG mainTrigger) const;
 	void disableStageTrigAcq() const;
 	void setStageTrigAcqDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir) const;
 	void uploadImagingParameters(const int mHeightPerBeamletAllFrames_pix, const int mHeightPerBeamletPerFrame_pix, const int mNframes) const;

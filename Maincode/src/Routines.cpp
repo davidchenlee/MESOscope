@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (46.350) * mm, (19.600)* mm, (20.324) * mm };
+POSITION3 stackCenterXYZ{ (46.350) * mm, (19.600)* mm, (20.344) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
@@ -42,7 +42,7 @@ double determineChromaticShift(const int wavelength_nm, const Laser::ID whichLas
 namespace Routines
 {
 	//The "Swiss knife" of my routines
-	void stepwiseScan(FPGA &fpga)
+	void stepwiseScan(const FPGA &fpga)
 	{
 		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
@@ -133,7 +133,7 @@ namespace Routines
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected acquisition mode not available");
 		}
 
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerBeamletPerFrame_pix, nFramesCont };
 
 		//LASER
@@ -265,7 +265,7 @@ namespace Routines
 
 	//I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the bead z-position looks almost identical with a difference of maybe only 1 plane (0.5 um)
 	//Remember that I do not use MACROS on the stages anymore*/
-	void contScanZ(FPGA &fpga)
+	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
@@ -350,7 +350,7 @@ namespace Routines
 		image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
 
-	void contScanX(FPGA &fpga)
+	void contScanX(const FPGA &fpga)
 	{
 		if (multibeam)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Continuous x-stage scanning available for single beam only");
@@ -445,7 +445,7 @@ namespace Routines
 
 	//Full sequence to image and cut an entire sample automatically
 	//Note that the stack starts at stackCenterXYZ.at(Z) (i.e., the stack is not centered at stackCenterXYZ.at(Z))
-	void sequencer(FPGA &fpga, const bool run)
+	void sequencer(const FPGA &fpga, const bool run)
 	{
 		//for beads, center the stack around stackCenterXYZ.at(Z) -----> //const double sampleSurfaceZ{ stackCenterXYZ.ZZ - nFramesCont * pixelSizeZ / 2 };
 
@@ -585,7 +585,7 @@ namespace Routines
 	}
 
 	//Image the sample non-stop. Use the PI program to move the stages manually
-	void liveScan(FPGA &fpga)
+	void liveScan(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
@@ -595,7 +595,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };							//Full FOV in the slow axis
 
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
 
 		//LASER
@@ -664,7 +664,7 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 	const double3 stackOverlap_frac{ 0.03, 0.03, 0.03 };				//Stack overlap
 	const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
-	//CREATE A REALTIME CONTROL SEQUENCE
+	//CREATE THE CONTROL SEQUENCE
 	RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };
 
 	//RS
@@ -773,7 +773,7 @@ void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
 namespace TestRoutines
 {
 	//Generate many short digital pulses and check the overall frameDuration with the oscilloscope
-	void digitalLatency(FPGA &fpga)
+	void digitalLatency(const FPGA &fpga)
 	{
 		const double timeStep{ 4. * us };
 
@@ -790,7 +790,7 @@ namespace TestRoutines
 	}
 
 	//First calibrate the digital channels, then use it as a time reference
-	void analogLatency(FPGA &fpga)
+	void analogLatency(const FPGA &fpga)
 	{
 		const double delay{ 400. * us };
 		const double timeStep{ 4. * us };
@@ -810,15 +810,15 @@ namespace TestRoutines
 		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
 	}
 
-	void pixelclock(FPGA &fpga)
+	void pixelclock(const FPGA &fpga)
 	{
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, FIFOOUTfpga::DIS, 300, 560, 1 }; 	//Create a realtime control sequence
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, FIFOOUTfpga::DIS, 300, 560, 1 }; 	//Create the control sequence
 		Image image{ RTcontrol };
-		RTcontrol.initialize();	//Execute the realtime control sequence and acquire the image
+		RTcontrol.initialize();	//Execute the control sequence and acquire the image
 	}
 
 	//Generate a long digital pulse and check the frameDuration with the oscilloscope
-	void digitalTiming(FPGA &fpga)
+	void digitalTiming(const FPGA &fpga)
 	{
 		const double timeStep{ 400. * us };
 
@@ -828,7 +828,7 @@ namespace TestRoutines
 	}
 
 	//Test the analog and digital output and the relative timing wrt the pixel clock
-	void analogAndDigitalOut(FPGA &fpga)
+	void analogAndDigitalOut(const FPGA &fpga)
 	{
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
 
@@ -841,10 +841,10 @@ namespace TestRoutines
 		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, 4 * us, 2 * V);
 		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, 4 * us, 1 * V);
 
-		RTcontrol.triggerRT();	//Execute the realtime control sequence
+		RTcontrol.trigger();	//Execute the control sequence
 	}
 
-	void analogRamp(FPGA &fpga)
+	void analogRamp(const FPGA &fpga)
 	{
 		const double Vmax{ 5. * V };
 		const double step{ 4. * us };
@@ -860,7 +860,7 @@ namespace TestRoutines
 	}
 
 	//I think this is for matching the galvo forward and backward scans via imaging beads
-	void fineTuneScanGalvo(FPGA &fpga)
+	void fineTuneScanGalvo(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
@@ -874,7 +874,7 @@ namespace TestRoutines
 		stage.moveXYZ(stagePositionXYZ);
 		stage.waitForMotionToStopAll();
 
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
 
 		//RS
@@ -901,9 +901,9 @@ namespace TestRoutines
 		image.save("Untitled", TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
 
-	void resonantScanner(FPGA &fpga)
+	void resonantScanner(const FPGA &fpga)
 	{
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
 
 		ResonantScanner RScanner{ RTcontrol };
@@ -914,14 +914,14 @@ namespace TestRoutines
 
 	//Use a single beamlet with the rescanner sync'ed to the scanner to keep the beam position fixed at the detector plane
 	//Must manually open the laser and Uniblitz shutter and adjust the pockels power
-	void galvosSync(FPGA &fpga)
+	void galvosSync(const FPGA &fpga)
 	{
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
 		const int nFramesCont{ 1 };
 
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
 
 		//GALVOS
@@ -937,7 +937,7 @@ namespace TestRoutines
 	}
 
 	//Test the synchronization of the 2 galvos and the laser
-	void gavosLaserSync(FPGA &fpga)
+	void gavosLaserSync(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
@@ -964,7 +964,7 @@ namespace TestRoutines
 		const double stepSizeZ{ 1.0 * um };
 		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the z-stage axis
 
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerBeamletPerFrame_pix, nFramesCont };
 
 		//LASER
@@ -1046,9 +1046,9 @@ namespace TestRoutines
 		//stage.printStageConfig(Z, DOchan);
 	}
 
-	void shutter(FPGA &fpga)
+	void shutter(const FPGA &fpga)
 	{
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
 
 		PockelsCell fidelity{ RTcontrol, 1040, Laser::ID::FIDELITY };
@@ -1067,9 +1067,9 @@ namespace TestRoutines
 //1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter automatically
 //2. Set pockelsAutoOff to 0 for holding on the last value
 //3. Tune Vision's wavelength manually
-	void pockels(FPGA &fpga)
+	void pockels(const FPGA &fpga)
 	{
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
 
 		//DEFINE THE POCKELS CELLS
@@ -1089,14 +1089,14 @@ namespace TestRoutines
 		//pressAnyKeyToCont();
 	}
 
-	void pockelsRamp(FPGA &fpga)
+	void pockelsRamp(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
 		const int nFramesCont{ 200 };			//Number of frames for continuous acquisition
 
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
 
 		//POCKELS CELL
@@ -1128,9 +1128,9 @@ namespace TestRoutines
 	}
 
 	//Open the Uniblitz shutter manually
-	void virtualLasers(FPGA &fpga)
+	void virtualLasers(const FPGA &fpga)
 	{
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
 
 		const int wavelength_nm{ 1040 };
@@ -1145,12 +1145,12 @@ namespace TestRoutines
 	}
 
 	//Photobleach a line along the fast axis (RS) on the sample
-	void photobleach(FPGA &fpga)
+	void photobleach(const FPGA &fpga)
 	{
 		Laser laser{ Laser::ID::VISION };
 		laser.setWavelength(920);
 
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 400, 100 };
 
 		//RS
@@ -1563,7 +1563,7 @@ namespace TestRoutines
 
 	//Test reading different channels of the PMT16X
 	//Must manually open the laser and Uniblitz shutter
-	void PMT16Xdemultiplex(FPGA &fpga)
+	void PMT16Xdemultiplex(const FPGA &fpga)
 	{
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
@@ -1572,7 +1572,7 @@ namespace TestRoutines
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
 		const int wavelength_nm{ 750 };
 
-		//CREATE A REALTIME CONTROL SEQUENCE
+		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
 
 		//LASER

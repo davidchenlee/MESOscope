@@ -293,7 +293,7 @@ private:
 		Laser mFidelity;
 		//RTcontrol &mRTcontrol;
 		std::unique_ptr <PockelsCell> mPockelsPtr;		//Create a pockels handle dynamically. Alternatively, I could create a fixed handle for each wavelength used
-		const double mPockelTimeStep{ 8. * us };		//Time step for the RT pockels command
+		const double mPockelTimeStep{ 8. * us };		//Time step for the pockels sequence
 
 		std::string laserNameToString_(const Laser::ID whichLaser) const;
 		Laser::ID autoSelectLaser_(const int wavelength_nm) const;

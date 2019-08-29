@@ -1082,7 +1082,7 @@ void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1. + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
-	mRTcontrol.enablePockelsScaling();
+	mRTcontrol.mFpga.enablePockelsScaling();
 }
 
 //Linearly scale the laser power from the first to the last frame
@@ -1111,7 +1111,7 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 	}
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
-	mRTcontrol.enablePockelsScaling();
+	mRTcontrol.mFpga.enablePockelsScaling();
 }
 
 void PockelsCell::setShutter(const bool state) const

@@ -5,11 +5,11 @@
 //MAIN SEQUENCES
 namespace Routines
 {
-	void stepwiseScan(const FPGA &fpga);
-	void contScanZ(const FPGA &fpga);
-	void contScanX(const FPGA &fpga);
-	void sequencer(const FPGA &fpga, const bool run);
-	void liveScan(const FPGA &fpga);
+	void stepwiseScan(FPGA &fpga);
+	void contScanZ(FPGA &fpga);
+	void contScanX(FPGA &fpga);
+	void sequencer(FPGA &fpga, const bool run);
+	void liveScan(FPGA &fpga);
 	//void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice);
 }
 
@@ -17,30 +17,30 @@ namespace Routines
 namespace TestRoutines
 {
 	//FPGA timing
-	void digitalLatency(const FPGA &fpga);
-	void analogLatency(const FPGA &fpga);
-	void pixelclock(const FPGA &fpga);
-	void digitalTiming(const FPGA &fpga);
-	void analogAndDigitalOut(const FPGA &fpga);
-	void analogRamp(const FPGA &fpga);
+	void digitalLatency(FPGA &fpga);
+	void analogLatency(FPGA &fpga);
+	void pixelclock(FPGA &fpga);
+	void digitalTiming(FPGA &fpga);
+	void analogAndDigitalOut(FPGA &fpga);
+	void analogRamp(FPGA &fpga);
 
 	//Scanners
-	void fineTuneScanGalvo(const FPGA &fpga);
-	void resonantScanner(const FPGA &fpga);
-	void galvosSync(const FPGA &fpga);
-	void gavosLaserSync(const FPGA &fpga);
+	void fineTuneScanGalvo(FPGA &fpga);
+	void resonantScanner(FPGA &fpga);
+	void galvosSync(FPGA &fpga);
+	void gavosLaserSync(FPGA &fpga);
 
 	//Stages
 	void stagePosition();
 	void stageConfig();
 
 	//Lasers
-	void shutter(const FPGA &fpga);
-	void pockels(const FPGA &fpga);
-	void pockelsRamp(const FPGA &fpga);
-	void lasers(const FPGA &fpga);
-	void virtualLasers(const FPGA &fpga);
-	void photobleach(const FPGA &fpga);
+	void shutter(FPGA &fpga);
+	void pockels(FPGA &fpga);
+	void pockelsRamp(FPGA &fpga);
+	void lasers(FPGA &fpga);
+	void virtualLasers(FPGA &fpga);
+	void photobleach(FPGA &fpga);
 
 	//Data management
 	void convertI16toVolt();
@@ -50,7 +50,7 @@ namespace TestRoutines
 
 	//Postprocessing
 	void correctImage();
-	void quickStitcher(const FPGA &fpga);
+	void quickStitcher();
 	void locateSample();
 	void isDark();
 	void vectorOfObjects();

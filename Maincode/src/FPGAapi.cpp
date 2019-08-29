@@ -262,7 +262,7 @@ QU32 RTcontrol::Pixelclock::readPixelclock() const
 	return mPixelclockQ;
 }
 
-RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const int nFrames) :
+RTcontrol::RTcontrol(FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const int nFrames) :
 	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },	//Initialize the size the vector containing the queues (= # of queues)
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
@@ -273,11 +273,10 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
 	mNframes{ nFrames },
 	mHeightPerBeamletAllFrames_pix{ mHeightPerBeamletPerFrame_pix * mNframes },
-	mNpixPerBeamletAllFrames{ mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix },
-	mBufferA{ nullptr },
-	mBufferB{ nullptr }
+	mNpixPerBeamletAllFrames{ mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix }
 {
 	uploadImagingParameters_();
+	mFpga.setLineclock(mLineclockInput);
 
 	mBufferA = new U32[mNpixPerBeamletAllFrames];
 	mBufferB = new U32[mNpixPerBeamletAllFrames];
@@ -287,8 +286,8 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
-//This constructor is meant to be used with RTcontrol::setNframes(const int nFrames)
-RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix):
+//This constructor is meant to be used with RTcontrol::setNumberOfFrames(const int nFrames)
+RTcontrol::RTcontrol(FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix):
 	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
@@ -296,21 +295,24 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	mEnableFIFOOUTfpga{ enableFIFOOUTfpga },
 	mPMT16Xchan{ determineRescannerSetpoint_() },
 	mWidthPerFrame_pix{ widthPerFrame_pix },
-	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
-	mBufferA{ nullptr },
-	mBufferB{ nullptr }
+	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }
 {}
 
 //Set the imaging parameters
-void RTcontrol::setNframes(const int nFrames)
+void RTcontrol::setNumberOfFrames(const int nFrames)
 {
 	mNframes = nFrames;
 	mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
 	mNpixPerBeamletAllFrames = mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix;
 	uploadImagingParameters_();
+	mFpga.setLineclock(mLineclockInput);
 
-	mBufferA = new U32[mNpixPerBeamletAllFrames];
-	mBufferB = new U32[mNpixPerBeamletAllFrames];
+	delete[] mBufferA;
+	delete[] mBufferB;
+	U32* newBufferA = new U32[mNpixPerBeamletAllFrames];
+	U32* newBufferB = new U32[mNpixPerBeamletAllFrames];
+	mBufferA = newBufferA;
+	mBufferB = newBufferB;
 
 	//Generate a pixelclock
 	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
@@ -374,8 +376,8 @@ void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double 
 	FPGAfunc::linearRamp(mVec_queue.at(static_cast<U8>(chan)), timeStep, rampLength, Vi, Vf);
 }
 
-//Ramp up or down the AO for the scanner and rescanner from the current voltage to the first value of the control sequence in mVec_queue to avoid any discontinuities at the start of the sequence
-void RTcontrol::FPGAinitializationRamp() const
+//Ramp up or down the AO for the scanner and rescanner from the current voltage to the first value of the control sequence in mVec_queue to avoid jumps at the start of the sequence
+void RTcontrol::presetScannerPosition() const
 {
 	//Read the current voltage of the AOs for the scanner and rescanner. See the LV implementation
 	std::vector<I16> AOlastVoltage_I16(static_cast<U8>(RTCHAN::NCHAN), 0);
@@ -506,8 +508,8 @@ void RTcontrol::initialize(const SCANDIR stackScanDir)
 	setPostSequenceTimer_();
 	enableFIFOOUTfpga();				//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
 	iniStageContScan_(stackScanDir);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
-	FPGAinitializationRamp();			//Preset the ouput of the FPGA and load the FPGA with the RT control sequence
-	Sleep(10);							//Give the FPGA enough time to settle (> 5 ms) to avoid FPGAinitializationRamp() clashing with the subsequent call of uploadRT()
+	presetScannerPosition();			//Preset the ouput of the FPGA and load the FPGA with the RT control sequence
+	Sleep(10);							//Give the FPGA enough time to settle (> 5 ms) to avoid presetScannerPosition() clashing with the subsequent call of uploadRT()
 										//(I realized this after running VS in release-mode, which connects faster to the FPGA than in debug-mode)
 	uploadRT();							//Upload the main RT control sequence to the FPGA
 	startFIFOOUTpc_();					//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the RT control to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
@@ -583,12 +585,16 @@ void RTcontrol::uploadImagingParameters_() const
 	if (mNframes < 0 || mHeightPerBeamletAllFrames_pix < 0 || mHeightPerBeamletPerFrame_pix < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
 
+	//IMAGING PARAMETERS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mFpga.handle(), NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(mHeightPerBeamletAllFrames_pix)));		//Total number of lines per beamlet in all the frames
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.handle(), NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(mNframes)));								//Number of frames to acquire
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mFpga.handle(), NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(mHeightPerBeamletPerFrame_pix)));	//Number of lines per beamlet in a frame
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mFpga.handle(), NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(mNframes)));								//Number of frames to acquire
+}
 
-	//SELECTORS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(mLineclockInput)));	//Lineclock: resonant scanner (RS) or function generator (FG)
+//Lineclock: resonant scanner (RS) or function generator (FG)
+void FPGA::setLineclock(const LINECLOCK lineclockInput)
+{
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(lineclockInput)));
 }
 
 //Send every single queue in 'vec_queue' to the FPGA buffer

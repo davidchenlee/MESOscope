@@ -27,6 +27,7 @@ public:
 	~FPGA();
 	void close(const FPGARESET reset = FPGARESET::DIS) const;
 	NiFpga_Session handle() const;										//Access the handle indirectly to avoid modifying it by mistake
+	void setLineclock(const LINECLOCK lineclockInput);
 private:
 	NiFpga_Session mHandle;												//FPGA handle. Non-const to let the FPGA API assign the handle
 	const std::string mBitfile{ bitfilePath + NiFpga_FPGAvi_Bitfile };	//FPGA bitfile location
@@ -41,7 +42,7 @@ public:
 	enum class RTCHAN { PIXELCLOCK, SCANGALVO, RESCANGALVO, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };				//NCHAN = number of RT channels available including the channel for the pixelclock
 	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED };		//*cast but not relevant, only for debugging
 
-	const FPGA &mFpga;
+	FPGA &mFpga;
 	LINECLOCK mLineclockInput;							//Resonant scanner (RS) or Function generator (FG)
 	MAINTRIG mMainTrigger;								//Trigger the acquisition with the Z stage: enable (0), disable (1)
 	FIFOOUTfpga mEnableFIFOOUTfpga;						//Enable or disable the FIFOOUTfpga on the FPGA
@@ -53,8 +54,8 @@ public:
 	int mHeightPerBeamletAllFrames_pix;					//Total number of lines per beamlet in all the frames
 	int mNpixPerBeamletAllFrames;						//Total number of pixels per beamlet in all the frames
 
-	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const int nFrames);
-	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix);
+	RTcontrol(FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const int nFrames);
+	RTcontrol(FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix);
 	~RTcontrol();
 	RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 	RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
@@ -67,7 +68,7 @@ public:
 	void pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override = OVERRIDE::DIS);
 	void pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor);
 	void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override);
-	void FPGAinitializationRamp() const;
+	void presetScannerPosition() const;
 	void uploadRT() const;
 	void triggerRT() const;
 	void enableStageTrigAcq() const;
@@ -75,7 +76,7 @@ public:
 	void enableFIFOOUTfpga() const;
 	void enablePockelsScaling() const;
 	void setStageTrigAcqDelay(const SCANDIR scanDir) const;
-	void setNframes(const int nFrames);
+	void setNumberOfFrames(const int nFrames);
 	void run();
 	void initialize(const SCANDIR scanDirZ = SCANDIR::UPWARD);
 	void downloadData();
@@ -99,8 +100,8 @@ private:
 	};
 
 	VQU32 mVec_queue;
-	U32* mBufferA;		//Buffer array to read FIFOOUTpc A
-	U32* mBufferB;		//Buffer array to read FIFOOUTpc B
+	U32* mBufferA{ nullptr };				//Buffer array to read FIFOOUTpc A
+	U32* mBufferB{ nullptr };				//Buffer array to read FIFOOUTpc B
 
 	void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
 	void uploadImagingParameters_() const;

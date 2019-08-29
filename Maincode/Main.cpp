@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::clipU8();
 
 			//TestRoutines::correctImage();
-			//TestRoutines::quickStitcher(fpga);
+			//TestRoutines::quickStitcher();
 			//TestRoutines::locateSample();
 			//TestRoutines::isDark();
 			//TestRoutines::vectorOfObjects();

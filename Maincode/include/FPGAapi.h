@@ -28,6 +28,7 @@ public:
 	void close(const FPGARESET reset = FPGARESET::DIS) const;
 	NiFpga_Session handle() const;										//Access the handle indirectly to avoid modifying it by mistake
 	void setLineclock(const LINECLOCK lineclockInput) const;
+	void uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const;
 	void startFIFOOUTpc() const;
 	void configureFIFOOUTpc(const U32 depth) const;
 	void collectFIFOOUTpcGarbage_() const;
@@ -82,8 +83,8 @@ public:
 	void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override);
 	void presetScannerPosition() const;
 	void uploadControlSequence() const;
-	void trigger() const;
 	void setNumberOfFrames(const int nFrames);
+	void trigger() const;
 	void initialize(const SCANDIR scanDirZ = SCANDIR::UPWARD);
 	void run();
 	void downloadData();
@@ -111,7 +112,6 @@ private:
 	U32* mBufferB{ nullptr };				//Buffer array to read FIFOOUTpc B
 
 	void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
-	void uploadFIFOIN_(const VQU32 &queue_vec) const;
 	PMT16XCHAN determineRescannerSetpoint_();
 	void iniStageContScan_(const SCANDIR stackScanDir);
 	void readFIFOOUTpc_();

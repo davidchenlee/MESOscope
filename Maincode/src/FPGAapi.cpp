@@ -349,14 +349,17 @@ void FPGA::initializeFpga_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_nPMTsim, g_nPMTsim));													//Size of g_PMTsimArray
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mHandle, NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, g_PMTsimArray, g_nPMTsim));					//Array that simulates the pulses from the PMTs
 
+	//TRIGGERS
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PcTrigger, false));													//Pc trigger signal
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));										//Trigger the AOs of the FPGA externally
+
 	//FIFOIN
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mHandle, NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTcontrol::RTCHAN::NCHAN)));				//Number of input channels
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));												//Trigger of the control sequence
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(g_FIFOtimeout_tick)));				//FIFOIN timeout
 
-	//TRIGGERS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PcTrigger, false));													//Pc trigger signal
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));										//Trigger the AOs of the FPGA externally
+	//FIFOOUT
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, false));											//Disable pushing data to the FIFOs by default
 
 	//DELAYS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_DOdelay_tick, static_cast<U32>(g_DOdelay_tick)));												//Delay DO to sync it with AO
@@ -554,14 +557,14 @@ void RTcontrol::presetScannerPosition() const
 			}
 		}
 	}
-	uploadFIFOIN_(vec_queue);	//Upload the initialization ramp to the FPGA
-	mFpga.triggerAOext();		//Trigger the initialization ramp externally (not using the internal clocks)
+	mFpga.uploadFIFOIN(vec_queue, static_cast<U8>(RTCHAN::NCHAN));	//Upload the initialization ramp to the FPGA
+	mFpga.triggerAOext();											//Trigger the initialization ramp externally (not using the internal clocks)
 }
 
 //Upload the main control sequence to the FPGA
 void RTcontrol::uploadControlSequence() const
 {
-	uploadFIFOIN_(mVec_queue);		
+	mFpga.uploadFIFOIN(mVec_queue, static_cast<U8>(RTCHAN::NCHAN));
 }
 
 //Trigger the ctl&acq sequence
@@ -674,11 +677,11 @@ void FPGA::uploadImagingParameters(const int heightPerBeamletAllFrames_pix, cons
 //For this, concatenate all the individual queues 'vec_queue.at(ii)' in the queue 'allQueues'.
 //The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
 //Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
-void RTcontrol::uploadFIFOIN_(const VQU32 &queue_vec) const
+void FPGA::uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const
 {
 	{
 		QU32 allQueues;		//Create a single long queue
-		for (int chan = 0; chan < static_cast<U8>(RTCHAN::NCHAN); chan++)
+		for (int chan = 0; chan < nChan; chan++)
 		{
 			allQueues.push_back(queue_vec.at(chan).size());					//Push the number of elements in each individual queue ii, 'vec_queue.at(ii)'	
 			for (std::vector<int>::size_type iter = 0; iter != queue_vec.at(chan).size(); iter++)
@@ -701,12 +704,12 @@ void RTcontrol::uploadFIFOIN_(const VQU32 &queue_vec) const
 		U32 r;							//Elements remaining
 
 		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mFpga.handle(), NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mHandle, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
 
 		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
 		//This boolean serves as the master trigger for the entire control sequence
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
 	}
 }
 

@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 5. * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (46.350) * mm, (19.600)* mm, (20.344) * mm };
+POSITION3 stackCenterXYZ{ (46.350) * mm, (19.600)* mm, (20.324) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
@@ -617,9 +617,9 @@ namespace Routines
 		{
 			virtualLaser.setPower(fluorLabel.mScanPmin);	//Set the laser power
 
+			RTcontrol.run();							//Execute the control sequence and acquire the image
 			Image image{ RTcontrol };
-			RTcontrol.run();
-			image.acquire();							//Execute the control sequence and acquire the image
+			image.acquire();							
 			image.averageFrames();						//Average the frames acquired via continuous acquisition
 			//image.correct(RScanner.mFFOV);
 			image.save("Untitled", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);	//Save individual files
@@ -628,145 +628,6 @@ namespace Routines
 			pressESCforEarlyTermination();						//Early termination if ESC is pressed
 		}
 	}
-
-	/*
-//Apply 'stepwiseScan' on a list of locations
-void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice)
-{
-	//ACQUISITION SETTINGS
-	const FluorLabelList fluorLabelList{ {currentSample.findFluorLabel("DAPI")} };
-	const INDICES2 nStacksIJ{ 2, 1 };
-	const double pixelSizeXY{ 0.5 * um };
-	const int widthPerFrame_pix{ 300 };
-	const int heightPerFrame_pix{ 560 };
-	const int nFramesCont{ 1 };											//Number of frames for continuous acquisition
-	const double FFOVfast{ widthPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
-	const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
-
-	int heightPerBeamletPerFrame_pix;
-	double FFOVslowPerBeamlet;
-	if (multibeam)
-	{
-		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / nChanPMT);
-		FFOVslowPerBeamlet = static_cast<int>(FFOVslow / nChanPMT);
-	}
-	else //Singlebeam
-	{
-		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
-		FFOVslowPerBeamlet = FFOVslow;
-	}
-
-	//STACK
-	const FFOV2 FFOV{ FFOVslow, FFOVfast };								//Full FOV in the (slow axis, fast axis)
-	const double stepSizeZ{ 1.0 * um };									//Step size in the z-stage axis
-	const double stackDepthZ{ 40. * um };								//Acquire a stack this deep in the z-stage axis
-	const int nDiffZ{ static_cast<int>(stackDepthZ / stepSizeZ) };		//Number of frames at different Zs
-	const double3 stackOverlap_frac{ 0.03, 0.03, 0.03 };				//Stack overlap
-	const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
-
-	//CREATE THE CONTROL SEQUENCE
-	RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, nFramesCont, widthPerFrame_pix, heightPerBeamletPerFrame_pix, FIFOOUTfpga::EN };
-
-	//RS
-	const ResonantScanner RScanner{ RTcontrol };
-	RScanner.isRunning();					//To make sure that the RS is running
-
-	//LASER
-	VirtualLaser virtualLaser{ RTcontrol, ID::VISION };
-
-	//Create a location list
-	Sequencer sequence{ currentSample, stack, {stackCenterXYZ.at(X), stackCenterXYZ.at(Y)}, nStacksIJ };
-	std::vector<POSITION2> locationListXY{ sequence.generateLocationList() };
-
-	//STAGES
-	Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps };
-
-	//Iterate over the wavelengths
-	for (std::vector<int>::size_type iterWL = 0; iterWL < fluorLabelList.size(); iterWL++)
-	{
-		//DATALOG
-		Logger datalog("Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iterWL).mName);
-		datalog.record("SAMPLE-------------------------------------------------------");
-		datalog.record("Sample = ", currentSample.mName);
-		datalog.record("Immersion medium = ", currentSample.mImmersionMedium);
-		datalog.record("Correction collar = ", currentSample.mObjectiveCollar);
-		datalog.record("\nFPGA---------------------------------------------------------");
-		datalog.record("FPGA clock (MHz) = ", g_tickPerUs);
-		datalog.record("\nSCAN---------------------------------------------------------");
-		datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
-		datalog.record("RS period (us) = ", 2 * g_lineclockHalfPeriod / us);
-		datalog.record("Pixel dwell time (us) = ", g_pixelDwellTime / us);
-		datalog.record("RS fill factor = ", RScanner.mFillFactor);
-		datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
-		datalog.record("\nIMAGE--------------------------------------------------------");
-		datalog.record("Max count per pixel = ", RTcontrol.g_pulsesPerPix);
-		datalog.record("Upscaling factor = ", RTcontrol.g_upscalingFactor);
-		datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
-		datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
-		datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
-		datalog.record("Resolution Y (galvo) (um/pix) = ", pixelSizeXY / um);
-		datalog.record("\nSTAGE--------------------------------------------------------");
-
-		//Update the laser wavelength
-		const int wavelength_nm{ fluorLabelList.at(iterWL).mWavelength_nm };
-		virtualLaser.configure(wavelength_nm);		//When switching pockels, the class destructor closes the uniblitz shutter
-		virtualLaser.openShutter();					//Re-open the Uniblitz shutter if closed by the pockels destructor
-
-		//GALVOS
-		const Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
-
-		//Iterate over the locations
-		for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationListXY.size(); iterLocation++)
-		{
-			//Generate the discrete scan sequence for the stages
-			std::vector<double3> stagePositionXYZ;
-			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-			{
-				//stagePositionXYZ.push_back({ locationListXY.at(iterLocation).at(X), locationListXY.at(iterLocation).at(Y), stackCenterXYZ.at(Z) + iterDiffZ * stepSizeZ });
-				stagePositionXYZ.push_back({ locationListXY.at(iterLocation).at(X), locationListXY.at(iterLocation).at(Y), stackCenterXYZ.at(Z) - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
-			}
-
-			//CREATE A STACK FOR SAVING THE TIFFS
-			TiffStack tiffStack{ widthPerFrame_pix, heightPerFrame_pix, nDiffZ, 1 };
-
-			//ACQUIRE FRAMES AT DIFFERENT Zs
-			for (int iterDiffZ = 0; iterDiffZ < nDiffZ; iterDiffZ++)
-			{
-				//Update the stages position
-				stage.moveXYZ(stagePositionXYZ.at(iterDiffZ));
-				stage.waitForMotionToStopAll();
-				//stage.printPositionXYZ();		//Print the stage position
-
-				std::cout << "Location: " << iterLocation + 1 << "/" << locationListXY.size() << "\tTotal frame: " << iterDiffZ + 1 << "/" << nDiffZ << "\n";
-
-				//Update the laser power
-				virtualLaser.setPower(fluorLabelList.at(iterWL).mScanPmin + iterDiffZ * stepSizeZ * fluorLabelList.at(iterWL).mStackPinc);
-
-				Image image{ RTcontrol };
-				image.acquire();							//Execute the control sequence and acquire the image
-				image.averageFrames();						//Average the frames acquired via continuous acquisition
-				image.correct(RScanner.mFFOV);
-				tiffStack.pushSameZ(0, image.data());
-				tiffStack.pushDiffZ(iterDiffZ);
-				std::cout << "\n";
-
-				pressESCforEarlyTermination();				//Early termination if ESC is pressed
-			}
-
-			//Save the stackDiffZ to file
-			std::string shortName{ "Slice" + std::to_string(nSlice) + "_" + fluorLabelList.at(iterWL).mName + "_Tile" + std::to_string(iterLocation + 1) };
-			std::string longName{ currentSample.mName + "_" + toString(wavelength_nm, 0) + "nm_P=" + toString(fluorLabelList.at(iterWL).mScanPmin / mW, 1) + "mW_Pinc=" + toString(fluorLabelList.at(iterWL).mStackPinc / mWpum, 2) + "mWpum" +
-				"_x=" + toString(stagePositionXYZ.front().at(X) / mm, 3) + "_y=" + toString(stagePositionXYZ.front().at(Y) / mm, 3) +
-				"_zi=" + toString(stagePositionXYZ.front().at(Z) / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().at(Z) / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) };
-
-			datalog.record(shortName + "\t" + longName);
-			tiffStack.saveToFile(shortName, OVERRIDE::DIS);
-		}//iterLocation
-	}//iter_wv
-}
-*/	
-}//namespace
 
 //Photobleach the sample with the resonant scanner to see how much the sample moves after slicing
 //I bleach with the RS and not the galvo or the stages because this way the RS is kept on the entire time while bleaching and imaging
@@ -813,8 +674,7 @@ namespace TestRoutines
 	void pixelclock(const FPGA &fpga)
 	{
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, FIFOOUTfpga::DIS, 300, 560, 1 }; 	//Create the control sequence
-		Image image{ RTcontrol };
-		RTcontrol.initialize();	//Execute the control sequence and acquire the image
+		RTcontrol.run();	//Execute the control sequence
 	}
 
 	//Generate a long digital pulse and check the frameDuration with the oscilloscope
@@ -894,8 +754,8 @@ namespace TestRoutines
 
 		//CONTROL SEQUENCE
 		virtualLaser.openShutter();	//Open the uniblitz shutter. The destructor will close the shutter automatically
-		Image image{ RTcontrol };
 		RTcontrol.run();
+		Image image{ RTcontrol };
 		image.acquire();			//Execute the control sequence and acquire the image via continuous acquisition
 		image.averageEvenOddFrames();
 		image.save("Untitled", TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
@@ -930,9 +790,7 @@ namespace TestRoutines
 		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2 };
 
 		//Execute the control sequence and acquire the image
-		Image image{ RTcontrol };
 		RTcontrol.run();
-		image.acquire();
 		pressAnyKeyToCont();
 	}
 
@@ -979,9 +837,7 @@ namespace TestRoutines
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, wavelength_nm };
 
 		//EXECUTE THE CONTROL SEQUENCE
-		Image image{ RTcontrol };
 		RTcontrol.run();
-		image.acquire();
 	}
 
 	void stagePosition()
@@ -1083,9 +939,7 @@ namespace TestRoutines
 		//pockels.pushVoltageSinglet(8 * us, 2.0 * V, OVERRIDE::DIS);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
-		Image image{ RTcontrol };
 		RTcontrol.run();
-		image.acquire();
 		//pressAnyKeyToCont();
 	}
 
@@ -1104,17 +958,16 @@ namespace TestRoutines
 		PockelsCell pockels{ RTcontrol, wavelength_nm, Laser::ID::FIDELITY };
 		const double Pi{ 192. * mW }, Pf{ 336. * mW };
 		//pockels.pushPowerSinglet(400 * us, Pf, OVERRIDE::EN);
-		pockels.powerLinearScaling(0.96 * Pi, Pf);			//Linearly scale the laser power from the first to the last frame
+		//pockels.powerLinearScaling(0.96 * Pi, Pf);			//Linearly scale the laser power from the first to the last frame
 		//pockels.powerLinearScaling(0.96 * Pf, Pi);
+		pockels.powerExponentialScaling(Pi, (1. * um) / (300. * um));
 
 		//Test the voltage setpoint
 		//pockels.pushVoltageSinglet(8* us, 0.5 * V);
 		//pockels.voltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
 
 		//EXECUTE THE CONTROL SEQUENCE
-		Image image{ RTcontrol };
 		RTcontrol.run();
-		image.acquire();
 	}
 
 	void lasers(const FPGA &fpga)
@@ -1138,10 +991,6 @@ namespace TestRoutines
 		VirtualLaser virtualLaser{ Laser::ID::VISION };
 		virtualLaser.configure(RTcontrol, wavelength_nm);
 		virtualLaser.setPower(laserPower);
-
-		//EXECUTE THE CONTROL SEQUENCE
-		//Image image{ RTcontrol };
-		//image.acquire();
 	}
 
 	//Photobleach a line along the fast axis (RS) on the sample
@@ -1166,9 +1015,7 @@ namespace TestRoutines
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		pockels.setShutter(true);
-		Image image{ RTcontrol };
 		RTcontrol.run();
-		image.acquire();
 
 		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the sequence
 		pressAnyKeyToCont();
@@ -1587,8 +1434,8 @@ namespace TestRoutines
 		//Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 
 		//EXECUTE THE CONTROL SEQUENCE
-		Image image{ RTcontrol };
 		RTcontrol.run();
+		Image image{ RTcontrol };
 		image.acquire();
 		image.save("SingleChannel", TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 	}

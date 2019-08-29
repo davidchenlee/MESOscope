@@ -206,6 +206,7 @@ public:
 	void voltageToZero() const;
 	void voltageLinearScaling(const double Vi, const double Vf) const;
 	void powerLinearScaling(const double Pi, const double Pf) const;
+	void powerExponentialScaling(const double Pi, const double scalingRate) const;
 	void setShutter(const bool state) const;
 private:
 	RTcontrol &mRTcontrol;						//Non-const because the laser power is pushed into the queues in RTcontrol						

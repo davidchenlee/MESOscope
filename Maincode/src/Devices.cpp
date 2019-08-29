@@ -1102,7 +1102,7 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 		const double V{ laserpowerToVolt_(Pi + (Pf - Pi) / (mRTcontrol.mNframes - 1) * ii) };
 		const double Vratio{ V / Vi };
 
-		//Make sure that Fx2p14 will not overflow
+		//Make sure that Fx2p14 does not overflow
 		if (Vratio > 4)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 		
@@ -1113,6 +1113,38 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
 	mRTcontrol.mFpga.enablePockelsScaling();
 }
+
+
+//If the exp decay length of the fluorescence is L and there is stepZ per frame, then scalingRate = stepZ / L
+//Typically, L = 200 um  and stepZ = 1 um, therefore scalingRate = 0.005
+void PockelsCell::powerExponentialScaling(const double Pi, const double scalingRate) const
+{
+	if (mRTcontrol.mNframes < 2)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
+
+	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
+	mRTcontrol.clearQueue(mScalingRTchan);
+
+	const double Vi{ laserpowerToVolt_(Pi) };
+	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
+
+	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
+	{
+		const double V{ laserpowerToVolt_(Pi * std::exp(ii * scalingRate)) };
+		const double Vratio{ V / Vi };
+
+		//Make sure that Fx2p14 does not overflow
+		if (Vratio > 4)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
+
+		//Push the scaling factors for the frames
+		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1. + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
+	}
+
+	//Enable scaling the pockels on the FPGA (see the LV implementation)
+	mRTcontrol.mFpga.enablePockelsScaling();
+}
+
 
 void PockelsCell::setShutter(const bool state) const
 {
@@ -2003,19 +2035,19 @@ void Stage::waitForMotionToStopAll() const
 {
 	std::cout << "Stages moving to the new position: ";
 
-	BOOL isMoving_x, isMoving_y, isMoving_z;
+	BOOL isMovingX, isMovingY, isMovingZ;
 	do {
-		if (!PI_IsMoving(mHandleXYZ.at(XX), mNstagesPerController, &isMoving_x))
+		if (!PI_IsMoving(mHandleXYZ.at(XX), mNstagesPerController, &isMovingX))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage X");
 
-		if (!PI_IsMoving(mHandleXYZ.at(YY), mNstagesPerController, &isMoving_y))
+		if (!PI_IsMoving(mHandleXYZ.at(YY), mNstagesPerController, &isMovingY))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Y");
 
-		if (!PI_IsMoving(mHandleXYZ.at(ZZ), mNstagesPerController, &isMoving_z))
+		if (!PI_IsMoving(mHandleXYZ.at(ZZ), mNstagesPerController, &isMovingZ))
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Z");
 
 		std::cout << ".";
-	} while (isMoving_x || isMoving_y || isMoving_z);
+	} while (isMovingX || isMovingY || isMovingZ);
 
 	std::cout << "\n";
 }

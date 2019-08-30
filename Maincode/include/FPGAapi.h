@@ -30,19 +30,18 @@ public:
 	void setLineclock(const LINECLOCK lineclockInput) const;
 	void startFIFOOUTpc() const;
 	void configureFIFOOUTpc(const U32 depth) const;
-	void collectFIFOOUTpcGarbage_() const;
+	void collectFIFOOUTpcGarbage() const;
 	void stopFIFOOUTpc() const;
 	void triggerAOext() const;
 	void enableFIFOOUTfpga(const FIFOOUTfpga enableFIFOOUTfpga) const;
 	void enablePockelsScaling() const;
-	void setStageTrigAcq(const MAINTRIG mainTrigger) const;
-	void disableStageTrigAcq() const;
-	void setStageTrigAcqDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir) const;
+	void setMainTrig(const MAINTRIG mainTrigger) const;
+	void setStageTrigDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir) const;
 	void uploadImagingParameters(const int mHeightPerBeamletAllFrames_pix, const int mHeightPerBeamletPerFrame_pix, const int mNframes) const;
 	void triggerControlSequence() const;
 	void setPostSequenceTimer(const MAINTRIG mainTrigger) const;
-	I16 readScanGalvoOutputVoltageMon() const;
-	I16 readRescanGalvoOutputVoltageMon() const;
+	I16 readScannerVoltageMon() const;
+	I16 readRescannerVoltageMon() const;
 	void uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const;
 	void readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 *mBufferB) const;
 
@@ -58,8 +57,8 @@ private:
 class RTcontrol
 {
 public:
-	enum class RTCHAN { PIXELCLOCK, SCANGALVO, RESCANGALVO, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };				//NCHAN = number of sequence channels available including the channel for the pixelclock
-	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED };		//*cast but not relevant, only for debugging
+	enum class RTCHAN { PIXELCLOCK, SCANNER, RESCANNER, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };				//NCHAN = number of sequence channels available including the channel for the pixelclock
+	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED };	//*cast but not relevant, only for debugging
 
 	const FPGA &mFpga;
 	LINECLOCK mLineclockInput;							//Resonant scanner (RS) or Function generator (FG)
@@ -67,8 +66,8 @@ public:
 	FIFOOUTfpga mEnableFIFOOUTfpga;						//Enable or disable the FIFOOUTfpga on the FPGA
 	SCANDIR mScanDir{ SCANDIR::UPWARD };				//Scan direction of the stage for continuous scan
 	PMT16XCHAN mPMT16Xchan;								//PMT16X channel to be used
-	int mWidthPerFrame_pix;								//Width in pixels of a single frame (RS axis). I call each swing of the RS a "line"
-	int mHeightPerBeamletPerFrame_pix;					//Height in pixels of a single beamlet in a single frame (galvo axis)
+	int mWidthPerFrame_pix;								//Width in pixels of a single frame (fast axis). I call each swing of the RS a "line"
+	int mHeightPerBeamletPerFrame_pix;					//Height in pixels of a single beamlet in a single frame (slow axis)
 	int mNframes;										//Number of frames to acquire
 	int mHeightPerBeamletAllFrames_pix;					//Total number of lines per beamlet in all the frames
 	int mNpixPerBeamletAllFrames;						//Total number of pixels per beamlet in all the frames
@@ -122,8 +121,6 @@ private:
 	void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
 	PMT16XCHAN determineRescannerSetpoint_();
 	void iniStageContScan_(const SCANDIR stackScanDir);
-
-
 	void correctInterleaved_();
 };
 

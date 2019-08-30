@@ -144,10 +144,10 @@ namespace Routines
 		const ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();					//To make sure that the RS is running
 
-		//GALVOS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
-		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, fluorLabel.mWavelength_nm };
+		//SCANNERS
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2, &virtualLaser };
+		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANNER, 0, fluorLabel.mWavelength_nm };
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
@@ -252,10 +252,10 @@ namespace Routines
 			datalog.record("\nIMAGE--------------------------------------------------------");
 			datalog.record("Max count per pixel = ", g_pulsesPerPix);
 			datalog.record("Upscaling factor = ", g_upscalingFactor);
-			datalog.record("Width X (RS) (pix) = ", widthPerFrame_pix);
-			datalog.record("Height Y (galvo) (pix) = ", heightPerFrame_pix);
-			datalog.record("Resolution X (RS) (um/pix) = ", RScanner.mSampRes / um);
-			datalog.record("Resolution Y (galvo) (um/pix) = ", pixelSizeXY / um);
+			datalog.record("Width X (fast) (pix) = ", widthPerFrame_pix);
+			datalog.record("Height Y (slow) (pix) = ", heightPerFrame_pix);
+			datalog.record("Resolution X (fast) (um/pix) = ", RScanner.mSampRes / um);
+			datalog.record("Resolution Y (slow) (um/pix) = ", pixelSizeXY / um);
 			datalog.record("\nSTAGE--------------------------------------------------------");
 			datalog.record("Stack center X (mm) = ", stackCenterXYZ.XX / mm);
 			datalog.record("Stack center Y (mm) = ", stackCenterXYZ.YY / mm);
@@ -314,9 +314,9 @@ namespace Routines
 		const ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();		//To make sure that the RS is running
 
-		//GALVOS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
+		//SCANNERS
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2, &virtualLaser };
 
 		//STAGES
 		const double stageZi = determineInitialScanPos(stackCenterXYZ.ZZ, stackDepth, 0. * mm, scanDirZ);
@@ -380,7 +380,7 @@ namespace Routines
 			stagePositionY.push_back( stackCenterXYZ.YY + tileWidth * (nColHalf - iterLocation) );	//for now, only allowed to stack strips to the right (i.e. only allowed to move the stage to the left)
 
 		//CONTROL SEQUENCE
-		//The Image height is 2 (two galvo scanner swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
+		//The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
 		const int nFrames{ 2 };
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, tileWidth_pix, nFrames, stitchedHeight_pix / 2 };
 
@@ -393,9 +393,9 @@ namespace Routines
 		const ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();		//To make sure that the RS is running
 
-		//GALVOS. Keep them fixed at 0
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, 0, &virtualLaser };
+		//SCANNERS. Keep them fixed at 0
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, 0 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, 0, &virtualLaser };
 
 		//STAGES
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
@@ -507,8 +507,8 @@ namespace Routines
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 
 				//SCANNERS
-				const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-				Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2 };
+				const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2 };
+				Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2 };
 
 				//These parameters must be accessible to all the cases
 				int wavelength_nm, nFramesBinning;
@@ -607,9 +607,9 @@ namespace Routines
 		const ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();					//To make sure that the RS is running
 
-		//GALVOS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2, &virtualLaser };
+		//SCANNERS
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2, &virtualLaser };
 
 		//OPEN THE UNIBLITZ SHUTTERS
 		virtualLaser.openShutter();	//The destructor will close the shutter automatically
@@ -632,7 +632,7 @@ namespace Routines
 }//namespace
 
 //Photobleach the sample with the resonant scanner to see how much the sample moves after slicing
-//I bleach with the RS and not the galvo or the stages because this way the RS is kept on the entire time while bleaching and imaging
+//I bleach with the RS and not the galvo scanner or the stages because this way the RS is kept on the entire time while bleaching and imaging
 namespace TestRoutines
 {
 	//Generate many short digital pulses and check the overall frameDuration with the oscilloscope
@@ -659,11 +659,11 @@ namespace TestRoutines
 		const double timeStep{ 4. * us };
 
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, timeStep, 10 * V);						//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, timeStep, 0);
-		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANGALVO, 4 * us, delay, 0, 5 * V, OVERRIDE::DIS);		//Linear ramp to accumulate the error
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, timeStep, 10 * V);						//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, timeStep, 0);								//Final pulse
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, timeStep, 10 * V);						//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, timeStep, 0);
+		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, 4 * us, delay, 0, 5 * V, OVERRIDE::DIS);	//Linear ramp to accumulate the error
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, timeStep, 10 * V);						//Initial pulse
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, timeStep, 0);							//Final pulse
 
 		//DO0
 		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
@@ -699,9 +699,9 @@ namespace TestRoutines
 		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, 4 * us, 0);
 
 		//AO
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, 8 * us, 4 * V);
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, 4 * us, 2 * V);
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANGALVO, 4 * us, 1 * V);
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, 8 * us, 4 * V);
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, 4 * us, 2 * V);
+		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, 4 * us, 1 * V);
 
 		RTcontrol.mFpga.triggerControlSequence();	//Execute the control sequence
 	}
@@ -712,16 +712,16 @@ namespace TestRoutines
 		const double step{ 4. * us };
 
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
-		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANGALVO, step, 2 * ms, 0, -Vmax, OVERRIDE::DIS);
-		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANGALVO, step, 20 * ms, -Vmax, Vmax, OVERRIDE::DIS);
-		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANGALVO, step, 2 * ms, Vmax, 0, OVERRIDE::DIS);
+		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, step, 2 * ms, 0, -Vmax, OVERRIDE::DIS);
+		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, step, 20 * ms, -Vmax, Vmax, OVERRIDE::DIS);
+		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, step, 2 * ms, Vmax, 0, OVERRIDE::DIS);
 
 		const double pulsewidth(300. * us);
 		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, pulsewidth, 1);
 		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, 4 * us, 0);
 	}
 
-	//I think this is for matching the galvo forward and backward scans via imaging beads
+	//I think this is for matching the galvos forward and backward scans via imaging beads
 	void fineTuneScanGalvo(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
@@ -743,9 +743,9 @@ namespace TestRoutines
 		const ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();		//To make sure that the RS is running
 
-		//GALVOS
+		//SCANNERS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2 };
 
 		//LASER
 		const int wavelength_nm{ 1040 };
@@ -786,10 +786,10 @@ namespace TestRoutines
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
 
-		//GALVOS
+		//SCANNERS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Scan duration in the slow axis
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
-		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2 };
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2 };
+		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2 };
 
 		//Execute the control sequence and acquire the image
 		RTcontrol.run();
@@ -833,10 +833,10 @@ namespace TestRoutines
 		virtualLaser.configure(RTcontrol, wavelength_nm);
 		virtualLaser.setPower(selectPower);
 
-		//GALVOS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslowPerBeamlet / 2, &virtualLaser };
-		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANGALVO, 0, wavelength_nm };
+		//SCANNERS
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2 };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2, &virtualLaser };
+		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANNER, 0, wavelength_nm };
 
 		//EXECUTE THE CONTROL SEQUENCE
 		RTcontrol.run();
@@ -1008,8 +1008,8 @@ namespace TestRoutines
 		ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();		//To make sure that the RS is running
 
-		//GALVO. Keep the galvo fixed to bleach a line on the sample
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, 0 };
+		//SCANNERS. Keep the scanner fixed to bleach a line on the sample
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, 0 };
 
 		//POCKELS CELLS
 		PockelsCell pockels{ RTcontrol, 920, Laser::ID::VISION };
@@ -1430,10 +1430,10 @@ namespace TestRoutines
 		virtualLaser.configure(RTcontrol, wavelength_nm);
 		virtualLaser.setPower(laserPower);
 
-		//GALVOS
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANGALVO, FFOVslow / 2 };
-		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANGALVO, FFOVslow / 2, &virtualLaser };
-		//Galvo scanner{ RTcontrol, RTCHAN::SCANGALVO, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
+		//SCANNERS
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2 };
+		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2, &virtualLaser };
+		//Galvo scanner{ RTcontrol, RTCHAN::SCANNER, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 
 		//EXECUTE THE CONTROL SEQUENCE
 		RTcontrol.run();

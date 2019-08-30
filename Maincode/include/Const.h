@@ -21,12 +21,12 @@ namespace Constants
 	typedef std::vector<QU32> VQU32;		//Vector of queues of unsigned integers
 
 	//The scan directions are wrt the direction of motion of the stages
-	//DOWNWARD: the stage z moves downward (the sample is scanned from bottom to top)
-	//UPWARD: the stage z moves upward (the sample is scanned from top to bottom)
-	//RIGHT: when facing the microscope, the stage x moves right (the sample is scanned from its right to its left)
-	//LEFT: when facing the microscope, the stage x moves left (the sample is scanned from its left to its right)
-	//OUTWARD: the stage y moves away from the optical table
-	//INWARD: the stage y moves to the center of the optical table
+	//DOWNWARD: the stage Z moves downward (the sample is scanned from bottom to top)
+	//UPWARD: the stage Z moves upward (the sample is scanned from top to bottom)
+	//RIGHT: when facing the microscope, the stage X moves right (the sample is scanned from its right to its left)
+	//LEFT: when facing the microscope, the stage X moves left (the sample is scanned from its left to its right)
+	//OUTWARD: the stage Y moves away from the optical table
+	//INWARD: the stage Y moves to the center of the optical table
 	enum class SCANDIR { LEFTWARD, RIGHTWARD, OUTWARD, INWARD, DOWNWARD, UPWARD };
 	struct SCANDIR3 { SCANDIR XX;  SCANDIR YY; SCANDIR ZZ; };
 	struct INDICES2 { int II; int JJ; };
@@ -87,8 +87,8 @@ namespace Constants
 	extern const double g_pockelsSecondaryDelay;
 
 	struct GALVOcalib {	double voltagePerDistance; double voltageOffset; };
-	extern const double g_scanGalvoDelay;
-	extern const double g_rescanGalvoDelay;
+	extern const double g_scannerDelay;
+	extern const double g_rescannerDelay;
 	extern const GALVOcalib g_scannerCalib;
 	extern const GALVOcalib g_rescannerCalibV750nm;
 	extern const GALVOcalib g_rescannerCalibV920nm;

@@ -332,7 +332,7 @@ private:
 	const double mRampDurationFineTuning{ -30. * us };		//Slightly decrease the ramp duration, otherwise the ramp overflow in each frame accumulates over a continuous scan (e.g. over 200 frames)
 															//Ideally, the ramp duration of the galvo is exactly g_lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix
 															//However, in practice g_lineclockHalfPeriod  is not fixed but seems to depend on the RS amplitude
-															//If mRampDurationFineTuning is changed, then g_scanGalvoDelay has to be readjusted to match the galvo's forward and backward scans
+															//If mRampDurationFineTuning is changed, then g_scannerDelay has to be readjusted to match the galvo's forward and backward scans
 
 	const double mInterBeamletDistance{ 17.5 * um };		//Set by the beamsplitter specs
 	RTcontrol &mRTcontrol;									//Non-const because some methods in this class change the variables referenced by mRTcontrol	

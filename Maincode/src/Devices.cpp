@@ -22,7 +22,7 @@ U8* const Image::data() const
 void Image::acquire(const bool saveAllPMT)
 {
 	demultiplex_(saveAllPMT);	//Copy the chuncks of data to mTiff
-	mTiff.mirrorOddFrames();	//The galvo (vectical axis of the image) performs bi-directional scanning frame after frame. Mirror the odd frames vertically
+	mTiff.mirrorOddFrames();	//The galvos (vectical axis of the image) performs bi-directional scanning frame after frame. Mirror the odd frames vertically
 }
 
 //To perform continuous scan in x. Different from Image::acquire() because
@@ -1668,7 +1668,7 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 	//Choose the scan or rescan galvo because the calibration parameters are different
 	switch (mWhichGalvo)//which GALVO
 	{
-	case RTcontrol::RTCHAN::SCANGALVO:
+	case RTcontrol::RTCHAN::SCANNER:
 		mVoltagePerDistance = g_scannerCalib.voltagePerDistance;
 		mVoltageOffset = g_scannerCalib.voltageOffset;
 
@@ -1679,7 +1679,7 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 		//Raster scan the sample from the positive to the negative direction of the x-stage
 		positionLinearRamp(-mPosMax, mPosMax, mVoltageOffset, OVERRIDE::EN);
 		break;
-	case RTcontrol::RTCHAN::RESCANGALVO:
+	case RTcontrol::RTCHAN::RESCANNER:
 
 		//The calibration of the rescanner is slightly different when using Vision or Fidelity
 		switch (whichLaser)
@@ -2229,7 +2229,7 @@ void Stage::configDOtriggers_() const
 	setDOtriggerParamAll(Z, DO1, triggerStep, triggerMode, startThreshold, stopThreshold);
 	*/
 
-	//DO2 TRIGGER: DO2 is set to output HIGH when the stage z is in motion
+	//DO2 TRIGGER: DO2 is set to output HIGH when the stage Z is in motion
 	const DIOCHAN ZDO2{ DIOCHAN::D2 };
 	setDOtriggerEnabled(ZZ, ZDO2, true);																//Enable DO2 output
 	setDOtriggerParamSingle(ZZ, ZDO2, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));	//Configure DO2 as motion monitor
@@ -2277,11 +2277,11 @@ void Vibratome::slice(const double planeToCutZ)
 
 	mStage.setVelSingle(Stage::YY, mSlicingVel);							//Change the y vel for slicing
 	pushStartStopButton();													//Turn on the vibratome
-	mStage.moveSingle(Stage::YY, mStageFinalSlicePosY);						//Slice the sample: move the stage y towards the blade
+	mStage.moveSingle(Stage::YY, mStageFinalSlicePosY);						//Slice the sample: move the stage Y towards the blade
 	mStage.waitForMotionToStopSingle(Stage::YY);							//Wait until the motion ends
 	mStage.setVelSingle(Stage::YY, mStageConveyingVelXYZ.YY);				//Set back the y vel to move the sample back to the microscope
 
-	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));				//Move the stage y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
+	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));				//Move the stage Y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
 	//mStage.waitForMotionToStopSingle(Y);									//Wait until the motion ends
 
 	pushStartStopButton();													//Turn off the vibratome

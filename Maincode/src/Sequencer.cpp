@@ -297,7 +297,7 @@ std::vector<POSITION2> Sequencer::generateLocationList()
 	int II{ 0 }, JJ{ 0 };			//Reset the stack indices after every cut
 	resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
 
-	//The stage y is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
+	//The stage Y is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
 	while (JJ >= 0 && JJ < mStackArrayDimIJ.JJ)			//y-stage direction
 	{
 		while (II >= 0 && II < mStackArrayDimIJ.II)		//x-stage direction

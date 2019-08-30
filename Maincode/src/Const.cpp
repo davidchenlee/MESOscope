@@ -24,13 +24,13 @@ namespace Constants
 	extern const double g_laserPulsePeriod{ 0.0125 * us };	//The pulse repetition rate of VISION and FIDELITY is 80 MHz
 
 	//PIXELCLOCK
-	extern const double g_pixelDwellTime{ 0.1625 * us };	//= 13 * 12.5 ns = 162.5 ns
-	extern const double g_lineclockHalfPeriod{ 63.05 * us };//Half-period of the resonant scanner. I measure 25.220 ms over 400 half oscillations. Therefore, the average half-period is 25200us/400 = 63.05 us
-															//The forward and backward times differ slightly and the difference depends on the scanning amplitude
-															//For example, forward = 63.14 us, backwards = 62.99 us, diff = 150 ns (i.e., ~ 1 pixel)
-															//The measured RS period (126.1 us) seems to be independent of the scanning amplitude
-	extern const double g_pulsesPerPix{ g_pixelDwellTime / g_laserPulsePeriod };//Max number of laser pulses per pixel
-	extern const U8 g_upscalingFactor{ static_cast<U8>(255 / g_pulsesPerPix) };	//Upscale 4-bit counts to 8-bit range [0-255] for compatibility with ImageJ's standards
+	extern const double g_pixelDwellTime{ 0.1625 * us };							//= 13 * 12.5 ns = 162.5 ns
+	extern const double g_lineclockHalfPeriod{ 63.05 * us };						//Half-period of the resonant scanner. I measure 25.220 ms over 400 half oscillations. Therefore, the average half-period is 25200us/400 = 63.05 us
+																					//The forward and backward times differ slightly and the difference depends on the scanning amplitude
+																					//For example, forward = 63.14 us, backwards = 62.99 us, diff = 150 ns (i.e., ~ 1 pixel)
+																					//The measured RS period (126.1 us) seems to be independent of the scanning amplitude
+	extern const double g_pulsesPerPix{ g_pixelDwellTime / g_laserPulsePeriod };	//Max number of laser pulses per pixel
+	extern const U8 g_upscalingFactor{ static_cast<U8>(255 / g_pulsesPerPix) };		//Upscale 4-bit counts to 8-bit range [0-255] for compatibility with ImageJ's standards
 
 
 	//FPGA
@@ -55,10 +55,10 @@ namespace Constants
 	extern const double g_pockelsFirstFrameDelay{ 112. * us };	//Delay of the Pockels wrt the preframeclock. The pockels is turned on early to avoid transient overshooting
 	extern const double g_pockelsSecondaryDelay{ 0 };			//Delay of the Pockels wrt the preframeclock in the subsequent frames 
 
-	//GALVOS
-	extern const double g_scanGalvoDelay{ 150 * us };								//Adjust 'g_scanGalvoDelay' until the bead position in a fordward scan coincides with that of a backward scan
-	extern const double g_rescanGalvoDelay{ 0. * us };								//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
-	extern const GALVOcalib g_scannerCalib{ 0.02417210 * V / um , 0.0 * V };		//Calibration factor and offset of the scan galvo. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
+	//GALVO SCANNERS
+	extern const double g_scannerDelay{ 150 * us };								//Adjust 'g_scannerDelay' until the bead position in a fordward scan coincides with that of a backward scan
+	extern const double g_rescannerDelay{ 0. * us };							//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
+	extern const GALVOcalib g_scannerCalib{ 0.02417210 * V / um , 0.0 * V };	//Calibration factor and offset of the galvo scanner. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
 
 	//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission fixed at the detector
 	//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the tiffs in all the PMT channels
@@ -69,7 +69,7 @@ namespace Constants
 	extern const GALVOcalib g_rescannerCalibV920nm{ 0.310 * g_scannerCalib.voltagePerDistance, 0.065 * V };
 	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.33 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//Using Vision
 	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.33 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//Using Fidelity
-	extern const int g_PMT16Xchan_int{ 7 }; //[0-15] when using a singlebeam, direct the galvo towards a particular channel of the PMT16X
+	extern const int g_PMT16Xchan_int{ 7 }; //[0-15] when using a singlebeam, direct the rescanner towards a particular channel of the PMT16X
 
 	//STAGES
 	//Stage Z
@@ -80,8 +80,8 @@ namespace Constants
 	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };		//Delay the Z stage triggering the acq sequence
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };
 	//Stage X
-	//extern const double	g_STAGEXTrigAcqDelay{32.1 * ms };//uncalibrated	for pixelSizeX = 0.5 um	//Delay the X stage triggering the acq sequence to match the forward and backward scans. Larger moves the image upward
-																		//Currently, the delay depends on the FOV in the x-stage axis
+	//extern const double	g_STAGEXTrigAcqDelay{32.1 * ms };		//uncalibrated	for pixelSizeX = 0.5 um	//Delay the X stage triggering the acq sequence to match the forward and backward scans. Larger moves the image upward
+																	//Currently, the delay depends on the FOV in the x-stage axis
 																		
 	extern const double	g_STAGEXTrigAcqDelay{ 122.0 * ms };//pixelSizeX = 1.0 um
 

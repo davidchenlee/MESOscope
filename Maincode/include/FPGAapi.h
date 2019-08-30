@@ -17,6 +17,7 @@ namespace FPGAfunc
 	U32 packPixelclockSinglet(const double timeStep, const bool DO);
 	void checkStatus(char functionName[], NiFpga_Status status);
 	void linearRamp(QU32 &queue, double timeStep, const double rampLength, const double Vi, const double Vf);
+	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
 }
 
 //Establish communication to the FPGA
@@ -25,26 +26,30 @@ class FPGA
 public:
 	FPGA();
 	~FPGA();
-	void close(const FPGARESET reset = FPGARESET::DIS) const;
+
 	NiFpga_Session handle() const;										//Access the handle indirectly to avoid modifying it by mistake
+	void close(const FPGARESET reset = FPGARESET::DIS) const;
+
 	void setLineclock(const LINECLOCK lineclockInput) const;
-	void startFIFOOUTpc() const;
-	void configureFIFOOUTpc(const U32 depth) const;
-	void collectFIFOOUTpcGarbage() const;
-	void stopFIFOOUTpc() const;
-	void triggerAOext() const;
-	void enableFIFOOUTfpga(const FIFOOUTfpga enableFIFOOUTfpga) const;
-	void enablePockelsScaling() const;
 	void setMainTrig(const MAINTRIG mainTrigger) const;
 	void setStageTrigDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir) const;
-	void uploadImagingParameters(const int mHeightPerBeamletAllFrames_pix, const int mHeightPerBeamletPerFrame_pix, const int mNframes) const;
-	void triggerControlSequence() const;
-	void setPostSequenceTimer(const MAINTRIG mainTrigger) const;
+	void enableFIFOOUTfpga(const FIFOOUTfpga enableFIFOOUTfpga) const;
+	void enablePockelsScaling() const;
+
 	I16 readScannerVoltageMon() const;
 	I16 readRescannerVoltageMon() const;
+	void uploadImagingParameters(const int mHeightPerBeamletAllFrames_pix, const int mHeightPerBeamletPerFrame_pix, const int mNframes) const;
+
+	void triggerAOext() const;
+	void triggerControlSequence() const;
+
+	void startFIFOOUTpc() const;
+	void stopFIFOOUTpc() const;
+	void configureFIFOOUTpc(const U32 depth) const;
+	void collectFIFOOUTpcGarbage() const;
+
 	void uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const;
 	void readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 *mBufferB) const;
-
 private:
 	NiFpga_Session mHandle;												//FPGA handle. Non-const to let the FPGA API assign the handle
 	const std::string mBitfile{ bitfilePath + NiFpga_FPGAvi_Bitfile };	//FPGA bitfile location
@@ -59,11 +64,7 @@ class RTcontrol
 public:
 	enum class RTCHAN { PIXELCLOCK, SCANNER, RESCANNER, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };				//NCHAN = number of sequence channels available including the channel for the pixelclock
 	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED };	//*cast but not relevant, only for debugging
-
 	const FPGA &mFpga;
-	LINECLOCK mLineclockInput;							//Resonant scanner (RS) or Function generator (FG)
-	MAINTRIG mMainTrigger;								//Trigger the acquisition with the Z stage: enable (0), disable (1)
-	FIFOOUTfpga mEnableFIFOOUTfpga;						//Enable or disable the FIFOOUTfpga on the FPGA
 	SCANDIR mScanDir{ SCANDIR::UPWARD };				//Scan direction of the stage for continuous scan
 	PMT16XCHAN mPMT16Xchan;								//PMT16X channel to be used
 	int mWidthPerFrame_pix;								//Width in pixels of a single frame (fast axis). I call each swing of the RS a "line"
@@ -87,18 +88,13 @@ public:
 	void pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor);
 	void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override);
 
-	void presetScannerPosition() const;
-	void uploadControlSequence() const;
-
 	void setNumberOfFrames(const int nFrames);
-
 	void initialize(const SCANDIR scanDirZ = SCANDIR::UPWARD);
 	void run();
 	void downloadData();
 	U32* dataBufferA() const;
 	U32* dataBufferB() const;
 private:
-	//Private subclass
 	class Pixelclock
 	{
 	public:
@@ -114,13 +110,17 @@ private:
 		void pushUniformDwellTimes_();
 	};
 
+	LINECLOCK mLineclockInput;				//Resonant scanner (RS) or Function generator (FG)
+	MAINTRIG mMainTrigger;					//Trigger the acquisition with the Z stage: enable (0), disable (1)
+	FIFOOUTfpga mEnableFIFOOUTfpga;			//Enable or disable the FIFOOUTfpga on the FPGA
 	VQU32 mVec_queue;
 	U32* mBufferA{ nullptr };				//Buffer array to read FIFOOUTpc A
 	U32* mBufferB{ nullptr };				//Buffer array to read FIFOOUTpc B
 
-	void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
-	PMT16XCHAN determineRescannerSetpoint_();
-	void iniStageContScan_(const SCANDIR stackScanDir);
+	PMT16XCHAN determineRescannerSetpoint_() const;
+	void presetScannerPosition_() const;
+	void initializeStages_(const SCANDIR stackScanDir);
+	void uploadControlSequence_() const;
 	void correctInterleaved_();
 };
 

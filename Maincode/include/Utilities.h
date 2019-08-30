@@ -28,7 +28,7 @@ void pressAnyKeyToContOrESCtoExit();
 double multiply16X(const double input);
 int SCANDIRtoInt(const SCANDIR scanDir);
 void reverseSCANDIR(SCANDIR &scanDir);
-double determineInitialScanPos(const double posMin, const double travel, const SCANDIR scanDir);
+double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
 double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
 double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
 double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);

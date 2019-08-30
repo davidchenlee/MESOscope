@@ -28,7 +28,6 @@ public:
 	void close(const FPGARESET reset = FPGARESET::DIS) const;
 	NiFpga_Session handle() const;										//Access the handle indirectly to avoid modifying it by mistake
 	void setLineclock(const LINECLOCK lineclockInput) const;
-	void uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const;
 	void startFIFOOUTpc() const;
 	void configureFIFOOUTpc(const U32 depth) const;
 	void collectFIFOOUTpcGarbage_() const;
@@ -40,12 +39,19 @@ public:
 	void disableStageTrigAcq() const;
 	void setStageTrigAcqDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir) const;
 	void uploadImagingParameters(const int mHeightPerBeamletAllFrames_pix, const int mHeightPerBeamletPerFrame_pix, const int mNframes) const;
+	void triggerControlSequence() const;
 	void setPostSequenceTimer(const MAINTRIG mainTrigger) const;
+	I16 readScanGalvoOutputVoltageMon() const;
+	I16 readRescanGalvoOutputVoltageMon() const;
+	void uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const;
+	void readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 *mBufferB) const;
+
 private:
 	NiFpga_Session mHandle;												//FPGA handle. Non-const to let the FPGA API assign the handle
 	const std::string mBitfile{ bitfilePath + NiFpga_FPGAvi_Bitfile };	//FPGA bitfile location
 
 	void initializeFpga_() const;
+	void readChunk_(const int &nPixPerBeamletAllFrames, int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 &FIFOOUTpc, U32* buffer, int &timeout) const;
 };
 
 //Create a control sequence and pixelclock
@@ -81,10 +87,12 @@ public:
 	void pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override = OVERRIDE::DIS);
 	void pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor);
 	void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override);
+
 	void presetScannerPosition() const;
 	void uploadControlSequence() const;
+
 	void setNumberOfFrames(const int nFrames);
-	void trigger() const;
+
 	void initialize(const SCANDIR scanDirZ = SCANDIR::UPWARD);
 	void run();
 	void downloadData();
@@ -114,8 +122,8 @@ private:
 	void concatenateQueues_(QU32& receivingQueue, QU32& givingQueue) const;
 	PMT16XCHAN determineRescannerSetpoint_();
 	void iniStageContScan_(const SCANDIR stackScanDir);
-	void readFIFOOUTpc_();
-	void readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &timeout);
+
+
 	void correctInterleaved_();
 };
 

@@ -41,7 +41,7 @@ namespace Constants
 
 	enum class PMTIN { PMT = false, SIM = true };							//*cast
 	enum class LINECLOCK { RS = false, FG = true  };						//*cast
-	enum class MAINTRIG { PC = 0, STAGEZ = 1, STAGEX = 2 };					//The numbering must match that of LV
+	enum class MAINTRIG { PC = 0, STAGEZ = 1, STAGEX = 2 };					//IMPORTANT! The number assignmnent must match that of LV
 	enum class FPGARESET { DIS = false, EN = true };
 	enum class FIFOOUTfpga { DIS = false, EN = true  };						//*cast
 	enum class TIFFSTRUCT { SINGLEPAGE, MULTIPAGE };

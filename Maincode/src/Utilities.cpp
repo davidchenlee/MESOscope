@@ -177,7 +177,7 @@ void reverseSCANDIR(SCANDIR &scanDir)
 	}
 }
 
-double determineInitialScanPos(const double posMin, const double travel, const SCANDIR scanDir)
+double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
 {
 	if (travel <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
@@ -186,10 +186,10 @@ double determineInitialScanPos(const double posMin, const double travel, const S
 	{
 	case SCANDIR::UPWARD:
 	case SCANDIR::RIGHTWARD:
-		return posMin;
+		return posMin - travelOverhead;
 	case SCANDIR::DOWNWARD:
 	case SCANDIR::LEFTWARD:
-		return posMin + travel;
+		return posMin + travel + travelOverhead;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
 	}

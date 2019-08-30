@@ -80,9 +80,11 @@ namespace Constants
 	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };		//Delay the Z stage triggering the acq sequence
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };
 	//Stage X
-	extern const double	g_STAGEXTrigAcqDelay{19.5 * ms };				//Delay the Z stage triggering the acq sequence to match the forward and backward scans. Larger moves the image upward
+	//extern const double	g_STAGEXTrigAcqDelay{32.1 * ms };//uncalibrated	for pixelSizeX = 0.5 um	//Delay the X stage triggering the acq sequence to match the forward and backward scans. Larger moves the image upward
 																		//Currently, the delay depends on the FOV in the x-stage axis
-													
+																		
+	extern const double	g_STAGEXTrigAcqDelay{ 122.0 * ms };//pixelSizeX = 1.0 um
+
 	//PMT
 	extern const int g_nChanPMT{ 16 };
 	extern const PMTIN g_photocounterInput{ PMTIN::PMT };				//PMT or simulated PMT

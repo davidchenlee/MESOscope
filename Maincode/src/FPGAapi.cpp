@@ -195,46 +195,6 @@ void FPGA::setLineclock(const LINECLOCK lineclockInput) const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_LineclockInputSelector, static_cast<bool>(lineclockInput)));
 }
 
-//Send every single queue in 'vec_queue' to the FPGA buffer
-//For this, concatenate all the individual queues 'vec_queue.at(ii)' in the queue 'allQueues'.
-//The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
-//Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
-void FPGA::uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const
-{
-	{
-		QU32 allQueues;		//Create a single long queue
-		for (int chan = 0; chan < nChan; chan++)
-		{
-			allQueues.push_back(queue_vec.at(chan).size());					//Push the number of elements in each individual queue ii, 'vec_queue.at(ii)'	
-			for (std::vector<int>::size_type iter = 0; iter != queue_vec.at(chan).size(); iter++)
-				allQueues.push_back(queue_vec.at(chan).at(iter));			//Push vec_queue[i]
-		}
-
-		const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 
-
-		if (sizeFIFOINqueue > g_FIFOINmax)
-			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
-
-		std::vector<U32> FIFOIN(sizeFIFOINqueue);							//Create a 1D array with the channels concatenated
-		for (int ii = 0; ii < sizeFIFOINqueue; ii++)
-		{
-			FIFOIN.at(ii) = allQueues.front();								//Transfer the queue elements to the array
-			allQueues.pop_front();
-		}
-		allQueues = {};					//Cleanup the queue C++11 style
-
-		U32 r;							//Elements remaining
-
-		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mHandle, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
-
-		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
-		//This boolean serves as the master trigger for the entire control sequence
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
-	}
-}
-
 //Establish a connection between FIFOOUTpc and FIFOOUTfpga and. Optional according to NI
 void FPGA::startFIFOOUTpc() const
 {
@@ -390,6 +350,13 @@ void FPGA::uploadImagingParameters(const int heightPerBeamletAllFrames_pix, cons
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mHandle, NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(nFrames)));								//Number of frames to acquire
 }
 
+//Trigger the ctl&acq sequence
+void FPGA::triggerControlSequence() const
+{
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PcTrigger, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PcTrigger, false));
+}
+
 //When the Z stage acts as the main trigger (for cont z scanning), the motion monitor of the Z stage bounces and therefore false-triggers new acquisitions
 //Solution: after an acq sequence, wait a certain amount of time before the acq is triggered again (timer implemented in LV)
 void FPGA::setPostSequenceTimer(const MAINTRIG mainTrigger) const
@@ -408,6 +375,107 @@ void FPGA::setPostSequenceTimer(const MAINTRIG mainTrigger) const
 		postSequenceTimer = 0;
 	}
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_PostsequenceTimer_tick, static_cast<U32>(postSequenceTimer / us * g_tickPerUs)));
+}
+
+I16 FPGA::readScanGalvoOutputVoltageMon() const
+{
+	I16 value;
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mHandle, NiFpga_FPGAvi_IndicatorU16_ScanGalvoMon, &value));
+	return value;
+}
+
+I16 FPGA::readRescanGalvoOutputVoltageMon() const
+{
+	I16 value;
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mHandle, NiFpga_FPGAvi_IndicatorU16_RescanGalvoMon, &value));
+	return value;
+}
+
+//Send every single queue in 'vec_queue' to the FPGA buffer
+//For this, concatenate all the individual queues 'vec_queue.at(ii)' in the queue 'allQueues'.
+//The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
+//Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
+void FPGA::uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const
+{
+	{
+		QU32 allQueues;		//Create a single long queue
+		for (int chan = 0; chan < nChan; chan++)
+		{
+			allQueues.push_back(queue_vec.at(chan).size());					//Push the number of elements in each individual queue ii, 'vec_queue.at(ii)'	
+			for (std::vector<int>::size_type iter = 0; iter != queue_vec.at(chan).size(); iter++)
+				allQueues.push_back(queue_vec.at(chan).at(iter));			//Push vec_queue[i]
+		}
+
+		const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 
+
+		if (sizeFIFOINqueue > g_FIFOINmax)
+			throw std::overflow_error((std::string)__FUNCTION__ + ": FIFOIN overflow");
+
+		std::vector<U32> FIFOIN(sizeFIFOINqueue);							//Create a 1D array with the channels concatenated
+		for (int ii = 0; ii < sizeFIFOINqueue; ii++)
+		{
+			FIFOIN.at(ii) = allQueues.front();								//Transfer the queue elements to the array
+			allQueues.pop_front();
+		}
+		allQueues = {};					//Cleanup the queue C++11 style
+
+		U32 r;							//Elements remaining
+
+		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mHandle, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
+
+		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
+		//This boolean serves as the master trigger for the entire control sequence
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, true));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));
+	}
+}
+
+//Read the data in FIFOOUTpc
+void FPGA::readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 *mBufferB) const
+{
+	//TODO: save the data concurrently
+	//I ran a test and found that two 32-bit FIFOOUTfpga have a larger bandwidth than a single 64 - bit FIFOOUTfpga
+	//Test if the bandwidth can be increased by using 'NiFpga_AcquireFifoReadElementsU32'.Ref: http://zone.ni.com/reference/en-XX/help/372928G-01/capi/functions_fifo_read_acquire/
+	//pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
+	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
+
+	/*
+	//Declare and start a stopwatch [2]
+	double duration;
+	auto t_start{ std::chrono::high_resolution_clock::now() };
+	*/
+
+	const int readFifoWaitingTime_ms{ 5 };				//Waiting time between each iteration
+	int timeout_iter{ 200 };							//Timeout the whileloop if the data transfer fails
+	int nullReadCounterA{ 0 }, nullReadCounterB{ 0 };	//Null reading counters
+
+	int nTotalPixReadA{ 0 }, nTotalPixReadB{ 0 }; 		//Total number of elements read from FIFOOUTpc A and B
+	while (nTotalPixReadA < nPixPerBeamletAllFrames || nTotalPixReadB < nPixPerBeamletAllFrames)
+	{
+		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
+
+		readChunk_(nPixPerBeamletAllFrames, nTotalPixReadA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufferA, nullReadCounterA);	//FIFOOUTpc A
+		readChunk_(nPixPerBeamletAllFrames, nTotalPixReadB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufferB, nullReadCounterB);	//FIFOOUTpc B
+
+		if (nullReadCounterA > timeout_iter && nullReadCounterB > timeout_iter)
+			throw ImageException((std::string)__FUNCTION__ + ": FIFO null-reading timeout");
+
+		//std::cout << "FIFO A: " << nTotalPixReadA << "\tFIFO B: " << nTotalPixReadB << "\n";	//For debugging
+		//std::cout << "nullReadCounter A: " << nullReadCounterA << "\tnullReadCounter: " << nullReadCounterB << "\n";	//For debugging
+	}
+
+	/*
+	//Stop the stopwatch
+	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
+	std::cout << "Elapsed time: " << duration << " ms" << "\n";
+	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * mRTcontrol.mNpixAllFrames / duration / 1000 << " Mbps" << "\n"; //2 FIFOOUTs of 32 bits each
+	std::cout << "Total of elements read: " << nTotalPixReadA << "\t" << nTotalPixReadB << "\n"; //Print out the total number of elements read
+	*/
+
+	//If all the expected data is NOT read successfully
+	if (nTotalPixReadA < nPixPerBeamletAllFrames || nTotalPixReadB < nPixPerBeamletAllFrames)
+		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFO elements than expected");
 }
 
 //Load the imaging parameters onto the FPGA. See 'Const.cpp' for the definition of each variable
@@ -471,6 +539,39 @@ void FPGA::initializeFpga_() const
 	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_RSenable, false));		//Turn on/off
 	*/
 }
+
+//Read a chunk of data in the FIFOpc
+void FPGA::readChunk_(const int &nPixPerBeamletAllFrames, int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 &FIFOOUTpc, U32* buffer, int &nullReadCounter) const
+{
+	U32 dummy;
+	U32 nElemToRead{ 0 };				//Elements remaining in FIFOOUTpc
+	const U32 timeout_ms{ 100 };		//FIFOOUTpc timeout
+
+	if (nElemRead < nPixPerBeamletAllFrames)		//Skip if all the data have already been transferred
+	{
+		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mHandle, FIFOOUTpc, buffer, 0, timeout_ms, &nElemToRead));
+		//std::cout << "Number of elements remaining in FIFOOUT: " << nElemToRead << "\n";	//For debugging
+
+		//If data available in FIFOOUTpc, retrieve it
+		if (nElemToRead > 0)
+		{
+			//If more data than expected
+			if (static_cast<int>(nElemRead + nElemToRead) > nPixPerBeamletAllFrames)
+				throw std::runtime_error((std::string)__FUNCTION__ + ": Received more FIFO elements than expected");
+
+			//Retrieve the elements in FIFOOUTpc
+			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mHandle, FIFOOUTpc, buffer + nElemRead, nElemToRead, timeout_ms, &dummy));
+
+			//Keep track of the total number of elements read
+			nElemRead += nElemToRead;
+
+			nullReadCounter = 0;	//Reset the iteration counter
+		}
+		else
+			nullReadCounter++;		//keep track of the null reads
+	}
+}
 #pragma endregion "FPGA"
 
 #pragma region "RTcontrol"
@@ -523,7 +624,7 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }
 {}
 
-//Set the imaging parameters
+//Set mNframes
 void RTcontrol::setNumberOfFrames(const int nFrames)
 {
 	mNframes = nFrames;
@@ -606,16 +707,14 @@ void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double 
 void RTcontrol::presetScannerPosition() const
 {
 	//Read the current voltage of the AOs for the scanner and rescanner. See the LV implementation
-	std::vector<I16> AOlastVoltage_I16(static_cast<U8>(RTCHAN::NCHAN), 0);
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.handle(), NiFpga_FPGAvi_IndicatorU16_ScanGalvoMon, &AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::SCANGALVO))));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mFpga.handle(), NiFpga_FPGAvi_IndicatorU16_RescanGalvoMon, &AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::RESCANGALVO))));
+	std::vector<I16> AOlastVoltage_I16(static_cast<U8>(RTCHAN::NCHAN), 0);								//Create a vector of zeros, one zero for each AO channel
+	AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::SCANGALVO)) = mFpga.readScanGalvoOutputVoltageMon();
+	AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::RESCANGALVO)) = mFpga.readRescanGalvoOutputVoltageMon();
 
 	//Create a vector of queues for the ramps
 	VQU32 vec_queue{ static_cast<U8>(RTCHAN::NCHAN) };
-	for (int iterChan = 1; iterChan < static_cast<U8>(RTCHAN::NCHAN); iterChan++) //the pixelclock (chan = 0) is kept empty
-	{
+	for (int iterChan = 1; iterChan < static_cast<U8>(RTCHAN::NCHAN); iterChan++) //iterChan starts from 1 because the pixelclock (chan = 0) is kept empty
 		if (mVec_queue.at(iterChan).size() != 0)
-		{
 			//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 			if ((iterChan == static_cast<U8>(RTCHAN::SCANGALVO) || iterChan == static_cast<U8>(RTCHAN::RESCANGALVO)))	//Only do GALVO1 and GALVO2 for now
 			{
@@ -627,8 +726,7 @@ void RTcontrol::presetScannerPosition() const
 				//std::cout << Vi << "\n";
 				//std::cout << Vf << "\n";
 			}
-		}
-	}
+
 	mFpga.uploadFIFOIN(vec_queue, static_cast<U8>(RTCHAN::NCHAN));	//Upload the initialization ramp to the FPGA
 	mFpga.triggerAOext();											//Trigger the initialization ramp externally (not using the internal clocks)
 }
@@ -637,13 +735,6 @@ void RTcontrol::presetScannerPosition() const
 void RTcontrol::uploadControlSequence() const
 {
 	mFpga.uploadFIFOIN(mVec_queue, static_cast<U8>(RTCHAN::NCHAN));
-}
-
-//Trigger the ctl&acq sequence
-void RTcontrol::trigger() const
-{
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, true));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_PcTrigger, false));
 }
 
 //Preset the parameters for the acquisition sequence
@@ -667,9 +758,9 @@ void RTcontrol::initialize(const SCANDIR stackScanDir)
 //Scan a single frame
 void RTcontrol::run()
 {
-	initialize();		//Preset the parameters for the acquisition sequence
-	trigger();			//Trigger the ctl&acq sequence. If triggered too early, FIFOOUTfpga will probably overflow
-	downloadData();		//Retrieve the data from the FPGA
+	initialize();					//Preset the parameters for the acquisition sequence
+	mFpga.triggerControlSequence();	//Trigger the ctl&acq sequence. If triggered too early, FIFOOUTfpga will probably overflow
+	downloadData();					//Retrieve the data from the FPGA
 }
 
 //Retrieve the data from the FPGA
@@ -679,7 +770,7 @@ void RTcontrol::downloadData()
 	{
 		try
 		{
-			readFIFOOUTpc_();			//Read the data received in FIFOOUTpc
+			mFpga.readFIFOOUTpc(mNpixPerBeamletAllFrames, mBufferA, mBufferB);			//Read the data received in FIFOOUTpc
 		}
 		catch (const ImageException &e)
 		{
@@ -746,86 +837,6 @@ void RTcontrol::iniStageContScan_(const SCANDIR stackScanDir)
 {
 	mScanDir = stackScanDir;															//Initialize mScanDir to set the stage-trigger delay and stack-saving order
 	mFpga.setStageTrigAcqDelay(mMainTrigger, mHeightPerBeamletPerFrame_pix, mScanDir);	//Set the delay for the stage triggering the ctl&acq sequence
-}
-
-//Read the data in FIFOOUTpc
-void RTcontrol::readFIFOOUTpc_()
-{
-	//TODO: save the data concurrently
-	//I ran a test and found that two 32-bit FIFOOUTfpga have a larger bandwidth than a single 64 - bit FIFOOUTfpga
-	//Test if the bandwidth can be increased by using 'NiFpga_AcquireFifoReadElementsU32'.Ref: http://zone.ni.com/reference/en-XX/help/372928G-01/capi/functions_fifo_read_acquire/
-	//pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
-	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
-
-	/*
-	//Declare and start a stopwatch [2]
-	double duration;
-	auto t_start{ std::chrono::high_resolution_clock::now() };
-	*/
-
-	const int readFifoWaitingTime_ms{ 5 };				//Waiting time between each iteration
-	int timeout_iter{ 200 };							//Timeout the whileloop if the data transfer fails
-	int nullReadCounterA{ 0 }, nullReadCounterB{ 0 };	//Null reading counters
-
-	int nElemTotalA{ 0 }, nElemTotalB{ 0 }; 			//Total number of elements read from FIFOOUTpc A and B
-	while (nElemTotalA < mNpixPerBeamletAllFrames || nElemTotalB < mNpixPerBeamletAllFrames)
-	{
-		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
-
-		readChunk_(nElemTotalA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufferA, nullReadCounterA);	//FIFOOUTpc A
-		readChunk_(nElemTotalB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufferB, nullReadCounterB);	//FIFOOUTpc B
-
-		if (nullReadCounterA > timeout_iter && nullReadCounterB > timeout_iter)
-			throw ImageException((std::string)__FUNCTION__ + ": FIFO null-reading timeout");
-
-		//std::cout << "FIFO A: " << nElemTotalA << "\tFIFO B: " << nElemTotalB << "\n";	//For debugging
-		//std::cout << "nullReadCounter A: " << nullReadCounterA << "\tnullReadCounter: " << nullReadCounterB << "\n";	//For debugging
-	}
-
-	/*
-	//Stop the stopwatch
-	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
-	std::cout << "Elapsed time: " << duration << " ms" << "\n";
-	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * mRTcontrol.mNpixAllFrames / duration / 1000 << " Mbps" << "\n"; //2 FIFOOUTs of 32 bits each
-	std::cout << "Total of elements read: " << nElemTotalA << "\t" << nElemTotalB << "\n"; //Print out the total number of elements read
-	*/
-
-	//If all the expected data is NOT read successfully
-	if (nElemTotalA < mNpixPerBeamletAllFrames || nElemTotalB < mNpixPerBeamletAllFrames)
-		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFO elements than expected");
-}
-
-//Read a chunk of data in the FIFOpc
-void RTcontrol::readChunk_(int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 FIFOOUTpc, U32* buffer, int &nullReadCounter)
-{
-	U32 dummy;
-	U32 nElemToRead{ 0 };				//Elements remaining in FIFOOUTpc
-	const U32 timeout_ms{ 100 };		//FIFOOUTpc timeout
-
-	if (nElemRead < mNpixPerBeamletAllFrames)		//Skip if all the data have already been transferred
-	{
-		//By requesting 0 elements from FIFOOUTpc, the function returns the number of elements available. If no data is available, nElemToRead = 0 is returned
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.handle(), FIFOOUTpc, buffer, 0, timeout_ms, &nElemToRead));
-		//std::cout << "Number of elements remaining in FIFOOUT: " << nElemToRead << "\n";	//For debugging
-
-		//If data available in FIFOOUTpc, retrieve it
-		if (nElemToRead > 0)
-		{
-			//If more data than expected
-			if (static_cast<int>(nElemRead + nElemToRead) > mNpixPerBeamletAllFrames)
-				throw std::runtime_error((std::string)__FUNCTION__ + ": Received more FIFO elements than expected");
-
-			//Retrieve the elements in FIFOOUTpc
-			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mFpga.handle(), FIFOOUTpc, buffer + nElemRead, nElemToRead, timeout_ms, &dummy));
-
-			//Keep track of the total number of elements read
-			nElemRead += nElemToRead;
-
-			nullReadCounter = 0;	//Reset the iteration counter
-		}
-		else
-			nullReadCounter++;		//keep track of the null reads
-	}
 }
 
 //The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample

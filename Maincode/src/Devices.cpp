@@ -25,7 +25,7 @@ void Image::acquire(const bool saveAllPMT)
 	mTiff.mirrorOddFrames();	//The galvos (vectical axis of the image) performs bi-directional scanning frame after frame. Mirror the odd frames vertically
 }
 
-//To perform continuous scan in x. Different from Image::acquire() because
+//To perform continuous scan in X. Different from Image::acquire() because
 //each frame has mHeightPerFrame_pix = 2 (2 swings of the RS) and mNframes = half the pixel height of the final image
 void Image::acquireVerticalStrip(const SCANDIR scanDirX)
 {
@@ -606,8 +606,8 @@ void Filterwheel::setColor(const COLOR color)
 
 			Sleep(static_cast<DWORD>(1. * minSteps / mTurningSpeed / ms));	//Wait until the filterwheel stops turning the turret
 
-			mSerial->read(RxBuffer, mRxBufSize);		//Read RxBuffer to flush it. Serial::flush() doesn't work
-														//std::cout << "setColor full RxBuffer: " << RxBuffer << "\n"; //For debugging
+			mSerial->read(RxBuffer, mRxBufSize);							//Read RxBuffer to flush it. Serial::flush() doesn't work
+			//std::cout << "setColor full RxBuffer: " << RxBuffer << "\n"; //For debugging
 
 			//Update the configuration of the filterwheel
 			mPosition = downloadPosition_();  //Download the current filter position to check that the operation was successful

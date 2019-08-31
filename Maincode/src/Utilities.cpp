@@ -351,14 +351,14 @@ TiffU8::TiffU8(const std::string filename) :
 
 	mArray = new U8[mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes];	//Allocate memory for the image
 
-	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
+	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
 	{
 		//Read the tiff one strip at a time
-		for (int iterRow = 0; iterRow < mHeightPerFrame_pix; iterRow++)
+		for (int iterRow_pix = 0; iterRow_pix < mHeightPerFrame_pix; iterRow_pix++)
 		{
-			if (TIFFReadScanline(tiffHandle, buffer, iterRow, 0) < 0)
+			if (TIFFReadScanline(tiffHandle, buffer, iterRow_pix, 0) < 0)
 				break;
-			std::memcpy(&mArray[(frameIndex * mHeightPerFrame_pix + iterRow) * mBytesPerLine], buffer, mBytesPerLine);
+			std::memcpy(&mArray[(iterFrame * mHeightPerFrame_pix + iterRow_pix) * mBytesPerLine], buffer, mBytesPerLine);
 		}
 		TIFFReadDirectory(tiffHandle);
 	}
@@ -431,8 +431,32 @@ int TiffU8::nFrames() const
 	return mNframes;
 }
 
+//Push a frame into mArray. The frame index starts from 0
+void TiffU8::pushImage(const U8* inputArray, const int frameIndex) const
+{
+	if (frameIndex < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be >= 0");
+	if (frameIndex > mNframes)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be smaller than or equal to the number of frames " + std::to_string(mNframes));
+
+	std::memcpy(&mArray[frameIndex * mHeightPerFrame_pix * mBytesPerLine], inputArray, mHeightPerFrame_pix * mBytesPerLine);
+}
+
+//Push a frame interval. The frame index starts from 0
+void TiffU8::pushImage(const U8* inputArray, const int firstFrameIndex, const int lastFrameIndex) const
+{
+	if (firstFrameIndex < 0 || lastFrameIndex < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be >= 0");
+	if (firstFrameIndex > mNframes || lastFrameIndex > mNframes)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be smaller than or equal to the number of frames");
+	if (lastFrameIndex < firstFrameIndex)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The last frame index must be >= the first frame index");
+
+	std::memcpy(&mArray[firstFrameIndex * mHeightPerFrame_pix * mBytesPerLine], inputArray, (lastFrameIndex - firstFrameIndex + 1) * mHeightPerFrame_pix * mBytesPerLine);
+}
+
 //Divide the concatenated images in a stack of nFrames
-void TiffU8::splitIntoFrames(const int nFrames)
+void TiffU8::splitFrames(const int nFrames)
 {
 	if (nFrames <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame number must be >0");
@@ -441,7 +465,78 @@ void TiffU8::splitIntoFrames(const int nFrames)
 	mHeightPerFrame_pix = mHeightPerFrame_pix / nFrames;
 }
 
+//Merge all the frames in a single image
+void TiffU8::mergeFrames()
+{
+	mHeightPerFrame_pix = mNframes * mHeightPerFrame_pix;
+	mNframes = 1;
+}
 
+//Re-order the input arrays so that channels belonging to the same frame are grouped together
+void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const
+{
+	/*
+	The input arrays have the structure:
+	inputArrayA = |CH00 f1|
+				  |  .	  |
+				  |CH00 fN|
+				  |  .	  |
+				  |  .	  |
+				  |  .	  |
+				  |CH07 f1|
+				  |  .	  |
+				  |CH07 fN|
+
+	inputArrayB = |CH08 f1|
+				  |  .	  |
+				  |CH08 fN|
+				  |  .	  |
+				  |  .	  |
+				  |  .	  |
+				  |CH15 f1|
+				  |  .	  |
+				  |CH15 fN|
+
+	"Merging" puts the channels belonging to the same frame together. The resulting structure is:
+	mArray = |CH00 f1|
+			 |  .	 |
+			 |CH15 f1|
+			 |CH15 f2|
+			 |  .	 |
+			 |  .	 |
+			 |  .	 |
+			 |CH00 f2|
+			 |CH00 fN|
+			 |  .	 |
+			 |CH15 fN|
+	Note in the figure above that the channel ordering within each frame is reversed wrt the next frame because of the bidirectionality of the scan galvo
+	*/
+	if (heightPerChannelPerFrame < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height per channel must be >= 0");
+
+	const int heightAllChannelsPerFrame{ g_nChanPMT * heightPerChannelPerFrame };
+	const int heightPerChannelAllFrames{ heightPerChannelPerFrame * mNframes };
+	const int nChanPMThalf{ g_nChanPMT / 2 };
+
+	//Even 'iterFrame' (Raster scan the sample from the positive to the negative direction of the x-stage)
+	for (int iterFrame = 0; iterFrame < mNframes; iterFrame += 2)
+		for (int chanIndex = 0; chanIndex < nChanPMThalf; chanIndex++)
+		{
+			//CH00-CH07
+			std::memcpy(&mArray[((15 - chanIndex) * heightPerChannelPerFrame + iterFrame * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(iterFrame * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
+			//CH08-CH15
+			std::memcpy(&mArray[((7 - chanIndex) * heightPerChannelPerFrame + iterFrame * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(iterFrame * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
+		}
+	//Odd 'iterFrame' (Raster scan the sample from the negative to the positive direction of the x-stage)
+	for (int iterFrame = 1; iterFrame < mNframes; iterFrame += 2)
+		for (int chanIndex = 0; chanIndex < nChanPMThalf; chanIndex++)
+		{
+			//CH00-CH07
+			std::memcpy(&mArray[(chanIndex * heightPerChannelPerFrame + iterFrame * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(iterFrame * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
+			//CH08-CH15
+			std::memcpy(&mArray[((chanIndex + nChanPMThalf) * heightPerChannelPerFrame + iterFrame * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(iterFrame * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
+		}
+}
 
 //Divide the concatenated images in a stack of nFrames and save it (the microscope concatenates all the images and hands over a long image that has to be resized into individual images)
 void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const SCANDIR scanDirZ) const
@@ -520,10 +615,10 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, TIFFTAG_ImageJ.c_str());
 
 		//Write a frame to the file one strip at a time
-		for (int iterRow = 0; iterRow < height_pix; iterRow++)
+		for (int iterRow_pix = 0; iterRow_pix < height_pix; iterRow_pix++)
 		{
-			std::memcpy(buffer, &mArray[(frameIndex * height_pix + iterRow) * mBytesPerLine], mBytesPerLine);
-			if (TIFFWriteScanline(tiffHandle, buffer, iterRow, 0) < 0)
+			std::memcpy(buffer, &mArray[(frameIndex * height_pix + iterRow_pix) * mBytesPerLine], mBytesPerLine);
+			if (TIFFWriteScanline(tiffHandle, buffer, iterRow_pix, 0) < 0)
 				break;
 		}
 		TIFFWriteDirectory(tiffHandle); //Create a page structure. This gives a large overhead
@@ -540,6 +635,18 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 	std::cout << "Successfully saved: " << filename << ".tif\n";
 }
 
+//Save mArray as a text file
+void TiffU8::saveToTxt(const std::string filename) const
+{
+	std::ofstream fileHandle;									//Create output file
+	fileHandle.open(folderPath + filename + ".txt");			//Open the file
+
+	for (int iterPix = 0; iterPix < mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes; iterPix++)
+		fileHandle << mArray[iterPix] << "\n";					//Write each element
+
+	fileHandle.close();											//Close the txt file
+}
+
 //Mirror the odd frames (the frame index starts from 0) vertically because the galvo (vectical axis of the image) performs bi-directional scanning and the images from different frames are concatenated
 void TiffU8::mirrorOddFrames()
 {
@@ -547,13 +654,13 @@ void TiffU8::mirrorOddFrames()
 	{
 		U8 *buffer = new U8[mBytesPerLine];		//Buffer used to store a row of pixels
 
-		for (int frameIndex = 1; frameIndex < mNframes; frameIndex += 2)
+		for (int iterFrame = 1; iterFrame < mNframes; iterFrame += 2)
 		{
 			//Swap the first and last rows of the sub-image, then do the second and second last rows, etc
-			for (int iterRow = 0; iterRow < mHeightPerFrame_pix / 2; iterRow++)
+			for (int iterRow_pix = 0; iterRow_pix < mHeightPerFrame_pix / 2; iterRow_pix++)
 			{
-				const int eneTene{ frameIndex * mHeightPerFrame_pix + iterRow };				//Swap this row
-				const int moneMei{ (frameIndex + 1) * mHeightPerFrame_pix - iterRow - 1 };		//With this one
+				const int eneTene{ iterFrame * mHeightPerFrame_pix + iterRow_pix };				//Swap this row
+				const int moneMei{ (iterFrame + 1) * mHeightPerFrame_pix - iterRow_pix - 1 };		//With this one
 				std::memcpy(buffer, &mArray[eneTene*mBytesPerLine], mBytesPerLine);
 				std::memcpy(&mArray[eneTene*mBytesPerLine], &mArray[moneMei*mBytesPerLine], mBytesPerLine);
 				std::memcpy(&mArray[moneMei*mBytesPerLine], buffer, mBytesPerLine);
@@ -561,13 +668,6 @@ void TiffU8::mirrorOddFrames()
 		}
 		delete[] buffer;	//Release the memory
 	}
-}
-
-//Merge all the frames in a single image
-void TiffU8::mergeFrames()
-{
-	mHeightPerFrame_pix = mNframes * mHeightPerFrame_pix;
-	mNframes = 1;
 }
 
 //Mirror the entire array mArray vertically
@@ -597,23 +697,23 @@ void TiffU8::averageEvenOddFrames()
 
 		//Calculate the average of the even and odd frames separately
 		unsigned int* avg{ new unsigned int[2 * nPixPerFrame]() };
-		for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
-			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
+		for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
+			for (int iterPix = 0; iterPix < nPixPerFrame; iterPix++)
 			{
-				if (frameIndex % 2)
-					avg[pixIndex] += mArray[frameIndex * nPixPerFrame + pixIndex];					//Odd frames
+				if (iterFrame % 2)
+					avg[iterPix] += mArray[iterFrame * nPixPerFrame + iterPix];				//Odd frames
 				else
-					avg[nPixPerFrame + pixIndex] += mArray[frameIndex * nPixPerFrame + pixIndex];	//Even frames
+					avg[nPixPerFrame + iterPix] += mArray[iterFrame * nPixPerFrame + iterPix];	//Even frames
 			}
 
 		//Put 'evenImage' and 'oddImage' back into mArray. Concatenate 'oddImage' after 'evenImage'. Ignore the rest of the data in mArray
 		int	nFramesHalf{ mNframes / 2 };
-		for (int pixIndex = 0; pixIndex < 2 * nPixPerFrame; pixIndex++)
+		for (int iterPix = 0; iterPix < 2 * nPixPerFrame; iterPix++)
 		{
 			if (mNframes % 2)	//Odd number of frames: 1, 3, 5, etc
-				mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / (nFramesHalf + 1));
+				mArray[iterPix] = static_cast<U8>(1. * avg[iterPix] / (nFramesHalf + 1));
 			else				//Even number of frames: 0, 2, 4, etc
-				mArray[pixIndex] = static_cast<U8>(1. * avg[pixIndex] / nFramesHalf);
+				mArray[iterPix] = static_cast<U8>(1. * avg[iterPix] / nFramesHalf);
 		}
 
 		mNframes = 2;	//Keep the odd and even averages in separate pages
@@ -630,13 +730,13 @@ void TiffU8::averageFrames()
 		unsigned int* sum{ new unsigned int[nPixPerFrame]() };
 
 		//For each pixel, calculate the sum intensity over all the frames
-		for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
-			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-				sum[pixIndex] += mArray[frameIndex * nPixPerFrame + pixIndex];
+		for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
+			for (int iterPix = 0; iterPix < nPixPerFrame; iterPix++)
+				sum[iterPix] += mArray[iterFrame * nPixPerFrame + iterPix];
 
 		//Calculate the average intensity and assign it to mArray
-		for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-			mArray[pixIndex] = static_cast<U8>(1. * sum[pixIndex] / mNframes);
+		for (int iterPix = 0; iterPix < nPixPerFrame; iterPix++)
+			mArray[iterPix] = static_cast<U8>(1. * sum[iterPix] / mNframes);
 
 		//Update the number of frames in the stack to 1
 		mNframes = 1;
@@ -665,195 +765,19 @@ void TiffU8::binFrames(const int nFramesPerBin)
 
 		//Take the first nFramesPerBin frames and average them. Then continue averaging every nFramesPerBin frames until the end of the stack
 		for (int binIndex = 0; binIndex < nBins; binIndex++)
-			for (int frameIndex = 0; frameIndex < nFramesPerBin; frameIndex++)		//Frame index within a bin
-				for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)			//Read the individual pixels
-					sum[binIndex * nPixPerFrame + pixIndex] += mArray[binIndex * nPixPerBin + frameIndex * nPixPerFrame + pixIndex];
+			for (int iterFrame = 0; iterFrame < nFramesPerBin; iterFrame++)		//Frame index within a bin
+				for (int iterPix = 0; iterPix < nPixPerFrame; iterPix++)			//Read the individual pixels
+					sum[binIndex * nPixPerFrame + iterPix] += mArray[binIndex * nPixPerBin + iterFrame * nPixPerFrame + iterPix];
 
 		//Calculate the average intensity in a bin and assign it to mArray
 		for (int binIndex = 0; binIndex < nBins; binIndex++)
-			for (int pixIndex = 0; pixIndex < nPixPerFrame; pixIndex++)
-				mArray[binIndex * nPixPerFrame + pixIndex] = static_cast<U8>(1. * sum[binIndex * nPixPerFrame + pixIndex] / nFramesPerBin);
+			for (int iterPix = 0; iterPix < nPixPerFrame; iterPix++)
+				mArray[binIndex * nPixPerFrame + iterPix] = static_cast<U8>(1. * sum[binIndex * nPixPerFrame + iterPix] / nFramesPerBin);
 
 		//Update the number of frames in the stack
 		mNframes = nBins;
 		delete[] sum;
 	}
-}
-
-/*
-//Calculate the max and min tile coordinates in the image to obtain the sample contour
-std::vector<bool> TiffU8::maxMin_(std::vector<bool> input, const int nRow, const int nCol)
-{
-	mWidthPerFrame_pix;
-	std::vector<int> vec_indexMin;
-	std::vector<int> vec_indexMax;
-	for (std::vector<int>::size_type iter = 0; iter != input.size(); iter++)
-		;
-}
-*/
-
-//Flood fill the sample contour
-
-
-//Return the average
-double TiffU8::determineTileAverage_(const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const
-{
-	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
-
-	if (tileWidth_pix < 0 || tileHeight_pix < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row and column indices must be >=0");
-
-	const int nPixPerTile{ tileWidth_pix * tileHeight_pix };		//Number of pixels in a tile
-
-	int sum{ 0 };
-	for (int iterRow = tileRowIndex * tileHeight_pix; iterRow < (tileRowIndex + 1) * tileHeight_pix; iterRow++)
-		for (int iterCol = tileColIndex * tileWidth_pix; iterCol < (tileColIndex + 1) * tileWidth_pix; iterCol++)
-			sum += mArray[iterRow * mWidthPerFrame_pix + iterCol];
-	return 1. * sum / nPixPerTile;
-}
-
-//Divide the large image into tiles of size tileWidth_pix * tileHeight_pix and return an array of tiles indicating if the tile NOT dark dark
-std::vector<bool> TiffU8::determineBoolMap(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const
-{
-	if (threshold < 0 || threshold > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
-
-	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
-
-	const int nTileCol{ mWidthPerFrame_pix / tileWidth_pix };		//Number of tile-colums
-	const int nTileRow{ mHeightPerFrame_pix / tileHeight_pix };		//Number of tile-rows
-
-	std::vector<double> vec_avg;
-	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
-	for (int iterTileRow = 0; iterTileRow < nTileRow; iterTileRow++)
-		for (int iterTileCol = 0; iterTileCol < nTileCol; iterTileCol++)
-			vec_avg.push_back(determineTileAverage_(tileWidth_pix, tileHeight_pix, iterTileRow, iterTileCol));
-
-	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
-	std::vector<bool> vec_isBright;
-	for (std::vector<int>::size_type iter = 0; iter != vec_avg.size(); iter++)
-		vec_isBright.push_back(vec_avg.at(iter) >= threshold_255);
-
-	//For debugging
-	//for (std::vector<int>::size_type iter = 0; iter != nTileCol; iter++)
-		//std::cout << "avg count: " << vec_avg.at(iter) << "\tis dark?: " << vec_isBright.at(iter) << "\n";
-
-	std::ofstream fileHandle;									//Create output file
-	fileHandle.open(folderPath + "ArrayOfTiles.txt");			//Open the file
-	for (int iterTileRow = 0; iterTileRow < nTileRow; iterTileRow++)
-	{
-		//Iterate over the colums
-		for (int iterTileCol = 0; iterTileCol < nTileCol; iterTileCol++)
-			fileHandle << vec_isBright.at(iterTileRow * nTileCol + iterTileCol);
-		fileHandle << "\n";	//End the row
-	}
-	fileHandle.close();											//Close the txt file
-
-	return vec_isBright;
-}
-
-//Save mArray as a text file
-void TiffU8::saveToTxt(const std::string filename) const
-{
-	std::ofstream fileHandle;									//Create output file
-	fileHandle.open(folderPath + filename + ".txt");			//Open the file
-
-	for (int pixIndex = 0; pixIndex < mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes; pixIndex++)
-		fileHandle << mArray[pixIndex] << "\n";					//Write each element
-
-	fileHandle.close();											//Close the txt file
-}
-
-//Specify the frame to push. The frame index starts from 0
-void TiffU8::pushImage(const U8* inputArray, const int frameIndex) const
-{
-	if (frameIndex < 0 )
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be >= 0");
-	if (frameIndex > mNframes)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be smaller than or equal to the number of frames " + std::to_string(mNframes));
-
-	std::memcpy(&mArray[frameIndex * mHeightPerFrame_pix * mBytesPerLine], inputArray, mHeightPerFrame_pix * mBytesPerLine);
-}
-
-//Specify the frame interval to push. The frame index starts from 0
-void TiffU8::pushImage(const U8* inputArray, const int firstFrameIndex, const int lastFrameIndex) const
-{
-	if (firstFrameIndex < 0 || lastFrameIndex < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be >= 0");
-	if (firstFrameIndex > mNframes || lastFrameIndex > mNframes)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame index must be smaller than or equal to the number of frames");
-	if (lastFrameIndex < firstFrameIndex)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The last frame index must be >= the first frame index");
-
-	std::memcpy(&mArray[firstFrameIndex * mHeightPerFrame_pix * mBytesPerLine], inputArray, (lastFrameIndex - firstFrameIndex + 1) * mHeightPerFrame_pix * mBytesPerLine);
-}
-
-
-/*
-The input arrays have the structure:
-inputArrayA = |CH00 f1|
-			  |  .	  |
-			  |CH00 fN|
-			  |  .	  |
-			  |  .	  |
-			  |  .	  |
-			  |CH07 f1|
-			  |  .	  |
-			  |CH07 fN|
-
-inputArrayB = |CH08 f1|
-			  |  .	  |
-			  |CH08 fN|
-			  |  .	  |
-			  |  .	  |
-			  |  .	  |
-			  |CH15 f1|
-			  |  .	  |
-			  |CH15 fN|
-
-"Merging" places channels belonging to the same frame together. The resulting structure is:
-mArray = |CH00 f1|
-		 |  .	 |
-		 |CH15 f1|
-		 |CH15 f2|
-		 |  .	 |
-		 |  .	 |
-		 |  .	 |
-		 |CH00 f2|
-		 |CH00 fN|
-		 |  .	 |
-		 |CH15 fN|
-Note in the figure above that the channel ordering within each frame is reversed wrt the next frame because of the bidirectionality of the scan galvo
-*/
-void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const
-{
-	if (heightPerChannelPerFrame < 0 )
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height per channel must be >= 0");
-
-	const int heightAllChannelsPerFrame{ g_nChanPMT * heightPerChannelPerFrame };
-	const int heightPerChannelAllFrames{ heightPerChannelPerFrame * mNframes };
-	const int nChanPMThalf{ g_nChanPMT / 2 };
-
-	//Even 'frameIndex' (Raster scan the sample from the positive to the negative direction of the x-stage)
-	for (int frameIndex = 0; frameIndex < mNframes; frameIndex += 2)
-		for (int chanIndex = 0; chanIndex < nChanPMThalf; chanIndex++)
-		{
-			//CH00-CH07
-			std::memcpy(&mArray[((15 - chanIndex) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
-			//CH08-CH15
-			std::memcpy(&mArray[((7 - chanIndex) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
-		}
-	//Odd 'frameIndex' (Raster scan the sample from the negative to the positive direction of the x-stage)
-	for (int frameIndex = 1; frameIndex < mNframes; frameIndex += 2)
-		for (int chanIndex = 0; chanIndex < nChanPMThalf; chanIndex++)
-		{
-			//CH00-CH07
-			std::memcpy(&mArray[(chanIndex * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayA[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
-			//CH08-CH15
-			std::memcpy(&mArray[((chanIndex + nChanPMThalf) * heightPerChannelPerFrame + frameIndex * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(frameIndex * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
-		}
 }
 
 //Correct the image distortion induced by the nonlinear scanning of the RS
@@ -929,15 +853,15 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 		default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>().at(1) << " " <<
 		default_device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>().at(2)  <<" )\n"; //(1024 1024 64)
 	*/
-	
+
 	//Build a string with the openCl kernel
 	std::string openclFilename{ "openclKernel.cl" };
 	std::ifstream openclKernelCode{ openclFilePath + openclFilename };
-	if(!openclKernelCode.is_open())
+	if (!openclKernelCode.is_open())
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Failed opening the file " + openclFilename);
 	std::string sourceCode{ std::istreambuf_iterator<char>(openclKernelCode), std::istreambuf_iterator<char>() };	//Create a string from the beginning to the end of the file
 	cl::Program::Sources sources{ 1, std::make_pair(sourceCode.c_str(), sourceCode.length()) };
-	
+
 	cl::Context context{ { default_device } };
 	cl::Program program{ context, sources };
 	if (program.build({ default_device }) != CL_SUCCESS) {
@@ -965,7 +889,7 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	kernel_add.setArg(2, buffer_correctedArray);
 	kernel_add.setArg(3, mWidthPerFrame_pix);
 	kernel_add.setArg(4, buffer_debugger);
-	queue.enqueueNDRangeKernel(kernel_add,cl::NullRange,cl::NDRange(mWidthPerFrame_pix, heightAllFrames),cl::NullRange);
+	queue.enqueueNDRangeKernel(kernel_add, cl::NullRange, cl::NDRange(mWidthPerFrame_pix, heightAllFrames), cl::NullRange);
 	queue.finish();
 
 	//Read correctedArray from the device
@@ -1047,17 +971,17 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 		kk_precomputed[k] = t * (mWidthPerFrame_pix - 1.f);
 		//std::cout << kk_floats_precomputed[k] << "\n";
 	}
-	
+
 # pragma omp parallel for schedule(dynamic)
-	for (int iterRow = 0; iterRow < mHeightPerFrame_pix * mNframes; iterRow++) {
+	for (int iterRow_pix = 0; iterRow_pix < mHeightPerFrame_pix * mNframes; iterRow_pix++) {
 		for (int k = 0; k < mWidthPerFrame_pix; k++) {
 			const float kk_float{ kk_precomputed[k] };
 			const int kk{ static_cast<int>(std::floor(kk_float)) };
 			const int kk1{ clip(kk, 0, mWidthPerFrame_pix - 1) };
 			const int kk2{ clip(kk + 1, 0, mWidthPerFrame_pix - 1) };
-			const U8 value1{ mArray[iterRow * mWidthPerFrame_pix + kk1] };	//Read from the input array
-			const U8 value2{ mArray[iterRow * mWidthPerFrame_pix + kk2] };	//Read from the input array
-			correctedArray[iterRow * mWidthPerFrame_pix + k] = interpolateU8(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
+			const U8 value1{ mArray[iterRow_pix * mWidthPerFrame_pix + kk1] };	//Read from the input array
+			const U8 value2{ mArray[iterRow_pix * mWidthPerFrame_pix + kk2] };	//Read from the input array
+			correctedArray[iterRow_pix * mWidthPerFrame_pix + k] = interpolateU8(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
 		}
 	}
 
@@ -1066,7 +990,9 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
 
-void TiffU8::correct16XFOVslow(const double FFOVslow)
+//When using 16X beamlets, the slow axis is slightly stretched out (3 pixels on the edges, 0 pixels at the center)
+//I was trying to correct the slow axis with this function. However, I realized that it's better to apply an affine transformation instead
+void TiffU8::correctFOVslowCPU(const double FFOVslow)
 {
 	if (FFOVslow <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
@@ -1086,16 +1012,16 @@ void TiffU8::correct16XFOVslow(const double FFOVslow)
 		kk_precomputed[k] = xnew * (mHeightPerFrame_pix - 1.f);
 	}
 
-//# pragma omp parallel for schedule(dynamic)
-	for (int iterCol = 0; iterCol < mWidthPerFrame_pix; iterCol++) {
+	//# pragma omp parallel for schedule(dynamic)
+	for (int iterCol_pix = 0; iterCol_pix < mWidthPerFrame_pix; iterCol_pix++) {
 		for (int k = 0; k < mHeightPerFrame_pix; k++) {
 			const float kk_float{ kk_precomputed[k] };
 			const int kk{ static_cast<int>(std::floor(kk_float)) };
 			const int kk1{ clip(kk, 0, mHeightPerFrame_pix - 1) };
 			const int kk2{ clip(kk + 1, 0, mHeightPerFrame_pix - 1) };
-			const U8 value1{ mArray[kk1 * mWidthPerFrame_pix + iterCol] };	//Read from the input array
-			const U8 value2{ mArray[kk2 * mWidthPerFrame_pix + iterCol] };	//Read from the input array
-			correctedArray[k * mWidthPerFrame_pix + iterCol] = interpolateU8(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
+			const U8 value1{ mArray[kk1 * mWidthPerFrame_pix + iterCol_pix] };	//Read from the input array
+			const U8 value2{ mArray[kk2 * mWidthPerFrame_pix + iterCol_pix] };	//Read from the input array
+			correctedArray[k * mWidthPerFrame_pix + iterCol_pix] = interpolateU8(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
 		}
 	}
 
@@ -1104,7 +1030,7 @@ void TiffU8::correct16XFOVslow(const double FFOVslow)
 }
 
 //The PMT16X channels have some crosstalk. The image in every strip corresponding to a PMT16X channel is ghost-imaged on the neighbor top and bottom strips
-//To correct for this, substract a fraction of the neighbor top and neighbor bottom strips
+//To correct for this, substract a lineThicknessFactor of the neighbor top and neighbor bottom strips
 void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 {
 	if (crosstalkRatio < 0 || crosstalkRatio > 1.0)
@@ -1114,22 +1040,22 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 	const int nPixStrip{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
 	U8* correctedArray{ new U8[nPixPerFrame * mNframes] };
 
-	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
-		for (int pixIndex = 0; pixIndex < nPixStrip; pixIndex++)
+	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
+		for (int iterPix = 0; iterPix < nPixStrip; iterPix++)
 		{
 			//First channel
-			correctedArray[frameIndex * nPixPerFrame + pixIndex] = clipU8dual(
-				mArray[frameIndex * nPixPerFrame + pixIndex] - crosstalkRatio * mArray[frameIndex * nPixPerFrame + nPixStrip + pixIndex]);
+			correctedArray[iterFrame * nPixPerFrame + iterPix] = clipU8dual(
+				mArray[iterFrame * nPixPerFrame + iterPix] - crosstalkRatio * mArray[iterFrame * nPixPerFrame + nPixStrip + iterPix]);
 
 			//Last channel
-			correctedArray[frameIndex * nPixPerFrame + (g_nChanPMT - 1) * nPixStrip + pixIndex] = clipU8dual(
-				mArray[frameIndex * nPixPerFrame + (g_nChanPMT - 1) * nPixStrip + pixIndex] - crosstalkRatio * mArray[frameIndex * nPixPerFrame + (g_nChanPMT - 2) * nPixStrip + pixIndex]);
+			correctedArray[iterFrame * nPixPerFrame + (g_nChanPMT - 1) * nPixStrip + iterPix] = clipU8dual(
+				mArray[iterFrame * nPixPerFrame + (g_nChanPMT - 1) * nPixStrip + iterPix] - crosstalkRatio * mArray[iterFrame * nPixPerFrame + (g_nChanPMT - 2) * nPixStrip + iterPix]);
 
 			//All channels in between
 			for (int chanIndex = 1; chanIndex < g_nChanPMT - 1; chanIndex++)
-				correctedArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex] = clipU8dual(
-					mArray[frameIndex * nPixPerFrame + chanIndex * nPixStrip + pixIndex]
-					- crosstalkRatio * ( mArray[frameIndex * nPixPerFrame + (chanIndex - 1) * nPixStrip + pixIndex] + mArray[frameIndex * nPixPerFrame + (chanIndex + 1) * nPixStrip + pixIndex] ));
+				correctedArray[iterFrame * nPixPerFrame + chanIndex * nPixStrip + iterPix] = clipU8dual(
+					mArray[iterFrame * nPixPerFrame + chanIndex * nPixStrip + iterPix]
+					- crosstalkRatio * (mArray[iterFrame * nPixPerFrame + (chanIndex - 1) * nPixStrip + iterPix] + mArray[iterFrame * nPixPerFrame + (chanIndex + 1) * nPixStrip + iterPix]));
 		}
 	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
@@ -1168,10 +1094,10 @@ void TiffU8::flattenField(const double scaleFactor, const int lowerChan, const i
 	//Upscale mArray
 	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };							//Number of pixels in a single frame
 	const int nPixPerFramePerBeamlet{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
-	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
-		for (int pixIndex = 0; pixIndex < nPixPerFramePerBeamlet; pixIndex++)
+	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
+		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
-				mArray[frameIndex * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + pixIndex] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + pixIndex]);
+				mArray[iterFrame * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]);
 }
 
 /*Old way of doing the field flattening
@@ -1195,14 +1121,186 @@ void TiffU8::flattenField(const double maxScaleFactor)
 	//for (int chanIndex = 0; chanIndex < nChanPMT; chanIndex++)
 	//	std::cout << vec_upscalingFactors.at(chanIndex) << "\n";
 
-	for (int frameIndex = 0; frameIndex < mNframes; frameIndex++)
-		for (int pixIndex = 0; pixIndex < nPixPerFramePerBeamlet; pixIndex++)
+	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
+		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
-				mArray[frameIndex * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + pixIndex] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[frameIndex * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + pixIndex]);
+				mArray[iterFrame * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]);
 }
 */
 #pragma endregion "TiffU8"
 
+#pragma region "BoolMap"
+BoolMap::BoolMap(const TiffU8 &baseTiff, const int tileWidth_pix, const int tileHeight_pix, const double threshold):
+	mBaseTiff{ baseTiff },
+	mThreshold{ threshold },
+	mWidth_pix{ baseTiff.widthPerFrame_pix() },
+	mHeight_pix{ baseTiff.heightPerFrame_pix() },
+	mTileWidth_pix{ tileWidth_pix },
+	mTileHeight_pix{ tileHeight_pix },
+	mNtileCol{ mWidth_pix / tileWidth_pix },
+	mNtileRow{ mHeight_pix / tileHeight_pix },
+	mBoolmap{ generateBoolmap_() },
+	mTileMap{ mWidth_pix, mHeight_pix, 1 }
+{
+	if (threshold < 0 || threshold > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
+
+	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
+}
+
+//
+void BoolMap::SaveTileGrid(std::string filename, const OVERRIDE override) const
+{
+	const U8 lineColor{ 200 };
+	const double lineThicknessFactor{ 0.7 };
+	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mNtileCol) };
+	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mNtileRow) };
+
+	//Horizontal lines
+# pragma omp parallel for schedule(dynamic)
+	for (int iterTileRow = 0; iterTileRow < mNtileRow; iterTileRow++)
+	{
+		const int iterRow_pix{ iterTileRow * mTileHeight_pix };
+		for (int iterCol_pix = 0; iterCol_pix < mWidth_pix; iterCol_pix++)
+			for (int iterThickness = 0; iterThickness < lineThicknessHorizontal; iterThickness++)
+				(mBaseTiff.data())[(iterRow_pix + iterThickness) * mWidth_pix + iterCol_pix] = lineColor;
+	}
+# pragma omp parallel for schedule(dynamic)
+	//Vertical lines
+	for (int iterTileCol = 0; iterTileCol < mNtileCol; iterTileCol++)
+	{
+		const int iterCol_pix{ iterTileCol * mTileWidth_pix };
+		for (int iterRow_pix = 0; iterRow_pix < mHeight_pix; iterRow_pix++)
+			for (int iterThickness = 0; iterThickness < lineThicknessVertical; iterThickness++)
+				(mBaseTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix + iterThickness] = lineColor;
+	}
+
+	mBaseTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
+}
+
+void BoolMap::saveTileMap(std::string filename, const OVERRIDE override) const
+{
+	const U8 lineColor{ 255 };
+
+	for (int iterTileRow = 0; iterTileRow < mNtileRow; iterTileRow++)
+		for (int iterTileCol = 0; iterTileCol < mNtileCol; iterTileCol++)
+			if (mBoolmap.at(iterTileRow * mNtileCol + iterTileCol))
+			{
+				for (int iterRow_pix = iterTileRow * mTileHeight_pix; iterRow_pix < (iterTileRow + 1) * mTileHeight_pix; iterRow_pix++)
+					for (int iterCol_pix = iterTileCol * mTileWidth_pix; iterCol_pix < (iterTileCol + 1) * mTileWidth_pix; iterCol_pix++)
+						(mTileMap.data())[iterRow_pix * mWidth_pix + iterCol_pix] = lineColor;
+			}
+
+	mTileMap.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
+}
+
+//Take the top frame of the stack and return true if it's bright
+bool BoolMap::isAvgBright_(const double threshold, const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const
+{
+	if (threshold < 0 || threshold > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
+
+	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
+
+	if (tileWidth_pix < 0 || tileHeight_pix < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row and column indices must be >=0");
+
+	const int nPixPerTile{ tileWidth_pix * tileHeight_pix };		//Number of pixels in a tile
+
+	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
+
+	int sum{ 0 };
+	for (int iterRow_pix = tileRowIndex * tileHeight_pix; iterRow_pix < (tileRowIndex + 1) * tileHeight_pix; iterRow_pix++)
+		for (int iterCol_pix = tileColIndex * tileWidth_pix; iterCol_pix < (tileColIndex + 1) * tileWidth_pix; iterCol_pix++)
+			sum += (mBaseTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
+
+	return (1. * sum / nPixPerTile) > threshold_255;
+}
+
+//Take the top frame of the stack and return true if it's bright. Divide the image in quadrants for a better sensitivity
+bool BoolMap::isQuadrantBright_(const double threshold, const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const
+{
+	if (threshold < 0 || threshold > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
+
+	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
+
+	if (tileWidth_pix < 0 || tileHeight_pix < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row and column indices must be >=0");
+
+	const int nPixPerTile{ tileWidth_pix * tileHeight_pix };		//Number of pixels in the entire image
+	const double nPixQuad{ 1. * nPixPerTile / 4 };					//Number of pixels in a quadrant
+	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
+
+	//Divide the image in 4 quadrants
+	const int halfwidth{ tileWidth_pix / 2 }, halfHeight{ tileHeight_pix / 2 };
+
+	std::vector<int> vec_sum;	//Vector of the sum for each quadrant
+	//Iterate over the 4 quadrants. Start scanning the quadrant from the top-left corner of the image. Scan from left to right, then go back and scan the second row from left to right.
+	for (int iterQuadRow = 0; iterQuadRow < 2; iterQuadRow++)
+		for (int iterQuadCol = 0; iterQuadCol < 2; iterQuadCol++)
+		{
+			int sum{ 0 };
+			//Iterate over all the pixels inside a quadrant
+			for (int iterRow_pix = (tileRowIndex * tileHeight_pix) + iterQuadRow * halfHeight; iterRow_pix < tileRowIndex * tileHeight_pix + ((iterQuadRow + 1) * halfHeight); iterRow_pix++)
+				for (int iterCol_pix = (tileColIndex * tileWidth_pix) + iterQuadCol * halfwidth; iterCol_pix < tileColIndex * tileWidth_pix + ((iterQuadCol + 1)* halfwidth); iterCol_pix++)
+					sum += (mBaseTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
+			vec_sum.push_back(sum);
+		}
+
+	const double sumTL{ 1. * vec_sum.at(0) / nPixQuad };	//Average count top-left
+	const double sumTR{ 1. * vec_sum.at(1) / nPixQuad };	//Average count top-right
+	const double sumBL{ 1. * vec_sum.at(2) / nPixQuad };	//Average count bottom-left
+	const double sumBR{ 1. * vec_sum.at(3) / nPixQuad };	//Average count bottom-right
+
+	/*
+	//For debuging
+	std::cout << "Average count TL = " << sumTL << "\n";
+	std::cout << "Average count TR = " << sumTR << "\n";
+	std::cout << "Average count BL = " << sumBL << "\n";
+	std::cout << "Average count BR = " << sumBR << "\n";
+	*/
+
+	return (sumTL > threshold_255 || sumTR > threshold_255 || sumBL > threshold_255 || sumBR > threshold_255);
+}
+
+//Divide the large image into tiles of size tileWidth_pix * tileHeight_pix and return an array of tiles indicating if the tile NOT dark dark
+std::vector<bool> BoolMap::generateBoolmap_() const
+{
+	if (mThreshold < 0 || mThreshold > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
+
+	if (mTileWidth_pix <= 0 || mTileHeight_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
+
+	std::vector<bool> vec_isBright;
+	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
+	for (int iterTileRow = 0; iterTileRow < mNtileRow; iterTileRow++)
+		for (int iterTileCol = 0; iterTileCol < mNtileCol; iterTileCol++)
+			vec_isBright.push_back(isQuadrantBright_(mThreshold, mTileWidth_pix, mTileHeight_pix, iterTileRow, iterTileCol));
+
+	//For debugging
+	//for (std::vector<int>::size_type iter = 0; iter != mNtileCol; iter++)
+		//std::cout << "avg count: " << vec_avg.at(iter) << "\tis dark?: " << vec_isBright.at(iter) << "\n";
+
+	std::ofstream fileHandle;								//Create output file
+	fileHandle.open(folderPath + "BoolMap.txt");			//Open the file
+	for (int iterTileRow = 0; iterTileRow < mNtileRow; iterTileRow++)
+	{
+		for (int iterTileCol = 0; iterTileCol < mNtileCol; iterTileCol++)
+			fileHandle << static_cast<int>(vec_isBright.at(iterTileRow * mNtileCol + iterTileCol));
+		fileHandle << "\n";	//End the row
+	}
+	fileHandle.close();										//Close the txt file
+
+	return vec_isBright;
+}
+#pragma endregion "BoolMap"
+
+#pragma region "QuickStitcher"
 //tileWidth_pix = tile width, tileHeight_pix = tile height, nTileRow = number of tile-rows in the stitched image, nTileCol = number of tile-columns in the stitched image
 QuickStitcher::QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nTileRow, const int nTileCol) :
 	mStitchedTiff{ tileWidth_pix * nTileCol, tileHeight_pix * nTileRow, 1 },
@@ -1235,93 +1333,17 @@ void QuickStitcher::push(const TiffU8 &tile, const int rowIndex, const int colIn
 
 	/*
 	//Transfer the data from the input tile to mStitchedTiff. Old way: copy pixel by pixel
-	for (int iterCol = 0; iterCol < tileWidth_pix; iterCol++)
-		for (int iterRow = 0; iterRow < tileHeight_pix; iterRow++)
-			mStitchedTiff.data()[(rowShift_pix + iterRow) * mStitchedTiff.widthPerFrame_pix() + colShift_pix + iterCol] = tile.data()[iterRow * tileWidth_pix + iterCol];*/
+	for (int iterCol_pix = 0; iterCol_pix < tileWidth_pix; iterCol_pix++)
+		for (int iterRow_pix = 0; iterRow_pix < tileHeight_pix; iterRow_pix++)
+			mStitchedTiff.data()[(rowShift_pix + iterRow_pix) * mStitchedTiff.widthPerFrame_pix() + colShift_pix + iterCol_pix] = tile.data()[iterRow_pix * tileWidth_pix + iterCol_pix];*/
 
 	//Transfer the data from the input tile to mStitchedTiff. New way: copy row by row
-	for (int iterRow = 0; iterRow < tileHeight_pix; iterRow++)
-		std::memcpy(&mStitchedTiff.data()[(rowShift_pix + iterRow) * stitchedTiffBytesPerRow + colShift_pix * sizeof(U8)], &tile.data()[iterRow * tileBytesPerRow], tileBytesPerRow);
+	for (int iterRow_pix = 0; iterRow_pix < tileHeight_pix; iterRow_pix++)
+		std::memcpy(&mStitchedTiff.data()[(rowShift_pix + iterRow_pix) * stitchedTiffBytesPerRow + colShift_pix * sizeof(U8)], &tile.data()[iterRow_pix * tileBytesPerRow], tileBytesPerRow);
 }
 
 void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) const
 {
 	mStitchedTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
 }
-
-/*Obsolete
-#pragma region "Stack"
-TiffStack::TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ) :
-	mArrayDiffZ(widthPerFrame_pix,
-	heightPerFrame_pix, nDiffZ),
-	mArraySameZ(widthPerFrame_pix,
-	heightPerFrame_pix, nSameZ)
-{}
-
-void TiffStack::pushSameZ(const int indexSameZ, const U8* data)
-{
-	mArraySameZ.pushImage(indexSameZ, data);
-}
-
-//I want get the average of the stack mArraySameZ and store it in a single frame of mArrayDiffZ
-//However, if I apply averageFrames() on mArraySameZ, it collapses mArraySameZ to a single image (containing the average), and therefore, the next iterations won't be able to use mArraySameZ container anymore
-//Temporary hack: make a duplicate of mArraySameZ and calculate the average on it
-void TiffStack::pushDiffZ(const int indexDiffZ)
-{
-	TiffU8 avgTiff{ mArraySameZ.data(), mArraySameZ.widthPerTile(), mArraySameZ.heightPerTile(), mArraySameZ.nFrames() }; //Make a copy of mArraySameZ
-	avgTiff.averageFrames();																								//Average the images with the same Z
-	mArrayDiffZ.pushImage(indexDiffZ, avgTiff.data());
-}
-
-void TiffStack::saveToFile(const std::string filename, OVERRIDE override) const
-{
-	mArrayDiffZ.saveToFile(filename, TIFFSTRUCT::EN, override);
-
-	//For debugging. Save mArraySameZ
-	//mArraySameZ.saveToFile(filename, TIFFSTRUCT::EN, override);
-}
-#pragma endregion "Stack"
-*/
-
-/*
-//Take the top frame of the stack and return true if it's dark. Divide the image in quadrants for a better sensitivity
-bool TiffU8::isDark(const double threshold) const
-{
-	if (threshold < 0  || threshold > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
-
-	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
-	const int nPix{ mWidthPerFrame_pix * mHeightPerFrame_pix };		//Number of pixels in the entire image
-	const double nPixQuad{ 1. * nPix / 4 };							//Number of pixels in a quadrant
-
-	//Divide the image in 4 quadrants
-	const int halfwidth{ mWidthPerFrame_pix / 2 };
-	const int halfHeight{ mHeightPerFrame_pix / 2 };
-
-	std::vector<int> vec_sum;										//Vector of the sum for each quadrant
-	//Start scanning the tiles from the top-left corner of the image
-	//Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
-	for (int iterTileRow = 0; iterTileRow < 2; iterTileRow++)
-		for (int iterTileCol = 0; iterTileCol < 2; iterTileCol++)
-		{
-			int sum{ 0 };
-			for (int iterRow = iterTileRow * halfHeight; iterRow < (iterTileRow + 1) * halfHeight; iterRow++)
-				for (int iterCol = iterTileCol * halfwidth; iterCol < (iterTileCol + 1) * halfwidth; iterCol++)
-					sum += mArray[iterRow * mWidthPerFrame_pix + iterCol];
-			vec_sum.push_back(sum);
-		}
-
-	const double sumTL{ 1. * vec_sum.at(0) / nPixQuad };	//Average count top-left
-	const double sumTR{ 1. * vec_sum.at(1) / nPixQuad };	//Average count top-right
-	const double sumBL{ 1. * vec_sum.at(2) / nPixQuad };	//Average count bottom-left
-	const double sumBR{ 1. * vec_sum.at(3) / nPixQuad };	//Average count bottom-right
-
-	//For debuging
-	std::cout << "Average count TL = " << sumTL << "\n";
-	std::cout << "Average count TR = " << sumTR << "\n";
-	std::cout << "Average count BL = " << sumBL << "\n";
-	std::cout << "Average count BR = " << sumBR << "\n";
-
-	return (sumTL < threshold_255 && sumTR < threshold_255 && sumBL < threshold_255 && sumBR < threshold_255);
-}
-*/
+#pragma endregion "QuickStitcher"

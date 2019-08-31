@@ -143,7 +143,7 @@ private:
 	const int mBaud{ 115200 };
 	const int mTimeout{ 150 * ms };
 	const int mNpos{ 6 };						//Number of filter positions
-	const double mTurningSpeed{ 0.8 / seconds };	//The measured filterwheel turning speed is ~ 1 position/s. Choose a slightly smaller value
+	const double mTurningSpeed{ 0.8 / seconds };//The measured filterwheel turning speed is ~ 1 position/s. Choose a slightly smaller value
 	const int mRxBufSize{ 256 };				//Serial buffer size
 
 	int downloadPosition_() const;
@@ -177,7 +177,7 @@ private:
 	COM  mPort;
 	int mBaud;
 	const int mTimeout{ 100 * ms };
-	const double mTuningSpeed{ 35. / seconds };		//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
+	const double mTuningSpeed{ 35. / seconds };	//in nm per second. The measured laser tuning speed is ~ 40 nm/s. Choose a slightly smaller value
 	const int mRxBufSize{ 256 };				//Serial buffer size
 
 	int downloadWavelength_nm_() const;

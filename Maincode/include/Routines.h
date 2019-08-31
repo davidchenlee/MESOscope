@@ -51,8 +51,7 @@ namespace TestRoutines
 	//Postprocessing
 	void correctImage();
 	void quickStitcher();
-	void locateSample();
-	void isDark();
+	void thresholdSample();
 	void vectorOfObjects();
 
 	//Sequence

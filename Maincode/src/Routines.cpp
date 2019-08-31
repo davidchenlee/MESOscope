@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.500 ) * mm, (21.075)* mm, (16.820 + 0.000) * mm };
+POSITION3 stackCenterXYZ{ (44.500 ) * mm, (21.075)* mm, (16.920 + 0.030) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
@@ -142,7 +142,7 @@ namespace Routines
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
-		RScanner.isRunning();					//To make sure that the RS is running
+		RScanner.isRunning();						//To make sure that the RS is running
 
 		//SCANNERS
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2 };
@@ -206,7 +206,7 @@ namespace Routines
 				"_zi=" + toString(stagePositionXYZ.front().ZZ / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().ZZ / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) + 
 				"_avg=" + toString(nFramesCont * nSameLocation, 0) );
 
-			output.binFrames(nSameLocation);									///Divide the images in bins and return the binned image
+			output.binFrames(nSameLocation);									//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
 			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);	//Save the scanZ to file
 			pressESCforEarlyTermination();
@@ -270,13 +270,13 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in z
-		const int nFramesBinning{ 4 };																	//For binning
+		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
+		const int nFramesBinning{ 1 };																	//For binning
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um  };
 
-		const int nFrames{ static_cast<int>(nFramesBinning * stackDepth / pixelSizeZafterBinning) };		//Number of frames BEFORE binning for continuous acquisition
-		const double pixelSizeZbeforeBinning{ pixelSizeZafterBinning / nFramesBinning };					//Pixel size per z frame
+		const int nFrames{ static_cast<int>(nFramesBinning * stackDepth / pixelSizeZafterBinning) };	//Number of frames BEFORE binning for continuous acquisition
+		const double pixelSizeZbeforeBinning{ pixelSizeZafterBinning / nFramesBinning };				//Pixel size per z frame
 		const double pixelSizeXY{ 0.5 * um };
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
@@ -358,18 +358,18 @@ namespace Routines
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Continuous x-stage scanning available for single beam only");
 
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };		//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };			//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
-		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };												//Initial scan direction of stage 
-		const double stitchedWidth{ 0.150 * mm };												//Total width of the stitched image
+		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };													//Initial scan direction of stage 
+		const double stitchedWidth{ 10.000 * mm };													//Total width of the stitched image
 
-		const double tileWidth{ 150. * um };													//Width of 1 strip (long vertical tile)
-		const int nCol{ static_cast<int>(std::ceil(1. * stitchedWidth / tileWidth)) };			//Number of columns in the stitched image
-		const int tileWidth_pix{ 300 };															//Number of pixel width in a strip (long vertical tile)
-		const double stitchedHeight{ 10.080 * mm };//= 36 * 0.280 * mm							//Total height of the stitched image = height of the strip (long vertical tile). If changed, the x-stage timing must be recalibrated
-		const double pixelSizeX{ 1.0 * um };													//WARNING: the image becomes distorted for pixelSizeX < 1 um
-		const int stitchedHeight_pix{ static_cast<int>(stitchedHeight / pixelSizeX) };			//Total pixel height in the stitched image
+		const double tileWidth{ 150. * um };														//Width of 1 strip (long vertical tile)
+		const int nCol{ static_cast<int>(std::ceil(1. * stitchedWidth / tileWidth)) };				//Number of columns in the stitched image
+		const int tileWidth_pix{ 300 };																//Number of pixel width in a strip (long vertical tile)
+		const double stitchedHeight{ 10.080 * mm };//= 36 * 0.280 * mm								//Total height of the stitched image = height of the strip (long vertical tile). If changed, the x-stage timing must be recalibrated
+		const double pixelSizeX{ 1.0 * um };														//WARNING: the image becomes distorted for pixelSizeX < 1 um
+		const int stitchedHeight_pix{ static_cast<int>(stitchedHeight / pixelSizeX) };				//Total pixel height in the stitched image
 
 		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
 
@@ -612,21 +612,21 @@ namespace Routines
 		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2, &virtualLaser };
 
 		//OPEN THE UNIBLITZ SHUTTERS
-		virtualLaser.openShutter();	//The destructor will close the shutter automatically
+		virtualLaser.openShutter();				//The destructor will close the shutter automatically
 
 		while (true)
 		{
-			virtualLaser.setPower(fluorLabel.mScanPmin);	//Set the laser power
+			virtualLaser.setPower(fluorLabel.mScanPmin);					//Set the laser power
 
 			RTcontrol.run();
 			Image image{ RTcontrol };
-			image.acquire();							//Execute the control sequence
-			image.averageFrames();						//Average the frames acquired via continuous acquisition
+			image.acquire();												//Execute the control sequence
+			image.averageFrames();											//Average the frames acquired via continuous acquisition
 			//image.correct(RScanner.mFFOV);
 			image.save("Untitled", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);	//Save individual files
 			Sleep(700);
 
-			pressESCforEarlyTermination();						//Early termination if ESC is pressed
+			pressESCforEarlyTermination();									//Early termination if ESC is pressed
 		}
 	}
 }//namespace
@@ -744,7 +744,7 @@ namespace TestRoutines
 		RScanner.isRunning();		//To make sure that the RS is running
 
 		//SCANNERS
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };					//Full FOV in the slow axis
 		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2 };
 
 		//LASER
@@ -950,7 +950,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
-		const int nFramesCont{ 200 };			//Number of frames for continuous acquisition
+		const int nFramesCont{ 200 };						//Number of frames for continuous acquisition
 
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
@@ -961,7 +961,7 @@ namespace TestRoutines
 		const double Pi{ 192. * mW }, Pf{ 336. * mW };
 		//const double Pi{ 30. * mW }, Pf{ 60. * mW };
 		//pockels.pushPowerSinglet(400 * us, Pf, OVERRIDE::EN);
-		pockels.powerLinearScaling(Pi, Pf);			//Linearly scale the laser power from the first to the last frame
+		pockels.powerLinearScaling(Pi, Pf);					//Linearly scale the laser power from the first to the last frame
 		//pockels.powerLinearScaling(0.96 * Pf, Pi);
 
 		//Test the voltage setpoint
@@ -1106,14 +1106,14 @@ namespace TestRoutines
 		std::string inputFilename{ "Liver20190812_02_F1040nm_P=800.0mW_Pinc=1.60mWpum_x=44.000_y=21.000_zi=16.6200_zf=16.7300_Step=0.0010_bin=4 (1)" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
-		//image.correct16XFOVslow(1);
+		//image.correctFOVslowCPU(1);
 		//image.correctRSdistortionGPU(200. * um);	
 		image.flattenField(2.0, 4, 11);
 		image.suppressCrosstalk(0.2);
 		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 		//image.binFrames(5);
-		//image.splitIntoFrames(10);
+		//image.splitFrames(10);
 		//image.mirrorOddFrames();
 		//image.averageEvenOddFrames();
 
@@ -1169,27 +1169,17 @@ namespace TestRoutines
 		pressAnyKeyToCont();
 	}
 
-	void locateSample()
+	void thresholdSample()
 	{
-		std::string outputFilename{ "output" };
-		TiffU8 image{ "Liver20190812_02_F1040nm_P=30.0mWpum_xi=51.200_xf=41.100_yi=23.100_yf=18.150_z=20.2440_Step=0.0005" };
-
 		const int tileWidth_pix{ 300 };
-		const int tileHeight_pix{ 400 };
-		const int nTileCol{ image.widthPerFrame_pix() / tileWidth_pix };
-		const int nTileRow{ image.heightPerFrame_pix() / tileHeight_pix };
+		const int tileHeight_pix{ 560 };
+		std::string inputFilename{ "aaa" };
+		std::string outputFilename{ "output" };
 
-		image.determineBoolMap(0.010, tileWidth_pix, tileHeight_pix);
-		//image.isDark(0.01);
-
-		pressAnyKeyToCont();
-	}
-
-	void isDark()
-	{
-		std::string inputFilename{ "Liver_V750nm_P=7.0mWpum_xi=53.500_xf=49.400_y=22.300_z=17.7840_Step=0.0005" };
 		TiffU8 image{ inputFilename };
-		image.determineBoolMap(0.004, 300, 400);
+		BoolMap boolmap{ image, tileWidth_pix, tileHeight_pix, 0.03 };
+		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
+		boolmap.SaveTileGrid("TileGrid", OVERRIDE::EN);
 
 		pressAnyKeyToCont();
 	}
@@ -1444,7 +1434,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (17.900) * mm };
+		const double slicePlaneZ{ (18.000) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

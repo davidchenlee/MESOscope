@@ -20,7 +20,6 @@ namespace FPGAfunc
 	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
 }
 
-//Establish communication to the FPGA
 class FPGA
 {
 public:
@@ -58,7 +57,6 @@ private:
 	void readChunk_(const int &nPixPerBeamletAllFrames, int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 &FIFOOUTpc, U32* buffer, int &timeout) const;
 };
 
-//Create a control sequence and pixelclock
 class RTcontrol
 {
 public:
@@ -130,8 +128,8 @@ public:
 	FPGAexception(const std::string& message) : std::runtime_error(message.c_str()) {}
 };
 
-class ImageException : public std::runtime_error
+class DataDownloadException : public std::runtime_error
 {
 public:
-	ImageException(const std::string& message) : std::runtime_error(message.c_str()) {}
+	DataDownloadException(const std::string& message) : std::runtime_error(message.c_str()) {}
 };

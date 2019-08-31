@@ -59,22 +59,23 @@ public:
 	int widthPerFrame_pix() const;
 	int heightPerFrame_pix() const;
 	int nFrames() const;
-	void splitIntoFrames(const int nFrames);
-	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override = OVERRIDE::DIS, const SCANDIR scanDirZ = SCANDIR::UPWARD) const;
-	void mirrorOddFrames();
+
+	void pushImage(const U8* inputArray, const int frameIndex) const;
+	void pushImage(const U8* inputArray, const int indexFirstFrame, const int indexLastFrame) const;
+	void splitFrames(const int nFrames);
 	void mergeFrames();
+	void mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
+	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override = OVERRIDE::DIS, const SCANDIR scanDirZ = SCANDIR::UPWARD) const;
+	void saveToTxt(const std::string fileName) const;
+
+	void mirrorOddFrames();
 	void mirror();
 	void averageEvenOddFrames();
 	void averageFrames();
 	void binFrames(const int nFramesPerBin);
-	std::vector<bool> determineBoolMap(const double threshold, const int tileWidth_pix, const int tileHeight_pix) const;
-	void saveToTxt(const std::string fileName) const;
-	void pushImage(const U8* inputArray, const int frameIndex) const;
-	void pushImage(const U8* inputArray, const int firstFrameIndex, const int lastFrameIndex) const;
-	void mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
 	void correctRSdistortionGPU(const double FFOVfast);
 	void correctRSdistortionCPU(const double FFOVfast);
-	void correct16XFOVslow(const double FFOVfast);
+	void correctFOVslowCPU(const double FFOVfast);
 	void suppressCrosstalk(const double crosstalkRatio = 1.0);
 	void flattenField(const double scaleFactor, const int lowerChan, const int higherChan);
 private:
@@ -84,7 +85,29 @@ private:
 	int mNframes;
 	int mBytesPerLine; 
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
-	double determineTileAverage_(const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const;
+};
+
+class BoolMap
+{
+public:
+	BoolMap(const TiffU8 &baseTiff, const int tileWidth_pix, const int tileHeight_pix, const double threshold);
+	void SaveTileGrid(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+private:
+	const TiffU8 &mBaseTiff;
+	double mThreshold;				//Threshold for generating the boolmap
+	int mWidth_pix;					//Pixel width of the entire image
+	int mHeight_pix;				//Pixel height of the entire image
+	int mTileWidth_pix;				//Pixel width of a tile
+	int mTileHeight_pix;			//Pixel height of a tile
+	int mNtileCol;					//Number of tile-colums
+	int mNtileRow;					//Number of tile-rows
+	std::vector<bool> mBoolmap;
+	TiffU8 mTileMap;
+
+	bool isAvgBright_(const double threshold, const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const;
+	bool isQuadrantBright_(const double threshold, const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const;
+	std::vector<bool> generateBoolmap_() const;
 };
 
 class QuickStitcher
@@ -98,18 +121,3 @@ private:
 	int mNrow;
 	int mNcol;
 };
-
-/*Obsolete
-class TiffStack
-{
-public:
-	TiffStack(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nDiffZ, const int nSameZ);
-	void pushSameZ(const int indexSameZ, const U8* data);
-	void pushDiffZ(const int indexDiffZ);
-	void saveToFile(const std::string filename, OVERRIDE override) const;
-private:
-	TiffU8 mArraySameZ;		//For imaging the same z plane many times and then compute the average image
-	TiffU8 mArrayDiffZ;		//For imaging different z planes
-};
-*/
-

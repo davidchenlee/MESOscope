@@ -433,7 +433,7 @@ void FPGA::readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 
 		readChunk_(nPixPerBeamletAllFrames, nTotalPixReadB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufferB, nullReadCounterB);	//FIFOOUTpc B
 
 		if (nullReadCounterA > timeout_iter && nullReadCounterB > timeout_iter)
-			throw ImageException((std::string)__FUNCTION__ + ": FIFO null-reading timeout");
+			throw DataDownloadException((std::string)__FUNCTION__ + ": FIFO null-reading timeout");
 
 		//std::cout << "FIFO A: " << nTotalPixReadA << "\tFIFO B: " << nTotalPixReadB << "\n";	//For debugging
 		//std::cout << "nullReadCounter A: " << nullReadCounterA << "\tnullReadCounter: " << nullReadCounterB << "\n";	//For debugging
@@ -449,7 +449,7 @@ void FPGA::readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 
 
 	//If all the expected data is NOT read successfully
 	if (nTotalPixReadA < nPixPerBeamletAllFrames || nTotalPixReadB < nPixPerBeamletAllFrames)
-		throw ImageException((std::string)__FUNCTION__ + ": Received less FIFO elements than expected");
+		throw DataDownloadException((std::string)__FUNCTION__ + ": Received less FIFO elements than expected");
 }
 
 //Load the imaging parameters onto the FPGA. See 'Const.cpp' for the definition of each variable
@@ -714,9 +714,9 @@ void RTcontrol::downloadData()
 		{
 			mFpga.readFIFOOUTpc(mNpixPerBeamletAllFrames, mBufferA, mBufferB);			//Read the data received in FIFOOUTpc
 		}
-		catch (const ImageException &e)
+		catch (const DataDownloadException &e)
 		{
-			std::cerr << "An ImageException has occurred in: " << e.what() << "\n";
+			std::cerr << "A data exception has occurred in: " << e.what() << "\n";
 			//throw;//Do not terminate the entire sequence. Notify the exception and continue with the next iteration
 		}
 	}

@@ -87,37 +87,38 @@ private:
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
 };
 
+//II is the row index and JJ is the column index of the tile wrt the stitched image
 class BoolMap
 {
 public:
-	BoolMap(const TiffU8 &baseTiff, const int tileWidth_pix, const int tileHeight_pix, const double threshold);
-	void SaveTileGrid(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+	BoolMap(const TiffU8 &tiff, const int tileWidth_pix, const int tileHeight_pix, const double threshold);
+	bool isTileBright(const int II, const int JJ);
+	void saveTileMapToText(std::string filename);
+	void SaveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 private:
-	const TiffU8 &mBaseTiff;
+	const TiffU8 &mTiff;
 	double mThreshold;				//Threshold for generating the boolmap
-	int mWidth_pix;					//Pixel width of the entire image
-	int mHeight_pix;				//Pixel height of the entire image
+	int mWidth_pix;					//Pixel width of the stitched image
+	int mHeight_pix;				//Pixel height of the stitched image
 	int mTileWidth_pix;				//Pixel width of a tile
 	int mTileHeight_pix;			//Pixel height of a tile
-	int mNtileCol;					//Number of tile-colums
-	int mNtileRow;					//Number of tile-rows
-	std::vector<bool> mBoolmap;
-	TiffU8 mTileMap;
+	INDICES2 mStackArrayDimIJ;		//Dimension of the tile array
+	std::vector<bool> mIsBrightMap;
 
-	bool isAvgBright_(const double threshold, const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const;
-	bool isQuadrantBright_(const double threshold, const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const;
-	std::vector<bool> generateBoolmap_() const;
+	bool isAvgBright_(const double threshold, const int II, const int JJ) const;
+	bool isQuadrantBright_(const double threshold, const int II, const int JJ) const;
 };
 
 class QuickStitcher
 {
 public:
-	QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nRow, const int nCol);
-	void push(const TiffU8 &tile, const int rowIndex, const int colIndex);
+	QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nTileRow, const int nTileCol);
+	void push(const TiffU8 &tile, const int II, const int JJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
 private:
 	TiffU8 mStitchedTiff;
 	int mNrow;
 	int mNcol;
+	INDICES2 mStackArrayDimIJ;		//Dimension of the tile array
 };

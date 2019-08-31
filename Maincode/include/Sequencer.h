@@ -116,8 +116,8 @@ private:
 	Sample mSample;											//Sample
 	const Stack mStack;										//Stack
 	std::vector<Commandline> mCommandList;
-	int mII;												//Iterator for the x-stage
-	int mJJ;												//Iterator for the y-stage
+	int mII;												//Tile iterator for the x-stage
+	int mJJ;												//Tile iterator for the y-stage
 	int mCommandCounter{ 0 };
 
 	const SCANDIR3 mInitialScanDirXYZ{ SCANDIR::LEFTWARD,	//Initial scan directions wrt the x-stage, y-stage, and z-stage axes (the imaging has the opposite direction)

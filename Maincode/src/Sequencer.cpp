@@ -429,6 +429,8 @@ void Sequencer::reserveMemoryBlock_()
 	mCommandList.reserve(3 * nTotalStackEntireSample + mNtotalSlices - 1);
 }
 
+//II is the row index of the tile wrt the stitched image, which coincide with the X stage direction
+//JJ is the column index of the tile wrt the stitched image, which coincide with the Y stage direction
 POSITION2 Sequencer::stackIndicesToStackCenter_(const INDICES2 stackIndexIJ) const
 {
 	if (stackIndexIJ.II < 0 || stackIndexIJ.II >= mStackArrayDimIJ.II)

@@ -3,6 +3,7 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
+- Keep an eye on the z stage bouncing that triggers the ctl&acq
 - Fix exp scaling the pockels. The problem is that for very low powers, the scaling exceeds the max = 4.0
 - how to deal with vector of objects containing pointer-arrays?
 - Implement suppressCrosstalk() flattenField() on the GPU

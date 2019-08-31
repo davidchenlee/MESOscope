@@ -723,7 +723,8 @@ void RTcontrol::downloadData()
 	correctInterleaved_();					//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines
 											//In case of pipelining, remove it from RTcontrol::initialize() and call it separately
 
-	mFpga.setMainTrig(MAINTRIG::PC);		//Disable the stage triggering the ctl&acq sequence to allow positioning the stage after acquisition
+	mFpga.setMainTrig(MAINTRIG::PC);						//Disable the stage triggering the ctl&acq sequence to allow positioning the stage after acquisition
+	Sleep(static_cast<DWORD>(g_postSequenceTimer / ms));	//Wait for at least the post-sequence timeout
 }
 
 U32* RTcontrol::dataBufferA() const

@@ -1130,113 +1130,139 @@ void TiffU8::flattenField(const double maxScaleFactor)
 #pragma endregion "TiffU8"
 
 #pragma region "BoolMap"
-BoolMap::BoolMap(const TiffU8 &baseTiff, const int tileWidth_pix, const int tileHeight_pix, const double threshold):
-	mBaseTiff{ baseTiff },
+BoolMap::BoolMap(const TiffU8 &tiff, const int tileWidth_pix, const int tileHeight_pix, const double threshold):
+	mTiff{ tiff },
 	mThreshold{ threshold },
-	mWidth_pix{ baseTiff.widthPerFrame_pix() },
-	mHeight_pix{ baseTiff.heightPerFrame_pix() },
+	mWidth_pix{ tiff.widthPerFrame_pix() },
+	mHeight_pix{ tiff.heightPerFrame_pix() },
 	mTileWidth_pix{ tileWidth_pix },
 	mTileHeight_pix{ tileHeight_pix },
-	mNtileCol{ mWidth_pix / tileWidth_pix },
-	mNtileRow{ mHeight_pix / tileHeight_pix },
-	mBoolmap{ generateBoolmap_() },
-	mTileMap{ mWidth_pix, mHeight_pix, 1 }
+	mStackArrayDimIJ{ mHeight_pix / tileHeight_pix , mWidth_pix / tileWidth_pix }
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
 
 	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
+
+	//Divide the large image into tiles of size tileWidth_pix * tileHeight_pix and return an array of tiles indicating if the tile NOT dark dark
+	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
+	for (int iterTileRow = 0; iterTileRow < mStackArrayDimIJ.II; iterTileRow++)
+		for (int iterTileCol = 0; iterTileCol < mStackArrayDimIJ.JJ; iterTileCol++)
+			mIsBrightMap.push_back(isQuadrantBright_(mThreshold, iterTileRow, iterTileCol));
 }
 
-//
-void BoolMap::SaveTileGrid(std::string filename, const OVERRIDE override) const
+//Indicate if a specific tile in the stitched image is bright. The tile indices start form 0
+bool BoolMap::isTileBright(const int II, const int JJ)
+{
+	if (II < 0 || II >= mStackArrayDimIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index must be in the range [0-" + toString(mStackArrayDimIJ.II,0) + "]");
+
+	if (JJ < 0 || JJ >= mStackArrayDimIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index must be in the range [0-" + toString(mStackArrayDimIJ.JJ, 0) + "]");
+
+	return mIsBrightMap.at(II * mStackArrayDimIJ.JJ + JJ);
+}
+
+//Save the boolmap as a text file
+void BoolMap::saveTileMapToText(std::string filename)
+{
+	std::ofstream fileHandle;
+	fileHandle.open(folderPath + filename + ".txt");
+	for (int iterTileRow = 0; iterTileRow < mStackArrayDimIJ.II; iterTileRow++)
+	{
+		for (int iterTileCol = 0; iterTileCol < mStackArrayDimIJ.JJ; iterTileCol++)
+			fileHandle << static_cast<int>(mIsBrightMap.at(iterTileRow * mStackArrayDimIJ.JJ + iterTileCol));
+		fileHandle << "\n";	//End the row
+	}
+	fileHandle.close();
+}
+
+//Overlap a grid with the tiles on the stitched image
+void BoolMap::SaveTileGridOverlap(std::string filename, const OVERRIDE override) const
 {
 	const U8 lineColor{ 200 };
 	const double lineThicknessFactor{ 0.7 };
-	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mNtileCol) };
-	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mNtileRow) };
+	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mStackArrayDimIJ.JJ) };
+	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mStackArrayDimIJ.II) };
 
 	//Horizontal lines
 # pragma omp parallel for schedule(dynamic)
-	for (int iterTileRow = 0; iterTileRow < mNtileRow; iterTileRow++)
+	for (int iterTileRow = 0; iterTileRow < mStackArrayDimIJ.II; iterTileRow++)
 	{
 		const int iterRow_pix{ iterTileRow * mTileHeight_pix };
 		for (int iterCol_pix = 0; iterCol_pix < mWidth_pix; iterCol_pix++)
 			for (int iterThickness = 0; iterThickness < lineThicknessHorizontal; iterThickness++)
-				(mBaseTiff.data())[(iterRow_pix + iterThickness) * mWidth_pix + iterCol_pix] = lineColor;
+				(mTiff.data())[(iterRow_pix + iterThickness) * mWidth_pix + iterCol_pix] = lineColor;
 	}
-# pragma omp parallel for schedule(dynamic)
+
 	//Vertical lines
-	for (int iterTileCol = 0; iterTileCol < mNtileCol; iterTileCol++)
+# pragma omp parallel for schedule(dynamic)
+	for (int iterTileCol = 0; iterTileCol < mStackArrayDimIJ.JJ; iterTileCol++)
 	{
 		const int iterCol_pix{ iterTileCol * mTileWidth_pix };
 		for (int iterRow_pix = 0; iterRow_pix < mHeight_pix; iterRow_pix++)
 			for (int iterThickness = 0; iterThickness < lineThicknessVertical; iterThickness++)
-				(mBaseTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix + iterThickness] = lineColor;
+				(mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix + iterThickness] = lineColor;
 	}
 
-	mBaseTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
+	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
 
+//Generate a Tiff with a binary dark or bright grid of tiles
 void BoolMap::saveTileMap(std::string filename, const OVERRIDE override) const
 {
-	const U8 lineColor{ 255 };
+	const U8 lineColor{ 255 };	//Shade level
 
-	for (int iterTileRow = 0; iterTileRow < mNtileRow; iterTileRow++)
-		for (int iterTileCol = 0; iterTileCol < mNtileCol; iterTileCol++)
-			if (mBoolmap.at(iterTileRow * mNtileCol + iterTileCol))
+	TiffU8 tileMap{ mWidth_pix, mHeight_pix, 1 };
+	for (int iterTileRow = 0; iterTileRow < mStackArrayDimIJ.II; iterTileRow++)
+		for (int iterTileCol = 0; iterTileCol < mStackArrayDimIJ.JJ; iterTileCol++)
+			if (mIsBrightMap.at(iterTileRow * mStackArrayDimIJ.JJ + iterTileCol))	//If the tile is bright, shade it
 			{
 				for (int iterRow_pix = iterTileRow * mTileHeight_pix; iterRow_pix < (iterTileRow + 1) * mTileHeight_pix; iterRow_pix++)
 					for (int iterCol_pix = iterTileCol * mTileWidth_pix; iterCol_pix < (iterTileCol + 1) * mTileWidth_pix; iterCol_pix++)
-						(mTileMap.data())[iterRow_pix * mWidth_pix + iterCol_pix] = lineColor;
+						(tileMap.data())[iterRow_pix * mWidth_pix + iterCol_pix] = lineColor;
 			}
 
-	mTileMap.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
+	tileMap.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
 
 //Take the top frame of the stack and return true if it's bright
-bool BoolMap::isAvgBright_(const double threshold, const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const
+bool BoolMap::isAvgBright_(const double threshold, const int tileRowIndex, const int tileColIndex) const
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
 
-	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
-
-	if (tileWidth_pix < 0 || tileHeight_pix < 0)
+	if (tileRowIndex < 0 || tileColIndex < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row and column indices must be >=0");
 
-	const int nPixPerTile{ tileWidth_pix * tileHeight_pix };		//Number of pixels in a tile
+	const int nPixPerTile{ mTileWidth_pix * mTileHeight_pix };		//Number of pixels in a tile
 
 	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
 
 	int sum{ 0 };
-	for (int iterRow_pix = tileRowIndex * tileHeight_pix; iterRow_pix < (tileRowIndex + 1) * tileHeight_pix; iterRow_pix++)
-		for (int iterCol_pix = tileColIndex * tileWidth_pix; iterCol_pix < (tileColIndex + 1) * tileWidth_pix; iterCol_pix++)
-			sum += (mBaseTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
+	for (int iterRow_pix = tileRowIndex * mTileHeight_pix; iterRow_pix < (tileRowIndex + 1) * mTileHeight_pix; iterRow_pix++)
+		for (int iterCol_pix = tileColIndex * mTileWidth_pix; iterCol_pix < (tileColIndex + 1) * mTileWidth_pix; iterCol_pix++)
+			sum += (mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
 
 	return (1. * sum / nPixPerTile) > threshold_255;
 }
 
 //Take the top frame of the stack and return true if it's bright. Divide the image in quadrants for a better sensitivity
-bool BoolMap::isQuadrantBright_(const double threshold, const int tileWidth_pix, const int tileHeight_pix, const int tileRowIndex, const int tileColIndex) const
+bool BoolMap::isQuadrantBright_(const double threshold, const int tileRowIndex, const int tileColIndex) const
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
 
-	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
-
-	if (tileWidth_pix < 0 || tileHeight_pix < 0)
+	if (tileRowIndex < 0 || tileColIndex < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row and column indices must be >=0");
 
-	const int nPixPerTile{ tileWidth_pix * tileHeight_pix };		//Number of pixels in the entire image
+	const int nPixPerTile{ mTileWidth_pix * mTileHeight_pix };		//Number of pixels in the tile
 	const double nPixQuad{ 1. * nPixPerTile / 4 };					//Number of pixels in a quadrant
 	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
 
 	//Divide the image in 4 quadrants
-	const int halfwidth{ tileWidth_pix / 2 }, halfHeight{ tileHeight_pix / 2 };
+	const int halfwidth{ mTileWidth_pix / 2 }, halfHeight{ mTileHeight_pix / 2 };
 
 	std::vector<int> vec_sum;	//Vector of the sum for each quadrant
 	//Iterate over the 4 quadrants. Start scanning the quadrant from the top-left corner of the image. Scan from left to right, then go back and scan the second row from left to right.
@@ -1245,9 +1271,9 @@ bool BoolMap::isQuadrantBright_(const double threshold, const int tileWidth_pix,
 		{
 			int sum{ 0 };
 			//Iterate over all the pixels inside a quadrant
-			for (int iterRow_pix = (tileRowIndex * tileHeight_pix) + iterQuadRow * halfHeight; iterRow_pix < tileRowIndex * tileHeight_pix + ((iterQuadRow + 1) * halfHeight); iterRow_pix++)
-				for (int iterCol_pix = (tileColIndex * tileWidth_pix) + iterQuadCol * halfwidth; iterCol_pix < tileColIndex * tileWidth_pix + ((iterQuadCol + 1)* halfwidth); iterCol_pix++)
-					sum += (mBaseTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
+			for (int iterRow_pix = (tileRowIndex * mTileHeight_pix) + iterQuadRow * halfHeight; iterRow_pix < tileRowIndex * mTileHeight_pix + ((iterQuadRow + 1) * halfHeight); iterRow_pix++)
+				for (int iterCol_pix = (tileColIndex * mTileWidth_pix) + iterQuadCol * halfwidth; iterCol_pix < tileColIndex * mTileWidth_pix + ((iterQuadCol + 1)* halfwidth); iterCol_pix++)
+					sum += (mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
 			vec_sum.push_back(sum);
 		}
 
@@ -1265,38 +1291,6 @@ bool BoolMap::isQuadrantBright_(const double threshold, const int tileWidth_pix,
 	*/
 
 	return (sumTL > threshold_255 || sumTR > threshold_255 || sumBL > threshold_255 || sumBR > threshold_255);
-}
-
-//Divide the large image into tiles of size tileWidth_pix * tileHeight_pix and return an array of tiles indicating if the tile NOT dark dark
-std::vector<bool> BoolMap::generateBoolmap_() const
-{
-	if (mThreshold < 0 || mThreshold > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
-
-	if (mTileWidth_pix <= 0 || mTileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
-
-	std::vector<bool> vec_isBright;
-	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
-	for (int iterTileRow = 0; iterTileRow < mNtileRow; iterTileRow++)
-		for (int iterTileCol = 0; iterTileCol < mNtileCol; iterTileCol++)
-			vec_isBright.push_back(isQuadrantBright_(mThreshold, mTileWidth_pix, mTileHeight_pix, iterTileRow, iterTileCol));
-
-	//For debugging
-	//for (std::vector<int>::size_type iter = 0; iter != mNtileCol; iter++)
-		//std::cout << "avg count: " << vec_avg.at(iter) << "\tis dark?: " << vec_isBright.at(iter) << "\n";
-
-	std::ofstream fileHandle;								//Create output file
-	fileHandle.open(folderPath + "BoolMap.txt");			//Open the file
-	for (int iterTileRow = 0; iterTileRow < mNtileRow; iterTileRow++)
-	{
-		for (int iterTileCol = 0; iterTileCol < mNtileCol; iterTileCol++)
-			fileHandle << static_cast<int>(vec_isBright.at(iterTileRow * mNtileCol + iterTileCol));
-		fileHandle << "\n";	//End the row
-	}
-	fileHandle.close();										//Close the txt file
-
-	return vec_isBright;
 }
 #pragma endregion "BoolMap"
 

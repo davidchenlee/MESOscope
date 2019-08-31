@@ -46,7 +46,7 @@ namespace Constants
 															//This is for triggering the pockels and rescanner slightly earlier and adjusting the timing by via delay
 	extern const double g_linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
 															//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered
-	extern const double g_postSequenceTimer{ 200 * ms };	//Timer after the sequence ends because the motion monitor of the Z stage (for cont z scanning) bounces and false triggers a new acq sequence
+	extern const double g_postSequenceTimer{ 0 * ms };		//Timer after the sequence ends because the motion monitor of the Z stage (for cont z scanning) bounces and false triggers a new acq sequence
 	extern const double g_stageDebounceTimer{ 20. * ms};	//Stage motion monitor debouncer
 	extern const int g_FIFOtimeout_tick{ 100 };				//Timeout of the all the FIFOS on the FPGA
 	extern const int g_FIFOINmax{ 32773 };					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the LV implementation on the FPGA!

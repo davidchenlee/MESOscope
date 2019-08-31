@@ -51,13 +51,13 @@ class TiffU8
 {
 public:
 	TiffU8(const std::string filename);
-	TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames = 1);
-	TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames = 1);
-	TiffU8(const int width_pix, const int height_pix, const int nFrames = 1);
+	TiffU8(const U8* inputImage, const int heightPerFrame, const int widthPerFrame, int nFrames = 1);
+	TiffU8(const std::vector<U8> &inputImage, const int heightPerFrame, const int widthPerFrame, const int nFrames = 1);
+	TiffU8(const int height_pix, const int width_pix, const int nFrames = 1);
 	~TiffU8();
 	U8* const data() const;
-	int widthPerFrame_pix() const;
 	int heightPerFrame_pix() const;
+	int widthPerFrame_pix() const;
 	int nFrames() const;
 
 	void pushImage(const U8* inputArray, const int frameIndex) const;
@@ -80,8 +80,8 @@ public:
 	void flattenField(const double scaleFactor, const int lowerChan, const int higherChan);
 private:
 	U8* mArray;
-	int mWidthPerFrame_pix;
 	int mHeightPerFrame_pix;
+	int mWidthPerFrame_pix;
 	int mNframes;
 	int mBytesPerLine; 
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
@@ -91,34 +91,32 @@ private:
 class BoolMap
 {
 public:
-	BoolMap(const TiffU8 &tiff, const int tileWidth_pix, const int tileHeight_pix, const double threshold);
-	bool isTileBright(const int II, const int JJ);
+	BoolMap(const TiffU8 &tiff, const int tileHeight_pix, const int tileWidth_pix,  double threshold);
+	bool isTileBright(const INDICES2 tileIJ);
 	void saveTileMapToText(std::string filename);
 	void SaveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 private:
 	const TiffU8 &mTiff;
 	double mThreshold;				//Threshold for generating the boolmap
-	int mWidth_pix;					//Pixel width of the stitched image
 	int mHeight_pix;				//Pixel height of the stitched image
+	int mWidth_pix;					//Pixel width of the stitched image
 	int mTileWidth_pix;				//Pixel width of a tile
 	int mTileHeight_pix;			//Pixel height of a tile
-	INDICES2 mStackArrayDimIJ;		//Dimension of the tile array
+	INDICES2 mTileArraySizeIJ;		//Dimension of the tile array
 	std::vector<bool> mIsBrightMap;
 
-	bool isAvgBright_(const double threshold, const int II, const int JJ) const;
-	bool isQuadrantBright_(const double threshold, const int II, const int JJ) const;
+	bool isAvgBright_(const double threshold, const INDICES2 tileIJ) const;
+	bool isQuadrantBright_(const double threshold, const INDICES2 tileIJ) const;
 };
 
 class QuickStitcher
 {
 public:
-	QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nTileRow, const int nTileCol);
-	void push(const TiffU8 &tile, const int II, const int JJ);
+	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySizeIJ);
+	void push(const TiffU8 &tile, const INDICES2 tileIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
 private:
 	TiffU8 mStitchedTiff;
-	int mNrow;
-	int mNcol;
-	INDICES2 mStackArrayDimIJ;		//Dimension of the tile array
+	INDICES2 mTileArraySizeIJ;		//Dimension of the tile array
 };

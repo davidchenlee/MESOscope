@@ -4,7 +4,7 @@
 //When multiplexing, create a mTiff to store 16 strips of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(const RTcontrol &RTcontrol) :
 	mRTcontrol{ RTcontrol },
-	mTiff{ mRTcontrol.mWidthPerFrame_pix, (static_cast<int>(multibeam) * (g_nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes }
+	mTiff{ (static_cast<int>(multibeam) * (g_nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mNframes }
 {}
 
 Image::~Image()
@@ -132,8 +132,8 @@ void Image::demuxSingleChannel_()
 void Image::demuxAllChannels_(const bool saveAllPMT)
 {
 	//Use 2 separate arrays to allow parallelization in the future
-	TiffU8 CountA{ mRTcontrol.mWidthPerFrame_pix, g_nChanPMT / 2 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH00-CH07
-	TiffU8 CountB{ mRTcontrol.mWidthPerFrame_pix, g_nChanPMT / 2 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH08-CH15
+	TiffU8 CountA{ g_nChanPMT / 2 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH00-CH07
+	TiffU8 CountB{ g_nChanPMT / 2 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH08-CH15
 
 	/*Iterate over all the pixels and frames (all the frames are concatenated in a single-long image), demultiplex the counts, and store them in CountA and CountB
 	CountA = |CH00 f1|
@@ -179,7 +179,7 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 	if (saveAllPMT)
 	{
 		//Save all PMT16X channels in separate pages in a Tiff
-		TiffU8 stack{ mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mHeightPerBeamletPerFrame_pix , g_nChanPMT * mRTcontrol.mNframes };
+		TiffU8 stack{ mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, g_nChanPMT * mRTcontrol.mNframes };
 		stack.pushImage(CountA.data(), static_cast<int>(RTcontrol::PMT16XCHAN::CH00), static_cast<int>(RTcontrol::PMT16XCHAN::CH07));
 		stack.pushImage(CountB.data(), static_cast<int>(RTcontrol::PMT16XCHAN::CH08), static_cast<int>(RTcontrol::PMT16XCHAN::CH15));
 
@@ -1676,7 +1676,7 @@ void Galvo::reconfigure(const VirtualLaser *virtualLaser)
 		//std::cout << "Scanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
 		//std::cout << "Scanner mVoltageOffset = " << mVoltageOffset << "\n";
 
-		//Raster scan the sample from the positive to the negative direction of the x-stage
+		//Raster scan the sample from the positive to the negative direction of the X-stage
 		positionLinearRamp(-mPosMax, mPosMax, mVoltageOffset, OVERRIDE::EN);
 		break;
 	case RTcontrol::RTCHAN::RESCANNER:
@@ -2207,7 +2207,7 @@ void Stage::printStageConfig(const Axis axis, const DIOCHAN chan) const
 	std::cout << "Vel = " << vel / mmps << " mm/s\n\n";
 }
 
-//DO1 and DO2 of z-stage are used to trigger the stack acquisition. Currently only DO2 is used as trigger. See the implementation on LV
+//DO1 and DO2 of Z-stage are used to trigger the stack acquisition. Currently only DO2 is used as trigger. See the implementation on LV
 void Stage::configDOtriggers_() const
 {
 

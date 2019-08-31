@@ -151,21 +151,21 @@ void reverseSCANDIR(SCANDIR &scanDir)
 {
 	switch (scanDir)
 	{
-	//x-stage
+	//X-stage
 	case SCANDIR::LEFTWARD:
 		scanDir =  SCANDIR::RIGHTWARD;
 		break;
 	case SCANDIR::RIGHTWARD:
 		scanDir =  SCANDIR::LEFTWARD;
 		break;
-	//y-stage
+	//Y-stage
 	case SCANDIR::OUTWARD:
 		scanDir =  SCANDIR::INWARD;
 		break;
 	case SCANDIR::INWARD:
 		scanDir =  SCANDIR::OUTWARD;
 		break;
-	//z-stage
+	//Z-stage
 	case SCANDIR::DOWNWARD:
 		scanDir =  SCANDIR::UPWARD;
 		break;
@@ -292,10 +292,10 @@ TiffU8::TiffU8(const std::string filename) :
 		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_SAMPLESPERPIXEL");
 	if (!TIFFGetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, &bitsPerSample))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_BITSPERSAMPLE,");
-	if (!TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &mWidthPerFrame_pix))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGEWIDTH");
 	if(!TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &mHeightPerFrame_pix))
 		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGELENGTH");
+	if (!TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &mWidthPerFrame_pix))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGEWIDTH");
 
 	//Reject unsupported file formats
 	if (samplesPerPixel != 1 || bitsPerSample != 8)
@@ -335,7 +335,7 @@ TiffU8::TiffU8(const std::string filename) :
 	//std::cout << "Image pixel height = " << mHeightPerFrame_pix << "\n";
 	//std::cout << "Number of frames = " << mNframes << "\n";
 
-	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
+	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
 	//Length in memory of one row of pixel in the image. Targeting 'U8' only. Alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
@@ -349,7 +349,7 @@ TiffU8::TiffU8(const std::string filename) :
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
 	}
 
-	mArray = new U8[mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes];	//Allocate memory for the image
+	mArray = new U8[mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes];	//Allocate memory for the image
 
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
 	{
@@ -368,13 +368,16 @@ TiffU8::TiffU8(const std::string filename) :
 }
 
 //Construct a Tiff from an array
-TiffU8::TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames) :
-	mWidthPerFrame_pix{ widthPerFrame }, mHeightPerFrame_pix{ heightPerFrame }, mNframes{ nFrames }, mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) }
+TiffU8::TiffU8(const U8* inputImage, const int heightPerFrame, const int widthPerFrame, const int nFrames) :
+	mHeightPerFrame_pix{ heightPerFrame },
+	mWidthPerFrame_pix{ widthPerFrame },
+	mNframes{ nFrames },
+	mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) }
 {
-	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
+	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
-	const int nPixAllFrames{ mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes };
+	const int nPixAllFrames{ mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes };
 	mArray = new U8[nPixAllFrames];
 
 	//Copy input image onto mArray
@@ -382,13 +385,16 @@ TiffU8::TiffU8(const U8* inputImage, const int widthPerFrame, const int heightPe
 }
 
 //Construct a Tiff from a vector
-TiffU8::TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const int heightPerFrame, const int nFrames) :
-	mWidthPerFrame_pix{ widthPerFrame }, mHeightPerFrame_pix{ heightPerFrame }, mNframes{ nFrames }, mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) }
+TiffU8::TiffU8(const std::vector<U8> &inputImage, const int heightPerFrame, const int widthPerFrame, const int nFrames) :
+	mHeightPerFrame_pix{ heightPerFrame },
+	mWidthPerFrame_pix{ widthPerFrame },
+	mNframes{ nFrames },
+	mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) }
 {
-	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
+	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
-	const int nPixAllFrames{ mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes };
+	const int nPixAllFrames{ mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes };
 	mArray = new U8[nPixAllFrames];
 
 	//Copy input image onto mArray
@@ -396,10 +402,12 @@ TiffU8::TiffU8(const std::vector<U8> &inputImage, const int widthPerFrame, const
 }
 
 //Construct a new Tiff by allocating memory and initialize it to zero for safety
-TiffU8::TiffU8(const int widthPerFrame_pix, const int heightPerFrame_pix, const int nFrames) :
-	mWidthPerFrame_pix{ widthPerFrame_pix }, mHeightPerFrame_pix{ heightPerFrame_pix }, mNframes{ nFrames }, mBytesPerLine{ static_cast<int>(widthPerFrame_pix * sizeof(U8)) }
+TiffU8::TiffU8(const int heightPerFrame_pix, const int widthPerFrame_pix, const int nFrames) :
+	mHeightPerFrame_pix{ heightPerFrame_pix },
+	mWidthPerFrame_pix{ widthPerFrame_pix },
+	mNframes{ nFrames }, mBytesPerLine{ static_cast<int>(widthPerFrame_pix * sizeof(U8)) }
 {
-	if (mWidthPerFrame_pix <= 0 || mHeightPerFrame_pix <= 0 || mNframes <= 0)
+	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
 	mArray = new U8[mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes]();
@@ -416,14 +424,14 @@ U8* const TiffU8::data() const
 	return mArray;
 }
 
-int TiffU8::widthPerFrame_pix() const
-{
-	return mWidthPerFrame_pix;
-}
-
 int TiffU8::heightPerFrame_pix() const
 {
 	return mHeightPerFrame_pix;
+}
+
+int TiffU8::widthPerFrame_pix() const
+{
+	return mWidthPerFrame_pix;
 }
 
 int TiffU8::nFrames() const
@@ -518,7 +526,7 @@ void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* input
 	const int heightPerChannelAllFrames{ heightPerChannelPerFrame * mNframes };
 	const int nChanPMThalf{ g_nChanPMT / 2 };
 
-	//Even 'iterFrame' (Raster scan the sample from the positive to the negative direction of the x-stage)
+	//Even 'iterFrame' (Raster scan the sample from the positive to the negative direction of the X-stage)
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame += 2)
 		for (int chanIndex = 0; chanIndex < nChanPMThalf; chanIndex++)
 		{
@@ -527,7 +535,7 @@ void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* input
 			//CH08-CH15
 			std::memcpy(&mArray[((7 - chanIndex) * heightPerChannelPerFrame + iterFrame * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(iterFrame * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
 		}
-	//Odd 'iterFrame' (Raster scan the sample from the negative to the positive direction of the x-stage)
+	//Odd 'iterFrame' (Raster scan the sample from the negative to the positive direction of the X-stage)
 	for (int iterFrame = 1; iterFrame < mNframes; iterFrame += 2)
 		for (int chanIndex = 0; chanIndex < nChanPMThalf; chanIndex++)
 		{
@@ -541,27 +549,27 @@ void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* input
 //Divide the concatenated images in a stack of nFrames and save it (the microscope concatenates all the images and hands over a long image that has to be resized into individual images)
 void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const SCANDIR scanDirZ) const
 {
-	int width_pix, height_pix, nFrames;
+	int height_pix, width_pix, nFrames;
 
 	//Multi page structure
 	if (tiffStruct == TIFFSTRUCT::MULTIPAGE)
 	{
-		nFrames = mNframes;
-		width_pix = mWidthPerFrame_pix;
 		height_pix = mHeightPerFrame_pix;
+		width_pix = mWidthPerFrame_pix;
+		nFrames = mNframes;
 	}
 	//Single page
 	else
 	{
-		nFrames = 1;
-		width_pix = mWidthPerFrame_pix;
 		height_pix = mHeightPerFrame_pix * mNframes;
+		width_pix = mWidthPerFrame_pix;
+		nFrames = 1;
 	}
 
 	/*For debugging
 	std::cout << nFrames << "\n";
-	std::cout << Pixel width << "\n";
 	std::cout << Pixel height << "\n";
+	std::cout << Pixel width << "\n";
 	*/
 
 	if (override == OVERRIDE::DIS)
@@ -599,8 +607,8 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 	do
 	{
 		//TAGS
-		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, width_pix);										//Set the pixel width of the image
 		TIFFSetField(tiffHandle, TIFFTAG_IMAGELENGTH, height_pix);										//Set the pixel height of the image
+		TIFFSetField(tiffHandle, TIFFTAG_IMAGEWIDTH, width_pix);										//Set the pixel width of the image
 		//TIFFSetField(tiffHandle, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);							//PLANARCONFIG_CONTIG (for example, RGBRGBRGB) or PLANARCONFIG_SEPARATE (R, G, and B separate)
 		TIFFSetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, 1);											//Set number of channels per pixel
 		TIFFSetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, 8);												//Set the size of the channels
@@ -641,7 +649,7 @@ void TiffU8::saveToTxt(const std::string filename) const
 	std::ofstream fileHandle;									//Create output file
 	fileHandle.open(folderPath + filename + ".txt");			//Open the file
 
-	for (int iterPix = 0; iterPix < mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes; iterPix++)
+	for (int iterPix = 0; iterPix < mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes; iterPix++)
 		fileHandle << mArray[iterPix] << "\n";					//Write each element
 
 	fileHandle.close();											//Close the txt file
@@ -693,7 +701,7 @@ void TiffU8::averageEvenOddFrames()
 {
 	if (mNframes > 2)
 	{
-		const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };
+		const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix  };
 
 		//Calculate the average of the even and odd frames separately
 		unsigned int* avg{ new unsigned int[2 * nPixPerFrame]() };
@@ -726,7 +734,7 @@ void TiffU8::averageFrames()
 {
 	if (mNframes > 1)
 	{
-		const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };
+		const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix };
 		unsigned int* sum{ new unsigned int[nPixPerFrame]() };
 
 		//For each pixel, calculate the sum intensity over all the frames
@@ -759,7 +767,7 @@ void TiffU8::binFrames(const int nFramesPerBin)
 	if (mNframes > 1 && nFramesPerBin > 1)
 	{
 		const int nBins{ mNframes / nFramesPerBin };	//Number of bins in the stack
-		const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };
+		const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix };
 		const int nPixPerBin{ nPixPerFrame * nFramesPerBin };
 		unsigned int* sum{ new unsigned int[nBins * nPixPerFrame]() };
 
@@ -788,7 +796,7 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	if (FFOVfast <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
 
-	const int nPixAllFrames{ mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes };
+	const int nPixAllFrames{ mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes };
 	const int heightAllFrames{ mHeightPerFrame_pix * mNframes };
 
 	//Start and stop time of the RS scan that define FFOVfast
@@ -934,7 +942,7 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 	if (FFOVfast <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
 
-	const int nPixAllFrames{ mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes };
+	const int nPixAllFrames{ mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes };
 	U8* correctedArray = new U8[nPixAllFrames];
 
 	//Start and stop time of the RS scan that define FFOVfast
@@ -997,7 +1005,7 @@ void TiffU8::correctFOVslowCPU(const double FFOVslow)
 	if (FFOVslow <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
 
-	const int nPixAllFrames{ mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes };
+	const int nPixAllFrames{ mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes };
 	U8* correctedArray = new U8[nPixAllFrames];
 
 	//Normalized variables
@@ -1036,8 +1044,8 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 	if (crosstalkRatio < 0 || crosstalkRatio > 1.0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The crosstalk ratio must be in the range [0, 1.0]");
 
-	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };			//Number of pixels in a single frame
-	const int nPixStrip{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
+	const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix  };			//Number of pixels in a single frame
+	const int nPixStrip{ mHeightPerFrame_pix * mWidthPerFrame_pix  / g_nChanPMT };	//Number of pixels in a strip
 	U8* correctedArray{ new U8[nPixPerFrame * mNframes] };
 
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
@@ -1092,8 +1100,8 @@ void TiffU8::flattenField(const double scaleFactor, const int lowerChan, const i
 		//std::cout << "upscaling " << chanIndex << " = " << vec_upscalingFactors.at(chanIndex) << "\n";
 
 	//Upscale mArray
-	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };							//Number of pixels in a single frame
-	const int nPixPerFramePerBeamlet{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
+	const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix  };							//Number of pixels in a single frame
+	const int nPixPerFramePerBeamlet{ mHeightPerFrame_pix * mWidthPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
 		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
@@ -1107,8 +1115,8 @@ void TiffU8::flattenField(const double maxScaleFactor)
 	if (maxScaleFactor < 1.0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The scale factor must be >= 1.0");
 
-	const int nPixPerFrame{ mWidthPerFrame_pix * mHeightPerFrame_pix };							//Number of pixels in a single frame
-	const int nPixPerFramePerBeamlet{ mWidthPerFrame_pix * mHeightPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
+	const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix};							//Number of pixels in a single frame
+	const int nPixPerFramePerBeamlet{ mHeightPerFrame_pix * mWidthPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
 	std::vector<double> vec_upscalingFactors(g_nChanPMT);
 
 	for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
@@ -1130,38 +1138,38 @@ void TiffU8::flattenField(const double maxScaleFactor)
 #pragma endregion "TiffU8"
 
 #pragma region "BoolMap"
-BoolMap::BoolMap(const TiffU8 &tiff, const int tileWidth_pix, const int tileHeight_pix, const double threshold):
+BoolMap::BoolMap(const TiffU8 &tiff, const int tileHeight_pix, const int tileWidth_pix, const double threshold):
 	mTiff{ tiff },
 	mThreshold{ threshold },
-	mWidth_pix{ tiff.widthPerFrame_pix() },
 	mHeight_pix{ tiff.heightPerFrame_pix() },
-	mTileWidth_pix{ tileWidth_pix },
+	mWidth_pix{ tiff.widthPerFrame_pix() },
 	mTileHeight_pix{ tileHeight_pix },
-	mStackArrayDimIJ{ mHeight_pix / tileHeight_pix , mWidth_pix / tileWidth_pix }
+	mTileWidth_pix{ tileWidth_pix },
+	mTileArraySizeIJ{ mHeight_pix / tileHeight_pix , mWidth_pix / tileWidth_pix }
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
 
-	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width and height pixel number must be >0");
+	if (tileHeight_pix <= 0 || tileWidth_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height and width must be >0");
 
-	//Divide the large image into tiles of size tileWidth_pix * tileHeight_pix and return an array of tiles indicating if the tile NOT dark dark
+	//Divide the large image into tiles of size tileHeight_pix * tileWidth_pix and return an array of tiles indicating if the tile NOT dark dark
 	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
-	for (int iterTileRow = 0; iterTileRow < mStackArrayDimIJ.II; iterTileRow++)
-		for (int iterTileCol = 0; iterTileCol < mStackArrayDimIJ.JJ; iterTileCol++)
-			mIsBrightMap.push_back(isQuadrantBright_(mThreshold, iterTileRow, iterTileCol));
+	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
+		for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
+			mIsBrightMap.push_back(isQuadrantBright_(mThreshold, { iterTileRow, iterTileCol }));
 }
 
 //Indicate if a specific tile in the stitched image is bright. The tile indices start form 0
-bool BoolMap::isTileBright(const int II, const int JJ)
+bool BoolMap::isTileBright(const INDICES2 tileIJ)
 {
-	if (II < 0 || II >= mStackArrayDimIJ.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index must be in the range [0-" + toString(mStackArrayDimIJ.II,0) + "]");
+	if (tileIJ.II < 0 || tileIJ.II >= mTileArraySizeIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index must be in the range [0-" + toString(mTileArraySizeIJ.II,0) + "]");
 
-	if (JJ < 0 || JJ >= mStackArrayDimIJ.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index must be in the range [0-" + toString(mStackArrayDimIJ.JJ, 0) + "]");
+	if (tileIJ.JJ < 0 || tileIJ.JJ >= mTileArraySizeIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index must be in the range [0-" + toString(mTileArraySizeIJ.JJ, 0) + "]");
 
-	return mIsBrightMap.at(II * mStackArrayDimIJ.JJ + JJ);
+	return mIsBrightMap.at(tileIJ.II * mTileArraySizeIJ.JJ + tileIJ.JJ);
 }
 
 //Save the boolmap as a text file
@@ -1169,10 +1177,10 @@ void BoolMap::saveTileMapToText(std::string filename)
 {
 	std::ofstream fileHandle;
 	fileHandle.open(folderPath + filename + ".txt");
-	for (int iterTileRow = 0; iterTileRow < mStackArrayDimIJ.II; iterTileRow++)
+	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
 	{
-		for (int iterTileCol = 0; iterTileCol < mStackArrayDimIJ.JJ; iterTileCol++)
-			fileHandle << static_cast<int>(mIsBrightMap.at(iterTileRow * mStackArrayDimIJ.JJ + iterTileCol));
+		for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
+			fileHandle << static_cast<int>(mIsBrightMap.at(iterTileRow * mTileArraySizeIJ.JJ + iterTileCol));
 		fileHandle << "\n";	//End the row
 	}
 	fileHandle.close();
@@ -1183,12 +1191,12 @@ void BoolMap::SaveTileGridOverlap(std::string filename, const OVERRIDE override)
 {
 	const U8 lineColor{ 200 };
 	const double lineThicknessFactor{ 0.7 };
-	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mStackArrayDimIJ.JJ) };
-	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mStackArrayDimIJ.II) };
+	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mTileArraySizeIJ.JJ) };
+	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mTileArraySizeIJ.II) };
 
 	//Horizontal lines
 # pragma omp parallel for schedule(dynamic)
-	for (int iterTileRow = 0; iterTileRow < mStackArrayDimIJ.II; iterTileRow++)
+	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
 	{
 		const int iterRow_pix{ iterTileRow * mTileHeight_pix };
 		for (int iterCol_pix = 0; iterCol_pix < mWidth_pix; iterCol_pix++)
@@ -1198,7 +1206,7 @@ void BoolMap::SaveTileGridOverlap(std::string filename, const OVERRIDE override)
 
 	//Vertical lines
 # pragma omp parallel for schedule(dynamic)
-	for (int iterTileCol = 0; iterTileCol < mStackArrayDimIJ.JJ; iterTileCol++)
+	for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
 	{
 		const int iterCol_pix{ iterTileCol * mTileWidth_pix };
 		for (int iterRow_pix = 0; iterRow_pix < mHeight_pix; iterRow_pix++)
@@ -1214,10 +1222,10 @@ void BoolMap::saveTileMap(std::string filename, const OVERRIDE override) const
 {
 	const U8 lineColor{ 255 };	//Shade level
 
-	TiffU8 tileMap{ mWidth_pix, mHeight_pix, 1 };
-	for (int iterTileRow = 0; iterTileRow < mStackArrayDimIJ.II; iterTileRow++)
-		for (int iterTileCol = 0; iterTileCol < mStackArrayDimIJ.JJ; iterTileCol++)
-			if (mIsBrightMap.at(iterTileRow * mStackArrayDimIJ.JJ + iterTileCol))	//If the tile is bright, shade it
+	TiffU8 tileMap{ mHeight_pix, mWidth_pix, 1 };
+	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
+		for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
+			if (mIsBrightMap.at(iterTileRow * mTileArraySizeIJ.JJ + iterTileCol))	//If the tile is bright, shade it
 			{
 				for (int iterRow_pix = iterTileRow * mTileHeight_pix; iterRow_pix < (iterTileRow + 1) * mTileHeight_pix; iterRow_pix++)
 					for (int iterCol_pix = iterTileCol * mTileWidth_pix; iterCol_pix < (iterTileCol + 1) * mTileWidth_pix; iterCol_pix++)
@@ -1227,42 +1235,42 @@ void BoolMap::saveTileMap(std::string filename, const OVERRIDE override) const
 	tileMap.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
 
-//Take the top frame of the stack and return true if it's bright
-bool BoolMap::isAvgBright_(const double threshold, const int tileRowIndex, const int tileColIndex) const
+//Take the top frame of the stack and return true if it is bright
+bool BoolMap::isAvgBright_(const double threshold, const INDICES2 tileIJ) const
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
 
-	if (tileRowIndex < 0 || tileColIndex < 0)
+	if (tileIJ.II < 0 || tileIJ.JJ < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row and column indices must be >=0");
 
-	const int nPixPerTile{ mTileWidth_pix * mTileHeight_pix };		//Number of pixels in a tile
+	const int nPixPerTile{ mTileHeight_pix * mTileWidth_pix };		//Number of pixels in a tile
 
 	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
 
 	int sum{ 0 };
-	for (int iterRow_pix = tileRowIndex * mTileHeight_pix; iterRow_pix < (tileRowIndex + 1) * mTileHeight_pix; iterRow_pix++)
-		for (int iterCol_pix = tileColIndex * mTileWidth_pix; iterCol_pix < (tileColIndex + 1) * mTileWidth_pix; iterCol_pix++)
+	for (int iterRow_pix = tileIJ.II * mTileHeight_pix; iterRow_pix < (tileIJ.II + 1) * mTileHeight_pix; iterRow_pix++)
+		for (int iterCol_pix = tileIJ.JJ * mTileWidth_pix; iterCol_pix < (tileIJ.JJ + 1) * mTileWidth_pix; iterCol_pix++)
 			sum += (mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
 
 	return (1. * sum / nPixPerTile) > threshold_255;
 }
 
 //Take the top frame of the stack and return true if it's bright. Divide the image in quadrants for a better sensitivity
-bool BoolMap::isQuadrantBright_(const double threshold, const int tileRowIndex, const int tileColIndex) const
+bool BoolMap::isQuadrantBright_(const double threshold, const INDICES2 tileIJ) const
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
 
-	if (tileRowIndex < 0 || tileColIndex < 0)
+	if (tileIJ.II < 0 || tileIJ.JJ < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row and column indices must be >=0");
 
-	const int nPixPerTile{ mTileWidth_pix * mTileHeight_pix };		//Number of pixels in the tile
+	const int nPixPerTile{ mTileHeight_pix * mTileWidth_pix };		//Number of pixels in the tile
 	const double nPixQuad{ 1. * nPixPerTile / 4 };					//Number of pixels in a quadrant
 	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
 
 	//Divide the image in 4 quadrants
-	const int halfwidth{ mTileWidth_pix / 2 }, halfHeight{ mTileHeight_pix / 2 };
+	const int halfHeight{ mTileHeight_pix / 2 }, halfwidth{ mTileWidth_pix / 2 };
 
 	std::vector<int> vec_sum;	//Vector of the sum for each quadrant
 	//Iterate over the 4 quadrants. Start scanning the quadrant from the top-left corner of the image. Scan from left to right, then go back and scan the second row from left to right.
@@ -1271,8 +1279,8 @@ bool BoolMap::isQuadrantBright_(const double threshold, const int tileRowIndex, 
 		{
 			int sum{ 0 };
 			//Iterate over all the pixels inside a quadrant
-			for (int iterRow_pix = (tileRowIndex * mTileHeight_pix) + iterQuadRow * halfHeight; iterRow_pix < tileRowIndex * mTileHeight_pix + ((iterQuadRow + 1) * halfHeight); iterRow_pix++)
-				for (int iterCol_pix = (tileColIndex * mTileWidth_pix) + iterQuadCol * halfwidth; iterCol_pix < tileColIndex * mTileWidth_pix + ((iterQuadCol + 1)* halfwidth); iterCol_pix++)
+			for (int iterRow_pix = (tileIJ.II * mTileHeight_pix) + iterQuadRow * halfHeight; iterRow_pix < tileIJ.II * mTileHeight_pix + ((iterQuadRow + 1) * halfHeight); iterRow_pix++)
+				for (int iterCol_pix = (tileIJ.JJ * mTileWidth_pix) + iterQuadCol * halfwidth; iterCol_pix < tileIJ.JJ * mTileWidth_pix + ((iterQuadCol + 1)* halfwidth); iterCol_pix++)
 					sum += (mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
 			vec_sum.push_back(sum);
 		}
@@ -1295,35 +1303,34 @@ bool BoolMap::isQuadrantBright_(const double threshold, const int tileRowIndex, 
 #pragma endregion "BoolMap"
 
 #pragma region "QuickStitcher"
-//tileWidth_pix = tile width, tileHeight_pix = tile height, nTileRow = number of tile-rows in the stitched image, nTileCol = number of tile-columns in the stitched image
-QuickStitcher::QuickStitcher(const int tileWidth_pix, const int tileHeight_pix, const int nTileRow, const int nTileCol) :
-	mStitchedTiff{ tileWidth_pix * nTileCol, tileHeight_pix * nTileRow, 1 },
-	mNrow{ nTileRow },
-	mNcol{ nTileCol }
+//tileHeight_pix = tile height, tileWidth_pix = tile width, tileArraySizeIJ = { number of tiles as rows, number of tiles as columns}
+QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySizeIJ) :
+	mTileArraySizeIJ{ tileArraySizeIJ },
+	mStitchedTiff{ tileHeight_pix * tileArraySizeIJ.II, tileWidth_pix * tileArraySizeIJ.JJ, 1 }
 {
-	if (tileWidth_pix <= 0 || tileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile width and height must be > 0");
+	if (tileHeight_pix <= 0 || tileWidth_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile height and width must be > 0");
 
-	if(mNrow <= 0 || mNcol <= 0)
+	if(mTileArraySizeIJ.II <= 0 || mTileArraySizeIJ.JJ <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array dimensions must be > 0");
 }
 
-//rowIndex = 0, 1, 2, ... from TOP to BOTTOM and colIndex = 0, 1, 2, ... from LEFT to RIGHT of the mTiff image.
-void QuickStitcher::push(const TiffU8 &tile, const int rowIndex, const int colIndex)
+//II = 0, 1, 2, ... from TOP to BOTTOM and JJ = 0, 1, 2, ... from LEFT to RIGHT of the mTiff image.
+void QuickStitcher::push(const TiffU8 &tile, const INDICES2 tileIJ)
 {
-	if (colIndex < 0 || rowIndex < 0)
+	if (tileIJ.II < 0 || tileIJ.JJ < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array indices must be >= 0");
-	if (colIndex >= mNcol)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The width array index must be <" + std::to_string(mNcol));
-	if (rowIndex >= mNrow)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The height array index must be <" + std::to_string(mNrow));
+	if (tileIJ.II >= mTileArraySizeIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be <" + std::to_string(mTileArraySizeIJ.II));
+	if (tileIJ.JJ >= mTileArraySizeIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be <" + std::to_string(mTileArraySizeIJ.JJ));
 
-	const int tileWidth_pix{ tile.widthPerFrame_pix() };	//Width of the tile
-	const int tileHeight_pix{ tile.heightPerFrame_pix() };	//Height of the tile
-	const int colShift_pix{ colIndex *  tileWidth_pix };	//In the mTiff image, shift the tile to the right by this many pixels
-	const int rowShift_pix{ rowIndex *  tileHeight_pix };	//In the mTiff image, shift the tile down by this many pixels
-	const int tileBytesPerRow{ static_cast<int>(tileWidth_pix * sizeof(U8)) };										//Bytes per row of the input tile
-	const int stitchedTiffBytesPerRow{ static_cast<int>(mStitchedTiff.widthPerFrame_pix() * sizeof(U8)) };			//Bytes per row of the stitched image
+	const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
+	const int tileWidth_pix{ tile.widthPerFrame_pix() };													//Width of the tile
+	const int rowShift_pix{ tileIJ.II *  tileHeight_pix };													//In the mTiff image, shift the tile down by this many pixels
+	const int colShift_pix{ tileIJ.JJ *  tileWidth_pix };													//In the mTiff image, shift the tile to the right by this many pixels
+	const int tileBytesPerRow{ static_cast<int>(tileWidth_pix * sizeof(U8)) };								//Bytes per row of the input tile
+	const int stitchedTiffBytesPerRow{ static_cast<int>(mStitchedTiff.widthPerFrame_pix() * sizeof(U8)) };	//Bytes per row of the stitched image
 
 	/*
 	//Transfer the data from the input tile to mStitchedTiff. Old way: copy pixel by pixel

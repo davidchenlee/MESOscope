@@ -564,7 +564,7 @@ QU32 RTcontrol::Pixelclock::readPixelclock() const
 	return mPixelclockQ;
 }
 
-RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const int nFrames) :
+RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames) :
 	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },	//Initialize the size the vector containing the queues (= # of queues)
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
@@ -590,7 +590,7 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 }
 
 //This constructor is meant to be used with RTcontrol::setNumberOfFrames(const int nFrames)
-RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix):
+RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix):
 	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },

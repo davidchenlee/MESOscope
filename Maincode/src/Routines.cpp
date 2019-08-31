@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.600 ) * mm, (21.075)* mm, (16.910 + 0.000) * mm };
+POSITION3 stackCenterXYZ{ (44.600 ) * mm, (21.075)* mm, (16.925 + 0.000) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
@@ -24,7 +24,7 @@ Sample liverTDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", Container
 //Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
 #endif
-Sample currentSample{ liverTDT };
+Sample currentSample{ liverDAPITDT };
 
 
 double determineChromaticShift(const int wavelength_nm, const Laser::ID whichLaser)
@@ -44,23 +44,23 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
-		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
-		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the x-stage axis stepwise
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
+		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the X-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const int nFramesCont{ 1 };	
-		const double stackDepthZ{ 40. * um };								//Stack deepth in the z-stage axis
+		const double stackDepthZ{ 40. * um };								//Stack deepth in the Z-stage axis
 		const double stepSizeZ{ 1.0 * um };
 	
 		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
+		const int widthPerFrame_pix{ 300 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
 		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
@@ -134,7 +134,7 @@ namespace Routines
 		}
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerBeamletPerFrame_pix, nFramesCont };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//LASER
 		VirtualLaser virtualLaser{ whichLaser };
@@ -157,7 +157,7 @@ namespace Routines
 
 		//CREATE A STACK FOR STORING THE TIFFS
 		const int nLocations{ static_cast<int>(stagePositionXYZ.size()) };
-		TiffU8 output{ widthPerFrame_pix, heightPerFrame_pix, nLocations };
+		TiffU8 output{ heightPerFrame_pix, widthPerFrame_pix, nLocations };
 		std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm" };
 		
 		//OPEN THE UNIBLITZ SHUTTERS
@@ -252,8 +252,8 @@ namespace Routines
 			datalog.record("\nIMAGE--------------------------------------------------------");
 			datalog.record("Max count per pixel = ", g_pulsesPerPix);
 			datalog.record("Upscaling factor = ", g_upscalingFactor);
-			datalog.record("Width X (fast) (pix) = ", widthPerFrame_pix);
 			datalog.record("Height Y (slow) (pix) = ", heightPerFrame_pix);
+			datalog.record("Width X (fast) (pix) = ", widthPerFrame_pix);
 			datalog.record("Resolution X (fast) (um/pix) = ", RScanner.mSampRes / um);
 			datalog.record("Resolution Y (slow) (um/pix) = ", pixelSizeXY / um);
 			datalog.record("\nSTAGE--------------------------------------------------------");
@@ -278,8 +278,8 @@ namespace Routines
 		const int nFrames{ static_cast<int>(nFramesBinning * stackDepth / pixelSizeZafterBinning) };	//Number of frames BEFORE binning for continuous acquisition
 		const double pixelSizeZbeforeBinning{ pixelSizeZafterBinning / nFramesBinning };				//Pixel size per z frame
 		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
+		const int widthPerFrame_pix{ 300 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };										//Full FOV in the slow axis
 
 		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
@@ -301,7 +301,7 @@ namespace Routines
 		}
 
 		//CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerBeamletPerFrame_pix, nFrames };	//Note the STAGEZ flag
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames };	//Note the STAGEZ flag
 
 		//LASER
 		const double laserPi = determineInitialLaserPower(fluorLabel.mScanPmin, stackDepth * fluorLabel.mStackPinc, scanDirZ);
@@ -355,7 +355,7 @@ namespace Routines
 	void contScanX(const FPGA &fpga)
 	{
 		if (multibeam)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Continuous x-stage scanning available for single beam only");
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Continuous X-stage scanning available for single beam only");
 
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };			//Select a particular laser
@@ -367,7 +367,7 @@ namespace Routines
 		const double tileWidth{ 150. * um };														//Width of 1 strip (long vertical tile)
 		const int nCol{ static_cast<int>(std::ceil(1. * stitchedWidth / tileWidth)) };				//Number of columns in the stitched image
 		const int tileWidth_pix{ 300 };																//Number of pixel width in a strip (long vertical tile)
-		const double stitchedHeight{ 10.080 * mm };//= 36 * 0.280 * mm								//Total height of the stitched image = height of the strip (long vertical tile). If changed, the x-stage timing must be recalibrated
+		const double stitchedHeight{ 10.080 * mm };//= 36 * 0.280 * mm								//Total height of the stitched image = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
 		const double pixelSizeX{ 1.0 * um };														//WARNING: the image becomes distorted for pixelSizeX < 1 um
 		const int stitchedHeight_pix{ static_cast<int>(stitchedHeight / pixelSizeX) };				//Total pixel height in the stitched image
 
@@ -382,7 +382,7 @@ namespace Routines
 		//CONTROL SEQUENCE
 		//The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
 		const int nFrames{ 2 };
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, tileWidth_pix, nFrames, stitchedHeight_pix / 2 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, tileWidth_pix, stitchedHeight_pix / 2 };
 
 		//LASER
 		VirtualLaser virtualLaser{ whichLaser };
@@ -408,7 +408,7 @@ namespace Routines
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		const int nLocations{ static_cast<int>(stagePositionY.size()) };
-		QuickStitcher stitchedImage{ tileWidth_pix, stitchedHeight_pix, 1, nCol };
+		QuickStitcher stitchedImage{ stitchedHeight_pix, tileWidth_pix, {1, nCol} };
 		double stageXi, stageXf;		//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
@@ -419,7 +419,7 @@ namespace Routines
 			stage.moveXY({ stageXi, stagePositionY.at(iterLocation) });
 			stage.waitForMotionToStopAll();
 
-			Sleep(300);					//Avoid iterations too close to each other, otherwise the x-stage will fail to trigger the ctl&acq sequence.
+			Sleep(300);					//Avoid iterations too close to each other, otherwise the X-stage will fail to trigger the ctl&acq sequence.
 										//This might be because of g_postSequenceTimer
 
 			RTcontrol.initialize();
@@ -431,8 +431,8 @@ namespace Routines
 			image.acquireVerticalStrip(iterScanDirX);
 			image.correctRSdistortion(tileWidth);							//Correct the image distortion induced by the nonlinear scanning of the RS
 
-			TiffU8 tmp{ image.data(), tileWidth_pix, stitchedHeight_pix };	//I tried to access mTiff in image directly but it gives me an error
-			stitchedImage.push(tmp, 0, iterLocation);						//for now, only allowed to stack up strips to the right
+			TiffU8 tmp{ image.data(), stitchedHeight_pix, tileWidth_pix };	//I tried to access mTiff in image directly but it gives me an error
+			stitchedImage.push(tmp, { 0, iterLocation });						//for now, only allowed to stack up strips to the right
 
 			reverseSCANDIR(iterScanDirX);
 			pressESCforEarlyTermination();
@@ -453,12 +453,12 @@ namespace Routines
 
 		//ACQUISITION SETTINGS
 		const double stackDepth{ 100. * um };
-		const double pixelSizeZafterBinning{ 1.0 * um };												//Step size in the z-stage axis
+		const double pixelSizeZafterBinning{ 1.0 * um };												//Step size in the Z-stage axis
 		
 		const int nFramesAfterBinning{ static_cast<int>(stackDepth / pixelSizeZafterBinning) };
 		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
+		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
 		const SAMPLESIZE3 sampleSize{ 0.2 * mm, 0.2 * mm, 0.00 * mm };
 		const TILEOVERLAP4 stackOverlap_frac{ 0.10, 0.05, 0.40 };										//Stack overlap
@@ -489,17 +489,17 @@ namespace Routines
 		{
 			//STAGES
 			Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
-			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);		//Move the Z stage to the sample surface
+			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);		//Move the Z-stage to the sample surface
 			stage.waitForMotionToStopAll();
 
 			//LASER
 			VirtualLaser virtualLaser;
 
 			//CONTROL SEQUENCE
-			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerBeamletPerFrame_pix };
+			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix };
 
 			//Read the commands line by line
-			POSITION2 stackCenterXY;
+			POSITION2 tileCenterXY;
 			std::string longName;
 			SCANDIR scanDirZ{ SCANDIR::UPWARD };
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
@@ -515,9 +515,9 @@ namespace Routines
 				double scanZi, scanZf, scanPi, scanPf;
 				switch (commandline.mAction)
 				{
-				case Action::ID::MOV://Move the X and Y stages to mStackCenterXY
-					stackCenterXY = commandline.mParam.moveStage.mStackCenterXY;
-					stage.moveXY(stackCenterXY);
+				case Action::ID::MOV://Move the X and Y-stages to mStackCenterXY
+					tileCenterXY = commandline.mParam.moveStage.mTileCenterXY;
+					stage.moveXY(tileCenterXY);
 					stage.waitForMotionToStopAll();
 					break;
 				case Action::ID::ACQ://Acquire a stack
@@ -556,8 +556,8 @@ namespace Routines
 				case Action::ID::SAV:
 					{
 					longName = virtualLaser.currentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pi=" + toString(scanPi / mW, 1) + "mW_Pf=" + toString(scanPf / mW, 1) + "mW" +
-						"_x=" + toString(stackCenterXY.XX / mm, 3) +
-						"_y=" + toString(stackCenterXY.YY / mm, 3) +
+						"_x=" + toString(tileCenterXY.XX / mm, 3) +
+						"_y=" + toString(tileCenterXY.YY / mm, 3) +
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) +
 						"_Step=" + toString(pixelSizeZafterBinning / mm, 4) + "_bin=" + toString(nFramesBinning, 0);
 
@@ -592,12 +592,12 @@ namespace Routines
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
 		const int nFramesCont{ 1 };															//Number of frames for continuous acquisition
 		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
+		const int widthPerFrame_pix{ 300 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };							//Full FOV in the slow axis
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//LASER
 		VirtualLaser virtualLaser{ Laser::ID::VISION };
@@ -640,7 +640,7 @@ namespace TestRoutines
 	{
 		const double timeStep{ 4. * us };
 
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
 		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
 
@@ -658,7 +658,7 @@ namespace TestRoutines
 		const double delay{ 400. * us };
 		const double timeStep{ 4. * us };
 
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, timeStep, 10 * V);						//Initial pulse
 		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, timeStep, 0);
 		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, 4 * us, delay, 0, 5 * V, OVERRIDE::DIS);	//Linear ramp to accumulate the error
@@ -675,7 +675,7 @@ namespace TestRoutines
 
 	void pixelclock(const FPGA &fpga)
 	{
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, FIFOOUTfpga::DIS, 300, 560, 1 }; 	//Create the control sequence
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, FIFOOUTfpga::DIS, 560, 300, 1 }; 	//Create the control sequence
 		RTcontrol.run();																				//Execute the control sequence
 	}
 
@@ -684,7 +684,7 @@ namespace TestRoutines
 	{
 		const double timeStep{ 400. * us };
 
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
 		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
 	}
@@ -692,7 +692,7 @@ namespace TestRoutines
 	//Test the analog and digital output and the relative timing wrt the pixel clock
 	void analogAndDigitalOut(const FPGA &fpga)
 	{
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
 		//DO
 		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, 4 * us, 1);
@@ -711,7 +711,7 @@ namespace TestRoutines
 		const double Vmax{ 5. * V };
 		const double step{ 4. * us };
 
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, step, 2 * ms, 0, -Vmax, OVERRIDE::DIS);
 		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, step, 20 * ms, -Vmax, Vmax, OVERRIDE::DIS);
 		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, step, 2 * ms, Vmax, 0, OVERRIDE::DIS);
@@ -726,8 +726,8 @@ namespace TestRoutines
 	{
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
+		const int widthPerFrame_pix{ 300 };
 		const int nFramesCont{ 30 };												//Number of frames for continuous acquisition
 		const POSITION3 stagePositionXYZ{ 35.05 * mm, 10.40 * mm, 18.204 * mm };	//Stage initial position
 
@@ -737,7 +737,7 @@ namespace TestRoutines
 		stage.waitForMotionToStopAll();
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -766,7 +766,7 @@ namespace TestRoutines
 	void resonantScanner(const FPGA &fpga)
 	{
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
 		ResonantScanner RScanner{ RTcontrol };
 		std::cout << "aaa = " << RScanner.downloadControlVoltage() << "\n";
@@ -779,12 +779,12 @@ namespace TestRoutines
 	void galvosSync(const FPGA &fpga)
 	{
 		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
+		const int widthPerFrame_pix{ 300 };
 		const int nFramesCont{ 1 };
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//SCANNERS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Scan duration in the slow axis
@@ -801,8 +801,8 @@ namespace TestRoutines
 	{
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
+		const int widthPerFrame_pix{ 300 };
 		const int nFramesCont{ 2 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
@@ -822,10 +822,10 @@ namespace TestRoutines
 #endif
 		//STACK
 		const double stepSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the z-stage axis
+		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the Z-stage axis
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerBeamletPerFrame_pix, nFramesCont };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//LASER
 		const int wavelength_nm{ 750 };
@@ -898,16 +898,16 @@ namespace TestRoutines
 
 		//const Stage::DOPARAM triggerParam{ Stage::DOPARAM::TRIGSTEP };
 		//stage.downloadDOtriggerParamSingle_(Z, DOchan , triggerParam);
-		//std::cout << "X stage vel: " << stage.downloadVelSingle_(X) / mmps << " mm/s" << "\n";
-		//std::cout << "Y stage vel: " << stage.downloadVelSingle_(Y) / mmps << " mm/s" << "\n";
-		//std::cout << "Z stage vel: " << stage.downloadVelSingle_(Z) / mmps << " mm/s" << "\n";
+		//std::cout << "X-stage vel: " << stage.downloadVelSingle_(X) / mmps << " mm/s" << "\n";
+		//std::cout << "Y-stage vel: " << stage.downloadVelSingle_(Y) / mmps << " mm/s" << "\n";
+		//std::cout << "Z-stage vel: " << stage.downloadVelSingle_(Z) / mmps << " mm/s" << "\n";
 		//stage.printStageConfig(Z, DOchan);
 	}
 
 	void shutter(const FPGA &fpga)
 	{
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
 		PockelsCell fidelity{ RTcontrol, 1040, Laser::ID::FIDELITY };
 		fidelity.setShutter(true);
@@ -928,7 +928,7 @@ namespace TestRoutines
 	void pockels(const FPGA &fpga)
 	{
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
 		//DEFINE THE POCKELS CELLS
 		PockelsCell pockelsVision{ RTcontrol, 750, Laser::ID::VISION };
@@ -948,12 +948,12 @@ namespace TestRoutines
 	void pockelsRamp(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 35 };
+		const int widthPerFrame_pix{ 300 };
 		const int nFramesCont{ 200 };						//Number of frames for continuous acquisition
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//POCKELS CELL
 		const int wavelength_nm{ 1040 };
@@ -986,7 +986,7 @@ namespace TestRoutines
 	void virtualLasers(const FPGA &fpga)
 	{
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 560, 1 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
 		const int wavelength_nm{ 1040 };
 		const double laserPower{ 50. * mW };
@@ -1002,7 +1002,7 @@ namespace TestRoutines
 		laser.setWavelength(920);
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, 300, 400, 100 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, 400, 300, 100 };
 
 		//RS
 		ResonantScanner RScanner{ RTcontrol };
@@ -1039,11 +1039,11 @@ namespace TestRoutines
 
 		//The goal is to stream a stackDiffZ composed of 200 z-planes (100 um in 0.5 um-steps), where each frame has 300x560 pixels. Therefore, the stackDiffZ has 300x560x200 = 33.6 Mega pixels
 		//The stackDiffZ size is 8 bits x 33.6M = 33.6 MB
-		const int width{ 300 };
 		const int height{ 560 };
+		const int width{ 300 };
 		const int nFramesCont{ 200 };
 
-		TiffU8 image{ width, height, nFramesCont };
+		TiffU8 image{ height, width, nFramesCont };
 
 		//Declare and start a stopwatch
 		double duration;
@@ -1136,14 +1136,14 @@ namespace TestRoutines
 		//image.acquireVerticalStrip(SCANDIRX::LEFT);
 
 		//TiffU8 asd{ image.data(), 300, 560 };
-		//std::cout << image.tiff().widthPerFrame_pix() << "\n";
 		//std::cout << image.tiff().heightPerFrame_pix() << "\n";
+		//std::cout << image.tiff().widthPerFrame_pix() << "\n";
 
 
 		/*
 		std::string outputFilename{ "stitched" };
-		const int width{ 300 };
 		const int height{ 8000 };
+		const int width{ 300 };
 		TiffU8 image00{ "01" };
 		TiffU8 image01{ "02" };
 		TiffU8 image03{ "03" };
@@ -1157,13 +1157,13 @@ namespace TestRoutines
 		stitched.saveToFile(outputFilename, OVERRIDE::DIS);
 		*/
 		std::string outputFilename{ "stitched" };
-		const int width{ 300 };
 		const int height{ 8000 };
+		const int width{ 300 };
 		TiffU8 image00{ "Tile_01" };
 		TiffU8 image01{ "Tile_02" };
-		QuickStitcher stitched{ width,height, 2, 1 };
-		stitched.push(image00, 0, 0);
-		stitched.push(image01, 1, 0);
+		QuickStitcher stitched{ height, width, {2, 1} };
+		stitched.push(image00, { 0, 0 });
+		stitched.push(image01, { 1, 0 });
 		stitched.saveToFile(outputFilename, OVERRIDE::DIS);
 
 		pressAnyKeyToCont();
@@ -1171,17 +1171,18 @@ namespace TestRoutines
 
 	void thresholdSample()
 	{
-		const int tileWidth_pix{ 300 };
-		const int tileHeight_pix{ 560 };
 		std::string inputFilename{ "aaa" };
 		std::string outputFilename{ "output" };
 
+		const double threshold{ 0.03 };
+		const int tileHeight_pix{ 560 };
+		const int tileWidth_pix{ 300 };
 		TiffU8 image{ inputFilename };
-		BoolMap boolmap{ image, tileWidth_pix, tileHeight_pix, 0.03 };
+		BoolMap boolmap{ image, tileHeight_pix, tileWidth_pix, threshold };
 		//boolmap.saveTileMapToText("Boolmap");
-		//boolmap.saveTileMap("TileMap", OVERRIDE::EN);
-		//boolmap.SaveTileGridOverlap("TileGrid", OVERRIDE::EN);
-		std::cout << boolmap.isTileBright(0, 30) << "\n";
+		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
+		boolmap.SaveTileGridOverlap("TileGrid", OVERRIDE::EN);
+		//std::cout << boolmap.isTileBright({ 0, 30 }) << "\n";
 
 		pressAnyKeyToCont();
 	}
@@ -1225,11 +1226,11 @@ namespace TestRoutines
 
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 400 };
+		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };
 		const int nFramesCont{ 80 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };										//Step size in the z-stage axis
+		const double stepSizeZ{ 0.5 * um };										//Step size in the Z-stage axis
 		const TILEOVERLAP4 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };							//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };								//Sample thickness
@@ -1309,7 +1310,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const FFOV2 FFOV{ 200. * um, 150. * um };
 		const int nDiffZ{ 100 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };									//Step size in the z-stage axis
+		const double stepSizeZ{ 0.5 * um };									//Step size in the Z-stage axis
 		const TILEOVERLAP4 stackOverlap_frac{ 0.05, 0.05, 0.05 };			//Stack overlap
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
@@ -1328,40 +1329,40 @@ namespace TestRoutines
 	//Generate a text file with the tile location for the BigStitcher
 	void generateLocationsForBigStitcher()
 	{
-		// X is vertical and Y is horizontal, to match the directions of the XYZ stage
-		const INDICES2 nStacksIJ{ 2, 2 };
+		// X is vertical and Y is horizontal, to match the directions of the XYZ-stage
+		const INDICES2 tileSizeIJ{ 2, 2 };
 		const int tileShiftX_pix{ 543 };
 		const int tileShiftY_pix{ 291 };
 
 		Logger datalog(currentSample.mName + "_locations");
 		datalog.record("dim=3"); //Needed for the BigStitcher
 
-		for (int nTile = 0; nTile < nStacksIJ.II * nStacksIJ.JJ; nTile++)
-			//for (int nTile = 0; nTile < 180; nTile++)
+		for (int tileNumber = 0; tileNumber < tileSizeIJ.II * tileSizeIJ.JJ; tileNumber++)
+			//for (int tileNumber = 0; tileNumber < 180; tileNumber++)
 		{
-			INDICES2 nIJ = nTileToArrayIndices(nTile);
-			int totalTileShiftX{ -nIJ.II * tileShiftX_pix };
-			int TotalTileShiftY{ -nIJ.JJ * tileShiftY_pix };
-			std::string line{ std::to_string(nTile) + ";;(" + std::to_string(TotalTileShiftY) + "," + std::to_string(totalTileShiftX) + ",0)" };	//In BigStitcher, X is horizontal and Y is vertical
-			//std::string line{ std::to_string(nTile) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(X)) + "\t" + std::to_string(nTileToArrayIndices(nTile).at(Y)) }; //For debugging
+			INDICES2 tileIJ = tileNumberToIndicesIJ(tileNumber);
+			int totalTileShiftX_pix{ -tileIJ.II * tileShiftX_pix };
+			int TotalTileShiftY_pix{ -tileIJ.JJ * tileShiftY_pix };
+			std::string line{ std::to_string(tileNumber) + ";;(" + std::to_string(TotalTileShiftY_pix) + "," + std::to_string(totalTileShiftX_pix) + ",0)" };	//In BigStitcher, X is horizontal and Y is vertical
+			//std::string line{ std::to_string(tileNumber) + "\t" + std::to_string(tileNumberToIndicesIJ(tileNumber).at(X)) + "\t" + std::to_string(tileNumberToIndicesIJ(tileNumber).at(Y)) }; //For debugging
 			datalog.record(line);
 		}
 	}
 
 	//Snake pattern starting from the bottom right of the sample and going up
-	INDICES2 nTileToArrayIndices(const int nTile)
+	INDICES2 tileNumberToIndicesIJ(const int tileNumber)
 	{
-		const INDICES2 nStacksXY{ 2, 2 };
+		const INDICES2 tileSizeIJ{ 2, 2 };
 
-		int nx;
-		int ny{ nTile / nStacksXY.II };
+		int II;
+		int JJ{ tileNumber / tileSizeIJ.II };
 
-		if (ny % 2)	//ny is odd
-			nx = nStacksXY.II - nTile % nStacksXY.II - 1;
-		else		//ny is even
-			nx = nTile % nStacksXY.II;
+		if (JJ % 2)	//JJ is odd
+			II = tileSizeIJ.II - tileNumber % tileSizeIJ.II - 1;
+		else		//JJ is even
+			II = tileNumber % tileSizeIJ.II;
 
-		return { nx,ny };
+		return { II, JJ };
 	}
 
 	void PMT16Xconfig()
@@ -1407,14 +1408,14 @@ namespace TestRoutines
 	void PMT16Xdemultiplex(const FPGA &fpga)
 	{
 		const double pixelSizeXY{ 0.5 * um };
-		const int widthPerFrame_pix{ 300 };
 		const int heightPerFrame_pix{ 560 };
+		const int widthPerFrame_pix{ 300 };
 		const int nFramesCont{ 1 };										//Number of frames for continuous acquisition
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };		//Scan duration in the slow axis
 		const int wavelength_nm{ 750 };
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, widthPerFrame_pix, heightPerFrame_pix, nFramesCont };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//LASER
 		const double laserPower{ 30. * mW };

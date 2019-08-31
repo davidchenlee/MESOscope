@@ -46,7 +46,7 @@ namespace Constants
 															//This is for triggering the pockels and rescanner slightly earlier and adjusting the timing by via delay
 	extern const double g_linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
 															//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered
-	extern const double g_postSequenceTimer{ 0 * ms };		//Timer after the sequence ends because the motion monitor of the Z stage (for cont z scanning) bounces and false triggers a new acq sequence
+	extern const double g_postSequenceTimer{ 0 * ms };		//Timer after the sequence ends because the motion monitor of the Z-stage (for cont Z scanning) bounces and false triggers a new acq sequence
 	extern const double g_stageDebounceTimer{ 20. * ms};	//Stage motion monitor debouncer
 	extern const int g_FIFOtimeout_tick{ 100 };				//Timeout of the all the FIFOS on the FPGA
 	extern const int g_FIFOINmax{ 32773 };					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the LV implementation on the FPGA!
@@ -58,13 +58,13 @@ namespace Constants
 	//GALVO SCANNERS
 	extern const double g_scannerDelay{ 150 * us };								//Adjust 'g_scannerDelay' until the bead position in a fordward scan coincides with that of a backward scan
 	extern const double g_rescannerDelay{ 0. * us };							//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
-	extern const GALVOcalib g_scannerCalib{ 0.02417210 * V / um , 0.0 * V };	//Calibration factor and offset of the galvo scanner. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the x-stage)
+	extern const GALVOcalib g_scannerCalib{ 0.02417210 * V / um , 0.0 * V };	//Calibration factor and offset of the galvo scanner. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the X-stage)
 
 	//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission fixed at the detector
 	//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the tiffs in all the PMT channels
 	//The beads should show up in the selected channel only
 	//Adjust 'mVoltagePerDistance' until all the beads show up in the same selected PMT16X channel. For a larger value, the top beads in a Tiff appear first, then the bottom ones
-	//Adjust 'mVoltageOffset' to center the beads on the selected PMT16X channel. A larger value steers the beam towards CH00 (i.e., positive dir of the x-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
+	//Adjust 'mVoltageOffset' to center the beads on the selected PMT16X channel. A larger value steers the beam towards CH00 (i.e., positive dir of the X-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
 	extern const GALVOcalib g_rescannerCalibV750nm{ 0.303 * g_scannerCalib.voltagePerDistance, 0.035 * V };
 	extern const GALVOcalib g_rescannerCalibV920nm{ 0.310 * g_scannerCalib.voltagePerDistance, 0.065 * V };
 	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.33 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//Using Vision
@@ -74,14 +74,14 @@ namespace Constants
 	//STAGES
 	//Stage Z
 	//To fine tune using beads
-	//1. Position the Z stage on the plane with beads
+	//1. Position the Z-stage on the plane with beads
 	//2. Do a centered Z scan
-	//3. Adjust the delay until the beads appear in the middle of the z-stack
-	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };		//Delay the Z stage triggering the acq sequence
+	//3. Adjust the delay until the beads appear in the middle of the Z stack
+	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };		//Delay the Z-stage triggering the acq sequence
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };
 	//Stage X
-	//extern const double	g_STAGEXTrigAcqDelay{32.1 * ms };		//uncalibrated	for pixelSizeX = 0.5 um	//Delay the X stage triggering the acq sequence to match the forward and backward scans. Larger moves the image upward
-																	//Currently, the delay depends on the FOV in the x-stage axis
+	//extern const double	g_STAGEXTrigAcqDelay{32.1 * ms };		//uncalibrated	for pixelSizeX = 0.5 um	//Delay the X-stage triggering the acq sequence to match the forward and backward scans. Larger moves the image upward
+																	//Currently, the delay depends on the FOV in the X-stage axis
 																		
 	extern const double	g_STAGEXTrigAcqDelay{ 122.0 * ms };//pixelSizeX = 1.0 um
 

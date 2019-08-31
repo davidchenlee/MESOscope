@@ -9,8 +9,8 @@ struct FluorLabelList	//Create a list of fluorescent labels
 	{
 		std::string mName{ "" };	//Fluorescent label name
 		int mWavelength_nm;			//Laser wavelength
-		double mScanPmin;			//Initial laser power for a stack-scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mStackPinc;			//Laser power increase per unit of distance in the z-stage axis
+		double mScanPmin;			//Initial laser power for a stack scan. It could be >= or <= than the final laser power depending on the scan direction
+		double mStackPinc;			//Laser power increase per unit of distance in the Z-stage axis
 		int nFramesBinning{ 1 };
 	};
 	std::vector<FluorLabel> mFluorLabelList;
@@ -33,7 +33,7 @@ struct Sample
 	FluorLabelList mFluorLabelList;
 	std::vector<LIMIT2> mStageSoftPosLimXYZ;				//Soft position limits of the stages
 
-	const POSITION2 mBladePositionXY{ 0. * mm, 0. * mm };	//Location of the vibratome blade in the x-stage and y-stage axes wrt the stages origin
+	const POSITION2 mBladePositionXY{ 0. * mm, 0. * mm };	//Location of the vibratome blade in the X-stage and Y-stage axes wrt the stages origin
 	const double mBladeFocalplaneOffsetZ{ 0. * um };		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack{ 0. * um };				//Specify at what height of the overlapping volume to cut
 
@@ -45,10 +45,10 @@ struct Sample
 
 struct Stack
 {
-	FFOV2 mFFOV;				//Full field of view in the x-stage and y-stage axes
-	double mStepSizeZ;			//Image resolution in the z-stage axis
+	FFOV2 mFFOV;				//Full field of view in the X-stage and Y-stage axes
+	double mStepSizeZ;			//Image resolution in the Z-stage axis
 	double mDepth;				//Stack depth or thickness
-	TILEOVERLAP4 mOverlap_frac;	//Stack overlap in the x-stage, y-stage, and z-stage axes
+	TILEOVERLAP4 mOverlap_frac;	//Stack overlap in the X-stage, Y-stage, and Z-stage axes
 
 	Stack(const FFOV2 FFOV, const double stepSizeZ, const int nFrames, const TILEOVERLAP4 stackOverlap_frac);
 	void printParams(std::ofstream *fileHandle) const;
@@ -59,17 +59,17 @@ namespace Action
 	enum class ID { CUT, ACQ, SAV, MOV };
 	struct MoveStage {
 		int mSliceNumber;			//Slice number
-		INDICES2 mStackIJ;			//Indices of the 2D array of stacks
-		POSITION2 mStackCenterXY;	//x-stage and y-stage positions corresponding to the center of the stack
+		INDICES2 mTilesIJ;			//Indices of the 2D array of tiles
+		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
 	};
 	struct AcqStack {
 		int mStackNumber;
 		int mWavelength_nm;
 		SCANDIR mScanDirZ;		//THIS IS NOT READ BY THE SEQUENCER ANYMORE!!
-		double mScanZmin;		//Min z position of a stack-scan
+		double mScanZmin;		//Min z position of a stack scan
 		double mStackDepth;		//Stack depth or thickness
-		double mScanPmin;		//Min laser power of the stack-scan (at the top of the stack)
-		double mStackPinc;		//Laser power increase in the z-stage axis per unit of distance
+		double mScanPmin;		//Min laser power of the stack scan (at the top of the stack)
+		double mStackPinc;		//Laser power increase in the Z-stage axis per unit of distance
 		int nFrameBinning;
 	};
 	struct CutSlice {
@@ -116,31 +116,31 @@ private:
 	Sample mSample;											//Sample
 	const Stack mStack;										//Stack
 	std::vector<Commandline> mCommandList;
-	int mII;												//Tile iterator for the x-stage
-	int mJJ;												//Tile iterator for the y-stage
+	int mII;												//Tile iterator for the X-stage
+	int mJJ;												//Tile iterator for the Y-stage
 	int mCommandCounter{ 0 };
 
-	const SCANDIR3 mInitialScanDirXYZ{ SCANDIR::LEFTWARD,	//Initial scan directions wrt the x-stage, y-stage, and z-stage axes (the imaging has the opposite direction)
+	const SCANDIR3 mInitialScanDirXYZ{ SCANDIR::LEFTWARD,	//Initial scan directions wrt the X-stage, Y-stage, and Z-stage axes (the imaging has the opposite direction)
 										SCANDIR::OUTWARD,
 										SCANDIR::UPWARD };
 	ROI4 mROIeff;											//Slightly larger than the requested area: mSample.mROI
 	int mStackCounter{ 0 };									//Count the number of stacks
 	int mSliceCounter{ 0 };									//Count the number of the slices
-	INDICES2 mStackArrayDimIJ;								//Dimension of the array of stacks
-	SCANDIR3 mIterScanDirXYZ{ mInitialScanDirXYZ };			//Scan directions wrt the x-stage, y-stage, and z-stage axes	
-	double mScanZi;											//Initial z-stage position for a stack-scan
+	INDICES2 mTileArraySizeIJ;								//Dimension of the array of tiles
+	SCANDIR3 mIterScanDirXYZ{ mInitialScanDirXYZ };			//Scan directions wrt the X-stage, Y-stage, and Z-stage axes	
+	double mScanZi;											//Initial Z-stage position for a stack scan
 	double mPlaneToSliceZ{ 0 };								//Height of the plane to cut	
 	int mNtotalSlices;										//Number of vibratome slices in the entire sample
 
 	void initializeVibratomeSlice_();
-	void initializeStackArrayDimIJ_();
+	void initializeTileArrayDimIJ_();
 	void initializeEffectiveROI_();
 	void reserveMemoryBlock_();
-	POSITION2 stackIndicesToStackCenter_(const INDICES2 stackIndexIJ) const;
+	POSITION2 indicesToTileCenter_(const INDICES2 tileIJ) const;
 	void initializeIteratorIJ_();
 	void resetStageScanDirections_();
 	SAMPLESIZE3 effectiveSizeXYZ_() const;
-	void moveStage_(const INDICES2 stackIJ);
+	void moveStage_(const INDICES2 tileIJ);
 	void acqStack_(const int wavelengthIndex);
 	void saveStack_();
 	void cutSlice_();

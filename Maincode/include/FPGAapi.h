@@ -71,8 +71,8 @@ public:
 	int mHeightPerBeamletAllFrames_pix;					//Total number of lines per beamlet in all the frames
 	int mNpixPerBeamletAllFrames;						//Total number of pixels per beamlet in all the frames
 
-	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix, const int nFrames);
-	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int widthPerFrame_pix, const int heightPerBeamletPerFrame_pix);
+	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames);
+	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix);
 	~RTcontrol();
 	RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
 	RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
@@ -109,7 +109,7 @@ private:
 	};
 
 	LINECLOCK mLineclockInput;				//Resonant scanner (RS) or Function generator (FG)
-	MAINTRIG mMainTrigger;					//Trigger the acquisition with the Z stage: enable (0), disable (1)
+	MAINTRIG mMainTrigger;					//Trigger the acquisition with the Z-stage: enable (0), disable (1)
 	FIFOOUTfpga mEnableFIFOOUTfpga;			//Enable or disable the FIFOOUTfpga on the FPGA
 	VQU32 mVec_queue;
 	U32* mBufferA{ nullptr };				//Buffer array to read FIFOOUTpc A

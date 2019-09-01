@@ -198,7 +198,7 @@ ResonantScanner::ResonantScanner(const RTcontrol &RTcontrol) :
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
-		mFillFactor = sin(1. * PI / 2 * temporalFillFactor);			//Note that the fill factor doesn't depend on the RS amplitude
+		mFillFactor = sin(1. * PI / 2. * temporalFillFactor);			//Note that the fill factor doesn't depend on the RS amplitude
 																		//because the RS period is always the same and independent of the amplitude
 
 	//std::cout << "Fill factor = " << mFillFactor << "\n";				//For debugging

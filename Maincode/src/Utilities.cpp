@@ -49,10 +49,27 @@ U16 doubleToFx2p14(double n)
 			n -= t;
 			frac_part += (1 << (FIXED_BIT - 1 - i));
 		}
-		t = t / 2;
+		t = t / 2.;
 	}
 
 	return int_part + frac_part;
+}
+
+int SCANDIRtoInt(const SCANDIR scanDir)
+{
+	switch (scanDir)
+	{
+	case SCANDIR::RIGHTWARD:
+	case SCANDIR::INWARD:
+	case SCANDIR::UPWARD:
+		return +1;
+	case SCANDIR::LEFTWARD:
+	case SCANDIR::OUTWARD:
+	case SCANDIR::DOWNWARD:
+		return -1;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
+	}
 }
 
 //Clip x so that lower <= x <= upper
@@ -120,132 +137,6 @@ void pressAnyKeyToContOrESCtoExit()
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
 		else
 			break;//Break the while loop
-	}
-}
-
-//Used to increase the laser power 16 times
-double multiply16X(const double input)
-{
-	return 16 * input;
-}
-
-int SCANDIRtoInt(const SCANDIR scanDir)
-{
-	switch (scanDir)
-	{
-	case SCANDIR::RIGHTWARD:
-	case SCANDIR::INWARD:
-	case SCANDIR::UPWARD:
-		return +1;
-	case SCANDIR::LEFTWARD:
-	case SCANDIR::OUTWARD:
-	case SCANDIR::DOWNWARD:
-		return -1;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
-	}
-}
-
-//Switch the scan direction. It is important to pass scanDir by reference to be able to modify it
-void reverseSCANDIR(SCANDIR &scanDir)
-{
-	switch (scanDir)
-	{
-	//X-stage
-	case SCANDIR::LEFTWARD:
-		scanDir =  SCANDIR::RIGHTWARD;
-		break;
-	case SCANDIR::RIGHTWARD:
-		scanDir =  SCANDIR::LEFTWARD;
-		break;
-	//Y-stage
-	case SCANDIR::OUTWARD:
-		scanDir =  SCANDIR::INWARD;
-		break;
-	case SCANDIR::INWARD:
-		scanDir =  SCANDIR::OUTWARD;
-		break;
-	//Z-stage
-	case SCANDIR::DOWNWARD:
-		scanDir =  SCANDIR::UPWARD;
-		break;
-	case SCANDIR::UPWARD:
-		scanDir =  SCANDIR::DOWNWARD;
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-	}
-}
-
-double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
-{
-	if (travel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
-
-	switch (scanDir)
-	{
-	case SCANDIR::UPWARD:
-	case SCANDIR::RIGHTWARD:
-		return posMin - travelOverhead;
-	case SCANDIR::DOWNWARD:
-	case SCANDIR::LEFTWARD:
-		return posMin + travel + travelOverhead;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-	}
-}
-
-//Travel overhead to avoid the nonlinearity at the end of the stage scan
-double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
-{
-	if (travel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
-	
-	switch (scanDir)
-	{
-	case SCANDIR::UPWARD:
-	case SCANDIR::RIGHTWARD:
-		return posMin + travel + travelOverhead;
-	case SCANDIR::DOWNWARD:
-	case SCANDIR::LEFTWARD:
-		return posMin - travelOverhead;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-	}
-}
-
-//The initial laser power for scanning a stack depends on whether the stack is imaged from the top down or from the bottom up
-//totalPowerInc is the total increase and NOT the increase per unit of length
-double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
-{
-	if (powerMin < 0 || totalPowerInc < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
-
-	switch (scanDirZ)
-	{
-	case SCANDIR::UPWARD:
-		return powerMin;
-	case SCANDIR::DOWNWARD:
-		return powerMin + totalPowerInc;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
-	}
-}
-
-//totalPowerInc is the total increase and NOT the increase per unit of length
-double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
-{
-	if (powerMin < 0 || totalPowerInc < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
-
-	switch (scanDirZ)
-	{
-	case SCANDIR::UPWARD:
-		return powerMin + totalPowerInc;
-	case SCANDIR::DOWNWARD:
-		return powerMin;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
 	}
 }
 
@@ -715,7 +606,7 @@ void TiffU8::averageEvenOddFrames()
 			}
 
 		//Put 'evenImage' and 'oddImage' back into mArray. Concatenate 'oddImage' after 'evenImage'. Ignore the rest of the data in mArray
-		int	nFramesHalf{ mNframes / 2 };
+		const int nFramesHalf{ mNframes / 2 };
 		for (int iterPix = 0; iterPix < 2 * nPixPerFrame; iterPix++)
 		{
 			if (mNframes % 2)	//Odd number of frames: 1, 3, 5, etc
@@ -807,8 +698,8 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	const double fullScan{ 2. * FFOVfast / (std::cos(PI * t1 / g_lineclockHalfPeriod) - std::cos(PI * t2 / g_lineclockHalfPeriod)) };
 
 	//Start and stop positions of the RS that define FFOVfast
-	const double x1{ 0.5 * fullScan * (1 - std::cos(PI * t1 / g_lineclockHalfPeriod)) };
-	const double x2{ 0.5 * fullScan * (1 - std::cos(PI * t2 / g_lineclockHalfPeriod)) };
+	const double x1{ 0.5 * fullScan * (1. - std::cos(PI * t1 / g_lineclockHalfPeriod)) };
+	const double x2{ 0.5 * fullScan * (1. - std::cos(PI * t2 / g_lineclockHalfPeriod)) };
 
 	/*//For debugging
 	std::cout << "t1 (us): " << t1 / us << "\n";
@@ -1137,173 +1028,9 @@ void TiffU8::flattenField(const double maxScaleFactor)
 */
 #pragma endregion "TiffU8"
 
-#pragma region "BoolMap"
-BoolMap::BoolMap(const TiffU8 &tiff, const int tileHeight_pix, const int tileWidth_pix, const double threshold):
-	mTiff{ tiff },
-	mThreshold{ threshold },
-	mHeight_pix{ tiff.heightPerFrame_pix() },
-	mWidth_pix{ tiff.widthPerFrame_pix() },
-	mTileHeight_pix{ tileHeight_pix },
-	mTileWidth_pix{ tileWidth_pix },
-	mTileArraySizeIJ{ mHeight_pix / tileHeight_pix , mWidth_pix / tileWidth_pix }
-{
-	if (threshold < 0 || threshold > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
-
-	if (tileHeight_pix <= 0 || tileWidth_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height and width must be >0");
-
-	//Divide the large image into tiles of size tileHeight_pix * tileWidth_pix and return an array of tiles indicating if the tile NOT dark dark
-	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
-	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
-		for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
-			mIsBrightMap.push_back(isQuadrantBright_(mThreshold, { iterTileRow, iterTileCol }));
-}
-
-//Indicate if a specific tile in the stitched image is bright. The tile indices start form 0
-bool BoolMap::isTileBright(const INDICES2 tileIJ)
-{
-	if (tileIJ.II < 0 || tileIJ.II >= mTileArraySizeIJ.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index must be in the range [0-" + toString(mTileArraySizeIJ.II,0) + "]");
-
-	if (tileIJ.JJ < 0 || tileIJ.JJ >= mTileArraySizeIJ.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index must be in the range [0-" + toString(mTileArraySizeIJ.JJ, 0) + "]");
-
-	return mIsBrightMap.at(tileIJ.II * mTileArraySizeIJ.JJ + tileIJ.JJ);
-}
-
-//Save the boolmap as a text file
-void BoolMap::saveTileMapToText(std::string filename)
-{
-	std::ofstream fileHandle;
-	fileHandle.open(folderPath + filename + ".txt");
-	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
-	{
-		for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
-			fileHandle << static_cast<int>(mIsBrightMap.at(iterTileRow * mTileArraySizeIJ.JJ + iterTileCol));
-		fileHandle << "\n";	//End the row
-	}
-	fileHandle.close();
-}
-
-//Overlap a grid with the tiles on the stitched image
-void BoolMap::SaveTileGridOverlap(std::string filename, const OVERRIDE override) const
-{
-	const U8 lineColor{ 200 };
-	const double lineThicknessFactor{ 0.7 };
-	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mTileArraySizeIJ.JJ) };
-	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mTileArraySizeIJ.II) };
-
-	//Horizontal lines
-# pragma omp parallel for schedule(dynamic)
-	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
-	{
-		const int iterRow_pix{ iterTileRow * mTileHeight_pix };
-		for (int iterCol_pix = 0; iterCol_pix < mWidth_pix; iterCol_pix++)
-			for (int iterThickness = 0; iterThickness < lineThicknessHorizontal; iterThickness++)
-				(mTiff.data())[(iterRow_pix + iterThickness) * mWidth_pix + iterCol_pix] = lineColor;
-	}
-
-	//Vertical lines
-# pragma omp parallel for schedule(dynamic)
-	for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
-	{
-		const int iterCol_pix{ iterTileCol * mTileWidth_pix };
-		for (int iterRow_pix = 0; iterRow_pix < mHeight_pix; iterRow_pix++)
-			for (int iterThickness = 0; iterThickness < lineThicknessVertical; iterThickness++)
-				(mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix + iterThickness] = lineColor;
-	}
-
-	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
-}
-
-//Generate a Tiff with a binary dark or bright grid of tiles
-void BoolMap::saveTileMap(std::string filename, const OVERRIDE override) const
-{
-	const U8 lineColor{ 255 };	//Shade level
-
-	TiffU8 tileMap{ mHeight_pix, mWidth_pix, 1 };
-	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
-		for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
-			if (mIsBrightMap.at(iterTileRow * mTileArraySizeIJ.JJ + iterTileCol))	//If the tile is bright, shade it
-			{
-				for (int iterRow_pix = iterTileRow * mTileHeight_pix; iterRow_pix < (iterTileRow + 1) * mTileHeight_pix; iterRow_pix++)
-					for (int iterCol_pix = iterTileCol * mTileWidth_pix; iterCol_pix < (iterTileCol + 1) * mTileWidth_pix; iterCol_pix++)
-						(tileMap.data())[iterRow_pix * mWidth_pix + iterCol_pix] = lineColor;
-			}
-
-	tileMap.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
-}
-
-//Take the top frame of the stack and return true if it is bright
-bool BoolMap::isAvgBright_(const double threshold, const INDICES2 tileIJ) const
-{
-	if (threshold < 0 || threshold > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
-
-	if (tileIJ.II < 0 || tileIJ.JJ < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row and column indices must be >=0");
-
-	const int nPixPerTile{ mTileHeight_pix * mTileWidth_pix };		//Number of pixels in a tile
-
-	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
-
-	int sum{ 0 };
-	for (int iterRow_pix = tileIJ.II * mTileHeight_pix; iterRow_pix < (tileIJ.II + 1) * mTileHeight_pix; iterRow_pix++)
-		for (int iterCol_pix = tileIJ.JJ * mTileWidth_pix; iterCol_pix < (tileIJ.JJ + 1) * mTileWidth_pix; iterCol_pix++)
-			sum += (mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
-
-	return (1. * sum / nPixPerTile) > threshold_255;
-}
-
-//Take the top frame of the stack and return true if it's bright. Divide the image in quadrants for a better sensitivity
-bool BoolMap::isQuadrantBright_(const double threshold, const INDICES2 tileIJ) const
-{
-	if (threshold < 0 || threshold > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
-
-	if (tileIJ.II < 0 || tileIJ.JJ < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row and column indices must be >=0");
-
-	const int nPixPerTile{ mTileHeight_pix * mTileWidth_pix };		//Number of pixels in the tile
-	const double nPixQuad{ 1. * nPixPerTile / 4 };					//Number of pixels in a quadrant
-	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
-
-	//Divide the image in 4 quadrants
-	const int halfHeight{ mTileHeight_pix / 2 }, halfwidth{ mTileWidth_pix / 2 };
-
-	std::vector<int> vec_sum;	//Vector of the sum for each quadrant
-	//Iterate over the 4 quadrants. Start scanning the quadrant from the top-left corner of the image. Scan from left to right, then go back and scan the second row from left to right.
-	for (int iterQuadRow = 0; iterQuadRow < 2; iterQuadRow++)
-		for (int iterQuadCol = 0; iterQuadCol < 2; iterQuadCol++)
-		{
-			int sum{ 0 };
-			//Iterate over all the pixels inside a quadrant
-			for (int iterRow_pix = (tileIJ.II * mTileHeight_pix) + iterQuadRow * halfHeight; iterRow_pix < tileIJ.II * mTileHeight_pix + ((iterQuadRow + 1) * halfHeight); iterRow_pix++)
-				for (int iterCol_pix = (tileIJ.JJ * mTileWidth_pix) + iterQuadCol * halfwidth; iterCol_pix < tileIJ.JJ * mTileWidth_pix + ((iterQuadCol + 1)* halfwidth); iterCol_pix++)
-					sum += (mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
-			vec_sum.push_back(sum);
-		}
-
-	const double sumTL{ 1. * vec_sum.at(0) / nPixQuad };	//Average count top-left
-	const double sumTR{ 1. * vec_sum.at(1) / nPixQuad };	//Average count top-right
-	const double sumBL{ 1. * vec_sum.at(2) / nPixQuad };	//Average count bottom-left
-	const double sumBR{ 1. * vec_sum.at(3) / nPixQuad };	//Average count bottom-right
-
-	/*
-	//For debuging
-	std::cout << "Average count TL = " << sumTL << "\n";
-	std::cout << "Average count TR = " << sumTR << "\n";
-	std::cout << "Average count BL = " << sumBL << "\n";
-	std::cout << "Average count BR = " << sumBR << "\n";
-	*/
-
-	return (sumTL > threshold_255 || sumTR > threshold_255 || sumBL > threshold_255 || sumBR > threshold_255);
-}
-#pragma endregion "BoolMap"
-
 #pragma region "QuickStitcher"
 //tileHeight_pix = tile height, tileWidth_pix = tile width, tileArraySizeIJ = { number of tiles as rows, number of tiles as columns}
+//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the stitched image. II and JJ start from 0
 QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySizeIJ) :
 	mTileArraySizeIJ{ tileArraySizeIJ },
 	mStitchedTiff{ tileHeight_pix * tileArraySizeIJ.II, tileWidth_pix * tileArraySizeIJ.JJ, 1 }
@@ -1315,20 +1042,18 @@ QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, 
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array dimensions must be > 0");
 }
 
-//II = 0, 1, 2, ... from TOP to BOTTOM and JJ = 0, 1, 2, ... from LEFT to RIGHT of the mTiff image.
-void QuickStitcher::push(const TiffU8 &tile, const INDICES2 tileIJ)
+//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the stitched image. II and JJ start from 0
+void QuickStitcher::push(const TiffU8 &tile, const INDICES2 tileIndicesIJ)
 {
-	if (tileIJ.II < 0 || tileIJ.JJ < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array indices must be >= 0");
-	if (tileIJ.II >= mTileArraySizeIJ.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be <" + std::to_string(mTileArraySizeIJ.II));
-	if (tileIJ.JJ >= mTileArraySizeIJ.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be <" + std::to_string(mTileArraySizeIJ.JJ));
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArraySizeIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArraySizeIJ.II) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArraySizeIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArraySizeIJ.JJ) + "]");
 
 	const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
 	const int tileWidth_pix{ tile.widthPerFrame_pix() };													//Width of the tile
-	const int rowShift_pix{ tileIJ.II *  tileHeight_pix };													//In the mTiff image, shift the tile down by this many pixels
-	const int colShift_pix{ tileIJ.JJ *  tileWidth_pix };													//In the mTiff image, shift the tile to the right by this many pixels
+	const int rowShift_pix{ tileIndicesIJ.II *  tileHeight_pix };											//In the mTiff image, shift the tile down by this many pixels
+	const int colShift_pix{ tileIndicesIJ.JJ *  tileWidth_pix };											//In the mTiff image, shift the tile to the right by this many pixels
 	const int tileBytesPerRow{ static_cast<int>(tileWidth_pix * sizeof(U8)) };								//Bytes per row of the input tile
 	const int stitchedTiffBytesPerRow{ static_cast<int>(mStitchedTiff.widthPerFrame_pix() * sizeof(U8)) };	//Bytes per row of the stitched image
 

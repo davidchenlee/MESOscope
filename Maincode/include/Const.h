@@ -37,7 +37,7 @@ namespace Constants
 	struct LIMIT2 { double MIN; double MAX; };
 	struct ROI4 { double YMIN; double XMIN; double YMAX;  double XMAX; };	//Region of interest
 	struct SAMPLESIZE3 { double XX; double YY; double ZZ; };				//Sample size
-	struct TILEOVERLAP4 { double XX; double YY; double ZZ; };				//Tile overlap fraction
+	struct TILEOVERLAP3 { double XX; double YY; double ZZ; };				//Tile overlap fraction
 
 	enum class PMTIN { PMT = false, SIM = true };							//*cast
 	enum class LINECLOCK { RS = false, FG = true  };						//*cast

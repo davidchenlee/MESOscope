@@ -3,6 +3,13 @@
 #include "Devices.h"
 using namespace Constants;
 
+double multiply16X(const double input);
+void reverseSCANDIR(SCANDIR &scanDir);
+double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
+double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
+double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
+double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
+
 struct FluorLabelList	//Create a list of fluorescent labels
 {
 	struct FluorLabel //Parameters for a single fluorescent label
@@ -10,7 +17,7 @@ struct FluorLabelList	//Create a list of fluorescent labels
 		std::string mName{ "" };	//Fluorescent label name
 		int mWavelength_nm;			//Laser wavelength
 		double mScanPmin;			//Initial laser power for a stack scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mStackPinc;			//Laser power increase per unit of distance in the Z-stage axis
+		double mScanPinc;			//Laser power increase per unit of distance in the Z-stage axis
 		int nFramesBinning{ 1 };
 	};
 	std::vector<FluorLabel> mFluorLabelList;
@@ -45,12 +52,12 @@ struct Sample
 
 struct Stack
 {
-	FFOV2 mFFOV;				//Full field of view in the X-stage and Y-stage axes
-	double mStepSizeZ;			//Image resolution in the Z-stage axis
-	double mDepth;				//Stack depth or thickness
-	TILEOVERLAP4 mOverlap_frac;	//Stack overlap in the X-stage, Y-stage, and Z-stage axes
+	FFOV2 mFFOV;					//Full field of view in the X-stage and Y-stage axes
+	double mStepSizeZ;				//Image resolution in the Z-stage axis
+	double mDepthZ;					//Stack depth or thickness
+	TILEOVERLAP3 mOverlapXYZ_frac;	//Stack overlap in the X-stage, Y-stage, and Z-stage axes
 
-	Stack(const FFOV2 FFOV, const double stepSizeZ, const int nFrames, const TILEOVERLAP4 stackOverlap_frac);
+	Stack(const FFOV2 FFOV, const double stepSizeZ, const int nFrames, const TILEOVERLAP3 overlapXYZ_frac);
 	void printParams(std::ofstream *fileHandle) const;
 };
 
@@ -67,9 +74,9 @@ namespace Action
 		int mWavelength_nm;
 		SCANDIR mScanDirZ;		//THIS IS NOT READ BY THE SEQUENCER ANYMORE!!
 		double mScanZmin;		//Min z position of a stack scan
-		double mStackDepth;		//Stack depth or thickness
+		double mDepthZ;			//Stack depth (thickness)
 		double mScanPmin;		//Min laser power of the stack scan (at the top of the stack)
-		double mStackPinc;		//Laser power increase in the Z-stage axis per unit of distance
+		double mScanPinc;		//Laser power increase in the Z-stage axis per unit of distance
 		int nFrameBinning;
 	};
 	struct CutSlice {
@@ -109,7 +116,7 @@ public:
 	void generateCommandList();
 	//std::vector<POSITION2> generateLocationList();
 	int size() const;
-	Stack stack() const;
+	POSITION2 tileIndicesIJToStagePositionXY(const INDICES2 tileIndicesIJ) const;
 	void printSequenceParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
 private:
@@ -136,12 +143,35 @@ private:
 	void initializeTileArrayDimIJ_();
 	void initializeEffectiveROI_();
 	void reserveMemoryBlock_();
-	POSITION2 indicesToTileCenter_(const INDICES2 tileIJ) const;
 	void initializeIteratorIJ_();
 	void resetStageScanDirections_();
 	SAMPLESIZE3 effectiveSizeXYZ_() const;
-	void moveStage_(const INDICES2 tileIJ);
+
+	void moveStage_(const INDICES2 tileIndicesIJ);
 	void acqStack_(const int wavelengthIndex);
 	void saveStack_();
 	void cutSlice_();
+};
+
+class BoolMap
+{
+public:
+	BoolMap(const TiffU8 &tiff, const int tileHeight_pix, const int tileWidth_pix, double threshold);
+	bool isTileBright(const INDICES2 tileIndicesIJ);
+	void saveTileMapToText(std::string filename);
+	void SaveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+	POSITION2 tileIndicesIJtoTileCenterXY_pix(const TILEOVERLAP3 overlap_frac, const INDICES2 tileIndicesIJ);
+private:
+	const TiffU8 &mTiff;
+	double mThreshold;				//Threshold for generating the boolmap
+	int mHeight_pix;				//Pixel height of the stitched image
+	int mWidth_pix;					//Pixel width of the stitched image
+	int mTileHeight_pix;			//Pixel height of a tile
+	int mTileWidth_pix;				//Pixel width of a tile
+	INDICES2 mTileArraySizeIJ;		//Dimension of the tile array
+	std::vector<bool> mIsBrightMap;
+
+	bool isAvgBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
+	bool isQuadrantBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
 };

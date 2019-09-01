@@ -743,7 +743,7 @@ void RTcontrol::Pixelclock::pushUniformDwellTimes_()
 	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 	//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (g_lineclockHalfPeriod-400*125ns)/2
 
-	const double initialWaitingTime{ (g_lineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2 }; //Relative delay of the pixel clock wrt the line clock
+	const double initialWaitingTime{ (g_lineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2. }; //Relative delay of the pixel clock wrt the line clock
 
 	//Check if the pixelclock overflows the Lineclock
 	if (initialWaitingTime <= 0)

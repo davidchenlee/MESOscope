@@ -145,8 +145,8 @@ namespace Routines
 		RScanner.isRunning();						//To make sure that the RS is running
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2, &virtualLaser };
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2. };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &virtualLaser };
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANNER, 0, fluorLabel.mWavelength_nm };
 
 		//STAGES
@@ -171,7 +171,7 @@ namespace Routines
 			stage.waitForMotionToStopAll();
 			//stage.printPositionXYZ();				//Print the stage position	
 			
-			virtualLaser.setPower(fluorLabel.mScanPmin + iterLocation * stepSizeZ * fluorLabel.mStackPinc);	//Update the laser power
+			virtualLaser.setPower(fluorLabel.mScanPmin + iterLocation * stepSizeZ * fluorLabel.mScanPinc);	//Update the laser power
 
 			//Used to optimize the collector lens position
 			if (acqMode == RUNMODE::COLLECTLENS)
@@ -201,7 +201,7 @@ namespace Routines
 
 		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
 		{	
-			filename.append( "_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 2) + "mWpum" +
+			filename.append( "_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mScanPinc / mWpum, 2) + "mWpum" +
 				"_x=" + toString(stagePositionXYZ.front().XX / mm, 3) + "_y=" + toString(stagePositionXYZ.front().YY / mm, 3) +
 				"_zi=" + toString(stagePositionXYZ.front().ZZ / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().ZZ / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) + 
 				"_avg=" + toString(nFramesCont * nSameLocation, 0) );
@@ -239,7 +239,7 @@ namespace Routines
 			datalog.record("Laser used = ", virtualLaser.currentLaser_s());
 			datalog.record("Laser wavelength (nm) = ", virtualLaser.currentWavelength_nm());
 			datalog.record("Min laser power (mW) = ", fluorLabel.mScanPmin / mW);
-			datalog.record("Laser power increase (mW/um) = ", fluorLabel.mStackPinc / mWpum);
+			datalog.record("Laser power increase (mW/um) = ", fluorLabel.mScanPinc / mWpum);
 			datalog.record("Laser repetition period (us) = ", g_laserPulsePeriod / us);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
@@ -304,8 +304,8 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames };	//Note the STAGEZ flag
 
 		//LASER
-		const double laserPi = determineInitialLaserPower(fluorLabel.mScanPmin, stackDepth * fluorLabel.mStackPinc, scanDirZ);
-		const double laserPf = determineFinalLaserPower(fluorLabel.mScanPmin, stackDepth * fluorLabel.mStackPinc, scanDirZ);
+		const double laserPi = determineInitialLaserPower(fluorLabel.mScanPmin, stackDepth * fluorLabel.mScanPinc, scanDirZ);
+		const double laserPf = determineFinalLaserPower(fluorLabel.mScanPmin, stackDepth * fluorLabel.mScanPinc, scanDirZ);
 		VirtualLaser virtualLaser{ whichLaser };
 		virtualLaser.configure(RTcontrol, fluorLabel.mWavelength_nm);
 		virtualLaser.setPower(laserPi, laserPf);
@@ -315,8 +315,8 @@ namespace Routines
 		RScanner.isRunning();		//To make sure that the RS is running
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2, &virtualLaser };
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2. };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &virtualLaser };
 
 		//STAGES
 		const double stageZi = determineInitialScanPos(stackCenterXYZ.ZZ, stackDepth, 0. * mm, scanDirZ);
@@ -341,7 +341,7 @@ namespace Routines
 		image.binFrames(nFramesBinning);
 		//image.correct(RScanner.mFFOV);
 
-		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mStackPinc / mWpum, 2) +
+		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mScanPinc / mWpum, 2) +
 			"mWpum_x=" + toString(stackCenterXYZ.XX / mm, 3) + "_y=" + toString(stackCenterXYZ.YY / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZafterBinning / mm, 4) +
 			"_bin=" + toString(nFramesBinning, 0) };
@@ -412,8 +412,8 @@ namespace Routines
 		double stageXi, stageXf;		//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
-			stageXi = determineInitialScanPos(stackCenterXYZ.XX - stitchedHeight / 2, stitchedHeight, 1. * mm, iterScanDirX);
-			stageXf = determineFinalScanPos(stackCenterXYZ.XX - stitchedHeight / 2, stitchedHeight, 1. * mm, iterScanDirX);
+			stageXi = determineInitialScanPos(stackCenterXYZ.XX - stitchedHeight / 2., stitchedHeight, 1. * mm, iterScanDirX);
+			stageXf = determineFinalScanPos(stackCenterXYZ.XX - stitchedHeight / 2., stitchedHeight, 1. * mm, iterScanDirX);
 
 			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations << "\n";
 			stage.moveXY({ stageXi, stagePositionY.at(iterLocation) });
@@ -461,7 +461,7 @@ namespace Routines
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
 		const SAMPLESIZE3 sampleSize{ 0.2 * mm, 0.2 * mm, 0.00 * mm };
-		const TILEOVERLAP4 stackOverlap_frac{ 0.10, 0.05, 0.40 };										//Stack overlap
+		const TILEOVERLAP3 stackOverlap_frac{ 0.10, 0.05, 0.40 };										//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
 
@@ -507,8 +507,8 @@ namespace Routines
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 
 				//SCANNERS
-				const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2 };
-				Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2 };
+				const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2. };
+				Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2. };
 
 				//These parameters must be accessible to all the cases
 				int wavelength_nm, nFramesBinning;
@@ -535,8 +535,8 @@ namespace Routines
 
 					//Save the parameters for saving the file
 					wavelength_nm = acqStack.mWavelength_nm;
-					scanPi = determineInitialLaserPower(acqStack.mScanPmin, stackDepth * acqStack.mStackPinc, scanDirZ);
-					scanPf = determineFinalLaserPower(acqStack.mScanPmin, stackDepth * acqStack.mStackPinc, scanDirZ);
+					scanPi = determineInitialLaserPower(acqStack.mScanPmin, stackDepth * acqStack.mScanPinc, scanDirZ);
+					scanPf = determineFinalLaserPower(acqStack.mScanPmin, stackDepth * acqStack.mScanPinc, scanDirZ);
 					scanZi = determineInitialScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
 					scanZf = determineFinalScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
 
@@ -608,8 +608,8 @@ namespace Routines
 		RScanner.isRunning();					//To make sure that the RS is running
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2, &virtualLaser };
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2. };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2., &virtualLaser };
 
 		//OPEN THE UNIBLITZ SHUTTERS
 		virtualLaser.openShutter();				//The destructor will close the shutter automatically
@@ -745,7 +745,7 @@ namespace TestRoutines
 
 		//SCANNERS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };					//Full FOV in the slow axis
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2 };
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2. };
 
 		//LASER
 		const int wavelength_nm{ 1040 };
@@ -788,8 +788,8 @@ namespace TestRoutines
 
 		//SCANNERS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Scan duration in the slow axis
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2 };
-		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2 };
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2. };
+		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2. };
 
 		//Execute the control sequence and acquire the image
 		RTcontrol.run();
@@ -834,8 +834,8 @@ namespace TestRoutines
 		virtualLaser.setPower(selectPower);
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2, &virtualLaser };
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2. };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &virtualLaser };
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANNER, 0, wavelength_nm };
 
 		//EXECUTE THE CONTROL SEQUENCE
@@ -1180,9 +1180,12 @@ namespace TestRoutines
 		TiffU8 image{ inputFilename };
 		BoolMap boolmap{ image, tileHeight_pix, tileWidth_pix, threshold };
 		//boolmap.saveTileMapToText("Boolmap");
-		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
-		boolmap.SaveTileGridOverlap("TileGrid", OVERRIDE::EN);
+		//boolmap.saveTileMap("TileMap", OVERRIDE::EN);
+		//boolmap.SaveTileGridOverlap("TileGrid", OVERRIDE::EN);
 		//std::cout << boolmap.isTileBright({ 0, 30 }) << "\n";
+
+		POSITION2 positionXY_pix = boolmap.tileIndicesIJtoTileCenterXY_pix({0.0, 0.0, 0.0},  { 35, 0 });
+		std::cout << positionXY_pix.XX << "\t" << positionXY_pix.YY << "\n";
 
 		pressAnyKeyToCont();
 	}
@@ -1231,7 +1234,7 @@ namespace TestRoutines
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };
 		const int nFramesCont{ 80 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };										//Step size in the Z-stage axis
-		const TILEOVERLAP4 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
+		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };							//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };								//Sample thickness
 		const double sampleSurfaceZ{ 18.471 * mm };
@@ -1311,7 +1314,7 @@ namespace TestRoutines
 		const FFOV2 FFOV{ 200. * um, 150. * um };
 		const int nDiffZ{ 100 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
 		const double stepSizeZ{ 0.5 * um };									//Step size in the Z-stage axis
-		const TILEOVERLAP4 stackOverlap_frac{ 0.05, 0.05, 0.05 };			//Stack overlap
+		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.05 };			//Stack overlap
 		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
 
 		//Create a sequence
@@ -1340,9 +1343,9 @@ namespace TestRoutines
 		for (int tileNumber = 0; tileNumber < tileSizeIJ.II * tileSizeIJ.JJ; tileNumber++)
 			//for (int tileNumber = 0; tileNumber < 180; tileNumber++)
 		{
-			INDICES2 tileIJ = tileNumberToIndicesIJ(tileNumber);
-			int totalTileShiftX_pix{ -tileIJ.II * tileShiftX_pix };
-			int TotalTileShiftY_pix{ -tileIJ.JJ * tileShiftY_pix };
+			INDICES2 tileIndicesIJ = tileNumberToIndicesIJ(tileNumber);
+			int totalTileShiftX_pix{ -tileIndicesIJ.II * tileShiftX_pix };
+			int TotalTileShiftY_pix{ -tileIndicesIJ.JJ * tileShiftY_pix };
 			std::string line{ std::to_string(tileNumber) + ";;(" + std::to_string(TotalTileShiftY_pix) + "," + std::to_string(totalTileShiftX_pix) + ",0)" };	//In BigStitcher, X is horizontal and Y is vertical
 			//std::string line{ std::to_string(tileNumber) + "\t" + std::to_string(tileNumberToIndicesIJ(tileNumber).at(X)) + "\t" + std::to_string(tileNumberToIndicesIJ(tileNumber).at(Y)) }; //For debugging
 			datalog.record(line);
@@ -1424,8 +1427,8 @@ namespace TestRoutines
 		virtualLaser.setPower(laserPower);
 
 		//SCANNERS
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2 };
-		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2, &virtualLaser };
+		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2. };
+		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2., &virtualLaser };
 		//Galvo scanner{ RTcontrol, RTCHAN::SCANNER, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 
 		//EXECUTE THE CONTROL SEQUENCE

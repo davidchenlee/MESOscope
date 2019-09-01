@@ -1,5 +1,114 @@
 #include "Sequencer.h"
 
+//Used to increase the laser power 16 times
+double multiply16X(const double input)
+{
+	return 16 * input;
+}
+
+//Switch the scan direction. It is important to pass scanDir by reference to be able to modify it
+void reverseSCANDIR(SCANDIR &scanDir)
+{
+	switch (scanDir)
+	{
+		//X-stage
+	case SCANDIR::LEFTWARD:
+		scanDir = SCANDIR::RIGHTWARD;
+		break;
+	case SCANDIR::RIGHTWARD:
+		scanDir = SCANDIR::LEFTWARD;
+		break;
+		//Y-stage
+	case SCANDIR::OUTWARD:
+		scanDir = SCANDIR::INWARD;
+		break;
+	case SCANDIR::INWARD:
+		scanDir = SCANDIR::OUTWARD;
+		break;
+		//Z-stage
+	case SCANDIR::DOWNWARD:
+		scanDir = SCANDIR::UPWARD;
+		break;
+	case SCANDIR::UPWARD:
+		scanDir = SCANDIR::DOWNWARD;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
+double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
+{
+	if (travel <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
+
+	switch (scanDir)
+	{
+	case SCANDIR::UPWARD:
+	case SCANDIR::RIGHTWARD:
+		return posMin - travelOverhead;
+	case SCANDIR::DOWNWARD:
+	case SCANDIR::LEFTWARD:
+		return posMin + travel + travelOverhead;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
+//Travel overhead to avoid the nonlinearity at the end of the stage scan
+double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
+{
+	if (travel <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
+
+	switch (scanDir)
+	{
+	case SCANDIR::UPWARD:
+	case SCANDIR::RIGHTWARD:
+		return posMin + travel + travelOverhead;
+	case SCANDIR::DOWNWARD:
+	case SCANDIR::LEFTWARD:
+		return posMin - travelOverhead;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
+//The initial laser power for scanning a stack depends on whether the stack is imaged from the top down or from the bottom up
+//totalPowerInc is the total increase and NOT the increase per unit of length
+double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
+{
+	if (powerMin < 0 || totalPowerInc < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
+
+	switch (scanDirZ)
+	{
+	case SCANDIR::UPWARD:
+		return powerMin;
+	case SCANDIR::DOWNWARD:
+		return powerMin + totalPowerInc;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
+//totalPowerInc is the total increase and NOT the increase per unit of length
+double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
+{
+	if (powerMin < 0 || totalPowerInc < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
+
+	switch (scanDirZ)
+	{
+	case SCANDIR::UPWARD:
+		return powerMin + totalPowerInc;
+	case SCANDIR::DOWNWARD:
+		return powerMin;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+	}
+}
+
 #pragma region "FluorLabelList"
 FluorLabelList::FluorLabelList(const std::vector<FluorLabel> fluorLabelList) :
 	mFluorLabelList{ fluorLabelList }
@@ -28,7 +137,7 @@ void FluorLabelList::printParams(std::ofstream *fileHandle) const
 	{
 		*fileHandle << "Wavelength = " << mFluorLabelList.at(iterWL).mWavelength_nm <<
 			" nm\nPower = " << mFluorLabelList.at(iterWL).mScanPmin / mW <<
-			" mW\nPower increase = " << mFluorLabelList.at(iterWL).mStackPinc / mWpum << " mW/um\n";
+			" mW\nPower increase = " << mFluorLabelList.at(iterWL).mScanPinc / mWpum << " mW/um\n";
 	}
 	*fileHandle << "\n";
 }
@@ -67,10 +176,8 @@ Sample::Sample(const Sample& sample, const POSITION2 centerXY, const SAMPLESIZE3
 {
 	if (mSizeRequest.XX <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length X must be >0");
-
 	if (mSizeRequest.YY <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Y must be >0");
-
 	if (mCutAboveBottomOfStack < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be >=0");
 }
@@ -101,25 +208,21 @@ void Sample::printParams(std::ofstream *fileHandle) const
 #pragma endregion "Sample"
 
 #pragma region "Stack"
-Stack::Stack(const FFOV2 FFOV, const double stepSizeZ, const int nFrames, const TILEOVERLAP4 overlap_frac) :
+Stack::Stack(const FFOV2 FFOV, const double stepSizeZ, const int nFrames, const TILEOVERLAP3 overlapXYZ_frac) :
 	mFFOV{ FFOV },
 	mStepSizeZ{ stepSizeZ },
-	mDepth{ stepSizeZ *  nFrames },
-	mOverlap_frac{ overlap_frac }
+	mDepthZ{ stepSizeZ *  nFrames },
+	mOverlapXYZ_frac{ overlapXYZ_frac }
 {
 	if (FFOV.XX <= 0 || FFOV.YY <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
-
 	if (mStepSizeZ <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The Z-stage step size must be positive");
-
-	if (mDepth <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth must be positive");
-
-	if (mOverlap_frac.XX < 0 || mOverlap_frac.YY < 0 || mOverlap_frac.XX > 0.2 || mOverlap_frac.YY > 0.2 )
+	if (mDepthZ <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth Z must be positive");
+	if (mOverlapXYZ_frac.XX < 0 || mOverlapXYZ_frac.YY < 0 || mOverlapXYZ_frac.XX > 0.2 || mOverlapXYZ_frac.YY > 0.2 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap in XY must be in the range [0-0.2]");
-
-	if (mOverlap_frac.ZZ < 0 || mOverlap_frac.ZZ > 0.5)
+	if (mOverlapXYZ_frac.ZZ < 0 || mOverlapXYZ_frac.ZZ > 0.5)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap in Z must be in the range [0-0.5]");
 }
 
@@ -129,11 +232,11 @@ void Stack::printParams(std::ofstream *fileHandle) const
 	*fileHandle << std::setprecision(1);
 	*fileHandle << "FOV (stageX, stageY) = (" << mFFOV.XX / um << " um, " << mFFOV.YY / um << " um)\n";
 	*fileHandle << "Step size Z = " << mStepSizeZ / um << " um\n";
-	*fileHandle << "Stack depth = " << mDepth / um << " um\n";
+	*fileHandle << "Stack depth Z= " << mDepthZ / um << " um\n";
 	*fileHandle << std::setprecision(2);
-	*fileHandle << "Stack overlap = (" << mOverlap_frac.XX << ", " << mOverlap_frac.YY << ", " << mOverlap_frac.ZZ << ") (frac)\n";
+	*fileHandle << "Stack overlap = (" << mOverlapXYZ_frac.XX << ", " << mOverlapXYZ_frac.YY << ", " << mOverlapXYZ_frac.ZZ << ") (frac)\n";
 	*fileHandle << std::setprecision(1);
-	*fileHandle << "Stack overlap = (" << mOverlap_frac.XX * mFFOV.XX / um << " um, " << mOverlap_frac.YY * mFFOV.YY / um << " um, " << mOverlap_frac.ZZ * mDepth << " um)\n";
+	*fileHandle << "Stack overlap = (" << mOverlapXYZ_frac.XX * mFFOV.XX / um << " um, " << mOverlapXYZ_frac.YY * mFFOV.YY / um << " um, " << mOverlapXYZ_frac.ZZ * mDepthZ << " um)\n";
 	*fileHandle << "\n";
 }
 #pragma endregion "Stack"
@@ -170,9 +273,9 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << SCANDIRtoInt(mParam.acqStack.mScanDirZ) << "\t";
 		*fileHandle << std::setprecision(3);
 		*fileHandle << mParam.acqStack.mScanZmin / mm << "\t";
-		*fileHandle << (mParam.acqStack.mScanZmin + mParam.acqStack.mStackDepth) / mm << "\t";
+		*fileHandle << (mParam.acqStack.mScanZmin + mParam.acqStack.mDepthZ) / mm << "\t";
 		*fileHandle << std::setprecision(0);
-		*fileHandle << mParam.acqStack.mScanPmin << "\t" << mParam.acqStack.mScanPmin + mParam.acqStack.mStackDepth * mParam.acqStack.mStackPinc << "\n";
+		*fileHandle << mParam.acqStack.mScanPmin << "\t" << mParam.acqStack.mScanPmin + mParam.acqStack.mDepthZ * mParam.acqStack.mScanPinc << "\n";
 		break;
 	case Action::ID::SAV:
 		*fileHandle << actionToString_(mAction) + "\n";
@@ -203,8 +306,8 @@ void Sequencer::Commandline::printParameters() const
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
 		std::cout << "wavelength = " << mParam.acqStack.mWavelength_nm << " nm\n";
 		std::cout << "scanDirZ = " << SCANDIRtoInt(mParam.acqStack.mScanDirZ) << "\n";
-		std::cout << "scanZmin / stackDepth = " << mParam.acqStack.mScanZmin / mm << " mm/" << mParam.acqStack.mStackDepth << " mm\n";
-		std::cout << "scanPmin / stackPdiff = " << mParam.acqStack.mScanPmin / mW << " mW/" << mParam.acqStack.mStackPinc / mWpum << " (mW/um)\n\n";
+		std::cout << "scanZmin / depthZ = " << mParam.acqStack.mScanZmin / mm << " mm/" << mParam.acqStack.mDepthZ << " mm\n";
+		std::cout << "scanPmin / ScanPinc = " << mParam.acqStack.mScanPmin / mW << " mW/" << mParam.acqStack.mScanPinc / mWpum << " (mW/um)\n\n";
 		break;
 	case Action::ID::SAV:
 		std::cout << "The command is " << actionToString_(mAction) << "\n";
@@ -253,6 +356,7 @@ Sequencer::Commandline Sequencer::readCommandline(const int iterCommandLine) con
 }
 
 //Generate a scan pattern and use the vibratome to slice the sample
+//II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
 void Sequencer::generateCommandList()
 {
 	std::cout << "Generating the command list..." << "\n";
@@ -302,7 +406,7 @@ std::vector<POSITION2> Sequencer::generateLocationList()
 	{
 		while (II >= 0 && II < mTileArraySizeIJ.II)		//X-stage direction
 		{
-			const POSITION2 tileCenterXY{ indicesToTileCenter_({ II, JJ }) };
+			const POSITION2 tileCenterXY{ tileIndicesIJToStagePositionXY({ II, JJ }) };
 			locationList.push_back(tileCenterXY);
 
 			std::cout << "x = " << tileCenterXY.XX / mm << "\ty = " << tileCenterXY.YY / mm << "\n";		//For debugging
@@ -324,9 +428,37 @@ int Sequencer::size() const
 	return mCommandCounter;
 }
 
-Stack Sequencer::stack() const
+//Input the tile indices II and JJ (integers) and return the tile indices with tile overlap (the indices become double)
+POSITION2 overlappedTileIndexingIJ(const TILEOVERLAP3 overlapXYZ_frac, const INDICES2 tileArraySizeIJ, const INDICES2 tileIndicesIJ)
 {
-	return mStack;
+	if (overlapXYZ_frac.XX < 0 || overlapXYZ_frac.YY < 0 || overlapXYZ_frac.ZZ < 0 || overlapXYZ_frac.XX > 1 || overlapXYZ_frac.YY > 1 || overlapXYZ_frac.ZZ > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
+	if (tileArraySizeIJ.II <= 0 || tileArraySizeIJ.II <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be >0");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= tileArraySizeIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + toString(tileArraySizeIJ.II, 0) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= tileArraySizeIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + toString(tileArraySizeIJ.JJ, 0) + "]");
+
+	return { (1. - overlapXYZ_frac.XX) * (tileIndicesIJ.II - static_cast<int>((tileArraySizeIJ.II - 1) / 2)),
+			 (1. - overlapXYZ_frac.YY) * (tileIndicesIJ.JJ - static_cast<int>((tileArraySizeIJ.JJ - 1) / 2)) };
+}
+
+//II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
+POSITION2 Sequencer::tileIndicesIJToStagePositionXY(const INDICES2 tileIndicesIJ) const
+{
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArraySizeIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + toString(mTileArraySizeIJ.II, 0) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArraySizeIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + toString(mTileArraySizeIJ.JJ, 0) + "]");
+
+	//The first tile center is FFOV/2 away from the edge of the ROI. The next center is at (1-a)*FFOV away from the first center, where a*L is the tile overlap
+	POSITION2 overlappedIJ{ overlappedTileIndexingIJ(mStack.mOverlapXYZ_frac, mTileArraySizeIJ, tileIndicesIJ)};
+	POSITION2 stagePositionXY;
+	stagePositionXY.XX = mSample.mCenterXY.XX - mStack.mFFOV.XX  * overlappedIJ.XX;
+	stagePositionXY.YY = mSample.mCenterXY.YY - mStack.mFFOV.YY  * overlappedIJ.YY;
+
+	return stagePositionXY;
 }
 
 void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
@@ -343,7 +475,7 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
 
-	const double imagingTimePerStack{ g_lineclockHalfPeriod * (560. / 35) * (mStack.mDepth / mStack.mStepSizeZ) };
+	const double imagingTimePerStack{ g_lineclockHalfPeriod * (560. / 35) * (mStack.mDepthZ / mStack.mStepSizeZ) };
 	const double totalImagingTime_hours{ mStackCounter * imagingTimePerStack / seconds / 3600.};
 	*fileHandle << "Runtime per stack = " << imagingTimePerStack / ms << " ms (pixelwidth manually input)\n";
 	*fileHandle << "Estimated total runtime (multibeam + pipelining) = " << totalImagingTime_hours << " hrs (pixelwidth manually input)\n\n";
@@ -383,9 +515,9 @@ void Sequencer::initializeVibratomeSlice_()
 {
 	mScanZi = mSample.mSurfaceZ; 	//Initialize the Z-stage with the position of the surface of the sample
 
-	mPlaneToSliceZ = mScanZi + mStack.mDepth - mSample.mCutAboveBottomOfStack;
+	mPlaneToSliceZ = mScanZi + mStack.mDepthZ - mSample.mCutAboveBottomOfStack;
 
-	const int nZZ{ static_cast<int>(1 + std::ceil(1. / (1 - mStack.mOverlap_frac.ZZ) * (mSample.mSizeRequest.ZZ / mStack.mDepth - 1))) };
+	const int nZZ{ static_cast<int>(1 + std::ceil(1. / (1 - mStack.mOverlapXYZ_frac.ZZ) * (mSample.mSizeRequest.ZZ / mStack.mDepthZ - 1))) };
 	if (nZZ > 1)
 		mNtotalSlices = nZZ;		//Total number of vibratome slices in the entire sample
 	else
@@ -396,29 +528,30 @@ void Sequencer::initializeVibratomeSlice_()
 //If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
 void Sequencer::initializeTileArrayDimIJ_()
 {
-	const int nXX{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlap_frac.XX) * (mSample.mSizeRequest.XX / mStack.mFFOV.XX - 1))) };
-	const int nYY{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlap_frac.YY) * (mSample.mSizeRequest.YY / mStack.mFFOV.YY - 1))) };
+	const int numberOfTilesII{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.XX) * (mSample.mSizeRequest.XX / mStack.mFFOV.XX - 1))) };
+	const int numberOfTilesJJ{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.YY) * (mSample.mSizeRequest.YY / mStack.mFFOV.YY - 1))) };
 
-	if (nXX > 1)
-		mTileArraySizeIJ.II = nXX;		//Number of tiles in the X-stage axis
+	if (numberOfTilesII > 1)
+		mTileArraySizeIJ.II = numberOfTilesII;		//Number of tiles in the X-stage axis
 	else
 		mTileArraySizeIJ.II = 1;
 
-	if (nYY > 1)
-		mTileArraySizeIJ.JJ = nYY;		//Number of tiles in the Y-stage axis	
+	if (numberOfTilesJJ > 1)
+		mTileArraySizeIJ.JJ = numberOfTilesJJ;		//Number of tiles in the Y-stage axis	
 	else
 		mTileArraySizeIJ.JJ = 1;
 }
 
 //Calculate the effective ROI =  { YMIN, XMIN, YMAX, XMAX } covered by all the tiles
+//II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
 void Sequencer::initializeEffectiveROI_()
 {
-	const POSITION2 tileCenterMin = indicesToTileCenter_({ 0, 0 });
-	const POSITION2 tileCenterMax = indicesToTileCenter_({ mTileArraySizeIJ.II - 1, mTileArraySizeIJ.JJ - 1 });
-	mROIeff.XMAX = tileCenterMin.XX + mStack.mFFOV.XX / 2;
-	mROIeff.YMAX = tileCenterMin.YY + mStack.mFFOV.YY / 2;
-	mROIeff.XMIN = tileCenterMax.XX - mStack.mFFOV.XX / 2;
-	mROIeff.YMIN = tileCenterMax.YY - mStack.mFFOV.YY / 2;
+	const POSITION2 tileCenterXYmin = tileIndicesIJToStagePositionXY({ 0, 0 });
+	const POSITION2 tileCenterXYmax = tileIndicesIJToStagePositionXY({ mTileArraySizeIJ.II - 1, mTileArraySizeIJ.JJ - 1 });
+	mROIeff.XMAX = tileCenterXYmin.XX + mStack.mFFOV.XX / 2.;
+	mROIeff.YMAX = tileCenterXYmin.YY + mStack.mFFOV.YY / 2.;
+	mROIeff.XMIN = tileCenterXYmax.XX - mStack.mFFOV.XX / 2.;
+	mROIeff.YMIN = tileCenterXYmax.YY - mStack.mFFOV.YY / 2.;
 }
 
 //Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
@@ -429,25 +562,8 @@ void Sequencer::reserveMemoryBlock_()
 	mCommandList.reserve(3 * nTotalTilesEntireSample + mNtotalSlices - 1);
 }
 
-//II is the row index of the tile wrt the stitched image, which coincide with the X-stage direction
-//JJ is the column index of the tile wrt the stitched image, which coincide with the Y-stage direction
-POSITION2 Sequencer::indicesToTileCenter_(const INDICES2 tileIJ) const
-{
-	if (tileIJ.II < 0 || tileIJ.II >= mTileArraySizeIJ.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + toString(mTileArraySizeIJ.II, 0) + "]");
-
-	if (tileIJ.JJ < 0 || tileIJ.JJ >= mTileArraySizeIJ.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + toString(mTileArraySizeIJ.JJ, 0) + "]");
-
-	//The first tile center is FFOV/2 away from the ROI's edge. The next center is at (1-a)*FFOV away from the first center, where a*L is the tile overlap
-	POSITION2 stagePositionXY;
-	stagePositionXY.XX = mSample.mCenterXY.XX - mStack.mFFOV.XX  * ((1 - mStack.mOverlap_frac.XX) * (tileIJ.II - (mTileArraySizeIJ.II - 1) / 2));
-	stagePositionXY.YY = mSample.mCenterXY.YY - mStack.mFFOV.YY  * ((1 - mStack.mOverlap_frac.YY) * (tileIJ.JJ - (mTileArraySizeIJ.JJ - 1) / 2));
-
-	return stagePositionXY;
-}
-
 //Reset the iterators mII and mJJ to the initial values
+//II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
 void Sequencer::initializeIteratorIJ_()
 {
 	switch (mIterScanDirXYZ.XX)
@@ -478,19 +594,19 @@ void Sequencer::resetStageScanDirections_()
 //Convert a ROI = {ymin, xmin, ymax, xmax} to the equivalent sample size in the X-stage and Y-stage axes
 SAMPLESIZE3 Sequencer::effectiveSizeXYZ_() const
 {
-	return { mROIeff.XMAX - mROIeff.XMIN, mROIeff.YMAX - mROIeff.YMIN, mStack.mDepth * ((1 - mStack.mOverlap_frac.ZZ) * (mNtotalSlices - 1) + 1) };
+	return { mROIeff.XMAX - mROIeff.XMIN, mROIeff.YMAX - mROIeff.YMIN, mStack.mDepthZ * ((1 - mStack.mOverlapXYZ_frac.ZZ) * (mNtotalSlices - 1) + 1) };
 }
 
 //Move the stage to the position corresponding to the tile indices II and JJ 
+//II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
 void Sequencer::moveStage_(const INDICES2 tilesIJ)
 {
 	if (tilesIJ.II < 0 || tilesIJ.II >= mTileArraySizeIJ.II)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + toString(mTileArraySizeIJ.II, 0) + "]");
-
 	if (tilesIJ.JJ < 0 || tilesIJ.JJ >= mTileArraySizeIJ.JJ)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + toString(mTileArraySizeIJ.JJ, 0) + "]");
 
-	const POSITION2 tileCenterXY = indicesToTileCenter_(tilesIJ);
+	const POSITION2 tileCenterXY = tileIndicesIJToStagePositionXY(tilesIJ);
 
 	Commandline commandline{ Action::ID::MOV };
 	commandline.mParam.moveStage = { mSliceCounter, tilesIJ, tileCenterXY };
@@ -503,12 +619,11 @@ void Sequencer::acqStack_(const int wavelengthIndex)
 	if (wavelengthIndex < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength index must be >=0");
 
-
 	//Read the corresponding laser configuration
 	const FluorLabelList::FluorLabel fluorLabel{ mSample.mFluorLabelList.at(wavelengthIndex) };
 
 	Commandline commandline{ Action::ID::ACQ };
-	commandline.mParam.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mScanZi, mStack.mDepth, fluorLabel.mScanPmin, fluorLabel.mStackPinc, fluorLabel.nFramesBinning };
+	commandline.mParam.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mScanZi, mStack.mDepthZ, fluorLabel.mScanPmin, fluorLabel.mScanPinc, fluorLabel.nFramesBinning };
 	mCommandList.push_back(commandline);
 	mStackCounter++;	//Count the number of stacks acquired
 	mCommandCounter++;	//Count the number of commands
@@ -537,7 +652,193 @@ void Sequencer::cutSlice_()
 
 	//Increase the height of the Z-stage and the height of the plane to be cut in the next iteration		
 	//Because of the overlap, the effective stack depth is (1-a)*stackDepth, where a*stackDepth is the overlap
-	mScanZi += (1 - mStack.mOverlap_frac.ZZ) * mStack.mDepth;
-	mPlaneToSliceZ += (1 - mStack.mOverlap_frac.ZZ) * mStack.mDepth;
+	mScanZi += (1 - mStack.mOverlapXYZ_frac.ZZ) * mStack.mDepthZ;
+	mPlaneToSliceZ += (1 - mStack.mOverlapXYZ_frac.ZZ) * mStack.mDepthZ;
 }
 #pragma endregion "sequencer"
+
+#pragma region "BoolMap"
+BoolMap::BoolMap(const TiffU8 &tiff, const int tileHeight_pix, const int tileWidth_pix, const double threshold) :
+	mTiff{ tiff },
+	mThreshold{ threshold },
+	mHeight_pix{ tiff.heightPerFrame_pix() },
+	mWidth_pix{ tiff.widthPerFrame_pix() },
+	mTileHeight_pix{ tileHeight_pix },
+	mTileWidth_pix{ tileWidth_pix },
+	mTileArraySizeIJ{ mHeight_pix / tileHeight_pix , mWidth_pix / tileWidth_pix }
+{
+	if (threshold < 0 || threshold > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
+	if (tileHeight_pix <= 0 || tileWidth_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height and width must be >0");
+
+	//Divide the large image into tiles of size tileHeight_pix * tileWidth_pix and return an array of tiles indicating if the tile NOT dark dark
+	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
+	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
+		for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
+			mIsBrightMap.push_back(isQuadrantBright_(mThreshold, { iterTileRow, iterTileCol }));
+}
+
+//Indicate if a specific tile in the stitched image is bright. The tile indices start form 0
+//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the stitched image
+bool BoolMap::isTileBright(const INDICES2 tileIndicesIJ)
+{
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArraySizeIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + toString(mTileArraySizeIJ.II, 0) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArraySizeIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index JJ must be in the range [0-" + toString(mTileArraySizeIJ.JJ, 0) + "]");
+
+	return mIsBrightMap.at(tileIndicesIJ.II * mTileArraySizeIJ.JJ + tileIndicesIJ.JJ);
+}
+
+//Save the boolmap as a text file
+void BoolMap::saveTileMapToText(std::string filename)
+{
+	std::ofstream fileHandle;
+	fileHandle.open(folderPath + filename + ".txt");
+	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
+	{
+		for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
+			fileHandle << static_cast<int>(mIsBrightMap.at(iterTileRow * mTileArraySizeIJ.JJ + iterTileCol));
+		fileHandle << "\n";	//End the row
+	}
+	fileHandle.close();
+}
+
+//Position in pixels of the tile wrt the entire stitched image
+//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the stitched image
+POSITION2 BoolMap::tileIndicesIJtoTileCenterXY_pix(const TILEOVERLAP3 overlapXYZ_frac, const INDICES2 tileIndicesIJ)
+{
+	if (overlapXYZ_frac.XX < 0 || overlapXYZ_frac.YY < 0 || overlapXYZ_frac.ZZ < 0 || overlapXYZ_frac.XX > 1 || overlapXYZ_frac.YY > 1 || overlapXYZ_frac.ZZ > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArraySizeIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + toString(mTileArraySizeIJ.II, 0) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArraySizeIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + toString(mTileArraySizeIJ.JJ, 0) + "]");
+
+	const POSITION2 overlappedIJ{ overlappedTileIndexingIJ(overlapXYZ_frac, mTileArraySizeIJ, tileIndicesIJ) };
+	const POSITION2 overlappedIJmin{ overlappedTileIndexingIJ(overlapXYZ_frac, mTileArraySizeIJ, {0, 0}) };
+
+	return { mTileHeight_pix * (overlappedIJ.XX - overlappedIJmin.XX) + mTileHeight_pix / 2,
+			 mTileWidth_pix * (overlappedIJ.YY - overlappedIJmin.YY) + mTileWidth_pix / 2 };
+}
+
+//Overlap a grid with the tiles on the stitched image
+void BoolMap::SaveTileGridOverlap(std::string filename, const OVERRIDE override) const
+{
+	const U8 lineColor{ 200 };
+	const double lineThicknessFactor{ 0.1 };
+	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mTileArraySizeIJ.JJ) };
+	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mTileArraySizeIJ.II) };
+
+	//Horizontal lines
+# pragma omp parallel for schedule(dynamic)
+	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
+	{
+		const int iterRow_pix{ iterTileRow * mTileHeight_pix };
+		for (int iterCol_pix = 0; iterCol_pix < mWidth_pix; iterCol_pix++)
+			for (int iterThickness = 0; iterThickness < lineThicknessHorizontal; iterThickness++)
+				(mTiff.data())[(iterRow_pix + iterThickness) * mWidth_pix + iterCol_pix] = lineColor;
+	}
+
+	//Vertical lines
+# pragma omp parallel for schedule(dynamic)
+	for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
+	{
+		const int iterCol_pix{ iterTileCol * mTileWidth_pix };
+		for (int iterRow_pix = 0; iterRow_pix < mHeight_pix; iterRow_pix++)
+			for (int iterThickness = 0; iterThickness < lineThicknessVertical; iterThickness++)
+				(mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix + iterThickness] = lineColor;
+	}
+
+	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
+}
+
+//Generate a Tiff with a binary dark or bright grid of tiles
+void BoolMap::saveTileMap(std::string filename, const OVERRIDE override) const
+{
+	const U8 lineColor{ 255 };	//Shade level
+
+	TiffU8 tileMap{ mHeight_pix, mWidth_pix, 1 };
+	for (int iterTileRow = 0; iterTileRow < mTileArraySizeIJ.II; iterTileRow++)
+		for (int iterTileCol = 0; iterTileCol < mTileArraySizeIJ.JJ; iterTileCol++)
+			if (mIsBrightMap.at(iterTileRow * mTileArraySizeIJ.JJ + iterTileCol))	//If the tile is bright, shade it
+			{
+				for (int iterRow_pix = iterTileRow * mTileHeight_pix; iterRow_pix < (iterTileRow + 1) * mTileHeight_pix; iterRow_pix++)
+					for (int iterCol_pix = iterTileCol * mTileWidth_pix; iterCol_pix < (iterTileCol + 1) * mTileWidth_pix; iterCol_pix++)
+						(tileMap.data())[iterRow_pix * mWidth_pix + iterCol_pix] = lineColor;
+			}
+
+	tileMap.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
+}
+
+//Take the top frame of the stack and return true if it is bright
+//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the stitched image. II and JJ start from 0
+bool BoolMap::isAvgBright_(const double threshold, const INDICES2 tileIndicesIJ) const
+{
+	if (threshold < 0 || threshold > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArraySizeIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArraySizeIJ.II) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArraySizeIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArraySizeIJ.JJ) + "]");
+
+	const int nPixPerTile{ mTileHeight_pix * mTileWidth_pix };		//Number of pixels in a tile
+
+	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
+
+	int sum{ 0 };
+	for (int iterRow_pix = tileIndicesIJ.II * mTileHeight_pix; iterRow_pix < (tileIndicesIJ.II + 1) * mTileHeight_pix; iterRow_pix++)
+		for (int iterCol_pix = tileIndicesIJ.JJ * mTileWidth_pix; iterCol_pix < (tileIndicesIJ.JJ + 1) * mTileWidth_pix; iterCol_pix++)
+			sum += (mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
+
+	return (1. * sum / nPixPerTile) > threshold_255;
+}
+
+//Take the top frame of the stack and return true if it's bright. Divide the image in quadrants for a better sensitivity
+//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the stitched image. II and JJ start from 0
+bool BoolMap::isQuadrantBright_(const double threshold, const INDICES2 tileIndicesIJ) const
+{
+	if (threshold < 0 || threshold > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArraySizeIJ.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArraySizeIJ.II) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArraySizeIJ.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArraySizeIJ.JJ) + "]");
+
+	const int nPixPerTile{ mTileHeight_pix * mTileWidth_pix };		//Number of pixels in the tile
+	const double nPixQuad{ 1. * nPixPerTile / 4. };					//Number of pixels in a quadrant
+	const int threshold_255{ static_cast<int>(threshold * 255) };	//Threshold in the range [0-255]
+
+	//Divide the image in 4 quadrants
+	const int halfHeight{ mTileHeight_pix / 2 }, halfwidth{ mTileWidth_pix / 2 };
+
+	std::vector<int> vec_sum;	//Vector of the sum for each quadrant
+	//Iterate over the 4 quadrants. Start scanning the quadrant from the top-left corner of the image. Scan from left to right, then go back and scan the second row from left to right.
+	for (int iterQuadRow = 0; iterQuadRow < 2; iterQuadRow++)
+		for (int iterQuadCol = 0; iterQuadCol < 2; iterQuadCol++)
+		{
+			int sum{ 0 };
+			//Iterate over all the pixels inside a quadrant
+			for (int iterRow_pix = (tileIndicesIJ.II * mTileHeight_pix) + iterQuadRow * halfHeight; iterRow_pix < tileIndicesIJ.II * mTileHeight_pix + ((iterQuadRow + 1) * halfHeight); iterRow_pix++)
+				for (int iterCol_pix = (tileIndicesIJ.JJ * mTileWidth_pix) + iterQuadCol * halfwidth; iterCol_pix < tileIndicesIJ.JJ * mTileWidth_pix + ((iterQuadCol + 1)* halfwidth); iterCol_pix++)
+					sum += (mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
+			vec_sum.push_back(sum);
+		}
+
+	const double sumTL{ 1. * vec_sum.at(0) / nPixQuad };	//Average count top-left
+	const double sumTR{ 1. * vec_sum.at(1) / nPixQuad };	//Average count top-right
+	const double sumBL{ 1. * vec_sum.at(2) / nPixQuad };	//Average count bottom-left
+	const double sumBR{ 1. * vec_sum.at(3) / nPixQuad };	//Average count bottom-right
+
+	/*
+	//For debuging
+	std::cout << "Average count TL = " << sumTL << "\n";
+	std::cout << "Average count TR = " << sumTR << "\n";
+	std::cout << "Average count BL = " << sumBL << "\n";
+	std::cout << "Average count BR = " << sumBR << "\n";
+	*/
+
+	return (sumTL > threshold_255 || sumTR > threshold_255 || sumBL > threshold_255 || sumBR > threshold_255);
+}
+#pragma endregion "BoolMap"

@@ -19,19 +19,13 @@ void printHex(const std::vector<uint8_t>  input);
 void printHex(const std::string input);
 void printBinary16(const int input);
 U16 doubleToFx2p14(double n);
+int SCANDIRtoInt(const SCANDIR scanDir);
 template<class T> inline T clip(T x, T lower, T upper);
 template<class T> inline U8 clipU8top(const T x);
 template<class T> inline U8 clipU8dual(const T x);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
 void pressAnyKeyToContOrESCtoExit();
-double multiply16X(const double input);
-int SCANDIRtoInt(const SCANDIR scanDir);
-void reverseSCANDIR(SCANDIR &scanDir);
-double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
-double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
-double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
-double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
 
 //For saving the parameters to a text file
 class Logger
@@ -87,34 +81,11 @@ private:
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
 };
 
-//II is the row index and JJ is the column index of the tile wrt the stitched image
-class BoolMap
-{
-public:
-	BoolMap(const TiffU8 &tiff, const int tileHeight_pix, const int tileWidth_pix,  double threshold);
-	bool isTileBright(const INDICES2 tileIJ);
-	void saveTileMapToText(std::string filename);
-	void SaveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
-	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
-private:
-	const TiffU8 &mTiff;
-	double mThreshold;				//Threshold for generating the boolmap
-	int mHeight_pix;				//Pixel height of the stitched image
-	int mWidth_pix;					//Pixel width of the stitched image
-	int mTileWidth_pix;				//Pixel width of a tile
-	int mTileHeight_pix;			//Pixel height of a tile
-	INDICES2 mTileArraySizeIJ;		//Dimension of the tile array
-	std::vector<bool> mIsBrightMap;
-
-	bool isAvgBright_(const double threshold, const INDICES2 tileIJ) const;
-	bool isQuadrantBright_(const double threshold, const INDICES2 tileIJ) const;
-};
-
 class QuickStitcher
 {
 public:
 	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySizeIJ);
-	void push(const TiffU8 &tile, const INDICES2 tileIJ);
+	void push(const TiffU8 &tile, const INDICES2 tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
 private:
 	TiffU8 mStitchedTiff;

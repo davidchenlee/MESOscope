@@ -30,6 +30,7 @@ namespace Constants
 	enum class SCANDIR { LEFTWARD, RIGHTWARD, OUTWARD, INWARD, DOWNWARD, UPWARD };
 	struct SCANDIR3 { SCANDIR XX;  SCANDIR YY; SCANDIR ZZ; };
 	struct INDICES2 { int II; int JJ; };
+	struct PIXELS2 { int ii; int jj; };
 	struct POSITION2 { double XX; double YY; };
 	struct POSITION3 { double XX; double YY; double ZZ; };
 	struct VELOCITY3 { double XX; double YY; double ZZ; };

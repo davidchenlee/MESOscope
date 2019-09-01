@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.600 ) * mm, (21.075)* mm, (16.925 + 0.000) * mm };
+POSITION3 stackCenterXYZ{ (44.600 ) * mm, (21.075)* mm, (16.915 + 0.000) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
@@ -362,20 +362,20 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };													//Initial scan direction of stage 
-		const double stitchedWidth{ 10.000 * mm };													//Total width of the stitched image
+		const double stitchedWidth{ 10.000 * mm };													//Total width of the tile array
 
 		const double tileWidth{ 150. * um };														//Width of 1 strip (long vertical tile)
-		const int nCol{ static_cast<int>(std::ceil(1. * stitchedWidth / tileWidth)) };				//Number of columns in the stitched image
+		const int nCol{ static_cast<int>(std::ceil(1. * stitchedWidth / tileWidth)) };				//Number of columns in the tile array
 		const int tileWidth_pix{ 300 };																//Number of pixel width in a strip (long vertical tile)
-		const double stitchedHeight{ 10.080 * mm };//= 36 * 0.280 * mm								//Total height of the stitched image = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
+		const double stitchedHeight{ 10.080 * mm };//= 36 * 0.280 * mm								//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
 		const double pixelSizeX{ 1.0 * um };														//WARNING: the image becomes distorted for pixelSizeX < 1 um
-		const int stitchedHeight_pix{ static_cast<int>(stitchedHeight / pixelSizeX) };				//Total pixel height in the stitched image
+		const int stitchedHeight_pix{ static_cast<int>(stitchedHeight / pixelSizeX) };				//Total pixel height in the tile array
 
 		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
 
 		//LOCATIONS on the sample to image
 		std::vector<double> stagePositionY;
-		const int nColHalf{ nCol / 2 };																//Make the center of the final stitched image coincide with stackCenterXYZ
+		const int nColHalf{ nCol / 2 };																//Make the center of the tile array coincide with stackCenterXYZ
 		for (int iterLocation = 0; iterLocation < nCol; iterLocation++)
 			stagePositionY.push_back( stackCenterXYZ.YY + tileWidth * (nColHalf - iterLocation) );	//for now, only allowed to stack strips to the right (i.e. only allowed to move the stage to the left)
 
@@ -460,7 +460,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const SAMPLESIZE3 sampleSize{ 0.2 * mm, 0.2 * mm, 0.00 * mm };
+		const SAMPLESIZE3 sampleSize{ 0.3 * mm, 0.2 * mm, 0.00 * mm };
 		const TILEOVERLAP3 stackOverlap_frac{ 0.10, 0.05, 0.40 };										//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
@@ -1178,14 +1178,17 @@ namespace TestRoutines
 		const int tileHeight_pix{ 560 };
 		const int tileWidth_pix{ 300 };
 		TiffU8 image{ inputFilename };
-		BoolMap boolmap{ image, tileHeight_pix, tileWidth_pix, threshold };
+
+		const TileArray tileArray{ {image.heightPerFrame_pix() / 2, image.widthPerFrame_pix() / 2}, tileHeight_pix, tileWidth_pix, { 36, 67 }, {0.0, 0.0, 0.0} };
+
+		BoolMap boolmap{ image, tileArray, threshold };
 		//boolmap.saveTileMapToText("Boolmap");
 		//boolmap.saveTileMap("TileMap", OVERRIDE::EN);
-		//boolmap.SaveTileGridOverlap("TileGrid", OVERRIDE::EN);
+		boolmap.SaveTileGridOverlap("TileGrid", OVERRIDE::EN);
 		//std::cout << boolmap.isTileBright({ 0, 30 }) << "\n";
 
-		POSITION2 positionXY_pix = boolmap.tileIndicesIJtoTileCenterXY_pix({0.0, 0.0, 0.0},  { 35, 0 });
-		std::cout << positionXY_pix.XX << "\t" << positionXY_pix.YY << "\n";
+		//PIXELS2 positionXY_pix = boolmap.tileIndicesIJtoPixelPosition_pix({0.0, 0.0, 0.0},  { 35, 66 });
+		//std::cout << positionXY_pix.ii << "\t" << positionXY_pix.jj<< "\n";
 
 		pressAnyKeyToCont();
 	}

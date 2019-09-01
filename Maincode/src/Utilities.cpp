@@ -1030,7 +1030,7 @@ void TiffU8::flattenField(const double maxScaleFactor)
 
 #pragma region "QuickStitcher"
 //tileHeight_pix = tile height, tileWidth_pix = tile width, tileArraySizeIJ = { number of tiles as rows, number of tiles as columns}
-//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the stitched image. II and JJ start from 0
+//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
 QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySizeIJ) :
 	mTileArraySizeIJ{ tileArraySizeIJ },
 	mStitchedTiff{ tileHeight_pix * tileArraySizeIJ.II, tileWidth_pix * tileArraySizeIJ.JJ, 1 }
@@ -1042,20 +1042,20 @@ QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, 
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array dimensions must be > 0");
 }
 
-//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the stitched image. II and JJ start from 0
+//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
 void QuickStitcher::push(const TiffU8 &tile, const INDICES2 tileIndicesIJ)
 {
 	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArraySizeIJ.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArraySizeIJ.II) + "]");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArraySizeIJ.II - 1) + "]");
 	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArraySizeIJ.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArraySizeIJ.JJ) + "]");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArraySizeIJ.JJ - 1) + "]");
 
 	const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
 	const int tileWidth_pix{ tile.widthPerFrame_pix() };													//Width of the tile
 	const int rowShift_pix{ tileIndicesIJ.II *  tileHeight_pix };											//In the mTiff image, shift the tile down by this many pixels
 	const int colShift_pix{ tileIndicesIJ.JJ *  tileWidth_pix };											//In the mTiff image, shift the tile to the right by this many pixels
 	const int tileBytesPerRow{ static_cast<int>(tileWidth_pix * sizeof(U8)) };								//Bytes per row of the input tile
-	const int stitchedTiffBytesPerRow{ static_cast<int>(mStitchedTiff.widthPerFrame_pix() * sizeof(U8)) };	//Bytes per row of the stitched image
+	const int stitchedTiffBytesPerRow{ static_cast<int>(mStitchedTiff.widthPerFrame_pix() * sizeof(U8)) };	//Bytes per row of the tiled image
 
 	/*
 	//Transfer the data from the input tile to mStitchedTiff. Old way: copy pixel by pixel

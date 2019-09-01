@@ -153,23 +153,37 @@ private:
 	void cutSlice_();
 };
 
+class TileArray
+{
+public:
+	int mTileHeight_pix;		//Pixel height of a tile
+	int mTileWidth_pix;			//Pixel width of a tile
+	int mNpix;					//Total number of pixels in the tile
+	INDICES2 mArraySizeIJ;		//Dimension of the tile array
+	TileArray(const PIXELS2 refTilePosXY_pix, const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySizeIJ, const TILEOVERLAP3 overlapXYZ_frac);
+	PIXELS2 tilePosition_pix(const INDICES2 tileIndicesIJ) const;
+private:
+	std::vector<INDICES2> mTilePosition_pix;
+	PIXELS2 mRefTilePosXY_pix;	//Pixel position of the reference tile
+	TILEOVERLAP3 mOverlapXYZ_frac;
+};
+
 class BoolMap
 {
 public:
-	BoolMap(const TiffU8 &tiff, const int tileHeight_pix, const int tileWidth_pix, double threshold);
+	BoolMap(const TiffU8 &tiff, const TileArray tileArray, const double threshold);
 	bool isTileBright(const INDICES2 tileIndicesIJ);
 	void saveTileMapToText(std::string filename);
 	void SaveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
-	POSITION2 tileIndicesIJtoTileCenterXY_pix(const TILEOVERLAP3 overlap_frac, const INDICES2 tileIndicesIJ);
 private:
 	const TiffU8 &mTiff;
 	double mThreshold;				//Threshold for generating the boolmap
-	int mHeight_pix;				//Pixel height of the stitched image
-	int mWidth_pix;					//Pixel width of the stitched image
-	int mTileHeight_pix;			//Pixel height of a tile
-	int mTileWidth_pix;				//Pixel width of a tile
-	INDICES2 mTileArraySizeIJ;		//Dimension of the tile array
+	int mHeight_pix;				//Pixel height of the tiled image
+	int mWidth_pix;					//Pixel width of the tiled image
+	int mNpix;						//Total number of pixels in mTiff
+	TileArray mTileArray;
+
 	std::vector<bool> mIsBrightMap;
 
 	bool isAvgBright_(const double threshold, const INDICES2 tileIndicesIJ) const;

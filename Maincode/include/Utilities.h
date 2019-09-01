@@ -78,6 +78,8 @@ private:
 	int mWidthPerFrame_pix;
 	int mNframes;
 	int mBytesPerLine; 
+	int mNpixPerFrame;	//Total number of pixels in a frame
+	int mNpixAllFrames;	//Total number of pixels in all the frames
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
 };
 

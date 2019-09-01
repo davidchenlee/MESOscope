@@ -229,6 +229,9 @@ TiffU8::TiffU8(const std::string filename) :
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
+	mNpixPerFrame = mHeightPerFrame_pix * mWidthPerFrame_pix;
+	mNpixAllFrames = mNpixPerFrame * mNframes;
+
 	//Length in memory of one row of pixel in the image. Targeting 'U8' only. Alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
 	mBytesPerLine = mWidthPerFrame_pix * sizeof(U8);	
 
@@ -240,7 +243,7 @@ TiffU8::TiffU8(const std::string filename) :
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
 	}
 
-	mArray = new U8[mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes];	//Allocate memory for the image
+	mArray = new U8[mNpixAllFrames];	//Allocate memory for the image
 
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
 	{
@@ -263,16 +266,17 @@ TiffU8::TiffU8(const U8* inputImage, const int heightPerFrame, const int widthPe
 	mHeightPerFrame_pix{ heightPerFrame },
 	mWidthPerFrame_pix{ widthPerFrame },
 	mNframes{ nFrames },
-	mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) }
+	mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) },
+	mNpixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix },
+	mNpixAllFrames{ mNpixPerFrame * mNframes }
 {
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
-	const int nPixAllFrames{ mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes };
-	mArray = new U8[nPixAllFrames];
+	mArray = new U8[mNpixAllFrames];
 
 	//Copy input image onto mArray
-	std::memcpy(mArray, inputImage, nPixAllFrames * sizeof(U8));
+	std::memcpy(mArray, inputImage, mNpixAllFrames * sizeof(U8));
 }
 
 //Construct a Tiff from a vector
@@ -280,28 +284,32 @@ TiffU8::TiffU8(const std::vector<U8> &inputImage, const int heightPerFrame, cons
 	mHeightPerFrame_pix{ heightPerFrame },
 	mWidthPerFrame_pix{ widthPerFrame },
 	mNframes{ nFrames },
-	mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) }
+	mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) },
+	mNpixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix },
+	mNpixAllFrames{ mNpixPerFrame * mNframes }
 {
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
-	const int nPixAllFrames{ mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes };
-	mArray = new U8[nPixAllFrames];
+	mArray = new U8[mNpixAllFrames];
 
 	//Copy input image onto mArray
-	std::memcpy(mArray, &inputImage[0], nPixAllFrames * sizeof(U8));
+	std::memcpy(mArray, &inputImage[0], mNpixAllFrames * sizeof(U8));
 }
 
 //Construct a new Tiff by allocating memory and initialize it to zero for safety
 TiffU8::TiffU8(const int heightPerFrame_pix, const int widthPerFrame_pix, const int nFrames) :
 	mHeightPerFrame_pix{ heightPerFrame_pix },
 	mWidthPerFrame_pix{ widthPerFrame_pix },
-	mNframes{ nFrames }, mBytesPerLine{ static_cast<int>(widthPerFrame_pix * sizeof(U8)) }
+	mNframes{ nFrames },
+	mBytesPerLine{ static_cast<int>(widthPerFrame_pix * sizeof(U8)) },
+	mNpixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix },
+	mNpixAllFrames{ mNpixPerFrame * mNframes }
 {
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
 
-	mArray = new U8[mWidthPerFrame_pix * mHeightPerFrame_pix * mNframes]();
+	mArray = new U8[mNpixAllFrames]();
 }
 
 TiffU8::~TiffU8()
@@ -540,7 +548,7 @@ void TiffU8::saveToTxt(const std::string filename) const
 	std::ofstream fileHandle;									//Create output file
 	fileHandle.open(folderPath + filename + ".txt");			//Open the file
 
-	for (int iterPix = 0; iterPix < mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes; iterPix++)
+	for (int iterPix = 0; iterPix < mNpixAllFrames; iterPix++)
 		fileHandle << mArray[iterPix] << "\n";					//Write each element
 
 	fileHandle.close();											//Close the txt file
@@ -592,22 +600,20 @@ void TiffU8::averageEvenOddFrames()
 {
 	if (mNframes > 2)
 	{
-		const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix  };
-
 		//Calculate the average of the even and odd frames separately
-		unsigned int* avg{ new unsigned int[2 * nPixPerFrame]() };
+		unsigned int* avg{ new unsigned int[2 * mNpixPerFrame]() };
 		for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
-			for (int iterPix = 0; iterPix < nPixPerFrame; iterPix++)
+			for (int iterPix = 0; iterPix < mNpixPerFrame; iterPix++)
 			{
 				if (iterFrame % 2)
-					avg[iterPix] += mArray[iterFrame * nPixPerFrame + iterPix];				//Odd frames
+					avg[iterPix] += mArray[iterFrame * mNpixPerFrame + iterPix];				//Odd frames
 				else
-					avg[nPixPerFrame + iterPix] += mArray[iterFrame * nPixPerFrame + iterPix];	//Even frames
+					avg[mNpixPerFrame + iterPix] += mArray[iterFrame * mNpixPerFrame + iterPix];	//Even frames
 			}
 
 		//Put 'evenImage' and 'oddImage' back into mArray. Concatenate 'oddImage' after 'evenImage'. Ignore the rest of the data in mArray
 		const int nFramesHalf{ mNframes / 2 };
-		for (int iterPix = 0; iterPix < 2 * nPixPerFrame; iterPix++)
+		for (int iterPix = 0; iterPix < 2 * mNpixPerFrame; iterPix++)
 		{
 			if (mNframes % 2)	//Odd number of frames: 1, 3, 5, etc
 				mArray[iterPix] = static_cast<U8>(1. * avg[iterPix] / (nFramesHalf + 1));
@@ -625,16 +631,15 @@ void TiffU8::averageFrames()
 {
 	if (mNframes > 1)
 	{
-		const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix };
-		unsigned int* sum{ new unsigned int[nPixPerFrame]() };
+		unsigned int* sum{ new unsigned int[mNpixPerFrame]() };
 
 		//For each pixel, calculate the sum intensity over all the frames
 		for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
-			for (int iterPix = 0; iterPix < nPixPerFrame; iterPix++)
-				sum[iterPix] += mArray[iterFrame * nPixPerFrame + iterPix];
+			for (int iterPix = 0; iterPix < mNpixPerFrame; iterPix++)
+				sum[iterPix] += mArray[iterFrame * mNpixPerFrame + iterPix];
 
 		//Calculate the average intensity and assign it to mArray
-		for (int iterPix = 0; iterPix < nPixPerFrame; iterPix++)
+		for (int iterPix = 0; iterPix < mNpixPerFrame; iterPix++)
 			mArray[iterPix] = static_cast<U8>(1. * sum[iterPix] / mNframes);
 
 		//Update the number of frames in the stack to 1
@@ -658,20 +663,19 @@ void TiffU8::binFrames(const int nFramesPerBin)
 	if (mNframes > 1 && nFramesPerBin > 1)
 	{
 		const int nBins{ mNframes / nFramesPerBin };	//Number of bins in the stack
-		const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix };
-		const int nPixPerBin{ nPixPerFrame * nFramesPerBin };
-		unsigned int* sum{ new unsigned int[nBins * nPixPerFrame]() };
+		const int nPixPerBin{ mNpixPerFrame * nFramesPerBin };
+		unsigned int* sum{ new unsigned int[nBins * mNpixPerFrame]() };
 
 		//Take the first nFramesPerBin frames and average them. Then continue averaging every nFramesPerBin frames until the end of the stack
 		for (int binIndex = 0; binIndex < nBins; binIndex++)
 			for (int iterFrame = 0; iterFrame < nFramesPerBin; iterFrame++)		//Frame index within a bin
-				for (int iterPix = 0; iterPix < nPixPerFrame; iterPix++)			//Read the individual pixels
-					sum[binIndex * nPixPerFrame + iterPix] += mArray[binIndex * nPixPerBin + iterFrame * nPixPerFrame + iterPix];
+				for (int iterPix = 0; iterPix < mNpixPerFrame; iterPix++)			//Read the individual pixels
+					sum[binIndex * mNpixPerFrame + iterPix] += mArray[binIndex * nPixPerBin + iterFrame * mNpixPerFrame + iterPix];
 
 		//Calculate the average intensity in a bin and assign it to mArray
 		for (int binIndex = 0; binIndex < nBins; binIndex++)
-			for (int iterPix = 0; iterPix < nPixPerFrame; iterPix++)
-				mArray[binIndex * nPixPerFrame + iterPix] = static_cast<U8>(1. * sum[binIndex * nPixPerFrame + iterPix] / nFramesPerBin);
+			for (int iterPix = 0; iterPix < mNpixPerFrame; iterPix++)
+				mArray[binIndex * mNpixPerFrame + iterPix] = static_cast<U8>(1. * sum[binIndex * mNpixPerFrame + iterPix] / nFramesPerBin);
 
 		//Update the number of frames in the stack
 		mNframes = nBins;
@@ -687,7 +691,6 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	if (FFOVfast <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
 
-	const int nPixAllFrames{ mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes };
 	const int heightAllFrames{ mHeightPerFrame_pix * mNframes };
 
 	//Start and stop time of the RS scan that define FFOVfast
@@ -770,8 +773,8 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 
 	//Create buffers on the device
 	cl::Buffer buffer_kPrecomputed{ context, CL_MEM_READ_WRITE, sizeof(float) * mWidthPerFrame_pix };
-	cl::Buffer buffer_uncorrectedArray{ context, CL_MEM_READ_WRITE, sizeof(unsigned char) * nPixAllFrames };
-	cl::Buffer buffer_correctedArray{ context, CL_MEM_READ_WRITE, sizeof(unsigned char) * nPixAllFrames };
+	cl::Buffer buffer_uncorrectedArray{ context, CL_MEM_READ_WRITE, sizeof(unsigned char) * mNpixAllFrames };
+	cl::Buffer buffer_correctedArray{ context, CL_MEM_READ_WRITE, sizeof(unsigned char) * mNpixAllFrames };
 	cl::Buffer buffer_debugger{ context, CL_MEM_READ_WRITE, sizeof(double) };
 
 	//Create queue to which we will push commands for the device.
@@ -779,7 +782,7 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 
 	//Write arrays to the device
 	queue.enqueueWriteBuffer(buffer_kPrecomputed, CL_TRUE, 0, sizeof(float) * mWidthPerFrame_pix, kPrecomputed);
-	queue.enqueueWriteBuffer(buffer_uncorrectedArray, CL_TRUE, 0, sizeof(unsigned char) * nPixAllFrames, mArray);
+	queue.enqueueWriteBuffer(buffer_uncorrectedArray, CL_TRUE, 0, sizeof(unsigned char) * mNpixAllFrames, mArray);
 
 	//Run the kernel
 	cl::Kernel kernel_add{ cl::Kernel{program,"correctRSdistortion"} };
@@ -792,8 +795,8 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 	queue.finish();
 
 	//Read correctedArray from the device
-	unsigned char* correctedArray = new unsigned char[nPixAllFrames];
-	queue.enqueueReadBuffer(buffer_correctedArray, CL_TRUE, 0, sizeof(unsigned char) * nPixAllFrames, correctedArray);
+	unsigned char* correctedArray = new unsigned char[mNpixAllFrames];
+	queue.enqueueReadBuffer(buffer_correctedArray, CL_TRUE, 0, sizeof(unsigned char) * mNpixAllFrames, correctedArray);
 
 	double debugger;
 	queue.enqueueReadBuffer(buffer_debugger, CL_TRUE, 0, sizeof(double), &debugger);
@@ -833,8 +836,7 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 	if (FFOVfast <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
 
-	const int nPixAllFrames{ mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes };
-	U8* correctedArray = new U8[nPixAllFrames];
+	U8* correctedArray = new U8[mNpixAllFrames];
 
 	//Start and stop time of the RS scan that define FFOVfast
 	const double t1{ 0.5 * (g_lineclockHalfPeriod - mWidthPerFrame_pix * g_pixelDwellTime) };
@@ -896,8 +898,7 @@ void TiffU8::correctFOVslowCPU(const double FFOVslow)
 	if (FFOVslow <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
 
-	const int nPixAllFrames{ mHeightPerFrame_pix * mWidthPerFrame_pix * mNframes };
-	U8* correctedArray = new U8[nPixAllFrames];
+	U8* correctedArray = new U8[mNpixAllFrames];
 
 	//Normalized variables
 	const float xbar2{ 1.007f };
@@ -935,26 +936,25 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 	if (crosstalkRatio < 0 || crosstalkRatio > 1.0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The crosstalk ratio must be in the range [0, 1.0]");
 
-	const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix  };			//Number of pixels in a single frame
-	const int nPixStrip{ mHeightPerFrame_pix * mWidthPerFrame_pix  / g_nChanPMT };	//Number of pixels in a strip
-	U8* correctedArray{ new U8[nPixPerFrame * mNframes] };
+	const int nPixPerFramePerBeamlet{ mNpixPerFrame / g_nChanPMT };	//Number of pixels in a strip
+	U8* correctedArray{ new U8[mNpixAllFrames] };
 
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
-		for (int iterPix = 0; iterPix < nPixStrip; iterPix++)
+		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
 		{
 			//First channel
-			correctedArray[iterFrame * nPixPerFrame + iterPix] = clipU8dual(
-				mArray[iterFrame * nPixPerFrame + iterPix] - crosstalkRatio * mArray[iterFrame * nPixPerFrame + nPixStrip + iterPix]);
+			correctedArray[iterFrame * mNpixPerFrame + iterPix] = clipU8dual(
+				mArray[iterFrame * mNpixPerFrame + iterPix] - crosstalkRatio * mArray[iterFrame * mNpixPerFrame + nPixPerFramePerBeamlet + iterPix]);
 
 			//Last channel
-			correctedArray[iterFrame * nPixPerFrame + (g_nChanPMT - 1) * nPixStrip + iterPix] = clipU8dual(
-				mArray[iterFrame * nPixPerFrame + (g_nChanPMT - 1) * nPixStrip + iterPix] - crosstalkRatio * mArray[iterFrame * nPixPerFrame + (g_nChanPMT - 2) * nPixStrip + iterPix]);
+			correctedArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] = clipU8dual(
+				mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] - crosstalkRatio * mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 2) * nPixPerFramePerBeamlet + iterPix]);
 
 			//All channels in between
 			for (int chanIndex = 1; chanIndex < g_nChanPMT - 1; chanIndex++)
-				correctedArray[iterFrame * nPixPerFrame + chanIndex * nPixStrip + iterPix] = clipU8dual(
-					mArray[iterFrame * nPixPerFrame + chanIndex * nPixStrip + iterPix]
-					- crosstalkRatio * (mArray[iterFrame * nPixPerFrame + (chanIndex - 1) * nPixStrip + iterPix] + mArray[iterFrame * nPixPerFrame + (chanIndex + 1) * nPixStrip + iterPix]));
+				correctedArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = clipU8dual(
+					mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]
+					- crosstalkRatio * (mArray[iterFrame * mNpixPerFrame + (chanIndex - 1) * nPixPerFramePerBeamlet + iterPix] + mArray[iterFrame * mNpixPerFrame + (chanIndex + 1) * nPixPerFramePerBeamlet + iterPix]));
 		}
 	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
@@ -991,12 +991,11 @@ void TiffU8::flattenField(const double scaleFactor, const int lowerChan, const i
 		//std::cout << "upscaling " << chanIndex << " = " << vec_upscalingFactors.at(chanIndex) << "\n";
 
 	//Upscale mArray
-	const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix  };							//Number of pixels in a single frame
-	const int nPixPerFramePerBeamlet{ mHeightPerFrame_pix * mWidthPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
+	const int nPixPerFramePerBeamlet{ mNpixPerFrame / g_nChanPMT };	//Number of pixels in a strip
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
 		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
-				mArray[iterFrame * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]);
+				mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]);
 }
 
 /*Old way of doing the field flattening
@@ -1006,8 +1005,7 @@ void TiffU8::flattenField(const double maxScaleFactor)
 	if (maxScaleFactor < 1.0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The scale factor must be >= 1.0");
 
-	const int nPixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix};							//Number of pixels in a single frame
-	const int nPixPerFramePerBeamlet{ mHeightPerFrame_pix * mWidthPerFrame_pix / g_nChanPMT };	//Number of pixels in a strip
+	const int nPixPerFramePerBeamlet{ mNpixPerFrame / g_nChanPMT };	//Number of pixels in a strip
 	std::vector<double> vec_upscalingFactors(g_nChanPMT);
 
 	for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
@@ -1021,9 +1019,9 @@ void TiffU8::flattenField(const double maxScaleFactor)
 	//	std::cout << vec_upscalingFactors.at(chanIndex) << "\n";
 
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
-		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
+		for (int iterPix = 0; iterPix < mNpixPerFramePerBeamlet; iterPix++)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
-				mArray[iterFrame * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * nPixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]);
+				mArray[iterFrame * mNpixPerFrame + chanIndex * mNpixPerFramePerBeamlet + iterPix] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * mNpixPerFrame + chanIndex * mNpixPerFramePerBeamlet + iterPix]);
 }
 */
 #pragma endregion "TiffU8"

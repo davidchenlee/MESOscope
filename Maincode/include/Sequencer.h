@@ -53,11 +53,13 @@ struct Sample
 struct Stack
 {
 	FFOV2 mFFOV;					//Full field of view in the X-stage and Y-stage axes
-	double mStepSizeZ;				//Image resolution in the Z-stage axis
+	int mTileHeight_pix;
+	int mTileWidth_pix;
+	double mPixelSizeZ;				//Image resolution in the Z-stage axis
 	double mDepthZ;					//Stack depth or thickness
 	TILEOVERLAP3 mOverlapXYZ_frac;	//Stack overlap in the X-stage, Y-stage, and Z-stage axes
 
-	Stack(const FFOV2 FFOV, const double stepSizeZ, const int nFrames, const TILEOVERLAP3 overlapXYZ_frac);
+	Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix, const double pixelSizeZ, const int nFrames, const TILEOVERLAP3 overlapXYZ_frac);
 	void printParams(std::ofstream *fileHandle) const;
 };
 
@@ -170,11 +172,7 @@ private:
 	ROI4 mROIeff;											//Not used in the sequencer. It is just for printing out the ROI
 	int mStackCounter{ 0 };									//Count the number of stacks
 	int mSliceCounter{ 0 };									//Count the number of the slices
-	INDICES2 mTileArraySize;								//Dimension of the array of tiles
-
 	TileArray mTileArray;
-
-
 	SCANDIR3 mIterScanDirXYZ{ mInitialScanDirXYZ };			//Scan directions wrt the X-stage, Y-stage, and Z-stage axes	
 	double mScanZi;											//Initial Z-stage position for a stack scan
 	double mPlaneToSliceZ{ 0 };								//Height of the plane to cut	
@@ -184,7 +182,6 @@ private:
 										SCANDIR::UPWARD };
 
 	void initializeVibratomeSlice_();
-	void initializeTileArraySize_();
 	INDICES2 determineTileArraySize_();
 	void initializeEffectiveROI_();
 	void reserveMemoryBlock_();

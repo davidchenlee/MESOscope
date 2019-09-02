@@ -56,7 +56,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 40. * um };								//Stack deepth in the Z-stage axis
-		const double stepSizeZ{ 1.0 * um };
+		const double pixelSizeZ{ 1.0 * um };
 	
 		const double pixelSizeXY{ 0.5 * um };
 		const int heightPerFrame_pix{ 560 };
@@ -100,13 +100,13 @@ namespace Routines
 			break;
 		case RUNMODE::SCANZ:
 			//Generate the discrete scan sequence for the stages
-			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / stepSizeZ); iterDiffZ++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ + iterDiffZ * stepSizeZ });
+			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / pixelSizeZ); iterDiffZ++)
+				stagePositionXYZ.push_back({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ + iterDiffZ * pixelSizeZ });
 			break;
 		case RUNMODE::SCANZCENTERED:
 			//Generate the discrete scan sequence for the stages
-			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / stepSizeZ); iterDiffZ++)
-				stagePositionXYZ.push_back({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ - 0.5 * stackDepthZ + iterDiffZ * stepSizeZ });
+			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / pixelSizeZ); iterDiffZ++)
+				stagePositionXYZ.push_back({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ - 0.5 * stackDepthZ + iterDiffZ * pixelSizeZ });
 			break;
 		case RUNMODE::SCANXY:
 			//saveAllPMT = true;
@@ -171,7 +171,7 @@ namespace Routines
 			stage.waitForMotionToStopAll();
 			//stage.printPositionXYZ();				//Print the stage position	
 			
-			virtualLaser.setPower(fluorLabel.mScanPmin + iterLocation * stepSizeZ * fluorLabel.mScanPinc);	//Update the laser power
+			virtualLaser.setPower(fluorLabel.mScanPmin + iterLocation * pixelSizeZ * fluorLabel.mScanPinc);	//Update the laser power
 
 			//Used to optimize the collector lens position
 			if (acqMode == RUNMODE::COLLECTLENS)
@@ -203,7 +203,7 @@ namespace Routines
 		{	
 			filename.append( "_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mScanPinc / mWpum, 2) + "mWpum" +
 				"_x=" + toString(stagePositionXYZ.front().XX / mm, 3) + "_y=" + toString(stagePositionXYZ.front().YY / mm, 3) +
-				"_zi=" + toString(stagePositionXYZ.front().ZZ / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().ZZ / mm, 4) + "_Step=" + toString(stepSizeZ / mm, 4) + 
+				"_zi=" + toString(stagePositionXYZ.front().ZZ / mm, 4) + "_zf=" + toString(stagePositionXYZ.back().ZZ / mm, 4) + "_Step=" + toString(pixelSizeZ / mm, 4) + 
 				"_avg=" + toString(nFramesCont * nSameLocation, 0) );
 
 			output.binFrames(nSameLocation);									//Divide the images in bins and return the binned image
@@ -480,7 +480,7 @@ namespace Routines
 
 		//Create a sequence
 		const Sample sample{ currentSample, {stackCenterXYZ.XX, stackCenterXYZ.YY}, sampleSize, sampleSurfaceZ, cutAboveBottomOfStack };
-		const Stack stack{ FFOV, pixelSizeZafterBinning, nFramesAfterBinning, stackOverlap_frac };
+		const Stack stack{ FFOV, heightPerFrame_pix, widthPerFrame_pix, pixelSizeZafterBinning, nFramesAfterBinning, stackOverlap_frac };
 		Sequencer sequence{ sample, stack };
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist");
@@ -821,7 +821,7 @@ namespace TestRoutines
 		selectPower = 50. * mW;
 #endif
 		//STACK
-		const double stepSizeZ{ 1.0 * um };
+		const double pixelSizeZ{ 1.0 * um };
 		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the Z-stage axis
 
 		//CREATE THE CONTROL SEQUENCE
@@ -1233,18 +1233,18 @@ namespace TestRoutines
 
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
-		const int heightPerFrame_pix{ 400 };
+		const int heightPerFrame_pix{ 560};
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };
-		const int nFramesCont{ 80 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };										//Step size in the Z-stage axis
+		const int nFramesCont{ 100 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
+		const double pixelSizeZ{ 0.5 * um };									//Step size in the Z-stage axis
 		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.05 };				//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };							//height to cut above the bottom of the stack
 		const double sampleLengthZ{ 0.01 * mm };								//Sample thickness
 		const double sampleSurfaceZ{ 18.471 * mm };
 
 		Sample sample{ currentSample,  {stackCenterXYZ.XX, stackCenterXYZ.YY}, {10. * mm, 10. * mm, sampleLengthZ}, sampleSurfaceZ, cutAboveBottomOfStack };
-		Stack stack{ FFOV, stepSizeZ, nFramesCont, stackOverlap_frac };
+		Stack stack{ FFOV, heightPerFrame_pix, widthPerFrame_pix, pixelSizeZ, nFramesCont, stackOverlap_frac };
 
 		//Create a sequence
 		Sequencer sequence{ sample, stack };
@@ -1317,9 +1317,9 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const FFOV2 FFOV{ 200. * um, 150. * um };
 		const int nDiffZ{ 100 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double stepSizeZ{ 0.5 * um };									//Step size in the Z-stage axis
+		const double pixelSizeZ{ 0.5 * um };									//Step size in the Z-stage axis
 		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.05 };			//Stack overlap
-		const Stack stack{ FFOV, stepSizeZ, nDiffZ, stackOverlap_frac };
+		const Stack stack{ FFOV, pixelSizeZ, nDiffZ, stackOverlap_frac };
 
 		//Create a sequence
 		Sequencer sequence{ currentSample, stack, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks

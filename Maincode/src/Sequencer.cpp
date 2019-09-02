@@ -226,16 +226,22 @@ void Sample::printParams(std::ofstream *fileHandle) const
 #pragma endregion "Sample"
 
 #pragma region "Stack"
-Stack::Stack(const FFOV2 FFOV, const double stepSizeZ, const int nFrames, const TILEOVERLAP3 overlapXYZ_frac) :
+Stack::Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix, const double pixelSizeZ, const int nFrames, const TILEOVERLAP3 overlapXYZ_frac) :
 	mFFOV{ FFOV },
-	mStepSizeZ{ stepSizeZ },
-	mDepthZ{ stepSizeZ *  nFrames },
+	mTileHeight_pix{ tileHeight_pix },
+	mTileWidth_pix{ tileWidth_pix },
+	mPixelSizeZ{ pixelSizeZ },
+	mDepthZ{ pixelSizeZ *  nFrames },
 	mOverlapXYZ_frac{ overlapXYZ_frac }
 {
 	if (FFOV.XX <= 0 || FFOV.YY <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
-	if (mStepSizeZ <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The Z-stage step size must be positive");
+	if (tileHeight_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be >0");
+	if (tileWidth_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be >0");
+	if (mPixelSizeZ <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel size Z must be >0");
 	if (mDepthZ <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth Z must be positive");
 	if (mOverlapXYZ_frac.XX < 0 || mOverlapXYZ_frac.YY < 0 || mOverlapXYZ_frac.XX > 0.2 || mOverlapXYZ_frac.YY > 0.2 )
@@ -249,7 +255,7 @@ void Stack::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "STACK ************************************************************\n";
 	*fileHandle << std::setprecision(1);
 	*fileHandle << "FOV (stageX, stageY) = (" << mFFOV.XX / um << " um, " << mFFOV.YY / um << " um)\n";
-	*fileHandle << "Step size Z = " << mStepSizeZ / um << " um\n";
+	*fileHandle << "Pixel size Z = " << mPixelSizeZ / um << " um\n";
 	*fileHandle << "Stack depth Z= " << mDepthZ / um << " um\n";
 	*fileHandle << std::setprecision(2);
 	*fileHandle << "Stack overlap = (" << mOverlapXYZ_frac.XX << ", " << mOverlapXYZ_frac.YY << ", " << mOverlapXYZ_frac.ZZ << ") (frac)\n";
@@ -606,10 +612,9 @@ bool BoolMap::isQuadrantBright_(const double threshold, const INDICES2 tileIndic
 Sequencer::Sequencer(const Sample sample, const Stack stack) :
 	mSample{ sample },
 	mStack{ stack },
-	mTileArray{ mStack.mFFOV.XX, mStack.mFFOV.YY, determineTileArraySize_(), mStack.mOverlapXYZ_frac }
+	mTileArray{ mStack.mTileHeight_pix, mStack.mTileWidth_pix, determineTileArraySize_(), mStack.mOverlapXYZ_frac }
 {
 	initializeVibratomeSlice_();
-	initializeTileArraySize_();		//Calculate the number of tiles in the X-stage and Y-stage axes based on the sample size and the FFOV
 	initializeEffectiveROI_();		//Calculate the effective ROI covered by all the tiles, which might be slightly larger than the requested ROI
 	reserveMemoryBlock_();			//Reserve memory for speed
 }
@@ -632,9 +637,9 @@ void Sequencer::generateCommandList()
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mSample.mFluorLabelList.size(); iterWL++)
 		{
 			//The Y-stage is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
-			while (mJJ >= 0 && mJJ < mTileArraySize.JJ)		//Y-stage direction. JJ iterates from 0 to mTileArraySize.JJ
+			while (mJJ >= 0 && mJJ < mTileArray.mArraySize.JJ)		//Y-stage direction. JJ iterates from 0 to mTileArraySize.JJ
 			{
-				while (mII >= 0 && mII < mTileArraySize.II)	//X-stage direction. II iterates back and forth between 0 and mTileArraySize.II
+				while (mII >= 0 && mII < mTileArray.mArraySize.II)	//X-stage direction. II iterates back and forth between 0 and mTileArraySize.II
 				{
 					moveStage_({ mII, mJJ });
 					acqStack_(iterWL);
@@ -696,13 +701,13 @@ int Sequencer::size() const
 //The center the tile array is at the sample center (exact center for an odd number of tiles or slightly off center for an even number of tiles)
 POSITION2 Sequencer::tileIndicesIJToStagePositionXY(const INDICES2 tileIndicesIJ) const
 {
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + std::to_string(mTileArraySize.II - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + std::to_string(mTileArraySize.JJ - 1) + "]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.mArraySize.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + std::to_string(mTileArray.mArraySize.II - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.mArraySize.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
 
 	//The tile centers are (1-a)*FFOV away from each other, where a*L is the tile overlap
-	POSITION2 centeredIJ{ determineRelativeTileIndicesIJ(mStack.mOverlapXYZ_frac, mTileArraySize, tileIndicesIJ) };
+	POSITION2 centeredIJ{ determineRelativeTileIndicesIJ(mStack.mOverlapXYZ_frac, mTileArray.mArraySize, tileIndicesIJ) };
 	POSITION2 stagePositionXY;
 	stagePositionXY.XX = mSample.mCenterXY.XX - mStack.mFFOV.XX  * centeredIJ.XX;
 	stagePositionXY.YY = mSample.mCenterXY.YY - mStack.mFFOV.YY  * centeredIJ.YY;
@@ -720,14 +725,16 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 	*fileHandle << "Z position of the surface of the sample = " << mSample.mSurfaceZ / mm << " mm\n";
 	*fileHandle << std::setprecision(0);
 	*fileHandle << "Total # tissue slices = " << mNtotalSlices << "\n";
-	*fileHandle << "Tile array size (stageX, stageY) = (" << mTileArraySize.II << ", " << mTileArraySize.JJ << ")\n";
+	*fileHandle << "Tile array size (stageX, stageY) = (" << mTileArray.mArraySize.II << ", " << mTileArray.mArraySize.JJ << ")\n";
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
 
-	const double imagingTimePerStack{ g_lineclockHalfPeriod * (560. / 35) * (mStack.mDepthZ / mStack.mStepSizeZ) };
-	const double totalImagingTime_hours{ mStackCounter * imagingTimePerStack / seconds / 3600. };
-	*fileHandle << "Runtime per stack = " << imagingTimePerStack / ms << " ms (pixelwidth manually input)\n";
-	*fileHandle << "Estimated total runtime (multibeam + pipelining) = " << totalImagingTime_hours << " hrs (pixelwidth manually input)\n\n";
+	const double imagingTimePerStack{ g_lineclockHalfPeriod *  mStack.mTileHeight_pix * (mStack.mDepthZ / mStack.mPixelSizeZ) };
+	const double totalImagingTime_hours{ (mStackCounter + 1) * imagingTimePerStack / seconds / 3600. };
+
+	*fileHandle << "Runtime per stack = " << imagingTimePerStack / ms << " ms\n";
+	*fileHandle << std::setprecision(6);
+	*fileHandle << "Estimated total runtime (multibeam + pipelining) = " << totalImagingTime_hours << " hrs\n\n";
 }
 
 //Print the commandlist to file
@@ -775,39 +782,20 @@ void Sequencer::initializeVibratomeSlice_()
 
 //Calculate the number of tiles in the X-stage and Y-stage axes based on the sample size and the FFOV
 //If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
-void Sequencer::initializeTileArraySize_()
-{
-	const int numberOfTilesII{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.XX) * (mSample.mSampleSizeXYZreq.XX / mStack.mFFOV.XX - 1))) };
-	const int numberOfTilesJJ{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.YY) * (mSample.mSampleSizeXYZreq.YY / mStack.mFFOV.YY - 1))) };
-
-	if (numberOfTilesII > 1)
-		mTileArraySize.II = numberOfTilesII;		//Number of tiles in the X-stage axis
-	else
-		mTileArraySize.II = 1;
-
-	if (numberOfTilesJJ > 1)
-		mTileArraySize.JJ = numberOfTilesJJ;		//Number of tiles in the Y-stage axis	
-	else
-		mTileArraySize.JJ = 1;
-}
-
-
-//Calculate the number of tiles in the X-stage and Y-stage axes based on the sample size and the FFOV
-//If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
 INDICES2 Sequencer::determineTileArraySize_()
 {
 	const int numberOfTilesII{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.XX) * (mSample.mSampleSizeXYZreq.XX / mStack.mFFOV.XX - 1))) };
 	const int numberOfTilesJJ{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.YY) * (mSample.mSampleSizeXYZreq.YY / mStack.mFFOV.YY - 1))) };
 
 	if (numberOfTilesII > 1)
-		mTileArraySize.II = numberOfTilesII;		//Number of tiles in the X-stage axis
+		mTileArray.mArraySize.II = numberOfTilesII;		//Number of tiles in the X-stage axis
 	else
-		mTileArraySize.II = 1;
+		mTileArray.mArraySize.II = 1;
 
 	if (numberOfTilesJJ > 1)
-		mTileArraySize.JJ = numberOfTilesJJ;		//Number of tiles in the Y-stage axis	
+		mTileArray.mArraySize.JJ = numberOfTilesJJ;		//Number of tiles in the Y-stage axis	
 	else
-		mTileArraySize.JJ = 1;
+		mTileArray.mArraySize.JJ = 1;
 
 	return { numberOfTilesII, numberOfTilesJJ };
 }
@@ -817,7 +805,7 @@ INDICES2 Sequencer::determineTileArraySize_()
 void Sequencer::initializeEffectiveROI_()
 {
 	const POSITION2 tileCenterXYmin = tileIndicesIJToStagePositionXY({ 0, 0 });
-	const POSITION2 tileCenterXYmax = tileIndicesIJToStagePositionXY({ mTileArraySize.II - 1, mTileArraySize.JJ - 1 });
+	const POSITION2 tileCenterXYmax = tileIndicesIJToStagePositionXY({ mTileArray.mArraySize.II - 1, mTileArray.mArraySize.JJ - 1 });
 	mROIeff.XMAX = tileCenterXYmin.XX + mStack.mFFOV.XX / 2.;
 	mROIeff.YMAX = tileCenterXYmin.YY + mStack.mFFOV.YY / 2.;
 	mROIeff.XMIN = tileCenterXYmax.XX - mStack.mFFOV.XX / 2.;
@@ -827,7 +815,7 @@ void Sequencer::initializeEffectiveROI_()
 //Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
 void Sequencer::reserveMemoryBlock_()
 {
-	const int nTotalTilesPerVibratomeSlice{ mTileArraySize.II * mTileArraySize.JJ };													//Total number of tiles in a vibratome slice
+	const int nTotalTilesPerVibratomeSlice{ mTileArray.mArraySize.II * mTileArray.mArraySize.JJ };											//Total number of tiles in a vibratome slice
 	const int nTotalTilesEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * nTotalTilesPerVibratomeSlice };	//Total number of tiles in the entire sample. mNtotalSlices is fixed at 1
 	mCommandList.reserve(3 * nTotalTilesEntireSample + mNtotalSlices - 1);
 }
@@ -839,7 +827,7 @@ void Sequencer::initializeIteratorIJ_()
 	switch (mIterScanDirXYZ.XX)
 	{
 	case SCANDIR::RIGHTWARD:	//The X-stage moves to the right, therefore, the sample is imaged from right to left
-		mII = mTileArraySize.II - 1;
+		mII = mTileArray.mArraySize.II - 1;
 		break;
 	case SCANDIR::LEFTWARD:		//The X-stage moves to the left, therefore, the sample is imaged from left to right
 		mII = 0;
@@ -848,7 +836,7 @@ void Sequencer::initializeIteratorIJ_()
 	switch (mIterScanDirXYZ.YY)
 	{
 	case SCANDIR::INWARD:		//The Y-stage moves inward, therefore, the sample is imaged from "inside" to "outside" of the microscope
-		mJJ = mTileArraySize.JJ - 1;
+		mJJ = mTileArray.mArraySize.JJ - 1;
 		break;
 	case SCANDIR::OUTWARD:		//The Y-stage moves outward, therefore, the sample is imaged from "outside" to "inside" of the microscope
 		mJJ = 0;
@@ -871,10 +859,10 @@ SIZE3 Sequencer::effectiveSampleSizeXYZ_() const
 //II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
 void Sequencer::moveStage_(const INDICES2 tilesIJ)
 {
-	if (tilesIJ.II < 0 || tilesIJ.II >= mTileArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + std::to_string(mTileArraySize.II - 1) + "]");
-	if (tilesIJ.JJ < 0 || tilesIJ.JJ >= mTileArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + std::to_string(mTileArraySize.JJ - 1) + "]");
+	if (tilesIJ.II < 0 || tilesIJ.II >= mTileArray.mArraySize.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + std::to_string(mTileArray.mArraySize.II - 1) + "]");
+	if (tilesIJ.JJ < 0 || tilesIJ.JJ >= mTileArray.mArraySize.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
 
 	const POSITION2 tileCenterXY = tileIndicesIJToStagePositionXY(tilesIJ);
 

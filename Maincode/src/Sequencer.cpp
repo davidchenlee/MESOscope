@@ -367,7 +367,6 @@ TileArray::TileArray(const int tileHeight_pix, const int tileWidth_pix, const IN
 	mTileHeight_pix{ tileHeight_pix },
 	mTileWidth_pix{ tileWidth_pix },
 	mArraySize{ tileArraysize },
-	mTilePosition_pix(tileArraysize.II * tileArraysize.JJ),
 	mOverlapXYZ_frac{ overlapXYZ_frac }
 {
 	if(tileHeight_pix <= 0)
@@ -718,7 +717,7 @@ POSITION2 Sequencer::tileIndicesIJToStagePositionXY(const INDICES2 tileIndicesIJ
 void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "SEQUENCER ************************************************************\n";
-	*fileHandle << "Stages initial scan direction {stageX, stageY, stageZ} = {" << SCANDIRtoInt(mInitialScanDirXYZ.XX) << ", " << SCANDIRtoInt(mInitialScanDirXYZ.YY) << ", " << SCANDIRtoInt(mInitialScanDirXYZ.ZZ) << "}\n";
+	*fileHandle << "Stages initial scan direction {stageX, stageY, stageZ} = {" << SCANDIRtoInt(g_initialStageScanDirXYZ.XX) << ", " << SCANDIRtoInt(g_initialStageScanDirXYZ.YY) << ", " << SCANDIRtoInt(g_initialStageScanDirXYZ.ZZ) << "}\n";
 	*fileHandle << std::setprecision(4);
 	*fileHandle << "Effective ROI (stage positions) [YMIN, XMIN, YMAX, XMAX] = [" << mROIeff.YMIN / mm << " mm, " << mROIeff.XMIN / mm << " mm, " << mROIeff.YMAX / mm << " mm, " << mROIeff.XMAX / mm << " mm]\n";
 	*fileHandle << "Effective sample size (stageX, stageY, stageZ) = (" << effectiveSampleSizeXYZ_().XX / mm << " mm, " << effectiveSampleSizeXYZ_().YY / mm << " mm, " << effectiveSampleSizeXYZ_().ZZ / mm << " mm)\n";
@@ -797,19 +796,24 @@ INDICES2 Sequencer::determineTileArraySize_()
 	else
 		mTileArray.mArraySize.JJ = 1;
 
+	//For debugging
+	//std::cout << "Number of row tiles = " << numberOfTilesII << "\tNumber of column tiles = " << numberOfTilesJJ << "\n";
+
 	return { numberOfTilesII, numberOfTilesJJ };
 }
 
 //Calculate the effective ROI =  { YMIN, XMIN, YMAX, XMAX } covered by all the tiles
-//II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
 void Sequencer::initializeEffectiveROI_()
 {
-	const POSITION2 tileCenterXYmin = tileIndicesIJToStagePositionXY({ 0, 0 });
-	const POSITION2 tileCenterXYmax = tileIndicesIJToStagePositionXY({ mTileArray.mArraySize.II - 1, mTileArray.mArraySize.JJ - 1 });
-	mROIeff.XMAX = tileCenterXYmin.XX + mStack.mFFOV.XX / 2.;
-	mROIeff.YMAX = tileCenterXYmin.YY + mStack.mFFOV.YY / 2.;
-	mROIeff.XMIN = tileCenterXYmax.XX - mStack.mFFOV.XX / 2.;
-	mROIeff.YMIN = tileCenterXYmax.YY - mStack.mFFOV.YY / 2.;
+	//II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
+	const POSITION2 tilePositionXYmin = tileIndicesIJToStagePositionXY({ 0, 0 });														//Absolute position of the CENTER of the tile
+	const POSITION2 tilePositionXYmax = tileIndicesIJToStagePositionXY({ mTileArray.mArraySize.II - 1, mTileArray.mArraySize.JJ - 1 });	//Absolute position of the CENTER of the tile
+
+	//The ROI is measured from the border of the tiles. Therefore, add half of the FFOV
+	mROIeff.XMAX = tilePositionXYmin.XX + mStack.mFFOV.XX / 2.;
+	mROIeff.YMAX = tilePositionXYmin.YY + mStack.mFFOV.YY / 2.;
+	mROIeff.XMIN = tilePositionXYmax.XX - mStack.mFFOV.XX / 2.;
+	mROIeff.YMIN = tilePositionXYmax.YY - mStack.mFFOV.YY / 2.;
 }
 
 //Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
@@ -833,6 +837,7 @@ void Sequencer::initializeIteratorIJ_()
 		mII = 0;
 		break;
 	}
+
 	switch (mIterScanDirXYZ.YY)
 	{
 	case SCANDIR::INWARD:		//The Y-stage moves inward, therefore, the sample is imaged from "inside" to "outside" of the microscope
@@ -846,13 +851,15 @@ void Sequencer::initializeIteratorIJ_()
 
 void Sequencer::resetStageScanDirections_()
 {
-	mIterScanDirXYZ = mInitialScanDirXYZ;
+	mIterScanDirXYZ = g_initialStageScanDirXYZ;
 }
 
 //Convert a ROI = {ymin, xmin, ymax, xmax} to the equivalent sample size in the X-stage and Y-stage axes
 SIZE3 Sequencer::effectiveSampleSizeXYZ_() const
 {
-	return { mROIeff.XMAX - mROIeff.XMIN, mROIeff.YMAX - mROIeff.YMIN, mStack.mDepthZ * ((1 - mStack.mOverlapXYZ_frac.ZZ) * (mNtotalSlices - 1) + 1) };
+	return { mROIeff.XMAX - mROIeff.XMIN,
+			 mROIeff.YMAX - mROIeff.YMIN,
+			 mStack.mDepthZ * ((1 - mStack.mOverlapXYZ_frac.ZZ) * (mNtotalSlices - 1) + 1) };
 }
 
 //Move the stage to the position corresponding to the tile indices II and JJ 

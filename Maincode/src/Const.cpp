@@ -72,6 +72,9 @@ namespace Constants
 	extern const int g_PMT16Xchan_int{ 7 }; //[0-15] when using a singlebeam, direct the rescanner towards a particular channel of the PMT16X
 
 	//STAGES
+	//Initial scan directions wrt the X-stage, Y-stage, and Z-stage axes. Note that the image formation has the opposite direction
+	extern const SCANDIR3 g_initialStageScanDirXYZ{ SCANDIR::LEFTWARD, SCANDIR::OUTWARD, SCANDIR::UPWARD };
+
 	//Stage Z
 	//To fine tune using beads
 	//1. Position the Z-stage on the plane with beads

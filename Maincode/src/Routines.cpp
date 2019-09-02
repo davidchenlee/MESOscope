@@ -371,6 +371,10 @@ namespace Routines
 		const double pixelSizeX{ 1.0 * um };														//WARNING: the image becomes distorted for pixelSizeX < 1 um
 		const int stitchedHeight_pix{ static_cast<int>( std::ceil(stitchedHeight / pixelSizeX)) };	//Total pixel height in the tile array
 
+
+		//Sample sample{ currentSample, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { stitchedHeight, stitchedWidth, 0}, 0, 0 };
+		//const Stack stack{ { 280. * um, tileWidth}, 560, tileWidth_pix, 0.001, 1, { 0, 0, 0} };
+
 		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
 
 		//LOCATIONS on the sample to image
@@ -394,8 +398,9 @@ namespace Routines
 		RScanner.isRunning();		//To make sure that the RS is running
 
 		//SCANNERS. Keep them fixed at 0
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, 0 };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, 0, &virtualLaser };
+		const double galvoScanAmplitude{ 0 };
+		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, galvoScanAmplitude };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, galvoScanAmplitude, &virtualLaser };
 
 		//STAGES
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
@@ -412,8 +417,9 @@ namespace Routines
 		double stageXi, stageXf;		//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
-			stageXi = determineInitialScanPos(stackCenterXYZ.XX - stitchedHeight / 2., stitchedHeight, 1. * mm, iterScanDirX);
-			stageXf = determineFinalScanPos(stackCenterXYZ.XX - stitchedHeight / 2., stitchedHeight, 1. * mm, iterScanDirX);
+			const double travelOverhead{ 1.0 * mm};
+			stageXi = determineInitialScanPos(stackCenterXYZ.XX - stitchedHeight / 2., stitchedHeight, travelOverhead, iterScanDirX);
+			stageXf = determineFinalScanPos(stackCenterXYZ.XX - stitchedHeight / 2., stitchedHeight, travelOverhead, iterScanDirX);
 
 			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations << "\n";
 			stage.moveXY({ stageXi, stagePositionY.at(iterLocation) });

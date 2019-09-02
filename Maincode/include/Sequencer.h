@@ -98,7 +98,6 @@ public:
 	PIXELS2 determineRelativeTilePosition_pix(const INDICES2 tileIndicesIJ) const;
 	void TileArray::asd(const POSITION2 centerPosition, const FFOV2 ffo) const;
 private:
-	std::vector<INDICES2> mTilePosition_pix;
 	TILEOVERLAP3 mOverlapXYZ_frac;
 };
 
@@ -166,20 +165,19 @@ private:
 	Sample mSample;											//Sample
 	const Stack mStack;										//Stack
 	std::vector<Commandline> mCommandList;
-	int mII;												//Tile iterator for the X-stage
-	int mJJ;												//Tile iterator for the Y-stage
+	int mII{ 0 };											//Tile iterator for the X-stage
+	int mJJ{ 0 };											//Tile iterator for the Y-stage
 	int mCommandCounter{ 0 };
-	ROI4 mROIeff;											//Not used in the sequencer. It is just for printing out the ROI
+	ROI4 mROIeff;											//ROI covered by the tile array
 	int mStackCounter{ 0 };									//Count the number of stacks
 	int mSliceCounter{ 0 };									//Count the number of the slices
 	TileArray mTileArray;
-	SCANDIR3 mIterScanDirXYZ{ mInitialScanDirXYZ };			//Scan directions wrt the X-stage, Y-stage, and Z-stage axes	
+
 	double mScanZi;											//Initial Z-stage position for a stack scan
 	double mPlaneToSliceZ{ 0 };								//Height of the plane to cut	
 	int mNtotalSlices;										//Number of vibratome slices in the entire sample
-	const SCANDIR3 mInitialScanDirXYZ{ SCANDIR::LEFTWARD,	//Initial scan directions wrt the X-stage, Y-stage, and Z-stage axes (the imaging has the opposite direction)
-										SCANDIR::OUTWARD,
-										SCANDIR::UPWARD };
+
+	SCANDIR3 mIterScanDirXYZ{ g_initialStageScanDirXYZ };	//Scan directions wrt the X-stage, Y-stage, and Z-stage axes	
 
 	void initializeVibratomeSlice_();
 	INDICES2 determineTileArraySize_();

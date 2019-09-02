@@ -35,7 +35,7 @@ struct Sample
 	std::string mImmersionMedium;
 	std::string mObjectiveCollar;	
 	POSITION2 mCenterXY;									//Sample center (stageX, stageY)
-	SAMPLESIZE3 mSizeRequest{ 0, 0, 0 };					//Requested sample size (stageX, stageY, stageZ)
+	SIZE3 mSampleSizeXYZreq{ 0, 0, 0 };						//Requested sample size (stageX, stageY, stageZ)
 	double mSurfaceZ;
 	FluorLabelList mFluorLabelList;
 	std::vector<LIMIT2> mStageSoftPosLimXYZ;				//Soft position limits of the stages
@@ -45,7 +45,7 @@ struct Sample
 	double mCutAboveBottomOfStack{ 0. * um };				//Specify at what height of the overlapping volume to cut
 
 	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorLabelList fluorLabelList = { {} });
-	Sample(const Sample& sample, const POSITION2 centerXY, const SAMPLESIZE3 sizeXYZ, const double sampleSurfaceZ, const double sliceOffset);
+	Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 sampleSizeXYZ, const double sampleSurfaceZ, const double sliceOffset);
 	FluorLabelList::FluorLabel findFluorLabel(const std::string fluorLabel) const;
 	void printParams(std::ofstream *fileHandle) const;
 };
@@ -66,7 +66,7 @@ namespace Action
 	enum class ID { CUT, ACQ, SAV, MOV };
 	struct MoveStage {
 		int mSliceNumber;			//Slice number
-		INDICES2 mTilesIJ;			//Indices of the 2D array of tiles
+		INDICES2 mTilesIJ;			//Indices of the tile array
 		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
 	};
 	struct AcqStack {
@@ -83,6 +83,47 @@ namespace Action
 		POSITION3 mBladePositionXY;		//Position the sample facing the vibratome blade
 	};
 }
+
+class TileArray
+{
+public:
+	int mTileHeight_pix;			//Pixel height of a single tile
+	int mTileWidth_pix;				//Pixel width of a single tile
+	int mNpix;						//Total number of pixels in a single tile
+	INDICES2 mArraySize;			//Dimension of the array of tiles
+
+	TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
+	PIXELS2 determineRelativeTilePosition_pix(const INDICES2 tileIndicesIJ) const;
+	void TileArray::asd(const POSITION2 centerPosition, const FFOV2 ffo) const;
+private:
+	std::vector<INDICES2> mTilePosition_pix;
+	TILEOVERLAP3 mOverlapXYZ_frac;
+};
+
+class BoolMap
+{
+public:
+	BoolMap(const TiffU8 &tiff, const TileArray tileArray, const double threshold);
+	bool isTileBright(const INDICES2 tileIndicesIJ);
+	void saveTileMapToText(std::string filename);
+
+	void SaveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+private:
+	const TiffU8 &mTiff;
+	double mThreshold;						//Threshold for generating the boolmap
+	int mHeight_pix;						//Pixel height of the tiled image
+	int mWidth_pix;							//Pixel width of the tiled image
+	int mNpix;								//Total number of pixels in mTiff
+	TileArray mTileArray;
+	PIXELS2 mTileArrayCenter_pix;			//Reference position for the tile array wrt the Tiff
+
+	std::vector<bool> mIsBrightMap;
+
+	PIXELS2 determineAbsoluteTilePosition_pix_(const INDICES2 tileIndicesIJ) const;
+	bool isAvgBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
+	bool isQuadrantBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
+};
 
 class Sequencer	//A list of commands that forms a full sequence
 {
@@ -126,66 +167,33 @@ private:
 	int mII;												//Tile iterator for the X-stage
 	int mJJ;												//Tile iterator for the Y-stage
 	int mCommandCounter{ 0 };
-
-	const SCANDIR3 mInitialScanDirXYZ{ SCANDIR::LEFTWARD,	//Initial scan directions wrt the X-stage, Y-stage, and Z-stage axes (the imaging has the opposite direction)
-										SCANDIR::OUTWARD,
-										SCANDIR::UPWARD };
-	ROI4 mROIeff;											//Slightly larger than the requested area: mSample.mROI
+	ROI4 mROIeff;											//Not used in the sequencer. It is just for printing out the ROI
 	int mStackCounter{ 0 };									//Count the number of stacks
 	int mSliceCounter{ 0 };									//Count the number of the slices
-	INDICES2 mTileArraySizeIJ;								//Dimension of the array of tiles
+	INDICES2 mTileArraySize;								//Dimension of the array of tiles
+
+	TileArray mTileArray;
+
+
 	SCANDIR3 mIterScanDirXYZ{ mInitialScanDirXYZ };			//Scan directions wrt the X-stage, Y-stage, and Z-stage axes	
 	double mScanZi;											//Initial Z-stage position for a stack scan
 	double mPlaneToSliceZ{ 0 };								//Height of the plane to cut	
 	int mNtotalSlices;										//Number of vibratome slices in the entire sample
+	const SCANDIR3 mInitialScanDirXYZ{ SCANDIR::LEFTWARD,	//Initial scan directions wrt the X-stage, Y-stage, and Z-stage axes (the imaging has the opposite direction)
+										SCANDIR::OUTWARD,
+										SCANDIR::UPWARD };
 
 	void initializeVibratomeSlice_();
-	void initializeTileArrayDimIJ_();
+	void initializeTileArraySize_();
+	INDICES2 determineTileArraySize_();
 	void initializeEffectiveROI_();
 	void reserveMemoryBlock_();
 	void initializeIteratorIJ_();
 	void resetStageScanDirections_();
-	SAMPLESIZE3 effectiveSizeXYZ_() const;
+	SIZE3 effectiveSampleSizeXYZ_() const;
 
 	void moveStage_(const INDICES2 tileIndicesIJ);
 	void acqStack_(const int wavelengthIndex);
 	void saveStack_();
 	void cutSlice_();
-};
-
-class TileArray
-{
-public:
-	int mTileHeight_pix;		//Pixel height of a tile
-	int mTileWidth_pix;			//Pixel width of a tile
-	int mNpix;					//Total number of pixels in the tile
-	INDICES2 mArraySizeIJ;		//Dimension of the tile array
-	TileArray(const PIXELS2 refTilePosXY_pix, const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySizeIJ, const TILEOVERLAP3 overlapXYZ_frac);
-	PIXELS2 tilePosition_pix(const INDICES2 tileIndicesIJ) const;
-private:
-	std::vector<INDICES2> mTilePosition_pix;
-	PIXELS2 mRefTilePosXY_pix;	//Pixel position of the reference tile
-	TILEOVERLAP3 mOverlapXYZ_frac;
-};
-
-class BoolMap
-{
-public:
-	BoolMap(const TiffU8 &tiff, const TileArray tileArray, const double threshold);
-	bool isTileBright(const INDICES2 tileIndicesIJ);
-	void saveTileMapToText(std::string filename);
-	void SaveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
-	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
-private:
-	const TiffU8 &mTiff;
-	double mThreshold;				//Threshold for generating the boolmap
-	int mHeight_pix;				//Pixel height of the tiled image
-	int mWidth_pix;					//Pixel width of the tiled image
-	int mNpix;						//Total number of pixels in mTiff
-	TileArray mTileArray;
-
-	std::vector<bool> mIsBrightMap;
-
-	bool isAvgBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
-	bool isQuadrantBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
 };

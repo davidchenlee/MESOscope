@@ -3,7 +3,7 @@
 #include <vector>
 #include <array>
 
-#define multibeam 0			//Multibeam or singlebeam. *cast
+#define multibeam 1			//Multibeam or singlebeam. *cast
 #define pockelsAutoOff 1	//For debugging purposes. In LV, let 'framegate' gate the output of the pockels cell
 
 namespace Constants
@@ -37,7 +37,7 @@ namespace Constants
 	struct FFOV2 { double XX; double YY; };
 	struct LIMIT2 { double MIN; double MAX; };
 	struct ROI4 { double YMIN; double XMIN; double YMAX;  double XMAX; };	//Region of interest
-	struct SAMPLESIZE3 { double XX; double YY; double ZZ; };				//Sample size
+	struct SIZE3 { double XX; double YY; double ZZ; };						//Sample size
 	struct TILEOVERLAP3 { double XX; double YY; double ZZ; };				//Tile overlap fraction
 
 	enum class PMTIN { PMT = false, SIM = true };							//*cast

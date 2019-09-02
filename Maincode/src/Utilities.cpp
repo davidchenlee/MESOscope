@@ -1027,26 +1027,26 @@ void TiffU8::flattenField(const double maxScaleFactor)
 #pragma endregion "TiffU8"
 
 #pragma region "QuickStitcher"
-//tileHeight_pix = tile height, tileWidth_pix = tile width, tileArraySizeIJ = { number of tiles as rows, number of tiles as columns}
+//tileHeight_pix = tile height, tileWidth_pix = tile width, tileArraySize = { number of tiles as rows, number of tiles as columns}
 //II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
-QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySizeIJ) :
-	mTileArraySizeIJ{ tileArraySizeIJ },
-	mStitchedTiff{ tileHeight_pix * tileArraySizeIJ.II, tileWidth_pix * tileArraySizeIJ.JJ, 1 }
+QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize) :
+	mTileArraySize{ tileArraySize },
+	mStitchedTiff{ tileHeight_pix * tileArraySize.II, tileWidth_pix * tileArraySize.JJ, 1 }
 {
 	if (tileHeight_pix <= 0 || tileWidth_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile height and width must be > 0");
 
-	if(mTileArraySizeIJ.II <= 0 || mTileArraySizeIJ.JJ <= 0)
+	if(mTileArraySize.II <= 0 || mTileArraySize.JJ <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array dimensions must be > 0");
 }
 
 //II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
 void QuickStitcher::push(const TiffU8 &tile, const INDICES2 tileIndicesIJ)
 {
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArraySizeIJ.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArraySizeIJ.II - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArraySizeIJ.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArraySizeIJ.JJ - 1) + "]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArraySize.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArraySize.II - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArraySize.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArraySize.JJ - 1) + "]");
 
 	const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
 	const int tileWidth_pix{ tile.widthPerFrame_pix() };													//Width of the tile

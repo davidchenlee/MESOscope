@@ -86,10 +86,10 @@ private:
 class QuickStitcher
 {
 public:
-	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySizeIJ);
+	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize);
 	void push(const TiffU8 &tile, const INDICES2 tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
 private:
 	TiffU8 mStitchedTiff;
-	INDICES2 mTileArraySizeIJ;		//Dimension of the tile array
+	INDICES2 mTileArraySize;		//Dimension of the tile array
 };

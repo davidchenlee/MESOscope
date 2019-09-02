@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.600 ) * mm, (21.075)* mm, (16.915 + 0.050) * mm };
+POSITION3 stackCenterXYZ{ (44.600 ) * mm, (21.075)* mm, (16.915 + 0.000) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
@@ -369,7 +369,7 @@ namespace Routines
 		const int tileWidth_pix{ 300 };																//Number of pixel width in a strip (long vertical tile)
 		const double stitchedHeight{ 10.080 * mm };//= 36 * 0.280 * mm								//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
 		const double pixelSizeX{ 1.0 * um };														//WARNING: the image becomes distorted for pixelSizeX < 1 um
-		const int stitchedHeight_pix{ static_cast<int>(stitchedHeight / pixelSizeX) };				//Total pixel height in the tile array
+		const int stitchedHeight_pix{ static_cast<int>( std::ceil(stitchedHeight / pixelSizeX)) };	//Total pixel height in the tile array
 
 		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
 
@@ -460,7 +460,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const SAMPLESIZE3 sampleSize{ 0.3 * mm, 0.2 * mm, 0.00 * mm };
+		const SIZE3 sampleSize{ 0.3 * mm, 0.2 * mm, 0.00 * mm };
 		const TILEOVERLAP3 stackOverlap_frac{ 0.10, 0.05, 0.40 };										//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
@@ -1179,7 +1179,8 @@ namespace TestRoutines
 		const int tileWidth_pix{ 300 };
 		TiffU8 image{ inputFilename };
 
-		const TileArray tileArray{ {image.heightPerFrame_pix() / 2, image.widthPerFrame_pix() / 2}, tileHeight_pix, tileWidth_pix, { 36, 67 }, {0.0, 0.0, 0.0} };
+		const TILEOVERLAP3 overlapXYZ_frac{ 0.0, 0.0, 0.0 };
+		const TileArray tileArray{ tileHeight_pix, tileWidth_pix, { 36, 67 }, overlapXYZ_frac };
 
 		BoolMap boolmap{ image, tileArray, threshold };
 		//boolmap.saveTileMapToText("Boolmap");
@@ -1336,14 +1337,14 @@ namespace TestRoutines
 	void generateLocationsForBigStitcher()
 	{
 		// X is vertical and Y is horizontal, to match the directions of the XYZ-stage
-		const INDICES2 tileSizeIJ{ 2, 2 };
+		const INDICES2 tileSize{ 2, 2 };
 		const int tileShiftX_pix{ 543 };
 		const int tileShiftY_pix{ 291 };
 
 		Logger datalog(currentSample.mName + "_locations");
 		datalog.record("dim=3"); //Needed for the BigStitcher
 
-		for (int tileNumber = 0; tileNumber < tileSizeIJ.II * tileSizeIJ.JJ; tileNumber++)
+		for (int tileNumber = 0; tileNumber < tileSize.II * tileSize.JJ; tileNumber++)
 			//for (int tileNumber = 0; tileNumber < 180; tileNumber++)
 		{
 			INDICES2 tileIndicesIJ = tileNumberToIndicesIJ(tileNumber);
@@ -1358,15 +1359,15 @@ namespace TestRoutines
 	//Snake pattern starting from the bottom right of the sample and going up
 	INDICES2 tileNumberToIndicesIJ(const int tileNumber)
 	{
-		const INDICES2 tileSizeIJ{ 2, 2 };
+		const INDICES2 tileSize{ 2, 2 };
 
 		int II;
-		int JJ{ tileNumber / tileSizeIJ.II };
+		int JJ{ tileNumber / tileSize.II };
 
 		if (JJ % 2)	//JJ is odd
-			II = tileSizeIJ.II - tileNumber % tileSizeIJ.II - 1;
+			II = tileSize.II - tileNumber % tileSize.II - 1;
 		else		//JJ is even
-			II = tileNumber % tileSizeIJ.II;
+			II = tileNumber % tileSize.II;
 
 		return { II, JJ };
 	}

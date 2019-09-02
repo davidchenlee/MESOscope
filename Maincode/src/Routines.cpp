@@ -3,20 +3,20 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.600 ) * mm, (21.075)* mm, (16.915 + 0.000) * mm };
+POSITION3 stackCenterXYZ{ (44.600 ) * mm, (21.075)* mm, (16.915 + 0.050) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.09 * mWpum) } }} };
-Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
+Sample liverDAPITDT{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
 					{{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.1 * mWpum), 4 } ,
 					   { "DAPI", 750, multiply16X(25. * mW), multiply16X(0.3 * mWpum), 2 } }} };
 
 #else
-Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
+Sample liverDAPITDT{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
 					{{{"TDT", 1040, 30. * mW, 0.05 * mWpum, 4 } ,
 					  { "DAPI", 750, 12. * mW, 0.2 * mWpum, 2 }}} };
-Sample liverTDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
+Sample liverTDT{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
 					{{{"TDT", 1040, 30. * mW, 0.05 * mWpum, 4 }}} };
 
 //Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
@@ -358,35 +358,26 @@ namespace Routines
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Continuous X-stage scanning available for single beam only");
 
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };			//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
-		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };													//Initial scan direction of stage 
-		const double stitchedWidth{ 10.000 * mm };													//Total width of the tile array
+		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
+		const double fullWidth{ 10.000 * mm };												//Total width of the tile array
 
-		const double tileWidth{ 150. * um };														//Width of 1 strip (long vertical tile)
-		const int nCol{ static_cast<int>(std::ceil(1. * stitchedWidth / tileWidth)) };				//Number of columns in the tile array
-		const int tileWidth_pix{ 300 };																//Number of pixel width in a strip (long vertical tile)
-		const double stitchedHeight{ 10.080 * mm };//= 36 * 0.280 * mm								//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
-		const double pixelSizeX{ 1.0 * um };														//WARNING: the image becomes distorted for pixelSizeX < 1 um
-		const int stitchedHeight_pix{ static_cast<int>( std::ceil(stitchedHeight / pixelSizeX)) };	//Total pixel height in the tile array
+		const double tileHeight{ 280. * um };
+		const double tileWidth{ 150. * um };												//Width of a strip
+		const double fullHeight{ 36 * tileHeight };//= 36 * 0.280 * mm						//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
+		const double pixelSizeX{ 1.0 * um };												//WARNING: the image becomes distorted for pixelSizeX > 1 um
+		const double pixelSizeY{ 0.5 * um };
 
-
-		//Sample sample{ currentSample, {stackCenterXYZ.XX, stackCenterXYZ.YY}, { stitchedHeight, stitchedWidth, 0}, 0, 0 };
-		//const Stack stack{ { 280. * um, tileWidth}, 560, tileWidth_pix, 0.001, 1, { 0, 0, 0} };
+		QuickScanXY quickScanXY{ {stackCenterXYZ.XX, stackCenterXYZ.YY}, {  tileHeight, tileWidth }, { pixelSizeX, pixelSizeY }, { fullHeight, fullWidth } };
 
 		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
-
-		//LOCATIONS on the sample to image
-		std::vector<double> stagePositionY;
-		const int nColHalf{ nCol / 2 };																//Make the center of the tile array coincide with stackCenterXYZ
-		for (int iterLocation = 0; iterLocation < nCol; iterLocation++)
-			stagePositionY.push_back( stackCenterXYZ.YY + tileWidth * (nColHalf - iterLocation) );	//for now, only allowed to stack strips to the right (i.e. only allowed to move the stage to the left)
 
 		//CONTROL SEQUENCE
 		//The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
 		const int nFrames{ 2 };
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, tileWidth_pix, stitchedHeight_pix / 2 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, quickScanXY.tileWidth_pix(), quickScanXY.fullHeight_pix() / 2 };
 
 		//LASER
 		VirtualLaser virtualLaser{ whichLaser };
@@ -411,15 +402,15 @@ namespace Routines
 
 		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 
-		//ACQUIRE FRAMES AT DIFFERENT Zs
+		//LOCATIONS on the sample to image
+		std::vector<double> stagePositionY{ quickScanXY.determineStagePositionY() };
 		const int nLocations{ static_cast<int>(stagePositionY.size()) };
-		QuickStitcher stitchedImage{ stitchedHeight_pix, tileWidth_pix, {1, nCol} };
 		double stageXi, stageXf;		//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
 			const double travelOverhead{ 1.0 * mm};
-			stageXi = determineInitialScanPos(stackCenterXYZ.XX - stitchedHeight / 2., stitchedHeight, travelOverhead, iterScanDirX);
-			stageXf = determineFinalScanPos(stackCenterXYZ.XX - stitchedHeight / 2., stitchedHeight, travelOverhead, iterScanDirX);
+			stageXi = quickScanXY.determineInitialScanPositionX(travelOverhead, iterScanDirX);
+			stageXf = quickScanXY.determineFinalScanPositionX(travelOverhead, iterScanDirX);
 
 			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations << "\n";
 			stage.moveXY({ stageXi, stagePositionY.at(iterLocation) });
@@ -437,8 +428,8 @@ namespace Routines
 			image.acquireVerticalStrip(iterScanDirX);
 			image.correctRSdistortion(tileWidth);							//Correct the image distortion induced by the nonlinear scanning of the RS
 
-			TiffU8 tmp{ image.data(), stitchedHeight_pix, tileWidth_pix };	//I tried to access mTiff in image directly but it gives me an error
-			stitchedImage.push(tmp, { 0, iterLocation });						//for now, only allowed to stack up strips to the right
+			TiffU8 tmp{ image.data(), quickScanXY.fullHeight_pix(), quickScanXY.tileWidth_pix() };	//I tried to access mTiff in image directly but it gives me an error
+			quickScanXY.push(tmp, { 0, iterLocation });												//for now, only allowed to stack up strips to the right
 
 			reverseSCANDIR(iterScanDirX);
 			pressESCforEarlyTermination();
@@ -448,7 +439,7 @@ namespace Routines
 				"_yi=" + toString(stagePositionY.front() / mm, 3) + "_yf=" + toString(stagePositionY.back() / mm, 3) +
 				"_z=" + toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
 			std::cout << "Saving the stack...\n";
-			stitchedImage.saveToFile(filename, OVERRIDE::DIS);
+			quickScanXY.saveToFile(filename, OVERRIDE::DIS);
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -467,8 +458,9 @@ namespace Routines
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
 		const SIZE3 sampleSize{ 0.3 * mm, 0.2 * mm, 0.00 * mm };
-		const TILEOVERLAP3 stackOverlap_frac{ 0.10, 0.05, 0.40 };										//Stack overlap
-		const double cutAboveBottomOfStack{ 15. * um };													//height to cut above the bottom of the stack
+		//const TILEOVERLAP3 stackOverlap_frac{ 0.10, 0.05, 0.40 };										//Stack overlap
+		const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };												//Stack overlap
+		const double cutAboveBottomOfStack{ 15. * um };													//Distance above the bottom of the stack to cut
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
 
 		int heightPerBeamletPerFrame_pix;

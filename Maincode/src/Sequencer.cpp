@@ -406,16 +406,85 @@ void TileArray::asd(const POSITION2 centerPositionXY, const FFOV2 tileFFOV) cons
 }
 #pragma endregion "TileArray"
 
+#pragma region "QuickScanXY"
+//The sample size is from tile edge to tile edge
+QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SIZE2 pixelSizeXY, const SIZE2 ROIsize) :
+	mROIcenterXY{ ROIcenterXY },
+	mFFOV{ ffov },
+	mPixelSizeXY{ pixelSizeXY },
+	mROIsize{ ROIsize },
+	mFullWidth_pix{ static_cast<int>(std::ceil(ROIsize.YY / pixelSizeXY.YY)) },
+	mTileArray{ static_cast<int>(std::ceil(ROIsize.XX / pixelSizeXY.XX)),			//tileHeight_pix
+				static_cast<int>(std::ceil(ffov.YY / pixelSizeXY.YY)),				//tileWidth_pix
+				{ 1, static_cast<int>(std::ceil(1. * ROIsize.YY / ffov.YY)) },		//Only 1 row, 1 or more columns
+				{0, 0, 0} },														//No overlap
+	mStitchedTiff{ mTileArray.mTileHeight_pix, mTileArray.mTileWidth_pix, mTileArray.mArraySize }
+{}
+
+double QuickScanXY::determineInitialScanPositionX(const double travelOverhead, const SCANDIR scanDir)
+{
+	const double ROIminX{ mROIcenterXY.XX - mROIsize.XX / 2 };		//Sample edge
+	const double tilePositionXmin{ ROIminX + mFFOV.XX / 2. };		//The first tile center is mFFOV.XX / 2 away from the ROI edge
+	const double travelX{ mROIsize.XX - mFFOV.XX };					//The X stage does not travel the first and last mFFOV.XX / 2 from the edge of the ROI
+
+	return determineInitialScanPos(tilePositionXmin, travelX, travelOverhead, scanDir);
+}
+
+double QuickScanXY::determineFinalScanPositionX(const double travelOverhead, const SCANDIR scanDir)
+{
+	const double ROIminX{ mROIcenterXY.XX - mROIsize.XX / 2. };		//Sample edge
+	const double tilePositionXmin{ ROIminX + mFFOV.XX / 2. };		//The first tile center is mFFOV.XX / 2 away from the ROI edge
+	const double travelX{ mROIsize.XX - mFFOV.XX };					//The X stage does not travel the first and last mFFOV.XX / 2 from the edge of the ROI
+
+	return determineFinalScanPos(tilePositionXmin, travelX, travelOverhead, scanDir);
+}
+
+std::vector<double> QuickScanXY::determineStagePositionY()
+{
+	std::vector<double> stagePositionY;
+	const int nColHalf{ mTileArray.mArraySize.JJ / 2 };																		//Make the center of the tile array coincide with stackCenterXYZ
+	for (int iterLocation = 0; iterLocation < mTileArray.mArraySize.JJ; iterLocation++)
+		stagePositionY.push_back(mROIcenterXY.YY + mTileArray.mTileWidth_pix * mPixelSizeXY.YY * (nColHalf - iterLocation));		//for now, only allowed to stack strips to the right (i.e. only allowed to move the stage to the left)
+
+	return stagePositionY;
+}
+
+int QuickScanXY::fullHeight_pix()
+{
+	return mTileArray.mTileHeight_pix;
+}
+
+int QuickScanXY::tileWidth_pix()
+{
+	return mTileArray.mTileWidth_pix;
+}
+
+INDICES2 QuickScanXY::tileArraySize()
+{
+	return mTileArray.mArraySize;
+}
+
+void QuickScanXY::push(const TiffU8 &tile, const INDICES2 tileIndicesIJ)
+{
+	mStitchedTiff.push(tile, tileIndicesIJ);
+}
+
+void QuickScanXY::saveToFile(std::string filename, const OVERRIDE override) const
+{
+	mStitchedTiff.saveToFile(filename,  override);
+}
+#pragma endregion "QuickScanXY"
+
 #pragma region "BoolMap"
 BoolMap::BoolMap(const TiffU8 &tiff, const TileArray tileArray, const double threshold) :
 	mTiff{ tiff },
 	mThreshold{ threshold },
-	mHeight_pix{ tiff.heightPerFrame_pix() },
-	mWidth_pix{ tiff.widthPerFrame_pix() },
-	mNpix{ mHeight_pix * mWidth_pix },
+	mFullHeight_pix{ tiff.heightPerFrame_pix() },
+	mFullWidth_pix{ tiff.widthPerFrame_pix() },
+	mNpix{ mFullHeight_pix * mFullWidth_pix },
 	mTileArray{ tileArray },
-	mTileArrayCenter_pix{ mHeight_pix / 2, mWidth_pix / 2 }//In X, The array center is exactly at the image center (implemented in the contX scan)
-															//In Y, this might not be always true!!!
+	mTileArrayCenter_pix{ mFullHeight_pix / 2, mFullWidth_pix / 2 }	//In X, the array center is exactly at the image center (implemented in the contX scan)
+																	//In Y, this might not be always true!!!
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
@@ -470,17 +539,17 @@ void BoolMap::SaveTileGridOverlap(std::string filename, const OVERRIDE override)
 		const PIXELS2 absoluteTilePosition_pix{ determineAbsoluteTilePosition_pix_({ II, 0 }) };			//Absolute tile position wrt the Tiff		
 		const int tilePositionTop_pix{ absoluteTilePosition_pix.ii - mTileArray.mTileHeight_pix / 2 };		//Top pixels of the tile wrt the Tiff
 		const int tilePositionBottom_pix{  absoluteTilePosition_pix.ii + mTileArray.mTileHeight_pix / 2 };	//Bottom pixels of the tile wrt the Tiff
-		for (int iterCol_pix = 0; iterCol_pix < mWidth_pix; iterCol_pix++)
+		for (int iterCol_pix = 0; iterCol_pix < mFullWidth_pix; iterCol_pix++)
 			for (int iterThickness = -lineThicknessHorizontal / 2; iterThickness < lineThicknessHorizontal / 2; iterThickness++)
 			{
-				const int iterTopRow_pix{ (tilePositionTop_pix + iterThickness) * mWidth_pix + iterCol_pix };
-				const int iterBottomRow_pix{ (tilePositionBottom_pix + iterThickness) * mWidth_pix + iterCol_pix };
+				const int iterTopRow_pix{ (tilePositionTop_pix + iterThickness) * mFullWidth_pix + iterCol_pix };
+				const int iterBottomRow_pix{ (tilePositionBottom_pix + iterThickness) * mFullWidth_pix + iterCol_pix };
 
 				if (iterTopRow_pix >=0 && iterTopRow_pix  < mNpix)
 					(mTiff.data())[iterTopRow_pix] = lineColor;
 
 				if (iterBottomRow_pix >=0 && iterBottomRow_pix < mNpix)
-					(mTiff.data())[(tilePositionBottom_pix + iterThickness) * mWidth_pix + iterCol_pix] = lineColor;
+					(mTiff.data())[(tilePositionBottom_pix + iterThickness) * mFullWidth_pix + iterCol_pix] = lineColor;
 			}
 	}
 
@@ -491,11 +560,11 @@ void BoolMap::SaveTileGridOverlap(std::string filename, const OVERRIDE override)
 		const PIXELS2 absoluteTilePosition_pix{ determineAbsoluteTilePosition_pix_({ 0, JJ }) };	//Absolute tile position wrt the Tiff
 		const int tileLeft{ absoluteTilePosition_pix.jj - mTileArray.mTileWidth_pix / 2 };			//Left pixels of the tile wrt the Tiff
 		const int tileRight{ absoluteTilePosition_pix.jj + mTileArray.mTileWidth_pix / 2 };			//Right pixels of the tile wrt the Tiff
-		for (int iterRow_pix = 0; iterRow_pix < mHeight_pix; iterRow_pix++)
+		for (int iterRow_pix = 0; iterRow_pix < mFullHeight_pix; iterRow_pix++)
 			for (int iterThickness = -lineThicknessVertical / 2; iterThickness < lineThicknessVertical / 2; iterThickness++)
 			{
-				const int iterLeftColumn_pix{ iterRow_pix * mWidth_pix + tileLeft + iterThickness };
-				const int iterRightColumn_pix{ iterRow_pix * mWidth_pix + tileRight + iterThickness };
+				const int iterLeftColumn_pix{ iterRow_pix * mFullWidth_pix + tileLeft + iterThickness };
+				const int iterRightColumn_pix{ iterRow_pix * mFullWidth_pix + tileRight + iterThickness };
 
 				if (iterLeftColumn_pix >= 0 && iterLeftColumn_pix < mNpix)
 					(mTiff.data())[iterLeftColumn_pix] = lineColor;
@@ -512,7 +581,7 @@ void BoolMap::saveTileMap(std::string filename, const OVERRIDE override) const
 {
 	const U8 lineColor{ 255 };	//Shade level
 
-	TiffU8 tileMap{ mHeight_pix, mWidth_pix, 1 };
+	TiffU8 tileMap{ mFullHeight_pix, mFullWidth_pix, 1 };
 	//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array
 	for (int II = 0; II < mTileArray.mArraySize.II; II++)
 		for (int JJ = 0; JJ < mTileArray.mArraySize.JJ; JJ++)
@@ -520,7 +589,7 @@ void BoolMap::saveTileMap(std::string filename, const OVERRIDE override) const
 			{
 				for (int iterRow_pix = II * mTileArray.mTileHeight_pix; iterRow_pix < (II + 1) * mTileArray.mTileHeight_pix; iterRow_pix++)
 					for (int iterCol_pix = JJ * mTileArray.mTileWidth_pix; iterCol_pix < (JJ + 1) * mTileArray.mTileWidth_pix; iterCol_pix++)
-						(tileMap.data())[iterRow_pix * mWidth_pix + iterCol_pix] = lineColor;
+						(tileMap.data())[iterRow_pix * mFullWidth_pix + iterCol_pix] = lineColor;
 			}
 
 	tileMap.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
@@ -554,7 +623,7 @@ bool BoolMap::isAvgBright_(const double threshold, const INDICES2 tileIndicesIJ)
 	int sum{ 0 };
 	for (int iterRow_pix = tileIndicesIJ.II * mTileArray.mTileHeight_pix; iterRow_pix < (tileIndicesIJ.II + 1) * mTileArray.mTileHeight_pix; iterRow_pix++)
 		for (int iterCol_pix = tileIndicesIJ.JJ * mTileArray.mTileWidth_pix; iterCol_pix < (tileIndicesIJ.JJ + 1) * mTileArray.mTileWidth_pix; iterCol_pix++)
-			sum += (mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
+			sum += (mTiff.data())[iterRow_pix * mFullWidth_pix + iterCol_pix];
 
 	return (1. * sum / mTileArray.mNpix) > threshold_255;
 }
@@ -585,7 +654,7 @@ bool BoolMap::isQuadrantBright_(const double threshold, const INDICES2 tileIndic
 			//Iterate over all the pixels inside a quadrant
 			for (int iterRow_pix = (tileIndicesIJ.II * mTileArray.mTileHeight_pix) + iterQuadRow * halfHeight; iterRow_pix < tileIndicesIJ.II * mTileArray.mTileHeight_pix + ((iterQuadRow + 1) * halfHeight); iterRow_pix++)
 				for (int iterCol_pix = (tileIndicesIJ.JJ * mTileArray.mTileWidth_pix) + iterQuadCol * halfwidth; iterCol_pix < tileIndicesIJ.JJ * mTileArray.mTileWidth_pix + ((iterQuadCol + 1)* halfwidth); iterCol_pix++)
-					sum += (mTiff.data())[iterRow_pix * mWidth_pix + iterCol_pix];
+					sum += (mTiff.data())[iterRow_pix * mFullWidth_pix + iterCol_pix];
 			vec_sum.push_back(sum);
 		}
 
@@ -611,7 +680,7 @@ bool BoolMap::isQuadrantBright_(const double threshold, const INDICES2 tileIndic
 Sequencer::Sequencer(const Sample sample, const Stack stack) :
 	mSample{ sample },
 	mStack{ stack },
-	mTileArray{ mStack.mTileHeight_pix, mStack.mTileWidth_pix, determineTileArraySize_(), mStack.mOverlapXYZ_frac }
+	mTileArray{ stack.mTileHeight_pix, stack.mTileWidth_pix, determineTileArraySize_(), stack.mOverlapXYZ_frac }
 {
 	initializeVibratomeSlice_();
 	initializeEffectiveROI_();		//Calculate the effective ROI covered by all the tiles, which might be slightly larger than the requested ROI

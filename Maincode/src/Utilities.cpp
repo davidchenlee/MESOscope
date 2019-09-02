@@ -262,13 +262,13 @@ TiffU8::TiffU8(const std::string filename) :
 }
 
 //Construct a Tiff from an array
-TiffU8::TiffU8(const U8* inputImage, const int heightPerFrame, const int widthPerFrame, const int nFrames) :
-	mHeightPerFrame_pix{ heightPerFrame },
-	mWidthPerFrame_pix{ widthPerFrame },
+TiffU8::TiffU8(const U8* inputImage, const int heightPerFrame_pix, const int widthPerFrame_pix, const int nFrames) :
+	mHeightPerFrame_pix{ heightPerFrame_pix },
+	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mNframes{ nFrames },
-	mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) },
-	mNpixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix },
-	mNpixAllFrames{ mNpixPerFrame * mNframes }
+	mBytesPerLine{ static_cast<int>(widthPerFrame_pix * sizeof(U8)) },
+	mNpixPerFrame{ heightPerFrame_pix * widthPerFrame_pix },
+	mNpixAllFrames{ mNpixPerFrame * nFrames }
 {
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
@@ -280,13 +280,13 @@ TiffU8::TiffU8(const U8* inputImage, const int heightPerFrame, const int widthPe
 }
 
 //Construct a Tiff from a vector
-TiffU8::TiffU8(const std::vector<U8> &inputImage, const int heightPerFrame, const int widthPerFrame, const int nFrames) :
-	mHeightPerFrame_pix{ heightPerFrame },
-	mWidthPerFrame_pix{ widthPerFrame },
+TiffU8::TiffU8(const std::vector<U8> &inputImage, const int heightPerFrame_pix, const int widthPerFrame_pix, const int nFrames) :
+	mHeightPerFrame_pix{ heightPerFrame_pix },
+	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mNframes{ nFrames },
-	mBytesPerLine{ static_cast<int>(widthPerFrame * sizeof(U8)) },
-	mNpixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix },
-	mNpixAllFrames{ mNpixPerFrame * mNframes }
+	mBytesPerLine{ static_cast<int>(widthPerFrame_pix * sizeof(U8)) },
+	mNpixPerFrame{ heightPerFrame_pix * widthPerFrame_pix },
+	mNpixAllFrames{ mNpixPerFrame * nFrames }
 {
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
@@ -303,8 +303,8 @@ TiffU8::TiffU8(const int heightPerFrame_pix, const int widthPerFrame_pix, const 
 	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mNframes{ nFrames },
 	mBytesPerLine{ static_cast<int>(widthPerFrame_pix * sizeof(U8)) },
-	mNpixPerFrame{ mHeightPerFrame_pix * mWidthPerFrame_pix },
-	mNpixAllFrames{ mNpixPerFrame * mNframes }
+	mNpixPerFrame{ heightPerFrame_pix * widthPerFrame_pix },
+	mNpixAllFrames{ mNpixPerFrame * nFrames }
 {
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");

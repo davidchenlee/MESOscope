@@ -84,9 +84,8 @@ namespace Constants
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };
 	//Stage X
 	//extern const double	g_STAGEXTrigAcqDelay{32.1 * ms };		//uncalibrated	for pixelSizeX = 0.5 um	//Delay the X-stage triggering the acq sequence to match the forward and backward scans. Larger moves the image upward
-																	//Currently, the delay depends on the FOV in the X-stage axis
-																		
-	extern const double	g_STAGEXTrigAcqDelay{ 122.0 * ms };//pixelSizeX = 1.0 um
+																	//Currently, the delay depends on the FOV in the X-stage axis																
+	extern const double	g_STAGEXTrigAcqDelay{ 113.3 * ms };//pixelSizeX = 1.0 um
 
 	//PMT
 	extern const int g_nChanPMT{ 16 };

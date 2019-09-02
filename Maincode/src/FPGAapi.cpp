@@ -574,8 +574,8 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
 	mNframes{ nFrames },
-	mHeightPerBeamletAllFrames_pix{ mHeightPerBeamletPerFrame_pix * mNframes },
-	mNpixPerBeamletAllFrames{ mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix }
+	mHeightPerBeamletAllFrames_pix{ heightPerBeamletPerFrame_pix * nFrames },
+	mNpixPerBeamletAllFrames{ widthPerFrame_pix * mHeightPerBeamletAllFrames_pix }
 {
 	mFpga.uploadImagingParameters(mHeightPerBeamletAllFrames_pix, mHeightPerBeamletPerFrame_pix, mNframes);
 

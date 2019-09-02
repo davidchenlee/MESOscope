@@ -45,8 +45,8 @@ class TiffU8
 {
 public:
 	TiffU8(const std::string filename);
-	TiffU8(const U8* inputImage, const int heightPerFrame, const int widthPerFrame, int nFrames = 1);
-	TiffU8(const std::vector<U8> &inputImage, const int heightPerFrame, const int widthPerFrame, const int nFrames = 1);
+	TiffU8(const U8* inputImage, const int heightPerFrame_pix, const int widthPerFrame_pix, int nFrames = 1);
+	TiffU8(const std::vector<U8> &inputImage, const int heightPerFrame_pix, const int widthPerFrame_pix, const int nFrames = 1);
 	TiffU8(const int height_pix, const int width_pix, const int nFrames = 1);
 	~TiffU8();
 	U8* const data() const;

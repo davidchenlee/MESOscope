@@ -1007,7 +1007,7 @@ void Shutter::pulse(const double pulsewidth) const
 PockelsCell::PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID laserSelector) :
 	mRTcontrol{ RTcontrol },
 	mWavelength_nm{ wavelength_nm },
-	mShutter{ mRTcontrol.mFpga, laserSelector }
+	mShutter{ RTcontrol.mFpga, laserSelector }
 {
 	if (laserSelector != Laser::ID::VISION && laserSelector != Laser::ID::FIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");

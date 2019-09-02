@@ -101,26 +101,47 @@ private:
 	TILEOVERLAP3 mOverlapXYZ_frac;
 };
 
+class QuickScanXY
+{
+public:
+	//The sample size is from tile edge to tile edge
+	QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SIZE2 pixelSizeXY, const SIZE2 ROIsize);
+	double determineInitialScanPositionX(const double travelOverhead, const SCANDIR scanDir);
+	double determineFinalScanPositionX(const double travelOverhead, const SCANDIR scanDir);
+	std::vector<double> determineStagePositionY();
+	int fullHeight_pix();
+	int tileWidth_pix();
+	INDICES2 tileArraySize();
+	void push(const TiffU8 &tile, const INDICES2 tileIndicesIJ);
+	void saveToFile(std::string filename, const OVERRIDE override) const;
+private:
+	POSITION2 mROIcenterXY;
+	FFOV2 mFFOV;
+	SIZE2 mPixelSizeXY;
+	SIZE2 mROIsize;
+	int mFullWidth_pix;
+	TileArray mTileArray;
+	QuickStitcher mStitchedTiff;
+};
+
 class BoolMap
 {
 public:
 	BoolMap(const TiffU8 &tiff, const TileArray tileArray, const double threshold);
 	bool isTileBright(const INDICES2 tileIndicesIJ);
 	void saveTileMapToText(std::string filename);
-
 	void SaveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 private:
 	const TiffU8 &mTiff;
 	double mThreshold;						//Threshold for generating the boolmap
-	int mHeight_pix;						//Pixel height of the tiled image
-	int mWidth_pix;							//Pixel width of the tiled image
+	int mFullHeight_pix;					//Pixel height of the tiled image
+	int mFullWidth_pix;						//Pixel width of the tiled image
 	int mNpix;								//Total number of pixels in mTiff
 	TileArray mTileArray;
 	PIXELS2 mTileArrayCenter_pix;			//Reference position for the tile array wrt the Tiff
 
 	std::vector<bool> mIsBrightMap;
-
 	PIXELS2 determineAbsoluteTilePosition_pix_(const INDICES2 tileIndicesIJ) const;
 	bool isAvgBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
 	bool isQuadrantBright_(const double threshold, const INDICES2 tileIndicesIJ) const;

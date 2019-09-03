@@ -1,22 +1,4 @@
 #include "Sequencer.h"
-//Take the integer indices II, JJ = 0, 1, 2... of the array of tiles and return new tile indices (now of double type) with overlapping tiles.
-//The returned indices are wrt the reference center tileare doubles and therefore can be negative
-//For an odd number of tiles, the center tile is at the middle of the array
-//For an even number of tiles, there are 2 tiles in the middle of the array. Take the one with smaller index as the reference center tile
-POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapXYZ_frac, const INDICES2 tileArraySize, const INDICES2 tileIndicesIJ)
-{
-	if (overlapXYZ_frac.XX < 0 || overlapXYZ_frac.YY < 0 || overlapXYZ_frac.ZZ < 0 || overlapXYZ_frac.XX > 1 || overlapXYZ_frac.YY > 1 || overlapXYZ_frac.ZZ > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
-	if (tileArraySize.II <= 0 || tileArraySize.II <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be >0");
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= tileArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + toString(tileArraySize.II, 0) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= tileArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + toString(tileArraySize.JJ, 0) + "]");
-
-	return { (1. - overlapXYZ_frac.XX) * (tileIndicesIJ.II - static_cast<int>((tileArraySize.II - 1) / 2)),
-			 (1. - overlapXYZ_frac.YY) * (tileIndicesIJ.JJ - static_cast<int>((tileArraySize.JJ - 1) / 2)) };
-}
 
 //Used to increase the laser power 16 times
 double multiply16X(const double input)
@@ -182,19 +164,19 @@ Sample::Sample(const std::string sampleName, const std::string immersionMedium, 
 	mFluorLabelList{ fluorLabelList }
 {}
 
-Sample::Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 sampleSizeXYZ, const double sampleSurfaceZ, const double sliceOffset) :
+Sample::Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 LOIxyz, const double sampleSurfaceZ, const double sliceOffset) :
 	mName{ sample.mName },
 	mImmersionMedium{ sample.mImmersionMedium },
 	mObjectiveCollar{ sample.mObjectiveCollar },
 	mFluorLabelList{ sample.mFluorLabelList },
 	mCenterXY{ centerXY },
-	mSampleSizeXYZreq{ sampleSizeXYZ },
+	mLOIxyz_req{ LOIxyz },
 	mSurfaceZ{ sampleSurfaceZ },
 	mCutAboveBottomOfStack{ sliceOffset }
 {
-	if (mSampleSizeXYZreq.XX <= 0)
+	if (mLOIxyz_req.XX <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length X must be >0");
-	if (mSampleSizeXYZreq.YY <= 0)
+	if (mLOIxyz_req.YY <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Y must be >0");
 	if (mCutAboveBottomOfStack < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be >=0");
@@ -213,7 +195,7 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
 	*fileHandle << std::setprecision(4);
 	*fileHandle << "Sample center (stageX, stageY) = (" << mCenterXY.XX / mm << " mm, " << mCenterXY.YY / mm << " mm)\n";
-	*fileHandle << "Requested sample size (stageX, stageY, stageZ) = (" << mSampleSizeXYZreq.XX / mm << " mm, " << mSampleSizeXYZreq.YY / mm << " mm, " << mSampleSizeXYZreq.ZZ / mm << " mm)\n\n";
+	*fileHandle << "Requested ROI size (stageX, stageY, stageZ) = (" << mLOIxyz_req.XX / mm << " mm, " << mLOIxyz_req.YY / mm << " mm, " << mLOIxyz_req.ZZ / mm << " mm)\n\n";
 
 	*fileHandle << "SLICE ************************************************************\n";
 	*fileHandle << std::setprecision(4);
@@ -362,119 +344,6 @@ std::string Sequencer::Commandline::actionToString_(const Action::ID action) con
 }
 #pragma endregion "Commandline"
 
-#pragma region "TileArray"
-TileArray::TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraysize, const TILEOVERLAP3 overlapXYZ_frac):
-	mTileHeight_pix{ tileHeight_pix },
-	mTileWidth_pix{ tileWidth_pix },
-	mArraySize{ tileArraysize },
-	mOverlapXYZ_frac{ overlapXYZ_frac }
-{
-	if(tileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be >0");
-	if (tileWidth_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be >0");
-	if (tileArraysize.II <= 0 || tileArraysize.II <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be >0");
-	if (overlapXYZ_frac.XX < 0 || overlapXYZ_frac.YY < 0 || overlapXYZ_frac.ZZ < 0 || overlapXYZ_frac.XX > 1 || overlapXYZ_frac.YY > 1 || overlapXYZ_frac.ZZ > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
-}
-
-//Pixel position of the center of the tiles relative to the center of the array
-PIXELS2 TileArray::determineRelativeTilePosition_pix(const INDICES2 tileIndicesIJ) const
-{
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + std::to_string(mArraySize.II - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index JJ must be in the range [0-" + std::to_string(mArraySize.JJ - 1) + "]");
-
-	POSITION2 relativeTileIndicesIJ{ determineRelativeTileIndicesIJ(mOverlapXYZ_frac, mArraySize, tileIndicesIJ) };
-
-	return { static_cast<int>(std::round(mTileHeight_pix * relativeTileIndicesIJ.XX)),
-			 static_cast<int>(std::round(mTileWidth_pix * relativeTileIndicesIJ.YY)) };
-}
-
-void TileArray::asd(const POSITION2 centerPositionXY, const FFOV2 tileFFOV) const
-{
-	const double tileFFOVheight{ tileFFOV.XX };
-	const double tileFFOVwidth{ tileFFOV.YY };
-
-	const PIXELS2 arrayHalfSize{ (mArraySize.II - 1) / 2, (mArraySize.JJ - 1) / 2 };
-
-	//centerPositionXY.XX - tileFFOVheight * arrayHalfSize.II;//Min
-	//centerPositionXY.XX + tileFFOVheight * (mArraySize.II - arrayHalfSize.II); //Max
-
-}
-#pragma endregion "TileArray"
-
-#pragma region "QuickScanXY"
-//The sample size is from tile edge to tile edge
-QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SIZE2 pixelSizeXY, const SIZE2 ROIsize) :
-	mROIcenterXY{ ROIcenterXY },
-	mFFOV{ ffov },
-	mPixelSizeXY{ pixelSizeXY },
-	mROIsize{ ROIsize },
-	mFullWidth_pix{ static_cast<int>(std::ceil(ROIsize.YY / pixelSizeXY.YY)) },
-	mTileArray{ static_cast<int>(std::ceil(ROIsize.XX / pixelSizeXY.XX)),			//tileHeight_pix
-				static_cast<int>(std::ceil(ffov.YY / pixelSizeXY.YY)),				//tileWidth_pix
-				{ 1, static_cast<int>(std::ceil(1. * ROIsize.YY / ffov.YY)) },		//Only 1 row, 1 or more columns
-				{0, 0, 0} },														//No overlap
-	mStitchedTiff{ mTileArray.mTileHeight_pix, mTileArray.mTileWidth_pix, mTileArray.mArraySize }
-{}
-
-double QuickScanXY::determineInitialScanPositionX(const double travelOverhead, const SCANDIR scanDir)
-{
-	const double ROIminX{ mROIcenterXY.XX - mROIsize.XX / 2 };		//Sample edge
-	const double tilePositionXmin{ ROIminX + mFFOV.XX / 2. };		//The first tile center is mFFOV.XX / 2 away from the ROI edge
-	const double travelX{ mROIsize.XX - mFFOV.XX };					//The X stage does not travel the first and last mFFOV.XX / 2 from the edge of the ROI
-
-	return determineInitialScanPos(tilePositionXmin, travelX, travelOverhead, scanDir);
-}
-
-double QuickScanXY::determineFinalScanPositionX(const double travelOverhead, const SCANDIR scanDir)
-{
-	const double ROIminX{ mROIcenterXY.XX - mROIsize.XX / 2. };		//Sample edge
-	const double tilePositionXmin{ ROIminX + mFFOV.XX / 2. };		//The first tile center is mFFOV.XX / 2 away from the ROI edge
-	const double travelX{ mROIsize.XX - mFFOV.XX };					//The X stage does not travel the first and last mFFOV.XX / 2 from the edge of the ROI
-
-	return determineFinalScanPos(tilePositionXmin, travelX, travelOverhead, scanDir);
-}
-
-std::vector<double> QuickScanXY::determineStagePositionY()
-{
-	std::vector<double> stagePositionY;
-	const int nColHalf{ mTileArray.mArraySize.JJ / 2 };																		//Make the center of the tile array coincide with stackCenterXYZ
-	for (int iterLocation = 0; iterLocation < mTileArray.mArraySize.JJ; iterLocation++)
-		stagePositionY.push_back(mROIcenterXY.YY + mTileArray.mTileWidth_pix * mPixelSizeXY.YY * (nColHalf - iterLocation));		//for now, only allowed to stack strips to the right (i.e. only allowed to move the stage to the left)
-
-	return stagePositionY;
-}
-
-int QuickScanXY::fullHeight_pix()
-{
-	return mTileArray.mTileHeight_pix;
-}
-
-int QuickScanXY::tileWidth_pix()
-{
-	return mTileArray.mTileWidth_pix;
-}
-
-INDICES2 QuickScanXY::tileArraySize()
-{
-	return mTileArray.mArraySize;
-}
-
-void QuickScanXY::push(const TiffU8 &tile, const INDICES2 tileIndicesIJ)
-{
-	mStitchedTiff.push(tile, tileIndicesIJ);
-}
-
-void QuickScanXY::saveToFile(std::string filename, const OVERRIDE override) const
-{
-	mStitchedTiff.saveToFile(filename,  override);
-}
-#pragma endregion "QuickScanXY"
-
 #pragma region "BoolMap"
 BoolMap::BoolMap(const TiffU8 &tiff, const TileArray tileArray, const double threshold) :
 	mTiff{ tiff },
@@ -523,7 +392,7 @@ void BoolMap::saveTileMapToText(std::string filename)
 }
 
 //Overlap a grid with the tiles on the tiled image
-void BoolMap::SaveTileGridOverlap(std::string filename, const OVERRIDE override) const
+void BoolMap::saveTileGridOverlap(std::string filename, const OVERRIDE override) const
 {
 	const U8 lineColor{ 200 };
 	const double lineThicknessFactor{ 0.7 };//If too small (<0.7), the grid will not show properly on ImageJ
@@ -675,8 +544,81 @@ bool BoolMap::isQuadrantBright_(const double threshold, const INDICES2 tileIndic
 }
 #pragma endregion "BoolMap"
 
+#pragma region "QuickScanXY"
+//The length of interest (LOI) is from tile edge to tile edge
+QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SIZE2 pixelSizeXY, const SIZE2 LOIxy) :
+	mROIcenterXY{ ROIcenterXY },
+	mFFOV{ ffov },
+	mPixelSizeXY{ pixelSizeXY },
+	mLOIxy{ LOIxy },
+	mFullWidth_pix{ static_cast<int>(std::ceil(LOIxy.YY / pixelSizeXY.YY)) },
+	mQuickStitcher{ static_cast<int>(std::ceil(LOIxy.XX / pixelSizeXY.XX)),			//tileHeight_pix. The tile height is the same as the full height (because a tile is a vertical strip)
+					static_cast<int>(std::ceil(ffov.YY / pixelSizeXY.YY)),			//tileWidth_pix
+					{ 1, static_cast<int>(std::ceil(1. * LOIxy.YY / ffov.YY)) },	//tile array size = Only 1 row and many columns
+					{ 0, 0, 0} }													//No overlap	
+{}
+
+/*
+//The length of interest (LOI) is from tile edge to tile edge
+QuickScanXY::QuickScanXY(const std::string filename, const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac) :
+	mROIcenterXY{ 0, 0 },
+	mFFOV{ 0, 0 },
+	mPixelSizeXY{ 0, 0 },
+	mLOIxy{ 0, 0 },
+	mFullWidth_pix{ tileWidth_pix * tileArraySize.JJ },
+	mQuickStitcher{ tileHeight_pix, tileWidth_pix, tileArraySize, overlapXYZ_frac }
+{}*/
+
+double QuickScanXY::determineInitialScanPositionX(const double travelOverhead, const SCANDIR scanDir) const
+{
+	const double ROIminX{ mROIcenterXY.XX - mLOIxy.XX / 2 };		//Sample edge
+	const double tilePositionXmin{ ROIminX + mFFOV.XX / 2. };		//The first tile center is mFFOV.XX / 2 away from the ROI edge
+	const double travelX{ mLOIxy.XX - mFFOV.XX };					//The X stage does not travel the first and last mFFOV.XX / 2 from the edge of the ROI
+
+	return determineInitialScanPos(tilePositionXmin, travelX, travelOverhead, scanDir);
+}
+
+double QuickScanXY::determineFinalScanPositionX(const double travelOverhead, const SCANDIR scanDir) const
+{
+	const double ROIminX{ mROIcenterXY.XX - mLOIxy.XX / 2. };		//Sample edge
+	const double tilePositionXmin{ ROIminX + mFFOV.XX / 2. };		//The first tile center is mFFOV.XX / 2 away from the ROI edge
+	const double travelX{ mLOIxy.XX - mFFOV.XX };					//The X stage does not travel the first and last mFFOV.XX / 2 from the edge of the ROI
+
+	return determineFinalScanPos(tilePositionXmin, travelX, travelOverhead, scanDir);
+}
+
+std::vector<double> QuickScanXY::determineStagePositionY() const
+{
+	std::vector<double> stagePositionY;
+	const int nColHalf{ mQuickStitcher.mTileArray.mArraySize.JJ / 2 };																//Make the center of the tile array coincide with stackCenterXYZ
+	for (int iterLocation = 0; iterLocation < mQuickStitcher.mTileArray.mArraySize.JJ; iterLocation++)
+		stagePositionY.push_back(mROIcenterXY.YY + mQuickStitcher.mTileArray.mTileWidth_pix * mPixelSizeXY.YY * (nColHalf - iterLocation));		//for now, only allowed to stack strips to the right (i.e. only allowed to move the stage to the left)
+
+	return stagePositionY;
+}
+
+int QuickScanXY::tileHeight_pix()
+{
+	return mQuickStitcher.mTileArray.mTileHeight_pix;
+}
+
+int QuickScanXY::tileWidth_pix()
+{
+	return mQuickStitcher.mTileArray.mTileWidth_pix;
+}
+
+void QuickScanXY::push(const U8 *tile, const INDICES2 tileIndicesIJ)
+{
+	mQuickStitcher.push(tile, tileIndicesIJ);
+}
+
+void QuickScanXY::saveToFile(std::string filename, const OVERRIDE override) const
+{
+	mQuickStitcher.saveToFile(filename, override);
+}
+#pragma endregion "QuickScanXY"
 #pragma region "Sequencer"
-//Constructor using the sample's ROI. The number of stacks is calculated automatically based on the FFOV
+//Constructor using the sample's LOI. The number of stacks is calculated automatically based on the FFOV
 Sequencer::Sequencer(const Sample sample, const Stack stack) :
 	mSample{ sample },
 	mStack{ stack },
@@ -788,8 +730,8 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 	*fileHandle << "SEQUENCER ************************************************************\n";
 	*fileHandle << "Stages initial scan direction {stageX, stageY, stageZ} = {" << SCANDIRtoInt(g_initialStageScanDirXYZ.XX) << ", " << SCANDIRtoInt(g_initialStageScanDirXYZ.YY) << ", " << SCANDIRtoInt(g_initialStageScanDirXYZ.ZZ) << "}\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Effective ROI (stage positions) [YMIN, XMIN, YMAX, XMAX] = [" << mROIeff.YMIN / mm << " mm, " << mROIeff.XMIN / mm << " mm, " << mROIeff.YMAX / mm << " mm, " << mROIeff.XMAX / mm << " mm]\n";
-	*fileHandle << "Effective sample size (stageX, stageY, stageZ) = (" << effectiveSampleSizeXYZ_().XX / mm << " mm, " << effectiveSampleSizeXYZ_().YY / mm << " mm, " << effectiveSampleSizeXYZ_().ZZ / mm << " mm)\n";
+	*fileHandle << "Effective LOI (stageX, stageY, stageZ) = (" << effectiveLOIxyz().XX / mm << " mm, " << effectiveLOIxyz().YY / mm << " mm, " << effectiveLOIxyz().ZZ / mm << " mm)\n";
+	*fileHandle << "Effective ROI boundaries [YMIN, XMIN, YMAX, XMAX] = [" << mROIeff.YMIN / mm << " mm, " << mROIeff.XMIN / mm << " mm, " << mROIeff.YMAX / mm << " mm, " << mROIeff.XMAX / mm << " mm]\n";
 	*fileHandle << "Z position of the surface of the sample = " << mSample.mSurfaceZ / mm << " mm\n";
 	*fileHandle << std::setprecision(0);
 	*fileHandle << "Total # tissue slices = " << mNtotalSlices << "\n";
@@ -841,19 +783,19 @@ void Sequencer::initializeVibratomeSlice_()
 
 	mPlaneToSliceZ = mScanZi + mStack.mDepthZ - mSample.mCutAboveBottomOfStack;
 
-	const int nZZ{ static_cast<int>(1 + std::ceil(1. / (1 - mStack.mOverlapXYZ_frac.ZZ) * (mSample.mSampleSizeXYZreq.ZZ / mStack.mDepthZ - 1))) };
+	const int nZZ{ static_cast<int>(1 + std::ceil(1. / (1 - mStack.mOverlapXYZ_frac.ZZ) * (mSample.mLOIxyz_req.ZZ / mStack.mDepthZ - 1))) };
 	if (nZZ > 1)
 		mNtotalSlices = nZZ;		//Total number of vibratome slices in the entire sample
 	else
 		mNtotalSlices = 1;
 }
 
-//Calculate the number of tiles in the X-stage and Y-stage axes based on the sample size and the FFOV
+//Calculate the number of tiles in the X-stage and Y-stage axes based on the length of interest (LOI) and the FFOV
 //If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
 INDICES2 Sequencer::determineTileArraySize_()
 {
-	const int numberOfTilesII{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.XX) * (mSample.mSampleSizeXYZreq.XX / mStack.mFFOV.XX - 1))) };
-	const int numberOfTilesJJ{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.YY) * (mSample.mSampleSizeXYZreq.YY / mStack.mFFOV.YY - 1))) };
+	const int numberOfTilesII{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.XX) * (mSample.mLOIxyz_req.XX / mStack.mFFOV.XX - 1))) };
+	const int numberOfTilesJJ{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.YY) * (mSample.mLOIxyz_req.YY / mStack.mFFOV.YY - 1))) };
 
 	if (numberOfTilesII > 1)
 		mTileArray.mArraySize.II = numberOfTilesII;		//Number of tiles in the X-stage axis
@@ -923,8 +865,8 @@ void Sequencer::resetStageScanDirections_()
 	mIterScanDirXYZ = g_initialStageScanDirXYZ;
 }
 
-//Convert a ROI = {ymin, xmin, ymax, xmax} to the equivalent sample size in the X-stage and Y-stage axes
-SIZE3 Sequencer::effectiveSampleSizeXYZ_() const
+//Convert a ROI = {ymin, xmin, ymax, xmax} to the equivalent length of interest (LOI) in the X-stage and Y-stage axes
+SIZE3 Sequencer::effectiveLOIxyz() const
 {
 	return { mROIeff.XMAX - mROIeff.XMIN,
 			 mROIeff.YMAX - mROIeff.YMIN,

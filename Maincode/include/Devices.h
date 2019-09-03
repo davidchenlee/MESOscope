@@ -86,7 +86,7 @@ public:
 	void readTemp() const;
 private:
 	std::unique_ptr<serial::Serial> mSerial;
-	COM mPort{ COM::PMT16X };
+	const COM mPort{ COM::PMT16X };
 	const int mBaud{ 9600 };
 	const int mTimeout{ 300 * ms };
 	const int mRxBufferSize{ 256 };				//Serial buffer size
@@ -215,7 +215,7 @@ private:
 	int mWavelength_nm;							//Laser wavelength
 	const double timeStep{ 8. * us };
 	double mMaxPower;							//Softlimit for the laser power
-	Shutter mShutter;
+	const Shutter mShutter;
 
 	double laserpowerToVolt_(const double power) const;
 };

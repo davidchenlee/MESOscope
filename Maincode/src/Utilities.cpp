@@ -140,6 +140,25 @@ void pressAnyKeyToContOrESCtoExit()
 	}
 }
 
+//Take the integer indices II, JJ = 0, 1, 2... of the array of tiles and return new tile indices (now of double type) with overlapping tiles.
+//The returned indices are wrt the reference center tileare doubles and therefore can be negative
+//For an odd number of tiles, the center tile is at the middle of the array
+//For an even number of tiles, there are 2 tiles in the middle of the array. Take the one with smaller index as the reference center tile
+POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapXYZ_frac, const INDICES2 tileArraySize, const INDICES2 tileIndicesIJ)
+{
+	if (overlapXYZ_frac.XX < 0 || overlapXYZ_frac.YY < 0 || overlapXYZ_frac.ZZ < 0 || overlapXYZ_frac.XX > 1 || overlapXYZ_frac.YY > 1 || overlapXYZ_frac.ZZ > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
+	if (tileArraySize.II <= 0 || tileArraySize.II <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be >0");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= tileArraySize.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + toString(tileArraySize.II, 0) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= tileArraySize.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + toString(tileArraySize.JJ, 0) + "]");
+
+	return { (1. - overlapXYZ_frac.XX) * (tileIndicesIJ.II - static_cast<int>((tileArraySize.II - 1) / 2)),
+			 (1. - overlapXYZ_frac.YY) * (tileIndicesIJ.JJ - static_cast<int>((tileArraySize.JJ - 1) / 2)) };
+}
+
 #pragma region "Logger"
 Logger::Logger(const std::string filename)
 {
@@ -262,7 +281,7 @@ TiffU8::TiffU8(const std::string filename) :
 }
 
 //Construct a Tiff from an array
-TiffU8::TiffU8(const U8* inputImage, const int heightPerFrame_pix, const int widthPerFrame_pix, const int nFrames) :
+TiffU8::TiffU8(const U8* inputArray, const int heightPerFrame_pix, const int widthPerFrame_pix, const int nFrames) :
 	mHeightPerFrame_pix{ heightPerFrame_pix },
 	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mNframes{ nFrames },
@@ -276,7 +295,7 @@ TiffU8::TiffU8(const U8* inputImage, const int heightPerFrame_pix, const int wid
 	mArray = new U8[mNpixAllFrames];
 
 	//Copy input image onto mArray
-	std::memcpy(mArray, inputImage, mNpixAllFrames * sizeof(U8));
+	std::memcpy(mArray, inputArray, mNpixAllFrames * sizeof(U8));
 }
 
 //Construct a Tiff from a vector
@@ -331,6 +350,11 @@ int TiffU8::heightPerFrame_pix() const
 int TiffU8::widthPerFrame_pix() const
 {
 	return mWidthPerFrame_pix;
+}
+
+int TiffU8::nPixPerFrame_pix() const
+{
+	return mNpixPerFrame;
 }
 
 int TiffU8::nFrames() const
@@ -1026,33 +1050,81 @@ void TiffU8::flattenField(const double maxScaleFactor)
 */
 #pragma endregion "TiffU8"
 
+#pragma region "TileArray"
+TileArray::TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraysize, const TILEOVERLAP3 overlapXYZ_frac) :
+	mTileHeight_pix{ tileHeight_pix },
+	mTileWidth_pix{ tileWidth_pix },
+	mNpix{ tileHeight_pix * tileWidth_pix },
+	mArraySize{ tileArraysize },
+	mOverlapXYZ_frac{ overlapXYZ_frac }
+{
+	if (tileHeight_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be >0");
+	if (tileWidth_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be >0");
+	if (tileArraysize.II <= 0 || tileArraysize.II <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be >0");
+	if (overlapXYZ_frac.XX < 0 || overlapXYZ_frac.YY < 0 || overlapXYZ_frac.ZZ < 0 || overlapXYZ_frac.XX > 1 || overlapXYZ_frac.YY > 1 || overlapXYZ_frac.ZZ > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
+}
+
+//Pixel position of the center of the tiles relative to the center of the array
+PIXELS2 TileArray::determineRelativeTilePosition_pix(const INDICES2 tileIndicesIJ) const
+{
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mArraySize.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + std::to_string(mArraySize.II - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mArraySize.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index JJ must be in the range [0-" + std::to_string(mArraySize.JJ - 1) + "]");
+
+	POSITION2 relativeTileIndicesIJ{ determineRelativeTileIndicesIJ(mOverlapXYZ_frac, mArraySize, tileIndicesIJ) };
+
+	return { static_cast<int>(std::round(mTileHeight_pix * relativeTileIndicesIJ.XX)),
+			 static_cast<int>(std::round(mTileWidth_pix * relativeTileIndicesIJ.YY)) };
+}
+
+void TileArray::asd(const POSITION2 centerPositionXY, const FFOV2 tileFFOV) const
+{
+	const double tileFFOVheight{ tileFFOV.XX };
+	const double tileFFOVwidth{ tileFFOV.YY };
+
+	const PIXELS2 arrayHalfSize{ (mArraySize.II - 1) / 2, (mArraySize.JJ - 1) / 2 };
+
+	//centerPositionXY.XX - tileFFOVheight * arrayHalfSize.II;//Min
+	//centerPositionXY.XX + tileFFOVheight * (mArraySize.II - arrayHalfSize.II); //Max
+
+}
+#pragma endregion "TileArray"
+
 #pragma region "QuickStitcher"
 //tileHeight_pix = tile height, tileWidth_pix = tile width, tileArraySize = { number of tiles as rows, number of tiles as columns}
 //II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
-QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize) :
-	mTileArraySize{ tileArraySize },
-	mStitchedTiff{ tileHeight_pix * tileArraySize.II, tileWidth_pix * tileArraySize.JJ, 1 }
+QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac) :
+	mStitchedTiff{ tileHeight_pix * tileArraySize.II, tileWidth_pix * tileArraySize.JJ, 1 },
+	mTileArray{ tileHeight_pix,
+				tileWidth_pix,
+				tileArraySize,
+				overlapXYZ_frac }
 {
 	if (tileHeight_pix <= 0 || tileWidth_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile height and width must be > 0");
 
-	if(mTileArraySize.II <= 0 || mTileArraySize.JJ <= 0)
+	if (tileArraySize.II <= 0 || tileArraySize.JJ <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array dimensions must be > 0");
 }
 
 //II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
-void QuickStitcher::push(const TiffU8 &tile, const INDICES2 tileIndicesIJ)
+void QuickStitcher::push(const U8 *tile, const INDICES2 tileIndicesIJ)
 {
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArraySize.II - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArraySize.JJ - 1) + "]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.mArraySize.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArray.mArraySize.II - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.mArraySize.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
 
-	const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
-	const int tileWidth_pix{ tile.widthPerFrame_pix() };													//Width of the tile
-	const int rowShift_pix{ tileIndicesIJ.II *  tileHeight_pix };											//In the mTiff image, shift the tile down by this many pixels
-	const int colShift_pix{ tileIndicesIJ.JJ *  tileWidth_pix };											//In the mTiff image, shift the tile to the right by this many pixels
-	const int tileBytesPerRow{ static_cast<int>(tileWidth_pix * sizeof(U8)) };								//Bytes per row of the input tile
+	//const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
+	//const int tileWidth_pix{ tile.widthPerFrame_pix() };													//Width of the tile
+	const int rowShift_pix{ tileIndicesIJ.II *  mTileArray.mTileHeight_pix };								//In the mTiff image, shift the tile down by this many pixels
+	const int colShift_pix{ tileIndicesIJ.JJ *  mTileArray.mTileWidth_pix };								//In the mTiff image, shift the tile to the right by this many pixels
+	const int tileBytesPerRow{ static_cast<int>(mTileArray.mTileWidth_pix * sizeof(U8)) };					//Bytes per row of the input tile
 	const int stitchedTiffBytesPerRow{ static_cast<int>(mStitchedTiff.widthPerFrame_pix() * sizeof(U8)) };	//Bytes per row of the tiled image
 
 	/*
@@ -1061,9 +1133,9 @@ void QuickStitcher::push(const TiffU8 &tile, const INDICES2 tileIndicesIJ)
 		for (int iterRow_pix = 0; iterRow_pix < tileHeight_pix; iterRow_pix++)
 			mStitchedTiff.data()[(rowShift_pix + iterRow_pix) * mStitchedTiff.widthPerFrame_pix() + colShift_pix + iterCol_pix] = tile.data()[iterRow_pix * tileWidth_pix + iterCol_pix];*/
 
-	//Transfer the data from the input tile to mStitchedTiff. New way: copy row by row
-	for (int iterRow_pix = 0; iterRow_pix < tileHeight_pix; iterRow_pix++)
-		std::memcpy(&mStitchedTiff.data()[(rowShift_pix + iterRow_pix) * stitchedTiffBytesPerRow + colShift_pix * sizeof(U8)], &tile.data()[iterRow_pix * tileBytesPerRow], tileBytesPerRow);
+			//Transfer the data from the input tile to mStitchedTiff. New way: copy row by row
+	for (int iterRow_pix = 0; iterRow_pix < mTileArray.mTileHeight_pix; iterRow_pix++)
+		std::memcpy(&mStitchedTiff.data()[(rowShift_pix + iterRow_pix) * stitchedTiffBytesPerRow + colShift_pix * sizeof(U8)], &tile[iterRow_pix * tileBytesPerRow], tileBytesPerRow);
 }
 
 void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) const

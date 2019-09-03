@@ -26,6 +26,7 @@ template<class T> inline U8 clipU8dual(const T x);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
 void pressAnyKeyToContOrESCtoExit();
+POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapXYZ_frac, const INDICES2 tileArraySize, const INDICES2 tileIndicesIJ);
 
 //For saving the parameters to a text file
 class Logger
@@ -45,13 +46,14 @@ class TiffU8
 {
 public:
 	TiffU8(const std::string filename);
-	TiffU8(const U8* inputImage, const int heightPerFrame_pix, const int widthPerFrame_pix, int nFrames = 1);
+	TiffU8(const U8* inputArray, const int heightPerFrame_pix, const int widthPerFrame_pix, int nFrames = 1);
 	TiffU8(const std::vector<U8> &inputImage, const int heightPerFrame_pix, const int widthPerFrame_pix, const int nFrames = 1);
 	TiffU8(const int height_pix, const int width_pix, const int nFrames = 1);
 	~TiffU8();
 	U8* const data() const;
 	int heightPerFrame_pix() const;
 	int widthPerFrame_pix() const;
+	int nPixPerFrame_pix() const;
 	int nFrames() const;
 
 	void pushImage(const U8* inputArray, const int frameIndex) const;
@@ -83,13 +85,28 @@ private:
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
 };
 
+class TileArray
+{
+public:
+	const int mTileHeight_pix;		//Pixel height of a single tile
+	const int mTileWidth_pix;		//Pixel width of a single tile
+	const int mNpix;				//Total number of pixels in a single tile
+	INDICES2 mArraySize;			//Dimension of the array of tiles
+
+	TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
+	PIXELS2 determineRelativeTilePosition_pix(const INDICES2 tileIndicesIJ) const;
+	void TileArray::asd(const POSITION2 centerPosition, const FFOV2 ffo) const;
+private:
+	TILEOVERLAP3 mOverlapXYZ_frac;
+};
+
 class QuickStitcher
 {
 public:
-	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize);
-	void push(const TiffU8 &tile, const INDICES2 tileIndicesIJ);
+	const TileArray mTileArray;
+	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
+	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
 private:
 	TiffU8 mStitchedTiff;
-	INDICES2 mTileArraySize;		//Dimension of the tile array
 };

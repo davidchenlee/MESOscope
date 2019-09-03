@@ -37,8 +37,8 @@ namespace Constants
 	struct FFOV2 { double XX; double YY; };
 	struct LIMIT2 { double MIN; double MAX; };
 	struct ROI4 { double YMIN; double XMIN; double YMAX;  double XMAX; };	//Region of interest
-	struct SIZE2 { double XX; double YY; };									//Sample size
-	struct SIZE3 { double XX; double YY; double ZZ; };						//Sample size
+	struct SIZE2 { double XX; double YY; };									//Size in 2D
+	struct SIZE3 { double XX; double YY; double ZZ; };						//Size in 3D
 	struct TILEOVERLAP3 { double XX; double YY; double ZZ; };				//Tile overlap fraction
 
 	enum class PMTIN { PMT = false, SIM = true };							//*cast

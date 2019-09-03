@@ -64,9 +64,9 @@ public:
 	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED };	//*cast but not relevant, only for debugging
 	const FPGA &mFpga;
 	SCANDIR mScanDir{ SCANDIR::UPWARD };				//Scan direction of the stage for continuous scan
-	PMT16XCHAN mPMT16Xchan;								//PMT16X channel to be used
-	int mWidthPerFrame_pix;								//Width in pixels of a single frame (fast axis). I call each swing of the RS a "line"
-	int mHeightPerBeamletPerFrame_pix;					//Height in pixels of a single beamlet in a single frame (slow axis)
+	const PMT16XCHAN mPMT16Xchan;						//PMT16X channel to be used
+	const int mWidthPerFrame_pix;						//Width in pixels of a single frame (fast axis). I call each swing of the RS a "line"
+	const int mHeightPerBeamletPerFrame_pix;			//Height in pixels of a single beamlet in a single frame (slow axis)
 	int mNframes;										//Number of frames to acquire
 	int mHeightPerBeamletAllFrames_pix;					//Total number of lines per beamlet in all the frames
 	int mNpixPerBeamletAllFrames;						//Total number of pixels per beamlet in all the frames
@@ -108,9 +108,9 @@ private:
 		void pushUniformDwellTimes_();
 	};
 
-	LINECLOCK mLineclockInput;				//Resonant scanner (RS) or Function generator (FG)
-	MAINTRIG mMainTrigger;					//Trigger the acquisition with the Z-stage: enable (0), disable (1)
-	FIFOOUTfpga mEnableFIFOOUTfpga;			//Enable or disable the FIFOOUTfpga on the FPGA
+	const LINECLOCK mLineclockInput;		//Resonant scanner (RS) or Function generator (FG)
+	const MAINTRIG mMainTrigger;					//Trigger the acquisition with the Z-stage: enable (0), disable (1)
+	const FIFOOUTfpga mEnableFIFOOUTfpga;			//Enable or disable the FIFOOUTfpga on the FPGA
 	VQU32 mVec_queue;
 	U32* mBufferA{ nullptr };				//Buffer array to read FIFOOUTpc A
 	U32* mBufferB{ nullptr };				//Buffer array to read FIFOOUTpc B

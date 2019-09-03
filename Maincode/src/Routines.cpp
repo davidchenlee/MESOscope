@@ -362,7 +362,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
-		const double fullWidth{ 10.000 * mm };												//Total width of the tile array
+		const double fullWidth{ 0.300 * mm };												//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };												//Width of a strip
@@ -377,7 +377,7 @@ namespace Routines
 		//CONTROL SEQUENCE
 		//The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
 		const int nFrames{ 2 };
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, quickScanXY.tileWidth_pix(), quickScanXY.fullHeight_pix() / 2 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, quickScanXY.tileWidth_pix(), quickScanXY.tileHeight_pix() / 2 };
 
 		//LASER
 		VirtualLaser virtualLaser{ whichLaser };
@@ -428,8 +428,8 @@ namespace Routines
 			image.acquireVerticalStrip(iterScanDirX);
 			image.correctRSdistortion(tileWidth);							//Correct the image distortion induced by the nonlinear scanning of the RS
 
-			TiffU8 tmp{ image.data(), quickScanXY.fullHeight_pix(), quickScanXY.tileWidth_pix() };	//I tried to access mTiff in image directly but it gives me an error
-			quickScanXY.push(tmp, { 0, iterLocation });												//for now, only allowed to stack up strips to the right
+
+			quickScanXY.push(image.data(), { 0, iterLocation });			//for now, only allowed to stack up strips to the right
 
 			reverseSCANDIR(iterScanDirX);
 			pressESCforEarlyTermination();
@@ -457,7 +457,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const SIZE3 sampleSize{ 0.3 * mm, 0.2 * mm, 0.00 * mm };
+		const SIZE3 LOIxyz{ 0.3 * mm, 0.2 * mm, 0.00 * mm };
 		//const TILEOVERLAP3 stackOverlap_frac{ 0.10, 0.05, 0.40 };										//Stack overlap
 		const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };												//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//Distance above the bottom of the stack to cut
@@ -477,7 +477,7 @@ namespace Routines
 		}
 
 		//Create a sequence
-		const Sample sample{ currentSample, {stackCenterXYZ.XX, stackCenterXYZ.YY}, sampleSize, sampleSurfaceZ, cutAboveBottomOfStack };
+		const Sample sample{ currentSample, {stackCenterXYZ.XX, stackCenterXYZ.YY}, LOIxyz, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, heightPerFrame_pix, widthPerFrame_pix, pixelSizeZafterBinning, nFramesAfterBinning, stackOverlap_frac };
 		Sequencer sequence{ sample, stack };
 		sequence.generateCommandList();
@@ -1159,9 +1159,9 @@ namespace TestRoutines
 		const int width{ 300 };
 		TiffU8 image00{ "Tile_01" };
 		TiffU8 image01{ "Tile_02" };
-		QuickStitcher stitched{ height, width, {2, 1} };
-		stitched.push(image00, { 0, 0 });
-		stitched.push(image01, { 1, 0 });
+		QuickStitcher stitched{ height, width, {2, 1}, {0, 0, 0} };
+		stitched.push(image00.data(), { 0, 0 });
+		stitched.push(image01.data(), { 1, 0 });
 		stitched.saveToFile(outputFilename, OVERRIDE::DIS);
 
 		pressAnyKeyToCont();
@@ -1181,9 +1181,9 @@ namespace TestRoutines
 		const TileArray tileArray{ tileHeight_pix, tileWidth_pix, { 36, 67 }, overlapXYZ_frac };
 
 		BoolMap boolmap{ image, tileArray, threshold };
-		//boolmap.saveTileMapToText("Boolmap");
-		//boolmap.saveTileMap("TileMap", OVERRIDE::EN);
-		boolmap.SaveTileGridOverlap("TileGrid", OVERRIDE::EN);
+		boolmap.saveTileMapToText("Boolmap");
+		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
+		//boolmap.saveTileGridOverlap("TileGrid", OVERRIDE::EN);
 		//std::cout << boolmap.isTileBright({ 0, 30 }) << "\n";
 
 		//PIXELS2 positionXY_pix = boolmap.tileIndicesIJtoPixelPosition_pix({0.0, 0.0, 0.0},  { 35, 66 });

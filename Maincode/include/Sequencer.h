@@ -110,7 +110,7 @@ class Boolmap
 {
 public:
 	Boolmap(const TiffU8 &tiff, const TileArray tileArray, const double threshold);
-	bool isTileBright(const INDICES2 tileIndicesIJ);
+	bool isTileBright(const INDICES2 tileIndicesIJ) const;
 	void saveTileMapToText(std::string filename);
 	void saveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
@@ -120,12 +120,11 @@ private:
 	const double mThreshold;			//Threshold for generating the boolmap
 	const int mFullHeight_pix;			//Pixel height of the tiled image
 	const int mFullWidth_pix;			//Pixel width of the tiled image
-	const int mNpix;					//Total number of pixels in mTiff
+	const int mNpixFull;				//Total number of pixels in mTiff
 	PIXELS2 mAnchorPixel_pix;			//Reference position for the tile array wrt the Tiff
 	std::vector<bool> mIsBrightMap;
 
 	PIXELS2 determineTileAbsolutePixelPos_pix_(const INDICES2 tileIndicesIJ) const;
-	bool isAvgBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
 	bool isQuadrantBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
 };
 

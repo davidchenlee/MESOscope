@@ -362,7 +362,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
-		const double fullWidth{ 0.300 * mm };												//Total width of the tile array
+		const double fullWidth{ 10.000 * mm };												//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };												//Width of a strip
@@ -1179,7 +1179,7 @@ namespace TestRoutines
 		const TileArray tileArray{ tileHeight_pix, tileWidth_pix, { 36, 67 }, overlapXYZ_frac };
 
 		Boolmap boolmap{ image, tileArray, threshold };
-		//boolmap.saveTileMapToText("Boolmap");
+		boolmap.saveTileMapToText("Boolmap");
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
 		boolmap.saveTileGridOverlap("TileGrid", OVERRIDE::EN);
 		//std::cout << boolmap.isTileBright({ 0, 30 }) << "\n";

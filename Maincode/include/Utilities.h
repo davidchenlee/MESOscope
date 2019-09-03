@@ -94,8 +94,7 @@ public:
 	INDICES2 mArraySize;			//Dimension of the array of tiles
 
 	TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
-	PIXELS2 determineRelativeTilePosition_pix(const INDICES2 tileIndicesIJ) const;
-	void TileArray::asd(const POSITION2 centerPosition, const FFOV2 ffo) const;
+	PIXELS2 determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const;
 private:
 	TILEOVERLAP3 mOverlapXYZ_frac;
 };
@@ -103,10 +102,16 @@ private:
 class QuickStitcher
 {
 public:
-	const TileArray mTileArray;
+
 	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
 	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
+	int tileHeight_pix() const;
+	int tileWidth_pix() const;
+	int fullHeight_pix() const;
+	int fullWidth_pix() const;
+	INDICES2 tileArraySize() const;
 private:
 	TiffU8 mStitchedTiff;
+	const TileArray mTileArray;
 };

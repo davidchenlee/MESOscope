@@ -141,9 +141,9 @@ void pressAnyKeyToContOrESCtoExit()
 }
 
 //Take the integer indices II, JJ = 0, 1, 2... of the array of tiles and return new tile indices (now of double type) with overlapping tiles.
-//The returned indices are wrt the reference center tileare doubles and therefore can be negative
-//For an odd number of tiles, the center tile is at the middle of the array
-//For an even number of tiles, there are 2 tiles in the middle of the array. Take the one with smaller index as the reference center tile
+//The returned indices are wrt the center tile and can be negative
+//For an odd number of tiles, the center tile is at the middle of the tile array
+//For an even number of tiles, there are 2 tiles in the middle of the tile array. The one on the top/left is taken as the reference tile
 POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapXYZ_frac, const INDICES2 tileArraySize, const INDICES2 tileIndicesIJ)
 {
 	if (overlapXYZ_frac.XX < 0 || overlapXYZ_frac.YY < 0 || overlapXYZ_frac.ZZ < 0 || overlapXYZ_frac.XX > 1 || overlapXYZ_frac.YY > 1 || overlapXYZ_frac.ZZ > 1)
@@ -1069,7 +1069,7 @@ TileArray::TileArray(const int tileHeight_pix, const int tileWidth_pix, const IN
 }
 
 //Pixel position of the center of the tiles relative to the center of the array
-PIXELS2 TileArray::determineRelativeTilePosition_pix(const INDICES2 tileIndicesIJ) const
+PIXELS2 TileArray::determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const
 {
 	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mArraySize.II)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + std::to_string(mArraySize.II - 1) + "]");
@@ -1080,18 +1080,6 @@ PIXELS2 TileArray::determineRelativeTilePosition_pix(const INDICES2 tileIndicesI
 
 	return { static_cast<int>(std::round(mTileHeight_pix * relativeTileIndicesIJ.XX)),
 			 static_cast<int>(std::round(mTileWidth_pix * relativeTileIndicesIJ.YY)) };
-}
-
-void TileArray::asd(const POSITION2 centerPositionXY, const FFOV2 tileFFOV) const
-{
-	const double tileFFOVheight{ tileFFOV.XX };
-	const double tileFFOVwidth{ tileFFOV.YY };
-
-	const PIXELS2 arrayHalfSize{ (mArraySize.II - 1) / 2, (mArraySize.JJ - 1) / 2 };
-
-	//centerPositionXY.XX - tileFFOVheight * arrayHalfSize.II;//Min
-	//centerPositionXY.XX + tileFFOVheight * (mArraySize.II - arrayHalfSize.II); //Max
-
 }
 #pragma endregion "TileArray"
 
@@ -1141,5 +1129,30 @@ void QuickStitcher::push(const U8 *tile, const INDICES2 tileIndicesIJ)
 void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) const
 {
 	mStitchedTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
+}
+
+int QuickStitcher::tileHeight_pix() const
+{
+	return mTileArray.mTileHeight_pix;
+}
+
+int QuickStitcher::tileWidth_pix() const
+{
+	return mTileArray.mTileWidth_pix;
+}
+
+INDICES2 QuickStitcher::tileArraySize() const
+{
+	return mTileArray.mArraySize;
+}
+
+int QuickStitcher::fullHeight_pix() const
+{
+	return mStitchedTiff.heightPerFrame_pix();
+}
+
+int QuickStitcher::fullWidth_pix() const
+{
+	return mStitchedTiff.widthPerFrame_pix();
 }
 #pragma endregion "QuickStitcher"

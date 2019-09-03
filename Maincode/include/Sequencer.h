@@ -34,15 +34,15 @@ struct Sample
 	std::string mName;
 	std::string mImmersionMedium;
 	std::string mObjectiveCollar;	
-	POSITION2 mCenterXY;									//Sample center (stageX, stageY)
-	SIZE3 mLOIxyz_req{ 0, 0, 0 };							//Requested Length of interest (stageX, stageY, stageZ)
+	POSITION2 mCenterXY;								//Sample center (stageX, stageY)
+	SIZE3 mLOIxyz_req{ 0, 0, 0 };						//Requested Length of interest (stageX, stageY, stageZ)
 	double mSurfaceZ;
 	FluorLabelList mFluorLabelList;
-	std::vector<LIMIT2> mStageSoftPosLimXYZ;				//Soft position limits of the stages
+	std::vector<LIMIT2> mStageSoftPosLimXYZ;			//Soft position limits of the stages
 
-	const POSITION2 mBladePositionXY{ 0. * mm, 0. * mm };	//Location of the vibratome blade in the X-stage and Y-stage axes wrt the stages origin
-	const double mBladeFocalplaneOffsetZ{ 0. * um };		//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
-	double mCutAboveBottomOfStack{ 0. * um };				//Specify at what height of the overlapping volume to cut
+	const POSITION2 mBladePosXY{ 0. * mm, 0. * mm };	//Location of the vibratome blade in the X-stage and Y-stage axes wrt the stages origin
+	const double mBladeFocalplaneOffsetZ{ 0. * um };	//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	double mCutAboveBottomOfStack{ 0. * um };			//Specify at what height of the overlapping volume to cut
 
 	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorLabelList fluorLabelList = { {} });
 	Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 LOIxyz, const double sampleSurfaceZ, const double sliceOffset);
@@ -82,46 +82,21 @@ namespace Action
 		int nFrameBinning;
 	};
 	struct CutSlice {
-		POSITION3 mBladePositionXY;		//Position the sample facing the vibratome blade
+		POSITION3 mBladePosXY;	//Position the sample facing the vibratome blade
 	};
 }
-
-class BoolMap
-{
-public:
-	BoolMap(const TiffU8 &tiff, const TileArray tileArray, const double threshold);
-	bool isTileBright(const INDICES2 tileIndicesIJ);
-	void saveTileMapToText(std::string filename);
-	void saveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
-	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
-private:
-	const TiffU8 &mTiff;
-	const double mThreshold;				//Threshold for generating the boolmap
-	const int mFullHeight_pix;				//Pixel height of the tiled image
-	const int mFullWidth_pix;				//Pixel width of the tiled image
-	const int mNpix;						//Total number of pixels in mTiff
-	const TileArray mTileArray;
-	const PIXELS2 mTileArrayCenter_pix;			//Reference position for the tile array wrt the Tiff
-	std::vector<bool> mIsBrightMap;
-
-	PIXELS2 determineAbsoluteTilePosition_pix_(const INDICES2 tileIndicesIJ) const;
-	bool isAvgBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
-	bool isQuadrantBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
-};
 
 class QuickScanXY
 {
 public:
-	//The Length of interest (LOI) is from tile edge to tile edge
 	QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SIZE2 pixelSizeXY, const SIZE2 LOIxy);
-	//QuickScanXY(const std::string filename, const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
-	double determineInitialScanPositionX(const double travelOverhead, const SCANDIR scanDir) const;
-	double determineFinalScanPositionX(const double travelOverhead, const SCANDIR scanDir) const;
-	std::vector<double> determineStagePositionY() const;
-	int tileHeight_pix();
-	int tileWidth_pix();
+	double determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
+	double determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
+	std::vector<double> generateStagePosY() const;
 	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
+	int tileHeight_pix() const;
+	int tileWidth_pix() const;
 private:
 	const POSITION2 mROIcenterXY;
 	const FFOV2 mFFOV;
@@ -129,6 +104,29 @@ private:
 	const SIZE2 mLOIxy;
 	const int mFullWidth_pix;
 	QuickStitcher mQuickStitcher;
+};
+
+class Boolmap
+{
+public:
+	Boolmap(const TiffU8 &tiff, const TileArray tileArray, const double threshold);
+	bool isTileBright(const INDICES2 tileIndicesIJ);
+	void saveTileMapToText(std::string filename);
+	void saveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+private:
+	const TiffU8 &mTiff;
+	const TileArray mTileArray;
+	const double mThreshold;			//Threshold for generating the boolmap
+	const int mFullHeight_pix;			//Pixel height of the tiled image
+	const int mFullWidth_pix;			//Pixel width of the tiled image
+	const int mNpix;					//Total number of pixels in mTiff
+	PIXELS2 mAnchorPixel_pix;			//Reference position for the tile array wrt the Tiff
+	std::vector<bool> mIsBrightMap;
+
+	PIXELS2 determineTileAbsolutePixelPos_pix_(const INDICES2 tileIndicesIJ) const;
+	bool isAvgBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
+	bool isQuadrantBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
 };
 
 class Sequencer	//A list of commands that forms a full sequence
@@ -163,7 +161,7 @@ public:
 	void generateCommandList();
 	//std::vector<POSITION2> generateLocationList();
 	int size() const;
-	POSITION2 tileIndicesIJToStagePositionXY(const INDICES2 tileIndicesIJ) const;
+	POSITION2 tileIndicesIJToStagePosXY(const INDICES2 tileIndicesIJ) const;
 	void printSequenceParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
 private:

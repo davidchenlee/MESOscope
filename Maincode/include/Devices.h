@@ -359,11 +359,11 @@ public:
 	Stage(Stage&&) = delete;					//Disable move constructor
 	Stage& operator=(Stage&&) = delete;			//Disable move-assignment constructor
 
-	POSITION3 readPositionXYZ() const;
-	void printPositionXYZ() const;
+	POSITION3 readPosXYZ() const;
+	void printPosXYZ() const;
 	void moveSingle(const Axis stage, const double position);
-	void moveXY(const POSITION2 positionXY);
-	void moveXYZ(const POSITION3 positionXYZ);
+	void moveXY(const POSITION2 posXY);
+	void moveXYZ(const POSITION3 posXYZ);
 	bool isMoving(const Axis axis) const;
 	void waitForMotionToStopSingle(const Axis axis) const;
 	void waitForMotionToStopAll() const;
@@ -382,7 +382,7 @@ private:
 	std::array<int, 3> mHandleXYZ;								//Stage handler
 
 	const char mNstagesPerController[2]{ "1" };					//Number of stages per controller (currently 1)
-	POSITION3 mPositionXYZ;										//Absolute position of the stages
+	POSITION3 mPosXYZ;											//Absolute position of the stages
 	VELOCITY3 mVelXYZ;											//Velocity of the stages
 	std::vector<LIMIT2> mSoftPosLimXYZ{ {0,0},{0,0},{0,0} };	//Travel soft limits (may differ from the hard limits stored in the internal memory of the stages)
 																//Initialized with invalid values (lower limit = upper limit) for safety. It must be overridden by the constructor

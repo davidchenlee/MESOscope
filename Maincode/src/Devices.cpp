@@ -1858,9 +1858,9 @@ Stage::Stage(const double velX, const double velY, const double velZ, const std:
 	std::cout << "Connection with the stages successfully established\n";
 
 	//Download the current position
-	mPositionXYZ.XX = downloadPositionSingle_(XX);
-	mPositionXYZ.YY = downloadPositionSingle_(YY);
-	mPositionXYZ.ZZ = downloadPositionSingle_(ZZ);
+	mPosXYZ.XX = downloadPositionSingle_(XX);
+	mPosXYZ.YY = downloadPositionSingle_(YY);
+	mPosXYZ.ZZ = downloadPositionSingle_(ZZ);
 
 	//Download the current velocities
 	mVelXYZ.XX = downloadVelSingle_(XX);
@@ -1881,16 +1881,16 @@ Stage::~Stage()
 }
 
 //Recall the current position for the 3 stages
-POSITION3 Stage::readPositionXYZ() const
+POSITION3 Stage::readPosXYZ() const
 {
-	return mPositionXYZ;
+	return mPosXYZ;
 }
 
-void Stage::printPositionXYZ() const
+void Stage::printPosXYZ() const
 {
-	std::cout << "Stage X position = " << mPositionXYZ.XX / mm << " mm\n";
-	std::cout << "Stage Y position = " << mPositionXYZ.YY / mm << " mm\n";
-	std::cout << "Stage Z position = " << mPositionXYZ.ZZ / mm << " mm\n";
+	std::cout << "Stage X position = " << mPosXYZ.XX / mm << " mm\n";
+	std::cout << "Stage Y position = " << mPosXYZ.YY / mm << " mm\n";
+	std::cout << "Stage Z position = " << mPosXYZ.ZZ / mm << " mm\n";
 }
 
 double Stage::readCurrentPosition_(const Axis axis) const
@@ -1898,11 +1898,11 @@ double Stage::readCurrentPosition_(const Axis axis) const
 	switch (axis)
 	{
 	case XX:
-		return mPositionXYZ.XX;
+		return mPosXYZ.XX;
 	case YY:
-		return mPositionXYZ.YY;
+		return mPosXYZ.YY;
 	case ZZ:
-		return mPositionXYZ.ZZ;
+		return mPosXYZ.ZZ;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
 	}
@@ -1913,11 +1913,11 @@ void Stage::setCurrentPosition_(const Axis axis, const double position)
 	switch(axis)
 	{
 	case XX:
-		mPositionXYZ.XX = position;
+		mPosXYZ.XX = position;
 	case YY:
-		mPositionXYZ.YY = position;
+		mPosXYZ.YY = position;
 	case ZZ:
-		mPositionXYZ.ZZ = position;
+		mPosXYZ.ZZ = position;
 	}
 }
 
@@ -1980,18 +1980,18 @@ void Stage::moveSingle(const Axis axis, const double position)
 }
 
 //Move the 2 stages to the requested position
-void Stage::moveXY(const POSITION2 positionXY)
+void Stage::moveXY(const POSITION2 posXY)
 {
-	moveSingle(XX, positionXY.XX);
-	moveSingle(YY, positionXY.YY);
+	moveSingle(XX, posXY.XX);
+	moveSingle(YY, posXY.YY);
 }
 
 //Move the 3 stages to the requested position
-void Stage::moveXYZ(const POSITION3 positionXYZ)
+void Stage::moveXYZ(const POSITION3 posXYZ)
 {
-	moveSingle(XX, positionXYZ.XX);
-	moveSingle(YY, positionXYZ.YY);
-	moveSingle(ZZ, positionXYZ.ZZ);
+	moveSingle(XX, posXYZ.XX);
+	moveSingle(YY, posXYZ.YY);
+	moveSingle(ZZ, posXYZ.ZZ);
 }
 
 bool Stage::isMoving(const Axis axis) const

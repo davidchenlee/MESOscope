@@ -1178,7 +1178,13 @@ namespace TestRoutines
 		const TILEOVERLAP3 overlapXYZ_frac{ 0.0, 0.0, 0.0 };
 		const TileArray tileArray{ tileHeight_pix, tileWidth_pix, { 36, 67 }, overlapXYZ_frac };
 
-		Boolmap boolmap{ image, tileArray, threshold };
+		//In X, for an odd number of tiles, there are 2 tiles in the middle of the tile array. The one on the top is taken as the reference tile. For an even number of tiles, the center tile is at the middle of the tile array
+		//In Y, for an odd number of tiles, the center tile is at the middle of the tile array. For an even number of tiles, there are 2 tiles in the middle of the tile array. The one on the left is taken as the reference tile
+		PIXELS2 anchorPixel_pix{ image.heightPerFrame_pix() / 2 - tileArray.mTileHeight_pix / 2,
+								 image.widthPerFrame_pix() / 2 };
+
+
+		Boolmap boolmap{ image, tileArray, anchorPixel_pix, threshold };
 		boolmap.saveTileMapToText("Boolmap");
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
 		boolmap.saveTileGridOverlap("TileGrid", OVERRIDE::EN);

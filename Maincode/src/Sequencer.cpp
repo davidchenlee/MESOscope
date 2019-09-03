@@ -414,25 +414,17 @@ int QuickScanXY::tileWidth_pix() const
 
 #pragma region "Boolmap"
 //Lay a tile array over the anchor pixel of the tiff
-Boolmap::Boolmap(const TiffU8 &tiff, const TileArray tileArray, const double threshold) :
+Boolmap::Boolmap(const TiffU8 &tiff, const TileArray tileArray, const PIXELS2 anchorPixel_pix, const double threshold) :
 	mTiff{ tiff },
 	mTileArray{ tileArray },
 	mThreshold{ threshold },
 	mFullHeight_pix{ tiff.heightPerFrame_pix() },
 	mFullWidth_pix{ tiff.widthPerFrame_pix() },
-	mNpixFull{ mFullHeight_pix * mFullWidth_pix }
+	mNpixFull{ mFullHeight_pix * mFullWidth_pix },
+	mAnchorPixel_pix{ anchorPixel_pix }
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
-
-	//In X, for an odd number of tiles, there are 2 tiles in the middle of the tile array. The one on the top is taken as the reference tile. For an even number of tiles, the center tile is at the middle of the tile array
-	//In Y, for an odd number of tiles, the center tile is at the middle of the tile array. For an even number of tiles, there are 2 tiles in the middle of the tile array. The one on the left is taken as the reference tile
-	if(tileArray.mArraySize.JJ % 2)//Odd number of tiles
-		mAnchorPixel_pix = { mFullHeight_pix / 2 - mTileArray.mTileHeight_pix / 2,
-							 mFullWidth_pix / 2 };
-	else//Even number of tiles
-		mAnchorPixel_pix = { mFullHeight_pix / 2,
-							 mFullWidth_pix / 2 - mTileArray.mTileWidth_pix / 2 };
 
 	//Divide the large image into tiles of size tileHeight_pix * tileWidth_pix and return an array of tiles indicating if the tile is bright
 	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...

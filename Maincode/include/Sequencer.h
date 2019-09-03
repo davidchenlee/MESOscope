@@ -109,7 +109,7 @@ private:
 class Boolmap
 {
 public:
-	Boolmap(const TiffU8 &tiff, const TileArray tileArray, const double threshold);
+	Boolmap(const TiffU8 &tiff, const TileArray tileArray, const PIXELS2 anchorPixel_pix, const double threshold);
 	bool isTileBright(const INDICES2 tileIndicesIJ) const;
 	void saveTileMapToText(std::string filename);
 	void saveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;

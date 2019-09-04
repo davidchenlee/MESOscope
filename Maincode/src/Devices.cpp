@@ -1101,8 +1101,8 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
 	{
-		const double V{ laserpowerToVolt_(Pi + (Pf - Pi) / (mRTcontrol.mNframes - 1) * ii) };
-		const double Vratio{ V / Vi };
+		const double VV{ laserpowerToVolt_(Pi + (Pf - Pi) / (mRTcontrol.mNframes - 1) * ii) };
+		const double Vratio{ VV / Vi };
 
 		//Make sure that Fx2p14 does not overflow
 		if (Vratio > 4)
@@ -1116,29 +1116,37 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 	mRTcontrol.mFpga.enablePockelsScaling();
 }
 
-
-//If the exp decay length of the fluorescence is L and there is stepZ per frame, then scalingRate = stepZ / L
-//Typically, L = 200 um  and stepZ = 1 um, therefore scalingRate = 0.005
-void PockelsCell::powerExponentialScaling(const double Pi, const double stepZ, const double decayLengthZ) const
+//Exponentially scale the laser power from the first to the last frame
+void PockelsCell::powerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const
 {
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
-
-	if (decayLengthZ <= 0 )
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The exponential decay length must be > 0");
+	if (decayLengthZ == 0 )
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The exponential length must be > 0 or < 0");
 
 	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
 	mRTcontrol.clearQueue(mScalingRTchan);
 
-	const double Vi{ laserpowerToVolt_(Pi) };
-	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
+	const double Vmin{ laserpowerToVolt_(Pmin) };
+
+	pushVoltageSinglet(timeStep, Vmin, OVERRIDE::EN);	//Set the laser power for the first frame
 
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
 	{
-		const double V{ laserpowerToVolt_(Pi * std::exp(ii * stepZ / decayLengthZ)) };
-		const double Vratio{ V / Vi };
+		double VV;
+		if (decayLengthZ > 0)
+		{
+			VV = laserpowerToVolt_(Pmin * std::exp(ii * distancePerFrame / decayLengthZ));		//Exponential growth
+		}
+		else //decayLengthZ < 0
+		{
+			const double Pmax{ Pmin * std::exp(-(mRTcontrol.mNframes - 1) * distancePerFrame / decayLengthZ) };
+			const double Vmax{ laserpowerToVolt_(Pmax) };
+			VV = laserpowerToVolt_(Pmax * std::exp(ii * distancePerFrame / decayLengthZ));	//Exponential decay
+		}
 
 		//Make sure that Fx2p14 does not overflow
+		const double Vratio{ VV / Vmin };
 		if (Vratio > 4)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 
@@ -1148,6 +1156,7 @@ void PockelsCell::powerExponentialScaling(const double Pi, const double stepZ, c
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
 	mRTcontrol.mFpga.enablePockelsScaling();
+
 }
 
 
@@ -1519,7 +1528,7 @@ void VirtualLaser::CombinedLasers::setWavelength(RTcontrol &RTcontrol, const int
 }
 
 //Linearly scale the laser power from the first to the last frame
-void VirtualLaser::CombinedLasers::setPower(const double Pi, const double Pf) const
+void VirtualLaser::CombinedLasers::setPowerLinearScaling(const double Pi, const double Pf) const
 {
 	//Set the initial laser power
 	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pi, OVERRIDE::EN);
@@ -1527,6 +1536,16 @@ void VirtualLaser::CombinedLasers::setPower(const double Pi, const double Pf) co
 	//Linearly scale the laser power across the frames
 	if (Pf != Pi)
 		mPockelsPtr->powerLinearScaling(Pi, Pf);
+}
+
+//Exponential scale the laser power from the first to the last frame
+void VirtualLaser::CombinedLasers::setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const
+{
+	//Set the initial laser power
+	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pmin, OVERRIDE::EN);
+
+	//Exponentially scale the laser power across the frames
+	mPockelsPtr->powerExponentialScaling(Pmin, distancePerFrame, decayLengthZ);
 }
 
 void VirtualLaser::CombinedLasers::openShutter() const
@@ -1613,13 +1632,19 @@ void VirtualLaser::configure(RTcontrol &RTcontrol, const int wavelength_nm)
 
 void VirtualLaser::setPower(const double laserPower) const
 {
-	mCombinedLasers.setPower(laserPower, laserPower);
+	mCombinedLasers.setPowerLinearScaling(laserPower, laserPower);
 }
 
-void VirtualLaser::setPower(const double initialPower, const double finalPower) const
+void VirtualLaser::setPowerLinearScaling(const double Pi, const double Pf) const
 {
-	mCombinedLasers.setPower(initialPower, finalPower);
+	mCombinedLasers.setPowerLinearScaling(Pi, Pf);
 }
+
+void VirtualLaser::setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const
+{
+	mCombinedLasers.setPowerExponentialScaling(Pmin, distancePerFrame, decayLengthZ);
+}
+
 
 //Open the Uniblitz shutter
 void VirtualLaser::openShutter() const

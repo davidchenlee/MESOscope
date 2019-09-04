@@ -3,23 +3,23 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.300 - 0.300) * mm, (23.675 - 7.442/2)* mm, (17.200 + 0.000) * mm };
+POSITION3 stackCenterXYZ{ (44.300 - 0.600) * mm, (23.375 - 7.442/2)* mm, (17.220 + 0.000) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
-//Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.09 * mWpum) } }} };
+//Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0. * mWpum) } }} };
 Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
-					{{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.1 * mWpum), 4 } ,
-					   { "DAPI", 750, multiply16X(20. * mW), multiply16X(0.3 * mWpum), 2 } }} };
+					{{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0), 4 } ,
+					   { "DAPI", 750, multiply16X(20. * mW), multiply16X(0.0), 2 } }} };
 
 #else
 Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
-					{{{"TDT", 1040, 30. * mW, 0.05 * mWpum, 4 } ,
-					  { "DAPI", 750, 12. * mW, 0.2 * mWpum, 2 }}} };
+					{{{"TDT", 1040, 30. * mW, 2000. * um, 4 } ,
+					  { "DAPI", 750, 12. * mW, 120. * um, 2 }}} };
 Sample liverDAPI{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
-					  {{{ "DAPI", 750, 12. * mW, 0.2 * mWpum, 2 }}} };
+					  {{{ "DAPI", 750, 12. * mW, 120. * um, 2 }}} };
 Sample liverTDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
-					{{{"TDT", 1040, 30. * mW, 0.05 * mWpum, 4 }}} };
+					{{{"TDT", 1040, 30. * mW, 2000. * um, 4 }}} };
 
 //Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
 //Sample beads05um{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. * mWpum }, { "GFP", 920, 40. * mW, 0. * mWpum }, { "TDT", 1040, 15. * mW, 0. * mWpum }}} };
@@ -173,7 +173,8 @@ namespace Routines
 			stage.waitForMotionToStopAll();
 			//stage.printPosXYZ();				//Print the stage position	
 			
-			virtualLaser.setPower(fluorLabel.mScanPmin + iterLocation * pixelSizeZ * fluorLabel.mScanPinc);	//Update the laser power
+			//virtualLaser.setPower(fluorLabel.mScanPmin + iterLocation * pixelSizeZ * fluorLabel.mScanPinc);	//Update the laser power
+			virtualLaser.setPower(fluorLabel.mScanPmin + 0);	//FIX THIS
 
 			//Used to optimize the collector lens position
 			if (acqMode == RUNMODE::COLLECTLENS)
@@ -203,7 +204,7 @@ namespace Routines
 
 		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
 		{	
-			filename.append( "_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mScanPinc / mWpum, 2) + "mWpum" +
+			filename.append( "_Pmin=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorLabel.mScanPinc / um, 0) + "mWpum" +
 				"_x=" + toString(stagePosXYZ.front().XX / mm, 3) + "_y=" + toString(stagePosXYZ.front().YY / mm, 3) +
 				"_zi=" + toString(stagePosXYZ.front().ZZ / mm, 4) + "_zf=" + toString(stagePosXYZ.back().ZZ / mm, 4) + "_Step=" + toString(pixelSizeZ / mm, 4) + 
 				"_avg=" + toString(nFramesCont * nSameLocation, 0) );
@@ -241,7 +242,7 @@ namespace Routines
 			datalog.record("Laser used = ", virtualLaser.currentLaser_s());
 			datalog.record("Laser wavelength (nm) = ", virtualLaser.currentWavelength_nm());
 			datalog.record("Min laser power (mW) = ", fluorLabel.mScanPmin / mW);
-			datalog.record("Laser power increase (mW/um) = ", fluorLabel.mScanPinc / mWpum);
+			datalog.record("Power exponential length (um) = ", fluorLabel.mScanPinc / um);
 			datalog.record("Laser repetition period (us) = ", g_laserPulsePeriod / us);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
@@ -270,11 +271,11 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };				//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ 1 };																	//For binning
-		const double stackDepth{ 100. * um };
+		const double stackDepth{ 200. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um  };
 
 		const int nFrames{ static_cast<int>(nFramesBinning * stackDepth / pixelSizeZafterBinning) };	//Number of frames BEFORE binning for continuous acquisition
@@ -306,11 +307,12 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames };	//Note the STAGEZ flag
 
 		//LASER
-		const double laserPi = determineInitialLaserPower(fluorLabel.mScanPmin, stackDepth * fluorLabel.mScanPinc, scanDirZ);
-		const double laserPf = determineFinalLaserPower(fluorLabel.mScanPmin, stackDepth * fluorLabel.mScanPinc, scanDirZ);
+		//const double laserPi = determineInitialLaserPower(fluorLabel.mScanPmin, stackDepth * fluorLabel.mScanPinc, scanDirZ);
+		//const double laserPf = determineFinalLaserPower(fluorLabel.mScanPmin, stackDepth * fluorLabel.mScanPinc, scanDirZ);
 		VirtualLaser virtualLaser{ whichLaser };
 		virtualLaser.configure(RTcontrol, fluorLabel.mWavelength_nm);
-		virtualLaser.setPower(laserPi, laserPf);
+		//virtualLaser.setPowerLinearScaling(laserPi, laserPf);
+		virtualLaser.setPowerExponentialScaling(fluorLabel.mScanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * fluorLabel.mScanPinc);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -343,8 +345,8 @@ namespace Routines
 		image.binFrames(nFramesBinning);
 		//image.correct(RScanner.mFFOV);
 
-		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString((std::min)(laserPi, laserPf) / mW, 1) + "mW_Pinc=" + toString(fluorLabel.mScanPinc / mWpum, 2) +
-			"mWpum_x=" + toString(stackCenterXYZ.XX / mm, 3) + "_y=" + toString(stackCenterXYZ.YY / mm, 3) +
+		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorLabel.mScanPinc / um, 0) +
+			"um_x=" + toString(stackCenterXYZ.XX / mm, 3) + "_y=" + toString(stackCenterXYZ.YY / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZafterBinning / mm, 4) +
 			"_bin=" + toString(nFramesBinning, 0) };
 		
@@ -456,7 +458,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const SIZE3 LOIxyz{ 0.3 * mm, 0.1 * mm, 0.00 * mm };
+		const SIZE3 LOIxyz{ 0.3 * mm, 0.2 * mm, 0.00 * mm };
 		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.40 };										//Stack overlap
 		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };												//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//Distance above the bottom of the stack to cut
@@ -509,7 +511,7 @@ namespace Routines
 
 				//These parameters must be accessible to all the cases
 				int wavelength_nm, nFramesBinning;
-				double scanZi, scanZf, scanPi, scanPf;
+				double scanZi, scanZf;
 				switch (commandline.mAction)
 				{
 				case Action::ID::MOV://Move the X and Y-stages to mStackCenterXY
@@ -522,26 +524,28 @@ namespace Routines
 					{
 						//Set the number of frames considering that binning will be performed
 						nFramesBinning = acqStack.nFrameBinning;
-						const int nFramesBeforeBinning{ nFramesAfterBinning * nFramesBinning };													
+						const int nFramesBeforeBinning{ nFramesAfterBinning * nFramesBinning };
 						RTcontrol.setNumberOfFrames(nFramesBeforeBinning);
 
 						//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix	
 						const double pixelSizeZbeforeBinning{ stackDepth / nFramesBeforeBinning };
 						stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
+
+						//Save the parameters for saving the file
+						wavelength_nm = acqStack.mWavelength_nm;
+						//scanPi = determineInitialLaserPower(acqStack.mScanPmin, stackDepth * acqStack.mScanPinc, scanDirZ);
+						//scanPf = determineFinalLaserPower(acqStack.mScanPmin, stackDepth * acqStack.mScanPinc, scanDirZ);
+						scanZi = determineInitialScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
+						scanZf = determineFinalScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
+
+						//Update the laser parameters
+						virtualLaser.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
+						//virtualLaser.setPowerLinearScaling(scanPi, scanPf);
+						virtualLaser.setPowerExponentialScaling(acqStack.mScanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * acqStack.mScanPinc);
+
+						virtualLaser.openShutter();								//Re-open the Uniblitz shutter if closed by the pockels destructor
+						rescanner.reconfigure(&virtualLaser);					//The calibration of the rescanner depends on the laser and wavelength being used
 					}
-
-					//Save the parameters for saving the file
-					wavelength_nm = acqStack.mWavelength_nm;
-					scanPi = determineInitialLaserPower(acqStack.mScanPmin, stackDepth * acqStack.mScanPinc, scanDirZ);
-					scanPf = determineFinalLaserPower(acqStack.mScanPmin, stackDepth * acqStack.mScanPinc, scanDirZ);
-					scanZi = determineInitialScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
-					scanZf = determineFinalScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
-
-					//Update the laser parameters
-					virtualLaser.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
-					virtualLaser.setPower(scanPi, scanPf);
-					virtualLaser.openShutter();								//Re-open the Uniblitz shutter if closed by the pockels destructor
-					rescanner.reconfigure(&virtualLaser);					//The calibration of the rescanner depends on the laser and wavelength being used
 
 					RTcontrol.initialize(scanDirZ);							//Use the scan direction determined dynamically
 					std::cout << "Scanning the stack...\n";
@@ -552,7 +556,7 @@ namespace Routines
 					break;
 				case Action::ID::SAV:
 					{
-					longName = virtualLaser.currentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pi=" + toString(scanPi / mW, 1) + "mW_Pf=" + toString(scanPf / mW, 1) + "mW" +
+					longName = virtualLaser.currentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pmin=" + toString(acqStack.mScanPmin / mW, 1) + "mW_Pexp=" + toString(acqStack.mScanPinc / um, 0) + "mW" +
 						"_x=" + toString(tileCenterXY.XX / mm, 3) +
 						"_y=" + toString(tileCenterXY.YY / mm, 3) +
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) +

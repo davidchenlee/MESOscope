@@ -206,7 +206,7 @@ public:
 	void voltageToZero() const;
 	//void voltageLinearScaling(const double Vi, const double Vf) const;
 	void powerLinearScaling(const double Pi, const double Pf) const;
-	void powerExponentialScaling(const double Pi, const double stepZ, const double decayLengthZ) const;
+	void powerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const;
 	void setShutter(const bool state) const;
 private:
 	RTcontrol &mRTcontrol;						//Non-const because the laser power is pushed into the queues in RTcontrol						
@@ -258,7 +258,8 @@ public:
 	int currentWavelength_nm() const;
 	void configure(RTcontrol &RTcontrol, const int wavelength_nm);
 	void setPower(const double laserPower) const;
-	void setPower(const double initialPower, const double finalPower) const;
+	void setPowerLinearScaling(const double Pi, const double Pf) const;
+	void setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const;
 	void openShutter() const;
 	void closeShutter() const;
 	void moveCollectorLens(const double position);
@@ -282,7 +283,8 @@ private:
 		int currentWavelength_nm() const;
 		void isLaserInternalShutterOpen() const;
 		void setWavelength(RTcontrol &RTcontrol, const int wavelength_nm);
-		void setPower(const double Pi, const double Pf) const;
+		void setPowerLinearScaling(const double Pi, const double Pf) const;
+		void setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const;
 		void openShutter() const;
 		void closeShutter() const;
 	private:

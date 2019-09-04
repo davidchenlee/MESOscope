@@ -254,7 +254,7 @@ Sequencer::Commandline::Commandline(const Action::ID action) :
 
 std::string Sequencer::Commandline::printHeader() const
 {
-	return 	"Action\tSlice#\tTileIJ\t(stageX,stageY)\tStack#\tWavlen\tDirZ\tstageZ<\tstageZ>\tP<\tP>";
+	return 	"Action\tSlice#\tTileIJ\t(stageX,stageY)\tStack#\tWavlen\tDirZ\tstageZ<\tstageZ>\tPmin\tPexp";
 }
 
 std::string Sequencer::Commandline::printHeaderUnits() const
@@ -281,7 +281,7 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << mParam.acqStack.mScanZmin / mm << "\t";
 		*fileHandle << (mParam.acqStack.mScanZmin + mParam.acqStack.mDepthZ) / mm << "\t";
 		*fileHandle << std::setprecision(0);
-		*fileHandle << mParam.acqStack.mScanPmin << "\t" << mParam.acqStack.mScanPmin + mParam.acqStack.mDepthZ * mParam.acqStack.mScanPinc << "\n";
+		*fileHandle << mParam.acqStack.mScanPmin << "\t" << mParam.acqStack.mScanPinc << "\n";
 		break;
 	case Action::ID::SAV:
 		*fileHandle << actionToString_(mAction) + "\n";

@@ -149,7 +149,7 @@ POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapXYZ_frac, con
 	if (overlapXYZ_frac.XX < 0 || overlapXYZ_frac.YY < 0 || overlapXYZ_frac.ZZ < 0 || overlapXYZ_frac.XX > 1 || overlapXYZ_frac.YY > 1 || overlapXYZ_frac.ZZ > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
 	if (tileArraySize.II <= 0 || tileArraySize.II <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be > 0");
 	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= tileArraySize.II)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + toString(tileArraySize.II, 0) + "]");
 	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= tileArraySize.JJ)
@@ -246,7 +246,7 @@ TiffU8::TiffU8(const std::string filename) :
 	//std::cout << "Number of frames = " << mNframes << "\n";
 
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
 
 	mNpixPerFrame = mHeightPerFrame_pix * mWidthPerFrame_pix;
 	mNpixAllFrames = mNpixPerFrame * mNframes;
@@ -290,7 +290,7 @@ TiffU8::TiffU8(const U8* inputArray, const int heightPerFrame_pix, const int wid
 	mNpixAllFrames{ mNpixPerFrame * nFrames }
 {
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
 
 	mArray = new U8[mNpixAllFrames];
 
@@ -308,7 +308,7 @@ TiffU8::TiffU8(const std::vector<U8> &inputImage, const int heightPerFrame_pix, 
 	mNpixAllFrames{ mNpixPerFrame * nFrames }
 {
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
 
 	mArray = new U8[mNpixAllFrames];
 
@@ -326,7 +326,7 @@ TiffU8::TiffU8(const int heightPerFrame_pix, const int widthPerFrame_pix, const 
 	mNpixAllFrames{ mNpixPerFrame * nFrames }
 {
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
 
 	mArray = new U8[mNpixAllFrames]();
 }
@@ -390,7 +390,7 @@ void TiffU8::pushImage(const U8* inputArray, const int firstFrameIndex, const in
 void TiffU8::splitFrames(const int nFrames)
 {
 	if (nFrames <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame number must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The frame number must be > 0");
 
 	mNframes = nFrames;
 	mHeightPerFrame_pix = mHeightPerFrame_pix / nFrames;
@@ -677,7 +677,7 @@ void TiffU8::binFrames(const int nFramesPerBin)
 {
 	//nFramesPerBin must be a divisor of mNframes
 	if (nFramesPerBin <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The bin size must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The bin size must be > 0");
 
 	//nFramesPerBin must be a divisor of mNframes
 	if (mNframes%nFramesPerBin != 0)
@@ -713,7 +713,7 @@ void TiffU8::binFrames(const int nFramesPerBin)
 void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 {
 	if (FFOVfast <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be > 0");
 
 	const int heightAllFrames{ mHeightPerFrame_pix * mNframes };
 
@@ -858,7 +858,7 @@ inline U8 interpolateU8(float lam, const U8  &val1, const U8 &val2)
 void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 {
 	if (FFOVfast <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be > 0");
 
 	U8* correctedArray = new U8[mNpixAllFrames];
 
@@ -920,7 +920,7 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 void TiffU8::correctFOVslowCPU(const double FFOVslow)
 {
 	if (FFOVslow <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": FFOV must be > 0");
 
 	U8* correctedArray = new U8[mNpixAllFrames];
 
@@ -1059,11 +1059,11 @@ TileArray::TileArray(const int tileHeight_pix, const int tileWidth_pix, const IN
 	mOverlapXYZ_frac{ overlapXYZ_frac }
 {
 	if (tileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be > 0");
 	if (tileWidth_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be > 0");
 	if (tileArraysize.II <= 0 || tileArraysize.II <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be > 0");
 	if (overlapXYZ_frac.XX < 0 || overlapXYZ_frac.YY < 0 || overlapXYZ_frac.ZZ < 0 || overlapXYZ_frac.XX > 1 || overlapXYZ_frac.YY > 1 || overlapXYZ_frac.ZZ > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
 }
@@ -1154,5 +1154,10 @@ int QuickStitcher::fullWidth_pix() const
 INDICES2 QuickStitcher::tileArraySize() const
 {
 	return mTileArray.mArraySize;
+}
+
+TILEOVERLAP3 QuickStitcher::tileOverlap_frac() const
+{
+	return mTileArray.mOverlapXYZ_frac;
 }
 #pragma endregion "QuickStitcher"

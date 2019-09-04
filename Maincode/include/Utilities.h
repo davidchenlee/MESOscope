@@ -92,11 +92,12 @@ public:
 	const int mTileWidth_pix;		//Pixel width of a single tile
 	const int mNpix;				//Total number of pixels in a single tile
 	INDICES2 mArraySize;			//Dimension of the array of tiles
+	TILEOVERLAP3 mOverlapXYZ_frac;
 
 	TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
 	PIXELS2 determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const;
 private:
-	TILEOVERLAP3 mOverlapXYZ_frac;
+
 };
 
 class QuickStitcher
@@ -111,6 +112,7 @@ public:
 	int fullHeight_pix() const;
 	int fullWidth_pix() const;
 	INDICES2 tileArraySize() const;
+	TILEOVERLAP3 tileOverlap_frac() const;
 private:
 	TiffU8 mStitchedTiff;
 	const TileArray mTileArray;

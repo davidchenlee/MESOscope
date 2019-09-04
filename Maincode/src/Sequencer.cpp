@@ -40,7 +40,7 @@ void reverseSCANDIR(SCANDIR &scanDir)
 double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
 {
 	if (travel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be > 0");
 
 	switch (scanDir)
 	{
@@ -59,7 +59,7 @@ double determineInitialScanPos(const double posMin, const double travel, const d
 double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
 {
 	if (travel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be > 0");
 
 	switch (scanDir)
 	{
@@ -79,7 +79,7 @@ double determineFinalScanPos(const double posMin, const double travel, const dou
 double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
 {
 	if (powerMin < 0 || totalPowerInc < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >= 0");
 
 	switch (scanDirZ)
 	{
@@ -96,7 +96,7 @@ double determineInitialLaserPower(const double powerMin, const double totalPower
 double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
 {
 	if (powerMin < 0 || totalPowerInc < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >=0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >= 0");
 
 	switch (scanDirZ)
 	{
@@ -175,11 +175,11 @@ Sample::Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 LOIxy
 	mCutAboveBottomOfStack{ sliceOffset }
 {
 	if (mLOIxyz_req.XX <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length X must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length X must be > 0");
 	if (mLOIxyz_req.YY <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Y must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Y must be > 0");
 	if (mCutAboveBottomOfStack < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be >=0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be >= 0");
 }
 
 FluorLabelList::FluorLabel Sample::findFluorLabel(const std::string fluorLabel) const
@@ -219,11 +219,11 @@ Stack::Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix
 	if (FFOV.XX <= 0 || FFOV.YY <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
 	if (tileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be > 0");
 	if (tileWidth_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be > 0");
 	if (mPixelSizeZ <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel size Z must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel size Z must be > 0");
 	if (mDepthZ <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth Z must be positive");
 	if (mOverlapXYZ_frac.XX < 0 || mOverlapXYZ_frac.YY < 0 || mOverlapXYZ_frac.XX > 0.2 || mOverlapXYZ_frac.YY > 0.2 )
@@ -357,7 +357,14 @@ QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SI
 					static_cast<int>(std::ceil(ffov.YY / pixelSizeXY.YY)),			//tileWidth_pix
 					{ 1, static_cast<int>(std::ceil(1. * LOIxy.YY / ffov.YY)) },	//tile array size = Only 1 row and many columns
 					{ 0, 0, 0} }													//No overlap	
-{}
+{
+	const int II{ 0 };							//Only 1 row
+	for (int JJ = 0; JJ < mQuickStitcher.tileArraySize().JJ; JJ++)
+	{
+		const POSITION2 relativeTileIndexIJ{ determineRelativeTileIndicesIJ(mQuickStitcher.tileOverlap_frac(), mQuickStitcher.tileArraySize(), { II, JJ }) };
+		mStagePosY.push_back(mROIcenterXY.YY - mFFOV.YY * relativeTileIndexIJ.YY);		//for now, only stacking strips to the right is allowed (i.e. move the stage to the left)
+	}
+}
 
 double QuickScanXY::determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const
 {
@@ -375,20 +382,6 @@ double QuickScanXY::determineFinalScanPosX(const double travelOverhead, const SC
 	const double travelX{ mLOIxy.XX - mFFOV.XX };				//The X stage does not travel the first and last mFFOV.XX / 2 from the edge of the ROI
 
 	return determineFinalScanPos(tilePosXmin, travelX, travelOverhead, scanDir);
-}
-
-
-std::vector<double> QuickScanXY::generateStagePosY() const
-{
-	const TILEOVERLAP3 overlap_frac{ 0, 0, 0 };	//No tile overlap
-	const int II{ 0 };							//Only 1 row
-	std::vector<double> stagePosY;
-	for (int JJ = 0; JJ < mQuickStitcher.tileArraySize().JJ; JJ++)
-	{
-		const POSITION2 relativeTileIndexIJ{ determineRelativeTileIndicesIJ(overlap_frac, mQuickStitcher.tileArraySize(), { II, JJ }) };
-		stagePosY.push_back(mROIcenterXY.YY - mFFOV.YY * relativeTileIndexIJ.YY);		//for now, only stacking strips to the right is allowed (i.e. move the stage to the left)
-	}
-	return stagePosY;
 }
 
 void QuickScanXY::push(const U8 *tile, const INDICES2 tileIndicesIJ)
@@ -895,7 +888,7 @@ void Sequencer::moveStage_(const INDICES2 tilesIJ)
 void Sequencer::acqStack_(const int wavelengthIndex)
 {
 	if (wavelengthIndex < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength index must be >=0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength index must be >= 0");
 
 	//Read the corresponding laser configuration
 	const FluorLabelList::FluorLabel fluorLabel{ mSample.mFluorLabelList.at(wavelengthIndex) };

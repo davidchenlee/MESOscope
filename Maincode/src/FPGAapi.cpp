@@ -393,9 +393,8 @@ void FPGA::uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const
 		}
 		allQueues = {};					//Cleanup the queue C++11 style
 
-		U32 r;							//Elements remaining
-
 		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
+		U32 r;							//Elements remaining
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mHandle, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
 
 		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 

@@ -3,20 +3,22 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.300 - 0.000) * mm, (23.675 - 0.000/2)* mm, (17.080 + 0.170) * mm };
+POSITION3 stackCenterXYZ{ (44.300 - 0.300) * mm, (23.675 - 7.442/2)* mm, (17.200 + 0.000) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0 * mWpum) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0 * mWpum) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.09 * mWpum) } }} };
-Sample liverDAPITDT{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
+Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
 					{{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.1 * mWpum), 4 } ,
-					   { "DAPI", 750, multiply16X(25. * mW), multiply16X(0.3 * mWpum), 2 } }} };
+					   { "DAPI", 750, multiply16X(20. * mW), multiply16X(0.3 * mWpum), 2 } }} };
 
 #else
-Sample liverDAPITDT{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
+Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
 					{{{"TDT", 1040, 30. * mW, 0.05 * mWpum, 4 } ,
 					  { "DAPI", 750, 12. * mW, 0.2 * mWpum, 2 }}} };
-Sample liverTDT{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
+Sample liverDAPI{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
+					  {{{ "DAPI", 750, 12. * mW, 0.2 * mWpum, 2 }}} };
+Sample liverTDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
 					{{{"TDT", 1040, 30. * mW, 0.05 * mWpum, 4 }}} };
 
 //Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0. * mWpum }, { "GFP", 920, 30. * mW, 0. * mWpum }, { "TDT", 1040, 5. * mW, 0. * mWpum }}} };
@@ -24,7 +26,7 @@ Sample liverTDT{ "Liver20190812_01", "SiliconeMineralOil5050", "1.49", Container
 //Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. * mWpum }}} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0.0 * mWpum } , { "GFP", 920, 25. * mW, 0.0 * mWpum }, { "DAPI", 750, 40. * mW, 0.09 * mWpum }}} };
 #endif
-Sample currentSample{ liverDAPITDT };
+Sample currentSample{ liverDAPI };
 
 
 double determineChromaticShift(const int wavelength_nm, const Laser::ID whichLaser)
@@ -54,7 +56,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const int nFramesCont{ 1 };	
+		const int nFramesCont{ 5 };	
 		const double stackDepthZ{ 40. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
 	
@@ -268,7 +270,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };				//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ 1 };																	//For binning
@@ -362,7 +364,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
-		const double fullWidth{ 0.150 * mm };												//Total width of the tile array
+		const double fullWidth{ 10.000 * mm };												//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };												//Width of a strip
@@ -403,8 +405,7 @@ namespace Routines
 		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 
 		//LOCATIONS on the sample to image
-		std::vector<double> stagePosY{ quickScanXY.generateStagePosY() };
-		const int nLocations{ static_cast<int>(stagePosY.size()) };
+		const int nLocations{ static_cast<int>(quickScanXY.mStagePosY.size()) };
 		double stageXi, stageXf;		//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
@@ -413,7 +414,7 @@ namespace Routines
 			stageXf = quickScanXY.determineFinalScanPosX(travelOverhead, iterScanDirX);
 
 			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations << "\n";
-			stage.moveXY({ stageXi, stagePosY.at(iterLocation) });
+			stage.moveXY({ stageXi, quickScanXY.mStagePosY.at(iterLocation) });
 			stage.waitForMotionToStopAll();
 
 			Sleep(300);					//Avoid iterations too close to each other, otherwise the X-stage will fail to trigger the ctl&acq sequence.
@@ -434,7 +435,7 @@ namespace Routines
 		}
 			const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) +
 				"mWpum_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
-				"_yi=" + toString(stagePosY.front() / mm, 3) + "_yf=" + toString(stagePosY.back() / mm, 3) +
+				"_yi=" + toString(quickScanXY.mStagePosY.front() / mm, 3) + "_yf=" + toString(quickScanXY.mStagePosY.back() / mm, 3) +
 				"_z=" + toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
 			std::cout << "Saving the stack...\n";
 			quickScanXY.saveToFile(filename, OVERRIDE::DIS);
@@ -455,9 +456,9 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const SIZE3 LOIxyz{ 0.3 * mm, 0.2 * mm, 0.00 * mm };
-		//const TILEOVERLAP3 stackOverlap_frac{ 0.10, 0.05, 0.40 };										//Stack overlap
-		const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };												//Stack overlap
+		const SIZE3 LOIxyz{ 0.3 * mm, 0.1 * mm, 0.00 * mm };
+		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.40 };										//Stack overlap
+		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };												//Stack overlap
 		const double cutAboveBottomOfStack{ 15. * um };													//Distance above the bottom of the stack to cut
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
 
@@ -575,7 +576,8 @@ namespace Routines
 				//Stopwatch
 				//auto t_start{ std::chrono::high_resolution_clock::now() };
 				//double duration{ std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count() };
-				//std::cout << "Elapsed time: " << duration << " ms" << "\n";				
+				//std::cout << "Elapsed time: " << duration << " ms" << "\n";
+				void pressESCforEarlyTermination();
 			}//for
 		}//if
 		pressAnyKeyToCont();
@@ -944,28 +946,38 @@ namespace TestRoutines
 	void pockelsRamp(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const int heightPerFrame_pix{ 35 };
+		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
-		const int nFramesCont{ 200 };						//Number of frames for continuous acquisition
+		const int nFramesCont{ 100 };						//Number of frames for continuous acquisition
 
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//POCKELS CELL
-		const int wavelength_nm{ 1040 };
-		PockelsCell pockels{ RTcontrol, wavelength_nm, Laser::ID::FIDELITY };
-		const double Pi{ 192. * mW }, Pf{ 336. * mW };
-		//const double Pi{ 30. * mW }, Pf{ 60. * mW };
-		//pockels.pushPowerSinglet(400 * us, Pf, OVERRIDE::EN);
-		pockels.powerLinearScaling(Pi, Pf);					//Linearly scale the laser power from the first to the last frame
+		const int wavelength_nm{ 750 };
+		PockelsCell pockels{ RTcontrol, wavelength_nm, Laser::ID::VISION };
+		const double Pi{ 500. * mW }, Pf{ 1000. * mW };
+		const SCANDIR scanDirZ{ SCANDIR::UPWARD };
+		const double laserPi = determineInitialLaserPower(Pi, Pf - Pi, scanDirZ);
+		const double laserPf = determineFinalLaserPower(Pi, Pf - Pi, scanDirZ);
+
+		std::cout << "Pi = " << laserPi << "\n";
+		std::cout << "Pf = " << laserPf << "\n";
+		//pockels.powerLinearScaling(laserPi, laserPf);					//Linearly scale the laser power from the first to the last frame
+		pockels.powerExponentialScaling(Pi, 1. * um, 200. * um);
+
+
 		//pockels.powerLinearScaling(0.96 * Pf, Pi);
 
+		//pockels.pushPowerSinglet(400 * us, Pi, OVERRIDE::EN);
+
 		//Test the voltage setpoint
-		//pockels.pushVoltageSinglet(8* us, 0.5 * V);
+		//pockels.pushVoltageSinglet(8* us, 0.0 * V, OVERRIDE::EN);
 		//pockels.voltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
 
 		//EXECUTE THE CONTROL SEQUENCE
 		RTcontrol.run();
+		pressAnyKeyToCont();
 	}
 
 	void lasers(const FPGA &fpga)
@@ -1099,12 +1111,12 @@ namespace TestRoutines
 	void correctImage()
 	{
 
-		std::string inputFilename{ "Liver20190812_02_F1040nm_P=800.0mW_Pinc=1.60mWpum_x=44.000_y=21.000_zi=16.6200_zf=16.7300_Step=0.0010_bin=4 (1)" };
+		std::string inputFilename{ "Liver20190812_01_V750nm_P=320.0mW_x=44.000_y=19.954_z=17.2400_avg=5" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		//image.correctFOVslowCPU(1);
 		//image.correctRSdistortionGPU(200. * um);	
-		image.flattenField(2.0, 4, 11);
+		//image.flattenField(2.0, 4, 11);
 		image.suppressCrosstalk(0.2);
 		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 

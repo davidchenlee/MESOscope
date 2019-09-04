@@ -204,9 +204,9 @@ public:
 	void pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const;
 	void pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const;
 	void voltageToZero() const;
-	void voltageLinearScaling(const double Vi, const double Vf) const;
+	//void voltageLinearScaling(const double Vi, const double Vf) const;
 	void powerLinearScaling(const double Pi, const double Pf) const;
-	//void powerExponentialScaling(const double Pi, const double scalingRate) const;
+	void powerExponentialScaling(const double Pi, const double stepZ, const double decayLengthZ) const;
 	void setShutter(const bool state) const;
 private:
 	RTcontrol &mRTcontrol;						//Non-const because the laser power is pushed into the queues in RTcontrol						

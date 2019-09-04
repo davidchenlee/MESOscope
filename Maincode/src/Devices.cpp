@@ -1043,7 +1043,7 @@ PockelsCell::PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const La
 void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const
 {
 	if (AO < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The control voltage of the Pockls cell must be positive");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The control voltage of the Pockels cell must be positive");
 
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, AO, override);
 }
@@ -1061,6 +1061,7 @@ void PockelsCell::voltageToZero() const
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, g_tMinAO, 0 * V);
 }
 
+/*
 //Linearly scale the pockels voltage from the first to the last frame
 void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
 {
@@ -1072,10 +1073,10 @@ void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
 	if (Vratio > 4)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 
-	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
-
 	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
 	mRTcontrol.clearQueue(mScalingRTchan);
+
+	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
 
 	//Push the scaling factors
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
@@ -1083,7 +1084,7 @@ void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
 	mRTcontrol.mFpga.enablePockelsScaling();
-}
+}*/
 
 //Linearly scale the laser power from the first to the last frame
 void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
@@ -1095,6 +1096,7 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 	mRTcontrol.clearQueue(mScalingRTchan);
 
 	const double Vi{ laserpowerToVolt_(Pi) };
+
 	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
 
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
@@ -1107,20 +1109,23 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 		
 		//Push the scaling factors for the frames
-		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1. + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
+		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, Vratio);
 	}
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
 	mRTcontrol.mFpga.enablePockelsScaling();
 }
 
-/*
+
 //If the exp decay length of the fluorescence is L and there is stepZ per frame, then scalingRate = stepZ / L
 //Typically, L = 200 um  and stepZ = 1 um, therefore scalingRate = 0.005
-void PockelsCell::powerExponentialScaling(const double Pi, const double scalingRate) const
+void PockelsCell::powerExponentialScaling(const double Pi, const double stepZ, const double decayLengthZ) const
 {
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
+
+	if (decayLengthZ <= 0 )
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The exponential decay length must be > 0");
 
 	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
 	mRTcontrol.clearQueue(mScalingRTchan);
@@ -1130,7 +1135,7 @@ void PockelsCell::powerExponentialScaling(const double Pi, const double scalingR
 
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
 	{
-		const double V{ laserpowerToVolt_(Pi * std::exp(ii * scalingRate)) };
+		const double V{ laserpowerToVolt_(Pi * std::exp(ii * stepZ / decayLengthZ)) };
 		const double Vratio{ V / Vi };
 
 		//Make sure that Fx2p14 does not overflow
@@ -1138,13 +1143,13 @@ void PockelsCell::powerExponentialScaling(const double Pi, const double scalingR
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 
 		//Push the scaling factors for the frames
-		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1. + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
+		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, Vratio);
 	}
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
 	mRTcontrol.mFpga.enablePockelsScaling();
 }
-*/
+
 
 void PockelsCell::setShutter(const bool state) const
 {
@@ -1183,9 +1188,9 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 		switch (mWavelength_nm)
 		{
 		case 750:
-			powerAmplitude = 1600.0 * mW;
-			powerMin = 0 * mW;
-			angularFreq = 0.624 / V;
+			powerAmplitude = 1453.3 * mW;
+			powerMin = 2.1 * mW;
+			angularFreq = 0.6511 / V;
 			Vphase = 0.019 * V;
 
 			break;
@@ -2066,7 +2071,7 @@ void Stage::setVelSingle(const Axis axis, const double vel)
 {
 	//Check if the requested vel is valid
 	if (vel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be >0 for the stage " + axisToString_(axis));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be > 0 for the stage " + axisToString_(axis));
 
 	//Update the vel if different
 	if (readCurrentVelocity_(axis) != vel)
@@ -2127,7 +2132,7 @@ void Stage::setDOtriggerParamSingle(const Axis axis, const DIOCHAN DOchan, const
 void Stage::setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const
 {
 	if (triggerStep <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be >0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be > 0");
 
 	if (startThreshold < mTravelRangeXYZ.at(axis).MIN || startThreshold > mTravelRangeXYZ.at(axis).MAX)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The start position is out of the physical limits of the stage " + axisToString_(axis));

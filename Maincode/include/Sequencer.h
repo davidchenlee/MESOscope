@@ -89,10 +89,11 @@ namespace Action
 class QuickScanXY
 {
 public:
+	std::vector<double> mStagePosY;
+
 	QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SIZE2 pixelSizeXY, const SIZE2 LOIxy);
 	double determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
 	double determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
-	std::vector<double> generateStagePosY() const;
 	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
 	int tileHeight_pix() const;

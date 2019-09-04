@@ -1155,23 +1155,4 @@ INDICES2 QuickStitcher::tileArraySize() const
 {
 	return mTileArray.mArraySize;
 }
-
-
-//Anchor pixel wrt the full image
-PIXELS2 QuickStitcher::determineAnchorPixel_pix() const
-{	
-	PIXELS2 anchorPixel_pix;
-
-	if (mTileArray.mArraySize.II % 2)	//Odd number of tiles
-		anchorPixel_pix.ii = mStitchedTiff.heightPerFrame_pix() / 2;
-	else								//Even number of tiles
-		anchorPixel_pix.ii = mStitchedTiff.heightPerFrame_pix() / 2 - mTileArray.mTileHeight_pix / 2;
-	
-	if (mTileArray.mArraySize.JJ % 2)	//Odd number of tiles
-		anchorPixel_pix.jj = mStitchedTiff.widthPerFrame_pix() / 2;
-	else								//Even number of tiles
-		anchorPixel_pix.jj = mStitchedTiff.widthPerFrame_pix() / 2 - mTileArray.mTileWidth_pix / 2;
-
-	return anchorPixel_pix;
-}
 #pragma endregion "QuickStitcher"

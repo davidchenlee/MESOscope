@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.600 ) * mm, (21.075)* mm, (16.915 + 0.050) * mm };
+POSITION3 stackCenterXYZ{ (44.300 - 0.000) * mm, (23.675 - 0.000/2)* mm, (17.080 + 0.170) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.0 * mWpum) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0. * mWpum) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0. * mWpum) } }} };
@@ -362,11 +362,11 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
-		const double fullWidth{ 10.000 * mm };												//Total width of the tile array
+		const double fullWidth{ 0.150 * mm };												//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };												//Width of a strip
-		const double fullHeight{ 36 * tileHeight };//= 36 * 0.280 * mm						//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
+		const double fullHeight{ 54 * tileHeight };//= 36 * 0.280 * mm						//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
 		const double pixelSizeX{ 1.0 * um };												//WARNING: the image becomes distorted for pixelSizeX > 1 um
 		const double pixelSizeY{ 0.5 * um };
 
@@ -1165,25 +1165,45 @@ namespace TestRoutines
 		pressAnyKeyToCont();
 	}
 
+	//Anchor pixel wrt the full image
+	//In X, for an odd number of tiles, there are 2 tiles in the middle of the tile array. The one on the top is taken as the reference tile. For an even number of tiles, the center tile is at the middle of the tile array
+	//In Y, for an odd number of tiles, the center tile is at the middle of the tile array. For an even number of tiles, there are 2 tiles in the middle of the tile array. The one on the left is taken as the reference tile
+	PIXELS2 determineAnchorPixel_pix(const TiffU8 &image, const TileArray tileArray)
+	{
+		PIXELS2 anchorPixel_pix;
+
+		if (tileArray.mArraySize.II % 2)	//Odd number of tiles
+			anchorPixel_pix.ii = image.heightPerFrame_pix() / 2;
+		else								//Even number of tiles
+			anchorPixel_pix.ii = image.heightPerFrame_pix() / 2 - tileArray.mTileHeight_pix / 2;
+
+		if (tileArray.mArraySize.JJ % 2)	//Odd number of tiles
+			anchorPixel_pix.jj = image.widthPerFrame_pix() / 2;
+		else								//Even number of tiles
+			anchorPixel_pix.jj = image.widthPerFrame_pix() / 2 - tileArray.mTileWidth_pix / 2;
+
+		return anchorPixel_pix;
+	}
+
 	void thresholdSample()
 	{
 		std::string inputFilename{ "aaa" };
 		std::string outputFilename{ "output" };
-
-		const double threshold{ 0.03 };
-		const int tileHeight_pix{ 560 };
-		const int tileWidth_pix{ 300 };
 		TiffU8 image{ inputFilename };
 
+		//The tile array used for imaging
+		const int imagingTileHeight_pix{ 560 };
+		const int imagingTileWidth_pix{ 300 };
+		const TileArray imagingTileArray{ imagingTileHeight_pix, imagingTileWidth_pix, { 36, 67 }, { 0.0, 0.0, 0.0 } };//Tile array used for imaging
+		PIXELS2 anchorPixel_pix{ determineAnchorPixel_pix(image, imagingTileArray) };
+
+		//The tile array for boolmap does not have to coincide with the tile array used for imaging
+		const int tileHeight_pix{ 560 };
+		const int tileWidth_pix{ 300 };
 		const TILEOVERLAP3 overlapXYZ_frac{ 0.0, 0.0, 0.0 };
 		const TileArray tileArray{ tileHeight_pix, tileWidth_pix, { 36, 67 }, overlapXYZ_frac };
 
-		//In X, for an odd number of tiles, there are 2 tiles in the middle of the tile array. The one on the top is taken as the reference tile. For an even number of tiles, the center tile is at the middle of the tile array
-		//In Y, for an odd number of tiles, the center tile is at the middle of the tile array. For an even number of tiles, there are 2 tiles in the middle of the tile array. The one on the left is taken as the reference tile
-		PIXELS2 anchorPixel_pix{ image.heightPerFrame_pix() / 2 - tileArray.mTileHeight_pix / 2,
-								 image.widthPerFrame_pix() / 2 };
-
-
+		const double threshold{ 0.02 };
 		Boolmap boolmap{ image, tileArray, anchorPixel_pix, threshold };
 		boolmap.saveTileMapToText("Boolmap");
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
@@ -1446,7 +1466,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (18.000) * mm };
+		const double slicePlaneZ{ (18.300) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

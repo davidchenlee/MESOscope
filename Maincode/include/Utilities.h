@@ -111,7 +111,6 @@ public:
 	int fullHeight_pix() const;
 	int fullWidth_pix() const;
 	INDICES2 tileArraySize() const;
-	PIXELS2 determineAnchorPixel_pix() const;
 private:
 	TiffU8 mStitchedTiff;
 	const TileArray mTileArray;

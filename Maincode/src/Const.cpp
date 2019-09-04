@@ -82,10 +82,8 @@ namespace Constants
 	//3. Adjust the delay until the beads appear in the middle of the Z stack
 	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };		//Delay the Z-stage triggering the acq sequence
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };
-	//Stage X
-	//extern const double	g_STAGEXTrigAcqDelay{32.1 * ms };		//uncalibrated	for pixelSizeX = 0.5 um	//Delay the X-stage triggering the acq sequence to match the forward and backward scans. Larger moves the image upward
-																	//Currently, the delay depends on the FOV in the X-stage axis																
-	extern const double	g_STAGEXTrigAcqDelay{ 113.3 * ms };//pixelSizeX = 1.0 um
+	//Stage X														
+	extern const double	g_STAGEXTrigAcqDelay{ 113.3 * ms };//pixelSizeX = 1.0 um and 36 * 0.280
 
 	//PMT
 	extern const int g_nChanPMT{ 16 };
@@ -99,7 +97,7 @@ namespace Constants
 										  1, 1, 1, 1, 1, 1, 1, 0, 0, 1 };
 
 	//COLLECTOR LENS
-	extern const double g_cLensPos750nm{ 10.0 * mm };
+	extern const double g_cLensPos750nm{ 10.0 * mm };				//Further away from the PMT16X
 	extern const double g_cLensPos920nm{ 6.0 * mm };
-	extern const double g_cLensPos1040nm{ 0.5 * mm };
+	extern const double g_cLensPos1040nm{ 0.5 * mm };				//Closer to the PMT16X
 }

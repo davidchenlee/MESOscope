@@ -1437,19 +1437,19 @@ void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm
 #pragma endregion "VirtualFilterWheel"
 
 #pragma region "CombinedLasers"
-VirtualLaser::CombinedLasers::CombinedLasers(const Laser::ID whichLaser) :
+CombinedLasers::CombinedLasers(const Laser::ID whichLaser) :
 	mWhichLaser{ whichLaser },
 	mVision{ Laser::ID::VISION },
 	mFidelity{ Laser::ID::FIDELITY }
 {}
 
 //Which laser is currently being used
-Laser::ID VirtualLaser::CombinedLasers::currentLaser() const
+Laser::ID CombinedLasers::currentLaser() const
 {
 	return mCurrentLaser;
 }
 
-std::string VirtualLaser::CombinedLasers::currentLaser_s(const bool justTheNameInitials) const
+std::string CombinedLasers::currentLaser_s(const bool justTheNameInitials) const
 {
 	std::string fullName{ laserNameToString_(mCurrentLaser) };
 	std::string nameInitials{ fullName.front() };
@@ -1460,7 +1460,7 @@ std::string VirtualLaser::CombinedLasers::currentLaser_s(const bool justTheNameI
 	return fullName;
 }
 
-int VirtualLaser::CombinedLasers::currentWavelength_nm() const
+int CombinedLasers::currentWavelength_nm() const
 {
 	switch (mCurrentLaser)
 	{
@@ -1473,7 +1473,7 @@ int VirtualLaser::CombinedLasers::currentWavelength_nm() const
 	}
 }
 
-void VirtualLaser::CombinedLasers::isLaserInternalShutterOpen() const
+void CombinedLasers::isLaserInternalShutterOpen() const
 {
 	while (true)
 	{
@@ -1504,7 +1504,7 @@ void VirtualLaser::CombinedLasers::isLaserInternalShutterOpen() const
 }
 
 //Change the laser wavelength (tune Vision or switching lasers accordingly) and switch pockels
-void VirtualLaser::CombinedLasers::setWavelength(RTcontrol &RTcontrol, const int wavelength_nm)
+void CombinedLasers::setWavelength(RTcontrol &RTcontrol, const int wavelength_nm)
 {
 	//Select the laser to be used: VISION or FIDELITY
 	Laser::ID newLaser = autoSelectLaser_(wavelength_nm);
@@ -1528,7 +1528,7 @@ void VirtualLaser::CombinedLasers::setWavelength(RTcontrol &RTcontrol, const int
 }
 
 //Linearly scale the laser power from the first to the last frame
-void VirtualLaser::CombinedLasers::setPowerLinearScaling(const double Pi, const double Pf) const
+void CombinedLasers::setPowerLinearScaling(const double Pi, const double Pf) const
 {
 	//Set the initial laser power
 	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pi, OVERRIDE::EN);
@@ -1539,7 +1539,7 @@ void VirtualLaser::CombinedLasers::setPowerLinearScaling(const double Pi, const 
 }
 
 //Exponential scale the laser power from the first to the last frame
-void VirtualLaser::CombinedLasers::setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const
+void CombinedLasers::setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const
 {
 	//Set the initial laser power
 	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pmin, OVERRIDE::EN);
@@ -1548,17 +1548,17 @@ void VirtualLaser::CombinedLasers::setPowerExponentialScaling(const double Pmin,
 	mPockelsPtr->powerExponentialScaling(Pmin, distancePerFrame, decayLengthZ);
 }
 
-void VirtualLaser::CombinedLasers::openShutter() const
+void CombinedLasers::openShutter() const
 {
 	mPockelsPtr->setShutter(true);
 }
 
-void VirtualLaser::CombinedLasers::closeShutter() const
+void CombinedLasers::closeShutter() const
 {
 	mPockelsPtr->setShutter(false);
 }
 
-std::string VirtualLaser::CombinedLasers::laserNameToString_(const Laser::ID whichLaser) const
+std::string CombinedLasers::laserNameToString_(const Laser::ID whichLaser) const
 {
 	switch (whichLaser)
 	{
@@ -1572,7 +1572,7 @@ std::string VirtualLaser::CombinedLasers::laserNameToString_(const Laser::ID whi
 }
 
 //Automatically select a laser: VISION, FIDELITY, or let the code to decide based on the requested wavelength
-Laser::ID VirtualLaser::CombinedLasers::autoSelectLaser_(const int wavelength_nm) const
+Laser::ID CombinedLasers::autoSelectLaser_(const int wavelength_nm) const
 {
 	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
 	if (mWhichLaser == Laser::ID::AUTO)
@@ -1592,31 +1592,15 @@ Laser::ID VirtualLaser::CombinedLasers::autoSelectLaser_(const int wavelength_nm
 //The constructor established a connection with the 2 lasers.
 //VirtualLaser::configure() and VirtualLaser::setPower() must be called after this constructor!! otherwise some class members will no be properly initialized
 VirtualLaser::VirtualLaser(const Laser::ID whichLaser) :
-	mCombinedLasers{ whichLaser }
+	CombinedLasers{ whichLaser }
 {}
-
-//Which laser is currently being used
-Laser::ID VirtualLaser::currentLaser() const
-{
-	return mCombinedLasers.currentLaser();
-}
-
-std::string VirtualLaser::currentLaser_s(const bool justTheNameInitials) const
-{
-	return mCombinedLasers.currentLaser_s(justTheNameInitials);
-}
-
-int VirtualLaser::currentWavelength_nm() const
-{
-	return mCombinedLasers.currentWavelength_nm();
-}
 
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
 void VirtualLaser::configure(RTcontrol &RTcontrol, const int wavelength_nm)
 {
-	std::future<void> th1{ std::async(&CombinedLasers::setWavelength, &mCombinedLasers, std::ref(RTcontrol), std::ref(wavelength_nm)) };	//Tune the laser wavelength
-	std::future<void> th2{ std::async(&VirtualFilterWheel::turnFilterwheels_, &mVirtualFilterWheel, wavelength_nm) };						//Set the filterwheels
-	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };												//Set the collector lens position
+	std::future<void> th1{ std::async(&CombinedLasers::setWavelength, this, std::ref(RTcontrol), std::ref(wavelength_nm)) };	//Tune the laser wavelength
+	std::future<void> th2{ std::async(&VirtualFilterWheel::turnFilterwheels_, &mVirtualFilterWheel, wavelength_nm) };			//Set the filterwheels
+	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };									//Set the collector lens position
 
 	try
 	{
@@ -1632,34 +1616,17 @@ void VirtualLaser::configure(RTcontrol &RTcontrol, const int wavelength_nm)
 
 void VirtualLaser::setPower(const double laserPower) const
 {
-	mCombinedLasers.setPowerLinearScaling(laserPower, laserPower);
+	this->CombinedLasers::setPowerLinearScaling(laserPower, laserPower);
 }
-
-void VirtualLaser::setPowerLinearScaling(const double Pi, const double Pf) const
-{
-	mCombinedLasers.setPowerLinearScaling(Pi, Pf);
-}
-
-void VirtualLaser::setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const
-{
-	mCombinedLasers.setPowerExponentialScaling(Pmin, distancePerFrame, decayLengthZ);
-}
-
 
 //Open the Uniblitz shutter
 void VirtualLaser::openShutter() const
 {
 	//Check if the laser internal shutter is open
-	mCombinedLasers.isLaserInternalShutterOpen();
+	this->CombinedLasers::isLaserInternalShutterOpen();
 
 	//Open the Uniblitz shutter
-	mCombinedLasers.openShutter();
-}
-
-//Close the Uniblitz shutter
-void VirtualLaser::closeShutter() const
-{
-	mCombinedLasers.closeShutter();
+	this->CombinedLasers::openShutter();
 }
 
 //Used for optimizing the collector lens position

@@ -15,9 +15,9 @@ Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", Conta
 #else
 Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
 					{{{"TDT", 1040, 30. * mW, 150. * um, 1 } ,
-					  { "DAPI", 750, 12. * mW, 100. * um, 1 }}} };
+					  { "DAPI", 750, 12. * mW, 120. * um, 1 }}} };
 Sample liverDAPI{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
-					  {{{ "DAPI", 750, 12. * mW, 100. * um, 1 }}} };
+					  {{{ "DAPI", 750, 12. * mW, 120. * um, 1 }}} };
 Sample liverTDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
 					{{{"TDT", 1040, 30. * mW, 150. * um, 1 }}} };
 
@@ -26,7 +26,7 @@ Sample liverTDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", Container
 //Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. }}} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0. } , { "GFP", 920, 25. * mW, 0. }, { "DAPI", 750, 40. * mW, 0. }}} };
 #endif
-Sample currentSample{ liverDAPI };
+Sample currentSample{ liverDAPITDT };
 
 
 double determineChromaticShift(const int wavelength_nm, const Laser::ID whichLaser)
@@ -239,7 +239,7 @@ namespace Routines
 			datalog.record("\nFPGA---------------------------------------------------------");
 			datalog.record("FPGA clock (MHz) = ", g_tickPerUs);
 			datalog.record("\nLASER--------------------------------------------------------");
-			datalog.record("Laser used = ", virtualLaser.currentLaser_s());
+			datalog.record("Laser used = ", virtualLaser.currentLaser_s(false));
 			datalog.record("Laser wavelength (nm) = ", virtualLaser.currentWavelength_nm());
 			datalog.record("Min laser power (mW) = ", fluorLabel.mScanPmin / mW);
 			datalog.record("Power exponential length (um) = ", fluorLabel.mScanPexp / um);
@@ -271,7 +271,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };				//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ 1 };																	//For binning
@@ -499,8 +499,10 @@ namespace Routines
 
 			//Read the commands line by line
 			POSITION2 tileCenterXY;
-			std::string longName;
+			std::string shortName, longName;
 			SCANDIR scanDirZ{ SCANDIR::UPWARD };
+			Logger datalog(currentSample.mName + "_locations");
+			int tileNumber{ 1 };
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
@@ -557,7 +559,11 @@ namespace Routines
 					reverseSCANDIR(scanDirZ);
 					break;
 				case Action::ID::SAV:
-					{
+					{			
+					std::string tileNumber_s{ std::to_string(tileNumber) };
+					std::string tileNumberPadded_s = std::string(3 - tileNumber_s.length(), '0') + tileNumber_s;
+
+					shortName = "tile_" + tileNumberPadded_s;
 					longName = virtualLaser.currentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pmin=" + toString(scanPmin / mW, 1) + "mW_Pexp=" + toString(scanPexp / um, 0) + "um" +
 						"_x=" + toString(tileCenterXY.XX / mm, 3) +
 						"_y=" + toString(tileCenterXY.YY / mm, 3) +
@@ -567,13 +573,16 @@ namespace Routines
 						Image image{ RTcontrol };
 						image.acquire();
 						image.binFrames(nFramesBinning);
-						image.save(longName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+						image.save(shortName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+						datalog.record(shortName + "\t" + longName);
 						std::cout << "\n";
+						tileNumber++;
 					}
 					break;
 				case Action::ID::CUT://Move the stage to the vibratome and then cut a slice off
 					POSITION3 stagePosXYZ{ commandline.mParam.cutSlice.mBladePosXY };
 					//IMPLEMENT THE SLICING HERE!
+					//reset tileNumber;
 					break;
 				default:
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");

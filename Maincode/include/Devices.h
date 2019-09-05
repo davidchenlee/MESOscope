@@ -244,7 +244,33 @@ private:
 	const int mAcc_iu{ 11041 };									//Equivalent to 0.5 mm/s^2
 };
 
-class VirtualLaser
+class CombinedLasers
+{
+public:
+	CombinedLasers(const Laser::ID whichLaser = Laser::ID::AUTO);
+	Laser::ID currentLaser() const;
+	std::string currentLaser_s(const bool justTheNameInitials) const;
+	int currentWavelength_nm() const;
+	void isLaserInternalShutterOpen() const;
+	void setWavelength(RTcontrol &RTcontrol, const int wavelength_nm);
+	void setPowerLinearScaling(const double Pi, const double Pf) const;
+	void setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const;
+	void openShutter() const;
+	void closeShutter() const;
+private:
+	Laser::ID mWhichLaser;							//use VISION, FIDELITY, or AUTO (let the code decide)
+	Laser::ID mCurrentLaser;						//Current laser in use: VISION or FIDELITY
+	Laser mVision;
+	Laser mFidelity;
+	//RTcontrol &mRTcontrol;
+	std::unique_ptr <PockelsCell> mPockelsPtr;		//Create a pockels handle dynamically. Alternatively, I could create a fixed handle for each wavelength used
+	const double mPockelTimeStep{ 8. * us };		//Time step for the pockels sequence
+
+	std::string laserNameToString_(const Laser::ID whichLaser) const;
+	Laser::ID autoSelectLaser_(const int wavelength_nm) const;
+};
+
+class VirtualLaser: public CombinedLasers
 {
 public:
 	VirtualLaser(const Laser::ID whichLaser = Laser::ID::AUTO);
@@ -253,15 +279,9 @@ public:
 	VirtualLaser(VirtualLaser&&) = delete;					//Disable move constructor
 	VirtualLaser& operator=(VirtualLaser&&) = delete;		//Disable move-assignment constructor
 
-	Laser::ID currentLaser() const;
-	std::string currentLaser_s(const bool justTheNameInitials = false) const;
-	int currentWavelength_nm() const;
 	void configure(RTcontrol &RTcontrol, const int wavelength_nm);
 	void setPower(const double laserPower) const;
-	void setPowerLinearScaling(const double Pi, const double Pf) const;
-	void setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const;
 	void openShutter() const;
-	void closeShutter() const;
 	void moveCollectorLens(const double position);
 private:
 	//Define separate classes to allow concurrent calls
@@ -274,32 +294,6 @@ private:
 		StepperActuator mStepper{ "26000299" };
 	};
 
-	class CombinedLasers
-	{
-	public:
-		CombinedLasers(const Laser::ID whichLaser = Laser::ID::AUTO);
-		Laser::ID currentLaser() const;
-		std::string currentLaser_s(const bool justTheNameInitials) const;
-		int currentWavelength_nm() const;
-		void isLaserInternalShutterOpen() const;
-		void setWavelength(RTcontrol &RTcontrol, const int wavelength_nm);
-		void setPowerLinearScaling(const double Pi, const double Pf) const;
-		void setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const;
-		void openShutter() const;
-		void closeShutter() const;
-	private:
-		Laser::ID mWhichLaser;							//use VISION, FIDELITY, or AUTO (let the code decide)
-		Laser::ID mCurrentLaser;						//Current laser in use: VISION or FIDELITY
-		Laser mVision;
-		Laser mFidelity;
-		//RTcontrol &mRTcontrol;
-		std::unique_ptr <PockelsCell> mPockelsPtr;		//Create a pockels handle dynamically. Alternatively, I could create a fixed handle for each wavelength used
-		const double mPockelTimeStep{ 8. * us };		//Time step for the pockels sequence
-
-		std::string laserNameToString_(const Laser::ID whichLaser) const;
-		Laser::ID autoSelectLaser_(const int wavelength_nm) const;
-	};
-
 	class VirtualFilterWheel
 	{
 	public:
@@ -310,7 +304,7 @@ private:
 		Filterwheel mFWdetection;
 	};
 
-	CombinedLasers mCombinedLasers;
+	//CombinedLasers mCombinedLasers;
 	VirtualFilterWheel mVirtualFilterWheel;
 	CollectorLens mCollectorLens;
 };

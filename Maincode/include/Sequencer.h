@@ -17,7 +17,7 @@ struct FluorLabelList	//Create a list of fluorescent labels
 		std::string mName{ "" };	//Fluorescent label name
 		int mWavelength_nm;			//Laser wavelength
 		double mScanPmin;			//Initial laser power for a stack scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mScanPinc;			//Laser power increase per unit of distance in the Z-stage axis
+		double mScanPexp;			//Length constant for the exponential power increase
 		int nFramesBinning{ 1 };
 	};
 	std::vector<FluorLabel> mFluorLabelList;
@@ -78,7 +78,7 @@ namespace Action
 		double mScanZmin;		//Min z position of a stack scan
 		double mDepthZ;			//Stack depth (thickness)
 		double mScanPmin;		//Min laser power of the stack scan (at the top of the stack)
-		double mScanPinc;		//Laser power increase in the Z-stage axis per unit of distance
+		double mScanPexp;		//Laser power increase in the Z-stage axis per unit of distance
 		int nFrameBinning;
 	};
 	struct CutSlice {

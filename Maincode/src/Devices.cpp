@@ -1196,11 +1196,11 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 	case RTcontrol::RTCHAN::VISION:
 		switch (mWavelength_nm)
 		{
-		case 750:
-			powerAmplitude = 1453.3 * mW;
-			powerMin = 2.1 * mW;
-			angularFreq = 0.6511 / V;
-			Vphase = 0.019 * V;
+		case 750://Calibrated 20190904
+			powerAmplitude = 1442.1 * mW;
+			powerMin = 2.4 * mW;
+			angularFreq = 0.647 / V;
+			Vphase = 0.011 * V;
 
 			break;
 		case 920:
@@ -1209,18 +1209,18 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 			angularFreq = 0.507 / V;
 			Vphase = -0.088 * V;
 			break;
-		case 1040:
-			powerAmplitude = 388.0 * mW;
+		case 1040://Calibrated 20190904
+			powerAmplitude = 336.3 * mW;
 			powerMin = 0 * mW;
-			angularFreq = 0.447 / V;
-			Vphase = 0.038 * V;
+			angularFreq = 0.461 / V;
+			Vphase = 0.054 * V;
 			break;
 		default:
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser wavelength " + std::to_string(mWavelength_nm) + " nm has not been calibrated");
 		}			
 		break;
 
-		//FIDELITY
+		//FIDELITY. Calibrated 201908
 	case RTcontrol::RTCHAN::FIDELITY:
 		powerAmplitude = 1601 * mW;
 		powerMin = 23.0 * mW;

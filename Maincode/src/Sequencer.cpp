@@ -137,7 +137,7 @@ void FluorLabelList::printParams(std::ofstream *fileHandle) const
 	{
 		*fileHandle << "Wavelength = " << mFluorLabelList.at(iterWL).mWavelength_nm <<
 			" nm\nPower = " << mFluorLabelList.at(iterWL).mScanPmin / mW <<
-			" mW\nPower increase = " << mFluorLabelList.at(iterWL).mScanPinc / mWpum << " mW/um\n";
+			" mW\nPower exponential length = " << mFluorLabelList.at(iterWL).mScanPexp / um << " um\n";
 	}
 	*fileHandle << "\n";
 }
@@ -281,7 +281,7 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << mParam.acqStack.mScanZmin / mm << "\t";
 		*fileHandle << (mParam.acqStack.mScanZmin + mParam.acqStack.mDepthZ) / mm << "\t";
 		*fileHandle << std::setprecision(0);
-		*fileHandle << mParam.acqStack.mScanPmin << "\t" << mParam.acqStack.mScanPinc << "\n";
+		*fileHandle << mParam.acqStack.mScanPmin << "\t" << mParam.acqStack.mScanPexp << "\n";
 		break;
 	case Action::ID::SAV:
 		*fileHandle << actionToString_(mAction) + "\n";
@@ -313,7 +313,7 @@ void Sequencer::Commandline::printParameters() const
 		std::cout << "wavelength = " << mParam.acqStack.mWavelength_nm << " nm\n";
 		std::cout << "scanDirZ = " << SCANDIRtoInt(mParam.acqStack.mScanDirZ) << "\n";
 		std::cout << "scanZmin / depthZ = " << mParam.acqStack.mScanZmin / mm << " mm/" << mParam.acqStack.mDepthZ << " mm\n";
-		std::cout << "scanPmin / ScanPinc = " << mParam.acqStack.mScanPmin / mW << " mW/" << mParam.acqStack.mScanPinc / mWpum << " (mW/um)\n\n";
+		std::cout << "scanPmin / ScanPexp = " << mParam.acqStack.mScanPmin / mW << " mW/" << mParam.acqStack.mScanPexp / um << " (um)\n\n";
 		break;
 	case Action::ID::SAV:
 		std::cout << "The command is " << actionToString_(mAction) << "\n";
@@ -894,7 +894,7 @@ void Sequencer::acqStack_(const int wavelengthIndex)
 	const FluorLabelList::FluorLabel fluorLabel{ mSample.mFluorLabelList.at(wavelengthIndex) };
 
 	Commandline commandline{ Action::ID::ACQ };
-	commandline.mParam.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mScanZi, mStack.mDepthZ, fluorLabel.mScanPmin, fluorLabel.mScanPinc, fluorLabel.nFramesBinning };
+	commandline.mParam.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mScanZi, mStack.mDepthZ, fluorLabel.mScanPmin, fluorLabel.mScanPexp, fluorLabel.nFramesBinning };
 	mCommandList.push_back(commandline);
 	mStackCounter++;	//Count the number of stacks acquired
 	mCommandCounter++;	//Count the number of commands

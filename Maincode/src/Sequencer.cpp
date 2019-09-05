@@ -268,7 +268,7 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 	{
 	case Action::ID::MOV:
 		*fileHandle << actionToString_(mAction) << "\t" << mParam.moveStage.mSliceNumber;
-		*fileHandle << "\t(" << mParam.moveStage.mTilesIJ.II << "," << mParam.moveStage.mTilesIJ.JJ << ")\t";
+		*fileHandle << "\t(" << mParam.moveStage.mTileIJ.II << "," << mParam.moveStage.mTileIJ.JJ << ")\t";
 		*fileHandle << std::setprecision(4);
 		*fileHandle << "(" << mParam.moveStage.mTileCenterXY.XX / mm << "," << mParam.moveStage.mTileCenterXY.YY / mm << ")\n";
 		break;
@@ -305,7 +305,7 @@ void Sequencer::Commandline::printParameters() const
 	case Action::ID::MOV:
 		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
 		std::cout << "Vibratome slice number = " << mParam.moveStage.mSliceNumber << "\n";
-		std::cout << "Tile ij = (" << mParam.moveStage.mTilesIJ.II << "," << mParam.moveStage.mTilesIJ.JJ << ")\n";
+		std::cout << "Tile ij = (" << mParam.moveStage.mTileIJ.II << "," << mParam.moveStage.mTileIJ.JJ << ")\n";
 		std::cout << "Tile center (stageX, stageY) = (" << mParam.moveStage.mTileCenterXY.XX / mm << "," << mParam.moveStage.mTileCenterXY.YY / mm << ") mm\n\n";
 		break;
 	case Action::ID::ACQ:
@@ -870,17 +870,17 @@ SIZE3 Sequencer::effectiveLOIxyz() const
 
 //Move the stage to the position corresponding to the tile indices II and JJ 
 //II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
-void Sequencer::moveStage_(const INDICES2 tilesIJ)
+void Sequencer::moveStage_(const INDICES2 tileIJ)
 {
-	if (tilesIJ.II < 0 || tilesIJ.II >= mTileArray.mArraySize.II)
+	if (tileIJ.II < 0 || tileIJ.II >= mTileArray.mArraySize.II)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + std::to_string(mTileArray.mArraySize.II - 1) + "]");
-	if (tilesIJ.JJ < 0 || tilesIJ.JJ >= mTileArray.mArraySize.JJ)
+	if (tileIJ.JJ < 0 || tileIJ.JJ >= mTileArray.mArraySize.JJ)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
 
-	const POSITION2 tileCenterXY = tileIndicesIJToStagePosXY(tilesIJ);
+	const POSITION2 tileCenterXY = tileIndicesIJToStagePosXY(tileIJ);
 
 	Commandline commandline{ Action::ID::MOV };
-	commandline.mParam.moveStage = { mSliceCounter, tilesIJ, tileCenterXY };
+	commandline.mParam.moveStage = { mSliceCounter, tileIJ, tileCenterXY };
 	mCommandList.push_back(commandline);
 	mCommandCounter++;	//Count the number of commands
 }

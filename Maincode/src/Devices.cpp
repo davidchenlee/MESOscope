@@ -1117,7 +1117,7 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 }
 
 //Exponentially scale the laser power from the first to the last frame
-void PockelsCell::powerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const
+void PockelsCell::powerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const
 {
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
@@ -1128,21 +1128,23 @@ void PockelsCell::powerExponentialScaling(const double Pmin, const double distan
 	mRTcontrol.clearQueue(mScalingRTchan);
 
 	const double Vmin{ laserpowerToVolt_(Pmin) };
-
 	pushVoltageSinglet(timeStep, Vmin, OVERRIDE::EN);	//Set the laser power for the first frame
+
+	const double Pmax{ exponentialFunction(Pmin,(mRTcontrol.mNframes - 1) * interframeDistance, std::abs(decayLengthZ)) };
+	if (Pmax < 0 || Pmax > mMaxPower)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power of the pockels cell must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower / mW)) + "] mW");
 
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
 	{
 		double VV;
 		if (decayLengthZ > 0)
 		{
-			VV = laserpowerToVolt_(Pmin * std::exp(ii * distancePerFrame / decayLengthZ));		//Exponential growth
+			VV = laserpowerToVolt_(exponentialFunction(Pmin, ii * interframeDistance, decayLengthZ));	//Exponential growth
 		}
 		else //decayLengthZ < 0
 		{
-			const double Pmax{ Pmin * std::exp(-(mRTcontrol.mNframes - 1) * distancePerFrame / decayLengthZ) };
 			const double Vmax{ laserpowerToVolt_(Pmax) };
-			VV = laserpowerToVolt_(Pmax * std::exp(ii * distancePerFrame / decayLengthZ));	//Exponential decay
+			VV = laserpowerToVolt_(exponentialFunction(Pmax, ii * interframeDistance, decayLengthZ));	//Exponential decay because decayLengthZ < 0
 		}
 
 		//Make sure that Fx2p14 does not overflow

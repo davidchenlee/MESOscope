@@ -46,16 +46,16 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the X-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
-		const Laser::ID whichLaser{ Laser::ID::AUTO };
+		const Laser::ID whichLaser{ Laser::ID::VISION };
 		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 40. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
@@ -173,9 +173,8 @@ namespace Routines
 			stage.waitForMotionToStopAll();
 			//stage.printPosXYZ();				//Print the stage position	
 			
-			//virtualLaser.setPower(fluorLabel.mScanPmin + iterLocation * pixelSizeZ * fluorLabel.mScanPexp);	//Update the laser power
-			virtualLaser.setPower(fluorLabel.mScanPmin + 0);	//FIX THIS
-
+			virtualLaser.setPower(exponentialFunction(fluorLabel.mScanPmin, iterLocation * pixelSizeZ, fluorLabel.mScanPexp));	//FIX THIS
+	
 			//Used to optimize the collector lens position
 			if (acqMode == RUNMODE::COLLECTLENS)
 				virtualLaser.moveCollectorLens(cLensPosIni + iterLocation * cLensStep);
@@ -271,7 +270,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };				//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ 1 };																	//For binning
@@ -307,11 +306,8 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames };	//Note the STAGEZ flag
 
 		//LASER
-		//const double laserPi = determineInitialLaserPower(fluorLabel.mScanPmin, stackDepth * fluorLabel.mScanPexp, scanDirZ);
-		//const double laserPf = determineFinalLaserPower(fluorLabel.mScanPmin, stackDepth * fluorLabel.mScanPexp, scanDirZ);
 		VirtualLaser virtualLaser{ whichLaser };
 		virtualLaser.configure(RTcontrol, fluorLabel.mWavelength_nm);
-		//virtualLaser.setPowerLinearScaling(laserPi, laserPf);
 		virtualLaser.setPowerExponentialScaling(fluorLabel.mScanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * fluorLabel.mScanPexp);
 
 		//RS
@@ -502,7 +498,6 @@ namespace Routines
 			std::string shortName, longName;
 			SCANDIR scanDirZ{ SCANDIR::UPWARD };
 			Logger datalog(currentSample.mName + "_locations");
-			int tileNumber{ 1 };
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
@@ -512,11 +507,15 @@ namespace Routines
 				Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2. };
 
 				//These parameters must be accessible to all the cases
-				int wavelength_nm, nFramesBinning;
+				int wavelength_nm, nFramesBinning, sliceNumber, stackNumber, tileIndexI, tileIndexJ;
 				double scanZi, scanZf, scanPmin, scanPexp;
 				switch (commandline.mAction)
 				{
 				case Action::ID::MOV://Move the X and Y-stages to mStackCenterXY
+					sliceNumber = commandline.mParam.moveStage.mSliceNumber;
+
+					tileIndexI = commandline.mParam.moveStage.mTileIJ.II;
+					tileIndexJ = commandline.mParam.moveStage.mTileIJ.JJ;
 					tileCenterXY = commandline.mParam.moveStage.mTileCenterXY;
 					stage.moveXY(tileCenterXY);
 					stage.waitForMotionToStopAll();
@@ -524,6 +523,8 @@ namespace Routines
 				case Action::ID::ACQ://Acquire a stack
 					Action::AcqStack acqStack{ commandline.mParam.acqStack };
 					{
+						stackNumber = acqStack.mStackNumber;
+
 						//Set the number of frames considering that binning will be performed
 						nFramesBinning = acqStack.nFrameBinning;
 						const int nFramesBeforeBinning{ nFramesAfterBinning * nFramesBinning };
@@ -535,8 +536,6 @@ namespace Routines
 
 						//Save the parameters for saving the file
 						wavelength_nm = acqStack.mWavelength_nm;
-						//scanPi = determineInitialLaserPower(acqStack.mScanPmin, stackDepth * acqStack.mScanPexp, scanDirZ);
-						//scanPf = determineFinalLaserPower(acqStack.mScanPmin, stackDepth * acqStack.mScanPexp, scanDirZ);
 						scanPmin = acqStack.mScanPmin;
 						scanPexp = acqStack.mScanPexp;
 						scanZi = determineInitialScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
@@ -544,7 +543,6 @@ namespace Routines
 
 						//Update the laser parameters
 						virtualLaser.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
-						//virtualLaser.setPowerLinearScaling(scanPi, scanPf);
 						virtualLaser.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * acqStack.mScanPexp);
 
 						virtualLaser.openShutter();								//Re-open the Uniblitz shutter if closed by the pockels destructor
@@ -559,11 +557,21 @@ namespace Routines
 					reverseSCANDIR(scanDirZ);
 					break;
 				case Action::ID::SAV:
-					{			
-					std::string tileNumber_s{ std::to_string(tileNumber) };
-					std::string tileNumberPadded_s = std::string(3 - tileNumber_s.length(), '0') + tileNumber_s;
+					{
+					//Paddle the number with zeros on the left
+					std::string sliceNumber_s{ std::to_string(sliceNumber) };
+					std::string sliceNumberPad_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;//3 digits in total
 
-					shortName = "tile_" + tileNumberPadded_s;
+					std::string stackNumber_s{ std::to_string(stackNumber) };
+					std::string stackNumberPad_s = std::string(7 - stackNumber_s.length(), '0') + stackNumber_s;//7 digits in total
+
+					std::string tileIndexI_s{ std::to_string(tileIndexI) };
+					std::string tileIndexIpad_s = std::string(2 - tileIndexI_s.length(), '0') + tileIndexI_s;//2 digits in total
+
+					std::string tileIndexJ_s{ std::to_string(tileIndexJ) };
+					std::string tileIndexJpad_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;//2 digits in total
+
+					shortName = sliceNumberPad_s + "_"+ stackNumberPad_s;
 					longName = virtualLaser.currentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pmin=" + toString(scanPmin / mW, 1) + "mW_Pexp=" + toString(scanPexp / um, 0) + "um" +
 						"_x=" + toString(tileCenterXY.XX / mm, 3) +
 						"_y=" + toString(tileCenterXY.YY / mm, 3) +
@@ -574,15 +582,13 @@ namespace Routines
 						image.acquire();
 						image.binFrames(nFramesBinning);
 						image.save(shortName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
-						datalog.record(shortName + "\t" + longName);
+						datalog.record(shortName + "\t(" + tileIndexIpad_s + "," + tileIndexJpad_s + ")\t" + longName);
 						std::cout << "\n";
-						tileNumber++;
 					}
 					break;
 				case Action::ID::CUT://Move the stage to the vibratome and then cut a slice off
 					POSITION3 stagePosXYZ{ commandline.mParam.cutSlice.mBladePosXY };
 					//IMPLEMENT THE SLICING HERE!
-					//reset tileNumber;
 					break;
 				default:
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");

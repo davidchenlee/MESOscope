@@ -68,7 +68,7 @@ namespace Action
 	enum class ID { CUT, ACQ, SAV, MOV };
 	struct MoveStage {
 		int mSliceNumber;			//Slice number
-		INDICES2 mTilesIJ;			//Indices of the tile array
+		INDICES2 mTileIJ;			//Indices of the tile array
 		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
 	};
 	struct AcqStack {
@@ -129,7 +129,7 @@ private:
 	bool isQuadrantBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
 };
 
-class Sequencer	//A list of commands that forms a full sequence
+class Sequencer	//A list of commands that form a full sequence
 {
 public:
 	class Commandline	//Single commands

@@ -72,6 +72,14 @@ int SCANDIRtoInt(const SCANDIR scanDir)
 	}
 }
 
+double exponentialFunction(const double Pmin, const double depthZ, const double decayLengthZ)
+{
+	if (decayLengthZ == 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The exponential length must be > 0 or < 0");
+
+	return Pmin * std::exp(depthZ / decayLengthZ);
+}
+
 //Clip x so that lower <= x <= upper
 template<class T> inline T clip(T x, T lower, T upper)
 {

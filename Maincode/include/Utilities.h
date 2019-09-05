@@ -20,6 +20,7 @@ void printHex(const std::string input);
 void printBinary16(const int input);
 U16 doubleToFx2p14(double n);
 int SCANDIRtoInt(const SCANDIR scanDir);
+double exponentialFunction(const double Pmin, const double depthZ, const double decayLengthZ);
 template<class T> inline T clip(T x, T lower, T upper);
 template<class T> inline U8 clipU8top(const T x);
 template<class T> inline U8 clipU8dual(const T x);
@@ -96,14 +97,11 @@ public:
 
 	TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
 	PIXELS2 determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const;
-private:
-
 };
 
 class QuickStitcher
 {
 public:
-
 	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
 	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;

@@ -4,12 +4,9 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 - Safeguard the LOI that it takes allowed values
-- Safeguard the laser power
-- Change f2.14 to f4.12
+- For low power at 1040 nm, choose Vision
 - Fix the power increase in the step-by-step rountine
 - Keep an eye on the Z-stage bouncing that triggers the ctl&acq
-- Fix exp scaling the pockels. The problem is that for very low powers, the scaling exceeds the max = 4.0
-- how to deal with vector of objects containing pointer-arrays?
 - Implement suppressCrosstalk() flattenField() on the GPU
 - Multithread demuxAllChannels_()
 - Do a post-sequence clean up routine to set the pockels outputs to 0

@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.640 + 0.000) * mm };
+POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.640 + 0.050) * mm };
 //POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (17.640 + 0.000) * mm };//For contScanX
 
 #if multibeam
@@ -359,7 +359,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
-		const double fullWidth{ 10.000 * mm };												//Total width of the tile array
+		const double fullWidth{ 0.300 * mm };												//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };												//Width of a strip
@@ -374,7 +374,7 @@ namespace Routines
 		//CONTROL SEQUENCE
 		//The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
 		const int nFrames{ 2 };
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, quickScanXY.tileWidth_pix(), quickScanXY.tileHeight_pix() / 2 };
+		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, quickScanXY.readTileWidth_pix(), quickScanXY.readTileHeight_pix() / 2 };
 		Mesoscope mesoscope{ whichLaser };
 		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
 		mesoscope.setPower(fluorLabel.mScanPmin);
@@ -1196,15 +1196,15 @@ namespace TestRoutines
 	{
 		PIXELS2 anchorPixel_pix;
 
-		if (tileArray.mArraySize.II % 2)	//Odd number of tiles
+		if (tileArray.readTileArraySize().II % 2)	//Odd number of tiles
 			anchorPixel_pix.ii = image.readHeightPerFrame_pix() / 2;
 		else								//Even number of tiles
-			anchorPixel_pix.ii = image.readHeightPerFrame_pix() / 2 - tileArray.mTileHeight_pix / 2;
+			anchorPixel_pix.ii = image.readHeightPerFrame_pix() / 2 - tileArray.readTileHeight_pix() / 2;
 
-		if (tileArray.mArraySize.JJ % 2)	//Odd number of tiles
+		if (tileArray.readTileArraySize().JJ % 2)	//Odd number of tiles
 			anchorPixel_pix.jj = image.readWidthPerFrame_pix() / 2;
 		else								//Even number of tiles
-			anchorPixel_pix.jj = image.readWidthPerFrame_pix() / 2 - tileArray.mTileWidth_pix / 2;
+			anchorPixel_pix.jj = image.readWidthPerFrame_pix() / 2 - tileArray.readTileWidth_pix() / 2;
 
 		return anchorPixel_pix;
 	}

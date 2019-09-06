@@ -85,8 +85,6 @@ void Image::save(std::string filename, const TIFFSTRUCT pageStructure, const OVE
 	mTiff.saveToFile(filename, pageStructure, override, mRTcontrol.mScanDir);
 }
 
-
-
 //Demultiplex the image
 void Image::demultiplex_(const bool saveAllPMT)
 {	

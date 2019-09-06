@@ -89,29 +89,25 @@ private:
 class TileArray
 {
 public:
+	TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
+	int readTileHeight_pix() const;
+	int readTileWidth_pix() const;
+	int readNpix() const;
+	INDICES2 readTileArraySize() const;
+	TILEOVERLAP3 readTileOverlapXYZ_frac() const;
+	PIXELS2 determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const;
+private:
 	const int mTileHeight_pix;		//Pixel height of a single tile
 	const int mTileWidth_pix;		//Pixel width of a single tile
 	const int mNpix;				//Total number of pixels in a single tile
 	INDICES2 mArraySize;			//Dimension of the array of tiles
 	TILEOVERLAP3 mOverlapXYZ_frac;
-
-	TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
-	PIXELS2 determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const;
 };
 
-class QuickStitcher
+class QuickStitcher : protected TiffU8, public TileArray
 {
 public:
 	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
 	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
-	int readTileHeight_pix() const;
-	int readTileWidth_pix() const;
-	int readFullHeight_pix() const;
-	int readFullWidth_pix() const;
-	INDICES2 readTileArraySize() const;
-	TILEOVERLAP3 readTileOverlap_frac() const;
-private:
-	TiffU8 mStitchedTiff;
-	const TileArray mTileArray;
 };

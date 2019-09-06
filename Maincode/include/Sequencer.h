@@ -86,7 +86,7 @@ namespace Action
 	};
 }
 
-class QuickScanXY
+class QuickScanXY: public QuickStitcher
 {
 public:
 	std::vector<double> mStagePosY;
@@ -94,17 +94,12 @@ public:
 	QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SIZE2 pixelSizeXY, const SIZE2 LOIxy);
 	double determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
 	double determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
-	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
-	void saveToFile(std::string filename, const OVERRIDE override) const;
-	int tileHeight_pix() const;
-	int tileWidth_pix() const;
 private:
 	const POSITION2 mROIcenterXY;
 	const FFOV2 mFFOV;
 	const SIZE2 mPixelSizeXY;
 	const SIZE2 mLOIxy;
 	const int mFullWidth_pix;
-	QuickStitcher mQuickStitcher;
 };
 
 class Boolmap

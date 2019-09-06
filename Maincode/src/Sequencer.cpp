@@ -333,23 +333,21 @@ std::string Sequencer::Commandline::convertActionToString_(const Action::ID acti
 #pragma endregion "Commandline"
 
 #pragma region "QuickScanXY"
-//In X, 
-//In Y, 
 QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SIZE2 pixelSizeXY, const SIZE2 LOIxy) :
 	mROIcenterXY{ ROIcenterXY },
 	mFFOV{ ffov },
 	mPixelSizeXY{ pixelSizeXY },
 	mLOIxy{ LOIxy },																//The length of interest (LOI) is from tile edge to tile edge
 	mFullWidth_pix{ static_cast<int>(std::ceil(LOIxy.YY / pixelSizeXY.YY)) },
-	mQuickStitcher{ static_cast<int>(std::ceil(LOIxy.XX / pixelSizeXY.XX)),			//tileHeight_pix. The tile height is the same as the full height (because a tile is a vertical strip)
+	QuickStitcher{ static_cast<int>(std::ceil(LOIxy.XX / pixelSizeXY.XX)),			//tileHeight_pix. The tile height is the same as the full height (because a tile is a vertical strip)
 					static_cast<int>(std::ceil(ffov.YY / pixelSizeXY.YY)),			//tileWidth_pix
 					{ 1, static_cast<int>(std::ceil(1. * LOIxy.YY / ffov.YY)) },	//tile array size = Only 1 row and many columns
 					{ 0, 0, 0} }													//No overlap	
 {
-	const int II{ 0 };							//Only 1 row
-	for (int JJ = 0; JJ < mQuickStitcher.readTileArraySize().JJ; JJ++)
+	const int II{ 0 };	//Only 1 row
+	for (int JJ = 0; JJ < QuickStitcher::readTileArraySize().JJ; JJ++)
 	{
-		const POSITION2 relativeTileIndexIJ{ determineRelativeTileIndicesIJ(mQuickStitcher.readTileOverlap_frac(), mQuickStitcher.readTileArraySize(), { II, JJ }) };
+		const POSITION2 relativeTileIndexIJ{ determineRelativeTileIndicesIJ(QuickStitcher::readTileOverlapXYZ_frac(), QuickStitcher::readTileArraySize(), { II, JJ }) };
 		mStagePosY.push_back(mROIcenterXY.YY - mFFOV.YY * relativeTileIndexIJ.YY);		//for now, only stacking strips to the right is allowed (i.e. move the stage to the left)
 	}
 }
@@ -371,26 +369,6 @@ double QuickScanXY::determineFinalScanPosX(const double travelOverhead, const SC
 
 	return determineFinalScanPos(tilePosXmin, travelX, travelOverhead, scanDir);
 }
-
-void QuickScanXY::push(const U8 *tile, const INDICES2 tileIndicesIJ)
-{
-	mQuickStitcher.push(tile, tileIndicesIJ);
-}
-
-void QuickScanXY::saveToFile(std::string filename, const OVERRIDE override) const
-{
-	mQuickStitcher.saveToFile(filename, override);
-}
-
-int QuickScanXY::tileHeight_pix() const
-{
-	return mQuickStitcher.readTileHeight_pix();
-}
-
-int QuickScanXY::tileWidth_pix() const
-{
-	return mQuickStitcher.readTileWidth_pix();
-}
 #pragma endregion "QuickScanXY"
 
 #pragma region "Boolmap"
@@ -410,8 +388,8 @@ Boolmap::Boolmap(const TiffU8 &tiff, const TileArray tileArray, const PIXELS2 an
 	//Divide the large image into tiles of size tileHeight_pix * tileWidth_pix and return an array of tiles indicating if the tile is bright
 	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
 
-	for (int II = 0; II < mTileArray.mArraySize.II; II++)
-		for (int JJ = 0; JJ < mTileArray.mArraySize.JJ; JJ++)
+	for (int II = 0; II < mTileArray.readTileArraySize().II; II++)
+		for (int JJ = 0; JJ < mTileArray.readTileArraySize().JJ; JJ++)
 			mIsBrightMap.push_back(isQuadrantBright_(mThreshold, { II, JJ }));
 }
 
@@ -419,12 +397,12 @@ Boolmap::Boolmap(const TiffU8 &tiff, const TileArray tileArray, const PIXELS2 an
 //II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array
 bool Boolmap::isTileBright(const INDICES2 tileIndicesIJ) const
 {
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.mArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + std::to_string(mTileArray.mArraySize.II - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.mArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.readTileArraySize().II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + std::to_string(mTileArray.readTileArraySize().II - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.readTileArraySize().JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index JJ must be in the range [0-" + std::to_string(mTileArray.readTileArraySize().JJ - 1) + "]");
 
-	return mIsBrightMap.at(tileIndicesIJ.II * mTileArray.mArraySize.JJ + tileIndicesIJ.JJ);
+	return mIsBrightMap.at(tileIndicesIJ.II * mTileArray.readTileArraySize().JJ + tileIndicesIJ.JJ);
 }
 
 //Save the boolmap as a text file
@@ -432,10 +410,10 @@ void Boolmap::saveTileMapToText(std::string filename)
 {
 	std::ofstream fileHandle;
 	fileHandle.open(folderPath + filename + ".txt");
-	for (int II = 0; II < mTileArray.mArraySize.II; II++)
+	for (int II = 0; II < mTileArray.readTileArraySize().II; II++)
 	{
-		for (int JJ = 0; JJ < mTileArray.mArraySize.JJ; JJ++)
-			fileHandle << static_cast<int>(mIsBrightMap.at(II * mTileArray.mArraySize.JJ + JJ));
+		for (int JJ = 0; JJ < mTileArray.readTileArraySize().JJ; JJ++)
+			fileHandle << static_cast<int>(mIsBrightMap.at(II * mTileArray.readTileArraySize().JJ + JJ));
 		fileHandle << "\n";	//End the row
 	}
 	fileHandle.close();
@@ -446,16 +424,16 @@ void Boolmap::saveTileGridOverlap(std::string filename, const OVERRIDE override)
 {
 	const U8 lineColor{ 200 };
 	const double lineThicknessFactor{ 0.7 };//If too small (<0.7), the grid will not show properly on ImageJ
-	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mTileArray.mArraySize.JJ) };
-	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mTileArray.mArraySize.II) };
+	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mTileArray.readTileArraySize().JJ) };
+	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mTileArray.readTileArraySize().II) };
 
 	//Horizontal lines. II is the row index (along the image height) of the tile wrt the tile array
 # pragma omp parallel for schedule(dynamic)
-	for (int II = 0; II < mTileArray.mArraySize.II; II++)
+	for (int II = 0; II < mTileArray.readTileArraySize().II; II++)
 	{
 		const PIXELS2 absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_({ II, 0 }) };		//Absolute tile center position wrt the Tiff		
-		const int tileTopPos_pix{ absoluteTilePixelPos_pix.ii - mTileArray.mTileHeight_pix / 2 };		//Top pixels of the tile wrt the Tiff
-		const int tileBottomPos_pix{ absoluteTilePixelPos_pix.ii + mTileArray.mTileHeight_pix / 2 };	//Bottom pixels of the tile wrt the Tiff
+		const int tileTopPos_pix{ absoluteTilePixelPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };		//Top pixels of the tile wrt the Tiff
+		const int tileBottomPos_pix{ absoluteTilePixelPos_pix.ii + mTileArray.readTileHeight_pix() / 2 };	//Bottom pixels of the tile wrt the Tiff
 		for (int iterCol_pix = 0; iterCol_pix < mFullWidth_pix; iterCol_pix++)
 			for (int iterThickness = -lineThicknessHorizontal / 2; iterThickness < lineThicknessHorizontal / 2; iterThickness++)
 			{
@@ -472,11 +450,11 @@ void Boolmap::saveTileGridOverlap(std::string filename, const OVERRIDE override)
 
 	//Vertical lines. JJ is the column index (along the image width) of the tile wrt the tile array
 # pragma omp parallel for schedule(dynamic)
-	for (int JJ = 0; JJ < mTileArray.mArraySize.JJ; JJ++)
+	for (int JJ = 0; JJ < mTileArray.readTileArraySize().JJ; JJ++)
 	{
 		const PIXELS2 absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_({ 0, JJ }) };	//Absolute tile center position wrt the Tiff
-		const int tileLeft{ absoluteTilePixelPos_pix.jj - mTileArray.mTileWidth_pix / 2 };			//Left pixels of the tile wrt the Tiff
-		const int tileRight{ absoluteTilePixelPos_pix.jj + mTileArray.mTileWidth_pix / 2 };			//Right pixels of the tile wrt the Tiff
+		const int tileLeft{ absoluteTilePixelPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };			//Left pixels of the tile wrt the Tiff
+		const int tileRight{ absoluteTilePixelPos_pix.jj + mTileArray.readTileWidth_pix() / 2 };			//Right pixels of the tile wrt the Tiff
 		for (int iterRow_pix = 0; iterRow_pix < mFullHeight_pix; iterRow_pix++)
 			for (int iterThickness = -lineThicknessVertical / 2; iterThickness < lineThicknessVertical / 2; iterThickness++)
 			{
@@ -500,16 +478,16 @@ void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 	TiffU8 tileMap{ mTiff.data(), mFullHeight_pix, mFullWidth_pix, 1 };
 
 	//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array
-	for (int II = 0; II < mTileArray.mArraySize.II; II++)
-		for (int JJ = 0; JJ < mTileArray.mArraySize.JJ; JJ++)
+	for (int II = 0; II < mTileArray.readTileArraySize().II; II++)
+		for (int JJ = 0; JJ < mTileArray.readTileArraySize().JJ; JJ++)
 		{
 			if ( isTileBright({ II, JJ }) )	//If the tile is bright, shade it
 			{
 				const PIXELS2 absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_({ II, JJ }) };	//Absolute tile center position wrt the Tiff anchor pixel
-				const int tileTopPos_pix{ absoluteTilePixelPos_pix.ii - mTileArray.mTileHeight_pix / 2 };
-				const int tileBottomPos_pix{ tileTopPos_pix + mTileArray.mTileHeight_pix };
-				const int tileLeftPos_pix{ absoluteTilePixelPos_pix.jj - mTileArray.mTileWidth_pix / 2 };
-				const int tileRightPos_pix{ tileLeftPos_pix + mTileArray.mTileWidth_pix };
+				const int tileTopPos_pix{ absoluteTilePixelPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };
+				const int tileBottomPos_pix{ tileTopPos_pix + mTileArray.readTileHeight_pix() };
+				const int tileLeftPos_pix{ absoluteTilePixelPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };
+				const int tileRightPos_pix{ tileLeftPos_pix + mTileArray.readTileWidth_pix() };
 
 				for (int iterRow_pix = tileTopPos_pix; iterRow_pix < tileBottomPos_pix; iterRow_pix++)
 					for (int iterCol_pix = tileLeftPos_pix; iterCol_pix < tileRightPos_pix; iterCol_pix++)
@@ -529,10 +507,10 @@ void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 //Pixel position of the center of the tiles relative to the center of the Tiff
 PIXELS2 Boolmap::determineTileAbsolutePixelPos_pix_(const INDICES2 tileIndicesIJ) const
 {
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.mArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + std::to_string(mTileArray.mArraySize.II - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.mArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.readTileArraySize().II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + std::to_string(mTileArray.readTileArraySize().II - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.readTileArraySize().JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index JJ must be in the range [0-" + std::to_string(mTileArray.readTileArraySize().JJ - 1) + "]");
 
 	return { mAnchorPixel_pix.ii + mTileArray.determineTileRelativePixelPos_pix(tileIndicesIJ).ii,
 			 mAnchorPixel_pix.jj + mTileArray.determineTileRelativePixelPos_pix(tileIndicesIJ).jj };
@@ -544,18 +522,18 @@ bool Boolmap::isQuadrantBright_(const double threshold, const INDICES2 tileIndic
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.mArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArray.mArraySize.II - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.mArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.readTileArraySize().II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArray.readTileArraySize().II - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.readTileArraySize().JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArray.readTileArraySize().JJ - 1) + "]");
 
-	const double nPixQuad{ 1. * mTileArray.mNpix / 4. };				//Number of pixels in a quadrant
+	const double nPixQuad{ 1. * mTileArray.readNpix() / 4. };			//Number of pixels in a quadrant
 	const int threshold_255{ static_cast<int>(threshold * 255) };		//Threshold in the range [0-255]
 
 	//Divide the image in 4 quadrants
 	const PIXELS2 absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_(tileIndicesIJ) };	//Absolute tile center position wrt the Tiff anchor pixel
-	const int halfHeight{ mTileArray.mTileHeight_pix / 2 };
-	const int halfwidth{ mTileArray.mTileWidth_pix / 2 };
+	const int halfHeight{ mTileArray.readTileHeight_pix() / 2 };
+	const int halfwidth{ mTileArray.readTileWidth_pix() / 2 };
 	const int tileTopPos_pix{ absoluteTilePixelPos_pix.ii - halfHeight };
 	const int tileBottomPos_pix{ absoluteTilePixelPos_pix.ii + halfHeight };
 	const int tileLeftPos_pix{ absoluteTilePixelPos_pix.jj - halfwidth };
@@ -625,9 +603,9 @@ void Sequencer::generateCommandList()
 		for (std::vector<int>::size_type iterWL = 0; iterWL != mSample.mFluorLabelList.size(); iterWL++)
 		{
 			//The Y-stage is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
-			while (mJJ >= 0 && mJJ < mTileArray.mArraySize.JJ)		//Y-stage direction. JJ iterates from 0 to mTileArraySize.JJ
+			while (mJJ >= 0 && mJJ < mTileArray.readTileArraySize().JJ)		//Y-stage direction. JJ iterates from 0 to mTileArraySize.JJ
 			{
-				while (mII >= 0 && mII < mTileArray.mArraySize.II)	//X-stage direction. II iterates back and forth between 0 and mTileArraySize.II
+				while (mII >= 0 && mII < mTileArray.readTileArraySize().II)	//X-stage direction. II iterates back and forth between 0 and mTileArraySize.II
 				{
 					moveStage_({ mII, mJJ });
 					acqStack_(iterWL);
@@ -656,13 +634,13 @@ int Sequencer::size() const
 //The center the tile array is at the sample center (exact center for an odd number of tiles or slightly off center for an even number of tiles)
 POSITION2 Sequencer::convertTileIndicesIJToStagePosXY(const INDICES2 tileIndicesIJ) const
 {
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.mArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + std::to_string(mTileArray.mArraySize.II - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.mArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.readTileArraySize().II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + std::to_string(mTileArray.readTileArraySize().II - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.readTileArraySize().JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + std::to_string(mTileArray.readTileArraySize().JJ - 1) + "]");
 
 	//The tile centers are (1-a)*FFOV away from each other, where a*L is the tile overlap
-	POSITION2 centeredIJ{ determineRelativeTileIndicesIJ(mStack.mOverlapXYZ_frac, mTileArray.mArraySize, tileIndicesIJ) };
+	POSITION2 centeredIJ{ determineRelativeTileIndicesIJ(mStack.mOverlapXYZ_frac, mTileArray.readTileArraySize(), tileIndicesIJ) };
 	POSITION2 stagePosXY;
 	stagePosXY.XX = mSample.mCenterXY.XX - mStack.mFFOV.XX  * centeredIJ.XX;
 	stagePosXY.YY = mSample.mCenterXY.YY - mStack.mFFOV.YY  * centeredIJ.YY;
@@ -698,8 +676,8 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 	*fileHandle << "Z position of the surface of the sample = " << mSample.mSurfaceZ / mm << " mm\n";
 	*fileHandle << std::setprecision(0);
 	*fileHandle << "Total # tissue slices = " << mNtotalSlices << "\n";
-	*fileHandle << "Tile array size (stageX, stageY) = (" << mTileArray.mArraySize.II << ", " <<
-															 mTileArray.mArraySize.JJ << ")\n";
+	*fileHandle << "Tile array size (stageX, stageY) = (" << mTileArray.readTileArraySize().II << ", " <<
+															 mTileArray.readTileArraySize().JJ << ")\n";
 
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 
@@ -769,28 +747,29 @@ INDICES2 Sequencer::determineTileArraySize_()
 	const int numberOfTilesII{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.XX) * (mSample.mLOIxyz_req.XX / mStack.mFFOV.XX - 1))) };
 	const int numberOfTilesJJ{ static_cast<int>(std::ceil(1 + 1. / (1 - mStack.mOverlapXYZ_frac.YY) * (mSample.mLOIxyz_req.YY / mStack.mFFOV.YY - 1))) };
 
+	INDICES2 output;
 	if (numberOfTilesII > 1)
-		mTileArray.mArraySize.II = numberOfTilesII;		//Number of tiles in the X-stage axis
+		output.II = numberOfTilesII;		//Number of tiles in the X-stage axis
 	else
-		mTileArray.mArraySize.II = 1;
+		output.II = 1;
 
 	if (numberOfTilesJJ > 1)
-		mTileArray.mArraySize.JJ = numberOfTilesJJ;		//Number of tiles in the Y-stage axis	
+		output.JJ = numberOfTilesJJ;		//Number of tiles in the Y-stage axis	
 	else
-		mTileArray.mArraySize.JJ = 1;
+		output.JJ = 1;
 
 	//For debugging
 	//std::cout << "Number of row tiles = " << numberOfTilesII << "\tNumber of column tiles = " << numberOfTilesJJ << "\n";
 
-	return { numberOfTilesII, numberOfTilesJJ };
+	return output;
 }
 
 //Calculate the effective ROI =  { YMIN, XMIN, YMAX, XMAX } covered by all the tiles
 void Sequencer::initializeEffectiveROI_()
 {
 	//II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
-	const POSITION2 tilePosXYmin = convertTileIndicesIJToStagePosXY({ 0, 0 });															//Absolute position of the CENTER of the tile
-	const POSITION2 tilePosXYmax = convertTileIndicesIJToStagePosXY({ mTileArray.mArraySize.II - 1, mTileArray.mArraySize.JJ - 1 });	//Absolute position of the CENTER of the tile
+	const POSITION2 tilePosXYmin = convertTileIndicesIJToStagePosXY({ 0, 0 });																			//Absolute position of the CENTER of the tile
+	const POSITION2 tilePosXYmax = convertTileIndicesIJToStagePosXY({ mTileArray.readTileArraySize().II - 1, mTileArray.readTileArraySize().JJ - 1 });	//Absolute position of the CENTER of the tile
 
 	//The ROI is measured from the border of the tiles. Therefore, add half of the FFOV
 	mROIeff.XMAX = tilePosXYmin.XX + mStack.mFFOV.XX / 2.;
@@ -802,7 +781,7 @@ void Sequencer::initializeEffectiveROI_()
 //Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
 void Sequencer::reserveMemoryBlock_()
 {
-	const int nTotalTilesPerVibratomeSlice{ mTileArray.mArraySize.II * mTileArray.mArraySize.JJ };											//Total number of tiles in a vibratome slice
+	const int nTotalTilesPerVibratomeSlice{ mTileArray.readTileArraySize().II * mTileArray.readTileArraySize().JJ };						//Total number of tiles in a vibratome slice
 	const int nTotalTilesEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * nTotalTilesPerVibratomeSlice };	//Total number of tiles in the entire sample. mNtotalSlices is fixed at 1
 	mCommandList.reserve(3 * nTotalTilesEntireSample + mNtotalSlices - 1);
 }
@@ -814,7 +793,7 @@ void Sequencer::initializeIteratorIJ_()
 	switch (mIterScanDirXYZ.XX)
 	{
 	case SCANDIR::RIGHTWARD:	//The X-stage moves to the right, therefore, the sample is imaged from right to left
-		mII = mTileArray.mArraySize.II - 1;
+		mII = mTileArray.readTileArraySize().II - 1;
 		break;
 	case SCANDIR::LEFTWARD:		//The X-stage moves to the left, therefore, the sample is imaged from left to right
 		mII = 0;
@@ -824,7 +803,7 @@ void Sequencer::initializeIteratorIJ_()
 	switch (mIterScanDirXYZ.YY)
 	{
 	case SCANDIR::INWARD:		//The Y-stage moves inward, therefore, the sample is imaged from "inside" to "outside" of the microscope
-		mJJ = mTileArray.mArraySize.JJ - 1;
+		mJJ = mTileArray.readTileArraySize().JJ - 1;
 		break;
 	case SCANDIR::OUTWARD:		//The Y-stage moves outward, therefore, the sample is imaged from "outside" to "inside" of the microscope
 		mJJ = 0;
@@ -849,10 +828,10 @@ SIZE3 Sequencer::determineEffectiveLOIxyz() const
 //II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
 void Sequencer::moveStage_(const INDICES2 tileIJ)
 {
-	if (tileIJ.II < 0 || tileIJ.II >= mTileArray.mArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + std::to_string(mTileArray.mArraySize.II - 1) + "]");
-	if (tileIJ.JJ < 0 || tileIJ.JJ >= mTileArray.mArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
+	if (tileIJ.II < 0 || tileIJ.II >= mTileArray.readTileArraySize().II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + std::to_string(mTileArray.readTileArraySize().II - 1) + "]");
+	if (tileIJ.JJ < 0 || tileIJ.JJ >= mTileArray.readTileArraySize().JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + std::to_string(mTileArray.readTileArraySize().JJ - 1) + "]");
 
 	const POSITION2 tileCenterXY = convertTileIndicesIJToStagePosXY(tileIJ);
 

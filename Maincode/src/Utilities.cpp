@@ -1076,6 +1076,31 @@ TileArray::TileArray(const int tileHeight_pix, const int tileWidth_pix, const IN
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
 }
 
+int TileArray::readTileHeight_pix() const
+{
+	return mTileHeight_pix;
+}
+
+int TileArray::readTileWidth_pix() const
+{
+	return mTileWidth_pix;
+}
+
+int TileArray::readNpix() const
+{
+	return mNpix;
+}
+
+INDICES2 TileArray::readTileArraySize() const
+{
+	return mArraySize;
+}
+
+TILEOVERLAP3 TileArray::readTileOverlapXYZ_frac() const
+{
+	return mOverlapXYZ_frac;
+}
+
 //Pixel position of the center of the tiles relative to the center of the array
 PIXELS2 TileArray::determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const
 {
@@ -1095,8 +1120,8 @@ PIXELS2 TileArray::determineTileRelativePixelPos_pix(const INDICES2 tileIndicesI
 //tileHeight_pix = tile height, tileWidth_pix = tile width, tileArraySize = { number of tiles as rows, number of tiles as columns}
 //II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
 QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac) :
-	mStitchedTiff{ tileHeight_pix * tileArraySize.II, tileWidth_pix * tileArraySize.JJ, 1 },
-	mTileArray{ tileHeight_pix,
+	TiffU8{ tileHeight_pix * tileArraySize.II, tileWidth_pix * tileArraySize.JJ, 1 },
+	TileArray{ tileHeight_pix,
 				tileWidth_pix,
 				tileArraySize,
 				overlapXYZ_frac }
@@ -1111,17 +1136,17 @@ QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, 
 //II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
 void QuickStitcher::push(const U8 *tile, const INDICES2 tileIndicesIJ)
 {
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.mArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(mTileArray.mArraySize.II - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.mArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= TileArray::readTileArraySize().II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(TileArray::readTileArraySize().II - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= TileArray::readTileArraySize().JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(TileArray::readTileArraySize().JJ - 1) + "]");
 
 	//const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
 	//const int tileWidth_pix{ tile.widthPerFrame_pix() };														//Width of the tile
-	const int rowShift_pix{ tileIndicesIJ.II *  mTileArray.mTileHeight_pix };									//In the mTiff image, shift the tile down by this many pixels
-	const int colShift_pix{ tileIndicesIJ.JJ *  mTileArray.mTileWidth_pix };									//In the mTiff image, shift the tile to the right by this many pixels
-	const int tileBytesPerRow{ static_cast<int>(mTileArray.mTileWidth_pix * sizeof(U8)) };						//Bytes per row of the input tile
-	const int stitchedTiffBytesPerRow{ static_cast<int>(mStitchedTiff.readWidthPerFrame_pix() * sizeof(U8)) };	//Bytes per row of the tiled image
+	const int rowShift_pix{ tileIndicesIJ.II *  TileArray::readTileHeight_pix() };								//In the mTiff image, shift the tile down by this many pixels
+	const int colShift_pix{ tileIndicesIJ.JJ *  TileArray::readTileWidth_pix() };								//In the mTiff image, shift the tile to the right by this many pixels
+	const int tileBytesPerRow{ static_cast<int>(TileArray::readTileWidth_pix() * sizeof(U8)) };					//Bytes per row of the input tile
+	const int stitchedTiffBytesPerRow{ static_cast<int>(TiffU8::readWidthPerFrame_pix() * sizeof(U8)) };		//Bytes per row of the tiled image
 
 	/*
 	//Transfer the data from the input tile to mStitchedTiff. Old way: copy pixel by pixel
@@ -1130,42 +1155,11 @@ void QuickStitcher::push(const U8 *tile, const INDICES2 tileIndicesIJ)
 			mStitchedTiff.data()[(rowShift_pix + iterRow_pix) * mStitchedTiff.widthPerFrame_pix() + colShift_pix + iterCol_pix] = tile.data()[iterRow_pix * tileWidth_pix + iterCol_pix];*/
 
 			//Transfer the data from the input tile to mStitchedTiff. New way: copy row by row
-	for (int iterRow_pix = 0; iterRow_pix < mTileArray.mTileHeight_pix; iterRow_pix++)
-		std::memcpy(&mStitchedTiff.data()[(rowShift_pix + iterRow_pix) * stitchedTiffBytesPerRow + colShift_pix * sizeof(U8)], &tile[iterRow_pix * tileBytesPerRow], tileBytesPerRow);
+	for (int iterRow_pix = 0; iterRow_pix < TileArray::readTileHeight_pix(); iterRow_pix++)
+		std::memcpy(&TiffU8::data()[(rowShift_pix + iterRow_pix) * stitchedTiffBytesPerRow + colShift_pix * sizeof(U8)], &tile[iterRow_pix * tileBytesPerRow], tileBytesPerRow);
 }
 
 void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) const
 {
-	mStitchedTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
+	TiffU8::saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
 }
-
-int QuickStitcher::readTileHeight_pix() const
-{
-	return mTileArray.mTileHeight_pix;
-}
-
-int QuickStitcher::readTileWidth_pix() const
-{
-	return mTileArray.mTileWidth_pix;
-}
-
-int QuickStitcher::readFullHeight_pix() const
-{
-	return mStitchedTiff.readHeightPerFrame_pix();
-}
-
-int QuickStitcher::readFullWidth_pix() const
-{
-	return mStitchedTiff.readWidthPerFrame_pix();
-}
-
-INDICES2 QuickStitcher::readTileArraySize() const
-{
-	return mTileArray.mArraySize;
-}
-
-TILEOVERLAP3 QuickStitcher::readTileOverlap_frac() const
-{
-	return mTileArray.mOverlapXYZ_frac;
-}
-#pragma endregion "QuickStitcher"

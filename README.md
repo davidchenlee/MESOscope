@@ -8,7 +8,7 @@ Code in C++ for controlling the NI USB-7852R card
 - enable/disable using the vibratome in Routines::sequencer
 - Safeguard the LOI that it takes allowed values
 - For low power at 1040 nm, choose Vision
-- Fix the power increase in the step-by-step rountine
+
 - Keep an eye on the Z-stage bouncing that triggers the ctl&acq
 - Implement suppressCrosstalk() flattenField() on the GPU
 - Multithread demuxAllChannels_()
@@ -18,11 +18,10 @@ Code in C++ for controlling the NI USB-7852R card
 - Maybe install VTK to display tiff images
 
 ### LabView
-- I detected that, when the FPGA resets at the end of the code, the shutter #2 is triggered. I see a small voltage on the scope, like ~50mV that seems to be enough to trigger the shutter
+- I detected that shutter #2 is triggered when the FPGA resets at the end of the code. I see a small voltage on the scope, like ~50mV that seems to be enough to trigger the shutter
 
 ### Hardware
 - realign the dichroic and rescanner mounts. Fine tune the galvo parameters
-- calibrate Fidelity
 - Screw down the PMT16X
 - Test cooling down the PMT16X
 

@@ -3,15 +3,15 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-//POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.640 + 0.000) * mm };
-POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (17.640 + 0.050) * mm };
+POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.640 + 0.000) * mm };
+//POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (17.640 + 0.000) * mm };//For contScanX
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0.) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0.) } }} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.) } }} };
 Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
-					{{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0), 4 } ,
-					   { "DAPI", 750, multiply16X(20. * mW), multiply16X(0.0), 2 } }} };
+					{{ {"TDT", 1040, multiply16X(50. * mW), 150., 4 } ,
+					   { "DAPI", 750, multiply16X(20. * mW), 120., 2 } }} };
 
 #else
 Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
@@ -47,15 +47,15 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANXY };			//Scan in the X-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 40. * um };								//Stack deepth in the Z-stage axis
@@ -148,9 +148,9 @@ namespace Routines
 		RScanner.isRunning();						//To make sure that the RS is running
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2. };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &mesoscope };
-		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANNER, 0, fluorLabel.mWavelength_nm };
+		const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2.};
+		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
+		//const Galvo rescanner{ RTcontrol, 0, fluorLabel.mWavelength_nm, mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
@@ -272,10 +272,10 @@ namespace Routines
 	{
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
-		const Laser::ID whichLaser{ Laser::ID::VISION };
+		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
-		const int nFramesBinning{ 1 };																	//For binning
-		const double stackDepth{ 200. * um };
+		const int nFramesBinning{ fluorLabel.nFramesBinning };											//For binning
+		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um  };
 
 		const int nFrames{ static_cast<int>(nFramesBinning * stackDepth / pixelSizeZafterBinning) };	//Number of frames BEFORE binning for continuous acquisition
@@ -316,8 +316,8 @@ namespace Routines
 		RScanner.isRunning();		//To make sure that the RS is running
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2. };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &mesoscope };
+		const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2. };
+		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
 
 		//STAGES
 		const double stageZi = determineInitialScanPos(stackCenterXYZ.ZZ, stackDepth, 0. * mm, scanDirZ);
@@ -391,8 +391,8 @@ namespace Routines
 
 		//SCANNERS. Keep them fixed at 0
 		const double galvoScanAmplitude{ 0 };
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, galvoScanAmplitude };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, galvoScanAmplitude, &mesoscope };
+		const Galvo scanner{ RTcontrol, galvoScanAmplitude };
+		const Galvo rescanner{ RTcontrol, galvoScanAmplitude, mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
 
 		//STAGES
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
@@ -504,8 +504,8 @@ namespace Routines
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 
 				//SCANNERS
-				const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2. };
-				Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2. };
+				const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2. };
+				Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
 
 				//These parameters must be accessible to all the cases
 				int wavelength_nm, nFramesBinning, sliceNumber, stackNumber, tileIndexI, tileIndexJ;
@@ -541,13 +541,13 @@ namespace Routines
 						scanZf = determineFinalScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
 
 						//Update the laser parameters
-						mesoscope.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
+						mesoscope.configure(RTcontrol, wavelength_nm);											//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
 						scanPmin = acqStack.mScanPmin;
 						scanPexp = acqStack.mScanPexp;
 						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * acqStack.mScanPexp);
 
-						mesoscope.openShutter();								//Re-open the Uniblitz shutter if closed by the pockels destructor
-						rescanner.reconfigure(&mesoscope);					//The calibration of the rescanner depends on the laser and wavelength being used
+						mesoscope.openShutter();																//Re-open the Uniblitz shutter if closed by the pockels destructor
+						rescanner.reconfigure(mesoscope.currentLaser(), mesoscope.currentWavelength_nm());		//The calibration of the rescanner depends on the laser and wavelength being used
 					}
 
 					RTcontrol.initialize(scanDirZ);							//Use the scan direction determined dynamically
@@ -631,8 +631,8 @@ namespace Routines
 		RScanner.isRunning();					//To make sure that the RS is running
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2. };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2., &mesoscope };
+		const Galvo scanner{ RTcontrol, FFOVslow / 2. };
+		const Galvo rescanner{ RTcontrol, FFOVslow / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
 
 		//OPEN THE UNIBLITZ SHUTTERS
 		mesoscope.openShutter();				//The destructor will close the shutter automatically
@@ -766,16 +766,16 @@ namespace TestRoutines
 		const ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();		//To make sure that the RS is running
 
-		//SCANNERS
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };					//Full FOV in the slow axis
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2. };
-
 		//LASER
 		const int wavelength_nm{ 1040 };
 		const double laserPower{ 25. * mW };		//Laser power
 		Mesoscope mesoscope{ Laser::ID::FIDELITY };
 		mesoscope.configure(RTcontrol, wavelength_nm);
 		mesoscope.setPower(laserPower);
+
+		//SCANNERS
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };					//Full FOV in the slow axis
+		Galvo scanner{ RTcontrol, FFOVslow / 2. };
 
 		//CONTROL SEQUENCE
 		mesoscope.openShutter();	//Open the uniblitz shutter. The destructor will close the shutter automatically
@@ -811,8 +811,9 @@ namespace TestRoutines
 
 		//SCANNERS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Scan duration in the slow axis
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2. };
-		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2. };
+		const int wavelength_nm{ 750 };
+		Galvo scanner{ RTcontrol, FFOVslow / 2. };
+		Galvo rescanner{ RTcontrol, FFOVslow / 2.,  Laser::ID::VISION, wavelength_nm };
 
 		//Execute the control sequence and acquire the image
 		RTcontrol.run();
@@ -857,9 +858,9 @@ namespace TestRoutines
 		mesoscope.setPower(selectPower);
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2. };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &mesoscope };
-		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANNER, 0, wavelength_nm };
+		const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2. };
+		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
+		//const Galvo rescanner{ RTcontrol, 0, wavelength_nm, mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
 
 		//EXECUTE THE CONTROL SEQUENCE
 		RTcontrol.run();
@@ -1041,7 +1042,7 @@ namespace TestRoutines
 		RScanner.isRunning();		//To make sure that the RS is running
 
 		//SCANNERS. Keep the scanner fixed to bleach a line on the sample
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, 0 };
+		Galvo scanner{ RTcontrol, 0 };
 
 		//POCKELS
 		Pockels pockels{ RTcontrol, 920, Laser::ID::VISION };
@@ -1135,13 +1136,13 @@ namespace TestRoutines
 	void correctImage()
 	{
 
-		std::string inputFilename{ "Liver20190812_01_V750nm_P=320.0mW_x=44.000_y=19.954_z=17.2400_avg=5" };
+		std::string inputFilename{ "Liver20190812_02_V750nm_P=320.0mW_Pexp=120um_x=45.756_y=28.670_zi=17.6400_zf=17.7500_Step=0.0010_bin=2" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		//image.correctFOVslowCPU(1);
 		//image.correctRSdistortionGPU(200. * um);	
 		//image.flattenField(2.0, 4, 11);
-		image.suppressCrosstalk(0.2);
+		image.suppressCrosstalk(0.25);
 		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 		//image.binFrames(5);
@@ -1489,9 +1490,9 @@ namespace TestRoutines
 		mesoscope.setPower(laserPower);
 
 		//SCANNERS
-		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2. };
-		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2., &mesoscope };
-		//Galvo scanner{ RTcontrol, RTCHAN::SCANNER, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
+		Galvo scanner{ RTcontrol, FFOVslow / 2. };
+		Galvo rescanner{ RTcontrol, FFOVslow / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
+		//Galvo scanner{ RTcontrol, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 
 		//EXECUTE THE CONTROL SEQUENCE
 		RTcontrol.run();

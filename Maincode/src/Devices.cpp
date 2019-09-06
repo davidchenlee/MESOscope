@@ -542,6 +542,517 @@ uint8_t PMT16X::sumCheck_(const std::vector<uint8_t> charArray, const int nEleme
 }
 #pragma endregion "PMT16X"
 
+#pragma region "Stages"
+Stage::Stage(const double velX, const double velY, const double velZ, const std::vector<LIMIT2> stageSoftPosLimXYZ) :
+	mSoftPosLimXYZ{ stageSoftPosLimXYZ }
+{
+	const std::string stageIDx{ "116049107" };	//X-stage (V-551.4B)
+	const std::string stageIDy{ "116049105" };	//Y-stage (V-551.2B)
+	const std::string stageIDz{ "0165500631" };	//Z-stage (ES-100)
+
+	//Open the connections to the stage controllers and assign the IDs
+	std::cout << "Establishing connection with the stages\n";
+	mHandleXYZ.at(XX) = PI_ConnectUSB(stageIDx.c_str());
+	mHandleXYZ.at(YY) = PI_ConnectUSB(stageIDy.c_str());
+	mHandleXYZ.at(ZZ) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
+	//mHandleXYZ.at(Z) = PI_ConnectUSB(stageIDz.c_str());
+
+	if (mHandleXYZ.at(XX) < 0)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
+
+	if (mHandleXYZ.at(YY) < 0)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
+
+	if (mHandleXYZ.at(ZZ) < 0)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
+
+	std::cout << "Connection with the stages successfully established\n";
+
+	//Download the current position
+	mPosXYZ.XX = downloadPositionSingle_(XX);
+	mPosXYZ.YY = downloadPositionSingle_(YY);
+	mPosXYZ.ZZ = downloadPositionSingle_(ZZ);
+
+	//Download the current velocities
+	mVelXYZ.XX = downloadVelSingle_(XX);
+	mVelXYZ.YY = downloadVelSingle_(YY);
+	mVelXYZ.ZZ = downloadVelSingle_(ZZ);
+
+	configDOtriggers_();				//Configure the stage velocities and DO triggers
+	setVelXYZ({ velX, velY, velZ });	//Set the stage velocities
+}
+
+Stage::~Stage()
+{
+	//Close the Connections
+	PI_CloseConnection(mHandleXYZ.at(XX));
+	PI_CloseConnection(mHandleXYZ.at(YY));
+	PI_CloseConnection(mHandleXYZ.at(ZZ));
+	//std::cout << "Connection with the stages successfully closed\n";
+}
+
+//Recall the current position for the 3 stages
+POSITION3 Stage::readPosXYZ() const
+{
+	return mPosXYZ;
+}
+
+void Stage::printPosXYZ() const
+{
+	std::cout << "Stage X position = " << mPosXYZ.XX / mm << " mm\n";
+	std::cout << "Stage Y position = " << mPosXYZ.YY / mm << " mm\n";
+	std::cout << "Stage Z position = " << mPosXYZ.ZZ / mm << " mm\n";
+}
+
+double Stage::readCurrentPosition_(const Axis axis) const
+{
+	switch (axis)
+	{
+	case XX:
+		return mPosXYZ.XX;
+	case YY:
+		return mPosXYZ.YY;
+	case ZZ:
+		return mPosXYZ.ZZ;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
+	}
+}
+
+void Stage::setCurrentPosition_(const Axis axis, const double position)
+{
+	switch (axis)
+	{
+	case XX:
+		mPosXYZ.XX = position;
+	case YY:
+		mPosXYZ.YY = position;
+	case ZZ:
+		mPosXYZ.ZZ = position;
+	}
+}
+
+double Stage::readCurrentVelocity_(const Axis axis) const
+{
+	switch (axis)
+	{
+	case XX:
+		return mVelXYZ.XX;
+	case YY:
+		return mVelXYZ.YY;
+	case ZZ:
+		return mVelXYZ.ZZ;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
+	}
+}
+
+void Stage::setCurrentVelocity_(const Axis axis, const double velocity)
+{
+	switch (axis)
+	{
+	case XX:
+		mVelXYZ.XX = velocity;
+	case YY:
+		mVelXYZ.YY = velocity;
+	case ZZ:
+		mVelXYZ.ZZ = velocity;
+	}
+}
+
+//Retrieve the stage position from the controller
+double Stage::downloadPositionSingle_(const Axis axis)
+{
+	double position_mm;	//Position in mm
+	if (!PI_qPOS(mHandleXYZ.at(axis), mNstagesPerController, &position_mm))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query position for the stage " + axisToString_(axis));
+
+	return position_mm * mm;	//Multiply by mm to convert from explicit to implicit units
+}
+
+//Move the stage to the requested position
+void Stage::moveSingle(const Axis axis, const double position)
+{
+	//Check if the requested position is within range
+	if (position < mSoftPosLimXYZ.at(axis).MIN || position > mSoftPosLimXYZ.at(axis).MAX)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the soft limits of the stage " + axisToString_(axis));
+	if (position < mTravelRangeXYZ.at(axis).MIN || position > mTravelRangeXYZ.at(axis).MAX)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the physical limits of the stage " + axisToString_(axis));
+
+	//Move the stage
+	if (readCurrentPosition_(axis) != position) //Move only if the requested position is different from the current position
+	{
+		const double position_mm{ position / mm };									//Divide by mm to convert from implicit to explicit units
+		if (!PI_MOV(mHandleXYZ.at(axis), mNstagesPerController, &position_mm))		//~14 ms to execute this function
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString_(axis) + " to the target position (maybe hardware limits?)");
+
+		setCurrentPosition_(axis, position);
+	}
+}
+
+//Move the 2 stages to the requested position
+void Stage::moveXY(const POSITION2 posXY)
+{
+	moveSingle(XX, posXY.XX);
+	moveSingle(YY, posXY.YY);
+}
+
+//Move the 3 stages to the requested position
+void Stage::moveXYZ(const POSITION3 posXYZ)
+{
+	moveSingle(XX, posXYZ.XX);
+	moveSingle(YY, posXYZ.YY);
+	moveSingle(ZZ, posXYZ.ZZ);
+}
+
+bool Stage::isMoving(const Axis axis) const
+{
+	BOOL isMoving;
+
+	if (!PI_IsMoving(mHandleXYZ.at(axis), mNstagesPerController, &isMoving))	//~55 ms to execute this function
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage " + axisToString_(axis));
+
+	return isMoving;
+}
+
+void Stage::waitForMotionToStopSingle(const Axis axis) const
+{
+	std::cout << "Stage " + axisToString_(axis) + " moving to the new position: ";
+
+	BOOL isMoving;
+	do {
+		if (!PI_IsMoving(mHandleXYZ.at(axis), mNstagesPerController, &isMoving))
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage" + axisToString_(axis));
+
+		std::cout << ".";
+		Sleep(300);
+	} while (isMoving);
+
+	std::cout << "\n";
+}
+
+void Stage::waitForMotionToStopAll() const
+{
+	std::cout << "Stages moving to the new position: ";
+
+	BOOL isMovingX, isMovingY, isMovingZ;
+	do {
+		if (!PI_IsMoving(mHandleXYZ.at(XX), mNstagesPerController, &isMovingX))
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage X");
+
+		if (!PI_IsMoving(mHandleXYZ.at(YY), mNstagesPerController, &isMovingY))
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Y");
+
+		if (!PI_IsMoving(mHandleXYZ.at(ZZ), mNstagesPerController, &isMovingZ))
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Z");
+
+		std::cout << ".";
+	} while (isMovingX || isMovingY || isMovingZ);
+
+	std::cout << "\n";
+}
+
+void Stage::stopAll() const
+{
+	PI_StopAll(mHandleXYZ.at(XX));
+	PI_StopAll(mHandleXYZ.at(YY));
+	PI_StopAll(mHandleXYZ.at(ZZ));
+
+	std::cout << "Stages stopped\n";
+}
+
+//Request the velocity of the stage
+double Stage::downloadVelSingle_(const Axis axis) const
+{
+	double vel_mmps;
+	if (!PI_qVEL(mHandleXYZ.at(axis), mNstagesPerController, &vel_mmps))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage " + axisToString_(axis));
+
+	//std::cout << vel_mmps << " mm/s\n";
+	return vel_mmps * mmps;					//Multiply by mmps to convert from explicit to implicit units
+}
+
+//Set the velocity of the stage
+void Stage::setVelSingle(const Axis axis, const double vel)
+{
+	//Check if the requested vel is valid
+	if (vel <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be > 0 for the stage " + axisToString_(axis));
+
+	//Update the vel if different
+	if (readCurrentVelocity_(axis) != vel)
+	{
+		const double vel_mmps{ vel / mmps };		//Divide by mmps to convert implicit to explicit units
+		if (!PI_VEL(mHandleXYZ.at(axis), mNstagesPerController, &vel_mmps))
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString_(axis));
+
+		setCurrentVelocity_(axis, vel);
+		//std::cout << "stage vel updated\n"; //For debugging
+	}
+}
+
+//Set the velocity of the stage 
+void Stage::setVelXYZ(const VELOCITY3 velXYZ)
+{
+	setVelSingle(XX, velXYZ.XX);
+	setVelSingle(YY, velXYZ.YY);
+	setVelSingle(ZZ, velXYZ.ZZ);
+}
+
+void Stage::printVelXYZ() const
+{
+	std::cout << "Stage X vel = " << mVelXYZ.XX / mmps << " mm/s\n";
+	std::cout << "Stage Y vel = " << mVelXYZ.YY / mmps << " mm/s\n";
+	std::cout << "Stage Z vel = " << mVelXYZ.ZZ / mmps << " mm/s\n";
+}
+
+//Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
+//This function requests the trigger parameters of the stage. Consult the manual for C-863 p165
+//1: trigger step in mm
+//2: axis of the controller ( always 1 because each controller has only 1 stage)
+//3: trigger mode (0: position distance, 2: on target, 6: in motion, 7: position+offset)
+//7: polarity (0 for active low, 1 for active high)
+//8: start threshold in mm
+//9: stop threshold in mm
+//10: trigger position in mm
+double Stage::downloadDOtriggerParamSingle_(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID) const
+{
+	const int triggerParamID_int{ static_cast<int>(triggerParamID) };
+	const int DOchan_int{ static_cast<int>(DOchan) };
+	double value;
+	if (!PI_qCTO(mHandleXYZ.at(axis), &DOchan_int, &triggerParamID_int, &value, 1))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger config for the stage " + axisToString_(axis));
+
+	//std::cout << value << "\n";
+	return value;
+}
+
+void Stage::setDOtriggerParamSingle(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID, const double value) const
+{
+	const int triggerParamID_int{ static_cast<int>(triggerParamID) };
+	const int DOchan_int{ static_cast<int>(DOchan) };
+	if (!PI_CTO(mHandleXYZ.at(axis), &DOchan_int, &triggerParamID_int, &value, 1))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + axisToString_(axis));
+}
+
+void Stage::setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const
+{
+	if (triggerStep <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be > 0");
+
+	if (startThreshold < mTravelRangeXYZ.at(axis).MIN || startThreshold > mTravelRangeXYZ.at(axis).MAX)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The start position is out of the physical limits of the stage " + axisToString_(axis));
+
+	if (stopThreshold < mTravelRangeXYZ.at(axis).MIN || stopThreshold > mTravelRangeXYZ.at(axis).MAX)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stop position is out of the physical limits of the stage " + axisToString_(axis));
+
+
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::TRIGSTEP, triggerStep / mm);					//Trigger step
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::AXISNUMBER, 1);								//Axis of the controller (always 1 because each controller has only 1 stage)
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::TRIGMODE, static_cast<double>(triggerMode));	//Trigger mode
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::POLARITY, 1);								//POLARITY (0 for active low, 1 for active high)
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::STARTTHRES, startThreshold / mm);			//Start threshold
+	setDOtriggerParamSingle(axis, DOchan, DOPARAM::STOPTHRES, stopThreshold / mm);				//Stop threshold
+}
+
+//Request the enable/disable status of the stage DO
+bool Stage::isDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan) const
+{
+	BOOL triggerState;
+	const int DOchan_int{ static_cast<int>(DOchan) };
+	if (!PI_qTRO(mHandleXYZ.at(axis), &DOchan_int, &triggerState, 1))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger EN/DIS stage for the stage " + axisToString_(axis));
+
+	//std::cout << triggerState << "\n";
+	return triggerState;
+}
+
+//Enable or disable the stage DO
+void Stage::setDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan, const BOOL triggerState) const
+{
+	const int DOchan_int{ static_cast<int>(DOchan) };
+	if (!PI_TRO(mHandleXYZ.at(axis), &DOchan_int, &triggerState, 1))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger EN/DIS state for the stage " + axisToString_(axis));
+}
+
+//Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
+//Print out the relevant parameters
+void Stage::printStageConfig(const Axis axis, const DIOCHAN chan) const
+{
+	switch (axis)
+	{
+	case XX:
+		//Only DO1 is wired to the FPGA
+		if (chan != DIOCHAN::D1)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString_(axis));
+		break;
+	case YY:
+		//Only DO1 is wired to the FPGA
+		if (chan != DIOCHAN::D1)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString_(axis));
+		break;
+	case ZZ:
+		//Only DO1 and DO2 are wired to the FPGA
+		if (chan != DIOCHAN::D1 || chan != DIOCHAN::D2)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 and DO2 are currently wired to the FPGA for the stage " + axisToString_(axis));
+		break;
+	}
+
+	const double triggerStep_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::TRIGSTEP) };
+	const int triggerMode{ static_cast<int>(downloadDOtriggerParamSingle_(axis, chan, DOPARAM::TRIGMODE)) };
+	const int polarity{ static_cast<int>(downloadDOtriggerParamSingle_(axis, chan, DOPARAM::POLARITY)) };
+	const double startThreshold_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::STARTTHRES) };
+	const double stopThreshold_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::STOPTHRES) };
+	const double triggerPosition_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::TRIGPOS) };
+	const bool triggerState{ isDOtriggerEnabled(axis, chan) };
+	const double vel{ downloadVelSingle_(axis) };
+
+	std::cout << "Configuration for the stage = " << axisToString_(axis) << ", DOchan = " << static_cast<int>(chan) << ":\n";
+	std::cout << "is DO trigger enabled? = " << triggerState << "\n";
+	std::cout << "Trigger step = " << triggerStep_mm << " mm\n";
+	std::cout << "Trigger mode = " << triggerMode << "\n";
+	std::cout << "POLARITY = " << polarity << "\n";
+	std::cout << "Start threshold position = " << startThreshold_mm << " mm\n";
+	std::cout << "Stop threshold position = " << stopThreshold_mm << " mm\n";
+	std::cout << "Trigger position = " << triggerPosition_mm << " mm\n";
+	std::cout << "Vel = " << vel / mmps << " mm/s\n\n";
+}
+
+//DO1 and DO2 of Z-stage are used to trigger the stack acquisition. Currently only DO2 is used as trigger. See the implementation on LV
+void Stage::configDOtriggers_() const
+{
+
+	//STAGE X. DO1 (PIN5 of the RS232 connector). DI2 (PIN2 of the RS232 connector). AFAIR, DI1 was not working properly as an an input pin (disabled by the firmware?)
+	const DIOCHAN XDO1{ DIOCHAN::D1 };
+	setDOtriggerEnabled(XX, XDO1, true);																//Enable DO1 output
+	setDOtriggerParamSingle(XX, XDO1, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));	//Configure DO1 as motion monitor
+
+
+	//STAGE Z
+	//DO1 TRIGGER: DO1 is set to output a pulse (fixed width = 50 us) whenever the stage covers a certain distance (e.g. 0.3 um)
+	/*
+	const int DO1{ 1 };
+	setDOtriggerEnabled(Z, DO1, true);	//Enable DO1 trigger
+	const double triggerStep{ 0.3 * um };
+	const DOTRIGMODE triggerMode{ POSDIST };
+	const double startThreshold{ 0. * mm };
+	const double stopThreshold{ 0. * mm };
+	setDOtriggerParamAll(Z, DO1, triggerStep, triggerMode, startThreshold, stopThreshold);
+	*/
+
+	//DO2 TRIGGER: DO2 is set to output HIGH when the stage Z is in motion
+	const DIOCHAN ZDO2{ DIOCHAN::D2 };
+	setDOtriggerEnabled(ZZ, ZDO2, true);																//Enable DO2 output
+	setDOtriggerParamSingle(ZZ, ZDO2, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));	//Configure DO2 as motion monitor
+}
+
+std::string Stage::axisToString_(const Axis axis) const
+{
+	switch (axis)
+	{
+	case XX:
+		return "X";
+	case YY:
+		return "Y";
+	case ZZ:
+		return "Z";
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
+	}
+}
+#pragma endregion "Stages"
+
+#pragma region "Vibratome"
+Vibratome::Vibratome(const FPGA &fpga, Stage &stage) :
+	mFpga{ fpga },
+	mStage{ stage }
+{}
+
+//Start or stop running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
+void Vibratome::pushStartStopButton() const
+{
+	const int pulsewidth{ 100 * ms }; //in ms. It has to be longer than~ 12 ms, otherwise the vibratome is not triggered
+
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_VTstart, true));
+
+	Sleep(static_cast<DWORD>(pulsewidth / ms));
+
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
+}
+
+void Vibratome::slice(const double planeZtoCut)
+{
+	mStage.setVelXYZ(mStageConveyingVelXYZ);													//Change the velocity to move the sample to the vibratome
+	mStage.moveXYZ({ mStageInitialSlicePosXY.XX, mStageInitialSlicePosXY.YY, planeZtoCut });	//Position the sample in front of the vibratome's blade
+	mStage.waitForMotionToStopAll();
+
+	mStage.setVelSingle(Stage::YY, mSlicingVel);							//Change the y vel for slicing
+	pushStartStopButton();													//Turn on the vibratome
+	mStage.moveSingle(Stage::YY, mStageFinalSlicePosY);						//Slice the sample: move the stage Y towards the blade
+	mStage.waitForMotionToStopSingle(Stage::YY);							//Wait until the motion ends
+	mStage.setVelSingle(Stage::YY, mStageConveyingVelXYZ.YY);				//Set back the y vel to move the sample back to the microscope
+
+	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));				//Move the stage Y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
+	//mStage.waitForMotionToStopSingle(Y);									//Wait until the motion ends
+
+	pushStartStopButton();													//Turn off the vibratome
+}
+
+/*//NOT USING THESE FUNCTIONS ANYMORE
+//Move the head of the vibratome forward or backward for 'duration'. The timing varies in approx 1 ms
+void Vibratome::moveHead_(const double duration, const MotionDir motionDir) const
+{
+	NiFpga_FPGAvi_ControlBool selectedChannel;
+	const double minDuration{ 10. * ms };
+	const double delay{ 1. * ms };				//Used to roughly calibrate the pulse length
+
+	switch (motionDir)
+	{
+	case BACKWARD:
+		selectedChannel = NiFpga_FPGAvi_ControlBool_VTback;
+		break;
+	case FORWARD:
+		selectedChannel = NiFpga_FPGAvi_ControlBool_VTforward;
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected vibratome channel unavailable");
+	}
+
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), selectedChannel, true));
+
+	if (duration >= minDuration)
+		Sleep(static_cast<DWORD>((duration - delay)/ms));
+	else
+	{
+		Sleep(static_cast<DWORD>((minDuration - delay)/ms));
+		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << 1. * minDuration / ms << "ms" << "\n";
+	}
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), selectedChannel, false));
+}
+
+void Vibratome::cutAndRetractDistance(const double distance) const
+{
+	const double cuttingTime{ distance / mCuttingSpeed };
+	const double retractingTime{ distance / mMovingSpeed };
+
+	pushStartStopButton();
+	std::cout << "The vibratome is cutting for " << cuttingTime / sec << " seconds" << "\n";
+	Sleep(static_cast<DWORD>(cuttingTime / ms));
+	Sleep(2000);
+	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
+	moveHead_(retractingTime, BACKWARD);
+}
+
+
+void Vibratome::retractDistance(const double distance) const
+{
+	const double retractingTime{ static_cast<int>(distance / mMovingSpeed) };
+	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
+	moveHead_(retractingTime, BACKWARD);
+}
+*/
+#pragma endregion "Vibratome"
+
 #pragma region "Filterwheel"
 Filterwheel::Filterwheel(const ID whichFilterwheel) :
 	mWhichFilterwheel{ whichFilterwheel }
@@ -1246,7 +1757,7 @@ double Pockels::laserpowerToVolt_(const double power) const
 			angularFreq = 0.647 / V;
 			Vphase = 0.011 * V;
 
-			break;
+			break;//The calibration is not current!!
 		case 920:
 			powerAmplitude = 1089.0 * mW;
 			powerMin = 0 * mW;
@@ -1411,15 +1922,21 @@ std::string VirtualLaser::laserNameToString_(const Laser::ID whichLaser) const
 }
 
 //Automatically select a laser: VISION, FIDELITY, or let the code to decide based on the requested wavelength
+	//If < 1040 nm, use VISION
+	//If = 1040 nm, use VISION for 1X and FIDELITY for 16X
 Laser::ID VirtualLaser::autoSelectLaser_(const int wavelength_nm) const
 {
-	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
 	if (mWhichLaser == Laser::ID::AUTO)
 	{
 		if (wavelength_nm < 1040)
 			return Laser::ID::VISION;
 		else if (wavelength_nm == 1040)
-			return Laser::ID::FIDELITY;
+		{
+			if(multibeam)
+				return Laser::ID::FIDELITY;
+			else
+				return Laser::ID::VISION;
+		}
 		else
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Wavelengths > 1040 nm is not implemented in the VirtualLaser class");
 	}
@@ -1577,101 +2094,41 @@ void CollectorLens::set(const int wavelength_nm)
 }
 #pragma endregion "CollectorLens"
 
-#pragma region "Mesoscope"
-//The constructor established a connection with the 2 lasers.
-//Mesoscope::configure() and Mesoscope::setPower() must be called after this constructor!! otherwise some class members will no be properly initialized
-Mesoscope::Mesoscope(const Laser::ID whichLaser) :
-	VirtualLaser{ whichLaser }
-{}
-
-//Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
-void Mesoscope::configure(RTcontrol &RTcontrol, const int wavelength_nm)
-{
-	std::future<void> th1{ std::async(&VirtualLaser::setWavelength, this, std::ref(RTcontrol), std::ref(wavelength_nm)) };		//Tune the laser wavelength
-	std::future<void> th2{ std::async(&CombinedFilterwheel::turnFilterwheels, &mVirtualFilterWheel, wavelength_nm) };			//Set the filterwheels
-	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };									//Set the collector lens position
-
-	try
-	{
-		th1.get();
-		th2.get();
-		th3.get();
-	}
-	catch (...)
-	{
-		throw;
-	}
-}
-
-void Mesoscope::setPower(const double laserPower) const
-{
-	this->VirtualLaser::setPowerLinearScaling(laserPower, laserPower);
-}
-
-//Open the Uniblitz shutter
-void Mesoscope::openShutter() const
-{
-	//Check if the laser internal shutter is open
-	this->VirtualLaser::isLaserInternalShutterOpen();
-
-	//Open the Uniblitz shutter
-	this->VirtualLaser::openShutter();
-}
-
-//Used for optimizing the collector lens position
-void Mesoscope::moveCollectorLens(const double position)
-{
-	mCollectorLens.move(position);
-}
-#pragma endregion "Mesoscope"
-
 #pragma region "Galvo"
-Galvo::Galvo(RTcontrol &RTcontrol, const RTcontrol::RTCHAN whichGalvo, const double posMax, const Mesoscope *mesoscope) :
+//constructor for the scanner
+Galvo::Galvo(RTcontrol &RTcontrol, const double posMax) :
 	mRTcontrol{ RTcontrol },
-	mWhichGalvo{ whichGalvo },
+	mWhichGalvo{ RTcontrol::RTCHAN::SCANNER },
+	mVoltagePerDistance{ g_scannerCalib.voltagePerDistance },
+	mVoltageOffset{ g_scannerCalib.voltageOffset },
 	mPosMax{ posMax }
 {
-	reconfigure(mesoscope);
+	//For debugging
+	//std::cout << "Scanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
+	//std::cout << "Scanner mVoltageOffset = " << mVoltageOffset << "\n";
+
+	//Raster scan the sample from the positive to the negative direction of the X-stage
+	positionLinearRamp(-mPosMax, mPosMax, mVoltageOffset, OVERRIDE::EN);
 }
 
-void Galvo::reconfigure(const Mesoscope *mesoscope)
+//Constructor for the rescanner
+Galvo::Galvo(RTcontrol &RTcontrol, const double posMax, const Laser::ID whichLaser, const int wavelength_nm) :
+	mRTcontrol{ RTcontrol },
+	mWhichGalvo{ RTcontrol::RTCHAN::RESCANNER },
+	mPosMax{ posMax }
 {
-	Laser::ID whichLaser;
-	int wavelength_nm;
+	reconfigure(whichLaser, wavelength_nm);
+}
 
-	//Make sure that the laser and wavelength are well defined in mesoscope, otherwise use Vision at 750 nm as default
-	if (mesoscope != nullptr)
-	{
-		whichLaser = mesoscope->currentLaser();
-		wavelength_nm = mesoscope->currentWavelength_nm();
-	}
-	else
-	{
-		whichLaser = Laser::ID::VISION;
-		wavelength_nm = 750;
-	}
-
-	//Choose the scan or rescan galvo because the calibration parameters are different
+void Galvo::reconfigure(const Laser::ID whichLaser, const int wavelength_nm)
+{
 	switch (mWhichGalvo)//which GALVO
 	{
-	case RTcontrol::RTCHAN::SCANNER:
-		mVoltagePerDistance = g_scannerCalib.voltagePerDistance;
-		mVoltageOffset = g_scannerCalib.voltageOffset;
-
-		//For debugging
-		//std::cout << "Scanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
-		//std::cout << "Scanner mVoltageOffset = " << mVoltageOffset << "\n";
-
-		//Raster scan the sample from the positive to the negative direction of the X-stage
-		positionLinearRamp(-mPosMax, mPosMax, mVoltageOffset, OVERRIDE::EN);
-		break;
 	case RTcontrol::RTCHAN::RESCANNER:
-
-		//The calibration of the rescanner is slightly different when using Vision or Fidelity
+		//The calibration of the rescanner is slightly different for Vision and Fidelity
 		switch (whichLaser)
 		{
-
-		//The calibration of the rescanner also depends on the wavelength used
+			//The calibration of the rescanner also depends on the wavelength used
 		case Laser::ID::VISION:
 			switch (wavelength_nm)
 			{
@@ -1724,7 +2181,7 @@ double Galvo::singlebeamVoltageOffset() const
 	switch (mRTcontrol.mPMT16Xchan)
 	{
 	case RTcontrol::PMT16XCHAN::CH00:
-		beamletIndex =  7.5;
+		beamletIndex = 7.5;
 		break;
 	case RTcontrol::PMT16XCHAN::CH01:
 		beamletIndex = 6.5;
@@ -1795,11 +2252,6 @@ void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, co
 	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, Vi, Vf, override);
 }
 
-void Galvo::positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal, const OVERRIDE override) const
-{
-	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, mVoltagePerDistance * posInitial, mVoltagePerDistance * posFinal, override);
-}
-
 //Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with a fixed z)
 void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset, const OVERRIDE override) const
 {
@@ -1817,516 +2269,53 @@ void Galvo::positionLinearRamp(const double posInitial, const double posFinal, c
 }
 #pragma endregion "Galvo"
 
-#pragma region "Stages"
-Stage::Stage(const double velX, const double velY, const double velZ, const std::vector<LIMIT2> stageSoftPosLimXYZ) :
-	mSoftPosLimXYZ{ stageSoftPosLimXYZ }
-{
-	const std::string stageIDx{ "116049107" };	//X-stage (V-551.4B)
-	const std::string stageIDy{ "116049105" };	//Y-stage (V-551.2B)
-	const std::string stageIDz{ "0165500631" };	//Z-stage (ES-100)
-
-	//Open the connections to the stage controllers and assign the IDs
-	std::cout << "Establishing connection with the stages\n";
-	mHandleXYZ.at(XX) = PI_ConnectUSB(stageIDx.c_str());
-	mHandleXYZ.at(YY) = PI_ConnectUSB(stageIDy.c_str());
-	mHandleXYZ.at(ZZ) = PI_ConnectRS232(mPort_z, mBaud_z); // nPortNr = 4 for "COM4" (CGS manual p12). For some reason 'PI_ConnectRS232' connects faster than 'PI_ConnectUSB'. More comments in [1]
-	//mHandleXYZ.at(Z) = PI_ConnectUSB(stageIDz.c_str());
-
-	if (mHandleXYZ.at(XX) < 0)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage X");
-
-	if (mHandleXYZ.at(YY) < 0)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Y");
-
-	if (mHandleXYZ.at(ZZ) < 0)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not connect to the stage Z");
-
-	std::cout << "Connection with the stages successfully established\n";
-
-	//Download the current position
-	mPosXYZ.XX = downloadPositionSingle_(XX);
-	mPosXYZ.YY = downloadPositionSingle_(YY);
-	mPosXYZ.ZZ = downloadPositionSingle_(ZZ);
-
-	//Download the current velocities
-	mVelXYZ.XX = downloadVelSingle_(XX);
-	mVelXYZ.YY = downloadVelSingle_(YY);
-	mVelXYZ.ZZ = downloadVelSingle_(ZZ);
-
-	configDOtriggers_();				//Configure the stage velocities and DO triggers
-	setVelXYZ({ velX, velY, velZ });	//Set the stage velocities
-}
-
-Stage::~Stage()
-{
-	//Close the Connections
-	PI_CloseConnection(mHandleXYZ.at(XX));
-	PI_CloseConnection(mHandleXYZ.at(YY));
-	PI_CloseConnection(mHandleXYZ.at(ZZ));
-	//std::cout << "Connection with the stages successfully closed\n";
-}
-
-//Recall the current position for the 3 stages
-POSITION3 Stage::readPosXYZ() const
-{
-	return mPosXYZ;
-}
-
-void Stage::printPosXYZ() const
-{
-	std::cout << "Stage X position = " << mPosXYZ.XX / mm << " mm\n";
-	std::cout << "Stage Y position = " << mPosXYZ.YY / mm << " mm\n";
-	std::cout << "Stage Z position = " << mPosXYZ.ZZ / mm << " mm\n";
-}
-
-double Stage::readCurrentPosition_(const Axis axis) const
-{
-	switch (axis)
-	{
-	case XX:
-		return mPosXYZ.XX;
-	case YY:
-		return mPosXYZ.YY;
-	case ZZ:
-		return mPosXYZ.ZZ;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
-	}
-}
-
-void Stage::setCurrentPosition_(const Axis axis, const double position)
-{
-	switch(axis)
-	{
-	case XX:
-		mPosXYZ.XX = position;
-	case YY:
-		mPosXYZ.YY = position;
-	case ZZ:
-		mPosXYZ.ZZ = position;
-	}
-}
-
-double Stage::readCurrentVelocity_(const Axis axis) const
-{
-	switch (axis)
-	{
-	case XX:
-		return mVelXYZ.XX;
-	case YY:
-		return mVelXYZ.YY;
-	case ZZ:
-		return mVelXYZ.ZZ;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
-	}
-}
-
-void Stage::setCurrentVelocity_(const Axis axis, const double velocity)
-{
-	switch (axis)
-	{
-	case XX:
-		mVelXYZ.XX = velocity;
-	case YY:
-		mVelXYZ.YY = velocity;
-	case ZZ:
-		mVelXYZ.ZZ = velocity;
-	}
-}
-
-//Retrieve the stage position from the controller
-double Stage::downloadPositionSingle_(const Axis axis)
-{
-	double position_mm;	//Position in mm
-	if (!PI_qPOS(mHandleXYZ.at(axis), mNstagesPerController, &position_mm))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query position for the stage " + axisToString_(axis));
-
-	return position_mm * mm;	//Multiply by mm to convert from explicit to implicit units
-}
-
-//Move the stage to the requested position
-void Stage::moveSingle(const Axis axis, const double position)
-{
-	//Check if the requested position is within range
-	if (position < mSoftPosLimXYZ.at(axis).MIN || position > mSoftPosLimXYZ.at(axis).MAX)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the soft limits of the stage " + axisToString_(axis));
-	if (position < mTravelRangeXYZ.at(axis).MIN || position > mTravelRangeXYZ.at(axis).MAX)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the physical limits of the stage " + axisToString_(axis));
-
-	//Move the stage
-	if (readCurrentPosition_(axis) != position) //Move only if the requested position is different from the current position
-	{
-		const double position_mm{ position / mm };									//Divide by mm to convert from implicit to explicit units
-		if (!PI_MOV(mHandleXYZ.at(axis), mNstagesPerController, &position_mm))		//~14 ms to execute this function
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString_(axis) + " to the target position (maybe hardware limits?)");
-
-		setCurrentPosition_(axis, position);
-	}
-}
-
-//Move the 2 stages to the requested position
-void Stage::moveXY(const POSITION2 posXY)
-{
-	moveSingle(XX, posXY.XX);
-	moveSingle(YY, posXY.YY);
-}
-
-//Move the 3 stages to the requested position
-void Stage::moveXYZ(const POSITION3 posXYZ)
-{
-	moveSingle(XX, posXYZ.XX);
-	moveSingle(YY, posXYZ.YY);
-	moveSingle(ZZ, posXYZ.ZZ);
-}
-
-bool Stage::isMoving(const Axis axis) const
-{
-	BOOL isMoving;
-
-	if (!PI_IsMoving(mHandleXYZ.at(axis), mNstagesPerController, &isMoving))	//~55 ms to execute this function
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage " + axisToString_(axis));
-
-	return isMoving;
-}
-
-void Stage::waitForMotionToStopSingle(const Axis axis) const
-{
-	std::cout << "Stage " + axisToString_(axis) + " moving to the new position: ";
-
-	BOOL isMoving;
-	do {
-		if (!PI_IsMoving(mHandleXYZ.at(axis), mNstagesPerController, &isMoving))
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage" + axisToString_(axis));
-
-		std::cout << ".";
-		Sleep(300);
-	} while (isMoving);
-
-	std::cout << "\n";
-}
-
-void Stage::waitForMotionToStopAll() const
-{
-	std::cout << "Stages moving to the new position: ";
-
-	BOOL isMovingX, isMovingY, isMovingZ;
-	do {
-		if (!PI_IsMoving(mHandleXYZ.at(XX), mNstagesPerController, &isMovingX))
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage X");
-
-		if (!PI_IsMoving(mHandleXYZ.at(YY), mNstagesPerController, &isMovingY))
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Y");
-
-		if (!PI_IsMoving(mHandleXYZ.at(ZZ), mNstagesPerController, &isMovingZ))
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage Z");
-
-		std::cout << ".";
-	} while (isMovingX || isMovingY || isMovingZ);
-
-	std::cout << "\n";
-}
-
-void Stage::stopAll() const
-{
-	PI_StopAll(mHandleXYZ.at(XX));
-	PI_StopAll(mHandleXYZ.at(YY));
-	PI_StopAll(mHandleXYZ.at(ZZ));
-
-	std::cout << "Stages stopped\n";
-}
-
-//Request the velocity of the stage
-double Stage::downloadVelSingle_(const Axis axis) const
-{
-	double vel_mmps;
-	if (!PI_qVEL(mHandleXYZ.at(axis), mNstagesPerController, &vel_mmps))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage " + axisToString_(axis));
-
-	//std::cout << vel_mmps << " mm/s\n";
-	return vel_mmps * mmps;					//Multiply by mmps to convert from explicit to implicit units
-}
-
-//Set the velocity of the stage
-void Stage::setVelSingle(const Axis axis, const double vel)
-{
-	//Check if the requested vel is valid
-	if (vel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be > 0 for the stage " + axisToString_(axis));
-
-	//Update the vel if different
-	if (readCurrentVelocity_(axis) != vel)
-	{
-		const double vel_mmps{ vel / mmps };		//Divide by mmps to convert implicit to explicit units
-		if (!PI_VEL(mHandleXYZ.at(axis), mNstagesPerController, &vel_mmps))
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString_(axis));
-
-		setCurrentVelocity_(axis, vel);
-		//std::cout << "stage vel updated\n"; //For debugging
-	}
-}
-
-//Set the velocity of the stage 
-void Stage::setVelXYZ(const VELOCITY3 velXYZ)
-{
-	setVelSingle(XX, velXYZ.XX);
-	setVelSingle(YY, velXYZ.YY);
-	setVelSingle(ZZ, velXYZ.ZZ);
-}
-
-void Stage::printVelXYZ() const
-{
-	std::cout << "Stage X vel = " << mVelXYZ.XX / mmps << " mm/s\n";
-	std::cout << "Stage Y vel = " << mVelXYZ.YY / mmps << " mm/s\n";
-	std::cout << "Stage Z vel = " << mVelXYZ.ZZ / mmps << " mm/s\n";
-}
-
-//Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
-//This function requests the trigger parameters of the stage. Consult the manual for C-863 p165
-//1: trigger step in mm
-//2: axis of the controller ( always 1 because each controller has only 1 stage)
-//3: trigger mode (0: position distance, 2: on target, 6: in motion, 7: position+offset)
-//7: polarity (0 for active low, 1 for active high)
-//8: start threshold in mm
-//9: stop threshold in mm
-//10: trigger position in mm
-double Stage::downloadDOtriggerParamSingle_(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID) const
-{
-	const int triggerParamID_int{ static_cast<int>(triggerParamID) };
-	const int DOchan_int{ static_cast<int>(DOchan) };
-	double value;
-	if (!PI_qCTO(mHandleXYZ.at(axis), &DOchan_int, &triggerParamID_int, &value, 1))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger config for the stage " + axisToString_(axis));
-
-	//std::cout << value << "\n";
-	return value;
-}
-
-void Stage::setDOtriggerParamSingle(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID, const double value) const
-{
-	const int triggerParamID_int{ static_cast<int>(triggerParamID) };
-	const int DOchan_int{ static_cast<int>(DOchan) };
-	if (!PI_CTO(mHandleXYZ.at(axis), &DOchan_int, &triggerParamID_int, &value, 1))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + axisToString_(axis));
-}
-
-void Stage::setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const
-{
-	if (triggerStep <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be > 0");
-
-	if (startThreshold < mTravelRangeXYZ.at(axis).MIN || startThreshold > mTravelRangeXYZ.at(axis).MAX)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The start position is out of the physical limits of the stage " + axisToString_(axis));
-
-	if (stopThreshold < mTravelRangeXYZ.at(axis).MIN || stopThreshold > mTravelRangeXYZ.at(axis).MAX)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stop position is out of the physical limits of the stage " + axisToString_(axis));
-
-
-	setDOtriggerParamSingle(axis, DOchan, DOPARAM::TRIGSTEP, triggerStep / mm);					//Trigger step
-	setDOtriggerParamSingle(axis, DOchan, DOPARAM::AXISNUMBER, 1);								//Axis of the controller (always 1 because each controller has only 1 stage)
-	setDOtriggerParamSingle(axis, DOchan, DOPARAM::TRIGMODE, static_cast<double>(triggerMode));	//Trigger mode
-	setDOtriggerParamSingle(axis, DOchan, DOPARAM::POLARITY, 1);								//POLARITY (0 for active low, 1 for active high)
-	setDOtriggerParamSingle(axis, DOchan, DOPARAM::STARTTHRES, startThreshold / mm);			//Start threshold
-	setDOtriggerParamSingle(axis, DOchan, DOPARAM::STOPTHRES, stopThreshold / mm);				//Stop threshold
-}
-
-//Request the enable/disable status of the stage DO
-bool Stage::isDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan) const
-{
-	BOOL triggerState;
-	const int DOchan_int{ static_cast<int>(DOchan) };
-	if (!PI_qTRO(mHandleXYZ.at(axis), &DOchan_int, &triggerState, 1))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger EN/DIS stage for the stage " + axisToString_(axis));
-
-	//std::cout << triggerState << "\n";
-	return triggerState;
-}
-
-//Enable or disable the stage DO
-void Stage::setDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan, const BOOL triggerState) const
-{
-	const int DOchan_int{ static_cast<int>(DOchan) };
-	if (!PI_TRO(mHandleXYZ.at(axis), &DOchan_int, &triggerState, 1))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger EN/DIS state for the stage " + axisToString_(axis));
-}
-
-//Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
-//Print out the relevant parameters
-void Stage::printStageConfig(const Axis axis, const DIOCHAN chan) const
-{
-	switch (axis)
-	{
-	case XX:
-		//Only DO1 is wired to the FPGA
-		if (chan != DIOCHAN::D1)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString_(axis));
-		break;
-	case YY:
-		//Only DO1 is wired to the FPGA
-		if (chan != DIOCHAN::D1)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString_(axis));
-		break;
-	case ZZ:
-		//Only DO1 and DO2 are wired to the FPGA
-		if (chan != DIOCHAN::D1 || chan != DIOCHAN::D2)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 and DO2 are currently wired to the FPGA for the stage " + axisToString_(axis));
-		break;
-	}
-
-	const double triggerStep_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::TRIGSTEP) };
-	const int triggerMode{ static_cast<int>(downloadDOtriggerParamSingle_(axis, chan, DOPARAM::TRIGMODE)) };
-	const int polarity{ static_cast<int>(downloadDOtriggerParamSingle_(axis, chan, DOPARAM::POLARITY)) };
-	const double startThreshold_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::STARTTHRES) };
-	const double stopThreshold_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::STOPTHRES) };
-	const double triggerPosition_mm{ downloadDOtriggerParamSingle_(axis, chan, DOPARAM::TRIGPOS) };
-	const bool triggerState{ isDOtriggerEnabled(axis, chan) };
-	const double vel{ downloadVelSingle_(axis) };
-
-	std::cout << "Configuration for the stage = " << axisToString_(axis) << ", DOchan = " << static_cast<int>(chan) << ":\n";
-	std::cout << "is DO trigger enabled? = " << triggerState << "\n";
-	std::cout << "Trigger step = " << triggerStep_mm << " mm\n";
-	std::cout << "Trigger mode = " << triggerMode << "\n";
-	std::cout << "POLARITY = " << polarity << "\n";
-	std::cout << "Start threshold position = " << startThreshold_mm << " mm\n";
-	std::cout << "Stop threshold position = " << stopThreshold_mm << " mm\n";
-	std::cout << "Trigger position = " << triggerPosition_mm << " mm\n";
-	std::cout << "Vel = " << vel / mmps << " mm/s\n\n";
-}
-
-//DO1 and DO2 of Z-stage are used to trigger the stack acquisition. Currently only DO2 is used as trigger. See the implementation on LV
-void Stage::configDOtriggers_() const
-{
-
-	//STAGE X. DO1 (PIN5 of the RS232 connector). DI2 (PIN2 of the RS232 connector). AFAIR, DI1 was not working properly as an an input pin (disabled by the firmware?)
-	const DIOCHAN XDO1{ DIOCHAN::D1 };
-	setDOtriggerEnabled(XX, XDO1, true);																//Enable DO1 output
-	setDOtriggerParamSingle(XX, XDO1, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));	//Configure DO1 as motion monitor
-
-
-	//STAGE Z
-	//DO1 TRIGGER: DO1 is set to output a pulse (fixed width = 50 us) whenever the stage covers a certain distance (e.g. 0.3 um)
-	/*
-	const int DO1{ 1 };
-	setDOtriggerEnabled(Z, DO1, true);	//Enable DO1 trigger
-	const double triggerStep{ 0.3 * um };
-	const DOTRIGMODE triggerMode{ POSDIST };
-	const double startThreshold{ 0. * mm };
-	const double stopThreshold{ 0. * mm };
-	setDOtriggerParamAll(Z, DO1, triggerStep, triggerMode, startThreshold, stopThreshold);
-	*/
-
-	//DO2 TRIGGER: DO2 is set to output HIGH when the stage Z is in motion
-	const DIOCHAN ZDO2{ DIOCHAN::D2 };
-	setDOtriggerEnabled(ZZ, ZDO2, true);																//Enable DO2 output
-	setDOtriggerParamSingle(ZZ, ZDO2, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));	//Configure DO2 as motion monitor
-}
-
-std::string Stage::axisToString_(const Axis axis) const
-{
-	switch (axis)
-	{
-	case XX:
-		return "X";
-	case YY:
-		return "Y";
-	case ZZ:
-		return "Z";
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid stage axis");
-	}
-}
-#pragma endregion "Stages"
-
-#pragma region "Vibratome"
-Vibratome::Vibratome(const FPGA &fpga, Stage &stage) :
-	mFpga{ fpga },
-	mStage{ stage }
+#pragma region "Mesoscope"
+//The constructor established a connection with the 2 lasers.
+//Mesoscope::configure() and Mesoscope::setPower() must be called after this constructor!! otherwise some class members will no be properly initialized
+Mesoscope::Mesoscope(const Laser::ID whichLaser) :
+	VirtualLaser{ whichLaser }
 {}
 
-//Start or stop running the vibratome. Simulate the act of pushing a button on the vibratome control pad.
-void Vibratome::pushStartStopButton() const
+//Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
+void Mesoscope::configure(RTcontrol &RTcontrol, const int wavelength_nm)
 {
-	const int pulsewidth{ 100 * ms }; //in ms. It has to be longer than~ 12 ms, otherwise the vibratome is not triggered
+	std::future<void> th1{ std::async(&VirtualLaser::setWavelength, this, std::ref(RTcontrol), std::ref(wavelength_nm)) };		//Tune the laser wavelength
+	std::future<void> th2{ std::async(&CombinedFilterwheel::turnFilterwheels, &mVirtualFilterWheel, wavelength_nm) };			//Set the filterwheels
+	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };									//Set the collector lens position
 
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_VTstart, true));
-
-	Sleep(static_cast<DWORD>(pulsewidth / ms));
-
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
-}
-
-void Vibratome::slice(const double planeZtoCut)
-{
-	mStage.setVelXYZ(mStageConveyingVelXYZ);													//Change the velocity to move the sample to the vibratome
-	mStage.moveXYZ({ mStageInitialSlicePosXY.XX, mStageInitialSlicePosXY.YY, planeZtoCut });	//Position the sample in front of the vibratome's blade
-	mStage.waitForMotionToStopAll();
-
-	mStage.setVelSingle(Stage::YY, mSlicingVel);							//Change the y vel for slicing
-	pushStartStopButton();													//Turn on the vibratome
-	mStage.moveSingle(Stage::YY, mStageFinalSlicePosY);						//Slice the sample: move the stage Y towards the blade
-	mStage.waitForMotionToStopSingle(Stage::YY);							//Wait until the motion ends
-	mStage.setVelSingle(Stage::YY, mStageConveyingVelXYZ.YY);				//Set back the y vel to move the sample back to the microscope
-
-	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));				//Move the stage Y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
-	//mStage.waitForMotionToStopSingle(Y);									//Wait until the motion ends
-
-	pushStartStopButton();													//Turn off the vibratome
-}
-
-/*//NOT USING THESE FUNCTIONS ANYMORE
-//Move the head of the vibratome forward or backward for 'duration'. The timing varies in approx 1 ms
-void Vibratome::moveHead_(const double duration, const MotionDir motionDir) const
-{
-	NiFpga_FPGAvi_ControlBool selectedChannel;
-	const double minDuration{ 10. * ms };
-	const double delay{ 1. * ms };				//Used to roughly calibrate the pulse length
-
-	switch (motionDir)
+	try
 	{
-	case BACKWARD:
-		selectedChannel = NiFpga_FPGAvi_ControlBool_VTback;
-		break;
-	case FORWARD:
-		selectedChannel = NiFpga_FPGAvi_ControlBool_VTforward;
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected vibratome channel unavailable");
+		th1.get();
+		th2.get();
+		th3.get();
 	}
-
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), selectedChannel, true));
-
-	if (duration >= minDuration)
-		Sleep(static_cast<DWORD>((duration - delay)/ms));
-	else
+	catch (...)
 	{
-		Sleep(static_cast<DWORD>((minDuration - delay)/ms));
-		std::cerr << "WARNING in " << __FUNCTION__ << ": Vibratome pulse duration too short. Duration set to the min = ~" << 1. * minDuration / ms << "ms" << "\n";
+		throw;
 	}
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), selectedChannel, false));
 }
 
-void Vibratome::cutAndRetractDistance(const double distance) const
+void Mesoscope::setPower(const double laserPower) const
 {
-	const double cuttingTime{ distance / mCuttingSpeed };
-	const double retractingTime{ distance / mMovingSpeed };
-
-	pushStartStopButton();
-	std::cout << "The vibratome is cutting for " << cuttingTime / sec << " seconds" << "\n";
-	Sleep(static_cast<DWORD>(cuttingTime / ms));
-	Sleep(2000);
-	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
-	moveHead_(retractingTime, BACKWARD);
+	this->VirtualLaser::setPowerLinearScaling(laserPower, laserPower);
 }
 
-
-void Vibratome::retractDistance(const double distance) const
+//Open the Uniblitz shutter
+void Mesoscope::openShutter() const
 {
-	const double retractingTime{ static_cast<int>(distance / mMovingSpeed) };
-	std::cout << "The vibratome is retracting for " << retractingTime / sec << " seconds" << "\n";
-	moveHead_(retractingTime, BACKWARD);
+	//Check if the laser internal shutter is open
+	this->VirtualLaser::isLaserInternalShutterOpen();
+
+	//Open the Uniblitz shutter
+	this->VirtualLaser::openShutter();
 }
-*/
-#pragma endregion "Vibratome"
+
+//Used for optimizing the collector lens position
+void Mesoscope::moveCollectorLens(const double position)
+{
+	mCollectorLens.move(position);
+}
+#pragma endregion "Mesoscope"
 
 /*
 [1] The stage Z has a virtual COM port that works on top of the USB connection (CGS manual p9). This is, the function PI_ConnectRS232(int nPortNr, int iBaudRate) can be used even when the controller (Mercury C-863) is connected via USB.

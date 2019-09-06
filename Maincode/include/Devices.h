@@ -91,9 +91,92 @@ private:
 	const int mTimeout{ 300 * ms };
 	const int mRxBufferSize{ 256 };				//Serial buffer size
 
-	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index) const;		//The PMT requires a sumcheck. Refer to the manual
 	std::vector<uint8_t> sendCommand_(std::vector<uint8_t> command) const;
 	int PMT16XCHANtoInt_(const RTcontrol::PMT16XCHAN chan) const;
+	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index) const;		//The PMT requires a sumcheck. Refer to the manual
+};
+
+class Stage
+{
+public:
+	enum Axis { XX, YY, ZZ };
+	enum class DOPARAM { TRIGSTEP = 1, AXISNUMBER = 2, TRIGMODE = 3, POLARITY = 7, STARTTHRES = 8, STOPTHRES = 9, TRIGPOS = 10 };		//*cast
+	enum class DOTRIGMODE { POSDIST = 0, ONTARGET = 2, INMOTION = 6, POSOFFSET = 7 };
+	enum class DIOCHAN { D1 = 1, D2 = 2 };
+	const std::vector<LIMIT2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };				//Travel range set by the physical limits of the stage
+
+	Stage(const double velX, const double velY, const double velZ, const std::vector<LIMIT2> stageSoftPosLimXYZ = { {0,0},{0,0},{0,0} });
+	~Stage();
+	Stage(const Stage&) = delete;				//Disable copy-constructor
+	Stage& operator=(const Stage&) = delete;	//Disable assignment-constructor
+	Stage(Stage&&) = delete;					//Disable move constructor
+	Stage& operator=(Stage&&) = delete;			//Disable move-assignment constructor
+
+	POSITION3 readPosXYZ() const;
+	void printPosXYZ() const;
+	void moveSingle(const Axis stage, const double position);
+	void moveXY(const POSITION2 posXY);
+	void moveXYZ(const POSITION3 posXYZ);
+	bool isMoving(const Axis axis) const;
+	void waitForMotionToStopSingle(const Axis axis) const;
+	void waitForMotionToStopAll() const;
+	void stopAll() const;
+	void setVelSingle(const Axis axis, const double vel);
+	void setVelXYZ(const VELOCITY3 vel);
+	void printVelXYZ() const;
+	void setDOtriggerParamSingle(const Axis axis, const DIOCHAN DIOchan, const DOPARAM triggerParamID, const double value) const;
+	void setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const;
+	bool isDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan) const;
+	void setDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan, const BOOL triggerState) const;
+	void printStageConfig(const Axis axis, const DIOCHAN chan) const;
+private:
+	const int mPort_z{ 4 };										//COM port
+	const int mBaud_z{ 38400 };
+	std::array<int, 3> mHandleXYZ;								//Stage handler
+
+	const char mNstagesPerController[2]{ "1" };					//Number of stages per controller (currently 1)
+	POSITION3 mPosXYZ;											//Absolute position of the stages
+	VELOCITY3 mVelXYZ;											//Velocity of the stages
+	std::vector<LIMIT2> mSoftPosLimXYZ{ {0,0},{0,0},{0,0} };	//Travel soft limits (may differ from the hard limits stored in the internal memory of the stages)
+																//Initialized with invalid values (lower limit = upper limit) for safety. It must be overridden by the constructor
+	double readCurrentPosition_(const Axis axis) const;
+	void setCurrentPosition_(const Axis axis, const double position);
+	double readCurrentVelocity_(const Axis axis) const;
+	void setCurrentVelocity_(const Axis axis, const double velocity);
+	double downloadPositionSingle_(const Axis axis);
+	double downloadVelSingle_(const Axis axis) const;
+	double downloadDOtriggerParamSingle_(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID) const;
+	void configDOtriggers_() const;
+	std::string axisToString_(const Axis axis) const;
+};
+
+class Vibratome
+{
+public:
+	const POSITION2 mStageInitialSlicePosXY{ -53. * mm, 2. * mm };	//Position the stages in front oh the vibratome's blade
+	const double mStageFinalSlicePosY{ 20. * mm };					//Final position of the Y-stage after slicing
+
+	Vibratome(const FPGA &fpga, Stage &stage);
+	Vibratome(const Vibratome&) = delete;							//Disable copy-constructor
+	Vibratome& operator=(const Vibratome&) = delete;				//Disable assignment-constructor
+	Vibratome(Vibratome&&) = delete;								//Disable move constructor
+	Vibratome& operator=(Vibratome&&) = delete;						//Disable move-assignment constructor
+
+	void pushStartStopButton() const;
+	void slice(const double planeZtoCut);
+private:
+	const FPGA &mFpga;
+	Stage &mStage;
+
+	const double mSlicingVel{ 0.5 * mmps };											//Move the Y-stage at this velocity for slicing
+	const VELOCITY3 mStageConveyingVelXYZ{ 10. * mmps, 10.  *mmps, 0.5 * mmps };	//Transport the sample between the objective and vibratome at this velocity
+	//enum MotionDir { BACKWARD = -1, FORWARD = 1 };
+	//double mCuttingSpeed{ 0.5 * mmps };	//Speed of the vibratome for cutting (manual setting)
+	//double mMovingSpeed{ 2.495 * mmps };	//Measured moving speed of the head: 52.4 mm in 21 seconds = 2.495 mm/s. Set by hardware. Cannot be changed
+	//double mTravelRange{ 52.4 * mm };		//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
+	//void moveHead_(const double duration, const MotionDir motionDir) const;
+	//void cutAndRetractDistance(const double distance) const;
+	//void retractDistance(const double distance) const;
 };
 
 class Filterwheel
@@ -230,7 +313,7 @@ private:
 	double laserpowerToVolt_(const double power) const;
 };
 
-//Integrate the Laser, Shutter, and Pockels classes in a single class
+//Integrate Laser, Shutter, and Pockels classes in a single class
 class VirtualLaser
 {
 public:
@@ -287,39 +370,20 @@ public:
 	void set(const int wavelength_nm);
 };
 
-//Integrate the VirtualLaser, Pockels, and CombinedFilterwheels classes in a single class
-class Mesoscope: public VirtualLaser
-{
-public:
-	Mesoscope(const Laser::ID whichLaser = Laser::ID::AUTO);
-	Mesoscope(const Mesoscope&) = delete;				//Disable copy-constructor
-	Mesoscope& operator=(const Mesoscope&) = delete;	//Disable assignment-constructor
-	Mesoscope(Mesoscope&&) = delete;					//Disable move constructor
-	Mesoscope& operator=(Mesoscope&&) = delete;		//Disable move-assignment constructor
-
-	void configure(RTcontrol &RTcontrol, const int wavelength_nm);
-	void setPower(const double laserPower) const;
-	void openShutter() const;
-	void moveCollectorLens(const double position);
-private:
-	CombinedFilterwheel mVirtualFilterWheel;
-	CollectorLens mCollectorLens;
-};
-
 class Galvo
 {
 public:
-	Galvo(RTcontrol &RTcontrol, const RTcontrol::RTCHAN whichGalvo, const double posMax, const Mesoscope *mesoscope = nullptr);
+	Galvo::Galvo(RTcontrol &RTcontrol, const double posMax);
+	Galvo(RTcontrol &RTcontrol, const double posMax, const Laser::ID whichLaser, const int wavelength_nm);
 	Galvo(const Galvo&) = delete;				//Disable copy-constructor
 	Galvo& operator=(const Galvo&) = delete;	//Disable assignment-constructor
 	Galvo(Galvo&&) = delete;					//Disable move constructor
 	Galvo& operator=(Galvo&&) = delete;			//Disable move-assignment constructor
 
-	void reconfigure(const Mesoscope *mesoscope);
+	void reconfigure(const Laser::ID whichLaser, const int wavelength_nm);
 	void voltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const;
-	void positionLinearRamp(const double timeStep, const double rampLength, const double posInitial, const double posFinal, const OVERRIDE override) const;
 	void positionLinearRamp(const double posInitial, const double posFinal, const double posOffset, const OVERRIDE override) const;
 private:
 	const double mRampDurationFineTuning{ -30. * us };		//Slightly decrease the ramp duration, otherwise the ramp overflow in each frame accumulates over a continuous scan (e.g. over 200 frames)
@@ -336,85 +400,21 @@ private:
 	double singlebeamVoltageOffset() const;
 };
 
-class Stage
+//Integrate VirtualLaser, Pockels, and CombinedFilterwheels classes in a single class
+class Mesoscope: public VirtualLaser
 {
 public:
-	enum Axis { XX, YY, ZZ };
-	enum class DOPARAM { TRIGSTEP = 1, AXISNUMBER = 2, TRIGMODE = 3, POLARITY = 7, STARTTHRES = 8, STOPTHRES = 9, TRIGPOS = 10 };		//*cast
-	enum class DOTRIGMODE { POSDIST = 0, ONTARGET = 2, INMOTION = 6, POSOFFSET = 7 };
-	enum class DIOCHAN { D1 = 1, D2 = 2 };
-	const std::vector<LIMIT2> mTravelRangeXYZ{ { -65. * mm, 65. * mm }, { -30. * mm, 30. * mm }, { 0. * mm, 26. * mm } };				//Travel range set by the physical limits of the stage
+	Mesoscope(const Laser::ID whichLaser = Laser::ID::AUTO);
+	Mesoscope(const Mesoscope&) = delete;				//Disable copy-constructor
+	Mesoscope& operator=(const Mesoscope&) = delete;	//Disable assignment-constructor
+	Mesoscope(Mesoscope&&) = delete;					//Disable move constructor
+	Mesoscope& operator=(Mesoscope&&) = delete;		//Disable move-assignment constructor
 
-	Stage(const double velX, const double velY, const double velZ, const std::vector<LIMIT2> stageSoftPosLimXYZ = { {0,0},{0,0},{0,0} });
-	~Stage();
-	Stage(const Stage&) = delete;				//Disable copy-constructor
-	Stage& operator=(const Stage&) = delete;	//Disable assignment-constructor
-	Stage(Stage&&) = delete;					//Disable move constructor
-	Stage& operator=(Stage&&) = delete;			//Disable move-assignment constructor
-
-	POSITION3 readPosXYZ() const;
-	void printPosXYZ() const;
-	void moveSingle(const Axis stage, const double position);
-	void moveXY(const POSITION2 posXY);
-	void moveXYZ(const POSITION3 posXYZ);
-	bool isMoving(const Axis axis) const;
-	void waitForMotionToStopSingle(const Axis axis) const;
-	void waitForMotionToStopAll() const;
-	void stopAll() const;
-	void setVelSingle(const Axis axis, const double vel);
-	void setVelXYZ(const VELOCITY3 vel);
-	void printVelXYZ() const;
-	void setDOtriggerParamSingle(const Axis axis, const DIOCHAN DIOchan, const DOPARAM triggerParamID, const double value) const;
-	void setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const;
-	bool isDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan) const;
-	void setDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan, const BOOL triggerState) const;
-	void printStageConfig(const Axis axis, const DIOCHAN chan) const;
+	void configure(RTcontrol &RTcontrol, const int wavelength_nm);
+	void setPower(const double laserPower) const;
+	void openShutter() const;
+	void moveCollectorLens(const double position);
 private:
-	const int mPort_z{ 4 };										//COM port
-	const int mBaud_z{ 38400 };
-	std::array<int, 3> mHandleXYZ;								//Stage handler
-
-	const char mNstagesPerController[2]{ "1" };					//Number of stages per controller (currently 1)
-	POSITION3 mPosXYZ;											//Absolute position of the stages
-	VELOCITY3 mVelXYZ;											//Velocity of the stages
-	std::vector<LIMIT2> mSoftPosLimXYZ{ {0,0},{0,0},{0,0} };	//Travel soft limits (may differ from the hard limits stored in the internal memory of the stages)
-																//Initialized with invalid values (lower limit = upper limit) for safety. It must be overridden by the constructor
-	double readCurrentPosition_(const Axis axis) const;
-	void setCurrentPosition_(const Axis axis, const double position);
-	double readCurrentVelocity_(const Axis axis) const;
-	void setCurrentVelocity_(const Axis axis, const double velocity);
-	double downloadPositionSingle_(const Axis axis);
-	double downloadVelSingle_(const Axis axis) const;
-	double downloadDOtriggerParamSingle_(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID) const;
-	void configDOtriggers_() const;
-	std::string axisToString_(const Axis axis) const;
-};
-
-class Vibratome
-{
-public:
-	const POSITION2 mStageInitialSlicePosXY{ -53. * mm, 2. * mm };	//Position the stages in front oh the vibratome's blade
-	const double mStageFinalSlicePosY{ 20. * mm };					//Final position of the Y-stage after slicing
-	
-	Vibratome(const FPGA &fpga, Stage &stage);
-	Vibratome(const Vibratome&) = delete;							//Disable copy-constructor
-	Vibratome& operator=(const Vibratome&) = delete;				//Disable assignment-constructor
-	Vibratome(Vibratome&&) = delete;								//Disable move constructor
-	Vibratome& operator=(Vibratome&&) = delete;						//Disable move-assignment constructor
-
-	void pushStartStopButton() const;
-	void slice(const double planeZtoCut);
-private:
-	const FPGA &mFpga;
-	Stage &mStage;
-
-	const double mSlicingVel{ 0.5 * mmps };											//Move the Y-stage at this velocity for slicing
-	const VELOCITY3 mStageConveyingVelXYZ{ 10. * mmps, 10.  *mmps, 0.5 * mmps };	//Transport the sample between the objective and vibratome at this velocity
-	//enum MotionDir { BACKWARD = -1, FORWARD = 1 };
-	//double mCuttingSpeed{ 0.5 * mmps };	//Speed of the vibratome for cutting (manual setting)
-	//double mMovingSpeed{ 2.495 * mmps };	//Measured moving speed of the head: 52.4 mm in 21 seconds = 2.495 mm/s. Set by hardware. Cannot be changed
-	//double mTravelRange{ 52.4 * mm };		//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
-	//void moveHead_(const double duration, const MotionDir motionDir) const;
-	//void cutAndRetractDistance(const double distance) const;
-	//void retractDistance(const double distance) const;
+	CombinedFilterwheel mVirtualFilterWheel;
+	CollectorLens mCollectorLens;
 };

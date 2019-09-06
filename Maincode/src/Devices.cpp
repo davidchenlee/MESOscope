@@ -224,7 +224,7 @@ void ResonantScanner::setFFOV(const double FFOV)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested FFOV must be in the range [0-" + std::to_string(mVMAX / mVoltagePerDistance / um) + "] um");
 
 	//Upload the control voltage
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::voltageToI16(mControlVoltage)));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::convertVoltageToI16(mControlVoltage)));
 }
 
 //First set the FFOV, then set RSenable on
@@ -260,7 +260,7 @@ double ResonantScanner::downloadControlVoltage() const
 	I16 control_I16;
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
 
-	return FPGAfunc::intToVoltage(control_I16);
+	return FPGAfunc::convertIntToVoltage(control_I16);
 }
 
 //Check if the RS is set to run. It does not actually check if the RS is running, for example, by looking at the RSsync signal
@@ -299,7 +299,7 @@ void ResonantScanner::setVoltage_(const double controlVoltage)
 	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;			//Spatial sampling resolution (length/pixel)
 
 	//Upload the control voltage
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::voltageToI16(mControlVoltage)));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::convertVoltageToI16(mControlVoltage)));
 }
 #pragma endregion "Resonant scanner"
 
@@ -665,7 +665,7 @@ double Stage::downloadPositionSingle_(const Axis axis)
 {
 	double position_mm;	//Position in mm
 	if (!PI_qPOS(mHandleXYZ.at(axis), mNstagesPerController, &position_mm))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query position for the stage " + axisToString_(axis));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query position for the stage " + convertAxisToString_(axis));
 
 	return position_mm * mm;	//Multiply by mm to convert from explicit to implicit units
 }
@@ -675,16 +675,16 @@ void Stage::moveSingle(const Axis axis, const double position)
 {
 	//Check if the requested position is within range
 	if (position < mSoftPosLimXYZ.at(axis).MIN || position > mSoftPosLimXYZ.at(axis).MAX)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the soft limits of the stage " + axisToString_(axis));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the soft limits of the stage " + convertAxisToString_(axis));
 	if (position < mTravelRangeXYZ.at(axis).MIN || position > mTravelRangeXYZ.at(axis).MAX)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the physical limits of the stage " + axisToString_(axis));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested position is out of the physical limits of the stage " + convertAxisToString_(axis));
 
 	//Move the stage
-	if (readCurrentPosition_(axis) != position) //Move only if the requested position is different from the current position
+	if (readCurrentPosition_(axis) != position)										//Move only if the requested position is different from the current position
 	{
 		const double position_mm{ position / mm };									//Divide by mm to convert from implicit to explicit units
 		if (!PI_MOV(mHandleXYZ.at(axis), mNstagesPerController, &position_mm))		//~14 ms to execute this function
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + axisToString_(axis) + " to the target position (maybe hardware limits?)");
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to move stage " + convertAxisToString_(axis) + " to the target position (maybe hardware limits?)");
 
 		setCurrentPosition_(axis, position);
 	}
@@ -710,19 +710,19 @@ bool Stage::isMoving(const Axis axis) const
 	BOOL isMoving;
 
 	if (!PI_IsMoving(mHandleXYZ.at(axis), mNstagesPerController, &isMoving))	//~55 ms to execute this function
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage " + axisToString_(axis));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage " + convertAxisToString_(axis));
 
 	return isMoving;
 }
 
 void Stage::waitForMotionToStopSingle(const Axis axis) const
 {
-	std::cout << "Stage " + axisToString_(axis) + " moving to the new position: ";
+	std::cout << "Stage " + convertAxisToString_(axis) + " moving to the new position: ";
 
 	BOOL isMoving;
 	do {
 		if (!PI_IsMoving(mHandleXYZ.at(axis), mNstagesPerController, &isMoving))
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage" + axisToString_(axis));
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query movement status for stage" + convertAxisToString_(axis));
 
 		std::cout << ".";
 		Sleep(300);
@@ -766,7 +766,7 @@ double Stage::downloadVelSingle_(const Axis axis) const
 {
 	double vel_mmps;
 	if (!PI_qVEL(mHandleXYZ.at(axis), mNstagesPerController, &vel_mmps))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage " + axisToString_(axis));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the velocity for the stage " + convertAxisToString_(axis));
 
 	//std::cout << vel_mmps << " mm/s\n";
 	return vel_mmps * mmps;					//Multiply by mmps to convert from explicit to implicit units
@@ -777,14 +777,14 @@ void Stage::setVelSingle(const Axis axis, const double vel)
 {
 	//Check if the requested vel is valid
 	if (vel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be > 0 for the stage " + axisToString_(axis));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The velocity must be > 0 for the stage " + convertAxisToString_(axis));
 
 	//Update the vel if different
 	if (readCurrentVelocity_(axis) != vel)
 	{
 		const double vel_mmps{ vel / mmps };		//Divide by mmps to convert implicit to explicit units
 		if (!PI_VEL(mHandleXYZ.at(axis), mNstagesPerController, &vel_mmps))
-			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + axisToString_(axis));
+			throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the velocity for the stage " + convertAxisToString_(axis));
 
 		setCurrentVelocity_(axis, vel);
 		//std::cout << "stage vel updated\n"; //For debugging
@@ -821,7 +821,7 @@ double Stage::downloadDOtriggerParamSingle_(const Axis axis, const DIOCHAN DOcha
 	const int DOchan_int{ static_cast<int>(DOchan) };
 	double value;
 	if (!PI_qCTO(mHandleXYZ.at(axis), &DOchan_int, &triggerParamID_int, &value, 1))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger config for the stage " + axisToString_(axis));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger config for the stage " + convertAxisToString_(axis));
 
 	//std::cout << value << "\n";
 	return value;
@@ -832,7 +832,7 @@ void Stage::setDOtriggerParamSingle(const Axis axis, const DIOCHAN DOchan, const
 	const int triggerParamID_int{ static_cast<int>(triggerParamID) };
 	const int DOchan_int{ static_cast<int>(DOchan) };
 	if (!PI_CTO(mHandleXYZ.at(axis), &DOchan_int, &triggerParamID_int, &value, 1))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + axisToString_(axis));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + convertAxisToString_(axis));
 }
 
 void Stage::setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const
@@ -841,10 +841,10 @@ void Stage::setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const do
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be > 0");
 
 	if (startThreshold < mTravelRangeXYZ.at(axis).MIN || startThreshold > mTravelRangeXYZ.at(axis).MAX)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The start position is out of the physical limits of the stage " + axisToString_(axis));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The start position is out of the physical limits of the stage " + convertAxisToString_(axis));
 
 	if (stopThreshold < mTravelRangeXYZ.at(axis).MIN || stopThreshold > mTravelRangeXYZ.at(axis).MAX)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stop position is out of the physical limits of the stage " + axisToString_(axis));
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stop position is out of the physical limits of the stage " + convertAxisToString_(axis));
 
 
 	setDOtriggerParamSingle(axis, DOchan, DOPARAM::TRIGSTEP, triggerStep / mm);					//Trigger step
@@ -861,7 +861,7 @@ bool Stage::isDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan) const
 	BOOL triggerState;
 	const int DOchan_int{ static_cast<int>(DOchan) };
 	if (!PI_qTRO(mHandleXYZ.at(axis), &DOchan_int, &triggerState, 1))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger EN/DIS stage for the stage " + axisToString_(axis));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to query the trigger EN/DIS stage for the stage " + convertAxisToString_(axis));
 
 	//std::cout << triggerState << "\n";
 	return triggerState;
@@ -872,7 +872,7 @@ void Stage::setDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan, const BOO
 {
 	const int DOchan_int{ static_cast<int>(DOchan) };
 	if (!PI_TRO(mHandleXYZ.at(axis), &DOchan_int, &triggerState, 1))
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger EN/DIS state for the stage " + axisToString_(axis));
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger EN/DIS state for the stage " + convertAxisToString_(axis));
 }
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
@@ -884,17 +884,17 @@ void Stage::printStageConfig(const Axis axis, const DIOCHAN chan) const
 	case XX:
 		//Only DO1 is wired to the FPGA
 		if (chan != DIOCHAN::D1)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString_(axis));
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + convertAxisToString_(axis));
 		break;
 	case YY:
 		//Only DO1 is wired to the FPGA
 		if (chan != DIOCHAN::D1)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + axisToString_(axis));
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 is currently wired to the FPGA for the stage " + convertAxisToString_(axis));
 		break;
 	case ZZ:
 		//Only DO1 and DO2 are wired to the FPGA
 		if (chan != DIOCHAN::D1 || chan != DIOCHAN::D2)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 and DO2 are currently wired to the FPGA for the stage " + axisToString_(axis));
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Only DO1 and DO2 are currently wired to the FPGA for the stage " + convertAxisToString_(axis));
 		break;
 	}
 
@@ -907,7 +907,7 @@ void Stage::printStageConfig(const Axis axis, const DIOCHAN chan) const
 	const bool triggerState{ isDOtriggerEnabled(axis, chan) };
 	const double vel{ downloadVelSingle_(axis) };
 
-	std::cout << "Configuration for the stage = " << axisToString_(axis) << ", DOchan = " << static_cast<int>(chan) << ":\n";
+	std::cout << "Configuration for the stage = " << convertAxisToString_(axis) << ", DOchan = " << static_cast<int>(chan) << ":\n";
 	std::cout << "is DO trigger enabled? = " << triggerState << "\n";
 	std::cout << "Trigger step = " << triggerStep_mm << " mm\n";
 	std::cout << "Trigger mode = " << triggerMode << "\n";
@@ -946,7 +946,7 @@ void Stage::configDOtriggers_() const
 	setDOtriggerParamSingle(ZZ, ZDO2, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));	//Configure DO2 as motion monitor
 }
 
-std::string Stage::axisToString_(const Axis axis) const
+std::string Stage::convertAxisToString_(const Axis axis) const
 {
 	switch (axis)
 	{
@@ -980,7 +980,7 @@ void Vibratome::pushStartStopButton() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
 }
 
-void Vibratome::slice(const double planeZtoCut)
+void Vibratome::sliceTissue(const double planeZtoCut)
 {
 	mStage.setVelXYZ(mStageConveyingVelXYZ);													//Change the velocity to move the sample to the vibratome
 	mStage.moveXYZ({ mStageInitialSlicePosXY.XX, mStageInitialSlicePosXY.YY, planeZtoCut });	//Position the sample in front of the vibratome's blade
@@ -1077,7 +1077,7 @@ Filterwheel::Filterwheel(const ID whichFilterwheel) :
 	{
 		mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(static_cast<int>(mPort)), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms)));
 		mPosition = downloadPosition_();		//Download the current filter position
-		mColor = positionToColor_(mPosition);
+		mColor = convertPositionToColor_(mPosition);
 	}
 	catch (const serial::IOException)
 	{
@@ -1093,7 +1093,7 @@ Filterwheel::~Filterwheel()
 //Set the color of the filterwheel
 void Filterwheel::setColor(const COLOR color)
 {
-	const int position{ colorToPosition_(color) };
+	const int position{ convertColorToPosition_(color) };
 
 	if (position != mPosition)
 	{
@@ -1112,7 +1112,7 @@ void Filterwheel::setColor(const COLOR color)
 
 			//Thread-safe message
 			std::stringstream msg;
-			msg << "Setting the " << mFilterwheelName << " to " + colorToString_(color) << "...\n";
+			msg << "Setting the " << mFilterwheelName << " to " + convertColorToString_(color) << "...\n";
 			std::cout << msg.str();
 
 			Sleep(static_cast<DWORD>(1. * minSteps / mTurningSpeed / ms));	//Wait until the filterwheel stops turning the turret
@@ -1128,7 +1128,7 @@ void Filterwheel::setColor(const COLOR color)
 			{
 				//Thread-safe message
 				std::stringstream msg;
-				//msg << mFilterwheelName << " successfully set to " + colorToString_(mColor) << " (position = " << mPosition << ")\n";
+				//msg << mFilterwheelName << " successfully set to " + convertColorToString_(mColor) << " (position = " << mPosition << ")\n";
 				std::cout << msg.str();
 			}
 			else
@@ -1196,7 +1196,7 @@ int Filterwheel::downloadPosition_() const
 }
 
 //Convert the color of the filter to the wheel position
-int Filterwheel::colorToPosition_(const COLOR color) const
+int Filterwheel::convertColorToPosition_(const COLOR color) const
 {
 	for (std::vector<int>::size_type iter = 0; iter < mFWconfig.size(); iter++)
 	{
@@ -1208,7 +1208,7 @@ int Filterwheel::colorToPosition_(const COLOR color) const
 }
 
 //Convert the wheel position to the color
-Filterwheel::COLOR Filterwheel::positionToColor_(const int position) const
+Filterwheel::COLOR Filterwheel::convertPositionToColor_(const int position) const
 {
 	if (position < 1 || position > mNpos)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The filterwheel position must be between 1 and " + std::to_string(mNpos));
@@ -1217,7 +1217,7 @@ Filterwheel::COLOR Filterwheel::positionToColor_(const int position) const
 }
 
 //Convert enum COLOR to string
-std::string Filterwheel::colorToString_(const COLOR color) const
+std::string Filterwheel::convertColorToString_(const COLOR color) const
 {
 	std::string colorStr;
 	switch (color)
@@ -1463,7 +1463,7 @@ bool Laser::isShutterOpen() const
 	}
 }
 
-int Laser::currentWavelength_nm() const
+int Laser::readCurrentWavelength_nm() const
 {
 	return mWavelength_nm;
 }
@@ -1538,7 +1538,7 @@ Shutter::~Shutter()
 }
 
 //Set the shutter open or close
-void Shutter::setShutter(const bool state) const
+void Shutter::setState(const bool state) const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), mWhichShutter, state));
 }
@@ -1606,10 +1606,10 @@ void Pockels::pushPowerSinglet(const double timeStep, const double P, const OVER
 	if (P < 0 || P > mMaxPower)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power of the pockels cell must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower / mW)) + "] mW");
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, laserpowerToVolt_(P), override);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, convertPowerToVolt_(P), override);
 }
 
-void Pockels::voltageToZero() const
+void Pockels::setVoltageToZero() const
 {
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, g_tMinAO, 0 * V);
 }
@@ -1640,7 +1640,7 @@ void Pockels::voltageLinearScaling(const double Vi, const double Vf) const
 }*/
 
 //Linearly scale the laser power from the first to the last frame
-void Pockels::powerLinearScaling(const double Pi, const double Pf) const
+void Pockels::pushPowerLinearScaling(const double Pi, const double Pf) const
 {
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
@@ -1648,13 +1648,13 @@ void Pockels::powerLinearScaling(const double Pi, const double Pf) const
 	//Delete the default scaling factors = 1.0 created in the Pockels constructor
 	mRTcontrol.clearQueue(mScalingRTchan);
 
-	const double Vi{ laserpowerToVolt_(Pi) };
+	const double Vi{ convertPowerToVolt_(Pi) };
 
 	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
 
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
 	{
-		const double VV{ laserpowerToVolt_(Pi + (Pf - Pi) / (mRTcontrol.mNframes - 1) * ii) };
+		const double VV{ convertPowerToVolt_(Pi + (Pf - Pi) / (mRTcontrol.mNframes - 1) * ii) };
 		const double Vratio{ VV / Vi };
 
 		//Make sure that Fx2p14 does not overflow
@@ -1670,7 +1670,7 @@ void Pockels::powerLinearScaling(const double Pi, const double Pf) const
 }
 
 //Exponentially scale the laser power from the first to the last frame
-void Pockels::powerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const
+void Pockels::pushPowerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const
 {
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
@@ -1680,7 +1680,7 @@ void Pockels::powerExponentialScaling(const double Pmin, const double interframe
 	//Delete the default scaling factors = 1.0 created in the Pockels constructor
 	mRTcontrol.clearQueue(mScalingRTchan);
 
-	const double Vmin{ laserpowerToVolt_(Pmin) };
+	const double Vmin{ convertPowerToVolt_(Pmin) };
 	pushVoltageSinglet(timeStep, Vmin, OVERRIDE::EN);	//Set the laser power for the first frame
 
 	const double Pmax{ exponentialFunction(Pmin,(mRTcontrol.mNframes - 1) * interframeDistance, std::abs(decayLengthZ)) };
@@ -1692,12 +1692,12 @@ void Pockels::powerExponentialScaling(const double Pmin, const double interframe
 		double VV;
 		if (decayLengthZ > 0)
 		{
-			VV = laserpowerToVolt_(exponentialFunction(Pmin, ii * interframeDistance, decayLengthZ));	//Exponential growth
+			VV = convertPowerToVolt_(exponentialFunction(Pmin, ii * interframeDistance, decayLengthZ));	//Exponential growth
 		}
 		else //decayLengthZ < 0
 		{
-			const double Vmax{ laserpowerToVolt_(Pmax) };
-			VV = laserpowerToVolt_(exponentialFunction(Pmax, ii * interframeDistance, decayLengthZ));	//Exponential decay because decayLengthZ < 0
+			const double Vmax{ convertPowerToVolt_(Pmax) };
+			VV = convertPowerToVolt_(exponentialFunction(Pmax, ii * interframeDistance, decayLengthZ));	//Exponential decay because decayLengthZ < 0
 		}
 
 		//Make sure that Fx2p14 does not overflow
@@ -1714,10 +1714,9 @@ void Pockels::powerExponentialScaling(const double Pmin, const double interframe
 
 }
 
-
 void Pockels::setShutter(const bool state) const
 {
-	mShutter.setShutter(state);
+	mShutter.setState(state);
 }
 
 /*
@@ -1736,12 +1735,12 @@ void  Pockels::powerLinearRampInFrame(const double timeStep, const double rampDu
 	if (Pi < 0 || Pf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTcontrol.pushLinearRamp(mPockelsRTchan, timeStep, rampDuration, laserpowerToVolt_(Pi), laserpowerToVolt_(Pf));
+	mRTcontrol.pushLinearRamp(mPockelsRTchan, timeStep, rampDuration, convertPowerToVolt_(Pi), convertPowerToVolt_(Pf));
 }
 */
 
 // power = powerAmplitude * sin( angularFreq * (V - Vphase))^2 + powerMin;
-double Pockels::laserpowerToVolt_(const double power) const
+double Pockels::convertPowerToVolt_(const double power) const
 {
 	double powerAmplitude, powerMin, angularFreq, Vphase;		//Calibration parameters
 
@@ -1805,14 +1804,14 @@ VirtualLaser::VirtualLaser(const Laser::ID whichLaser) :
 {}
 
 //Which laser is currently being used
-Laser::ID VirtualLaser::currentLaser() const
+Laser::ID VirtualLaser::readCurrentLaser() const
 {
 	return mCurrentLaser;
 }
 
-std::string VirtualLaser::currentLaser_s(const bool justTheNameInitials) const
+std::string VirtualLaser::readCurrentLaser_s(const bool justTheNameInitials) const
 {
-	std::string fullName{ laserNameToString_(mCurrentLaser) };
+	std::string fullName{ convertLaserNameToString_(mCurrentLaser) };
 	std::string nameInitials{ fullName.front() };
 
 	if (justTheNameInitials && nameInitials.size() != 0)
@@ -1821,14 +1820,14 @@ std::string VirtualLaser::currentLaser_s(const bool justTheNameInitials) const
 	return fullName;
 }
 
-int VirtualLaser::currentWavelength_nm() const
+int VirtualLaser::readCurrentWavelength_nm() const
 {
 	switch (mCurrentLaser)
 	{
 	case Laser::ID::VISION:
-		return mVision.currentWavelength_nm();
+		return mVision.readCurrentWavelength_nm();
 	case Laser::ID::FIDELITY:
-		return mFidelity.currentWavelength_nm();
+		return mFidelity.readCurrentWavelength_nm();
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}
@@ -1850,7 +1849,7 @@ void VirtualLaser::isLaserInternalShutterOpen() const
 
 	//Check if the corresponding internal shutter is open
 	if (!isShutterOpen)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": The internal shutter of " + laserNameToString_(mCurrentLaser) + " seems to be closed");
+		throw std::runtime_error((std::string)__FUNCTION__ + ": The internal shutter of " + convertLaserNameToString_(mCurrentLaser) + " seems to be closed");
 }
 
 //Change the laser wavelength (tune Vision or switching lasers accordingly) and switch pockels
@@ -1860,14 +1859,14 @@ void VirtualLaser::setWavelength(RTcontrol &RTcontrol, const int wavelength_nm)
 	Laser::ID newLaser = autoSelectLaser_(wavelength_nm);
 
 	std::stringstream msg;
-	msg << "Using " << laserNameToString_(newLaser) << " at " << wavelength_nm << " nm\n";
+	msg << "Using " << convertLaserNameToString_(newLaser) << " at " << wavelength_nm << " nm\n";
 	std::cout << msg.str();
 
 	//For the first call, assign a pointer to mPockelsPtr
 	if (mPockelsPtr == nullptr)
 		mPockelsPtr.reset(new Pockels(RTcontrol, wavelength_nm, newLaser));
 	//For the subsequent calls, destroy the pockels object when switching wavelengths (including switching lasers) to avoid photobleaching the sample (the pockels destructor closes the shutter)
-	else if (currentWavelength_nm() != wavelength_nm || mCurrentLaser != newLaser)
+	else if (readCurrentWavelength_nm() != wavelength_nm || mCurrentLaser != newLaser)
 		mPockelsPtr.reset(new Pockels(RTcontrol, wavelength_nm, newLaser));
 
 	//If VISION is selected, set the new wavelength
@@ -1885,7 +1884,7 @@ void VirtualLaser::setPowerLinearScaling(const double Pi, const double Pf) const
 
 	//Linearly scale the laser power across the frames
 	if (Pf != Pi)
-		mPockelsPtr->powerLinearScaling(Pi, Pf);
+		mPockelsPtr->pushPowerLinearScaling(Pi, Pf);
 }
 
 //Exponential scale the laser power from the first to the last frame
@@ -1895,7 +1894,7 @@ void VirtualLaser::setPowerExponentialScaling(const double Pmin, const double di
 	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pmin, OVERRIDE::EN);
 
 	//Exponentially scale the laser power across the frames
-	mPockelsPtr->powerExponentialScaling(Pmin, distancePerFrame, decayLengthZ);
+	mPockelsPtr->pushPowerExponentialScaling(Pmin, distancePerFrame, decayLengthZ);
 }
 
 void VirtualLaser::openShutter() const
@@ -1908,7 +1907,7 @@ void VirtualLaser::closeShutter() const
 	mPockelsPtr->setShutter(false);
 }
 
-std::string VirtualLaser::laserNameToString_(const Laser::ID whichLaser) const
+std::string VirtualLaser::convertLaserNameToString_(const Laser::ID whichLaser) const
 {
 	switch (whichLaser)
 	{
@@ -2050,7 +2049,7 @@ void StepperActuator::downloadConfig() const
 	std::cout << "Collector lens acceleration: " << currentAcceleration << " internal units\tvelocity: " << currentVelocity << " internal units\n";
 }
 
-void StepperActuator::home()
+void StepperActuator::moveHome()
 {
 	Sleep(100);	//The code does not work without this sleep
 	SCC_ClearMessageQueue(mSerialNumber);
@@ -2108,7 +2107,7 @@ Galvo::Galvo(RTcontrol &RTcontrol, const double posMax) :
 	//std::cout << "Scanner mVoltageOffset = " << mVoltageOffset << "\n";
 
 	//Raster scan the sample from the positive to the negative direction of the X-stage
-	positionLinearRamp(-mPosMax, mPosMax, mVoltageOffset, OVERRIDE::EN);
+	pushPositionLinearRamp(-mPosMax, mPosMax, mVoltageOffset, OVERRIDE::EN);
 }
 
 //Constructor for the rescanner
@@ -2168,14 +2167,14 @@ void Galvo::reconfigure(const Laser::ID whichLaser, const int wavelength_nm)
 		//std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
 
 		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
-		positionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + singlebeamVoltageOffset(), OVERRIDE::EN);
+		pushPositionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + readSinglebeamVoltageOffset(), OVERRIDE::EN);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
 	}
 }
 
-double Galvo::singlebeamVoltageOffset() const
+double Galvo::readSinglebeamVoltageOffset() const
 {
 	double beamletIndex;
 	switch (mRTcontrol.mPMT16Xchan)
@@ -2237,7 +2236,7 @@ double Galvo::singlebeamVoltageOffset() const
 	return beamletIndex * mInterBeamletDistance * mVoltagePerDistance;
 }
 
-void Galvo::voltageToZero() const
+void Galvo::setVoltageToZero() const
 {
 	mRTcontrol.pushAnalogSinglet(mWhichGalvo, g_tMinAO, 0 * V);
 }
@@ -2247,13 +2246,13 @@ void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
 	mRTcontrol.pushAnalogSinglet(mWhichGalvo, timeStep, AO);
 }
 
-void Galvo::voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const
+void Galvo::pushVoltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const
 {
 	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, Vi, Vf, override);
 }
 
 //Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with a fixed z)
-void Galvo::positionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset, const OVERRIDE override) const
+void Galvo::pushPositionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset, const OVERRIDE override) const
 {
 	//Limit the number of steps for long ramps because the buffer of the galvos on the fpga currently only supports 5000 elements
 	//For timeStep = 2 us, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned in a single frame

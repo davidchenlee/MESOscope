@@ -147,7 +147,7 @@ private:
 	double downloadVelSingle_(const Axis axis) const;
 	double downloadDOtriggerParamSingle_(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID) const;
 	void configDOtriggers_() const;
-	std::string axisToString_(const Axis axis) const;
+	std::string convertAxisToString_(const Axis axis) const;
 };
 
 class Vibratome
@@ -163,7 +163,7 @@ public:
 	Vibratome& operator=(Vibratome&&) = delete;						//Disable move-assignment constructor
 
 	void pushStartStopButton() const;
-	void slice(const double planeZtoCut);
+	void sliceTissue(const double planeZtoCut);
 private:
 	const FPGA &mFpga;
 	Stage &mStage;
@@ -230,9 +230,9 @@ private:
 	const int mRxBufSize{ 256 };				//Serial buffer size
 
 	int downloadPosition_() const;
-	int colorToPosition_(const COLOR color) const;
-	COLOR positionToColor_(const int position) const;
-	std::string colorToString_(const COLOR color) const;
+	int convertColorToPosition_(const COLOR color) const;
+	COLOR convertPositionToColor_(const int position) const;
+	std::string convertColorToString_(const COLOR color) const;
 };
 
 class CombinedFilterwheel
@@ -262,7 +262,7 @@ public:
 	void setWavelength(const int wavelength_nm);
 	void setShutter(const bool state) const;
 	bool isShutterOpen() const;
-	int currentWavelength_nm() const;
+	int readCurrentWavelength_nm() const;
 private:
 	ID mWhichLaser;
 	int mWavelength_nm;
@@ -282,7 +282,7 @@ public:
 	Shutter(const FPGA &fpga, const Laser::ID whichLaser);
 	~Shutter();
 
-	void setShutter(const bool state) const;
+	void setState(const bool state) const;
 	void pulse(const double pulsewidth) const;
 private:
 	const FPGA &mFpga;
@@ -296,10 +296,10 @@ public:
 
 	void pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const;
 	void pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const;
-	void voltageToZero() const;
+	void setVoltageToZero() const;
 	//void voltageLinearScaling(const double Vi, const double Vf) const;
-	void powerLinearScaling(const double Pi, const double Pf) const;
-	void powerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const;
+	void pushPowerLinearScaling(const double Pi, const double Pf) const;
+	void pushPowerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const;
 	void setShutter(const bool state) const;
 private:
 	RTcontrol &mRTcontrol;						//Non-const because the laser power is pushed into the queues in RTcontrol						
@@ -310,7 +310,7 @@ private:
 	double mMaxPower;							//Softlimit for the laser power
 	const Shutter mShutter;
 
-	double laserpowerToVolt_(const double power) const;
+	double convertPowerToVolt_(const double power) const;
 };
 
 //Integrate Laser, Shutter, and Pockels classes in a single class
@@ -318,9 +318,9 @@ class VirtualLaser
 {
 public:
 	VirtualLaser(const Laser::ID whichLaser = Laser::ID::AUTO);
-	Laser::ID currentLaser() const;
-	std::string currentLaser_s(const bool justTheNameInitials) const;
-	int currentWavelength_nm() const;
+	Laser::ID readCurrentLaser() const;
+	std::string readCurrentLaser_s(const bool justTheNameInitials) const;
+	int readCurrentWavelength_nm() const;
 	void isLaserInternalShutterOpen() const;
 	void setWavelength(RTcontrol &RTcontrol, const int wavelength_nm);
 	void setPowerLinearScaling(const double Pi, const double Pf) const;
@@ -332,10 +332,10 @@ private:
 	Laser::ID mCurrentLaser;						//Current laser in use: VISION or FIDELITY
 	Laser mVision;
 	Laser mFidelity;
-	std::unique_ptr <Pockels> mPockelsPtr;		//Create a pockels handle dynamically. Alternatively, I could create a fixed handle for each wavelength used
+	std::unique_ptr <Pockels> mPockelsPtr;			//Create a pockels handle dynamically. Alternatively, I could create a fixed handle for each wavelength used
 	const double mPockelTimeStep{ 8. * us };		//Time step for the pockels sequence
 
-	std::string laserNameToString_(const Laser::ID whichLaser) const;
+	std::string convertLaserNameToString_(const Laser::ID whichLaser) const;
 	Laser::ID autoSelectLaser_(const int wavelength_nm) const;
 };
 
@@ -351,7 +351,7 @@ public:
 
 	void move(const double position);
 	void downloadConfig() const;
-	void home();
+	void moveHome();
 private:
 	//To obtain the calibration, use Thorlabs APT software to set the position in mm, then read the position in internal-units via downloadConfig() implemented in this class
 	double mPosition;
@@ -381,10 +381,10 @@ public:
 	Galvo& operator=(Galvo&&) = delete;			//Disable move-assignment constructor
 
 	void reconfigure(const Laser::ID whichLaser, const int wavelength_nm);
-	void voltageToZero() const;
+	void setVoltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
-	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const;
-	void positionLinearRamp(const double posInitial, const double posFinal, const double posOffset, const OVERRIDE override) const;
+	void pushVoltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const;
+	void pushPositionLinearRamp(const double posInitial, const double posFinal, const double posOffset, const OVERRIDE override) const;
 private:
 	const double mRampDurationFineTuning{ -30. * us };		//Slightly decrease the ramp duration, otherwise the ramp overflow in each frame accumulates over a continuous scan (e.g. over 200 frames)
 															//Ideally, the ramp duration of the galvo is exactly g_lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix
@@ -397,7 +397,7 @@ private:
 	double mVoltagePerDistance;
 	double mVoltageOffset;
 	double mPosMax;
-	double singlebeamVoltageOffset() const;
+	double readSinglebeamVoltageOffset() const;
 };
 
 //Integrate VirtualLaser, Pockels, and CombinedFilterwheels classes in a single class

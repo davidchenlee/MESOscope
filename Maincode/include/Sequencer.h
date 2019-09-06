@@ -141,14 +141,12 @@ public:
 			Action::AcqStack acqStack;
 			Action::CutSlice cutSlice;
 		} mParam;
-
 		Commandline(const Action::ID action);
-
 
 		void printToFile(std::ofstream *fileHandle) const;
 		void printParameters() const;
 	private:
-		std::string actionToString_(const Action::ID action) const;
+		std::string convertActionToString_(const Action::ID action) const;
 	};
 	Sequencer(const Sample sample, const Stack stack);
 	Sequencer(const Sequencer&) = delete;					//Disable copy-constructor
@@ -156,15 +154,14 @@ public:
 	Sequencer(Sequencer&&) = delete;						//Disable move constructor
 	Sequencer& operator=(Sequencer&&) = delete;				//Disable move-assignment constructor
 
-
-	Commandline readCommandline(const int iterCommandline) const;
 	void generateCommandList();
 	int size() const;
-	POSITION2 tileIndicesIJToStagePosXY(const INDICES2 tileIndicesIJ) const;
+	POSITION2 convertTileIndicesIJToStagePosXY(const INDICES2 tileIndicesIJ) const;
 	std::string printHeader() const;
 	std::string printHeaderUnits() const;
 	void printSequenceParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
+	Commandline readCommandline(const int iterCommandline) const;
 private:
 	const Sample mSample;									//Sample
 	const Stack mStack;										//Stack
@@ -189,7 +186,7 @@ private:
 	void reserveMemoryBlock_();
 	void initializeIteratorIJ_();
 	void resetStageScanDirections_();
-	SIZE3 effectiveLOIxyz() const;
+	SIZE3 determineEffectiveLOIxyz() const;
 
 	void moveStage_(const INDICES2 tileIndicesIJ);
 	void acqStack_(const int wavelengthIndex);

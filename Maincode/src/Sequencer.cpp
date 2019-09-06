@@ -255,13 +255,13 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 	switch (mAction)
 	{
 	case Action::ID::MOV:
-		*fileHandle << actionToString_(mAction) << "\t" << mParam.moveStage.mSliceNumber;
+		*fileHandle << convertActionToString_(mAction) << "\t" << mParam.moveStage.mSliceNumber;
 		*fileHandle << "\t(" << mParam.moveStage.mTileIJ.II << "," << mParam.moveStage.mTileIJ.JJ << ")\t";
 		*fileHandle << std::setprecision(4);
 		*fileHandle << "(" << mParam.moveStage.mTileCenterXY.XX / mm << "," << mParam.moveStage.mTileCenterXY.YY / mm << ")\n";
 		break;
 	case Action::ID::ACQ:
-		*fileHandle << actionToString_(mAction) << "\t\t\t\t\t";
+		*fileHandle << convertActionToString_(mAction) << "\t\t\t\t\t";
 		*fileHandle << mParam.acqStack.mStackNumber << "\t";
 		*fileHandle << mParam.acqStack.mWavelength_nm << "\t";
 		*fileHandle << SCANDIRtoInt(mParam.acqStack.mScanDirZ) << "\t";
@@ -272,10 +272,10 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << mParam.acqStack.mScanPmin << "\t" << mParam.acqStack.mScanPexp << "\n";
 		break;
 	case Action::ID::SAV:
-		*fileHandle << actionToString_(mAction) + "\n";
+		*fileHandle << convertActionToString_(mAction) + "\n";
 		break;
 	case Action::ID::CUT:
-		*fileHandle << actionToString_(mAction);
+		*fileHandle << convertActionToString_(mAction);
 		*fileHandle << std::setprecision(3);
 		*fileHandle << "******Stage height for facing the VT = " << mParam.cutSlice.mStageZheightForFacingTheBlade / mm << " mm";
 		*fileHandle << "******Equivalent sample plane Z = " << mParam.cutSlice.mPlaneZtoCut / mm << " mm";
@@ -291,30 +291,30 @@ void Sequencer::Commandline::printParameters() const
 	switch (mAction)
 	{
 	case Action::ID::MOV:
-		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
+		std::cout << "The command is " << convertActionToString_(mAction) << " with parameters: \n";
 		std::cout << "Vibratome slice number = " << mParam.moveStage.mSliceNumber << "\n";
 		std::cout << "Tile ij = (" << mParam.moveStage.mTileIJ.II << "," << mParam.moveStage.mTileIJ.JJ << ")\n";
 		std::cout << "Tile center (stageX, stageY) = (" << mParam.moveStage.mTileCenterXY.XX / mm << "," << mParam.moveStage.mTileCenterXY.YY / mm << ") mm\n\n";
 		break;
 	case Action::ID::ACQ:
-		std::cout << "The command is " << actionToString_(mAction) << " with parameters: \n";
+		std::cout << "The command is " << convertActionToString_(mAction) << " with parameters: \n";
 		std::cout << "wavelength = " << mParam.acqStack.mWavelength_nm << " nm\n";
 		std::cout << "scanDirZ = " << SCANDIRtoInt(mParam.acqStack.mScanDirZ) << "\n";
 		std::cout << "scanZmin / depthZ = " << mParam.acqStack.mScanZmin / mm << " mm/" << mParam.acqStack.mDepthZ << " mm\n";
 		std::cout << "scanPmin / ScanPexp = " << mParam.acqStack.mScanPmin / mW << " mW/" << mParam.acqStack.mScanPexp / um << " (um)\n\n";
 		break;
 	case Action::ID::SAV:
-		std::cout << "The command is " << actionToString_(mAction) << "\n";
+		std::cout << "The command is " << convertActionToString_(mAction) << "\n";
 		break;
 	case Action::ID::CUT:
-		std::cout << "The command is " << actionToString_(mAction) << "\n";
+		std::cout << "The command is " << convertActionToString_(mAction) << "\n";
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
 	}
 }
 
-std::string Sequencer::Commandline::actionToString_(const Action::ID action) const
+std::string Sequencer::Commandline::convertActionToString_(const Action::ID action) const
 {
 	switch (action)
 	{
@@ -612,11 +612,6 @@ Sequencer::Sequencer(const Sample sample, const Stack stack) :
 	reserveMemoryBlock_();			//Reserve memory for speed
 }
 
-Sequencer::Commandline Sequencer::readCommandline(const int iterCommandLine) const
-{
-	return mCommandList.at(iterCommandLine);
-}
-
 //Generate a scan pattern and use the vibratome to slice the sample
 //II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
 void Sequencer::generateCommandList()
@@ -659,7 +654,7 @@ int Sequencer::size() const
 
 //II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
 //The center the tile array is at the sample center (exact center for an odd number of tiles or slightly off center for an even number of tiles)
-POSITION2 Sequencer::tileIndicesIJToStagePosXY(const INDICES2 tileIndicesIJ) const
+POSITION2 Sequencer::convertTileIndicesIJToStagePosXY(const INDICES2 tileIndicesIJ) const
 {
 	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.mArraySize.II)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + std::to_string(mTileArray.mArraySize.II - 1) + "]");
@@ -690,7 +685,7 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 	*fileHandle << "SEQUENCER ************************************************************\n";
 	*fileHandle << "Stages initial scan direction {stageX, stageY, stageZ} = {" << SCANDIRtoInt(g_initialStageScanDirXYZ.XX) << ", " << SCANDIRtoInt(g_initialStageScanDirXYZ.YY) << ", " << SCANDIRtoInt(g_initialStageScanDirXYZ.ZZ) << "}\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Effective LOI (stageX, stageY, stageZ) = (" << effectiveLOIxyz().XX / mm << " mm, " << effectiveLOIxyz().YY / mm << " mm, " << effectiveLOIxyz().ZZ / mm << " mm)\n";
+	*fileHandle << "Effective LOI (stageX, stageY, stageZ) = (" << determineEffectiveLOIxyz().XX / mm << " mm, " << determineEffectiveLOIxyz().YY / mm << " mm, " << determineEffectiveLOIxyz().ZZ / mm << " mm)\n";
 	*fileHandle << "Effective ROI boundaries [YMIN, XMIN, YMAX, XMAX] = [" << mROIeff.YMIN / mm << " mm, " << mROIeff.XMIN / mm << " mm, " << mROIeff.YMAX / mm << " mm, " << mROIeff.XMAX / mm << " mm]\n";
 	*fileHandle << "Z position of the surface of the sample = " << mSample.mSurfaceZ / mm << " mm\n";
 	*fileHandle << std::setprecision(0);
@@ -737,6 +732,11 @@ void Sequencer::printToFile(const std::string fileName) const
 	fileHandle->close();
 }
 
+Sequencer::Commandline Sequencer::readCommandline(const int iterCommandLine) const
+{
+	return mCommandList.at(iterCommandLine);
+}
+
 void Sequencer::initializeVibratomeSlice_()
 {
 	mIterScanZi = mSample.mSurfaceZ; 	//Initialize the Z-stage with the position of the surface of the sample
@@ -778,8 +778,8 @@ INDICES2 Sequencer::determineTileArraySize_()
 void Sequencer::initializeEffectiveROI_()
 {
 	//II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
-	const POSITION2 tilePosXYmin = tileIndicesIJToStagePosXY({ 0, 0 });															//Absolute position of the CENTER of the tile
-	const POSITION2 tilePosXYmax = tileIndicesIJToStagePosXY({ mTileArray.mArraySize.II - 1, mTileArray.mArraySize.JJ - 1 });	//Absolute position of the CENTER of the tile
+	const POSITION2 tilePosXYmin = convertTileIndicesIJToStagePosXY({ 0, 0 });															//Absolute position of the CENTER of the tile
+	const POSITION2 tilePosXYmax = convertTileIndicesIJToStagePosXY({ mTileArray.mArraySize.II - 1, mTileArray.mArraySize.JJ - 1 });	//Absolute position of the CENTER of the tile
 
 	//The ROI is measured from the border of the tiles. Therefore, add half of the FFOV
 	mROIeff.XMAX = tilePosXYmin.XX + mStack.mFFOV.XX / 2.;
@@ -827,7 +827,7 @@ void Sequencer::resetStageScanDirections_()
 }
 
 //Convert a ROI = {ymin, xmin, ymax, xmax} to the equivalent length of interest (LOI) in the X-stage and Y-stage axes
-SIZE3 Sequencer::effectiveLOIxyz() const
+SIZE3 Sequencer::determineEffectiveLOIxyz() const
 {
 	return { mROIeff.XMAX - mROIeff.XMIN,
 			 mROIeff.YMAX - mROIeff.YMIN,
@@ -843,7 +843,7 @@ void Sequencer::moveStage_(const INDICES2 tileIJ)
 	if (tileIJ.JJ < 0 || tileIJ.JJ >= mTileArray.mArraySize.JJ)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
 
-	const POSITION2 tileCenterXY = tileIndicesIJToStagePosXY(tileIJ);
+	const POSITION2 tileCenterXY = convertTileIndicesIJToStagePosXY(tileIJ);
 
 	Commandline commandline{ Action::ID::MOV };
 	commandline.mParam.moveStage = { mSliceCounter, tileIJ, tileCenterXY };

@@ -138,8 +138,6 @@ namespace Routines
 
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont };
-
-		//LASER
 		Mesoscope mesoscope{ whichLaser };
 		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
 
@@ -149,8 +147,8 @@ namespace Routines
 
 		//SCANNERS
 		const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2.};
-		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
-		//const Galvo rescanner{ RTcontrol, 0, fluorLabel.mWavelength_nm, mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
+		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		//const Galvo rescanner{ RTcontrol, 0, fluorLabel.mWavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
@@ -161,7 +159,7 @@ namespace Routines
 		//CREATE A STACK FOR STORING THE TIFFS
 		const int nLocations{ static_cast<int>(stagePosXYZ.size()) };
 		TiffU8 output{ heightPerFrame_pix, widthPerFrame_pix, nLocations };
-		std::string filename{ currentSample.mName + "_" + mesoscope.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm" };
+		std::string filename{ currentSample.mName + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm" };
 		
 		//OPEN THE UNIBLITZ SHUTTERS
 		mesoscope.openShutter();					//The destructor will close the shutter automatically
@@ -239,8 +237,8 @@ namespace Routines
 			datalog.record("\nFPGA---------------------------------------------------------");
 			datalog.record("FPGA clock (MHz) = ", g_tickPerUs);
 			datalog.record("\nLASER--------------------------------------------------------");
-			datalog.record("Laser used = ", mesoscope.currentLaser_s(false));
-			datalog.record("Laser wavelength (nm) = ", mesoscope.currentWavelength_nm());
+			datalog.record("Laser used = ", mesoscope.readCurrentLaser_s(false));
+			datalog.record("Laser wavelength (nm) = ", mesoscope.readCurrentWavelength_nm());
 			datalog.record("Min laser power (mW) = ", fluorLabel.mScanPmin / mW);
 			datalog.record("Power exponential length (um) = ", fluorLabel.mScanPexp / um);
 			datalog.record("Laser repetition period (us) = ", g_laserPulsePeriod / us);
@@ -305,8 +303,6 @@ namespace Routines
 
 		//CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames };	//Note the STAGEZ flag
-
-		//LASER
 		Mesoscope mesoscope{ whichLaser };
 		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
 		mesoscope.setPowerExponentialScaling(fluorLabel.mScanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * fluorLabel.mScanPexp);
@@ -317,7 +313,7 @@ namespace Routines
 
 		//SCANNERS
 		const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2. };
-		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
+		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//STAGES
 		const double stageZi = determineInitialScanPos(stackCenterXYZ.ZZ, stackDepth, 0. * mm, scanDirZ);
@@ -342,7 +338,7 @@ namespace Routines
 		image.binFrames(nFramesBinning);
 		//image.correct(RScanner.mFFOV);
 
-		const std::string filename{ currentSample.mName + "_" + mesoscope.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorLabel.mScanPexp / um, 0) +
+		const std::string filename{ currentSample.mName + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorLabel.mScanPexp / um, 0) +
 			"um_x=" + toString(stackCenterXYZ.XX / mm, 3) + "_y=" + toString(stackCenterXYZ.YY / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZafterBinning / mm, 4) +
 			"_bin=" + toString(nFramesBinning, 0) };
@@ -379,8 +375,6 @@ namespace Routines
 		//The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
 		const int nFrames{ 2 };
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, quickScanXY.tileWidth_pix(), quickScanXY.tileHeight_pix() / 2 };
-
-		//LASER
 		Mesoscope mesoscope{ whichLaser };
 		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
 		mesoscope.setPower(fluorLabel.mScanPmin);
@@ -392,7 +386,7 @@ namespace Routines
 		//SCANNERS. Keep them fixed at 0
 		const double galvoScanAmplitude{ 0 };
 		const Galvo scanner{ RTcontrol, galvoScanAmplitude };
-		const Galvo rescanner{ RTcontrol, galvoScanAmplitude, mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
+		const Galvo rescanner{ RTcontrol, galvoScanAmplitude, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//STAGES
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
@@ -432,7 +426,7 @@ namespace Routines
 			reverseSCANDIR(iterScanDirX);
 			pressESCforEarlyTermination();
 		}
-			const std::string filename{ currentSample.mName + "_" + mesoscope.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) +
+			const std::string filename{ currentSample.mName + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) +
 				"mW_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
 				"_yi=" + toString(quickScanXY.mStagePosY.front() / mm, 3) + "_yf=" + toString(quickScanXY.mStagePosY.back() / mm, 3) +
 				"_z=" + toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
@@ -458,7 +452,7 @@ namespace Routines
 		const SIZE3 LOIxyz{ 1.6 * mm, 0.8 * mm, 0.25 * mm };
 		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.50 };										//Stack overlap
 		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };											//Stack overlap
-		const double cutAboveBottomOfStack{ 100. * um };												//Distance above the bottom of the stack to cut
+		const double cutAboveBottomOfStack{ 100. * um };												//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
 
 		int heightPerBeamletPerFrame_pix;
@@ -488,11 +482,9 @@ namespace Routines
 			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);		//Move the Z-stage to the sample surface
 			stage.waitForMotionToStopAll();
 
-			//LASER
-			Mesoscope mesoscope{ Laser::ID::VISION };
-
 			//CONTROL SEQUENCE
 			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix };
+			Mesoscope mesoscope{ Laser::ID::VISION };
 
 			//Read the commands line by line
 			POSITION2 tileCenterXY;
@@ -505,7 +497,7 @@ namespace Routines
 
 				//SCANNERS
 				const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2. };
-				Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
+				Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 				//These parameters must be accessible to all the cases
 				int wavelength_nm, nFramesBinning, sliceNumber, stackNumber, tileIndexI, tileIndexJ;
@@ -547,12 +539,13 @@ namespace Routines
 						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * acqStack.mScanPexp);
 
 						mesoscope.openShutter();																//Re-open the Uniblitz shutter if closed by the pockels destructor
-						rescanner.reconfigure(mesoscope.currentLaser(), mesoscope.currentWavelength_nm());		//The calibration of the rescanner depends on the laser and wavelength being used
+						rescanner.reconfigure(mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm());		//The calibration of the rescanner depends on the laser and wavelength being used
 					}
 
-					RTcontrol.initialize(scanDirZ);							//Use the scan direction determined dynamically
+					stage.moveSingle(Stage::ZZ, scanZi);	//Move the stage to the initial Z position
+					RTcontrol.initialize(scanDirZ);			//Use the scan direction determined dynamically
 					std::cout << "Scanning slice = " << std::to_string(sliceNumber) << "\tstack = " << std::to_string(stackNumber) << "\n";
-					stage.moveSingle(Stage::ZZ, scanZf);					//Move the stage to trigger the ctl&acq sequence
+					stage.moveSingle(Stage::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
 					RTcontrol.downloadData();
 
 					reverseSCANDIR(scanDirZ);
@@ -573,7 +566,7 @@ namespace Routines
 					std::string tileIndexJpad_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;//2 digits in total
 
 					shortName = sliceNumberPad_s + "_"+ stackNumberPad_s;
-					longName = mesoscope.currentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pmin=" + toString(scanPmin / mW, 1) + "mW_Pexp=" + toString(scanPexp / um, 0) + "um" +
+					longName = mesoscope.readCurrentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pmin=" + toString(scanPmin / mW, 1) + "mW_Pexp=" + toString(scanPexp / um, 0) + "um" +
 						"_x=" + toString(tileCenterXY.XX / mm, 3) +
 						"_y=" + toString(tileCenterXY.YY / mm, 3) +
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) +
@@ -591,7 +584,7 @@ namespace Routines
 				{
 					const double planeZtoCut{ commandline.mParam.cutSlice.mStageZheightForFacingTheBlade };
 					Vibratome vibratome{ fpga, stage };
-					vibratome.slice(planeZtoCut);
+					vibratome.sliceTissue(planeZtoCut);
 				}		
 					break;
 				default:
@@ -621,8 +614,6 @@ namespace Routines
 
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
-
-		//LASER
 		Mesoscope mesoscope{ Laser::ID::VISION };
 		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
 
@@ -632,7 +623,7 @@ namespace Routines
 
 		//SCANNERS
 		const Galvo scanner{ RTcontrol, FFOVslow / 2. };
-		const Galvo rescanner{ RTcontrol, FFOVslow / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
+		const Galvo rescanner{ RTcontrol, FFOVslow / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//OPEN THE UNIBLITZ SHUTTERS
 		mesoscope.openShutter();				//The destructor will close the shutter automatically
@@ -761,17 +752,15 @@ namespace TestRoutines
 
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
+		Mesoscope mesoscope{ Laser::ID::FIDELITY };
+		const int wavelength_nm{ 1040 };
+		const double laserPower{ 25. * mW };		//Laser power
+		mesoscope.configure(RTcontrol, wavelength_nm);
+		mesoscope.setPower(laserPower);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
 		RScanner.isRunning();		//To make sure that the RS is running
-
-		//LASER
-		const int wavelength_nm{ 1040 };
-		const double laserPower{ 25. * mW };		//Laser power
-		Mesoscope mesoscope{ Laser::ID::FIDELITY };
-		mesoscope.configure(RTcontrol, wavelength_nm);
-		mesoscope.setPower(laserPower);
 
 		//SCANNERS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };					//Full FOV in the slow axis
@@ -850,17 +839,15 @@ namespace TestRoutines
 
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont };
-
-		//LASER
-		const int wavelength_nm{ 750 };
 		Mesoscope mesoscope{ Laser::ID::VISION };
+		const int wavelength_nm{ 750 };
 		mesoscope.configure(RTcontrol, wavelength_nm);
 		mesoscope.setPower(selectPower);
 
 		//SCANNERS
 		const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2. };
-		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
-		//const Galvo rescanner{ RTcontrol, 0, wavelength_nm, mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
+		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		//const Galvo rescanner{ RTcontrol, 0, wavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//EXECUTE THE CONTROL SEQUENCE
 		RTcontrol.run();
@@ -988,17 +975,17 @@ namespace TestRoutines
 
 		std::cout << "Pi = " << laserPi << "\n";
 		std::cout << "Pf = " << laserPf << "\n";
-		//pockels.powerLinearScaling(laserPi, laserPf);					//Linearly scale the laser power from the first to the last frame
-		pockels.powerExponentialScaling(Pi, 1. * um, 200. * um);
+		//pockels.pushPowerLinearScaling(laserPi, laserPf);					//Linearly scale the laser power from the first to the last frame
+		pockels.pushPowerExponentialScaling(Pi, 1. * um, 200. * um);
 
 
-		//pockels.powerLinearScaling(0.96 * Pf, Pi);
+		//pockels.pushPowerLinearScaling(0.96 * Pf, Pi);
 
 		//pockels.pushPowerSinglet(400 * us, Pi, OVERRIDE::EN);
 
 		//Test the voltage setpoint
 		//pockels.pushVoltageSinglet(8* us, 0.0 * V, OVERRIDE::EN);
-		//pockels.voltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
+		//pockels.pushVoltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
 
 		//EXECUTE THE CONTROL SEQUENCE
 		RTcontrol.run();
@@ -1059,9 +1046,9 @@ namespace TestRoutines
 
 	void convertI16toVolt()
 	{
-		std::cout << "volt to I16: " << FPGAfunc::voltageToI16(-10) << "\n";
-		std::cout << "int to volt: " << FPGAfunc::intToVoltage(-32768) << "\n";
-		std::cout << "volt to I16 to volt: " << FPGAfunc::intToVoltage(FPGAfunc::voltageToI16(0)) << "\n";
+		std::cout << "volt to I16: " << FPGAfunc::convertVoltageToI16(-10) << "\n";
+		std::cout << "int to volt: " << FPGAfunc::convertIntToVoltage(-32768) << "\n";
+		std::cout << "volt to I16 to volt: " << FPGAfunc::convertIntToVoltage(FPGAfunc::convertVoltageToI16(0)) << "\n";
 	}
 
 	//To measure the saving speed of a Tiff file, either locally or remotely
@@ -1231,7 +1218,8 @@ namespace TestRoutines
 		//The tile array used for imaging
 		const int imagingTileHeight_pix{ 560 };
 		const int imagingTileWidth_pix{ 300 };
-		const TileArray imagingTileArray{ imagingTileHeight_pix, imagingTileWidth_pix, { 36, 67 }, { 0.0, 0.0, 0.0 } };//Tile array used for imaging
+		const INDICES2 nImagingTiles{ image.heightPerFrame_pix() / imagingTileHeight_pix , image.widthPerFrame_pix() / imagingTileWidth_pix };
+		const TileArray imagingTileArray{ imagingTileHeight_pix, imagingTileWidth_pix, nImagingTiles, { 0.0, 0.0, 0.0 } };//Tile array used for imaging
 		PIXELS2 anchorPixel_pix{ determineAnchorPixel_pix(image, imagingTileArray) };
 
 		//The tile array for boolmap does not have to coincide with the tile array used for imaging
@@ -1482,16 +1470,14 @@ namespace TestRoutines
 
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
-
-		//LASER
-		const double laserPower{ 30. * mW };
 		Mesoscope mesoscope{ Laser::ID::VISION };
+		const double laserPower{ 30. * mW };
 		mesoscope.configure(RTcontrol, wavelength_nm);
 		mesoscope.setPower(laserPower);
 
 		//SCANNERS
 		Galvo scanner{ RTcontrol, FFOVslow / 2. };
-		Galvo rescanner{ RTcontrol, FFOVslow / 2., mesoscope.currentLaser(), mesoscope.currentWavelength_nm() };
+		Galvo rescanner{ RTcontrol, FFOVslow / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 		//Galvo scanner{ RTcontrol, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 
 		//EXECUTE THE CONTROL SEQUENCE
@@ -1507,7 +1493,7 @@ namespace TestRoutines
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };
-		vibratome.slice(slicePlaneZ);
+		vibratome.sliceTissue(slicePlaneZ);
 
 		const POSITION3 samplePosXYZ{ 10. * mm, 23. * mm, slicePlaneZ };
 		stage.moveXYZ(samplePosXYZ);
@@ -1549,7 +1535,7 @@ namespace TestRoutines
 		CollectorLens collectorLens;
 		//collectorLens.move(10.0 * mm);
 		collectorLens.downloadConfig();
-		//collectorLens.home();
+		//collectorLens.moveHome();
 		pressAnyKeyToCont();
 	}
 

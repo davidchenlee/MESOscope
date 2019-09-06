@@ -40,8 +40,7 @@ struct Sample
 	FluorLabelList mFluorLabelList;
 	std::vector<LIMIT2> mStageSoftPosLimXYZ;			//Soft position limits of the stages
 
-	const POSITION2 mBladePosXY{ 0. * mm, 0. * mm };	//Location of the vibratome blade in the X-stage and Y-stage axes wrt the stages origin
-	const double mBladeFocalplaneOffsetZ{ 0. * um };	//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	const double mBladeFocalplaneOffsetZ{ 1.06 * mm };	//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack{ 0. * um };			//Specify at what height of the overlapping volume to cut
 
 	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorLabelList fluorLabelList = { {} });
@@ -82,7 +81,8 @@ namespace Action
 		int nFrameBinning;
 	};
 	struct CutSlice {
-		POSITION3 mBladePosXY;	//Position the sample facing the vibratome blade
+		double mPlaneZtoCut;
+		double mStageZheightForFacingTheBlade;
 	};
 }
 
@@ -144,8 +144,7 @@ public:
 
 		Commandline(const Action::ID action);
 
-		std::string printHeader() const;
-		std::string printHeaderUnits() const;
+
 		void printToFile(std::ofstream *fileHandle) const;
 		void printParameters() const;
 	private:
@@ -157,11 +156,13 @@ public:
 	Sequencer(Sequencer&&) = delete;						//Disable move constructor
 	Sequencer& operator=(Sequencer&&) = delete;				//Disable move-assignment constructor
 
+
 	Commandline readCommandline(const int iterCommandline) const;
 	void generateCommandList();
-	//std::vector<POSITION2> generateLocationList();
 	int size() const;
 	POSITION2 tileIndicesIJToStagePosXY(const INDICES2 tileIndicesIJ) const;
+	std::string printHeader() const;
+	std::string printHeaderUnits() const;
 	void printSequenceParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
 private:
@@ -175,12 +176,12 @@ private:
 	int mStackCounter{ 0 };									//Count the number of stacks
 	int mSliceCounter{ 0 };									//Count the number of the slices
 	TileArray mTileArray;
-
-	double mScanZi;											//Initial Z-stage position for a stack scan
-	double mPlaneToSliceZ{ 0 };								//Height of the plane to cut	
-	int mNtotalSlices;										//Number of vibratome slices in the entire sample
-
 	SCANDIR3 mIterScanDirXYZ{ g_initialStageScanDirXYZ };	//Scan directions wrt the X-stage, Y-stage, and Z-stage axes	
+	double mIterScanZi;										//Initial Z-stage position for a stack scan
+	double mIterSamplePlaneZtoCut;							//Sample plane to cut (height of the stage Z)
+	double mIterStageZheightForFacingTheBlade;				//Actual height of the stage Z for cutting the sample at mIterSamplePlaneZtoCut
+															//(It defers from mIterSamplePlaneZtoCut by the height offset of the blade wrt the imaging plane)
+	int mNtotalSlices;										//Number of vibratome slices in the entire sample
 
 	void initializeVibratomeSlice_();
 	INDICES2 determineTileArraySize_();

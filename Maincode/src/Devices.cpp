@@ -2268,10 +2268,10 @@ void Vibratome::pushStartStopButton() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
 }
 
-void Vibratome::slice(const double planeToCutZ)
+void Vibratome::slice(const double planeZtoCut)
 {
 	mStage.setVelXYZ(mStageConveyingVelXYZ);													//Change the velocity to move the sample to the vibratome
-	mStage.moveXYZ({ mStageInitialSlicePosXY.XX, mStageInitialSlicePosXY.YY, planeToCutZ });	//Position the sample in front of the vibratome's blade
+	mStage.moveXYZ({ mStageInitialSlicePosXY.XX, mStageInitialSlicePosXY.YY, planeZtoCut });	//Position the sample in front of the vibratome's blade
 	mStage.waitForMotionToStopAll();
 
 	mStage.setVelSingle(Stage::YY, mSlicingVel);							//Change the y vel for slicing

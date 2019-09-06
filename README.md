@@ -3,6 +3,7 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
+- Add label for the color
 - Safeguard the LOI that it takes allowed values
 - For low power at 1040 nm, choose Vision
 - Fix the power increase in the step-by-step rountine

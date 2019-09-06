@@ -198,8 +198,6 @@ void Sample::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "Requested ROI size (stageX, stageY, stageZ) = (" << mLOIxyz_req.XX / mm << " mm, " << mLOIxyz_req.YY / mm << " mm, " << mLOIxyz_req.ZZ / mm << " mm)\n\n";
 
 	*fileHandle << "SLICE ************************************************************\n";
-	*fileHandle << std::setprecision(4);
-	*fileHandle << "Blade position (stageX, stageY) = (" << mBladePosXY.XX / mm << " mm, " << mBladePosXY.YY / mm << " mm)\n";
 	*fileHandle << std::setprecision(1);
 	*fileHandle << "Blade-focal plane vertical offset = " << mBladeFocalplaneOffsetZ / um << " um\n";
 	*fileHandle << "Cut above the bottom of the stack = " << mCutAboveBottomOfStack / um << " um\n";
@@ -252,16 +250,6 @@ Sequencer::Commandline::Commandline(const Action::ID action) :
 	mAction{ action }
 {}
 
-std::string Sequencer::Commandline::printHeader() const
-{
-	return 	"Action\tSlice#\tTileIJ\t(stageX,stageY)\tStack#\tWavlen\tDirZ\tstageZ<\tstageZ>\tPmin\tPexp";
-}
-
-std::string Sequencer::Commandline::printHeaderUnits() const
-{
-	return "\t\t(mm,mm)\t\t\tnm\t\tmm\tmm\tmW\tmW";
-}
-
 void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 {
 	switch (mAction)
@@ -289,9 +277,9 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 	case Action::ID::CUT:
 		*fileHandle << actionToString_(mAction);
 		*fileHandle << std::setprecision(3);
-		*fileHandle << "\t************Sample facing the vibratome at = ";
-		*fileHandle << "(" << mParam.cutSlice.mBladePosXY.XX / mm << "," << mParam.cutSlice.mBladePosXY.YY / mm << "," << mParam.cutSlice.mBladePosXY.ZZ / mm << ") mm";
-		*fileHandle << "**************************************************************\n";
+		*fileHandle << "******Stage height for facing the VT = " << mParam.cutSlice.mStageZheightForFacingTheBlade / mm << " mm";
+		*fileHandle << "******Equivalent sample plane Z = " << mParam.cutSlice.mPlaneZtoCut / mm << " mm";
+		*fileHandle << "********\n";
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
@@ -664,39 +652,6 @@ void Sequencer::generateCommandList()
 	}
 }
 
-/*
-//Like generateCommandList() but instead of a list of command, Generate a list of locations to be called by frameByFrameZscanTilingXY()
-//Note that this sequence does not use the vibratome
-std::vector<POSITION2> Sequencer::generateLocationList()
-{
-	std::vector<POSITION2> locationList;
-	//std::cout << "Generating the location list..." << "\n";
-
-	int II{ 0 }, JJ{ 0 };			//Reset the tile indices after every cut
-	resetStageScanDirections_();	//Reset the scan directions of the stages to the initial value
-
-	//The stage Y is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
-	while (JJ >= 0 && JJ < mTileArraySize.JJ)			//Y-stage direction
-	{
-		while (II >= 0 && II < mTileArraySize.II)		//X-stage direction
-		{
-			const POSITION2 tileCenterXY{ tileIndicesIJToStagePosXY({ II, JJ }) };
-			locationList.push_back(tileCenterXY);
-
-			std::cout << "x = " << tileCenterXY.XX / mm << "\ty = " << tileCenterXY.YY / mm << "\n";		//For debugging
-			II += SCANDIRtoInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the X-stage axis
-		}
-		II -= SCANDIRtoInt(mIterScanDirXYZ.XX);		//Re-initialize II by going back one step to start from 0 or mTileArraySize.II - 1
-		reverseSCANDIR(mIterScanDirXYZ.XX);			//Reverse the scanning direction
-		JJ += SCANDIRtoInt(mIterScanDirXYZ.YY);		//Increase/decrease the iterator in the Y-stage axis
-	}
-	JJ -= SCANDIRtoInt(mIterScanDirXYZ.YY);			//Re-initialize JJ by going back one step to start from 0 or mTileArraySize.JJ - 1
-	reverseSCANDIR(mIterScanDirXYZ.YY);				//Reverse the scanning direction
-
-	return locationList;
-}
-*/
-
 int Sequencer::size() const
 {
 	return mCommandCounter;
@@ -718,6 +673,16 @@ POSITION2 Sequencer::tileIndicesIJToStagePosXY(const INDICES2 tileIndicesIJ) con
 	stagePosXY.YY = mSample.mCenterXY.YY - mStack.mFFOV.YY  * centeredIJ.YY;
 
 	return stagePosXY;
+}
+
+std::string Sequencer::printHeader() const
+{
+	return 	"Action\tSlice#\tTileIJ\t(stageX,stageY)\tStack#\tWavlen\tDirZ\tstageZ<\tstageZ>\tPmin\tPexp";
+}
+
+std::string Sequencer::printHeaderUnits() const
+{
+	return "\t\t(mm,mm)\t\t\tnm\t\tmm\tmm\tmW\tmW";
 }
 
 void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
@@ -757,8 +722,8 @@ void Sequencer::printToFile(const std::string fileName) const
 	//Print out the header
 	if (!mCommandList.empty())
 	{
-		*fileHandle << "Act#\t" + mCommandList.front().printHeader() + "\n";
-		*fileHandle << "\t\t" + mCommandList.front().printHeaderUnits() + "\n";
+		*fileHandle << "Act#\t" + printHeader() + "\n";
+		*fileHandle << "\t\t" + printHeaderUnits() + "\n";
 	}
 
 	for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != mCommandList.size(); iterCommandline++)
@@ -774,9 +739,10 @@ void Sequencer::printToFile(const std::string fileName) const
 
 void Sequencer::initializeVibratomeSlice_()
 {
-	mScanZi = mSample.mSurfaceZ; 	//Initialize the Z-stage with the position of the surface of the sample
+	mIterScanZi = mSample.mSurfaceZ; 	//Initialize the Z-stage with the position of the surface of the sample
 
-	mPlaneToSliceZ = mScanZi + mStack.mDepthZ - mSample.mCutAboveBottomOfStack;
+	mIterSamplePlaneZtoCut = mIterScanZi + mStack.mDepthZ - mSample.mCutAboveBottomOfStack;
+	mIterStageZheightForFacingTheBlade = mIterSamplePlaneZtoCut + mSample.mBladeFocalplaneOffsetZ;
 
 	const int nZZ{ static_cast<int>(1 + std::ceil(1. / (1 - mStack.mOverlapXYZ_frac.ZZ) * (mSample.mLOIxyz_req.ZZ / mStack.mDepthZ - 1))) };
 	if (nZZ > 1)
@@ -894,7 +860,7 @@ void Sequencer::acqStack_(const int wavelengthIndex)
 	const FluorLabelList::FluorLabel fluorLabel{ mSample.mFluorLabelList.at(wavelengthIndex) };
 
 	Commandline commandline{ Action::ID::ACQ };
-	commandline.mParam.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mScanZi, mStack.mDepthZ, fluorLabel.mScanPmin, fluorLabel.mScanPexp, fluorLabel.nFramesBinning };
+	commandline.mParam.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mIterScanZi, mStack.mDepthZ, fluorLabel.mScanPmin, fluorLabel.mScanPexp, fluorLabel.nFramesBinning };
 	mCommandList.push_back(commandline);
 	mStackCounter++;	//Count the number of stacks acquired
 	mCommandCounter++;	//Count the number of commands
@@ -913,17 +879,18 @@ void Sequencer::saveStack_()
 void Sequencer::cutSlice_()
 {
 	//Move the sample to face the vibratome blade. Note the additional offset in the Z-stage axis
-	const POSITION3 samplePosXYZ{ mSample.mBladePosXY.XX, mSample.mBladePosXY.YY, mPlaneToSliceZ + mSample.mBladeFocalplaneOffsetZ };
-
 	Commandline commandline{ Action::ID::CUT };
-	commandline.mParam.cutSlice = { samplePosXYZ };
+	commandline.mParam.cutSlice = { mIterSamplePlaneZtoCut, mIterStageZheightForFacingTheBlade };
 	mCommandList.push_back(commandline);
 	mSliceCounter++;	//Count the number of vibratome slices
 	mCommandCounter++;	//Count the number of commands
 
-	//Increase the height of the Z-stage and the height of the plane to be cut in the next iteration		
+	//Increase the height of the Z-stage and the height of the plane to cut in the next iteration		
 	//Because of the overlap, the effective stack depth is (1-a)*stackDepth, where a*stackDepth is the overlap
-	mScanZi += (1 - mStack.mOverlapXYZ_frac.ZZ) * mStack.mDepthZ;
-	mPlaneToSliceZ += (1 - mStack.mOverlapXYZ_frac.ZZ) * mStack.mDepthZ;
+	const double heightIncrease{ (1 - mStack.mOverlapXYZ_frac.ZZ) * mStack.mDepthZ };
+
+	mIterScanZi += heightIncrease;
+	mIterSamplePlaneZtoCut += heightIncrease;
+	mIterStageZheightForFacingTheBlade += heightIncrease;
 }
 #pragma endregion "sequencer"

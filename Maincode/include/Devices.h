@@ -304,7 +304,6 @@ private:
 		Filterwheel mFWdetection;
 	};
 
-	//CombinedLasers mCombinedLasers;
 	VirtualFilterWheel mVirtualFilterWheel;
 	CollectorLens mCollectorLens;
 };
@@ -406,7 +405,7 @@ public:
 	Vibratome& operator=(Vibratome&&) = delete;						//Disable move-assignment constructor
 
 	void pushStartStopButton() const;
-	void slice(const double planeToCutZ);
+	void slice(const double planeZtoCut);
 private:
 	const FPGA &mFpga;
 	Stage &mStage;

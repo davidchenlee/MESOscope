@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (23.703 + 9.904/2 - 0.285)* mm, (17.540 + 0.000) * mm };
+POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.640 + 0.000) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0.) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0.) } }} };
@@ -270,7 +270,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };				//Select a particular laser
+		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ 1 };																	//For binning
@@ -454,10 +454,10 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const SIZE3 LOIxyz{ 1.6 * mm, 0.8 * mm, 0.00 * mm };
-		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.40 };										//Stack overlap
-		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };												//Stack overlap
-		const double cutAboveBottomOfStack{ 15. * um };													//Distance above the bottom of the stack to cut
+		const SIZE3 LOIxyz{ 1.6 * mm, 0.8 * mm, 0.25 * mm };
+		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.50 };										//Stack overlap
+		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };											//Stack overlap
+		const double cutAboveBottomOfStack{ 100. * um };												//Distance above the bottom of the stack to cut
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
 
 		int heightPerBeamletPerFrame_pix;
@@ -536,13 +536,13 @@ namespace Routines
 
 						//Save the parameters for saving the file
 						wavelength_nm = acqStack.mWavelength_nm;
-						scanPmin = acqStack.mScanPmin;
-						scanPexp = acqStack.mScanPexp;
 						scanZi = determineInitialScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
 						scanZf = determineFinalScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
 
 						//Update the laser parameters
 						virtualLaser.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
+						scanPmin = acqStack.mScanPmin;
+						scanPexp = acqStack.mScanPexp;
 						virtualLaser.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * acqStack.mScanPexp);
 
 						virtualLaser.openShutter();								//Re-open the Uniblitz shutter if closed by the pockels destructor
@@ -550,7 +550,7 @@ namespace Routines
 					}
 
 					RTcontrol.initialize(scanDirZ);							//Use the scan direction determined dynamically
-					std::cout << "Scanning the stack...\n";
+					std::cout << "Scanning slice = " << std::to_string(sliceNumber) << "\tstack = " << std::to_string(stackNumber) << "\n";
 					stage.moveSingle(Stage::ZZ, scanZf);					//Move the stage to trigger the ctl&acq sequence
 					RTcontrol.downloadData();
 
@@ -587,8 +587,11 @@ namespace Routines
 					}
 					break;
 				case Action::ID::CUT://Move the stage to the vibratome and then cut a slice off
-					POSITION3 stagePosXYZ{ commandline.mParam.cutSlice.mBladePosXY };
-					//IMPLEMENT THE SLICING HERE!
+				{
+					const double planeZtoCut{ commandline.mParam.cutSlice.mStageZheightForFacingTheBlade };
+					Vibratome vibratome{ fpga, stage };
+					vibratome.slice(planeZtoCut);
+				}		
 					break;
 				default:
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");

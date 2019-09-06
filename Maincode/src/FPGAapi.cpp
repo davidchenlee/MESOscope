@@ -490,7 +490,7 @@ void FPGA::initializeFpga_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_LinegateTimeout_tick, static_cast<U32>(g_linegateTimeout / us * g_tickPerUs)));				//Timeout the trigger of the control sequence
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_StageDebouncerTimer_tick, static_cast<U32>(g_stageDebounceTimer / us * g_tickPerUs)));		//Stage motion monitor debouncer
 
-	//POCKELS CELLS
+	//POCKELS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));														//Enable or disable gating the pockels by framegate. For debugging purposes
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsScalingFactorEnable, false));														//Enable or disable scaling the pockels output. Disabled by default
 
@@ -664,7 +664,7 @@ void RTcontrol::pushAnalogSinglet(const RTCHAN chan, double timeStep, const doub
 	mVec_queue.at(static_cast<U8>(chan)).push_back(FPGAfunc::packAnalogSinglet(timeStep, AO));
 }
 
-//Push a fixed-point number. For scaling the pockels cell output
+//Push a fixed-point number. For scaling the pockels output
 void RTcontrol::pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor)
 {
 	mVec_queue.at(static_cast<U8>(chan)).push_back(static_cast<U32>(doubleToFx2p14(scalingFactor)));

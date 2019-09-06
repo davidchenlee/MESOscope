@@ -3,7 +3,8 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.640 + 0.000) * mm };
+//POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.640 + 0.000) * mm };
+POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (17.640 + 0.050) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0.) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0.) } }} };
@@ -139,8 +140,8 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//LASER
-		VirtualLaser virtualLaser{ whichLaser };
-		virtualLaser.configure(RTcontrol, fluorLabel.mWavelength_nm);
+		Mesoscope mesoscope{ whichLaser };
+		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -148,7 +149,7 @@ namespace Routines
 
 		//SCANNERS
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2. };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &virtualLaser };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &mesoscope };
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANNER, 0, fluorLabel.mWavelength_nm };
 
 		//STAGES
@@ -160,10 +161,10 @@ namespace Routines
 		//CREATE A STACK FOR STORING THE TIFFS
 		const int nLocations{ static_cast<int>(stagePosXYZ.size()) };
 		TiffU8 output{ heightPerFrame_pix, widthPerFrame_pix, nLocations };
-		std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm" };
+		std::string filename{ currentSample.mName + "_" + mesoscope.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm" };
 		
 		//OPEN THE UNIBLITZ SHUTTERS
-		virtualLaser.openShutter();					//The destructor will close the shutter automatically
+		mesoscope.openShutter();					//The destructor will close the shutter automatically
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
@@ -173,11 +174,11 @@ namespace Routines
 			stage.waitForMotionToStopAll();
 			//stage.printPosXYZ();				//Print the stage position	
 			
-			virtualLaser.setPower(exponentialFunction(fluorLabel.mScanPmin, iterLocation * pixelSizeZ, fluorLabel.mScanPexp));	//FIX THIS
+			mesoscope.setPower(exponentialFunction(fluorLabel.mScanPmin, iterLocation * pixelSizeZ, fluorLabel.mScanPexp));	//FIX THIS
 	
 			//Used to optimize the collector lens position
 			if (acqMode == RUNMODE::COLLECTLENS)
-				virtualLaser.moveCollectorLens(cLensPosIni + iterLocation * cLensStep);
+				mesoscope.moveCollectorLens(cLensPosIni + iterLocation * cLensStep);
 
 			//EXECUTE THE CONTROL SEQUENCE
 			RTcontrol.run();					//Execute the control sequence and acquire the image
@@ -238,8 +239,8 @@ namespace Routines
 			datalog.record("\nFPGA---------------------------------------------------------");
 			datalog.record("FPGA clock (MHz) = ", g_tickPerUs);
 			datalog.record("\nLASER--------------------------------------------------------");
-			datalog.record("Laser used = ", virtualLaser.currentLaser_s(false));
-			datalog.record("Laser wavelength (nm) = ", virtualLaser.currentWavelength_nm());
+			datalog.record("Laser used = ", mesoscope.currentLaser_s(false));
+			datalog.record("Laser wavelength (nm) = ", mesoscope.currentWavelength_nm());
 			datalog.record("Min laser power (mW) = ", fluorLabel.mScanPmin / mW);
 			datalog.record("Power exponential length (um) = ", fluorLabel.mScanPexp / um);
 			datalog.record("Laser repetition period (us) = ", g_laserPulsePeriod / us);
@@ -306,9 +307,9 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames };	//Note the STAGEZ flag
 
 		//LASER
-		VirtualLaser virtualLaser{ whichLaser };
-		virtualLaser.configure(RTcontrol, fluorLabel.mWavelength_nm);
-		virtualLaser.setPowerExponentialScaling(fluorLabel.mScanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * fluorLabel.mScanPexp);
+		Mesoscope mesoscope{ whichLaser };
+		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
+		mesoscope.setPowerExponentialScaling(fluorLabel.mScanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * fluorLabel.mScanPexp);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -316,7 +317,7 @@ namespace Routines
 
 		//SCANNERS
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2. };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &virtualLaser };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &mesoscope };
 
 		//STAGES
 		const double stageZi = determineInitialScanPos(stackCenterXYZ.ZZ, stackDepth, 0. * mm, scanDirZ);
@@ -328,20 +329,20 @@ namespace Routines
 		stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));		//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
 
 		//EXECUTE THE CONTROL SEQUENCE
-		virtualLaser.openShutter();				//Open the shutter. The destructor will close the shutter automatically
+		mesoscope.openShutter();				//Open the shutter. The destructor will close the shutter automatically
 		
 		RTcontrol.initialize(scanDirZ);
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(Stage::ZZ, stageZf);	//Move the stage to trigger the ctl&acq sequence
 		RTcontrol.downloadData();
 
-		virtualLaser.closeShutter();			//Close the shutter manually even though the destructor does it because the post-processing could take a long time
+		mesoscope.closeShutter();			//Close the shutter manually even though the destructor does it because the post-processing could take a long time
 		Image image{ RTcontrol };
 		image.acquire();
 		image.binFrames(nFramesBinning);
 		//image.correct(RScanner.mFFOV);
 
-		const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorLabel.mScanPexp / um, 0) +
+		const std::string filename{ currentSample.mName + "_" + mesoscope.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorLabel.mScanPexp / um, 0) +
 			"um_x=" + toString(stackCenterXYZ.XX / mm, 3) + "_y=" + toString(stackCenterXYZ.YY / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZafterBinning / mm, 4) +
 			"_bin=" + toString(nFramesBinning, 0) };
@@ -359,7 +360,7 @@ namespace Routines
 
 		//ACQUISITION SETTINGS
 		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
-		const Laser::ID whichLaser{ Laser::ID::AUTO };
+		const Laser::ID whichLaser{ Laser::ID::VISION };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
 		const double fullWidth{ 10.000 * mm };												//Total width of the tile array
@@ -380,9 +381,9 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, quickScanXY.tileWidth_pix(), quickScanXY.tileHeight_pix() / 2 };
 
 		//LASER
-		VirtualLaser virtualLaser{ whichLaser };
-		virtualLaser.configure(RTcontrol, fluorLabel.mWavelength_nm);
-		virtualLaser.setPower(fluorLabel.mScanPmin);
+		Mesoscope mesoscope{ whichLaser };
+		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
+		mesoscope.setPower(fluorLabel.mScanPmin);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -391,7 +392,7 @@ namespace Routines
 		//SCANNERS. Keep them fixed at 0
 		const double galvoScanAmplitude{ 0 };
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, galvoScanAmplitude };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, galvoScanAmplitude, &virtualLaser };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, galvoScanAmplitude, &mesoscope };
 
 		//STAGES
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
@@ -400,7 +401,7 @@ namespace Routines
 		Sleep(500);																					//Give the stages enough time to settle at the initial position
 		stage.setVelSingle(Stage::Axis::XX, pixelSizeX / g_lineclockHalfPeriod);					//Set the vel for imaging
 
-		virtualLaser.openShutter();	//Open the shutter. The destructor will close the shutter automatically
+		mesoscope.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 
 		//LOCATIONS on the sample to image
 		const int nLocations{ static_cast<int>(quickScanXY.mStagePosY.size()) };
@@ -431,7 +432,7 @@ namespace Routines
 			reverseSCANDIR(iterScanDirX);
 			pressESCforEarlyTermination();
 		}
-			const std::string filename{ currentSample.mName + "_" + virtualLaser.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) +
+			const std::string filename{ currentSample.mName + "_" + mesoscope.currentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) +
 				"mW_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
 				"_yi=" + toString(quickScanXY.mStagePosY.front() / mm, 3) + "_yf=" + toString(quickScanXY.mStagePosY.back() / mm, 3) +
 				"_z=" + toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
@@ -488,7 +489,7 @@ namespace Routines
 			stage.waitForMotionToStopAll();
 
 			//LASER
-			VirtualLaser virtualLaser{ Laser::ID::VISION };
+			Mesoscope mesoscope{ Laser::ID::VISION };
 
 			//CONTROL SEQUENCE
 			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix };
@@ -540,13 +541,13 @@ namespace Routines
 						scanZf = determineFinalScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
 
 						//Update the laser parameters
-						virtualLaser.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
+						mesoscope.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
 						scanPmin = acqStack.mScanPmin;
 						scanPexp = acqStack.mScanPexp;
-						virtualLaser.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * acqStack.mScanPexp);
+						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * acqStack.mScanPexp);
 
-						virtualLaser.openShutter();								//Re-open the Uniblitz shutter if closed by the pockels destructor
-						rescanner.reconfigure(&virtualLaser);					//The calibration of the rescanner depends on the laser and wavelength being used
+						mesoscope.openShutter();								//Re-open the Uniblitz shutter if closed by the pockels destructor
+						rescanner.reconfigure(&mesoscope);					//The calibration of the rescanner depends on the laser and wavelength being used
 					}
 
 					RTcontrol.initialize(scanDirZ);							//Use the scan direction determined dynamically
@@ -572,7 +573,7 @@ namespace Routines
 					std::string tileIndexJpad_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;//2 digits in total
 
 					shortName = sliceNumberPad_s + "_"+ stackNumberPad_s;
-					longName = virtualLaser.currentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pmin=" + toString(scanPmin / mW, 1) + "mW_Pexp=" + toString(scanPexp / um, 0) + "um" +
+					longName = mesoscope.currentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pmin=" + toString(scanPmin / mW, 1) + "mW_Pexp=" + toString(scanPexp / um, 0) + "um" +
 						"_x=" + toString(tileCenterXY.XX / mm, 3) +
 						"_y=" + toString(tileCenterXY.YY / mm, 3) +
 						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) +
@@ -622,8 +623,8 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//LASER
-		VirtualLaser virtualLaser{ Laser::ID::VISION };
-		virtualLaser.configure(RTcontrol, fluorLabel.mWavelength_nm);
+		Mesoscope mesoscope{ Laser::ID::VISION };
+		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -631,14 +632,14 @@ namespace Routines
 
 		//SCANNERS
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2. };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2., &virtualLaser };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2., &mesoscope };
 
 		//OPEN THE UNIBLITZ SHUTTERS
-		virtualLaser.openShutter();				//The destructor will close the shutter automatically
+		mesoscope.openShutter();				//The destructor will close the shutter automatically
 
 		while (true)
 		{
-			virtualLaser.setPower(fluorLabel.mScanPmin);					//Set the laser power
+			mesoscope.setPower(fluorLabel.mScanPmin);					//Set the laser power
 
 			RTcontrol.run();
 			Image image{ RTcontrol };
@@ -772,12 +773,12 @@ namespace TestRoutines
 		//LASER
 		const int wavelength_nm{ 1040 };
 		const double laserPower{ 25. * mW };		//Laser power
-		VirtualLaser virtualLaser{ Laser::ID::FIDELITY };
-		virtualLaser.configure(RTcontrol, wavelength_nm);
-		virtualLaser.setPower(laserPower);
+		Mesoscope mesoscope{ Laser::ID::FIDELITY };
+		mesoscope.configure(RTcontrol, wavelength_nm);
+		mesoscope.setPower(laserPower);
 
 		//CONTROL SEQUENCE
-		virtualLaser.openShutter();	//Open the uniblitz shutter. The destructor will close the shutter automatically
+		mesoscope.openShutter();	//Open the uniblitz shutter. The destructor will close the shutter automatically
 		RTcontrol.run();
 		Image image{ RTcontrol };
 		image.acquire();			//Execute the control sequence and acquire the image via continuous acquisition
@@ -851,13 +852,13 @@ namespace TestRoutines
 
 		//LASER
 		const int wavelength_nm{ 750 };
-		VirtualLaser virtualLaser{ Laser::ID::VISION };
-		virtualLaser.configure(RTcontrol, wavelength_nm);
-		virtualLaser.setPower(selectPower);
+		Mesoscope mesoscope{ Laser::ID::VISION };
+		mesoscope.configure(RTcontrol, wavelength_nm);
+		mesoscope.setPower(selectPower);
 
 		//SCANNERS
 		const Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslowPerBeamlet / 2. };
-		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &virtualLaser };
+		const Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslowPerBeamlet / 2., &mesoscope };
 		//const Galvo rescanner{ RTcontrol, RTCHAN::RESCANNER, 0, wavelength_nm };
 
 		//EXECUTE THE CONTROL SEQUENCE
@@ -931,7 +932,7 @@ namespace TestRoutines
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
-		PockelsCell fidelity{ RTcontrol, 1040, Laser::ID::FIDELITY };
+		Pockels fidelity{ RTcontrol, 1040, Laser::ID::FIDELITY };
 		fidelity.setShutter(true);
 		Sleep(5000);
 		fidelity.setShutter(false);
@@ -952,12 +953,12 @@ namespace TestRoutines
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
-		//DEFINE THE POCKELS CELLS
-		PockelsCell pockelsVision{ RTcontrol, 1040, Laser::ID::VISION };
-		PockelsCell pockelsFidelity{ RTcontrol, 1040, Laser::ID::FIDELITY };
+		//DEFINE THE POCKELS
+		Pockels pockelsVision{ RTcontrol, 1040, Laser::ID::VISION };
+		Pockels pockelsFidelity{ RTcontrol, 1040, Laser::ID::FIDELITY };
 
-		PockelsCell pockels{ pockelsVision };
-		//PockelsCell pockels{ pockelsFidelity };
+		Pockels pockels{ pockelsVision };
+		//Pockels pockels{ pockelsFidelity };
 
 		pockels.pushVoltageSinglet(8 * us, 0.0 * V, OVERRIDE::DIS);
 
@@ -976,9 +977,9 @@ namespace TestRoutines
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
-		//POCKELS CELL
+		//POCKELS
 		const int wavelength_nm{ 750 };
-		PockelsCell pockels{ RTcontrol, wavelength_nm, Laser::ID::VISION };
+		Pockels pockels{ RTcontrol, wavelength_nm, Laser::ID::VISION };
 		const double Pi{ 500. * mW }, Pf{ 1000. * mW };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };
 		const double laserPi = determineInitialLaserPower(Pi, Pf - Pi, scanDirZ);
@@ -1021,9 +1022,9 @@ namespace TestRoutines
 
 		const int wavelength_nm{ 1040 };
 		const double laserPower{ 50. * mW };
-		VirtualLaser virtualLaser{ Laser::ID::VISION };
-		virtualLaser.configure(RTcontrol, wavelength_nm);
-		virtualLaser.setPower(laserPower);
+		Mesoscope mesoscope{ Laser::ID::VISION };
+		mesoscope.configure(RTcontrol, wavelength_nm);
+		mesoscope.setPower(laserPower);
 	}
 
 	//Photobleach a line along the fast axis (RS) on the sample
@@ -1042,8 +1043,8 @@ namespace TestRoutines
 		//SCANNERS. Keep the scanner fixed to bleach a line on the sample
 		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, 0 };
 
-		//POCKELS CELLS
-		PockelsCell pockels{ RTcontrol, 920, Laser::ID::VISION };
+		//POCKELS
+		Pockels pockels{ RTcontrol, 920, Laser::ID::VISION };
 		pockels.pushPowerSinglet(8 * us, 200 * mW, OVERRIDE::DIS);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
@@ -1483,13 +1484,13 @@ namespace TestRoutines
 
 		//LASER
 		const double laserPower{ 30. * mW };
-		VirtualLaser virtualLaser{ Laser::ID::VISION };
-		virtualLaser.configure(RTcontrol, wavelength_nm);
-		virtualLaser.setPower(laserPower);
+		Mesoscope mesoscope{ Laser::ID::VISION };
+		mesoscope.configure(RTcontrol, wavelength_nm);
+		mesoscope.setPower(laserPower);
 
 		//SCANNERS
 		Galvo scanner{ RTcontrol, RTcontrol::RTCHAN::SCANNER, FFOVslow / 2. };
-		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2., &virtualLaser };
+		Galvo rescanner{ RTcontrol, RTcontrol::RTCHAN::RESCANNER, FFOVslow / 2., &mesoscope };
 		//Galvo scanner{ RTcontrol, RTCHAN::SCANNER, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 
 		//EXECUTE THE CONTROL SEQUENCE
@@ -1544,10 +1545,11 @@ namespace TestRoutines
 
 	void collectorLens()
 	{
-		StepperActuator collectorLens{ "26000299" };
-		collectorLens.move(10.0 * mm);
+		CollectorLens collectorLens;
+		//collectorLens.move(10.0 * mm);
 		collectorLens.downloadConfig();
 		//collectorLens.home();
+		pressAnyKeyToCont();
 	}
 
 	void openCV()

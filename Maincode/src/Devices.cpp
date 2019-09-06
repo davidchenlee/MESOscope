@@ -733,6 +733,48 @@ std::string Filterwheel::colorToString_(const COLOR color) const
 }
 #pragma endregion "Filterwheel"
 
+#pragma region "CombinedFilterwheel"
+CombinedFilterwheel::CombinedFilterwheel() :
+	mFWexcitation{ Filterwheel::ID::EXC },
+	mFWdetection{ Filterwheel::ID::DET }
+{}
+
+void CombinedFilterwheel::turnFilterwheels(const int wavelength_nm)
+{
+	if (multibeam)//Multiplex. Turn both filterwheels concurrently
+	{
+		std::future<void> th1{ std::async(&Filterwheel::setWavelength, &mFWexcitation, wavelength_nm) };
+		std::future<void> th2{ std::async(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm) };
+
+		try
+		{
+			th1.get();
+			th2.get();
+		}
+		catch (...)
+		{
+			throw;
+		}
+	}
+
+	else //Single beam. Turn both filterwheels concurrently
+	{
+		std::future<void> th1{ std::async(&Filterwheel::setColor, &mFWexcitation, Filterwheel::COLOR::OPEN) };
+		std::future<void> th2{ std::async(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm) };
+
+		try
+		{
+			th1.get();
+			th2.get();
+		}
+		catch (...)
+		{
+			throw;
+		}
+	}
+}
+#pragma endregion "CombinedFilterwheel"
+
 #pragma region "Laser"
 Laser::Laser(const ID whichLaser) :
 	mWhichLaser{ whichLaser }
@@ -1001,10 +1043,10 @@ void Shutter::pulse(const double pulsewidth) const
 }
 #pragma endregion "Shutters"
 
-#pragma region "Pockels cells"
-//Curently, the output of the pockels cell is gated on the FPGA side: the output is HIGH when 'framegate' is HIGH
-//Each Uniblitz shutter goes with a specific pockels cell, so it makes more sense to control the shutters through the PockelsCell class
-PockelsCell::PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID laserSelector) :
+#pragma region "Pockels"
+//Curently, the output of the pockels is gated on the FPGA side: the output is HIGH when 'framegate' is HIGH
+//Each Uniblitz shutter goes with a specific pockels, so it makes more sense to control the shutters through the Pockels class
+Pockels::Pockels(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID laserSelector) :
 	mRTcontrol{ RTcontrol },
 	mWavelength_nm{ wavelength_nm },
 	mShutter{ RTcontrol.mFpga, laserSelector }
@@ -1040,7 +1082,7 @@ PockelsCell::PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const La
 		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1.0);
 }
 
-void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const
+void Pockels::pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const
 {
 	if (AO < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The control voltage of the Pockels cell must be positive");
@@ -1048,7 +1090,7 @@ void PockelsCell::pushVoltageSinglet(const double timeStep, const double AO, con
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, AO, override);
 }
 
-void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const
+void Pockels::pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const
 {
 	if (P < 0 || P > mMaxPower)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power of the pockels cell must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower / mW)) + "] mW");
@@ -1056,14 +1098,14 @@ void PockelsCell::pushPowerSinglet(const double timeStep, const double P, const 
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, laserpowerToVolt_(P), override);
 }
 
-void PockelsCell::voltageToZero() const
+void Pockels::voltageToZero() const
 {
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, g_tMinAO, 0 * V);
 }
 
 /*
 //Linearly scale the pockels voltage from the first to the last frame
-void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
+void Pockels::voltageLinearScaling(const double Vi, const double Vf) const
 {
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
@@ -1073,7 +1115,7 @@ void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
 	if (Vratio > 4)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 
-	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
+	//Delete the default scaling factors = 1.0 created in the Pockels constructor
 	mRTcontrol.clearQueue(mScalingRTchan);
 
 	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
@@ -1087,12 +1129,12 @@ void PockelsCell::voltageLinearScaling(const double Vi, const double Vf) const
 }*/
 
 //Linearly scale the laser power from the first to the last frame
-void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
+void Pockels::powerLinearScaling(const double Pi, const double Pf) const
 {
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
-	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
+	//Delete the default scaling factors = 1.0 created in the Pockels constructor
 	mRTcontrol.clearQueue(mScalingRTchan);
 
 	const double Vi{ laserpowerToVolt_(Pi) };
@@ -1117,14 +1159,14 @@ void PockelsCell::powerLinearScaling(const double Pi, const double Pf) const
 }
 
 //Exponentially scale the laser power from the first to the last frame
-void PockelsCell::powerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const
+void Pockels::powerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const
 {
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 	if (decayLengthZ == 0 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The exponential length must be > 0 or < 0");
 
-	//Delete the default scaling factors = 1.0 created in the PockelsCell constructor
+	//Delete the default scaling factors = 1.0 created in the Pockels constructor
 	mRTcontrol.clearQueue(mScalingRTchan);
 
 	const double Vmin{ laserpowerToVolt_(Pmin) };
@@ -1162,14 +1204,14 @@ void PockelsCell::powerExponentialScaling(const double Pmin, const double interf
 }
 
 
-void PockelsCell::setShutter(const bool state) const
+void Pockels::setShutter(const bool state) const
 {
 	mShutter.setShutter(state);
 }
 
 /*
-//Ramp up or down the pockels cell within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
-void PockelsCell::voltageLinearRampInFrame(const double timeStep, const double rampDuration, const double Vi, const double Vf) const
+//Ramp up or down the pockels within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
+void Pockels::voltageLinearRampInFrame(const double timeStep, const double rampDuration, const double Vi, const double Vf) const
 {
 	if (Vi < 0 || Vf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
@@ -1177,8 +1219,8 @@ void PockelsCell::voltageLinearRampInFrame(const double timeStep, const double r
 	mRTcontrol.pushLinearRamp(mPockelsRTchan, timeStep, rampDuration, Vi, Vf);
 }
 
-//Ramp up or down the pockels cell within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
-void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double rampDuration, const double Pi, const double Pf) const
+//Ramp up or down the pockels within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
+void  Pockels::powerLinearRampInFrame(const double timeStep, const double rampDuration, const double Pi, const double Pf) const
 {
 	if (Pi < 0 || Pf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
@@ -1188,7 +1230,7 @@ void  PockelsCell::powerLinearRampInFrame(const double timeStep, const double ra
 */
 
 // power = powerAmplitude * sin( angularFreq * (V - Vphase))^2 + powerMin;
-double PockelsCell::laserpowerToVolt_(const double power) const
+double Pockels::laserpowerToVolt_(const double power) const
 {
 	double powerAmplitude, powerMin, angularFreq, Vphase;		//Calibration parameters
 
@@ -1242,7 +1284,149 @@ double PockelsCell::laserpowerToVolt_(const double power) const
 
 	return asin(arg) / angularFreq + Vphase;
 }
-#pragma endregion "Pockels cells"
+#pragma endregion "Pockels"
+
+#pragma region "VirtualLaser"
+VirtualLaser::VirtualLaser(const Laser::ID whichLaser) :
+	mWhichLaser{ whichLaser },
+	mVision{ Laser::ID::VISION },
+	mFidelity{ Laser::ID::FIDELITY }
+{}
+
+//Which laser is currently being used
+Laser::ID VirtualLaser::currentLaser() const
+{
+	return mCurrentLaser;
+}
+
+std::string VirtualLaser::currentLaser_s(const bool justTheNameInitials) const
+{
+	std::string fullName{ laserNameToString_(mCurrentLaser) };
+	std::string nameInitials{ fullName.front() };
+
+	if (justTheNameInitials && nameInitials.size() != 0)
+		return nameInitials;
+
+	return fullName;
+}
+
+int VirtualLaser::currentWavelength_nm() const
+{
+	switch (mCurrentLaser)
+	{
+	case Laser::ID::VISION:
+		return mVision.currentWavelength_nm();
+	case Laser::ID::FIDELITY:
+		return mFidelity.currentWavelength_nm();
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
+	}
+}
+
+void VirtualLaser::isLaserInternalShutterOpen() const
+{
+	//Check which laser is being used
+	bool isShutterOpen;
+	switch (mCurrentLaser)
+	{
+	case Laser::ID::VISION:
+		isShutterOpen = mVision.isShutterOpen();
+		break;
+	case Laser::ID::FIDELITY:
+		isShutterOpen = mFidelity.isShutterOpen();
+		break;
+	}//switch
+
+	//Check if the corresponding internal shutter is open
+	if (!isShutterOpen)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": The internal shutter of " + laserNameToString_(mCurrentLaser) + " seems to be closed");
+}
+
+//Change the laser wavelength (tune Vision or switching lasers accordingly) and switch pockels
+void VirtualLaser::setWavelength(RTcontrol &RTcontrol, const int wavelength_nm)
+{
+	//Select the laser to be used: VISION or FIDELITY
+	Laser::ID newLaser = autoSelectLaser_(wavelength_nm);
+
+	std::stringstream msg;
+	msg << "Using " << laserNameToString_(newLaser) << " at " << wavelength_nm << " nm\n";
+	std::cout << msg.str();
+
+	//For the first call, assign a pointer to mPockelsPtr
+	if (mPockelsPtr == nullptr)
+		mPockelsPtr.reset(new Pockels(RTcontrol, wavelength_nm, newLaser));
+	//For the subsequent calls, destroy the pockels object when switching wavelengths (including switching lasers) to avoid photobleaching the sample (the pockels destructor closes the shutter)
+	else if (currentWavelength_nm() != wavelength_nm || mCurrentLaser != newLaser)
+		mPockelsPtr.reset(new Pockels(RTcontrol, wavelength_nm, newLaser));
+
+	//If VISION is selected, set the new wavelength
+	if (newLaser == Laser::ID::VISION)
+		mVision.setWavelength(wavelength_nm);
+
+	mCurrentLaser = newLaser;
+}
+
+//Linearly scale the laser power from the first to the last frame
+void VirtualLaser::setPowerLinearScaling(const double Pi, const double Pf) const
+{
+	//Set the initial laser power
+	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pi, OVERRIDE::EN);
+
+	//Linearly scale the laser power across the frames
+	if (Pf != Pi)
+		mPockelsPtr->powerLinearScaling(Pi, Pf);
+}
+
+//Exponential scale the laser power from the first to the last frame
+void VirtualLaser::setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const
+{
+	//Set the initial laser power
+	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pmin, OVERRIDE::EN);
+
+	//Exponentially scale the laser power across the frames
+	mPockelsPtr->powerExponentialScaling(Pmin, distancePerFrame, decayLengthZ);
+}
+
+void VirtualLaser::openShutter() const
+{
+	mPockelsPtr->setShutter(true);
+}
+
+void VirtualLaser::closeShutter() const
+{
+	mPockelsPtr->setShutter(false);
+}
+
+std::string VirtualLaser::laserNameToString_(const Laser::ID whichLaser) const
+{
+	switch (whichLaser)
+	{
+	case Laser::ID::VISION:
+		return "VISION";
+	case Laser::ID::FIDELITY:
+		return "FIDELITY";
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
+	}
+}
+
+//Automatically select a laser: VISION, FIDELITY, or let the code to decide based on the requested wavelength
+Laser::ID VirtualLaser::autoSelectLaser_(const int wavelength_nm) const
+{
+	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
+	if (mWhichLaser == Laser::ID::AUTO)
+	{
+		if (wavelength_nm < 1040)
+			return Laser::ID::VISION;
+		else if (wavelength_nm == 1040)
+			return Laser::ID::FIDELITY;
+		else
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Wavelengths > 1040 nm is not implemented in the VirtualLaser class");
+	}
+	else //If mWhichLaser != ID::AUTO, the mWhichLaser is either ID::VISION or ID::FIDELITY
+		return mWhichLaser;
+}
+#pragma endregion "VirtualLaser"
 
 #pragma region "StepperActuator"
 StepperActuator::StepperActuator(const char* serialNumber) :
@@ -1346,7 +1530,7 @@ void StepperActuator::downloadConfig() const
 
 	int currentVelocity, currentAcceleration;
 	SCC_GetVelParams(mSerialNumber, &currentAcceleration, &currentVelocity);
-	std::cout << "Collector lens acceleration: " << currentAcceleration << " iu\tvelocity: " << currentVelocity << " iu\n";
+	std::cout << "Collector lens acceleration: " << currentAcceleration << " internal units\tvelocity: " << currentVelocity << " internal units\n";
 }
 
 void StepperActuator::home()
@@ -1369,239 +1553,42 @@ void StepperActuator::home()
 }
 #pragma endregion "StepperActuator"
 
+#pragma region "CollectorLens"
+CollectorLens::CollectorLens() :
+	StepperActuator{ "26000299" }
+{}
 
-//Integrate the lasers, pockels cells, and filterwheels in a single class
-#pragma region "VirtualLaser"
-
-void VirtualLaser::CollectorLens::move(const double position)
-{
-	mStepper.move(position);
-}
-
-void VirtualLaser::CollectorLens::set(const int wavelength_nm)
+void CollectorLens::set(const int wavelength_nm)
 {
 	switch (wavelength_nm)
 	{
 	case 750:
-		mStepper.move(g_cLensPos750nm);
+		move(g_cLensPos750nm);
 		break;
 	case 920:
-		mStepper.move(g_cLensPos920nm);
+		move(g_cLensPos920nm);
 		break;
 	case 1040:
-		mStepper.move(g_cLensPos1040nm);
+		move(g_cLensPos1040nm);
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The collector lens position has not been calibrated for the wavelength " + std::to_string(wavelength_nm));
 	}
 }
+#pragma endregion "CollectorLens"
 
-#pragma region "VirtualFilterWheel"
-VirtualLaser::VirtualFilterWheel::VirtualFilterWheel() :
-	mFWexcitation{ Filterwheel::ID::EXC },
-	mFWdetection{ Filterwheel::ID::DET }
-{}
-
-void VirtualLaser::VirtualFilterWheel::turnFilterwheels_(const int wavelength_nm)
-{
-	if (multibeam)//Multiplex. Turn both filterwheels concurrently
-	{
-		std::future<void> th1{ std::async(&Filterwheel::setWavelength, &mFWexcitation, wavelength_nm) };
-		std::future<void> th2{ std::async(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm) };
-
-		try
-		{
-		th1.get();
-		th2.get();
-		}
-		catch (...)
-		{
-			throw;
-		}
-	}
-
-	else //Single beam. Turn both filterwheels concurrently
-	{
-		std::future<void> th1{ std::async(&Filterwheel::setColor, &mFWexcitation, Filterwheel::COLOR::OPEN) };
-		std::future<void> th2{ std::async(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm) };
-
-		try
-		{
-			th1.get();
-			th2.get();
-		}
-		catch (...)
-		{
-			throw;
-		}
-	}
-}
-#pragma endregion "VirtualFilterWheel"
-
-#pragma region "CombinedLasers"
-CombinedLasers::CombinedLasers(const Laser::ID whichLaser) :
-	mWhichLaser{ whichLaser },
-	mVision{ Laser::ID::VISION },
-	mFidelity{ Laser::ID::FIDELITY }
-{}
-
-//Which laser is currently being used
-Laser::ID CombinedLasers::currentLaser() const
-{
-	return mCurrentLaser;
-}
-
-std::string CombinedLasers::currentLaser_s(const bool justTheNameInitials) const
-{
-	std::string fullName{ laserNameToString_(mCurrentLaser) };
-	std::string nameInitials{ fullName.front() };
-
-	if (justTheNameInitials && nameInitials.size() != 0)
-		return nameInitials;
-
-	return fullName;
-}
-
-int CombinedLasers::currentWavelength_nm() const
-{
-	switch (mCurrentLaser)
-	{
-	case Laser::ID::VISION:
-		return mVision.currentWavelength_nm();
-	case Laser::ID::FIDELITY:
-		return mFidelity.currentWavelength_nm();
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
-	}
-}
-
-void CombinedLasers::isLaserInternalShutterOpen() const
-{
-	while (true)
-	{
-		bool isShutterOpen;
-
-		//Check which laser is being used
-		switch (mCurrentLaser)
-		{
-		case Laser::ID::VISION:
-			isShutterOpen = mVision.isShutterOpen();
-			break;
-		case Laser::ID::FIDELITY:
-			isShutterOpen = mFidelity.isShutterOpen();
-			break;
-		}//switch
-
-		//Check if the corresponding internal shutter is open
-		if (!isShutterOpen)
-		{
-			std::cout << "The internal shutter of " + laserNameToString_(mCurrentLaser) + " seems to be closed. Press ESC to exit or any other key to try again\n";
-
-			if (_getch() == 27)
-				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
-		}
-		else
-			break; //break the whileloop
-	}//whileloop
-}
-
-//Change the laser wavelength (tune Vision or switching lasers accordingly) and switch pockels
-void CombinedLasers::setWavelength(RTcontrol &RTcontrol, const int wavelength_nm)
-{
-	//Select the laser to be used: VISION or FIDELITY
-	Laser::ID newLaser = autoSelectLaser_(wavelength_nm);
-
-	std::stringstream msg;
-	msg << "Using " << laserNameToString_(newLaser) << " at " << wavelength_nm << " nm\n";
-	std::cout << msg.str();
-
-	//For the first call, assign a pointer to mPockelsPtr
-	if(mPockelsPtr == nullptr)	
-		mPockelsPtr.reset(new PockelsCell(RTcontrol, wavelength_nm, newLaser));
-	//For the subsequent calls, destroy the pockels object when switching wavelengths (including switching lasers) to avoid photobleaching the sample (the pockels destructor closes the shutter)
-	else if(currentWavelength_nm() != wavelength_nm || mCurrentLaser != newLaser)
-		mPockelsPtr.reset(new PockelsCell(RTcontrol, wavelength_nm, newLaser));
-
-	//If VISION is selected, set the new wavelength
-	if (newLaser == Laser::ID::VISION)
-		mVision.setWavelength(wavelength_nm);
-
-	mCurrentLaser = newLaser;
-}
-
-//Linearly scale the laser power from the first to the last frame
-void CombinedLasers::setPowerLinearScaling(const double Pi, const double Pf) const
-{
-	//Set the initial laser power
-	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pi, OVERRIDE::EN);
-
-	//Linearly scale the laser power across the frames
-	if (Pf != Pi)
-		mPockelsPtr->powerLinearScaling(Pi, Pf);
-}
-
-//Exponential scale the laser power from the first to the last frame
-void CombinedLasers::setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const
-{
-	//Set the initial laser power
-	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pmin, OVERRIDE::EN);
-
-	//Exponentially scale the laser power across the frames
-	mPockelsPtr->powerExponentialScaling(Pmin, distancePerFrame, decayLengthZ);
-}
-
-void CombinedLasers::openShutter() const
-{
-	mPockelsPtr->setShutter(true);
-}
-
-void CombinedLasers::closeShutter() const
-{
-	mPockelsPtr->setShutter(false);
-}
-
-std::string CombinedLasers::laserNameToString_(const Laser::ID whichLaser) const
-{
-	switch (whichLaser)
-	{
-	case Laser::ID::VISION:
-		return "VISION";
-	case Laser::ID::FIDELITY:
-		return "FIDELITY";
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
-	}
-}
-
-//Automatically select a laser: VISION, FIDELITY, or let the code to decide based on the requested wavelength
-Laser::ID CombinedLasers::autoSelectLaser_(const int wavelength_nm) const
-{
-	//Use VISION for everything below 1040 nm. Use FIDELITY for 1040 nm	
-	if (mWhichLaser == Laser::ID::AUTO)
-	{
-		if (wavelength_nm < 1040)
-			return Laser::ID::VISION;
-		else if (wavelength_nm == 1040)
-			return Laser::ID::FIDELITY;
-		else
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Wavelengths > 1040 nm is not implemented in the CombinedLasers class");
-	}
-	else //If mWhichLaser != ID::AUTO, the mWhichLaser is either ID::VISION or ID::FIDELITY
-		return mWhichLaser;
-}
-#pragma endregion "CombinedLasers"
-
+#pragma region "Mesoscope"
 //The constructor established a connection with the 2 lasers.
-//VirtualLaser::configure() and VirtualLaser::setPower() must be called after this constructor!! otherwise some class members will no be properly initialized
-VirtualLaser::VirtualLaser(const Laser::ID whichLaser) :
-	CombinedLasers{ whichLaser }
+//Mesoscope::configure() and Mesoscope::setPower() must be called after this constructor!! otherwise some class members will no be properly initialized
+Mesoscope::Mesoscope(const Laser::ID whichLaser) :
+	VirtualLaser{ whichLaser }
 {}
 
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
-void VirtualLaser::configure(RTcontrol &RTcontrol, const int wavelength_nm)
+void Mesoscope::configure(RTcontrol &RTcontrol, const int wavelength_nm)
 {
-	std::future<void> th1{ std::async(&CombinedLasers::setWavelength, this, std::ref(RTcontrol), std::ref(wavelength_nm)) };	//Tune the laser wavelength
-	std::future<void> th2{ std::async(&VirtualFilterWheel::turnFilterwheels_, &mVirtualFilterWheel, wavelength_nm) };			//Set the filterwheels
+	std::future<void> th1{ std::async(&VirtualLaser::setWavelength, this, std::ref(RTcontrol), std::ref(wavelength_nm)) };		//Tune the laser wavelength
+	std::future<void> th2{ std::async(&CombinedFilterwheel::turnFilterwheels, &mVirtualFilterWheel, wavelength_nm) };			//Set the filterwheels
 	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };									//Set the collector lens position
 
 	try
@@ -1616,47 +1603,47 @@ void VirtualLaser::configure(RTcontrol &RTcontrol, const int wavelength_nm)
 	}
 }
 
-void VirtualLaser::setPower(const double laserPower) const
+void Mesoscope::setPower(const double laserPower) const
 {
-	this->CombinedLasers::setPowerLinearScaling(laserPower, laserPower);
+	this->VirtualLaser::setPowerLinearScaling(laserPower, laserPower);
 }
 
 //Open the Uniblitz shutter
-void VirtualLaser::openShutter() const
+void Mesoscope::openShutter() const
 {
 	//Check if the laser internal shutter is open
-	this->CombinedLasers::isLaserInternalShutterOpen();
+	this->VirtualLaser::isLaserInternalShutterOpen();
 
 	//Open the Uniblitz shutter
-	this->CombinedLasers::openShutter();
+	this->VirtualLaser::openShutter();
 }
 
 //Used for optimizing the collector lens position
-void VirtualLaser::moveCollectorLens(const double position)
+void Mesoscope::moveCollectorLens(const double position)
 {
 	mCollectorLens.move(position);
 }
-#pragma endregion "VirtualLaser"
+#pragma endregion "Mesoscope"
 
 #pragma region "Galvo"
-Galvo::Galvo(RTcontrol &RTcontrol, const RTcontrol::RTCHAN whichGalvo, const double posMax, const VirtualLaser *virtualLaser) :
+Galvo::Galvo(RTcontrol &RTcontrol, const RTcontrol::RTCHAN whichGalvo, const double posMax, const Mesoscope *mesoscope) :
 	mRTcontrol{ RTcontrol },
 	mWhichGalvo{ whichGalvo },
 	mPosMax{ posMax }
 {
-	reconfigure(virtualLaser);
+	reconfigure(mesoscope);
 }
 
-void Galvo::reconfigure(const VirtualLaser *virtualLaser)
+void Galvo::reconfigure(const Mesoscope *mesoscope)
 {
 	Laser::ID whichLaser;
 	int wavelength_nm;
 
-	//Make sure that the laser and wavelength are well defined in virtualLaser, otherwise use Vision at 750 nm as default
-	if (virtualLaser != nullptr)
+	//Make sure that the laser and wavelength are well defined in mesoscope, otherwise use Vision at 750 nm as default
+	if (mesoscope != nullptr)
 	{
-		whichLaser = virtualLaser->currentLaser();
-		wavelength_nm = virtualLaser->currentWavelength_nm();
+		whichLaser = mesoscope->currentLaser();
+		wavelength_nm = mesoscope->currentWavelength_nm();
 	}
 	else
 	{

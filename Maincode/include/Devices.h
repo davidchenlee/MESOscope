@@ -152,6 +152,16 @@ private:
 	std::string colorToString_(const COLOR color) const;
 };
 
+class CombinedFilterwheel
+{
+public:
+	CombinedFilterwheel();
+	void turnFilterwheels(const int wavelength_nm);
+private:
+	Filterwheel mFWexcitation;
+	Filterwheel mFWdetection;
+};
+
 class Laser
 {
 public:
@@ -196,10 +206,10 @@ private:
 	NiFpga_FPGAvi_ControlBool mWhichShutter;	//Device ID
 };
 
-class PockelsCell
+class Pockels
 {
 public:
-	PockelsCell(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID laserSelector);	//Do not set the output to 0 through the destructor to allow latching the last value
+	Pockels(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID laserSelector);	//Do not set the output to 0 through the destructor to allow latching the last value
 
 	void pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const;
 	void pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const;
@@ -220,6 +230,32 @@ private:
 	double laserpowerToVolt_(const double power) const;
 };
 
+//Integrate the Laser, Shutter, and Pockels classes in a single class
+class VirtualLaser
+{
+public:
+	VirtualLaser(const Laser::ID whichLaser = Laser::ID::AUTO);
+	Laser::ID currentLaser() const;
+	std::string currentLaser_s(const bool justTheNameInitials) const;
+	int currentWavelength_nm() const;
+	void isLaserInternalShutterOpen() const;
+	void setWavelength(RTcontrol &RTcontrol, const int wavelength_nm);
+	void setPowerLinearScaling(const double Pi, const double Pf) const;
+	void setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const;
+	void openShutter() const;
+	void closeShutter() const;
+private:
+	Laser::ID mWhichLaser;							//use VISION, FIDELITY, or AUTO (let the code decide)
+	Laser::ID mCurrentLaser;						//Current laser in use: VISION or FIDELITY
+	Laser mVision;
+	Laser mFidelity;
+	std::unique_ptr <Pockels> mPockelsPtr;		//Create a pockels handle dynamically. Alternatively, I could create a fixed handle for each wavelength used
+	const double mPockelTimeStep{ 8. * us };		//Time step for the pockels sequence
+
+	std::string laserNameToString_(const Laser::ID whichLaser) const;
+	Laser::ID autoSelectLaser_(const int wavelength_nm) const;
+};
+
 class StepperActuator
 {
 public:
@@ -238,86 +274,48 @@ private:
 	double mPosition;
 
 	const char* mSerialNumber;									//Each Thorlabs actuator has a unique serial number
-	const double mCalib{ 26000000./(12.9442 * mm) };			//Calibration factor to convert mm to the actuator's internal units
+	const double mCalib{ 26000000. / (12.9442 * mm) };			//Calibration factor to convert mm to the actuator's internal units
 	const std::vector<double> mPosLimit{ 0. * mm, 13. * mm };
 	const int mVel_iu{ 323449856 };								//Equivalent to 3 mm/s
 	const int mAcc_iu{ 11041 };									//Equivalent to 0.5 mm/s^2
 };
 
-class CombinedLasers
+class CollectorLens: public StepperActuator
 {
 public:
-	CombinedLasers(const Laser::ID whichLaser = Laser::ID::AUTO);
-	Laser::ID currentLaser() const;
-	std::string currentLaser_s(const bool justTheNameInitials) const;
-	int currentWavelength_nm() const;
-	void isLaserInternalShutterOpen() const;
-	void setWavelength(RTcontrol &RTcontrol, const int wavelength_nm);
-	void setPowerLinearScaling(const double Pi, const double Pf) const;
-	void setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const;
-	void openShutter() const;
-	void closeShutter() const;
-private:
-	Laser::ID mWhichLaser;							//use VISION, FIDELITY, or AUTO (let the code decide)
-	Laser::ID mCurrentLaser;						//Current laser in use: VISION or FIDELITY
-	Laser mVision;
-	Laser mFidelity;
-	//RTcontrol &mRTcontrol;
-	std::unique_ptr <PockelsCell> mPockelsPtr;		//Create a pockels handle dynamically. Alternatively, I could create a fixed handle for each wavelength used
-	const double mPockelTimeStep{ 8. * us };		//Time step for the pockels sequence
-
-	std::string laserNameToString_(const Laser::ID whichLaser) const;
-	Laser::ID autoSelectLaser_(const int wavelength_nm) const;
+	CollectorLens();
+	void set(const int wavelength_nm);
 };
 
-class VirtualLaser: public CombinedLasers
+//Integrate the VirtualLaser, Pockels, and CombinedFilterwheels classes in a single class
+class Mesoscope: public VirtualLaser
 {
 public:
-	VirtualLaser(const Laser::ID whichLaser = Laser::ID::AUTO);
-	VirtualLaser(const VirtualLaser&) = delete;				//Disable copy-constructor
-	VirtualLaser& operator=(const VirtualLaser&) = delete;	//Disable assignment-constructor
-	VirtualLaser(VirtualLaser&&) = delete;					//Disable move constructor
-	VirtualLaser& operator=(VirtualLaser&&) = delete;		//Disable move-assignment constructor
+	Mesoscope(const Laser::ID whichLaser = Laser::ID::AUTO);
+	Mesoscope(const Mesoscope&) = delete;				//Disable copy-constructor
+	Mesoscope& operator=(const Mesoscope&) = delete;	//Disable assignment-constructor
+	Mesoscope(Mesoscope&&) = delete;					//Disable move constructor
+	Mesoscope& operator=(Mesoscope&&) = delete;		//Disable move-assignment constructor
 
 	void configure(RTcontrol &RTcontrol, const int wavelength_nm);
 	void setPower(const double laserPower) const;
 	void openShutter() const;
 	void moveCollectorLens(const double position);
 private:
-	//Define separate classes to allow concurrent calls
-	class CollectorLens
-	{
-	public:
-		void move(const double position);
-		void set(const int wavelength_nm);
-	private:
-		StepperActuator mStepper{ "26000299" };
-	};
-
-	class VirtualFilterWheel
-	{
-	public:
-		VirtualFilterWheel();
-		void turnFilterwheels_(const int wavelength_nm);
-	private:
-		Filterwheel mFWexcitation;
-		Filterwheel mFWdetection;
-	};
-
-	VirtualFilterWheel mVirtualFilterWheel;
+	CombinedFilterwheel mVirtualFilterWheel;
 	CollectorLens mCollectorLens;
 };
 
 class Galvo
 {
 public:
-	Galvo(RTcontrol &RTcontrol, const RTcontrol::RTCHAN whichGalvo, const double posMax, const VirtualLaser *virtualLaser = nullptr);
+	Galvo(RTcontrol &RTcontrol, const RTcontrol::RTCHAN whichGalvo, const double posMax, const Mesoscope *mesoscope = nullptr);
 	Galvo(const Galvo&) = delete;				//Disable copy-constructor
 	Galvo& operator=(const Galvo&) = delete;	//Disable assignment-constructor
 	Galvo(Galvo&&) = delete;					//Disable move constructor
 	Galvo& operator=(Galvo&&) = delete;			//Disable move-assignment constructor
 
-	void reconfigure(const VirtualLaser *virtualLaser);
+	void reconfigure(const Mesoscope *mesoscope);
 	void voltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void voltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const;

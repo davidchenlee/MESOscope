@@ -4,7 +4,7 @@
 #include <array>
 
 #define multibeam 0			//Multibeam or singlebeam. *cast
-#define pockelsAutoOff 1	//For debugging purposes. In LV, let 'framegate' gate the output of the pockels cell
+#define pockelsAutoOff 1	//For debugging purposes. In LV, let 'framegate' gate the output of the pockels
 
 namespace Constants
 {

@@ -3,7 +3,9 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
+- Update the Z position after cutting!!!
 - Add label for the color
+- enable/disable using the vibratome in Routines::sequencer
 - Safeguard the LOI that it takes allowed values
 - For low power at 1040 nm, choose Vision
 - Fix the power increase in the step-by-step rountine

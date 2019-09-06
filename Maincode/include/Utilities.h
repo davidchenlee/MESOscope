@@ -19,7 +19,7 @@ void printHex(const std::vector<uint8_t>  input);
 void printHex(const std::string input);
 void printBinary16(const int input);
 U16 doubleToFx2p14(double n);
-int SCANDIRtoInt(const SCANDIR scanDir);
+int convertScandirToInt(const SCANDIR scanDir);
 double exponentialFunction(const double Pmin, const double depthZ, const double decayLengthZ);
 template<class T> inline T clip(T x, T lower, T upper);
 template<class T> inline U8 clipU8top(const T x);
@@ -52,10 +52,10 @@ public:
 	TiffU8(const int height_pix, const int width_pix, const int nFrames = 1);
 	~TiffU8();
 	U8* const data() const;
-	int heightPerFrame_pix() const;
-	int widthPerFrame_pix() const;
-	int nPixPerFrame_pix() const;
-	int nFrames() const;
+	int readHeightPerFrame_pix() const;
+	int readWidthPerFrame_pix() const;
+	int readNpixPerFrame_pix() const;
+	int readNframes() const;
 
 	void pushImage(const U8* inputArray, const int frameIndex) const;
 	void pushImage(const U8* inputArray, const int indexFirstFrame, const int indexLastFrame) const;
@@ -66,7 +66,7 @@ public:
 	void saveToTxt(const std::string fileName) const;
 
 	void mirrorOddFrames();
-	void mirror();
+	void mirrorSingleFrame();
 	void averageEvenOddFrames();
 	void averageFrames();
 	void binFrames(const int nFramesPerBin);
@@ -105,12 +105,12 @@ public:
 	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
 	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
-	int tileHeight_pix() const;
-	int tileWidth_pix() const;
-	int fullHeight_pix() const;
-	int fullWidth_pix() const;
-	INDICES2 tileArraySize() const;
-	TILEOVERLAP3 tileOverlap_frac() const;
+	int readTileHeight_pix() const;
+	int readTileWidth_pix() const;
+	int readFullHeight_pix() const;
+	int readFullWidth_pix() const;
+	INDICES2 readTileArraySize() const;
+	TILEOVERLAP3 readTileOverlap_frac() const;
 private:
 	TiffU8 mStitchedTiff;
 	const TileArray mTileArray;

@@ -264,7 +264,7 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << convertActionToString_(mAction) << "\t\t\t\t\t";
 		*fileHandle << mParam.acqStack.mStackNumber << "\t";
 		*fileHandle << mParam.acqStack.mWavelength_nm << "\t";
-		*fileHandle << SCANDIRtoInt(mParam.acqStack.mScanDirZ) << "\t";
+		*fileHandle << convertScandirToInt(mParam.acqStack.mScanDirZ) << "\t";
 		*fileHandle << std::setprecision(3);
 		*fileHandle << mParam.acqStack.mScanZmin / mm << "\t";
 		*fileHandle << (mParam.acqStack.mScanZmin + mParam.acqStack.mDepthZ) / mm << "\t";
@@ -299,7 +299,7 @@ void Sequencer::Commandline::printParameters() const
 	case Action::ID::ACQ:
 		std::cout << "The command is " << convertActionToString_(mAction) << " with parameters: \n";
 		std::cout << "wavelength = " << mParam.acqStack.mWavelength_nm << " nm\n";
-		std::cout << "scanDirZ = " << SCANDIRtoInt(mParam.acqStack.mScanDirZ) << "\n";
+		std::cout << "scanDirZ = " << convertScandirToInt(mParam.acqStack.mScanDirZ) << "\n";
 		std::cout << "scanZmin / depthZ = " << mParam.acqStack.mScanZmin / mm << " mm/" << mParam.acqStack.mDepthZ << " mm\n";
 		std::cout << "scanPmin / ScanPexp = " << mParam.acqStack.mScanPmin / mW << " mW/" << mParam.acqStack.mScanPexp / um << " (um)\n\n";
 		break;
@@ -347,9 +347,9 @@ QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SI
 					{ 0, 0, 0} }													//No overlap	
 {
 	const int II{ 0 };							//Only 1 row
-	for (int JJ = 0; JJ < mQuickStitcher.tileArraySize().JJ; JJ++)
+	for (int JJ = 0; JJ < mQuickStitcher.readTileArraySize().JJ; JJ++)
 	{
-		const POSITION2 relativeTileIndexIJ{ determineRelativeTileIndicesIJ(mQuickStitcher.tileOverlap_frac(), mQuickStitcher.tileArraySize(), { II, JJ }) };
+		const POSITION2 relativeTileIndexIJ{ determineRelativeTileIndicesIJ(mQuickStitcher.readTileOverlap_frac(), mQuickStitcher.readTileArraySize(), { II, JJ }) };
 		mStagePosY.push_back(mROIcenterXY.YY - mFFOV.YY * relativeTileIndexIJ.YY);		//for now, only stacking strips to the right is allowed (i.e. move the stage to the left)
 	}
 }
@@ -384,12 +384,12 @@ void QuickScanXY::saveToFile(std::string filename, const OVERRIDE override) cons
 
 int QuickScanXY::tileHeight_pix() const
 {
-	return mQuickStitcher.tileHeight_pix();
+	return mQuickStitcher.readTileHeight_pix();
 }
 
 int QuickScanXY::tileWidth_pix() const
 {
-	return mQuickStitcher.tileWidth_pix();
+	return mQuickStitcher.readTileWidth_pix();
 }
 #pragma endregion "QuickScanXY"
 
@@ -399,8 +399,8 @@ Boolmap::Boolmap(const TiffU8 &tiff, const TileArray tileArray, const PIXELS2 an
 	mTiff{ tiff },
 	mTileArray{ tileArray },
 	mThreshold{ threshold },
-	mFullHeight_pix{ tiff.heightPerFrame_pix() },
-	mFullWidth_pix{ tiff.widthPerFrame_pix() },
+	mFullHeight_pix{ tiff.readHeightPerFrame_pix() },
+	mFullWidth_pix{ tiff.readWidthPerFrame_pix() },
 	mNpixFull{ mFullHeight_pix * mFullWidth_pix },
 	mAnchorPixel_pix{ anchorPixel_pix }
 {
@@ -632,14 +632,14 @@ void Sequencer::generateCommandList()
 					moveStage_({ mII, mJJ });
 					acqStack_(iterWL);
 					saveStack_();
-					mII -= SCANDIRtoInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the X-stage axis
+					mII -= convertScandirToInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the X-stage axis
 				}
-				mII += SCANDIRtoInt(mIterScanDirXYZ.XX);		//Re-initialize II by going back one step to start from 0 or mTileArraySize.II - 1
-				reverseSCANDIR(mIterScanDirXYZ.XX);				//Reverse the scanning direction
-				mJJ -= SCANDIRtoInt(mIterScanDirXYZ.YY);		//Increase/decrease the iterator in the Y-stage axis
+				mII += convertScandirToInt(mIterScanDirXYZ.XX);		//Re-initialize II by going back one step to start from 0 or mTileArraySize.II - 1
+				reverseSCANDIR(mIterScanDirXYZ.XX);					//Reverse the scanning direction
+				mJJ -= convertScandirToInt(mIterScanDirXYZ.YY);		//Increase/decrease the iterator in the Y-stage axis
 			}
-			mJJ += SCANDIRtoInt(mIterScanDirXYZ.YY);			//Re-initialize JJ by going back one step to start from 0 or mTileArraySize.JJ - 1
-			reverseSCANDIR(mIterScanDirXYZ.YY);					//Reverse the scanning direction
+			mJJ += convertScandirToInt(mIterScanDirXYZ.YY);			//Re-initialize JJ by going back one step to start from 0 or mTileArraySize.JJ - 1
+			reverseSCANDIR(mIterScanDirXYZ.YY);						//Reverse the scanning direction
 		}
 		//Only need to cut the sample 'nVibratomeSlices -1' times
 		if (iterSlice < mNtotalSlices - 1)
@@ -683,15 +683,26 @@ std::string Sequencer::printHeaderUnits() const
 void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "SEQUENCER ************************************************************\n";
-	*fileHandle << "Stages initial scan direction {stageX, stageY, stageZ} = {" << SCANDIRtoInt(g_initialStageScanDirXYZ.XX) << ", " << SCANDIRtoInt(g_initialStageScanDirXYZ.YY) << ", " << SCANDIRtoInt(g_initialStageScanDirXYZ.ZZ) << "}\n";
+	*fileHandle << "Stages initial scan direction {stageX, stageY, stageZ} = {" << convertScandirToInt(g_initialStageScanDirXYZ.XX) << ", " <<
+																				   convertScandirToInt(g_initialStageScanDirXYZ.YY) << ", " <<
+																				   convertScandirToInt(g_initialStageScanDirXYZ.ZZ) << "}\n";
 	*fileHandle << std::setprecision(4);
-	*fileHandle << "Effective LOI (stageX, stageY, stageZ) = (" << determineEffectiveLOIxyz().XX / mm << " mm, " << determineEffectiveLOIxyz().YY / mm << " mm, " << determineEffectiveLOIxyz().ZZ / mm << " mm)\n";
-	*fileHandle << "Effective ROI boundaries [YMIN, XMIN, YMAX, XMAX] = [" << mROIeff.YMIN / mm << " mm, " << mROIeff.XMIN / mm << " mm, " << mROIeff.YMAX / mm << " mm, " << mROIeff.XMAX / mm << " mm]\n";
+	*fileHandle << "Effective LOI (stageX, stageY, stageZ) = (" << determineEffectiveLOIxyz().XX / mm << " mm, " <<
+																   determineEffectiveLOIxyz().YY / mm << " mm, " <<
+																   determineEffectiveLOIxyz().ZZ / mm << " mm)\n";
+
+	*fileHandle << "Effective ROI boundaries [YMIN, XMIN, YMAX, XMAX] = [" << mROIeff.YMIN / mm << " mm, " <<
+																			  mROIeff.XMIN / mm << " mm, " <<
+																			  mROIeff.YMAX / mm << " mm, " <<
+																			  mROIeff.XMAX / mm << " mm]\n";
 	*fileHandle << "Z position of the surface of the sample = " << mSample.mSurfaceZ / mm << " mm\n";
 	*fileHandle << std::setprecision(0);
 	*fileHandle << "Total # tissue slices = " << mNtotalSlices << "\n";
-	*fileHandle << "Tile array size (stageX, stageY) = (" << mTileArray.mArraySize.II << ", " << mTileArray.mArraySize.JJ << ")\n";
+	*fileHandle << "Tile array size (stageX, stageY) = (" << mTileArray.mArraySize.II << ", " <<
+															 mTileArray.mArraySize.JJ << ")\n";
+
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
+
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
 
 	const double imagingTimePerStack{ g_lineclockHalfPeriod *  mStack.mTileHeight_pix * (mStack.mDepthZ / mStack.mPixelSizeZ) };

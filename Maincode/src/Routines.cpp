@@ -305,7 +305,7 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames };	//Note the STAGEZ flag
 		Mesoscope mesoscope{ whichLaser };
 		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
-		mesoscope.setPowerExponentialScaling(fluorLabel.mScanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * fluorLabel.mScanPexp);
+		mesoscope.setPowerExponentialScaling(fluorLabel.mScanPmin, pixelSizeZbeforeBinning, convertScandirToInt(scanDirZ) * fluorLabel.mScanPexp);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -536,7 +536,7 @@ namespace Routines
 						mesoscope.configure(RTcontrol, wavelength_nm);											//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
 						scanPmin = acqStack.mScanPmin;
 						scanPexp = acqStack.mScanPexp;
-						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, SCANDIRtoInt(scanDirZ) * acqStack.mScanPexp);
+						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, convertScandirToInt(scanDirZ) * acqStack.mScanPexp);
 
 						mesoscope.openShutter();																//Re-open the Uniblitz shutter if closed by the pockels destructor
 						rescanner.reconfigure(mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm());		//The calibration of the rescanner depends on the laser and wavelength being used
@@ -1197,14 +1197,14 @@ namespace TestRoutines
 		PIXELS2 anchorPixel_pix;
 
 		if (tileArray.mArraySize.II % 2)	//Odd number of tiles
-			anchorPixel_pix.ii = image.heightPerFrame_pix() / 2;
+			anchorPixel_pix.ii = image.readHeightPerFrame_pix() / 2;
 		else								//Even number of tiles
-			anchorPixel_pix.ii = image.heightPerFrame_pix() / 2 - tileArray.mTileHeight_pix / 2;
+			anchorPixel_pix.ii = image.readHeightPerFrame_pix() / 2 - tileArray.mTileHeight_pix / 2;
 
 		if (tileArray.mArraySize.JJ % 2)	//Odd number of tiles
-			anchorPixel_pix.jj = image.widthPerFrame_pix() / 2;
+			anchorPixel_pix.jj = image.readWidthPerFrame_pix() / 2;
 		else								//Even number of tiles
-			anchorPixel_pix.jj = image.widthPerFrame_pix() / 2 - tileArray.mTileWidth_pix / 2;
+			anchorPixel_pix.jj = image.readWidthPerFrame_pix() / 2 - tileArray.mTileWidth_pix / 2;
 
 		return anchorPixel_pix;
 	}
@@ -1218,7 +1218,7 @@ namespace TestRoutines
 		//The tile array used for imaging
 		const int imagingTileHeight_pix{ 560 };
 		const int imagingTileWidth_pix{ 300 };
-		const INDICES2 nImagingTiles{ image.heightPerFrame_pix() / imagingTileHeight_pix , image.widthPerFrame_pix() / imagingTileWidth_pix };
+		const INDICES2 nImagingTiles{ image.readHeightPerFrame_pix() / imagingTileHeight_pix , image.readWidthPerFrame_pix() / imagingTileWidth_pix };
 		const TileArray imagingTileArray{ imagingTileHeight_pix, imagingTileWidth_pix, nImagingTiles, { 0.0, 0.0, 0.0 } };//Tile array used for imaging
 		PIXELS2 anchorPixel_pix{ determineAnchorPixel_pix(image, imagingTileArray) };
 

@@ -38,7 +38,7 @@ void Image::acquireVerticalStrip(const SCANDIR scanDirX)
 	switch (scanDirX)
 	{
 	case SCANDIR::RIGHTWARD:
-		mTiff.mirror();			
+		mTiff.mirrorSingleFrame();			
 		break;
 	}
 }

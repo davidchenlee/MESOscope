@@ -55,7 +55,7 @@ U16 doubleToFx2p14(double n)
 	return int_part + frac_part;
 }
 
-int SCANDIRtoInt(const SCANDIR scanDir)
+int convertScandirToInt(const SCANDIR scanDir)
 {
 	switch (scanDir)
 	{
@@ -350,22 +350,22 @@ U8* const TiffU8::data() const
 	return mArray;
 }
 
-int TiffU8::heightPerFrame_pix() const
+int TiffU8::readHeightPerFrame_pix() const
 {
 	return mHeightPerFrame_pix;
 }
 
-int TiffU8::widthPerFrame_pix() const
+int TiffU8::readWidthPerFrame_pix() const
 {
 	return mWidthPerFrame_pix;
 }
 
-int TiffU8::nPixPerFrame_pix() const
+int TiffU8::readNpixPerFrame_pix() const
 {
 	return mNpixPerFrame;
 }
 
-int TiffU8::nFrames() const
+int TiffU8::readNframes() const
 {
 	return mNframes;
 }
@@ -565,7 +565,7 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 		if (frameIndex == lastFrame)
 			break;
 
-		frameIndex += SCANDIRtoInt(scanDirZ); //Increasing iterator for UPWARD. Decreasing for DOWNWARD
+		frameIndex += convertScandirToInt(scanDirZ); //Increasing iterator for UPWARD. Decreasing for DOWNWARD
 	} while (true);
 
 	_TIFFfree(buffer);		//Destroy the buffer
@@ -610,7 +610,7 @@ void TiffU8::mirrorOddFrames()
 }
 
 //Mirror the entire array mArray vertically
-void TiffU8::mirror()
+void TiffU8::mirrorSingleFrame()
 {
 	U8 *buffer = new U8[mBytesPerLine];		//Buffer used to store a row of pixels
 
@@ -1117,11 +1117,11 @@ void QuickStitcher::push(const U8 *tile, const INDICES2 tileIndicesIJ)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArray.mArraySize.JJ - 1) + "]");
 
 	//const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
-	//const int tileWidth_pix{ tile.widthPerFrame_pix() };													//Width of the tile
-	const int rowShift_pix{ tileIndicesIJ.II *  mTileArray.mTileHeight_pix };								//In the mTiff image, shift the tile down by this many pixels
-	const int colShift_pix{ tileIndicesIJ.JJ *  mTileArray.mTileWidth_pix };								//In the mTiff image, shift the tile to the right by this many pixels
-	const int tileBytesPerRow{ static_cast<int>(mTileArray.mTileWidth_pix * sizeof(U8)) };					//Bytes per row of the input tile
-	const int stitchedTiffBytesPerRow{ static_cast<int>(mStitchedTiff.widthPerFrame_pix() * sizeof(U8)) };	//Bytes per row of the tiled image
+	//const int tileWidth_pix{ tile.widthPerFrame_pix() };														//Width of the tile
+	const int rowShift_pix{ tileIndicesIJ.II *  mTileArray.mTileHeight_pix };									//In the mTiff image, shift the tile down by this many pixels
+	const int colShift_pix{ tileIndicesIJ.JJ *  mTileArray.mTileWidth_pix };									//In the mTiff image, shift the tile to the right by this many pixels
+	const int tileBytesPerRow{ static_cast<int>(mTileArray.mTileWidth_pix * sizeof(U8)) };						//Bytes per row of the input tile
+	const int stitchedTiffBytesPerRow{ static_cast<int>(mStitchedTiff.readWidthPerFrame_pix() * sizeof(U8)) };	//Bytes per row of the tiled image
 
 	/*
 	//Transfer the data from the input tile to mStitchedTiff. Old way: copy pixel by pixel
@@ -1139,32 +1139,32 @@ void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) co
 	mStitchedTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
 }
 
-int QuickStitcher::tileHeight_pix() const
+int QuickStitcher::readTileHeight_pix() const
 {
 	return mTileArray.mTileHeight_pix;
 }
 
-int QuickStitcher::tileWidth_pix() const
+int QuickStitcher::readTileWidth_pix() const
 {
 	return mTileArray.mTileWidth_pix;
 }
 
-int QuickStitcher::fullHeight_pix() const
+int QuickStitcher::readFullHeight_pix() const
 {
-	return mStitchedTiff.heightPerFrame_pix();
+	return mStitchedTiff.readHeightPerFrame_pix();
 }
 
-int QuickStitcher::fullWidth_pix() const
+int QuickStitcher::readFullWidth_pix() const
 {
-	return mStitchedTiff.widthPerFrame_pix();
+	return mStitchedTiff.readWidthPerFrame_pix();
 }
 
-INDICES2 QuickStitcher::tileArraySize() const
+INDICES2 QuickStitcher::readTileArraySize() const
 {
 	return mTileArray.mArraySize;
 }
 
-TILEOVERLAP3 QuickStitcher::tileOverlap_frac() const
+TILEOVERLAP3 QuickStitcher::readTileOverlap_frac() const
 {
 	return mTileArray.mOverlapXYZ_frac;
 }

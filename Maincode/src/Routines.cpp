@@ -3,7 +3,7 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.640 + 0.050) * mm };
+POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.640 + 0.000) * mm };
 //POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (17.640 + 0.000) * mm };//For contScanX
 
 #if multibeam
@@ -450,7 +450,7 @@ namespace Routines
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
 		const SIZE3 LOIxyz{ 1.6 * mm, 0.8 * mm, 0.25 * mm };
-		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.50 };										//Stack overlap
+		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.00 };										//Stack overlap
 		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };											//Stack overlap
 		const double cutAboveBottomOfStack{ 100. * um };												//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
@@ -497,7 +497,7 @@ namespace Routines
 
 				//SCANNERS
 				const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2. };
-				Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+
 
 				//These parameters must be accessible to all the cases
 				int wavelength_nm, nFramesBinning, sliceNumber, stackNumber, tileIndexI, tileIndexJ;
@@ -505,11 +505,11 @@ namespace Routines
 				switch (commandline.mAction)
 				{
 				case Action::ID::MOV://Move the X and Y-stages to mStackCenterXY
-					sliceNumber = commandline.mParam.moveStage.mSliceNumber;
+					sliceNumber = commandline.mParam.moveStage.readSliceNumber();
 
-					tileIndexI = commandline.mParam.moveStage.mTileIJ.II;
-					tileIndexJ = commandline.mParam.moveStage.mTileIJ.JJ;
-					tileCenterXY = commandline.mParam.moveStage.mTileCenterXY;
+					tileIndexI = commandline.mParam.moveStage.readTileIJ().II;
+					tileIndexJ = commandline.mParam.moveStage.readTileIJ().JJ;
+					tileCenterXY = commandline.mParam.moveStage.readTileCenterXY();
 					stage.moveXY(tileCenterXY);
 					stage.waitForMotionToStopAll();
 					break;
@@ -538,8 +538,9 @@ namespace Routines
 						scanPexp = acqStack.mScanPexp;
 						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, convertScandirToInt(scanDirZ) * acqStack.mScanPexp);
 
-						mesoscope.openShutter();																//Re-open the Uniblitz shutter if closed by the pockels destructor
-						rescanner.reconfigure(mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm());		//The calibration of the rescanner depends on the laser and wavelength being used
+						Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+
+						mesoscope.openShutter();																		//Re-open the Uniblitz shutter if closed by the pockels destructor
 					}
 
 					stage.moveSingle(Stage::ZZ, scanZi);	//Move the stage to the initial Z position
@@ -582,7 +583,7 @@ namespace Routines
 					break;
 				case Action::ID::CUT://Move the stage to the vibratome and then cut a slice off
 				{
-					const double planeZtoCut{ commandline.mParam.cutSlice.mStageZheightForFacingTheBlade };
+					const double planeZtoCut{ commandline.mParam.cutSlice.readStageZheightForFacingTheBlade() };
 					Vibratome vibratome{ fpga, stage };
 					vibratome.sliceTissue(planeZtoCut);
 				}		

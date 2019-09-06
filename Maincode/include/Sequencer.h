@@ -65,11 +65,35 @@ struct Stack
 namespace Action
 {
 	enum class ID { CUT, ACQ, SAV, MOV };
-	struct MoveStage {
+	class MoveStage {
+	public:
+		void setParam(const int sliceNumber, const INDICES2 tileIJ, const POSITION2 tileCenterXY)
+		{
+			mSliceNumber = sliceNumber;
+			mTileIJ = tileIJ;
+			mTileCenterXY = tileCenterXY;
+		}
+
+		int readSliceNumber() const
+		{
+			return mSliceNumber;
+		}
+
+		INDICES2 readTileIJ() const
+		{
+			return mTileIJ;
+		}
+
+		POSITION2 readTileCenterXY() const
+		{
+			return mTileCenterXY;
+		}
+	private:
 		int mSliceNumber;			//Slice number
 		INDICES2 mTileIJ;			//Indices of the tile array
 		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
 	};
+
 	struct AcqStack {
 		int mStackNumber;
 		int mWavelength_nm;
@@ -80,7 +104,26 @@ namespace Action
 		double mScanPexp;		//Laser power increase in the Z-stage axis per unit of distance
 		int nFrameBinning;
 	};
+
 	struct CutSlice {
+	public:
+		void setParam(const double planeZtoCut, const double stageZheightForFacingTheBlade)
+		{
+			mPlaneZtoCut = planeZtoCut;
+			mStageZheightForFacingTheBlade = stageZheightForFacingTheBlade;
+		}
+
+		double readPlaneZtoCut() const
+		{
+			return mPlaneZtoCut;
+		}
+
+		double readStageZheightForFacingTheBlade() const
+		{
+			return mStageZheightForFacingTheBlade;
+		}
+
+	private:
 		double mPlaneZtoCut;
 		double mStageZheightForFacingTheBlade;
 	};
@@ -136,8 +179,8 @@ public:
 			Action::AcqStack acqStack;
 			Action::CutSlice cutSlice;
 		} mParam;
-		Commandline(const Action::ID action);
 
+		Commandline(const Action::ID action);
 		void printToFile(std::ofstream *fileHandle) const;
 		void printParameters() const;
 	private:

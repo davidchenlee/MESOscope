@@ -2114,62 +2114,50 @@ Galvo::Galvo(RTcontrol &RTcontrol, const double posMax, const Laser::ID whichLas
 	mWhichGalvo{ RTcontrol::RTCHAN::RESCANNER },
 	mPosMax{ posMax }
 {
-	reconfigure(whichLaser, wavelength_nm);
-}
-
-void Galvo::reconfigure(const Laser::ID whichLaser, const int wavelength_nm)
-{
-	switch (mWhichGalvo)//which GALVO
+	//The calibration of the rescanner is slightly different for Vision and Fidelity
+	switch (whichLaser)
 	{
-	case RTcontrol::RTCHAN::RESCANNER:
-		//The calibration of the rescanner is slightly different for Vision and Fidelity
-		switch (whichLaser)
+		//The calibration of the rescanner also depends on the wavelength used
+	case Laser::ID::VISION:
+		switch (wavelength_nm)
 		{
-			//The calibration of the rescanner also depends on the wavelength used
-		case Laser::ID::VISION:
-			switch (wavelength_nm)
-			{
-			case 750:
-				mVoltagePerDistance = g_rescannerCalibV750nm.voltagePerDistance;
-				mVoltageOffset = g_rescannerCalibV750nm.voltageOffset;
-				break;
-			case 920:
-				mVoltagePerDistance = g_rescannerCalibV920nm.voltagePerDistance;
-				mVoltageOffset = g_rescannerCalibV920nm.voltageOffset;
-				break;
-			case 1040:
-				mVoltagePerDistance = g_rescannerCalibV1040nm.voltagePerDistance;
-				mVoltageOffset = g_rescannerCalibV1040nm.voltageOffset;
-				break;
-			default:
-				throw std::invalid_argument((std::string)__FUNCTION__ + ": The galvo has not been calibrated for the wavelength " + std::to_string(wavelength_nm) + " nm");
-			}
+		case 750:
+			mVoltagePerDistance = g_rescannerCalibV750nm.voltagePerDistance;
+			mVoltageOffset = g_rescannerCalibV750nm.voltageOffset;
 			break;
-		case Laser::ID::FIDELITY:
-			switch (wavelength_nm)
-			{
-			case 1040:
-				mVoltagePerDistance = g_rescannerCalibF1040nm.voltagePerDistance;
-				mVoltageOffset = g_rescannerCalibF1040nm.voltageOffset;
-				break;
-			default:
-				throw std::invalid_argument((std::string)__FUNCTION__ + ": FIDELITY only supports the wavelength 1040 nm\n");
-			}
+		case 920:
+			mVoltagePerDistance = g_rescannerCalibV920nm.voltagePerDistance;
+			mVoltageOffset = g_rescannerCalibV920nm.voltageOffset;
+			break;
+		case 1040:
+			mVoltagePerDistance = g_rescannerCalibV1040nm.voltagePerDistance;
+			mVoltageOffset = g_rescannerCalibV1040nm.voltageOffset;
 			break;
 		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The galvo has not been calibrated for the wavelength " + std::to_string(wavelength_nm) + " nm");
 		}
-
-		//For debugging
-		//std::cout << "Rescanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
-		//std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
-
-		//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
-		pushPositionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + readSinglebeamVoltageOffset(), OVERRIDE::EN);
+		break;
+	case Laser::ID::FIDELITY:
+		switch (wavelength_nm)
+		{
+		case 1040:
+			mVoltagePerDistance = g_rescannerCalibF1040nm.voltagePerDistance;
+			mVoltageOffset = g_rescannerCalibF1040nm.voltageOffset;
+			break;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": FIDELITY only supports the wavelength 1040 nm\n");
+		}
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected galvo channel unavailable");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
 	}
+
+	//For debugging
+	//std::cout << "Rescanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
+	//std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
+
+	//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
+	pushPositionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + readSinglebeamVoltageOffset(), OVERRIDE::EN);
 }
 
 double Galvo::readSinglebeamVoltageOffset() const

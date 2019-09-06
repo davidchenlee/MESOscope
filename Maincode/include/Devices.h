@@ -380,7 +380,6 @@ public:
 	Galvo(Galvo&&) = delete;					//Disable move constructor
 	Galvo& operator=(Galvo&&) = delete;			//Disable move-assignment constructor
 
-	void reconfigure(const Laser::ID whichLaser, const int wavelength_nm);
 	void setVoltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
 	void pushVoltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const;
@@ -400,7 +399,7 @@ private:
 	double readSinglebeamVoltageOffset() const;
 };
 
-//Integrate VirtualLaser, Pockels, and CombinedFilterwheels classes in a single class
+//Integrate VirtualLaser, CombinedFilterwheel, and CollectorLens classes in a single class
 class Mesoscope: public VirtualLaser
 {
 public:

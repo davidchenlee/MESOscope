@@ -255,10 +255,10 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 	switch (mAction)
 	{
 	case Action::ID::MOV:
-		*fileHandle << convertActionToString_(mAction) << "\t" << mParam.moveStage.mSliceNumber;
-		*fileHandle << "\t(" << mParam.moveStage.mTileIJ.II << "," << mParam.moveStage.mTileIJ.JJ << ")\t";
+		*fileHandle << convertActionToString_(mAction) << "\t" << mParam.moveStage.readSliceNumber();
+		*fileHandle << "\t(" << mParam.moveStage.readTileIJ().II << "," << mParam.moveStage.readTileIJ().JJ << ")\t";
 		*fileHandle << std::setprecision(4);
-		*fileHandle << "(" << mParam.moveStage.mTileCenterXY.XX / mm << "," << mParam.moveStage.mTileCenterXY.YY / mm << ")\n";
+		*fileHandle << "(" << mParam.moveStage.readTileCenterXY().XX / mm << "," << mParam.moveStage.readTileCenterXY().YY / mm << ")\n";
 		break;
 	case Action::ID::ACQ:
 		*fileHandle << convertActionToString_(mAction) << "\t\t\t\t\t";
@@ -277,8 +277,8 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 	case Action::ID::CUT:
 		*fileHandle << convertActionToString_(mAction);
 		*fileHandle << std::setprecision(3);
-		*fileHandle << "******Stage height for facing the VT = " << mParam.cutSlice.mStageZheightForFacingTheBlade / mm << " mm";
-		*fileHandle << "******Equivalent sample plane Z = " << mParam.cutSlice.mPlaneZtoCut / mm << " mm";
+		*fileHandle << "******Stage height for facing the VT = " << mParam.cutSlice.readStageZheightForFacingTheBlade() / mm << " mm";
+		*fileHandle << "******Equivalent sample plane Z = " << mParam.cutSlice.readPlaneZtoCut() / mm << " mm";
 		*fileHandle << "********\n";
 		break;
 	default:
@@ -292,9 +292,9 @@ void Sequencer::Commandline::printParameters() const
 	{
 	case Action::ID::MOV:
 		std::cout << "The command is " << convertActionToString_(mAction) << " with parameters: \n";
-		std::cout << "Vibratome slice number = " << mParam.moveStage.mSliceNumber << "\n";
-		std::cout << "Tile ij = (" << mParam.moveStage.mTileIJ.II << "," << mParam.moveStage.mTileIJ.JJ << ")\n";
-		std::cout << "Tile center (stageX, stageY) = (" << mParam.moveStage.mTileCenterXY.XX / mm << "," << mParam.moveStage.mTileCenterXY.YY / mm << ") mm\n\n";
+		std::cout << "Vibratome slice number = " << mParam.moveStage.readSliceNumber() << "\n";
+		std::cout << "Tile ij = (" << mParam.moveStage.readTileIJ().II << "," << mParam.moveStage.readTileIJ().JJ << ")\n";
+		std::cout << "Tile center (stageX, stageY) = (" << mParam.moveStage.readTileCenterXY().XX / mm << "," << mParam.moveStage.readTileCenterXY().YY / mm << ") mm\n\n";
 		break;
 	case Action::ID::ACQ:
 		std::cout << "The command is " << convertActionToString_(mAction) << " with parameters: \n";
@@ -836,7 +836,7 @@ void Sequencer::moveStage_(const INDICES2 tileIJ)
 	const POSITION2 tileCenterXY = convertTileIndicesIJToStagePosXY(tileIJ);
 
 	Commandline commandline{ Action::ID::MOV };
-	commandline.mParam.moveStage = { mSliceCounter, tileIJ, tileCenterXY };
+	commandline.mParam.moveStage.setParam(mSliceCounter, tileIJ, tileCenterXY);
 	mCommandList.push_back(commandline);
 	mCommandCounter++;	//Count the number of commands
 }
@@ -870,7 +870,7 @@ void Sequencer::cutSlice_()
 {
 	//Move the sample to face the vibratome blade. Note the additional offset in the Z-stage axis
 	Commandline commandline{ Action::ID::CUT };
-	commandline.mParam.cutSlice = { mIterSamplePlaneZtoCut, mIterStageZheightForFacingTheBlade };
+	commandline.mParam.cutSlice.setParam(mIterSamplePlaneZtoCut, mIterStageZheightForFacingTheBlade);
 	mCommandList.push_back(commandline);
 	mSliceCounter++;	//Count the number of vibratome slices
 	mCommandCounter++;	//Count the number of commands

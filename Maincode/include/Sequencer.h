@@ -35,12 +35,13 @@ struct Sample
 	std::string mName;
 	std::string mImmersionMedium;
 	std::string mObjectiveCollar;	
-	POSITION2 mCenterXY;								//Sample center (stageX, stageY)
-	SIZE3 mLOIxyz_req{ 0, 0, 0 };						//Requested Length of interest (stageX, stageY, stageZ)
-	double mSurfaceZ;
 	FluorLabelList mFluorLabelList;
 	std::vector<LIMIT2> mStageSoftPosLimXYZ;			//Soft position limits of the stages
 
+	//Initialize with std::numeric_limits<double>::quiet_NaN??
+	POSITION2 mCenterXY{-1, -1};						//Sample center (stageX, stageY)
+	SIZE3 mLOIxyz_req{ -1, -1, -1 };					//Requested Length of interest (stageX, stageY, stageZ)
+	double mSurfaceZ{ -1 };
 	const double mBladeFocalplaneOffsetZ{ 1.06 * mm };	//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack{ 0. * um };			//Specify at what height of the overlapping volume to cut
 
@@ -264,7 +265,7 @@ private:
 	int mII{ 0 };											//Tile iterator for the X-stage
 	int mJJ{ 0 };											//Tile iterator for the Y-stage
 	int mCommandCounter{ 0 };
-	ROI4 mROIeff;											//ROI covered by the tile array
+	ROI4 mROI;												//Effective ROI covered by the tile array. It could be slightly larger than the size specified by mSample.mLOIxyz_req
 	int mStackCounter{ 0 };									//Count the number of stacks
 	int mSliceCounter{ 0 };									//Count the number of the slices
 	TileArray mTileArray;

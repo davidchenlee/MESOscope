@@ -9,9 +9,9 @@ int main(int argc, char* argv[])
 		{
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
-			Routines::contScanZ(fpga);
+			//Routines::contScanZ(fpga);
 			//Routines::contScanX(fpga);
-			//Routines::sequencer(fpga, 1);
+			Routines::sequencer(fpga, 0);
 			//Routines::liveScan(fpga);
 
 			//TESTS
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::vibratome(fpga);
 			//TestRoutines::filterwheel();
-			//TestRoutines::collectorLens();
+			//TestRoutines::collectorLens();;
 		}
 		catch (const std::invalid_argument &e)
 		{

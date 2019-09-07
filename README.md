@@ -14,6 +14,9 @@ Code in C++ for controlling the NI USB-7852R card
 - For the vibratome, show a progress bar for the slicing sequence
 - Maybe install VTK to display tiff images
 
+### ImageJ
+- How to stitch a tile array with missing tiles
+
 ### LabView
 - I detected that shutter #2 is triggered when the FPGA resets at the end of the code. I see a small voltage on the scope, like ~50mV that seems to be enough to trigger the shutter
 

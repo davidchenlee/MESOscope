@@ -184,6 +184,7 @@ Sample::Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 LOIxy
 	mName{ sample.mName },
 	mImmersionMedium{ sample.mImmersionMedium },
 	mObjectiveCollar{ sample.mObjectiveCollar },
+	mStageSoftPosLimXYZ{ sample.mStageSoftPosLimXYZ },
 	mFluorLabelList{ sample.mFluorLabelList },
 	mCenterXY{ centerXY },
 	mLOIxyz_req{ LOIxyz },
@@ -679,10 +680,10 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 																   determineEffectiveLOIxyz().YY / mm << " mm, " <<
 																   determineEffectiveLOIxyz().ZZ / mm << " mm)\n";
 
-	*fileHandle << "Effective ROI boundaries [YMIN, XMIN, YMAX, XMAX] = [" << mROIeff.YMIN / mm << " mm, " <<
-																			  mROIeff.XMIN / mm << " mm, " <<
-																			  mROIeff.YMAX / mm << " mm, " <<
-																			  mROIeff.XMAX / mm << " mm]\n";
+	*fileHandle << "Effective ROI boundaries [YMIN, XMIN, YMAX, XMAX] = [" << mROI.YMIN / mm << " mm, " <<
+																			  mROI.XMIN / mm << " mm, " <<
+																			  mROI.YMAX / mm << " mm, " <<
+																			  mROI.XMAX / mm << " mm]\n";
 	*fileHandle << "Z position of the surface of the sample = " << mSample.mSurfaceZ / mm << " mm\n";
 	*fileHandle << std::setprecision(0);
 	*fileHandle << "Total # tissue slices = " << mNtotalSlices << "\n";
@@ -797,10 +798,15 @@ void Sequencer::initializeEffectiveROI_()
 	const POSITION2 tilePosXYmax = convertTileIndicesIJToStagePosXY({ mTileArray.readTileArraySize().II - 1, mTileArray.readTileArraySize().JJ - 1 });	//Absolute position of the CENTER of the tile
 
 	//The ROI is measured from the border of the tiles. Therefore, add half of the FFOV
-	mROIeff.XMAX = tilePosXYmin.XX + mStack.mFFOV.XX / 2.;
-	mROIeff.YMAX = tilePosXYmin.YY + mStack.mFFOV.YY / 2.;
-	mROIeff.XMIN = tilePosXYmax.XX - mStack.mFFOV.XX / 2.;
-	mROIeff.YMIN = tilePosXYmax.YY - mStack.mFFOV.YY / 2.;
+	mROI.XMAX = tilePosXYmin.XX + mStack.mFFOV.XX / 2.;
+	mROI.YMAX = tilePosXYmin.YY + mStack.mFFOV.YY / 2.;
+	mROI.XMIN = tilePosXYmax.XX - mStack.mFFOV.XX / 2.;
+	mROI.YMIN = tilePosXYmax.YY - mStack.mFFOV.YY / 2.;
+
+	if (mROI.XMIN < mSample.mStageSoftPosLimXYZ.at(Stage::Axis::XX).MIN || mROI.XMAX > mSample.mStageSoftPosLimXYZ.at(Stage::Axis::XX).MAX)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The ROI goes beyond the soft limits of the stage X");
+	if (mROI.YMIN < mSample.mStageSoftPosLimXYZ.at(Stage::Axis::YY).MIN || mROI.YMAX >  mSample.mStageSoftPosLimXYZ.at(Stage::Axis::YY).MAX)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The ROI goes beyond the soft limits of the stage Y");
 }
 
 //Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
@@ -846,8 +852,8 @@ void Sequencer::resetStageScanDirections_()
 //Convert a ROI = {ymin, xmin, ymax, xmax} to the equivalent length of interest (LOI) in the X-stage and Y-stage axes
 SIZE3 Sequencer::determineEffectiveLOIxyz() const
 {
-	return { mROIeff.XMAX - mROIeff.XMIN,
-			 mROIeff.YMAX - mROIeff.YMIN,
+	return { mROI.XMAX - mROI.XMIN,
+			 mROI.YMAX - mROI.YMIN,
 			 mStack.mDepthZ * ((1 - mStack.mOverlapXYZ_frac.ZZ) * (mNtotalSlices - 1) + 1) };
 }
 

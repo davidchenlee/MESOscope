@@ -45,7 +45,7 @@ namespace Routines
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ currentSample.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 40. * um };								//Stack deepth in the Z-stage axis
@@ -424,6 +424,14 @@ namespace Routines
 				"_z=" + Util::toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + Util::toString(pixelSizeX / mm, 4) };
 			std::cout << "Saving the stack...\n";
 			quickScanXY.saveToFile(filename, OVERRIDE::DIS);
+
+			//FIX THIS!!!
+			TiffU8 tmp{ quickScanXY.data(), 14840, 900 };
+			const double threshold{ 0.02 };
+			TileArray tileArray{ 280, 300, {14840/280, 900/3} , { 0, 0, 0} };
+			Boolmap boolmap{ tmp, tileArray, threshold };
+			boolmap.saveTileMapToText("Boolmap");
+			boolmap.saveTileMap("TileArrayMap");
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -1190,29 +1198,9 @@ namespace TestRoutines
 		Util::pressAnyKeyToCont();
 	}
 
-	//Anchor pixel wrt the full image
-	//In X, for an odd number of tiles, there are 2 tiles in the middle of the tile array. The one on the top is taken as the reference tile. For an even number of tiles, the center tile is at the middle of the tile array
-	//In Y, for an odd number of tiles, the center tile is at the middle of the tile array. For an even number of tiles, there are 2 tiles in the middle of the tile array. The one on the left is taken as the reference tile
-	PIXELS2 determineAnchorPixel_pix(const TiffU8 &image, const TileArray tileArray)
-	{
-		PIXELS2 anchorPixel_pix;
-
-		if (tileArray.readTileArraySize(TileArray::Axis::II) % 2)	//Odd number of tiles
-			anchorPixel_pix.ii = image.readHeightPerFrame_pix() / 2;
-		else								//Even number of tiles
-			anchorPixel_pix.ii = image.readHeightPerFrame_pix() / 2 - tileArray.readTileHeight_pix() / 2;
-
-		if (tileArray.readTileArraySize(TileArray::Axis::JJ) % 2)	//Odd number of tiles
-			anchorPixel_pix.jj = image.readWidthPerFrame_pix() / 2;
-		else								//Even number of tiles
-			anchorPixel_pix.jj = image.readWidthPerFrame_pix() / 2 - tileArray.readTileWidth_pix() / 2;
-
-		return anchorPixel_pix;
-	}
-
 	void thresholdSample()
 	{
-		std::string inputFilename{ "aaa" };
+		std::string inputFilename{ "Liver20190812_02_V1040nm_P=30.0mW_xi=36.020_xf=52.580_yi=24.153_yf=23.853_z=18.1010_Step=0.0010 (3)" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
@@ -1221,16 +1209,15 @@ namespace TestRoutines
 		const int imagingTileWidth_pix{ 300 };
 		const INDICES2 nImagingTiles{ image.readHeightPerFrame_pix() / imagingTileHeight_pix , image.readWidthPerFrame_pix() / imagingTileWidth_pix };
 		const TileArray imagingTileArray{ imagingTileHeight_pix, imagingTileWidth_pix, nImagingTiles, { 0.0, 0.0, 0.0 } };//Tile array used for imaging
-		PIXELS2 anchorPixel_pix{ determineAnchorPixel_pix(image, imagingTileArray) };
 
 		//The tile array for boolmap does not have to coincide with the tile array used for imaging
-		const int tileHeight_pix{ 560 };
+		const int tileHeight_pix{ 280 };
 		const int tileWidth_pix{ 300 };
 		const TILEOVERLAP3 overlapIJK_frac{ 0.0, 0.0, 0.0 };
-		const TileArray tileArray{ tileHeight_pix, tileWidth_pix, { 36, 67 }, overlapIJK_frac };
+		const TileArray tileArray{ tileHeight_pix, tileWidth_pix, { 53, 3 }, overlapIJK_frac };
 
 		const double threshold{ 0.02 };
-		Boolmap boolmap{ image, tileArray, anchorPixel_pix, threshold };
+		Boolmap boolmap{ image, tileArray, threshold };
 		boolmap.saveTileMapToText("Boolmap");
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
 		boolmap.saveTileGridOverlap("TileGrid", OVERRIDE::EN);

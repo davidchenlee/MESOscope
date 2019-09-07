@@ -33,12 +33,14 @@ private:
 	TILEOVERLAP3 mOverlapIJK_frac;
 };
 
-class QuickStitcher : protected TiffU8, public TileArray
+class QuickStitcher : public TiffU8, public TileArray
 {
 public:
 	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapIJK_frac);
 	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
+	TileArray readTileArray() const;
+	//Add mFullwidth and mFullheight
 };
 
 class QuickScanXY final: public QuickStitcher
@@ -63,7 +65,7 @@ private:
 class Boolmap final
 {
 public:
-	Boolmap(const TiffU8 &tiff, const TileArray tileArray, const PIXELS2 anchorPixel_pix, const double threshold);
+	Boolmap(const TiffU8 &tiff, const TileArray tileArray, const double threshold);
 	bool isTileBright(const INDICES2 tileIndicesIJ) const;
 	void saveTileMapToText(std::string filename);
 	void saveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;

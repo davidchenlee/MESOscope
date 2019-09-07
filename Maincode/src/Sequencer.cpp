@@ -262,6 +262,13 @@ void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) co
 {
 	TiffU8::saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
 }
+
+TileArray QuickStitcher::readTileArray() const
+{
+	//Is there any better way to return the parent object?
+	TileArray tmp{ this->readTileHeight_pix(),this->readTileWidth_pix(), this->readTileArraySizeIJ(), this->readTileOverlapIJK_frac() };
+	return tmp;
+}
 #pragma endregion "QuickStitcher"
 
 #pragma region "QuickScanXY"
@@ -272,7 +279,7 @@ QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 FFOV, const SI
 	mLOIxy{ castLOIxy_(FFOV, LOIxy) },																	//Cast the length of interest (LOI) to odd numbers to have an exact center tile. LOI covers from tile edge to tile edge
 	mFullWidth_pix{ static_cast<int>(std::ceil(castLOIxy_(FFOV, LOIxy).YY / pixelSizeXY.YY)) },			//Full width. Note that the cast mLOIxy is being used
 	QuickStitcher{ static_cast<int>(std::ceil(castLOIxy_(FFOV, LOIxy).XX / pixelSizeXY.XX)),			//tileHeight_pix. The tile height is the same as the full height (because a tile is a long vertical strip). Note that the cast mLOIxy is being used
-				   static_cast<int>(std::ceil(castLOIxy_(FFOV, LOIxy).YY / pixelSizeXY.YY)),			//tileWidth_pix
+				   static_cast<int>(std::ceil(FFOV.YY / pixelSizeXY.YY)),								//tileWidth_pix
 				   { 1, static_cast<int>(std::ceil(castLOIxy_(FFOV, LOIxy).YY / FFOV.YY)) },			//tile array size = { 1, JJ }. Only 1 row and many columns. Note that the cast mLOIxy is being used
 				   { 0, 0, 0} }																			//No overlap	
 {
@@ -327,15 +334,15 @@ SIZE2 QuickScanXY::castLOIxy_(const FFOV2 FFOV, const SIZE2 LOIxy) const
 #pragma endregion "QuickScanXY"
 
 #pragma region "Boolmap"
-//Lay a tile array over the anchor pixel of the tiff
-Boolmap::Boolmap(const TiffU8 &tiff, const TileArray tileArray, const PIXELS2 anchorPixel_pix, const double threshold) :
+//Lay a tile array over the center of the tiff
+Boolmap::Boolmap(const TiffU8 &tiff, const TileArray tileArray, const double threshold) :
 	mTiff{ tiff },
 	mTileArray{ tileArray },
 	mThreshold{ threshold },
 	mFullHeight_pix{ tiff.readHeightPerFrame_pix() },
 	mFullWidth_pix{ tiff.readWidthPerFrame_pix() },
 	mNpixFull{ mFullHeight_pix * mFullWidth_pix },
-	mAnchorPixel_pix{ anchorPixel_pix }
+	mAnchorPixel_pix{ tiff.readHeightPerFrame_pix() / 2, tiff.readWidthPerFrame_pix() / 2}
 {
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
@@ -374,7 +381,7 @@ void Boolmap::saveTileMapToText(std::string filename)
 	fileHandle.close();
 }
 
-//Overlay a grid with the tiles on the tiled image
+//Overlay a grid with the tiles on the stitched image
 void Boolmap::saveTileGridOverlap(std::string filename, const OVERRIDE override) const
 {
 	const U8 lineColor{ 200 };
@@ -386,7 +393,7 @@ void Boolmap::saveTileGridOverlap(std::string filename, const OVERRIDE override)
 # pragma omp parallel for schedule(dynamic)
 	for (int II = 0; II < mTileArray.readTileArraySize(TileArray::Axis::II); II++)
 	{
-		const PIXELS2 absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_({ II, 0 }) };		//Absolute tile center position wrt the Tiff		
+		const PIXELS2 absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_({ II, 0 }) };			//Absolute tile center position wrt the Tiff		
 		const int tileTopPos_pix{ absoluteTilePixelPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };		//Top pixels of the tile wrt the Tiff
 		const int tileBottomPos_pix{ absoluteTilePixelPos_pix.ii + mTileArray.readTileHeight_pix() / 2 };	//Bottom pixels of the tile wrt the Tiff
 		for (int iterCol_pix = 0; iterCol_pix < mFullWidth_pix; iterCol_pix++)
@@ -395,10 +402,10 @@ void Boolmap::saveTileGridOverlap(std::string filename, const OVERRIDE override)
 				const int iterTopRow_pix{ (tileTopPos_pix + iterThickness) * mFullWidth_pix + iterCol_pix };
 				const int iterBottomRow_pix{ (tileBottomPos_pix + iterThickness) * mFullWidth_pix + iterCol_pix };
 
-				if (iterTopRow_pix >= 0 && iterTopRow_pix < mNpixFull)									//Make sure that the pixel is inside the Tiff
+				if (iterTopRow_pix >= 0 && iterTopRow_pix < mNpixFull)										//Make sure that the pixel is inside the Tiff
 					(mTiff.data())[iterTopRow_pix] = lineColor;
 
-				if (iterBottomRow_pix >= 0 && iterBottomRow_pix < mNpixFull)							//Make sure that the pixel is inside the Tiff
+				if (iterBottomRow_pix >= 0 && iterBottomRow_pix < mNpixFull)								//Make sure that the pixel is inside the Tiff
 					(mTiff.data())[(tileBottomPos_pix + iterThickness) * mFullWidth_pix + iterCol_pix] = lineColor;
 			}
 	}
@@ -429,14 +436,14 @@ void Boolmap::saveTileGridOverlap(std::string filename, const OVERRIDE override)
 //Generate a Tiff with a binary dark or bright grid of tiles
 void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 {
-	const U8 pixelColor{ 255 };	//Shade level
+	const U8 pixelColor{ 200 };	//Shade level
 	TiffU8 tileMap{ mTiff.data(), mFullHeight_pix, mFullWidth_pix, 1 };
 
 	//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array
 	for (int II = 0; II < mTileArray.readTileArraySize(TileArray::Axis::II); II++)
 		for (int JJ = 0; JJ < mTileArray.readTileArraySize(TileArray::Axis::JJ); JJ++)
 		{
-			if (isTileBright({ II, JJ }))	//If the tile is bright, shade it
+			if (!isTileBright({ II, JJ }))	//If the tile is dark, make it white
 			{
 				const PIXELS2 absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_({ II, JJ }) };	//Absolute tile center position wrt the Tiff anchor pixel
 				const int tileTopPos_pix{ absoluteTilePixelPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };
@@ -456,8 +463,6 @@ void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 
 	tileMap.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
-
-
 
 //Pixel position of the center of the tiles relative to the center of the Tiff
 PIXELS2 Boolmap::determineTileAbsolutePixelPos_pix_(const INDICES2 tileIndicesIJ) const
@@ -482,7 +487,7 @@ bool Boolmap::isQuadrantBright_(const double threshold, const INDICES2 tileIndic
 	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.readTileArraySize(TileArray::Axis::JJ))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(mTileArray.readTileArraySize(TileArray::Axis::JJ) - 1) + "]");
 
-	const double nPixQuad{ 1. * mTileArray.readNpix() / 4. };			//Number of pixels in a quadrant
+	//const double nPixQuad{ 1. * mTileArray.readNpix() / 4. };			//Number of pixels in a quadrant
 	const int threshold_255{ static_cast<int>(threshold * 255) };		//Threshold in the range [0-255]
 
 	//Divide the image in 4 quadrants
@@ -493,43 +498,42 @@ bool Boolmap::isQuadrantBright_(const double threshold, const INDICES2 tileIndic
 	const int tileBottomPos_pix{ absoluteTilePixelPos_pix.ii + halfHeight };
 	const int tileLeftPos_pix{ absoluteTilePixelPos_pix.jj - halfwidth };
 	const int tileRightPos_pix{ absoluteTilePixelPos_pix.jj + halfwidth };
-	std::vector<int> vec_sum;	//Vector of the sum for each quadrant
+	std::vector<double> vec_sum;	//Vector of the sum for each quadrant
 
-	//Make sure that the tile is inside the Tiff
-	if (tileTopPos_pix >= 0 &&					//Top of the tile
-		tileBottomPos_pix < mFullHeight_pix &&	//Bottom of the tile
-		tileLeftPos_pix >= 0 &&					//Left of the tile
-		tileRightPos_pix < mFullWidth_pix)		//Right of the tile
-	{
-		//Iterate over the 4 quadrants. Start scanning the quadrant from the top-left corner of the image. Scan from left to right, then go back and scan the second row from left to right.
-		for (int iterQuadRow = 0; iterQuadRow < 2; iterQuadRow++)
-			for (int iterQuadCol = 0; iterQuadCol < 2; iterQuadCol++)
-			{
-				int sum{ 0 };
-				//Iterate over all the pixels inside a quadrant
-				for (int iterQuadRow_pix = tileTopPos_pix + (iterQuadRow * halfHeight); iterQuadRow_pix < tileTopPos_pix + ((iterQuadRow + 1) * halfHeight); iterQuadRow_pix++)
-					for (int iterQuadCol_pix = tileLeftPos_pix + (iterQuadCol * halfwidth); iterQuadCol_pix < tileLeftPos_pix + ((iterQuadCol + 1)* halfwidth); iterQuadCol_pix++)
-						sum += (mTiff.data())[iterQuadRow_pix * mFullWidth_pix + iterQuadCol_pix];
-				vec_sum.push_back(sum);
-			}
+	//Iterate over the 4 quadrants. Start scanning the quadrant from the top-left corner of the image. Scan from left to right, then go back and scan the second row from left to right.
+	for (int iterQuadRow = 0; iterQuadRow < 2; iterQuadRow++)
+		for (int iterQuadCol = 0; iterQuadCol < 2; iterQuadCol++)
+		{
+			int sum{ 0 };
+			int nPixQuad{ 0 };				//Calculate the number of pixels in a quadrant dynamically to take into account the partial tiles at the tiff edges
+			//Iterate over all the pixels inside a quadrant
+			for (int iterQuadRow_pix = tileTopPos_pix + (iterQuadRow * halfHeight); iterQuadRow_pix < tileTopPos_pix + ((iterQuadRow + 1) * halfHeight); iterQuadRow_pix++)
+				for (int iterQuadCol_pix = tileLeftPos_pix + (iterQuadCol * halfwidth); iterQuadCol_pix < tileLeftPos_pix + ((iterQuadCol + 1)* halfwidth); iterQuadCol_pix++)
+				{
+					const int pixelIndex{ iterQuadRow_pix * mFullWidth_pix + iterQuadCol_pix };
+					if (pixelIndex >= 0 && pixelIndex < mFullHeight_pix * mFullWidth_pix)
+					{
+						sum += (mTiff.data())[pixelIndex];
+						nPixQuad++;
+					}
+				}
+			vec_sum.push_back(1. * sum / nPixQuad);
+		}
 
-		const double sumTL{ 1. * vec_sum.at(0) / nPixQuad };	//Average count top-left
-		const double sumTR{ 1. * vec_sum.at(1) / nPixQuad };	//Average count top-right
-		const double sumBL{ 1. * vec_sum.at(2) / nPixQuad };	//Average count bottom-left
-		const double sumBR{ 1. * vec_sum.at(3) / nPixQuad };	//Average count bottom-right
+	const double sumTL{ 1. * vec_sum.at(0) };	//Average count top-left
+	const double sumTR{ 1. * vec_sum.at(1) };	//Average count top-right
+	const double sumBL{ 1. * vec_sum.at(2) };	//Average count bottom-left
+	const double sumBR{ 1. * vec_sum.at(3) };	//Average count bottom-right
 
-		/*
-		//For debuging
-		std::cout << "Average count TL = " << sumTL << "\n";
-		std::cout << "Average count TR = " << sumTR << "\n";
-		std::cout << "Average count BL = " << sumBL << "\n";
-		std::cout << "Average count BR = " << sumBR << "\n";
-		*/
-		return (sumTL > threshold_255 || sumTR > threshold_255 || sumBL > threshold_255 || sumBR > threshold_255);
-		//return false;
-	}
-	else
-		return false;
+	/*
+	//For debuging
+	std::cout << "Average count TL = " << sumTL << "\n";
+	std::cout << "Average count TR = " << sumTR << "\n";
+	std::cout << "Average count BL = " << sumBL << "\n";
+	std::cout << "Average count BR = " << sumBR << "\n";
+	*/
+	return (sumTL > threshold_255 || sumTR > threshold_255 || sumBL > threshold_255 || sumBR > threshold_255);
+	//return false;
 }
 #pragma endregion "Boolmap"
 

@@ -4,10 +4,7 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 - Update the Z position after cutting --> check that it works
-- Add label for the color
 - enable/disable using the vibratome in Routines::sequencer
-- Safeguard the LOI that it takes allowed values
-- For low power at 1040 nm, choose Vision
 
 - Keep an eye on the Z-stage bouncing that triggers the ctl&acq
 - Implement suppressCrosstalk() flattenField() on the GPU

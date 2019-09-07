@@ -3,8 +3,8 @@ const std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 3
 const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };		//Soft limit of the stage for the oil container
 
 //SAMPLE PARAMETERS
-POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.640 + 0.000) * mm };
-//POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (17.640 + 0.000) * mm };//For contScanX
+//POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.840 + 0.000) * mm };
+POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (18.001 + 0.000) * mm };//For contScanX
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0.) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0.) } }} };
@@ -27,7 +27,7 @@ Sample liverTDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", Container
 //Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. }}} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0. } , { "GFP", 920, 25. * mW, 0. }, { "DAPI", 750, 40. * mW, 0. }}} };
 #endif
-Sample currentSample{ liverDAPITDT };
+Sample currentSample{ liverTDT };
 
 
 double determineChromaticShift(const int wavelength_nm, const Laser::ID whichLaser)
@@ -359,7 +359,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
-		const double fullWidth{ 0.300 * mm };												//Total width of the tile array
+		const double fullWidth{ 10.000 * mm };												//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };												//Width of a strip
@@ -441,7 +441,7 @@ namespace Routines
 		//for beads, center the stack around stackCenterXYZ.at(Z) -----> //const double sampleSurfaceZ{ stackCenterXYZ.ZZ - nFramesCont * pixelSizeZ / 2 };
 
 		//ACQUISITION SETTINGS
-		const double stackDepth{ 200. * um };
+		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um };												//Step size in the Z-stage axis
 		
 		const int nFramesAfterBinning{ static_cast<int>(stackDepth / pixelSizeZafterBinning) };
@@ -449,11 +449,12 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const SIZE3 LOIxyz{ 1.6 * mm, 0.8 * mm, 0.25 * mm };
-		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.00 };										//Stack overlap
+		const SIZE3 LOIxyz{ 0.3 * mm, 0.2 * mm, 0.150 * mm };
+		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.50 };										//Stack overlap
 		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };											//Stack overlap
-		const double cutAboveBottomOfStack{ 100. * um };												//Distance to cut above the bottom of the stack
+		const double cutAboveBottomOfStack{ 50. * um };												//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
+		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -489,37 +490,34 @@ namespace Routines
 			//Read the commands line by line
 			POSITION2 tileCenterXY;
 			std::string shortName, longName;
-			SCANDIR scanDirZ{ SCANDIR::UPWARD };
+			SCANDIR iterScanDirZ{ ScanDirZini };
 			Logger datalog(currentSample.mName + "_locations");
-			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
+			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 
 				//SCANNERS
 				const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2. };
 
-
 				//These parameters must be accessible to all the cases
 				int wavelength_nm, nFramesBinning, sliceNumber, stackNumber, tileIndexI, tileIndexJ;
 				double scanZi, scanZf, scanPmin, scanPexp;
-				switch (commandline.mAction)
+				switch (commandline.mActionID)
 				{
 				case Action::ID::MOV://Move the X and Y-stages to mStackCenterXY
-					sliceNumber = commandline.mParam.moveStage.readSliceNumber();
+					sliceNumber = commandline.mAction.moveStage.readSliceNumber();
 
-					tileIndexI = commandline.mParam.moveStage.readTileIJ().II;
-					tileIndexJ = commandline.mParam.moveStage.readTileIJ().JJ;
-					tileCenterXY = commandline.mParam.moveStage.readTileCenterXY();
+					tileIndexI = commandline.mAction.moveStage.readTileIJ().II;
+					tileIndexJ = commandline.mAction.moveStage.readTileIJ().JJ;
+					tileCenterXY = commandline.mAction.moveStage.readTileCenterXY();
 					stage.moveXY(tileCenterXY);
 					stage.waitForMotionToStopAll();
 					break;
 				case Action::ID::ACQ://Acquire a stack
-					Action::AcqStack acqStack{ commandline.mParam.acqStack };
+					Action::AcqStack acqStack{ commandline.mAction.acqStack };
 					{
-						stackNumber = acqStack.mStackNumber;
-
 						//Set the number of frames considering that binning will be performed
-						nFramesBinning = acqStack.nFrameBinning;
+						nFramesBinning = acqStack.readNframeBinning();
 						const int nFramesBeforeBinning{ nFramesAfterBinning * nFramesBinning };
 						RTcontrol.setNumberOfFrames(nFramesBeforeBinning);
 
@@ -527,29 +525,30 @@ namespace Routines
 						const double pixelSizeZbeforeBinning{ stackDepth / nFramesBeforeBinning };
 						stage.setVelSingle(Stage::Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
 
-						//Save the parameters for saving the file
-						wavelength_nm = acqStack.mWavelength_nm;
-						scanZi = determineInitialScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
-						scanZf = determineFinalScanPos(acqStack.mScanZmin, stackDepth, 0. * mm, scanDirZ);
+						//These parameters must be accessible for saving the file
+						stackNumber = acqStack.readStackNumber();
+						wavelength_nm = acqStack.readWavelength_nm();
+						scanZi = determineInitialScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
+						scanZf = determineFinalScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
 
 						//Update the laser parameters
-						mesoscope.configure(RTcontrol, wavelength_nm);											//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
-						scanPmin = acqStack.mScanPmin;
-						scanPexp = acqStack.mScanPexp;
-						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, convertScandirToInt(scanDirZ) * acqStack.mScanPexp);
+						mesoscope.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
+						scanPmin = acqStack.readScanPmin();
+						scanPexp = acqStack.readScanPexp();
+						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, convertScandirToInt(iterScanDirZ) * acqStack.readScanPexp());
 
 						Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
-
-						mesoscope.openShutter();																		//Re-open the Uniblitz shutter if closed by the pockels destructor
 					}
-
 					stage.moveSingle(Stage::ZZ, scanZi);	//Move the stage to the initial Z position
-					RTcontrol.initialize(scanDirZ);			//Use the scan direction determined dynamically
-					std::cout << "Scanning slice = " << std::to_string(sliceNumber) << "\tstack = " << std::to_string(stackNumber) << "\n";
+					RTcontrol.initialize(iterScanDirZ);			//Use the scan direction determined dynamically
+					mesoscope.openShutter();				//Re-open the Uniblitz shutter if closed by the pockels destructor
+
+					std::cout << "Scanning slice = " << std::to_string(sliceNumber) << "/" << sequence.readNtotalSlices() << "\tstack = " <<
+														std::to_string(stackNumber) << "/" << sequence.readNtotalStacks() << "\n";
+
 					stage.moveSingle(Stage::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
 					RTcontrol.downloadData();
-
-					reverseSCANDIR(scanDirZ);
+					reverseSCANDIR(iterScanDirZ);
 					break;
 				case Action::ID::SAV:
 					{
@@ -566,7 +565,7 @@ namespace Routines
 					std::string tileIndexJ_s{ std::to_string(tileIndexJ) };
 					std::string tileIndexJpad_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;//2 digits in total
 
-					shortName = sliceNumberPad_s + "_"+ stackNumberPad_s;
+					shortName = sliceNumberPad_s + "_" + indexFluorLabel_s(wavelength_nm) + "_" + stackNumberPad_s;
 					longName = mesoscope.readCurrentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pmin=" + toString(scanPmin / mW, 1) + "mW_Pexp=" + toString(scanPexp / um, 0) + "um" +
 						"_x=" + toString(tileCenterXY.XX / mm, 3) +
 						"_y=" + toString(tileCenterXY.YY / mm, 3) +
@@ -583,9 +582,14 @@ namespace Routines
 					break;
 				case Action::ID::CUT://Move the stage to the vibratome and then cut a slice off
 				{
-					const double planeZtoCut{ commandline.mParam.cutSlice.readStageZheightForFacingTheBlade() };
+					const double planeZtoCut{ commandline.mAction.cutSlice.readStageZheightForFacingTheBlade() };
 					Vibratome vibratome{ fpga, stage };
+
+					std::cout << "Cutting slice = " << std::to_string(sliceNumber) << "/" << sequence.readNtotalSlices() << "\n";
 					vibratome.sliceTissue(planeZtoCut);
+
+					//Reset the scan direction
+					iterScanDirZ = ScanDirZini;
 				}		
 					break;
 				default:
@@ -1305,13 +1309,13 @@ namespace TestRoutines
 			std::thread saveFile, moveStage;
 
 			//Read the commands line by line
-			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.size(); iterCommandline++)
+			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
 				//for (std::vector<int>::size_type iterCommandline = 0; iterCommandline < 2; iterCommandline++) //For debugging
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) }; //Implement read-from-file?
 				//commandline.printParameters();
 
-				switch (commandline.mAction)
+				switch (commandline.mActionID)
 				{
 				case Action::ID::MOV:
 					std::cout << "MOV " << "\n";
@@ -1490,7 +1494,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (18.600) * mm };
+		const double slicePlaneZ{ (19.000) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

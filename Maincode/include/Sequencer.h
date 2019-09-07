@@ -9,6 +9,7 @@ double determineInitialScanPos(const double posMin, const double travel, const d
 double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
 double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
 double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
+std::string indexFluorLabel_s(const int wavelength_nm);
 
 struct FluorLabelList	//Create a list of fluorescent labels
 {
@@ -22,7 +23,7 @@ struct FluorLabelList	//Create a list of fluorescent labels
 	};
 	std::vector<FluorLabel> mFluorLabelList;
 	FluorLabelList(const std::vector<FluorLabel> fluorLabelList);
-	std::size_t size() const;
+	std::size_t readNtotalFluorLabels() const;
 	FluorLabel front() const;
 	FluorLabel at(const int index) const;
 	void printParams(std::ofstream *fileHandle) const;
@@ -94,7 +95,61 @@ namespace Action
 		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
 	};
 
-	struct AcqStack {
+	class AcqStack {
+	public:
+		void setParam(const int stackNumber, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPexp, const int nFrameBinning)
+		{
+			mStackNumber = stackNumber;
+			mWavelength_nm = wavelength_nm;
+			mScanDirZ = scanDirZ;
+			mScanZmin = scanZmin;
+			mDepthZ = depthZ;
+			mScanPmin = scanPmin;
+			mScanPexp = scanPexp;
+			mNframeBinning = nFrameBinning;
+		}
+
+		int readStackNumber() const
+		{
+			return mStackNumber;
+		}
+
+		int readWavelength_nm() const
+		{
+			return mWavelength_nm;
+		}
+
+		SCANDIR readScanDirZ() const
+		{
+			return mScanDirZ;
+		}
+
+		double readScanZmin() const
+		{
+			return mScanZmin;
+		}
+
+		double readDepthZ() const
+		{
+			return mDepthZ;
+		}
+
+		double readScanPmin() const
+		{
+			return mScanPmin;
+		}
+
+		double readScanPexp() const
+		{
+			return mScanPexp;
+		}
+
+		int readNframeBinning() const
+		{
+			return mNframeBinning;
+		}
+
+	private:
 		int mStackNumber;
 		int mWavelength_nm;
 		SCANDIR mScanDirZ;		//THIS IS NOT READ BY THE SEQUENCER ANYMORE!!
@@ -102,10 +157,10 @@ namespace Action
 		double mDepthZ;			//Stack depth (thickness)
 		double mScanPmin;		//Min laser power of the stack scan (at the top of the stack)
 		double mScanPexp;		//Laser power increase in the Z-stage axis per unit of distance
-		int nFrameBinning;
+		int mNframeBinning;
 	};
 
-	struct CutSlice {
+	class CutSlice {
 	public:
 		void setParam(const double planeZtoCut, const double stageZheightForFacingTheBlade)
 		{
@@ -173,18 +228,18 @@ public:
 	class Commandline	//Single commands
 	{
 	public:
-		Action::ID mAction;
+		Action::ID mActionID;
 		union {
 			Action::MoveStage moveStage;
 			Action::AcqStack acqStack;
 			Action::CutSlice cutSlice;
-		} mParam;
+		} mAction;
 
-		Commandline(const Action::ID action);
+		Commandline(const Action::ID actionID);
 		void printToFile(std::ofstream *fileHandle) const;
 		void printParameters() const;
 	private:
-		std::string convertActionToString_(const Action::ID action) const;
+		std::string convertActionIDtoString_(const Action::ID actionID) const;
 	};
 	Sequencer(const Sample sample, const Stack stack);
 	Sequencer(const Sequencer&) = delete;					//Disable copy-constructor
@@ -193,12 +248,14 @@ public:
 	Sequencer& operator=(Sequencer&&) = delete;				//Disable move-assignment constructor
 
 	void generateCommandList();
-	int size() const;
 	POSITION2 convertTileIndicesIJToStagePosXY(const INDICES2 tileIndicesIJ) const;
 	std::string printHeader() const;
 	std::string printHeaderUnits() const;
 	void printSequenceParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
+	int readNtotalSlices() const;
+	int readNtotalStacks() const;
+	int readNtotalCommands() const;
 	Commandline readCommandline(const int iterCommandline) const;
 private:
 	const Sample mSample;									//Sample

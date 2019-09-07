@@ -33,14 +33,14 @@ void reverseSCANDIR(SCANDIR &scanDir)
 		scanDir = SCANDIR::DOWNWARD;
 		break;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
 	}
 }
 
 double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
 {
 	if (travel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be > 0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The travel range must be > 0");
 
 	switch (scanDir)
 	{
@@ -51,7 +51,7 @@ double determineInitialScanPos(const double posMin, const double travel, const d
 	case SCANDIR::LEFTWARD:
 		return posMin + travel + travelOverhead;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
 	}
 }
 
@@ -59,7 +59,7 @@ double determineInitialScanPos(const double posMin, const double travel, const d
 double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
 {
 	if (travel <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The travel range must be > 0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The travel range must be > 0");
 
 	switch (scanDir)
 	{
@@ -70,7 +70,7 @@ double determineFinalScanPos(const double posMin, const double travel, const dou
 	case SCANDIR::LEFTWARD:
 		return posMin - travelOverhead;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
 	}
 }
 
@@ -79,7 +79,7 @@ double determineFinalScanPos(const double posMin, const double travel, const dou
 double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
 {
 	if (powerMin < 0 || totalPowerInc < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >= 0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power and power increase must be >= 0");
 
 	switch (scanDirZ)
 	{
@@ -88,7 +88,7 @@ double determineInitialLaserPower(const double powerMin, const double totalPower
 	case SCANDIR::DOWNWARD:
 		return powerMin + totalPowerInc;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
 	}
 }
 
@@ -96,7 +96,7 @@ double determineInitialLaserPower(const double powerMin, const double totalPower
 double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDirZ)
 {
 	if (powerMin < 0 || totalPowerInc < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + "The laser power and power increase must be >= 0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power and power increase must be >= 0");
 
 	switch (scanDirZ)
 	{
@@ -105,7 +105,23 @@ double determineFinalLaserPower(const double powerMin, const double totalPowerIn
 	case SCANDIR::DOWNWARD:
 		return powerMin;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + "Invalid scan direction");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
+	}
+}
+
+//Assign a fixed number to the fluorescent labels. Used for naming the Tiff files
+std::string indexFluorLabel_s(const int wavelength_nm)
+{
+	switch (wavelength_nm)
+	{
+	case 750:
+		return "0";
+	case 920:
+		return "1";
+	case 1040:
+		return "2";
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength " + std::to_string(wavelength_nm) + "has not been assigned a fluorescent label");
 	}
 }
 
@@ -114,7 +130,7 @@ FluorLabelList::FluorLabelList(const std::vector<FluorLabel> fluorLabelList) :
 	mFluorLabelList{ fluorLabelList }
 {}
 
-std::size_t FluorLabelList::size() const
+std::size_t FluorLabelList::readNtotalFluorLabels() const
 {
 	return mFluorLabelList.size();
 }
@@ -246,39 +262,39 @@ void Stack::printParams(std::ofstream *fileHandle) const
 #pragma endregion "Stack"
 
 #pragma region "Commandline"
-Sequencer::Commandline::Commandline(const Action::ID action) :
-	mAction{ action }
+Sequencer::Commandline::Commandline(const Action::ID actionID) :
+	mActionID{ actionID }
 {}
 
 void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 {
-	switch (mAction)
+	switch (mActionID)
 	{
 	case Action::ID::MOV:
-		*fileHandle << convertActionToString_(mAction) << "\t" << mParam.moveStage.readSliceNumber();
-		*fileHandle << "\t(" << mParam.moveStage.readTileIJ().II << "," << mParam.moveStage.readTileIJ().JJ << ")\t";
+		*fileHandle << convertActionIDtoString_(mActionID) << "\t" << mAction.moveStage.readSliceNumber();
+		*fileHandle << "\t(" << mAction.moveStage.readTileIJ().II << "," << mAction.moveStage.readTileIJ().JJ << ")\t";
 		*fileHandle << std::setprecision(4);
-		*fileHandle << "(" << mParam.moveStage.readTileCenterXY().XX / mm << "," << mParam.moveStage.readTileCenterXY().YY / mm << ")\n";
+		*fileHandle << "(" << mAction.moveStage.readTileCenterXY().XX / mm << "," << mAction.moveStage.readTileCenterXY().YY / mm << ")\n";
 		break;
 	case Action::ID::ACQ:
-		*fileHandle << convertActionToString_(mAction) << "\t\t\t\t\t";
-		*fileHandle << mParam.acqStack.mStackNumber << "\t";
-		*fileHandle << mParam.acqStack.mWavelength_nm << "\t";
-		*fileHandle << convertScandirToInt(mParam.acqStack.mScanDirZ) << "\t";
+		*fileHandle << convertActionIDtoString_(mActionID) << "\t\t\t\t\t";
+		*fileHandle << mAction.acqStack.readStackNumber() << "\t";
+		*fileHandle << mAction.acqStack.readWavelength_nm() << "\t";
+		*fileHandle << convertScandirToInt(mAction.acqStack.readScanDirZ()) << "\t";
 		*fileHandle << std::setprecision(3);
-		*fileHandle << mParam.acqStack.mScanZmin / mm << "\t";
-		*fileHandle << (mParam.acqStack.mScanZmin + mParam.acqStack.mDepthZ) / mm << "\t";
+		*fileHandle << mAction.acqStack.readScanZmin() / mm << "\t";
+		*fileHandle << (mAction.acqStack.readScanZmin() + mAction.acqStack.readDepthZ()) / mm << "\t";
 		*fileHandle << std::setprecision(0);
-		*fileHandle << mParam.acqStack.mScanPmin << "\t" << mParam.acqStack.mScanPexp << "\n";
+		*fileHandle << mAction.acqStack.readScanPmin() << "\t" << mAction.acqStack.readScanPexp() << "\n";
 		break;
 	case Action::ID::SAV:
-		*fileHandle << convertActionToString_(mAction) + "\n";
+		*fileHandle << convertActionIDtoString_(mActionID) + "\n";
 		break;
 	case Action::ID::CUT:
-		*fileHandle << convertActionToString_(mAction);
+		*fileHandle << convertActionIDtoString_(mActionID);
 		*fileHandle << std::setprecision(3);
-		*fileHandle << "******Stage height for facing the VT = " << mParam.cutSlice.readStageZheightForFacingTheBlade() / mm << " mm";
-		*fileHandle << "******Equivalent sample plane Z = " << mParam.cutSlice.readPlaneZtoCut() / mm << " mm";
+		*fileHandle << "******Stage height for facing the VT = " << mAction.cutSlice.readStageZheightForFacingTheBlade() / mm << " mm";
+		*fileHandle << "******Equivalent sample plane Z = " << mAction.cutSlice.readPlaneZtoCut() / mm << " mm";
 		*fileHandle << "********\n";
 		break;
 	default:
@@ -288,35 +304,35 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 
 void Sequencer::Commandline::printParameters() const
 {
-	switch (mAction)
+	switch (mActionID)
 	{
 	case Action::ID::MOV:
-		std::cout << "The command is " << convertActionToString_(mAction) << " with parameters: \n";
-		std::cout << "Vibratome slice number = " << mParam.moveStage.readSliceNumber() << "\n";
-		std::cout << "Tile ij = (" << mParam.moveStage.readTileIJ().II << "," << mParam.moveStage.readTileIJ().JJ << ")\n";
-		std::cout << "Tile center (stageX, stageY) = (" << mParam.moveStage.readTileCenterXY().XX / mm << "," << mParam.moveStage.readTileCenterXY().YY / mm << ") mm\n\n";
+		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
+		std::cout << "Vibratome slice number = " << mAction.moveStage.readSliceNumber() << "\n";
+		std::cout << "Tile ij = (" << mAction.moveStage.readTileIJ().II << "," << mAction.moveStage.readTileIJ().JJ << ")\n";
+		std::cout << "Tile center (stageX, stageY) = (" << mAction.moveStage.readTileCenterXY().XX / mm << "," << mAction.moveStage.readTileCenterXY().YY / mm << ") mm\n\n";
 		break;
 	case Action::ID::ACQ:
-		std::cout << "The command is " << convertActionToString_(mAction) << " with parameters: \n";
-		std::cout << "wavelength = " << mParam.acqStack.mWavelength_nm << " nm\n";
-		std::cout << "scanDirZ = " << convertScandirToInt(mParam.acqStack.mScanDirZ) << "\n";
-		std::cout << "scanZmin / depthZ = " << mParam.acqStack.mScanZmin / mm << " mm/" << mParam.acqStack.mDepthZ << " mm\n";
-		std::cout << "scanPmin / ScanPexp = " << mParam.acqStack.mScanPmin / mW << " mW/" << mParam.acqStack.mScanPexp / um << " (um)\n\n";
+		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
+		std::cout << "wavelength = " << mAction.acqStack.readWavelength_nm() << " nm\n";
+		std::cout << "scanDirZ = " << convertScandirToInt(mAction.acqStack.readScanDirZ()) << "\n";
+		std::cout << "scanZmin / depthZ = " << mAction.acqStack.readScanZmin() / mm << " mm/" << mAction.acqStack.readDepthZ() << " mm\n";
+		std::cout << "scanPmin / ScanPexp = " << mAction.acqStack.readScanPmin() / mW << " mW/" << mAction.acqStack.readScanPexp() / um << " (um)\n\n";
 		break;
 	case Action::ID::SAV:
-		std::cout << "The command is " << convertActionToString_(mAction) << "\n";
+		std::cout << "The command is " << convertActionIDtoString_(mActionID) << "\n";
 		break;
 	case Action::ID::CUT:
-		std::cout << "The command is " << convertActionToString_(mAction) << "\n";
+		std::cout << "The command is " << convertActionIDtoString_(mActionID) << "\n";
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
 	}
 }
 
-std::string Sequencer::Commandline::convertActionToString_(const Action::ID action) const
+std::string Sequencer::Commandline::convertActionIDtoString_(const Action::ID actionID) const
 {
-	switch (action)
+	switch (actionID)
 	{
 	case Action::ID::CUT:
 		return "CUT";
@@ -598,9 +614,8 @@ void Sequencer::generateCommandList()
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
 		initializeIteratorIJ_();		//Reset the tile iterator after every cut
-		resetStageScanDirections_();	//Reset the scan directions of the stages after every cut
 
-		for (std::vector<int>::size_type iterWL = 0; iterWL != mSample.mFluorLabelList.size(); iterWL++)
+		for (std::vector<int>::size_type iterWL = 0; iterWL != mSample.mFluorLabelList.readNtotalFluorLabels(); iterWL++)
 		{
 			//The Y-stage is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
 			while (mJJ >= 0 && mJJ < mTileArray.readTileArraySize().JJ)		//Y-stage direction. JJ iterates from 0 to mTileArraySize.JJ
@@ -623,11 +638,6 @@ void Sequencer::generateCommandList()
 		if (iterSlice < mNtotalSlices - 1)
 			cutSlice_();
 	}
-}
-
-int Sequencer::size() const
-{
-	return mCommandCounter;
 }
 
 //II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
@@ -721,6 +731,21 @@ void Sequencer::printToFile(const std::string fileName) const
 	fileHandle->close();
 }
 
+int Sequencer::readNtotalSlices() const
+{
+	return mSliceCounter;
+}
+
+int Sequencer::readNtotalStacks() const
+{
+	return mStackCounter;
+}
+
+int Sequencer::readNtotalCommands() const
+{
+	return mCommandCounter;
+}
+
 Sequencer::Commandline Sequencer::readCommandline(const int iterCommandLine) const
 {
 	return mCommandList.at(iterCommandLine);
@@ -781,8 +806,8 @@ void Sequencer::initializeEffectiveROI_()
 //Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
 void Sequencer::reserveMemoryBlock_()
 {
-	const int nTotalTilesPerVibratomeSlice{ mTileArray.readTileArraySize().II * mTileArray.readTileArraySize().JJ };						//Total number of tiles in a vibratome slice
-	const int nTotalTilesEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.size()) * nTotalTilesPerVibratomeSlice };	//Total number of tiles in the entire sample. mNtotalSlices is fixed at 1
+	const int nTotalTilesPerVibratomeSlice{ mTileArray.readTileArraySize().II * mTileArray.readTileArraySize().JJ };										//Total number of tiles in a vibratome slice
+	const int nTotalTilesEntireSample{ mNtotalSlices * static_cast<int>(mSample.mFluorLabelList.readNtotalFluorLabels()) * nTotalTilesPerVibratomeSlice };	//Total number of tiles in the entire sample. mNtotalSlices is fixed at 1
 	mCommandList.reserve(3 * nTotalTilesEntireSample + mNtotalSlices - 1);
 }
 
@@ -790,6 +815,8 @@ void Sequencer::reserveMemoryBlock_()
 //II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
 void Sequencer::initializeIteratorIJ_()
 {
+	resetStageScanDirections_();	//Reset the scan directions
+
 	switch (mIterScanDirXYZ.XX)
 	{
 	case SCANDIR::RIGHTWARD:	//The X-stage moves to the right, therefore, the sample is imaged from right to left
@@ -836,7 +863,7 @@ void Sequencer::moveStage_(const INDICES2 tileIJ)
 	const POSITION2 tileCenterXY = convertTileIndicesIJToStagePosXY(tileIJ);
 
 	Commandline commandline{ Action::ID::MOV };
-	commandline.mParam.moveStage.setParam(mSliceCounter, tileIJ, tileCenterXY);
+	commandline.mAction.moveStage.setParam(mSliceCounter, tileIJ, tileCenterXY);
 	mCommandList.push_back(commandline);
 	mCommandCounter++;	//Count the number of commands
 }
@@ -850,7 +877,7 @@ void Sequencer::acqStack_(const int wavelengthIndex)
 	const FluorLabelList::FluorLabel fluorLabel{ mSample.mFluorLabelList.at(wavelengthIndex) };
 
 	Commandline commandline{ Action::ID::ACQ };
-	commandline.mParam.acqStack = { mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mIterScanZi, mStack.mDepthZ, fluorLabel.mScanPmin, fluorLabel.mScanPexp, fluorLabel.nFramesBinning };
+	commandline.mAction.acqStack.setParam(mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mIterScanZi, mStack.mDepthZ, fluorLabel.mScanPmin, fluorLabel.mScanPexp, fluorLabel.nFramesBinning);
 	mCommandList.push_back(commandline);
 	mStackCounter++;	//Count the number of stacks acquired
 	mCommandCounter++;	//Count the number of commands
@@ -870,7 +897,7 @@ void Sequencer::cutSlice_()
 {
 	//Move the sample to face the vibratome blade. Note the additional offset in the Z-stage axis
 	Commandline commandline{ Action::ID::CUT };
-	commandline.mParam.cutSlice.setParam(mIterSamplePlaneZtoCut, mIterStageZheightForFacingTheBlade);
+	commandline.mAction.cutSlice.setParam(mIterSamplePlaneZtoCut, mIterStageZheightForFacingTheBlade);
 	mCommandList.push_back(commandline);
 	mSliceCounter++;	//Count the number of vibratome slices
 	mCommandCounter++;	//Count the number of commands

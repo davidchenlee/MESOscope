@@ -25,6 +25,10 @@ class FPGA
 public:
 	FPGA();
 	~FPGA();
+	FPGA(const FPGA&) = delete;				//Disable copy-constructor
+	FPGA& operator=(const FPGA&) = delete;	//Disable assignment-constructor
+	FPGA(FPGA&&) = delete;					//Disable move constructor
+	FPGA& operator=(FPGA&&) = delete;		//Disable move-assignment constructor
 
 	NiFpga_Session handle() const;										//Access the handle indirectly to avoid modifying it by mistake
 	void close(const FPGARESET reset = FPGARESET::DIS) const;

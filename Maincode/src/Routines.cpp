@@ -4,7 +4,7 @@ const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm
 
 //SAMPLE PARAMETERS
 //POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.840 + 0.000) * mm };
-POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (18.051 + 0.000) * mm };//For contScanX
+POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (18.051 + 0.050) * mm };//For contScanX
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0.) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0.) } }} };
@@ -149,7 +149,7 @@ namespace Routines
 		//CREATE A STACK FOR STORING THE TIFFS
 		const int nLocations{ static_cast<int>(stagePosXYZ.size()) };
 		TiffU8 output{ heightPerFrame_pix, widthPerFrame_pix, nLocations };
-		std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorMarker.mWavelength_nm, 0) + "nm" };
+		std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) + "nm" };
 		
 		//OPEN THE UNIBLITZ SHUTTERS
 		mesoscope.openShutter();					//The destructor will close the shutter automatically
@@ -162,7 +162,7 @@ namespace Routines
 			stage.waitForMotionToStopAll();
 			//stage.printPosXYZ();				//Print the stage position	
 			
-			mesoscope.setPower(exponentialFunction(fluorMarker.mScanPmin, iterLocation * pixelSizeZ, fluorMarker.mScanPexp));	//FIX THIS
+			mesoscope.setPower(Util::exponentialFunction(fluorMarker.mScanPmin, iterLocation * pixelSizeZ, fluorMarker.mScanPexp));	//FIX THIS
 	
 			//Used to optimize the collector lens position
 			if (acqMode == RUNMODE::COLLECTLENS)
@@ -179,42 +179,42 @@ namespace Routines
 			if (acqMode == RUNMODE::SINGLE && !saveAllPMT)
 			{
 				//Save individual files
-				filename.append("_P=" + toString(fluorMarker.mScanPmin / mW, 1) + "mW" +
-					"_x=" + toString(stagePosXYZ.at(iterLocation).XX / mm, 3) + "_y=" + toString(stagePosXYZ.at(iterLocation).YY / mm, 3) + "_z=" + toString(stagePosXYZ.at(iterLocation).ZZ / mm, 4) + 
-					"_avg=" + toString(nFramesCont, 0));
+				filename.append("_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW" +
+					"_x=" + Util::toString(stagePosXYZ.at(iterLocation).XX / mm, 3) + "_y=" + Util::toString(stagePosXYZ.at(iterLocation).YY / mm, 3) + "_z=" + Util::toString(stagePosXYZ.at(iterLocation).ZZ / mm, 4) +
+					"_avg=" + Util::toString(nFramesCont, 0));
 				std::cout << "Saving the stack...\n";
 				image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 			}
 			output.pushImage(image.data(), iterLocation);
 
-			pressESCforEarlyTermination();
+			Util::pressESCforEarlyTermination();
 		}
 
 		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
 		{	
-			filename.append( "_Pmin=" + toString(fluorMarker.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorMarker.mScanPexp / um, 0) + "um" +
-				"_x=" + toString(stagePosXYZ.front().XX / mm, 3) + "_y=" + toString(stagePosXYZ.front().YY / mm, 3) +
-				"_zi=" + toString(stagePosXYZ.front().ZZ / mm, 4) + "_zf=" + toString(stagePosXYZ.back().ZZ / mm, 4) + "_Step=" + toString(pixelSizeZ / mm, 4) + 
-				"_avg=" + toString(nFramesCont * nSameLocation, 0) );
+			filename.append( "_Pmin=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_Pexp=" + Util::toString(fluorMarker.mScanPexp / um, 0) + "um" +
+				"_x=" + Util::toString(stagePosXYZ.front().XX / mm, 3) + "_y=" + Util::toString(stagePosXYZ.front().YY / mm, 3) +
+				"_zi=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_zf=" + Util::toString(stagePosXYZ.back().ZZ / mm, 4) + "_Step=" + Util::toString(pixelSizeZ / mm, 4) +
+				"_avg=" + Util::toString(nFramesCont * nSameLocation, 0) );
 
 			output.binFrames(nSameLocation);									//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
 			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);	//Save the scanZ to file
-			pressESCforEarlyTermination();
+			Util::pressESCforEarlyTermination();
 		}
 
 		if (acqMode == RUNMODE::SCANXY)
 		{
-			filename.append( "_P=" + toString(fluorMarker.mScanPmin / mW, 1) + "mW" +
-				"_xi=" + toString(stagePosXYZ.front().XX / mm, 4) + "_xf=" + toString(stagePosXYZ.back().XX / mm, 4) +
-				"_y=" + toString(stagePosXYZ.front().YY / mm, 4) +
-				"_z=" + toString(stagePosXYZ.front().ZZ / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) +
-				"_avg=" + toString(nFramesCont, 0) );
+			filename.append( "_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW" +
+				"_xi=" + Util::toString(stagePosXYZ.front().XX / mm, 4) + "_xf=" + Util::toString(stagePosXYZ.back().XX / mm, 4) +
+				"_y=" + Util::toString(stagePosXYZ.front().YY / mm, 4) +
+				"_z=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_Step=" + Util::toString(stepSizeX / mm, 4) +
+				"_avg=" + Util::toString(nFramesCont, 0) );
 
 			output.binFrames(nSameLocation);									//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
 			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);	//Save the scanXY to file
-			pressESCforEarlyTermination();
+			Util::pressESCforEarlyTermination();
 		}
 
 		//DATALOG
@@ -295,7 +295,7 @@ namespace Routines
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames };	//Note the STAGEZ flag
 		Mesoscope mesoscope{ whichLaser };
 		mesoscope.configure(RTcontrol, fluorMarker.mWavelength_nm);
-		mesoscope.setPowerExponentialScaling(fluorMarker.mScanPmin, pixelSizeZbeforeBinning, convertScandirToInt(scanDirZ) * fluorMarker.mScanPexp);
+		mesoscope.setPowerExponentialScaling(fluorMarker.mScanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(scanDirZ) * fluorMarker.mScanPexp);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -328,11 +328,11 @@ namespace Routines
 		image.binFrames(nFramesBinning);
 		//image.correct(RScanner.mFFOV);
 
-		const std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorMarker.mWavelength_nm, 0) +
-			"nm_P=" + toString(fluorMarker.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorMarker.mScanPexp / um, 0) +
-			"um_x=" + toString(stackCenterXYZ.XX / mm, 3) + "_y=" + toString(stackCenterXYZ.YY / mm, 3) +
-			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZafterBinning / mm, 4) +
-			"_bin=" + toString(nFramesBinning, 0) };
+		const std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) +
+			"nm_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_Pexp=" + Util::toString(fluorMarker.mScanPexp / um, 0) +
+			"um_x=" + Util::toString(stackCenterXYZ.XX / mm, 3) + "_y=" + Util::toString(stackCenterXYZ.YY / mm, 3) +
+			"_zi=" + Util::toString(stageZi / mm, 4) + "_zf=" + Util::toString(stageZf / mm, 4) + "_Step=" + Util::toString(pixelSizeZafterBinning / mm, 4) +
+			"_bin=" + Util::toString(nFramesBinning, 0) };
 		
 		std::cout << "Saving the stack...\n";
 		image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
@@ -350,12 +350,12 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
-		const double fullWidth{ 10.000 * mm };												//Total width of the tile array
+		const double fullWidth{ 0.300 * mm };												//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };												//Width of a strip
-		const double fullHeight{ 54 * tileHeight };//= 36 * 0.280 * mm						//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
-		const double pixelSizeX{ 1.0 * um };												//WARNING: the image becomes distorted for pixelSizeX > 1 um
+		const double fullHeight{ 53 * tileHeight };											//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
+		const double pixelSizeX{ 1.0 * um };												//WARNING: the image becomes distorted at the edges of the strip when pixelSizeX > 1 um (check this again)
 		const double pixelSizeY{ 0.5 * um };
 
 		QuickScanXY quickScanXY{ {stackCenterXYZ.XX, stackCenterXYZ.YY}, {  tileHeight, tileWidth }, { pixelSizeX, pixelSizeY }, { fullHeight, fullWidth } };
@@ -415,13 +415,13 @@ namespace Routines
 			quickScanXY.push(image.data(), { 0, iterLocation });	//for now, only allowed to stack up strips to the right
 
 			reverseSCANDIR(iterScanDirX);
-			pressESCforEarlyTermination();
+			Util::pressESCforEarlyTermination();
 		}
-			const std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorMarker.mWavelength_nm, 0) +
-				"nm_P=" + toString(fluorMarker.mScanPmin / mW, 1) +
-				"mW_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
-				"_yi=" + toString(quickScanXY.mStagePosY.front() / mm, 3) + "_yf=" + toString(quickScanXY.mStagePosY.back() / mm, 3) +
-				"_z=" + toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
+			const std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) +
+				"nm_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) +
+				"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
+				"_yi=" + Util::toString(quickScanXY.mStagePosY.front() / mm, 3) + "_yf=" + Util::toString(quickScanXY.mStagePosY.back() / mm, 3) +
+				"_z=" + Util::toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + Util::toString(pixelSizeX / mm, 4) };
 			std::cout << "Saving the stack...\n";
 			quickScanXY.saveToFile(filename, OVERRIDE::DIS);
 	}
@@ -531,7 +531,7 @@ namespace Routines
 						mesoscope.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
 						scanPmin = acqStack.readScanPmin();
 						scanPexp = acqStack.readScanPexp();
-						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, convertScandirToInt(iterScanDirZ) * acqStack.readScanPexp());
+						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(iterScanDirZ) * acqStack.readScanPexp());
 
 						Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 					}
@@ -562,11 +562,11 @@ namespace Routines
 					std::string tileIndexJpad_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;//2 digits in total
 
 					shortName = sliceNumberPad_s + "_" + convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + stackNumberPad_s;
-					longName = mesoscope.readCurrentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pmin=" + toString(scanPmin / mW, 1) + "mW_Pexp=" + toString(scanPexp / um, 0) + "um" +
-						"_x=" + toString(tileCenterXY.XX / mm, 3) +
-						"_y=" + toString(tileCenterXY.YY / mm, 3) +
-						"_zi=" + toString(scanZi / mm, 4) + "_zf=" + toString(scanZf / mm, 4) +
-						"_Step=" + toString(pixelSizeZafterBinning / mm, 4) + "_bin=" + toString(nFramesBinning, 0);
+					longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_Pexp=" + Util::toString(scanPexp / um, 0) + "um" +
+						"_x=" + Util::toString(tileCenterXY.XX / mm, 3) +
+						"_y=" + Util::toString(tileCenterXY.YY / mm, 3) +
+						"_zi=" + Util::toString(scanZi / mm, 4) + "_zf=" + Util::toString(scanZf / mm, 4) +
+						"_Step=" + Util::toString(pixelSizeZafterBinning / mm, 4) + "_bin=" + Util::toString(nFramesBinning, 0);
 
 						Image image{ RTcontrol };
 						image.acquire();
@@ -596,10 +596,10 @@ namespace Routines
 				//auto t_start{ std::chrono::high_resolution_clock::now() };
 				//double duration{ std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count() };
 				//std::cout << "Elapsed time: " << duration << " ms" << "\n";
-				pressESCforEarlyTermination();
+				Util::pressESCforEarlyTermination();
 			}//for
 		}//if
-		pressAnyKeyToCont();
+		Util::pressAnyKeyToCont();
 	}
 
 	//Image the sample non-stop. Use the PI program to move the stages manually
@@ -607,11 +607,11 @@ namespace Routines
 	{
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
-		const int nFramesCont{ 1 };															//Number of frames for continuous acquisition
+		const int nFramesCont{ 1 };																//Number of frames for continuous acquisition
 		const double pixelSizeXY{ 0.5 * um };
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };							//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };								//Full FOV in the slow axis
 
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
@@ -627,11 +627,11 @@ namespace Routines
 		const Galvo rescanner{ RTcontrol, FFOVslow / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//OPEN THE UNIBLITZ SHUTTERS
-		mesoscope.openShutter();				//The destructor will close the shutter automatically
+		mesoscope.openShutter();											//The destructor will close the shutter automatically
 
 		while (true)
 		{
-			mesoscope.setPower(fluorMarker.mScanPmin);					//Set the laser power
+			mesoscope.setPower(fluorMarker.mScanPmin);						//Set the laser power
 
 			RTcontrol.run();
 			Image image{ RTcontrol };
@@ -641,7 +641,7 @@ namespace Routines
 			image.save("Untitled", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);	//Save individual files
 			Sleep(700);
 
-			pressESCforEarlyTermination();									//Early termination if ESC is pressed
+			Util::pressESCforEarlyTermination();						//Early termination if ESC is pressed
 		}
 	}
 }//namespace
@@ -807,7 +807,7 @@ namespace TestRoutines
 
 		//Execute the control sequence and acquire the image
 		RTcontrol.run();
-		pressAnyKeyToCont();
+		Util::pressAnyKeyToCont();
 	}
 
 	//Test the synchronization of the 2 galvos and the laser
@@ -990,7 +990,7 @@ namespace TestRoutines
 
 		//EXECUTE THE CONTROL SEQUENCE
 		RTcontrol.run();
-		pressAnyKeyToCont();
+		Util::pressAnyKeyToCont();
 	}
 
 	void lasers(const FPGA &fpga)
@@ -1041,7 +1041,7 @@ namespace TestRoutines
 		RTcontrol.run();
 
 		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the sequence
-		pressAnyKeyToCont();
+		Util::pressAnyKeyToCont();
 		pockels.setShutter(false);
 	}
 
@@ -1116,9 +1116,9 @@ namespace TestRoutines
 	void clipU8()
 	{
 		int input{ 260 };
-		U8 output{ clipU8top(input) };
+		U8 output{ Util::clipU8top(input) };
 		std::cout << (int)output << "\n";
-		pressAnyKeyToCont();
+		Util::pressAnyKeyToCont();
 	}
 
 	void correctImage()
@@ -1187,7 +1187,7 @@ namespace TestRoutines
 		stitched.push(image01.data(), { 1, 0 });
 		stitched.saveToFile(outputFilename, OVERRIDE::DIS);
 
-		pressAnyKeyToCont();
+		Util::pressAnyKeyToCont();
 	}
 
 	//Anchor pixel wrt the full image
@@ -1239,7 +1239,7 @@ namespace TestRoutines
 		//PIXELS2 positionXY_pix = boolmap.tileIndicesIJtoPixelPosition_pix({0.0, 0.0, 0.0},  { 35, 66 });
 		//std::cout << positionXY_pix.ii << "\t" << positionXY_pix.jj<< "\n";
 
-		pressAnyKeyToCont();
+		Util::pressAnyKeyToCont();
 	}
 
 	void vectorOfObjects()
@@ -1259,7 +1259,7 @@ namespace TestRoutines
 		A a{ 1 };
 		aaa.push_back(a);
 
-		pressAnyKeyToCont();
+		Util::pressAnyKeyToCont();
 	}
 
 	void sequencerConcurrentTest()
@@ -1455,7 +1455,7 @@ namespace TestRoutines
 			});
 			*/
 
-		pressAnyKeyToCont();
+		Util::pressAnyKeyToCont();
 	}
 
 	//Test reading different channels of the PMT16X
@@ -1537,7 +1537,7 @@ namespace TestRoutines
 		//collectorLens.move(10.0 * mm);
 		collectorLens.downloadConfig();
 		//collectorLens.moveHome();
-		pressAnyKeyToCont();
+		Util::pressAnyKeyToCont();
 	}
 
 	void openCV()

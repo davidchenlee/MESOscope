@@ -12,24 +12,27 @@
 #include <conio.h>					//For _getch()
 using namespace Constants;
 
-std::string doesFileExist(const std::string filename);
-std::string toString(const double number, const int nDecimalPlaces);
-void printHex(int input);
-void printHex(const std::vector<uint8_t>  input);
-void printHex(const std::string input);
-void printBinary16(const int input);
-U16 doubleToFx2p14(double n);
-int convertScandirToInt(const SCANDIR scanDir);
-double exponentialFunction(const double Pmin, const double depthZ, const double decayLengthZ);
-template<class T> inline T clip(T x, T lower, T upper);
-template<class T> inline U8 clipU8top(const T x);
-template<class T> inline U8 clipU8dual(const T x);
-void pressAnyKeyToCont();
-void pressESCforEarlyTermination();
-void pressAnyKeyToContOrESCtoExit();
+namespace Util
+{
+	std::string doesFileExist(const std::string filename);
+	std::string toString(const double number, const int nDecimalPlaces);
+	void printHex(int input);
+	void printHex(const std::vector<uint8_t>  input);
+	void printHex(const std::string input);
+	void printBinary16(const int input);
+	U16 doubleToFx2p14(double n);
+	int convertScandirToInt(const SCANDIR scanDir);
+	double exponentialFunction(const double Pmin, const double depthZ, const double decayLengthZ);
+	template<class T> inline T clip(T x, T lower, T upper);
+	template<class T> inline U8 clipU8top(const T x);
+	template<class T> inline U8 clipU8dual(const T x);
+	void pressAnyKeyToCont();
+	void pressESCforEarlyTermination();
+	void pressAnyKeyToContOrESCtoExit();
+}
 
 //For saving the parameters to a text file
-class Logger
+class Logger final
 {
 public:
 	Logger(const std::string filename);

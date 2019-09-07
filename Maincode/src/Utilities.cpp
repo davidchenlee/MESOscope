@@ -1,150 +1,153 @@
 #include "Utilities.h"
 
-//Convert an int to hex and print it out
-void printHex(const int input)
+namespace Util
 {
-	std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << "\n";
-}
-
-//Convert an unsigned char to hex and print it out
-void printHex(const std::vector<uint8_t>  input)
-{
-	for (size_t ii = 0; ii < input.size(); ii++)
+	//Convert an int to hex and print it out
+	void printHex(const int input)
 	{
-		std::cout << std::hex << std::uppercase << static_cast<int>(input[ii]);
-		std::cout << " ";
+		std::cout << std::hex << std::uppercase << input << std::nouppercase << std::dec << "\n";
 	}
-	std::cout << std::nouppercase << std::dec << "\n";
-}
 
-//Convert a string to hex and print it out
-void printHex(const std::string input)
-{
-	const char *cstr{ input.c_str() };
-	for (size_t ii = 0; ii < input.size(); ii++)
+	//Convert an unsigned char to hex and print it out
+	void printHex(const std::vector<uint8_t>  input)
 	{
-		std::cout << std::hex << std::uppercase << static_cast<int>(cstr[ii]);
-		std::cout << " ";
-	}
-	std::cout << std::nouppercase << std::dec << "\n";
-}
-
-void printBinary16(const int input)
-{
-	std::cout << std::bitset<16>(input) << "\n";
-}
-
-//Convert a double to a fixed 2p14
-U16 doubleToFx2p14(double n)
-{
-	const int FIXED_BIT{ 14 }; //Number of decimal digits. It MUST match the LV implementation: currently fx2.14 (U16 is split into 2 integer digits + 14 decimal digits)
-	U16 int_part{ 0 }, frac_part{ 0 };
-	double t;
-	int_part = static_cast<U16>(floor(n)) << FIXED_BIT;
-	n -= static_cast<U16>(floor(n));
-
-	t = 0.5;
-	for (int i = 0; i < FIXED_BIT; i++) {
-		if ((n - t) >= 0) {
-			n -= t;
-			frac_part += (1 << (FIXED_BIT - 1 - i));
+		for (size_t ii = 0; ii < input.size(); ii++)
+		{
+			std::cout << std::hex << std::uppercase << static_cast<int>(input[ii]);
+			std::cout << " ";
 		}
-		t = t / 2.;
+		std::cout << std::nouppercase << std::dec << "\n";
 	}
 
-	return int_part + frac_part;
-}
-
-int convertScandirToInt(const SCANDIR scanDir)
-{
-	switch (scanDir)
+	//Convert a string to hex and print it out
+	void printHex(const std::string input)
 	{
-	case SCANDIR::RIGHTWARD:
-	case SCANDIR::INWARD:
-	case SCANDIR::UPWARD:
-		return +1;
-	case SCANDIR::LEFTWARD:
-	case SCANDIR::OUTWARD:
-	case SCANDIR::DOWNWARD:
-		return -1;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
+		const char *cstr{ input.c_str() };
+		for (size_t ii = 0; ii < input.size(); ii++)
+		{
+			std::cout << std::hex << std::uppercase << static_cast<int>(cstr[ii]);
+			std::cout << " ";
+		}
+		std::cout << std::nouppercase << std::dec << "\n";
 	}
-}
 
-double exponentialFunction(const double Pmin, const double depthZ, const double decayLengthZ)
-{
-	if (decayLengthZ == 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The exponential length must be > 0 or < 0");
-
-	return Pmin * std::exp(depthZ / decayLengthZ);
-}
-
-//Clip x so that lower <= x <= upper
-template<class T> inline T clip(T x, T lower, T upper)
-{
-	return (std::min)(upper, (std::max)(x, lower));
-}
-
-//Clip so that x <= 0xFF
-template<class T> inline U8 clipU8top(const T x)
-{
-	return static_cast<U8>( (std::min)(x, static_cast<T>(255)) );
-}
-template U8 clipU8top(const int x);	//Allow calling the function from a different .cpp file
-
-//Clip so that 0x00 <= x <= 0xFF
-template<class T> inline U8 clipU8dual(const T x)
-{
-	return static_cast<U8>( (std::max)(static_cast<T>(0),(std::min)(x, static_cast<T>(255))) );
-}
-
-//Convert a double to a string with decimal places
-std::string toString(const double number, const int nDecimalPlaces)
-{
-	std::ostringstream str;
-	str << std::fixed << std::setprecision(nDecimalPlaces);
-	str << number;
-	return str.str();
-}
-
-//Check if the file already exists
-std::string doesFileExist(const std::string filename)
-{
-	std::string suffix{ "" };
-
-	for (int ii = 1; std::experimental::filesystem::exists(folderPath + filename + suffix + ".tif"); ii++)
-		suffix = " (" + std::to_string(ii) + ")";
-
-	return filename + suffix;
-}
-
-//Pause the sequence until any key is pressed
-void pressAnyKeyToCont()
-{
-	std::cout << "\nPress any key to continue...\n";
-	getchar();
-}
-
-//Early termination if ESC is pressed
-void pressESCforEarlyTermination()
-{
-	if (GetAsyncKeyState(VK_ESCAPE) & 0x0001)
-		throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
-}
-
-void pressAnyKeyToContOrESCtoExit()
-{
-	char input_char;
-	while (true)
+	void printBinary16(const int input)
 	{
-		std::cout << "\nPress any key to continue or ESC to exit\n";
-		input_char = _getch();
+		std::cout << std::bitset<16>(input) << "\n";
+	}
 
-		if (input_char == 27)
+	//Convert a double to a fixed 2p14
+	U16 doubleToFx2p14(double n)
+	{
+		const int FIXED_BIT{ 14 }; //Number of decimal digits. It MUST match the LV implementation: currently fx2.14 (U16 is split into 2 integer digits + 14 decimal digits)
+		U16 int_part{ 0 }, frac_part{ 0 };
+		double t;
+		int_part = static_cast<U16>(floor(n)) << FIXED_BIT;
+		n -= static_cast<U16>(floor(n));
+
+		t = 0.5;
+		for (int i = 0; i < FIXED_BIT; i++) {
+			if ((n - t) >= 0) {
+				n -= t;
+				frac_part += (1 << (FIXED_BIT - 1 - i));
+			}
+			t = t / 2.;
+		}
+
+		return int_part + frac_part;
+	}
+
+	int convertScandirToInt(const SCANDIR scanDir)
+	{
+		switch (scanDir)
+		{
+		case SCANDIR::RIGHTWARD:
+		case SCANDIR::INWARD:
+		case SCANDIR::UPWARD:
+			return +1;
+		case SCANDIR::LEFTWARD:
+		case SCANDIR::OUTWARD:
+		case SCANDIR::DOWNWARD:
+			return -1;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
+		}
+	}
+
+	double exponentialFunction(const double Pmin, const double depthZ, const double decayLengthZ)
+	{
+		if (decayLengthZ == 0)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The exponential length must be > 0 or < 0");
+
+		return Pmin * std::exp(depthZ / decayLengthZ);
+	}
+
+	//Clip x so that lower <= x <= upper
+	template<class T> inline T clip(T x, T lower, T upper)
+	{
+		return (std::min)(upper, (std::max)(x, lower));
+	}
+
+	//Clip so that x <= 0xFF
+	template<class T> inline U8 clipU8top(const T x)
+	{
+		return static_cast<U8>((std::min)(x, static_cast<T>(255)));
+	}
+	template U8 clipU8top(const int x);	//Allow calling the function from a different .cpp file
+
+	//Clip so that 0x00 <= x <= 0xFF
+	template<class T> inline U8 clipU8dual(const T x)
+	{
+		return static_cast<U8>((std::max)(static_cast<T>(0), (std::min)(x, static_cast<T>(255))));
+	}
+
+	//Convert a double to a string with decimal places
+	std::string toString(const double number, const int nDecimalPlaces)
+	{
+		std::ostringstream str;
+		str << std::fixed << std::setprecision(nDecimalPlaces);
+		str << number;
+		return str.str();
+	}
+
+	//Check if the file already exists
+	std::string doesFileExist(const std::string filename)
+	{
+		std::string suffix{ "" };
+
+		for (int ii = 1; std::experimental::filesystem::exists(folderPath + filename + suffix + ".tif"); ii++)
+			suffix = " (" + std::to_string(ii) + ")";
+
+		return filename + suffix;
+	}
+
+	//Pause the sequence until any key is pressed
+	void pressAnyKeyToCont()
+	{
+		std::cout << "\nPress any key to continue...\n";
+		getchar();
+	}
+
+	//Early termination if ESC is pressed
+	void pressESCforEarlyTermination()
+	{
+		if (GetAsyncKeyState(VK_ESCAPE) & 0x0001)
 			throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
-		else
-			break;//Break the while loop
+	}
+
+	void pressAnyKeyToContOrESCtoExit()
+	{
+		char input_char;
+		while (true)
+		{
+			std::cout << "\nPress any key to continue or ESC to exit\n";
+			input_char = _getch();
+
+			if (input_char == 27)
+				throw std::runtime_error((std::string)__FUNCTION__ + ": Control sequence terminated");
+			else
+				break;//Break the while loop
+		}
 	}
 }
 
@@ -485,7 +488,7 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 	*/
 
 	if (override == OVERRIDE::DIS)
-		filename = doesFileExist(filename);	//Check if the file exits. It gives some overhead
+		filename = Util::doesFileExist(filename);	//Check if the file exits. It gives some overhead
 
 	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "w") };
 
@@ -541,16 +544,16 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 			if (TIFFWriteScanline(tiffHandle, buffer, iterRow_pix, 0) < 0)
 				break;
 		}
-		TIFFWriteDirectory(tiffHandle);				//Create a page structure. This gives a large overhead
+		TIFFWriteDirectory(tiffHandle);						//Create a page structure. This gives a large overhead
 
 		if (frameIndex == lastFrame)
 			break;
 
-		frameIndex += convertScandirToInt(scanDirZ);//Increasing iterator for UPWARD. Decreasing for DOWNWARD
+		frameIndex += Util::convertScandirToInt(scanDirZ);	//Increasing iterator for UPWARD. Decreasing for DOWNWARD
 	} while (true);
 
-	_TIFFfree(buffer);								//Destroy the buffer
-	TIFFClose(tiffHandle);							//Close the output tiff file
+	_TIFFfree(buffer);										//Destroy the buffer
+	TIFFClose(tiffHandle);									//Close the output tiff file
 
 	std::cout << "Successfully saved: " << filename << ".tif\n";
 }
@@ -891,10 +894,10 @@ void TiffU8::correctRSdistortionCPU(const double FFOVfast)
 		for (int k = 0; k < mWidthPerFrame_pix; k++) {
 			const float kk_float{ kk_precomputed[k] };
 			const int kk{ static_cast<int>(std::floor(kk_float)) };
-			const int kk1{ clip(kk, 0, mWidthPerFrame_pix - 1) };
-			const int kk2{ clip(kk + 1, 0, mWidthPerFrame_pix - 1) };
-			const U8 value1{ mArray[iterRow_pix * mWidthPerFrame_pix + kk1] };	//Read from the input array
-			const U8 value2{ mArray[iterRow_pix * mWidthPerFrame_pix + kk2] };	//Read from the input array
+			const int kk1{ Util::clip(kk, 0, mWidthPerFrame_pix - 1) };
+			const int kk2{ Util::clip(kk + 1, 0, mWidthPerFrame_pix - 1) };
+			const U8 value1{ mArray[iterRow_pix * mWidthPerFrame_pix + kk1] };										//Read from the input array
+			const U8 value2{ mArray[iterRow_pix * mWidthPerFrame_pix + kk2] };										//Read from the input array
 			correctedArray[iterRow_pix * mWidthPerFrame_pix + k] = interpolateU8(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
 		}
 	}
@@ -930,10 +933,10 @@ void TiffU8::correctFOVslowCPU(const double FFOVslow)
 		for (int k = 0; k < mHeightPerFrame_pix; k++) {
 			const float kk_float{ kk_precomputed[k] };
 			const int kk{ static_cast<int>(std::floor(kk_float)) };
-			const int kk1{ clip(kk, 0, mHeightPerFrame_pix - 1) };
-			const int kk2{ clip(kk + 1, 0, mHeightPerFrame_pix - 1) };
-			const U8 value1{ mArray[kk1 * mWidthPerFrame_pix + iterCol_pix] };	//Read from the input array
-			const U8 value2{ mArray[kk2 * mWidthPerFrame_pix + iterCol_pix] };	//Read from the input array
+			const int kk1{ Util::clip(kk, 0, mHeightPerFrame_pix - 1) };
+			const int kk2{ Util::clip(kk + 1, 0, mHeightPerFrame_pix - 1) };
+			const U8 value1{ mArray[kk1 * mWidthPerFrame_pix + iterCol_pix] };										//Read from the input array
+			const U8 value2{ mArray[kk2 * mWidthPerFrame_pix + iterCol_pix] };										//Read from the input array
 			correctedArray[k * mWidthPerFrame_pix + iterCol_pix] = interpolateU8(kk_float - kk1, value1, value2);	//Interpolate and save to the output array
 		}
 	}
@@ -956,16 +959,16 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
 		{
 			//First channel
-			correctedArray[iterFrame * mNpixPerFrame + iterPix] = clipU8dual(
+			correctedArray[iterFrame * mNpixPerFrame + iterPix] = Util::clipU8dual(
 				mArray[iterFrame * mNpixPerFrame + iterPix] - crosstalkRatio * mArray[iterFrame * mNpixPerFrame + nPixPerFramePerBeamlet + iterPix]);
 
 			//Last channel
-			correctedArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] = clipU8dual(
+			correctedArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
 				mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] - crosstalkRatio * mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 2) * nPixPerFramePerBeamlet + iterPix]);
 
 			//All channels in between
 			for (int chanIndex = 1; chanIndex < g_nChanPMT - 1; chanIndex++)
-				correctedArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = clipU8dual(
+				correctedArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
 					mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]
 					- crosstalkRatio * (mArray[iterFrame * mNpixPerFrame + (chanIndex - 1) * nPixPerFramePerBeamlet + iterPix] + mArray[iterFrame * mNpixPerFrame + (chanIndex + 1) * nPixPerFramePerBeamlet + iterPix]));
 		}
@@ -1008,7 +1011,8 @@ void TiffU8::flattenField(const double scaleFactor, const int lowerChan, const i
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
 		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
-				mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = clipU8dual(vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]);
+				mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
+					vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]);
 }
 
 /*Old way of doing the field flattening

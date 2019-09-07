@@ -48,9 +48,9 @@ POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapIJK_frac, con
 	if (tileArraySize.II <= 0 || tileArraySize.II <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be > 0");
 	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= tileArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + toString(tileArraySize.II, 0) + "]");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + Util::toString(tileArraySize.II, 0) + "]");
 	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= tileArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + toString(tileArraySize.JJ, 0) + "]");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + Util::toString(tileArraySize.JJ, 0) + "]");
 
 	return { (1. - overlapIJK_frac.II) * (tileIndicesIJ.II - static_cast<int>((tileArraySize.II - 1) / 2)),
 			 (1. - overlapIJK_frac.JJ) * (tileIndicesIJ.JJ - static_cast<int>((tileArraySize.JJ - 1) / 2)) };
@@ -265,21 +265,22 @@ void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) co
 #pragma endregion "QuickStitcher"
 
 #pragma region "QuickScanXY"
-QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SIZE2 pixelSizeXY, const SIZE2 LOIxy) :
+QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 FFOV, const SIZE2 pixelSizeXY, const SIZE2 LOIxy) :
 	mROIcenterXY{ ROIcenterXY },
-	mFFOV{ ffov },
+	mFFOV{ FFOV },
 	mPixelSizeXY{ pixelSizeXY },
-	mLOIxy{ LOIxy },																//The length of interest (LOI) is from tile edge to tile edge
-	mFullWidth_pix{ static_cast<int>(std::ceil(LOIxy.YY / pixelSizeXY.YY)) },
-	QuickStitcher{ static_cast<int>(std::ceil(LOIxy.XX / pixelSizeXY.XX)),			//tileHeight_pix. The tile height is the same as the full height (because a tile is a vertical strip)
-					static_cast<int>(std::ceil(ffov.YY / pixelSizeXY.YY)),			//tileWidth_pix
-					{ 1, static_cast<int>(std::ceil(1. * LOIxy.YY / ffov.YY)) },	//tile array size = Only 1 row and many columns
-					{ 0, 0, 0} }													//No overlap	
+	mLOIxy{ castLOIxy_(FFOV, LOIxy) },																	//Cast the length of interest (LOI) to odd numbers to have an exact center tile. LOI covers from tile edge to tile edge
+	mFullWidth_pix{ static_cast<int>(std::ceil(castLOIxy_(FFOV, LOIxy).YY / pixelSizeXY.YY)) },			//Full width. Note that the cast mLOIxy is being used
+	QuickStitcher{ static_cast<int>(std::ceil(castLOIxy_(FFOV, LOIxy).XX / pixelSizeXY.XX)),			//tileHeight_pix. The tile height is the same as the full height (because a tile is a long vertical strip). Note that the cast mLOIxy is being used
+				   static_cast<int>(std::ceil(castLOIxy_(FFOV, LOIxy).YY / pixelSizeXY.YY)),			//tileWidth_pix
+				   { 1, static_cast<int>(std::ceil(castLOIxy_(FFOV, LOIxy).YY / FFOV.YY)) },			//tile array size = { 1, JJ }. Only 1 row and many columns. Note that the cast mLOIxy is being used
+				   { 0, 0, 0} }																			//No overlap	
 {
-	const int II{ 0 };	//Only 1 row
+
 	for (int JJ = 0; JJ < QuickStitcher::readTileArraySize(Axis::JJ); JJ++)
 	{
-		const POSITION2 relativeTileIndexIJ{ determineRelativeTileIndicesIJ(QuickStitcher::readTileOverlapIJK_frac(), QuickStitcher::readTileArraySizeIJ(), { II, JJ }) };
+		const int II{ 0 };	//Only 1 row
+		const POSITION2 relativeTileIndexIJ{ determineRelativeTileIndicesIJ(readTileOverlapIJK_frac(), readTileArraySizeIJ(), { II, JJ }) };
 		mStagePosY.push_back(mROIcenterXY.YY - mFFOV.YY * relativeTileIndexIJ.YY);		//for now, only stacking strips to the right is allowed (i.e. move the stage to the left)
 	}
 }
@@ -287,7 +288,7 @@ QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SI
 double QuickScanXY::determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const
 {
 	const double ROIminX{ mROIcenterXY.XX - mLOIxy.XX / 2 };	//Sample edge
-	const double tilePosXmin{ ROIminX + mFFOV.XX / 2. };		//The first tile center is mFFOV.XX / 2 away from the ROI edge
+	const double tilePosXmin{ ROIminX + mFFOV.XX / 2. };		//LOI covers from tile edge to tile edge. The first tile center is mFFOV.XX / 2 away from the ROI edge
 	const double travelX{ mLOIxy.XX - mFFOV.XX };				//The X stage does not travel the first and last mFFOV.XX / 2 from the edge of the ROI
 
 	return determineInitialScanPos(tilePosXmin, travelX, travelOverhead, scanDir);
@@ -296,10 +297,32 @@ double QuickScanXY::determineInitialScanPosX(const double travelOverhead, const 
 double QuickScanXY::determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const
 {
 	const double ROIminX{ mROIcenterXY.XX - mLOIxy.XX / 2. };	//Sample edge
-	const double tilePosXmin{ ROIminX + mFFOV.XX / 2. };		//The first tile center is mFFOV.XX / 2 away from the ROI edge
+	const double tilePosXmin{ ROIminX + mFFOV.XX / 2. };		//LOI covers from tile edge to tile edge. The first tile center is mFFOV.XX / 2 away from the ROI edge
 	const double travelX{ mLOIxy.XX - mFFOV.XX };				//The X stage does not travel the first and last mFFOV.XX / 2 from the edge of the ROI
 
 	return determineFinalScanPos(tilePosXmin, travelX, travelOverhead, scanDir);
+}
+
+//Return an odd number of tiles
+int QuickScanXY::castToOddnumber_(const double inputNumber) const
+{
+	int inputNumber_int{ static_cast<int>(std::ceil(inputNumber)) };
+	if (inputNumber_int % 2)	//Odd number
+		return inputNumber_int;
+	else				//Even number
+	{
+		//std::cerr << "WARNING in " << __FUNCTION__ << ": The number of tiles has been cast to an odd number\n";
+		return inputNumber_int + 1;
+	}
+}
+
+//Return a cast LOI that covers an odd number of tiles
+SIZE2 QuickScanXY::castLOIxy_(const FFOV2 FFOV, const SIZE2 LOIxy) const
+{
+	const int numberOfTilesII{ castToOddnumber_(LOIxy.XX / FFOV.XX) };
+	const int numberOfTilesJJ{ castToOddnumber_(LOIxy.YY / FFOV.YY) };
+
+	return { numberOfTilesII * FFOV.XX , numberOfTilesJJ * FFOV.YY };
 }
 #pragma endregion "QuickScanXY"
 
@@ -870,7 +893,7 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << convertActionIDtoString_(mActionID) << "\t\t\t\t\t";
 		*fileHandle << mAction.acqStack.readStackNumber() << "\t";
 		*fileHandle << mAction.acqStack.readWavelength_nm() << "\t";
-		*fileHandle << convertScandirToInt(mAction.acqStack.readScanDirZ()) << "\t";
+		*fileHandle << Util::convertScandirToInt(mAction.acqStack.readScanDirZ()) << "\t";
 		*fileHandle << std::setprecision(3);
 		*fileHandle << mAction.acqStack.readScanZmin() / mm << "\t";
 		*fileHandle << (mAction.acqStack.readScanZmin() + mAction.acqStack.readDepthZ()) / mm << "\t";
@@ -905,7 +928,7 @@ void Sequencer::Commandline::printParameters() const
 	case Action::ID::ACQ:
 		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
 		std::cout << "wavelength = " << mAction.acqStack.readWavelength_nm() << " nm\n";
-		std::cout << "scanDirZ = " << convertScandirToInt(mAction.acqStack.readScanDirZ()) << "\n";
+		std::cout << "scanDirZ = " << Util::convertScandirToInt(mAction.acqStack.readScanDirZ()) << "\n";
 		std::cout << "scanZmin / depthZ = " << mAction.acqStack.readScanZmin() / mm << " mm/" << mAction.acqStack.readDepthZ() << " mm\n";
 		std::cout << "scanPmin / ScanPexp = " << mAction.acqStack.readScanPmin() / mW << " mW/" << mAction.acqStack.readScanPexp() / um << " (um)\n\n";
 		break;
@@ -970,14 +993,14 @@ void Sequencer::generateCommandList()
 					moveStage_({ mII, mJJ });
 					acqStack_(iterFluorMarker);
 					saveStack_();
-					mII -= convertScandirToInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the X-stage axis
+					mII -= Util::convertScandirToInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the X-stage axis
 				}
-				mII += convertScandirToInt(mIterScanDirXYZ.XX);		//Re-initialize II by going back one step to start from 0 or mTileArraySize.II - 1
-				reverseSCANDIR(mIterScanDirXYZ.XX);					//Reverse the scanning direction
-				mJJ -= convertScandirToInt(mIterScanDirXYZ.YY);		//Increase/decrease the iterator in the Y-stage axis
+				mII += Util::convertScandirToInt(mIterScanDirXYZ.XX);		//Re-initialize II by going back one step to start from 0 or mTileArraySize.II - 1
+				reverseSCANDIR(mIterScanDirXYZ.XX);							//Reverse the scanning direction
+				mJJ -= Util::convertScandirToInt(mIterScanDirXYZ.YY);		//Increase/decrease the iterator in the Y-stage axis
 			}
-			mJJ += convertScandirToInt(mIterScanDirXYZ.YY);			//Re-initialize JJ by going back one step to start from 0 or mTileArraySize.JJ - 1
-			reverseSCANDIR(mIterScanDirXYZ.YY);						//Reverse the scanning direction
+			mJJ += Util::convertScandirToInt(mIterScanDirXYZ.YY);			//Re-initialize JJ by going back one step to start from 0 or mTileArraySize.JJ - 1
+			reverseSCANDIR(mIterScanDirXYZ.YY);								//Reverse the scanning direction
 		}
 		//Only need to cut the sample 'nVibratomeSlices -1' times
 		if (iterSlice < mNtotalSlices - 1)
@@ -1016,9 +1039,9 @@ std::string Sequencer::printHeaderUnits() const
 void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 {
 	*fileHandle << "SEQUENCER ************************************************************\n";
-	*fileHandle << "Stages initial scan direction {stageX, stageY, stageZ} = {" << convertScandirToInt(g_initialStageScanDirXYZ.XX) << ", " <<
-																				   convertScandirToInt(g_initialStageScanDirXYZ.YY) << ", " <<
-																				   convertScandirToInt(g_initialStageScanDirXYZ.ZZ) << "}\n";
+	*fileHandle << "Stages initial scan direction {stageX, stageY, stageZ} = {" << Util::convertScandirToInt(g_initialStageScanDirXYZ.XX) << ", " <<
+																				   Util::convertScandirToInt(g_initialStageScanDirXYZ.YY) << ", " <<
+																				   Util::convertScandirToInt(g_initialStageScanDirXYZ.ZZ) << "}\n";
 	*fileHandle << std::setprecision(4);
 	*fileHandle << "Effective LOI (stageX, stageY, stageZ) = (" << determineEffectiveLOIxyz().XX / mm << " mm, " <<
 																   determineEffectiveLOIxyz().YY / mm << " mm, " <<

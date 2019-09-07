@@ -9,7 +9,7 @@
 #include <memory>										//For smart pointers
 #include "Thorlabs.MotionControl.KCube.StepperMotor.h"	//For the Thorlabs stepper
 
-class Image
+class Image final
 {
 public:
 	Image(const RTcontrol &RTcontrol);
@@ -37,7 +37,7 @@ private:
 	void demuxAllChannels_(const bool saveAllPMT);
 };
 
-class ResonantScanner
+class ResonantScanner final
 {
 public:
 	double mFillFactor;		//Fill factor: how much of an RS swing is covered by the pixels
@@ -67,7 +67,7 @@ private:
 	void setVoltage_(const double controlVoltage);
 };
 
-class PMT16X
+class PMT16X final
 {
 public:
 	PMT16X();
@@ -96,7 +96,7 @@ private:
 	uint8_t sumCheck_(const std::vector<uint8_t> input, const int index) const;		//The PMT requires a sumcheck. Refer to the manual
 };
 
-class Stage
+class Stage final
 {
 public:
 	enum Axis { XX, YY, ZZ };
@@ -150,7 +150,7 @@ private:
 	std::string convertAxisToString_(const Axis axis) const;
 };
 
-class Vibratome
+class Vibratome final
 {
 public:
 	const POSITION2 mStageInitialSlicePosXY{ -53. * mm, 2. * mm };	//Position the stages in front oh the vibratome's blade
@@ -179,7 +179,7 @@ private:
 	//void retractDistance(const double distance) const;
 };
 
-class Filterwheel
+class Filterwheel final
 {
 public:
 	enum class ID { DET, EXC };
@@ -245,7 +245,7 @@ private:
 	Filterwheel mFWdetection;
 };
 
-class Laser
+class Laser final
 {
 public:
 	enum class ID { VISION, FIDELITY, AUTO };
@@ -276,7 +276,7 @@ private:
 	int downloadWavelength_nm_() const;
 };
 
-class Shutter
+class Shutter final
 {
 public:
 	Shutter(const FPGA &fpga, const Laser::ID whichLaser);
@@ -289,7 +289,7 @@ private:
 	NiFpga_FPGAvi_ControlBool mWhichShutter;	//Device ID
 };
 
-class Pockels
+class Pockels final
 {
 public:
 	Pockels(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID laserSelector);	//Do not set the output to 0 through the destructor to allow latching the last value
@@ -363,14 +363,14 @@ private:
 	const int mAcc_iu{ 11041 };									//Equivalent to 0.5 mm/s^2
 };
 
-class CollectorLens: public StepperActuator
+class CollectorLens final: public StepperActuator
 {
 public:
 	CollectorLens();
 	void set(const int wavelength_nm);
 };
 
-class Galvo
+class Galvo final
 {
 public:
 	Galvo::Galvo(RTcontrol &RTcontrol, const double posMax);

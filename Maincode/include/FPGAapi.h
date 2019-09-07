@@ -20,7 +20,7 @@ namespace FPGAfunc
 	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue);
 }
 
-class FPGA
+class FPGA final
 {
 public:
 	FPGA();
@@ -61,7 +61,7 @@ private:
 	void readChunk_(const int &nPixPerBeamletAllFrames, int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 &FIFOOUTpc, U32* buffer, int &timeout) const;
 };
 
-class RTcontrol
+class RTcontrol final
 {
 public:
 	enum class RTCHAN { PIXELCLOCK, SCANNER, RESCANNER, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };				//NCHAN = number of sequence channels available including the channel for the pixelclock

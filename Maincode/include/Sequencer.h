@@ -41,7 +41,7 @@ public:
 	void saveToFile(std::string filename, const OVERRIDE override) const;
 };
 
-class QuickScanXY: public QuickStitcher
+class QuickScanXY final: public QuickStitcher
 {
 public:
 	std::vector<double> mStagePosY;
@@ -55,9 +55,12 @@ private:
 	const SIZE2 mPixelSizeXY;
 	const SIZE2 mLOIxy;
 	const int mFullWidth_pix;
+
+	int castToOddnumber_(const double input) const;
+	SIZE2 castLOIxy_(const FFOV2 FFOV, const SIZE2 LOIxy) const;
 };
 
-class Boolmap
+class Boolmap final
 {
 public:
 	Boolmap(const TiffU8 &tiff, const TileArray tileArray, const PIXELS2 anchorPixel_pix, const double threshold);
@@ -129,7 +132,7 @@ private:
 	std::vector<LIMIT2> mStageSoftPosLimXYZ;			//Soft position limits of the stages
 };
 
-class Stack
+class Stack final
 {
 public:
 	Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix, const double pixelSizeZ, const int nFrames, const TILEOVERLAP3 overlapIJK_frac);
@@ -153,7 +156,7 @@ private:
 namespace Action
 {
 	enum class ID { CUT, ACQ, SAV, MOV };
-	class MoveStage
+	class MoveStage final
 	{
 	public:
 		void setParam(const int sliceNumber, const INDICES2 tileIndicesIJ, const POSITION2 tileCenterXY);
@@ -167,7 +170,7 @@ namespace Action
 		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
 	};
 
-	class AcqStack
+	class AcqStack final
 	{
 	public:
 		void setParam(const int stackNumber, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPexp, const int nFrameBinning);
@@ -190,7 +193,7 @@ namespace Action
 		int mNframeBinning;
 	};
 
-	class CutSlice
+	class CutSlice final
 	{
 	public:
 		void setParam(const double planeZtoCut, const double stageZheightForFacingTheBlade);
@@ -202,10 +205,11 @@ namespace Action
 	};
 }
 
-class Sequencer	//A list of commands that form a full sequence
+//A list of commands that form a full sequence
+class Sequencer final 
 {
 public:
-	class Commandline	//Single commands
+	class Commandline final	//Single commands
 	{
 	public:
 		Action::ID mActionID;

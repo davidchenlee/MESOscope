@@ -107,8 +107,8 @@ void Image::demuxSingleChannel_()
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
-			const int upscaled{ g_upscalingFactor * (((mRTcontrol.dataBufferA())[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.data())[pixIndex] = clipU8top(upscaled);																		//Clip if overflow
+			const int upscaled{ g_upscalingFactor * (((mRTcontrol.dataBufferA())[pixIndex] >> nBitsToShift) & 0x0000000F) };			//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
+			(mTiff.data())[pixIndex] = Util::clipU8top(upscaled);																		//Clip if overflow
 		}
 	}
 	//Demultiplex mBufferB (CH08-CH15). Each U32 element in mBufferB has the multiplexed structure | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
@@ -116,8 +116,8 @@ void Image::demuxSingleChannel_()
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
-			const int upscaled{ g_upscalingFactor * (((mRTcontrol.dataBufferB())[pixIndex] >> nBitsToShift) & 0x0000000F) };	//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.data())[pixIndex] = clipU8top(upscaled);																		//Clip if overflow
+			const int upscaled{ g_upscalingFactor * (((mRTcontrol.dataBufferB())[pixIndex] >> nBitsToShift) & 0x0000000F) };			//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
+			(mTiff.data())[pixIndex] = Util::clipU8top(upscaled);																		//Clip if overflow
 		}
 	}
 	else
@@ -159,19 +159,19 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 		for (int chanIndex = 0; chanIndex < g_nChanPMT / 2; chanIndex++)
 		{
 			//Buffer A (CH00-CH07)
-			const int upscaledA{ g_upscalingFactor * ((mRTcontrol.dataBufferA())[pixIndex] & 0x0000000F) };			//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountA.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledA);		//Clip if overflow
-			(mRTcontrol.dataBufferA())[pixIndex] = (mRTcontrol.dataBufferA())[pixIndex] >> 4;						//Shift 4 places to the right for the next iteration
+			const int upscaledA{ g_upscalingFactor * ((mRTcontrol.dataBufferA())[pixIndex] & 0x0000000F) };					//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			(CountA.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = Util::clipU8top(upscaledA);		//Clip if overflow
+			(mRTcontrol.dataBufferA())[pixIndex] = (mRTcontrol.dataBufferA())[pixIndex] >> 4;								//Shift 4 places to the right for the next iteration
 
 			//Buffer B (CH08-CH15)
-			const int upscaledB{ g_upscalingFactor * ((mRTcontrol.dataBufferB())[pixIndex] & 0x0000000F) };			//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountB.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = clipU8top(upscaledB);		//Clip if overflow
-			(mRTcontrol.dataBufferB())[pixIndex] = (mRTcontrol.dataBufferB())[pixIndex] >> 4;						//Shift 4 places to the right for the next iteration
+			const int upscaledB{ g_upscalingFactor * ((mRTcontrol.dataBufferB())[pixIndex] & 0x0000000F) };					//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			(CountB.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = Util::clipU8top(upscaledB);		//Clip if overflow
+			(mRTcontrol.dataBufferB())[pixIndex] = (mRTcontrol.dataBufferB())[pixIndex] >> 4;								//Shift 4 places to the right for the next iteration
 		}
 
 	//Merge all the PMT16X channels into a single image. The strip ordering depends on the scanning direction of the galvos (forward or backwards)
 	if (multibeam)
-		mTiff.mergePMT16Xchan(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());				//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
+		mTiff.mergePMT16Xchan(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());						//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
 
 	//For debugging
 	if (saveAllPMT)
@@ -1135,7 +1135,7 @@ void Filterwheel::setColor(const COLOR color)
 				std::stringstream msg;
 				msg << "WARNING: " << mFilterwheelName << " is in the incorrect position " << position << "\n";
 				std::cout << msg.str();
-				pressAnyKeyToContOrESCtoExit();
+				Util::pressAnyKeyToContOrESCtoExit();
 			}
 		}
 		catch (const serial::IOException)
@@ -1681,7 +1681,7 @@ void Pockels::pushPowerExponentialScaling(const double Pmin, const double interf
 	const double Vmin{ convertPowerToVolt_(Pmin) };
 	pushVoltageSinglet(timeStep, Vmin, OVERRIDE::EN);	//Set the laser power for the first frame
 
-	const double Pmax{ exponentialFunction(Pmin,(mRTcontrol.mNframes - 1) * interframeDistance, std::abs(decayLengthZ)) };
+	const double Pmax{ Util::exponentialFunction(Pmin,(mRTcontrol.mNframes - 1) * interframeDistance, std::abs(decayLengthZ)) };
 	if (Pmax < 0 || Pmax > mMaxPower)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power of the pockels cell must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower / mW)) + "] mW");
 
@@ -1690,12 +1690,12 @@ void Pockels::pushPowerExponentialScaling(const double Pmin, const double interf
 		double VV;
 		if (decayLengthZ > 0)
 		{
-			VV = convertPowerToVolt_(exponentialFunction(Pmin, ii * interframeDistance, decayLengthZ));	//Exponential growth
+			VV = convertPowerToVolt_(Util::exponentialFunction(Pmin, ii * interframeDistance, decayLengthZ));	//Exponential growth
 		}
 		else //decayLengthZ < 0
 		{
 			const double Vmax{ convertPowerToVolt_(Pmax) };
-			VV = convertPowerToVolt_(exponentialFunction(Pmax, ii * interframeDistance, decayLengthZ));	//Exponential decay because decayLengthZ < 0
+			VV = convertPowerToVolt_(Util::exponentialFunction(Pmax, ii * interframeDistance, decayLengthZ));	//Exponential decay because decayLengthZ < 0
 		}
 
 		//Make sure that Fx2p14 does not overflow

@@ -113,8 +113,8 @@ private:
 	};
 
 	const LINECLOCK mLineclockInput;		//Resonant scanner (RS) or Function generator (FG)
-	const MAINTRIG mMainTrigger;					//Trigger the acquisition with the Z-stage: enable (0), disable (1)
-	const FIFOOUTfpga mEnableFIFOOUTfpga;			//Enable or disable the FIFOOUTfpga on the FPGA
+	const MAINTRIG mMainTrigger;			//Trigger the acquisition with the Z-stage: enable (0), disable (1)
+	const FIFOOUTfpga mEnableFIFOOUTfpga;	//Enable or disable the FIFOOUTfpga on the FPGA
 	VQU32 mVec_queue;
 	U32* mBufferA{ nullptr };				//Buffer array to read FIFOOUTpc A
 	U32* mBufferB{ nullptr };				//Buffer array to read FIFOOUTpc B

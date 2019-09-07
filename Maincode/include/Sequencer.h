@@ -11,8 +11,9 @@ double determineInitialLaserPower(const double powerMin, const double totalPower
 double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
 std::string indexFluorLabel_s(const int wavelength_nm);
 
-struct FluorLabelList	//Create a list of fluorescent labels
+class FluorLabelList	//Create a list of fluorescent labels
 {
+public:
 	struct FluorLabel //Parameters for a single fluorescent label
 	{
 		std::string mName{ "" };	//Fluorescent label name
@@ -21,24 +22,23 @@ struct FluorLabelList	//Create a list of fluorescent labels
 		double mScanPexp;			//Length constant for the exponential power increase
 		int nFramesBinning{ 1 };
 	};
-	std::vector<FluorLabel> mFluorLabelList;
+
 	FluorLabelList(const std::vector<FluorLabel> fluorLabelList);
 	std::size_t readNtotalFluorLabels() const;
 	FluorLabel front() const;
 	FluorLabel at(const int index) const;
-	void printParams(std::ofstream *fileHandle) const;
+	void printFluorParams(std::ofstream *fileHandle) const;
 	FluorLabel findFluorLabel(const std::string fluorLabel) const;
+	FluorLabelList readFluorLabelList() const { return mFluorLabelList; }
+	FluorLabel  readFluorLabel(const int wavelengthIndex) const { return mFluorLabelList.at(wavelengthIndex); }
+private:
+	std::vector<FluorLabel> mFluorLabelList;
 };
 
-struct Sample
+class Sample : public FluorLabelList
 {
-	std::string mName;
-	std::string mImmersionMedium;
-	std::string mObjectiveCollar;	
-	FluorLabelList mFluorLabelList;
-	std::vector<LIMIT2> mStageSoftPosLimXYZ;			//Soft position limits of the stages
-
-	//Initialize with std::numeric_limits<double>::quiet_NaN??
+public:
+	 //Initialize with std::numeric_limits<double>::quiet_NaN??
 	POSITION2 mCenterXY{-1, -1};						//Sample center (stageX, stageY)
 	SIZE3 mLOIxyz_req{ -1, -1, -1 };					//Requested Length of interest (stageX, stageY, stageZ)
 	double mSurfaceZ{ -1 };
@@ -47,56 +47,115 @@ struct Sample
 
 	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorLabelList fluorLabelList = { {} });
 	Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 LOIxyz, const double sampleSurfaceZ, const double sliceOffset);
-	FluorLabelList::FluorLabel findFluorLabel(const std::string fluorLabel) const;
-	void printParams(std::ofstream *fileHandle) const;
+	void printSampleParams(std::ofstream *fileHandle) const;
+
+	std::string readName() const { return mName; }
+	std::string readImmersionMedium() const { return mImmersionMedium; }
+	std::string readObjectiveCollar() const { return mObjectiveCollar; }
+	std::vector<LIMIT2> readStageSoftPosLimXYZ() const { return mStageSoftPosLimXYZ; }
+	double readStageSoftPosLimXMIN() const { return mStageSoftPosLimXYZ.at(Stage::Axis::XX).MIN; }
+	double readStageSoftPosLimXMAX() const { return mStageSoftPosLimXYZ.at(Stage::Axis::XX).MAX; }
+	double readStageSoftPosLimYMIN() const { return mStageSoftPosLimXYZ.at(Stage::Axis::YY).MIN; }
+	double readStageSoftPosLimYMAX() const { return mStageSoftPosLimXYZ.at(Stage::Axis::YY).MAX; }
+private:
+	std::string mName;
+	std::string mImmersionMedium;
+	std::string mObjectiveCollar;	
+	std::vector<LIMIT2> mStageSoftPosLimXYZ;			//Soft position limits of the stages
 };
 
-struct Stack
+class Stack
 {
+public:
+	Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix, const double pixelSizeZ, const int nFrames, const TILEOVERLAP3 overlapIJK_frac);
+	void printParams(std::ofstream *fileHandle) const;
+	double readFFOV(const Stage::Axis axis) const
+	{
+		switch (axis)
+		{
+		case Stage::Axis::XX:
+			return mFFOV.XX;
+		case Stage::Axis::YY:
+			return mFFOV.YY;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected stage axis unavailable");
+		}
+	}
+	int readTileHeight_pix() const { return mTileHeight_pix; }
+	int readTileWidth_pix() const { return mTileWidth_pix; }
+	double readPixelSizeZ() const { return mPixelSizeZ;  }
+	double readDepthZ() const { return mDepthZ; }
+	TILEOVERLAP3 readOverlapIJK_frac() const { return mOverlapIJK_frac; }
+	double readOverlap_frac(const TileArray::Axis axis) const
+	{
+		switch (axis)
+		{
+		case TileArray::Axis::II:
+			return mOverlapIJK_frac.II;
+		case TileArray::Axis::JJ:
+			return mOverlapIJK_frac.JJ;
+		case TileArray::Axis::KK:
+			return mOverlapIJK_frac.KK;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected tile array axis unavailable");
+		}
+	}
+private:
 	FFOV2 mFFOV;					//Full field of view in the X-stage and Y-stage axes
 	int mTileHeight_pix;
 	int mTileWidth_pix;
 	double mPixelSizeZ;				//Image resolution in the Z-stage axis
 	double mDepthZ;					//Stack depth or thickness
-	TILEOVERLAP3 mOverlapXYZ_frac;	//Stack overlap in the X-stage, Y-stage, and Z-stage axes
-
-	Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix, const double pixelSizeZ, const int nFrames, const TILEOVERLAP3 overlapXYZ_frac);
-	void printParams(std::ofstream *fileHandle) const;
+	TILEOVERLAP3 mOverlapIJK_frac;	//Stack overlap in the X-stage, Y-stage, and Z-stage axes
 };
 
 namespace Action
 {
 	enum class ID { CUT, ACQ, SAV, MOV };
-	class MoveStage {
+	class MoveStage
+	{
 	public:
-		void setParam(const int sliceNumber, const INDICES2 tileIJ, const POSITION2 tileCenterXY)
+		void setParam(const int sliceNumber, const INDICES2 tileIndicesIJ, const POSITION2 tileCenterXY)
 		{
 			mSliceNumber = sliceNumber;
-			mTileIJ = tileIJ;
+			mTileIndicesIJ = tileIndicesIJ;
 			mTileCenterXY = tileCenterXY;
 		}
-
-		int readSliceNumber() const
+		int readSliceNumber() const { return mSliceNumber; }
+		int readTileIndex(const TileArray::Axis axis) const
 		{
-			return mSliceNumber;
+			switch (axis)
+			{
+			case TileArray::Axis::II:
+				return mTileIndicesIJ.II;
+			case TileArray::Axis::JJ:
+				return mTileIndicesIJ.JJ;
+			default:
+				throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected tile array axis unavailable");
+			}
 		}
 
-		INDICES2 readTileIJ() const
+		POSITION2 readTileCenterXY() const { return mTileCenterXY; }
+		double readTileCenter(Stage::Axis axis) const
 		{
-			return mTileIJ;
-		}
-
-		POSITION2 readTileCenterXY() const
-		{
-			return mTileCenterXY;
+			switch (axis)
+			{
+			case Stage::Axis::XX:
+				return mTileCenterXY.XX;
+			case Stage::Axis::YY:
+				return mTileCenterXY.YY;
+			default:
+				throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected stage axis unavailable");
+			}
 		}
 	private:
 		int mSliceNumber;			//Slice number
-		INDICES2 mTileIJ;			//Indices of the tile array
+		INDICES2 mTileIndicesIJ;	//Indices of the tile array
 		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
 	};
 
-	class AcqStack {
+	class AcqStack
+	{
 	public:
 		void setParam(const int stackNumber, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPexp, const int nFrameBinning)
 		{
@@ -109,47 +168,14 @@ namespace Action
 			mScanPexp = scanPexp;
 			mNframeBinning = nFrameBinning;
 		}
-
-		int readStackNumber() const
-		{
-			return mStackNumber;
-		}
-
-		int readWavelength_nm() const
-		{
-			return mWavelength_nm;
-		}
-
-		SCANDIR readScanDirZ() const
-		{
-			return mScanDirZ;
-		}
-
-		double readScanZmin() const
-		{
-			return mScanZmin;
-		}
-
-		double readDepthZ() const
-		{
-			return mDepthZ;
-		}
-
-		double readScanPmin() const
-		{
-			return mScanPmin;
-		}
-
-		double readScanPexp() const
-		{
-			return mScanPexp;
-		}
-
-		int readNframeBinning() const
-		{
-			return mNframeBinning;
-		}
-
+		int readStackNumber() const { return mStackNumber; }
+		int readWavelength_nm() const { return mWavelength_nm; }
+		SCANDIR readScanDirZ() const { return mScanDirZ; }
+		double readScanZmin() const { return mScanZmin; }
+		double readDepthZ() const { return mDepthZ; }
+		double readScanPmin() const { return mScanPmin; }
+		double readScanPexp() const { return mScanPexp; }
+		int readNframeBinning() const { return mNframeBinning; }
 	private:
 		int mStackNumber;
 		int mWavelength_nm;
@@ -161,24 +187,16 @@ namespace Action
 		int mNframeBinning;
 	};
 
-	class CutSlice {
+	class CutSlice
+	{
 	public:
 		void setParam(const double planeZtoCut, const double stageZheightForFacingTheBlade)
 		{
 			mPlaneZtoCut = planeZtoCut;
 			mStageZheightForFacingTheBlade = stageZheightForFacingTheBlade;
 		}
-
-		double readPlaneZtoCut() const
-		{
-			return mPlaneZtoCut;
-		}
-
-		double readStageZheightForFacingTheBlade() const
-		{
-			return mStageZheightForFacingTheBlade;
-		}
-
+		double readPlaneZtoCut() const { return mPlaneZtoCut; }
+		double readStageZheightForFacingTheBlade() const { return mStageZheightForFacingTheBlade; }
 	private:
 		double mPlaneZtoCut;
 		double mStageZheightForFacingTheBlade;

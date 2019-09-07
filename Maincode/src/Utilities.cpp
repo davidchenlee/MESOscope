@@ -152,9 +152,9 @@ void pressAnyKeyToContOrESCtoExit()
 //The returned indices are wrt the center tile and can be negative
 //For an odd number of tiles, the center tile is at the middle of the tile array
 //For an even number of tiles, there are 2 tiles in the middle of the tile array. The one on the top/left is taken as the reference tile
-POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapXYZ_frac, const INDICES2 tileArraySize, const INDICES2 tileIndicesIJ)
+POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapIJK_frac, const INDICES2 tileArraySize, const INDICES2 tileIndicesIJ)
 {
-	if (overlapXYZ_frac.XX < 0 || overlapXYZ_frac.YY < 0 || overlapXYZ_frac.ZZ < 0 || overlapXYZ_frac.XX > 1 || overlapXYZ_frac.YY > 1 || overlapXYZ_frac.ZZ > 1)
+	if (overlapIJK_frac.II < 0 || overlapIJK_frac.JJ < 0 || overlapIJK_frac.KK < 0 || overlapIJK_frac.II > 1 || overlapIJK_frac.JJ > 1 || overlapIJK_frac.KK > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
 	if (tileArraySize.II <= 0 || tileArraySize.II <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be > 0");
@@ -163,8 +163,8 @@ POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapXYZ_frac, con
 	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= tileArraySize.JJ)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + toString(tileArraySize.JJ, 0) + "]");
 
-	return { (1. - overlapXYZ_frac.XX) * (tileIndicesIJ.II - static_cast<int>((tileArraySize.II - 1) / 2)),
-			 (1. - overlapXYZ_frac.YY) * (tileIndicesIJ.JJ - static_cast<int>((tileArraySize.JJ - 1) / 2)) };
+	return { (1. - overlapIJK_frac.II) * (tileIndicesIJ.II - static_cast<int>((tileArraySize.II - 1) / 2)),
+			 (1. - overlapIJK_frac.JJ) * (tileIndicesIJ.JJ - static_cast<int>((tileArraySize.JJ - 1) / 2)) };
 }
 
 #pragma region "Logger"
@@ -1059,12 +1059,12 @@ void TiffU8::flattenField(const double maxScaleFactor)
 #pragma endregion "TiffU8"
 
 #pragma region "TileArray"
-TileArray::TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraysize, const TILEOVERLAP3 overlapXYZ_frac) :
+TileArray::TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraysize, const TILEOVERLAP3 overlapIJK_frac) :
 	mTileHeight_pix{ tileHeight_pix },
 	mTileWidth_pix{ tileWidth_pix },
 	mNpix{ tileHeight_pix * tileWidth_pix },
 	mArraySize{ tileArraysize },
-	mOverlapXYZ_frac{ overlapXYZ_frac }
+	mOverlapIJK_frac{ overlapIJK_frac }
 {
 	if (tileHeight_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be > 0");
@@ -1072,7 +1072,7 @@ TileArray::TileArray(const int tileHeight_pix, const int tileWidth_pix, const IN
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be > 0");
 	if (tileArraysize.II <= 0 || tileArraysize.II <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be > 0");
-	if (overlapXYZ_frac.XX < 0 || overlapXYZ_frac.YY < 0 || overlapXYZ_frac.ZZ < 0 || overlapXYZ_frac.XX > 1 || overlapXYZ_frac.YY > 1 || overlapXYZ_frac.ZZ > 1)
+	if (overlapIJK_frac.II < 0 || overlapIJK_frac.JJ < 0 || overlapIJK_frac.KK < 0 || overlapIJK_frac.II > 1 || overlapIJK_frac.JJ > 1 || overlapIJK_frac.KK > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
 }
 
@@ -1091,14 +1091,27 @@ int TileArray::readNpix() const
 	return mNpix;
 }
 
-INDICES2 TileArray::readTileArraySize() const
+INDICES2 TileArray::readTileArraySizeIJ() const
 {
 	return mArraySize;
 }
 
-TILEOVERLAP3 TileArray::readTileOverlapXYZ_frac() const
+int TileArray::readTileArraySize(const Axis axis) const
 {
-	return mOverlapXYZ_frac;
+	switch (axis)
+	{
+	case Axis::II:
+		return mArraySize.II;
+	case Axis::JJ:
+		return mArraySize.JJ;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected tile array axis unavailable");
+	}
+}
+
+TILEOVERLAP3 TileArray::readTileOverlapIJK_frac() const
+{
+	return mOverlapIJK_frac;
 }
 
 //Pixel position of the center of the tiles relative to the center of the array
@@ -1109,7 +1122,7 @@ PIXELS2 TileArray::determineTileRelativePixelPos_pix(const INDICES2 tileIndicesI
 	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mArraySize.JJ)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index JJ must be in the range [0-" + std::to_string(mArraySize.JJ - 1) + "]");
 
-	POSITION2 relativeTileIndicesIJ{ determineRelativeTileIndicesIJ(mOverlapXYZ_frac, mArraySize, tileIndicesIJ) };
+	POSITION2 relativeTileIndicesIJ{ determineRelativeTileIndicesIJ(mOverlapIJK_frac, mArraySize, tileIndicesIJ) };
 
 	return { static_cast<int>(std::round(mTileHeight_pix * relativeTileIndicesIJ.XX)),
 			 static_cast<int>(std::round(mTileWidth_pix * relativeTileIndicesIJ.YY)) };
@@ -1119,12 +1132,12 @@ PIXELS2 TileArray::determineTileRelativePixelPos_pix(const INDICES2 tileIndicesI
 #pragma region "QuickStitcher"
 //tileHeight_pix = tile height, tileWidth_pix = tile width, tileArraySize = { number of tiles as rows, number of tiles as columns}
 //II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
-QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac) :
+QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapIJK_frac) :
 	TiffU8{ tileHeight_pix * tileArraySize.II, tileWidth_pix * tileArraySize.JJ, 1 },
 	TileArray{ tileHeight_pix,
 				tileWidth_pix,
 				tileArraySize,
-				overlapXYZ_frac }
+				overlapIJK_frac }
 {
 	if (tileHeight_pix <= 0 || tileWidth_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile height and width must be > 0");
@@ -1136,10 +1149,10 @@ QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, 
 //II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
 void QuickStitcher::push(const U8 *tile, const INDICES2 tileIndicesIJ)
 {
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= TileArray::readTileArraySize().II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(TileArray::readTileArraySize().II - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= TileArray::readTileArraySize().JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(TileArray::readTileArraySize().JJ - 1) + "]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= TileArray::readTileArraySize(Axis::II))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(TileArray::readTileArraySize(Axis::II) - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= TileArray::readTileArraySize(Axis::JJ))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(TileArray::readTileArraySize(Axis::JJ) - 1) + "]");
 
 	//const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
 	//const int tileWidth_pix{ tile.widthPerFrame_pix() };														//Width of the tile

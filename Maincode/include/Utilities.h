@@ -27,7 +27,7 @@ template<class T> inline U8 clipU8dual(const T x);
 void pressAnyKeyToCont();
 void pressESCforEarlyTermination();
 void pressAnyKeyToContOrESCtoExit();
-POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapXYZ_frac, const INDICES2 tileArraySize, const INDICES2 tileIndicesIJ);
+POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapIJK_frac, const INDICES2 tileArraySize, const INDICES2 tileIndicesIJ);
 
 //For saving the parameters to a text file
 class Logger
@@ -86,28 +86,31 @@ private:
 	//int mStripSize;	//I think this was implemented to allow different channels (e.g., RGB) on each pixel
 };
 
+//Currently, the tile axis II coincides with Stage::Axis::XX, JJ with Stage::Axis::YY, and KK with Stage::Axis::ZZ
 class TileArray
 {
 public:
-	TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
+	enum Axis { II, JJ, KK };	 
+	TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapIJK_frac);
 	int readTileHeight_pix() const;
 	int readTileWidth_pix() const;
 	int readNpix() const;
-	INDICES2 readTileArraySize() const;
-	TILEOVERLAP3 readTileOverlapXYZ_frac() const;
+	INDICES2 readTileArraySizeIJ() const;
+	int readTileArraySize(const Axis axis) const;
+	TILEOVERLAP3 readTileOverlapIJK_frac() const;
 	PIXELS2 determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const;
 private:
 	const int mTileHeight_pix;		//Pixel height of a single tile
 	const int mTileWidth_pix;		//Pixel width of a single tile
 	const int mNpix;				//Total number of pixels in a single tile
 	INDICES2 mArraySize;			//Dimension of the array of tiles
-	TILEOVERLAP3 mOverlapXYZ_frac;
+	TILEOVERLAP3 mOverlapIJK_frac;
 };
 
 class QuickStitcher : protected TiffU8, public TileArray
 {
 public:
-	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapXYZ_frac);
+	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapIJK_frac);
 	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
 };

@@ -4,31 +4,21 @@ const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm
 
 //SAMPLE PARAMETERS
 //POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.840 + 0.000) * mm };
-POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (18.001 + 0.000) * mm };//For contScanX
+POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (18.051 + 0.000) * mm };//For contScanX
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0.) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0.) } }} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.) } }} };
-Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
-					{{ {"TDT", 1040, multiply16X(50. * mW), 150., 4 } ,
-					   { "DAPI", 750, multiply16X(20. * mW), 120., 2 } }} };
+Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), 150., 4 }, { "DAPI", 750, multiply16X(20. * mW), 120., 2 } }} };
 
 #else
-Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
-					{{{"TDT", 1040, 30. * mW, 150. * um, 1 } ,
-					  { "DAPI", 750, 12. * mW, 120. * um, 1 }}} };
-Sample liverDAPI{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
-					  {{{ "DAPI", 750, 12. * mW, 120. * um, 1 }}} };
-Sample liverTDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,
-					{{{"TDT", 1040, 30. * mW, 150. * um, 1 }}} };
+Sample currentSample{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,  {{{"TDT", 1040, 30. * mW, 150. * um, 1 } , { "DAPI", 750, 12. * mW, 120. * um, 1 }}} };
 
 //Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0.}, { "GFP", 920, 30. * mW, 0. }, { "TDT", 1040, 5. * mW, 0. }}} };
 //Sample beads05um{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. }, { "GFP", 920, 40. * mW, 0. }, { "TDT", 1040, 15. * mW, 0. }}} };
 //Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. }}} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0. } , { "GFP", 920, 25. * mW, 0. }, { "DAPI", 750, 40. * mW, 0. }}} };
 #endif
-Sample currentSample{ liverTDT };
-
 
 double determineChromaticShift(const int wavelength_nm, const Laser::ID whichLaser)
 {
@@ -151,7 +141,7 @@ namespace Routines
 		//const Galvo rescanner{ RTcontrol, 0, fluorLabel.mWavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//STAGES
-		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
+		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.readStageSoftPosLimXYZ() };
 		stage.moveXYZ(stagePosXYZ.front());			//Move the stage to the initial position
 		Sleep(500);									//Give the stages enough time to settle at the initial position
 		stage.waitForMotionToStopAll();
@@ -159,7 +149,7 @@ namespace Routines
 		//CREATE A STACK FOR STORING THE TIFFS
 		const int nLocations{ static_cast<int>(stagePosXYZ.size()) };
 		TiffU8 output{ heightPerFrame_pix, widthPerFrame_pix, nLocations };
-		std::string filename{ currentSample.mName + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm" };
+		std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm" };
 		
 		//OPEN THE UNIBLITZ SHUTTERS
 		mesoscope.openShutter();					//The destructor will close the shutter automatically
@@ -231,9 +221,9 @@ namespace Routines
 		{
 			Logger datalog(filename);
 			datalog.record("SAMPLE-------------------------------------------------------");
-			datalog.record("Sample = ", currentSample.mName);
-			datalog.record("Immersion medium = ", currentSample.mImmersionMedium);
-			datalog.record("Correction collar = ", currentSample.mObjectiveCollar);
+			datalog.record("Sample = ", currentSample.readName());
+			datalog.record("Immersion medium = ", currentSample.readImmersionMedium());
+			datalog.record("Correction collar = ", currentSample.readObjectiveCollar());
 			datalog.record("\nFPGA---------------------------------------------------------");
 			datalog.record("FPGA clock (MHz) = ", g_tickPerUs);
 			datalog.record("\nLASER--------------------------------------------------------");
@@ -318,7 +308,7 @@ namespace Routines
 		//STAGES
 		const double stageZi = determineInitialScanPos(stackCenterXYZ.ZZ, stackDepth, 0. * mm, scanDirZ);
 		const double stageZf = determineFinalScanPos(stackCenterXYZ.ZZ, stackDepth, 0.010 * mm, scanDirZ);
-		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };							
+		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.readStageSoftPosLimXYZ() };							
 		stage.moveXYZ({ stackCenterXYZ.XX, stackCenterXYZ.YY, stageZi });		//Move the stage to the initial position
 		stage.waitForMotionToStopAll();
 		Sleep(500);																//Give the stages enough time to settle at the initial position
@@ -338,7 +328,8 @@ namespace Routines
 		image.binFrames(nFramesBinning);
 		//image.correct(RScanner.mFFOV);
 
-		const std::string filename{ currentSample.mName + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorLabel.mScanPexp / um, 0) +
+		const std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) +
+			"nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorLabel.mScanPexp / um, 0) +
 			"um_x=" + toString(stackCenterXYZ.XX / mm, 3) + "_y=" + toString(stackCenterXYZ.YY / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZafterBinning / mm, 4) +
 			"_bin=" + toString(nFramesBinning, 0) };
@@ -389,7 +380,7 @@ namespace Routines
 		const Galvo rescanner{ RTcontrol, galvoScanAmplitude, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//STAGES
-		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
+		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.readStageSoftPosLimXYZ() };
 		stage.moveXYZ({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ });					//Move the stage to the initial position
 		stage.waitForMotionToStopAll();
 		Sleep(500);																					//Give the stages enough time to settle at the initial position
@@ -426,7 +417,8 @@ namespace Routines
 			reverseSCANDIR(iterScanDirX);
 			pressESCforEarlyTermination();
 		}
-			const std::string filename{ currentSample.mName + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) +
+			const std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) +
+				"nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) +
 				"mW_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
 				"_yi=" + toString(quickScanXY.mStagePosY.front() / mm, 3) + "_yf=" + toString(quickScanXY.mStagePosY.back() / mm, 3) +
 				"_z=" + toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
@@ -479,7 +471,7 @@ namespace Routines
 		if (run)
 		{
 			//STAGES
-			Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.mStageSoftPosLimXYZ };
+			Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.readStageSoftPosLimXYZ() };
 			stage.moveSingle(Stage::ZZ, sample.mSurfaceZ);		//Move the Z-stage to the sample surface
 			stage.waitForMotionToStopAll();
 
@@ -491,7 +483,7 @@ namespace Routines
 			POSITION2 tileCenterXY;
 			std::string shortName, longName;
 			SCANDIR iterScanDirZ{ ScanDirZini };
-			Logger datalog(currentSample.mName + "_locations");
+			Logger datalog(currentSample.readName() + "_locations");
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
@@ -507,8 +499,8 @@ namespace Routines
 				case Action::ID::MOV://Move the X and Y-stages to mStackCenterXY
 					sliceNumber = commandline.mAction.moveStage.readSliceNumber();
 
-					tileIndexI = commandline.mAction.moveStage.readTileIJ().II;
-					tileIndexJ = commandline.mAction.moveStage.readTileIJ().JJ;
+					tileIndexI = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::II);
+					tileIndexJ = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::JJ);
 					tileCenterXY = commandline.mAction.moveStage.readTileCenterXY();
 					stage.moveXY(tileCenterXY);
 					stage.waitForMotionToStopAll();
@@ -1201,12 +1193,12 @@ namespace TestRoutines
 	{
 		PIXELS2 anchorPixel_pix;
 
-		if (tileArray.readTileArraySize().II % 2)	//Odd number of tiles
+		if (tileArray.readTileArraySize(TileArray::Axis::II) % 2)	//Odd number of tiles
 			anchorPixel_pix.ii = image.readHeightPerFrame_pix() / 2;
 		else								//Even number of tiles
 			anchorPixel_pix.ii = image.readHeightPerFrame_pix() / 2 - tileArray.readTileHeight_pix() / 2;
 
-		if (tileArray.readTileArraySize().JJ % 2)	//Odd number of tiles
+		if (tileArray.readTileArraySize(TileArray::Axis::JJ) % 2)	//Odd number of tiles
 			anchorPixel_pix.jj = image.readWidthPerFrame_pix() / 2;
 		else								//Even number of tiles
 			anchorPixel_pix.jj = image.readWidthPerFrame_pix() / 2 - tileArray.readTileWidth_pix() / 2;
@@ -1230,8 +1222,8 @@ namespace TestRoutines
 		//The tile array for boolmap does not have to coincide with the tile array used for imaging
 		const int tileHeight_pix{ 560 };
 		const int tileWidth_pix{ 300 };
-		const TILEOVERLAP3 overlapXYZ_frac{ 0.0, 0.0, 0.0 };
-		const TileArray tileArray{ tileHeight_pix, tileWidth_pix, { 36, 67 }, overlapXYZ_frac };
+		const TILEOVERLAP3 overlapIJK_frac{ 0.0, 0.0, 0.0 };
+		const TileArray tileArray{ tileHeight_pix, tileWidth_pix, { 36, 67 }, overlapIJK_frac };
 
 		const double threshold{ 0.02 };
 		Boolmap boolmap{ image, tileArray, anchorPixel_pix, threshold };
@@ -1393,7 +1385,7 @@ namespace TestRoutines
 		const int tileShiftX_pix{ 543 };
 		const int tileShiftY_pix{ 291 };
 
-		Logger datalog(currentSample.mName + "_locations");
+		Logger datalog(currentSample.readName() + "_locations");
 		datalog.record("dim=3"); //Needed for the BigStitcher
 
 		for (int tileNumber = 0; tileNumber < tileSize.II * tileSize.JJ; tileNumber++)

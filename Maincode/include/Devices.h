@@ -375,10 +375,10 @@ class Galvo
 public:
 	Galvo::Galvo(RTcontrol &RTcontrol, const double posMax);
 	Galvo(RTcontrol &RTcontrol, const double posMax, const Laser::ID whichLaser, const int wavelength_nm);
-	Galvo(const Galvo&) = delete;				//Disable copy-constructor
-	Galvo& operator=(const Galvo&) = delete;	//Disable assignment-constructor
-	Galvo(Galvo&&) = delete;					//Disable move constructor
-	Galvo& operator=(Galvo&&) = delete;			//Disable move-assignment constructor
+	Galvo(const Galvo&) = delete;							//Disable copy-constructor
+	Galvo& operator=(const Galvo&) = delete;				//Disable assignment-constructor
+	Galvo(Galvo&&) = delete;								//Disable move constructor
+	Galvo& operator=(Galvo&&) = delete;						//Disable move-assignment constructor
 
 	void setVoltageToZero() const;
 	void pushVoltageSinglet(const double timeStep, const double AO) const;
@@ -407,7 +407,7 @@ public:
 	Mesoscope(const Mesoscope&) = delete;				//Disable copy-constructor
 	Mesoscope& operator=(const Mesoscope&) = delete;	//Disable assignment-constructor
 	Mesoscope(Mesoscope&&) = delete;					//Disable move constructor
-	Mesoscope& operator=(Mesoscope&&) = delete;		//Disable move-assignment constructor
+	Mesoscope& operator=(Mesoscope&&) = delete;			//Disable move-assignment constructor
 
 	void configure(RTcontrol &RTcontrol, const int wavelength_nm);
 	void setPower(const double laserPower) const;

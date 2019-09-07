@@ -39,7 +39,7 @@ namespace Constants
 	struct ROI4 { double YMIN; double XMIN; double YMAX;  double XMAX; };	//Region of interest
 	struct SIZE2 { double XX; double YY; };									//Size in 2D
 	struct SIZE3 { double XX; double YY; double ZZ; };						//Size in 3D
-	struct TILEOVERLAP3 { double XX; double YY; double ZZ; };				//Tile overlap fraction
+	struct TILEOVERLAP3 { double II; double JJ; double KK; };				//Tile overlap fraction
 
 	enum class PMTIN { PMT = false, SIM = true };							//*cast
 	enum class LINECLOCK { RS = false, FG = true  };						//*cast

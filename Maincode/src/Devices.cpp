@@ -1149,7 +1149,7 @@ void Filterwheel::setColor(const COLOR color)
 void Filterwheel::setWavelength(const int wavelength_nm)
 {
 	COLOR color;
-	//Wavelength intervals chosen based on the 2p-excitation spectrum of the fluorescent labels (DAPI, GFP, and tdTomato)
+	//Wavelength intervals chosen based on the 2p-excitation spectrum of the fluorescent markers (DAPI, GFP, and tdTomato)
 	if (wavelength_nm > 940 && wavelength_nm <= 1080)
 		color = COLOR::RED;
 	else if (wavelength_nm > 790)

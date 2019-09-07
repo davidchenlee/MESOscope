@@ -5,203 +5,41 @@ using namespace Constants;
 
 double multiply16X(const double input);
 void reverseSCANDIR(SCANDIR &scanDir);
+POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapIJK_frac, const INDICES2 tileArraySize, const INDICES2 tileIndicesIJ);
 double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
 double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
 double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
 double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
-std::string indexFluorLabel_s(const int wavelength_nm);
+std::string convertWavelengthToFluorMarker_s(const int wavelength_nm);
 
-class FluorLabelList	//Create a list of fluorescent labels
+//Currently, the tile axis II coincides with Stage::Axis::XX, JJ with Stage::Axis::YY, and KK with Stage::Axis::ZZ
+class TileArray
 {
 public:
-	struct FluorLabel //Parameters for a single fluorescent label
-	{
-		std::string mName{ "" };	//Fluorescent label name
-		int mWavelength_nm;			//Laser wavelength
-		double mScanPmin;			//Initial laser power for a stack scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mScanPexp;			//Length constant for the exponential power increase
-		int nFramesBinning{ 1 };
-	};
-
-	FluorLabelList(const std::vector<FluorLabel> fluorLabelList);
-	std::size_t readNtotalFluorLabels() const;
-	FluorLabel front() const;
-	FluorLabel at(const int index) const;
-	void printFluorParams(std::ofstream *fileHandle) const;
-	FluorLabel findFluorLabel(const std::string fluorLabel) const;
-	FluorLabelList readFluorLabelList() const { return mFluorLabelList; }
-	FluorLabel  readFluorLabel(const int wavelengthIndex) const { return mFluorLabelList.at(wavelengthIndex); }
+	enum Axis { II, JJ, KK };
+	TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapIJK_frac);
+	int readTileHeight_pix() const;
+	int readTileWidth_pix() const;
+	int readNpix() const;
+	INDICES2 readTileArraySizeIJ() const;
+	int readTileArraySize(const Axis axis) const;
+	TILEOVERLAP3 readTileOverlapIJK_frac() const;
+	PIXELS2 determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const;
 private:
-	std::vector<FluorLabel> mFluorLabelList;
+	const int mTileHeight_pix;		//Pixel height of a single tile
+	const int mTileWidth_pix;		//Pixel width of a single tile
+	const int mNpix;				//Total number of pixels in a single tile
+	INDICES2 mArraySize;			//Dimension of the array of tiles
+	TILEOVERLAP3 mOverlapIJK_frac;
 };
 
-class Sample : public FluorLabelList
+class QuickStitcher : protected TiffU8, public TileArray
 {
 public:
-	 //Initialize with std::numeric_limits<double>::quiet_NaN??
-	POSITION2 mCenterXY{-1, -1};						//Sample center (stageX, stageY)
-	SIZE3 mLOIxyz_req{ -1, -1, -1 };					//Requested Length of interest (stageX, stageY, stageZ)
-	double mSurfaceZ{ -1 };
-	const double mBladeFocalplaneOffsetZ{ 1.06 * mm };	//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
-	double mCutAboveBottomOfStack{ 0. * um };			//Specify at what height of the overlapping volume to cut
-
-	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorLabelList fluorLabelList = { {} });
-	Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 LOIxyz, const double sampleSurfaceZ, const double sliceOffset);
-	void printSampleParams(std::ofstream *fileHandle) const;
-
-	std::string readName() const { return mName; }
-	std::string readImmersionMedium() const { return mImmersionMedium; }
-	std::string readObjectiveCollar() const { return mObjectiveCollar; }
-	std::vector<LIMIT2> readStageSoftPosLimXYZ() const { return mStageSoftPosLimXYZ; }
-	double readStageSoftPosLimXMIN() const { return mStageSoftPosLimXYZ.at(Stage::Axis::XX).MIN; }
-	double readStageSoftPosLimXMAX() const { return mStageSoftPosLimXYZ.at(Stage::Axis::XX).MAX; }
-	double readStageSoftPosLimYMIN() const { return mStageSoftPosLimXYZ.at(Stage::Axis::YY).MIN; }
-	double readStageSoftPosLimYMAX() const { return mStageSoftPosLimXYZ.at(Stage::Axis::YY).MAX; }
-private:
-	std::string mName;
-	std::string mImmersionMedium;
-	std::string mObjectiveCollar;	
-	std::vector<LIMIT2> mStageSoftPosLimXYZ;			//Soft position limits of the stages
+	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapIJK_frac);
+	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
+	void saveToFile(std::string filename, const OVERRIDE override) const;
 };
-
-class Stack
-{
-public:
-	Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix, const double pixelSizeZ, const int nFrames, const TILEOVERLAP3 overlapIJK_frac);
-	void printParams(std::ofstream *fileHandle) const;
-	double readFFOV(const Stage::Axis axis) const
-	{
-		switch (axis)
-		{
-		case Stage::Axis::XX:
-			return mFFOV.XX;
-		case Stage::Axis::YY:
-			return mFFOV.YY;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected stage axis unavailable");
-		}
-	}
-	int readTileHeight_pix() const { return mTileHeight_pix; }
-	int readTileWidth_pix() const { return mTileWidth_pix; }
-	double readPixelSizeZ() const { return mPixelSizeZ;  }
-	double readDepthZ() const { return mDepthZ; }
-	TILEOVERLAP3 readOverlapIJK_frac() const { return mOverlapIJK_frac; }
-	double readOverlap_frac(const TileArray::Axis axis) const
-	{
-		switch (axis)
-		{
-		case TileArray::Axis::II:
-			return mOverlapIJK_frac.II;
-		case TileArray::Axis::JJ:
-			return mOverlapIJK_frac.JJ;
-		case TileArray::Axis::KK:
-			return mOverlapIJK_frac.KK;
-		default:
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected tile array axis unavailable");
-		}
-	}
-private:
-	FFOV2 mFFOV;					//Full field of view in the X-stage and Y-stage axes
-	int mTileHeight_pix;
-	int mTileWidth_pix;
-	double mPixelSizeZ;				//Image resolution in the Z-stage axis
-	double mDepthZ;					//Stack depth or thickness
-	TILEOVERLAP3 mOverlapIJK_frac;	//Stack overlap in the X-stage, Y-stage, and Z-stage axes
-};
-
-namespace Action
-{
-	enum class ID { CUT, ACQ, SAV, MOV };
-	class MoveStage
-	{
-	public:
-		void setParam(const int sliceNumber, const INDICES2 tileIndicesIJ, const POSITION2 tileCenterXY)
-		{
-			mSliceNumber = sliceNumber;
-			mTileIndicesIJ = tileIndicesIJ;
-			mTileCenterXY = tileCenterXY;
-		}
-		int readSliceNumber() const { return mSliceNumber; }
-		int readTileIndex(const TileArray::Axis axis) const
-		{
-			switch (axis)
-			{
-			case TileArray::Axis::II:
-				return mTileIndicesIJ.II;
-			case TileArray::Axis::JJ:
-				return mTileIndicesIJ.JJ;
-			default:
-				throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected tile array axis unavailable");
-			}
-		}
-
-		POSITION2 readTileCenterXY() const { return mTileCenterXY; }
-		double readTileCenter(Stage::Axis axis) const
-		{
-			switch (axis)
-			{
-			case Stage::Axis::XX:
-				return mTileCenterXY.XX;
-			case Stage::Axis::YY:
-				return mTileCenterXY.YY;
-			default:
-				throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected stage axis unavailable");
-			}
-		}
-	private:
-		int mSliceNumber;			//Slice number
-		INDICES2 mTileIndicesIJ;	//Indices of the tile array
-		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
-	};
-
-	class AcqStack
-	{
-	public:
-		void setParam(const int stackNumber, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPexp, const int nFrameBinning)
-		{
-			mStackNumber = stackNumber;
-			mWavelength_nm = wavelength_nm;
-			mScanDirZ = scanDirZ;
-			mScanZmin = scanZmin;
-			mDepthZ = depthZ;
-			mScanPmin = scanPmin;
-			mScanPexp = scanPexp;
-			mNframeBinning = nFrameBinning;
-		}
-		int readStackNumber() const { return mStackNumber; }
-		int readWavelength_nm() const { return mWavelength_nm; }
-		SCANDIR readScanDirZ() const { return mScanDirZ; }
-		double readScanZmin() const { return mScanZmin; }
-		double readDepthZ() const { return mDepthZ; }
-		double readScanPmin() const { return mScanPmin; }
-		double readScanPexp() const { return mScanPexp; }
-		int readNframeBinning() const { return mNframeBinning; }
-	private:
-		int mStackNumber;
-		int mWavelength_nm;
-		SCANDIR mScanDirZ;		//THIS IS NOT READ BY THE SEQUENCER ANYMORE!!
-		double mScanZmin;		//Min z position of a stack scan
-		double mDepthZ;			//Stack depth (thickness)
-		double mScanPmin;		//Min laser power of the stack scan (at the top of the stack)
-		double mScanPexp;		//Laser power increase in the Z-stage axis per unit of distance
-		int mNframeBinning;
-	};
-
-	class CutSlice
-	{
-	public:
-		void setParam(const double planeZtoCut, const double stageZheightForFacingTheBlade)
-		{
-			mPlaneZtoCut = planeZtoCut;
-			mStageZheightForFacingTheBlade = stageZheightForFacingTheBlade;
-		}
-		double readPlaneZtoCut() const { return mPlaneZtoCut; }
-		double readStageZheightForFacingTheBlade() const { return mStageZheightForFacingTheBlade; }
-	private:
-		double mPlaneZtoCut;
-		double mStageZheightForFacingTheBlade;
-	};
-}
 
 class QuickScanXY: public QuickStitcher
 {
@@ -240,6 +78,129 @@ private:
 	PIXELS2 determineTileAbsolutePixelPos_pix_(const INDICES2 tileIndicesIJ) const;
 	bool isQuadrantBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
 };
+
+class FluorMarkerList	//Create a list of fluorescent markers
+{
+public:
+	struct FluorMarker //Parameters for a single fluorescent marker
+	{
+		std::string mName{ "" };	//Fluorescent marker name
+		int mWavelength_nm;			//Laser wavelength
+		double mScanPmin;			//Initial laser power for a stack scan. It could be >= or <= than the final laser power depending on the scan direction
+		double mScanPexp;			//Length constant for the exponential power increase
+		int nFramesBinning{ 1 };
+	};
+
+	FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList);
+	std::size_t readFluorMarkerListSize() const;
+	void printFluorParams(std::ofstream *fileHandle) const;
+	FluorMarker findFluorMarker(const std::string fluorMarker) const;
+	FluorMarker readFluorMarker(const int indexFluorMarker) const;
+	FluorMarkerList readFluorMarkerList() const;
+private:
+	std::vector<FluorMarker> mFluorMarkerList;
+};
+
+class Sample : public FluorMarkerList
+{
+public:
+	 //Initialize with std::numeric_limits<double>::quiet_NaN??
+	POSITION2 mCenterXY{-1, -1};						//Sample center (stageX, stageY)
+	SIZE3 mLOIxyz_req{ -1, -1, -1 };					//Requested Length of interest (stageX, stageY, stageZ)
+	double mSurfaceZ{ -1 };
+	const double mBladeFocalplaneOffsetZ{ 1.06 * mm };	//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	double mCutAboveBottomOfStack{ 0. * um };			//Specify at what height of the overlapping volume to cut
+
+	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorMarkerList fluorMarkerList = { {} });
+	Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 LOIxyz, const double sampleSurfaceZ, const double sliceOffset);
+	void printSampleParams(std::ofstream *fileHandle) const;
+	std::string readName() const;
+	std::string readImmersionMedium() const;
+	std::string readObjectiveCollar() const;
+	std::vector<LIMIT2> readStageSoftPosLimXYZ() const;
+	double readStageSoftPosLimXMIN() const;
+	double readStageSoftPosLimXMAX() const;
+	double readStageSoftPosLimYMIN() const;
+	double readStageSoftPosLimYMAX() const;
+private:
+	std::string mName;
+	std::string mImmersionMedium;
+	std::string mObjectiveCollar;	
+	std::vector<LIMIT2> mStageSoftPosLimXYZ;			//Soft position limits of the stages
+};
+
+class Stack
+{
+public:
+	Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix, const double pixelSizeZ, const int nFrames, const TILEOVERLAP3 overlapIJK_frac);
+	void printParams(std::ofstream *fileHandle) const;
+	double readFFOV(const Stage::Axis axis) const;
+	int readTileHeight_pix() const;
+	int readTileWidth_pix() const;
+	double readPixelSizeZ() const;
+	double readDepthZ() const;
+	TILEOVERLAP3 readOverlapIJK_frac() const;
+	double readOverlap_frac(const TileArray::Axis axis) const;
+private:
+	FFOV2 mFFOV;					//Full field of view in the X-stage and Y-stage axes
+	int mTileHeight_pix;
+	int mTileWidth_pix;
+	double mPixelSizeZ;				//Image resolution in the Z-stage axis
+	double mDepthZ;					//Stack depth or thickness
+	TILEOVERLAP3 mOverlapIJK_frac;	//Stack overlap in the X-stage, Y-stage, and Z-stage axes
+};
+
+namespace Action
+{
+	enum class ID { CUT, ACQ, SAV, MOV };
+	class MoveStage
+	{
+	public:
+		void setParam(const int sliceNumber, const INDICES2 tileIndicesIJ, const POSITION2 tileCenterXY);
+		int readSliceNumber() const;
+		int readTileIndex(const TileArray::Axis axis) const;
+		POSITION2 readTileCenterXY() const;
+		double readTileCenter(Stage::Axis axis) const;
+	private:
+		int mSliceNumber;			//Slice number
+		INDICES2 mTileIndicesIJ;	//Indices of the tile array
+		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
+	};
+
+	class AcqStack
+	{
+	public:
+		void setParam(const int stackNumber, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPexp, const int nFrameBinning);
+		int readStackNumber() const;
+		int readWavelength_nm() const;
+		SCANDIR readScanDirZ() const;
+		double readScanZmin() const;
+		double readDepthZ() const;
+		double readScanPmin() const;
+		double readScanPexp() const;
+		int readNframeBinning() const;
+	private:
+		int mStackNumber;
+		int mWavelength_nm;
+		SCANDIR mScanDirZ;		//THIS IS NOT READ BY THE SEQUENCER ANYMORE!!
+		double mScanZmin;		//Min z position of a stack scan
+		double mDepthZ;			//Stack depth (thickness)
+		double mScanPmin;		//Min laser power of the stack scan (at the top of the stack)
+		double mScanPexp;		//Laser power increase in the Z-stage axis per unit of distance
+		int mNframeBinning;
+	};
+
+	class CutSlice
+	{
+	public:
+		void setParam(const double planeZtoCut, const double stageZheightForFacingTheBlade);
+		double readPlaneZtoCut() const;
+		double readStageZheightForFacingTheBlade() const;
+	private:
+		double mPlaneZtoCut;
+		double mStageZheightForFacingTheBlade;
+	};
+}
 
 class Sequencer	//A list of commands that form a full sequence
 {
@@ -303,7 +264,7 @@ private:
 	SIZE3 determineEffectiveLOIxyz() const;
 
 	void moveStage_(const INDICES2 tileIndicesIJ);
-	void acqStack_(const int wavelengthIndex);
+	void acqStack_(const int indexFluorMarker);
 	void saveStack_();
 	void cutSlice_();
 };

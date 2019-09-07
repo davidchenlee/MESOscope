@@ -37,6 +37,25 @@ void reverseSCANDIR(SCANDIR &scanDir)
 	}
 }
 
+//Take the integer indices II, JJ = 0, 1, 2... of the array of tiles and return new tile indices (now of double type) with overlapping tiles.
+//The returned indices are wrt the center tile and can be negative
+//For an odd number of tiles, the center tile is at the middle of the tile array
+//For an even number of tiles, there are 2 tiles in the middle of the tile array. The one on the top/left is taken as the reference tile
+POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapIJK_frac, const INDICES2 tileArraySize, const INDICES2 tileIndicesIJ)
+{
+	if (overlapIJK_frac.II < 0 || overlapIJK_frac.JJ < 0 || overlapIJK_frac.KK < 0 || overlapIJK_frac.II > 1 || overlapIJK_frac.JJ > 1 || overlapIJK_frac.KK > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
+	if (tileArraySize.II <= 0 || tileArraySize.II <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be > 0");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= tileArraySize.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + toString(tileArraySize.II, 0) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= tileArraySize.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + toString(tileArraySize.JJ, 0) + "]");
+
+	return { (1. - overlapIJK_frac.II) * (tileIndicesIJ.II - static_cast<int>((tileArraySize.II - 1) / 2)),
+			 (1. - overlapIJK_frac.JJ) * (tileIndicesIJ.JJ - static_cast<int>((tileArraySize.JJ - 1) / 2)) };
+}
+
 double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir)
 {
 	if (travel <= 0)
@@ -109,8 +128,8 @@ double determineFinalLaserPower(const double powerMin, const double totalPowerIn
 	}
 }
 
-//Assign a fixed number to the fluorescent labels. Used for naming the Tiff files
-std::string indexFluorLabel_s(const int wavelength_nm)
+//Assign a fixed number to the fluorescent markers. Used for naming the Tiff files
+std::string convertWavelengthToFluorMarker_s(const int wavelength_nm)
 {
 	switch (wavelength_nm)
 	{
@@ -121,228 +140,129 @@ std::string indexFluorLabel_s(const int wavelength_nm)
 	case 1040:
 		return "2";
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength " + std::to_string(wavelength_nm) + "has not been assigned a fluorescent label");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength " + std::to_string(wavelength_nm) + "has not been assigned a fluorescent marker");
 	}
 }
 
-#pragma region "FluorLabelList"
-FluorLabelList::FluorLabelList(const std::vector<FluorLabel> fluorLabelList) :
-	mFluorLabelList{ fluorLabelList }
-{}
-
-std::size_t FluorLabelList::readNtotalFluorLabels() const
-{
-	return mFluorLabelList.size();
-}
-
-FluorLabelList::FluorLabel FluorLabelList::front() const
-{
-	return mFluorLabelList.front();
-}
-
-FluorLabelList::FluorLabel FluorLabelList::at(const int index) const
-{
-	return mFluorLabelList.at(index);
-}
-
-void FluorLabelList::printFluorParams(std::ofstream *fileHandle) const
-{
-	*fileHandle << "LASERS ************************************************************\n";
-
-	for (std::vector<int>::size_type iterWL = 0; iterWL != mFluorLabelList.size(); iterWL++)
-	{
-		*fileHandle << "Wavelength = " << mFluorLabelList.at(iterWL).mWavelength_nm <<
-			" nm\nPower = " << mFluorLabelList.at(iterWL).mScanPmin / mW <<
-			" mW\nPower exponential length = " << mFluorLabelList.at(iterWL).mScanPexp / um << " um\n";
-	}
-	*fileHandle << "\n";
-}
-
-//Return the first instance of "fluorLabel" in mFluorLabelList
-FluorLabelList::FluorLabel FluorLabelList::findFluorLabel(const std::string fluorLabel) const
-{
-	for (std::vector<int>::size_type iter_label = 0; iter_label < mFluorLabelList.size(); iter_label++)
-	{
-		if (!fluorLabel.compare(mFluorLabelList.at(iter_label).mName)) //compare() returns 0 if the strings are identical
-			return mFluorLabelList.at(iter_label);
-	}
-	//If the requested fluorLabel is not found
-	throw std::runtime_error((std::string)__FUNCTION__ + ": Fluorescent label " + fluorLabel + " not found");
-}
-#pragma endregion "FluorLabelList"
-
-#pragma region "Sample"
-Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorLabelList fluorLabelList) :
-	mName{ sampleName },
-	mImmersionMedium{ immersionMedium },
-	mObjectiveCollar{ objectiveCollar },
-	mStageSoftPosLimXYZ{ stageSoftPosLimXYZ },
-	FluorLabelList{ fluorLabelList }
-{}
-
-Sample::Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 LOIxyz, const double sampleSurfaceZ, const double sliceOffset) :
-	mName{ sample.mName },
-	mImmersionMedium{ sample.mImmersionMedium },
-	mObjectiveCollar{ sample.mObjectiveCollar },
-	mStageSoftPosLimXYZ{ sample.mStageSoftPosLimXYZ },
-	FluorLabelList{ sample.readFluorLabelList() },
-	mCenterXY{ centerXY },
-	mLOIxyz_req{ LOIxyz },
-	mSurfaceZ{ sampleSurfaceZ },
-	mCutAboveBottomOfStack{ sliceOffset }
-{
-	if (mLOIxyz_req.XX <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length X must be > 0");
-	if (mLOIxyz_req.YY <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Y must be > 0");
-	if (mCutAboveBottomOfStack < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be >= 0");
-}
-
-void Sample::printSampleParams(std::ofstream *fileHandle) const
-{
-	*fileHandle << "SAMPLE ************************************************************\n";
-	*fileHandle << "Name = " << mName << "\n";
-	*fileHandle << "Immersion medium = " << mImmersionMedium << "\n";
-	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
-	*fileHandle << std::setprecision(4);
-	*fileHandle << "Sample center (stageX, stageY) = (" << mCenterXY.XX / mm << " mm, " << mCenterXY.YY / mm << " mm)\n";
-	*fileHandle << "Requested ROI size (stageX, stageY, stageZ) = (" << mLOIxyz_req.XX / mm << " mm, " << mLOIxyz_req.YY / mm << " mm, " << mLOIxyz_req.ZZ / mm << " mm)\n\n";
-
-	*fileHandle << "SLICE ************************************************************\n";
-	*fileHandle << std::setprecision(1);
-	*fileHandle << "Blade-focal plane vertical offset = " << mBladeFocalplaneOffsetZ / um << " um\n";
-	*fileHandle << "Cut above the bottom of the stack = " << mCutAboveBottomOfStack / um << " um\n";
-	*fileHandle << "\n";
-}
-#pragma endregion "Sample"
-
-#pragma region "Stack"
-Stack::Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix, const double pixelSizeZ, const int nFrames, const TILEOVERLAP3 overlapXYZ_frac) :
-	mFFOV{ FFOV },
+#pragma region "TileArray"
+TileArray::TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraysize, const TILEOVERLAP3 overlapIJK_frac) :
 	mTileHeight_pix{ tileHeight_pix },
 	mTileWidth_pix{ tileWidth_pix },
-	mPixelSizeZ{ pixelSizeZ },
-	mDepthZ{ pixelSizeZ *  nFrames },
-	mOverlapIJK_frac{ overlapXYZ_frac }
+	mNpix{ tileHeight_pix * tileWidth_pix },
+	mArraySize{ tileArraysize },
+	mOverlapIJK_frac{ overlapIJK_frac }
 {
-	if (FFOV.XX <= 0 || FFOV.YY <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
 	if (tileHeight_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be > 0");
 	if (tileWidth_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be > 0");
-	if (mPixelSizeZ <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel size Z must be > 0");
-	if (mDepthZ <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth Z must be positive");
-	if (mOverlapIJK_frac.II < 0 || mOverlapIJK_frac.JJ < 0 || mOverlapIJK_frac.II > 0.2 || mOverlapIJK_frac.JJ > 0.2 )
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap in XY must be in the range [0-0.2]");
-	if (mOverlapIJK_frac.KK < 0 || mOverlapIJK_frac.KK > 0.5)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap in Z must be in the range [0-0.5]");
+	if (tileArraysize.II <= 0 || tileArraysize.II <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be > 0");
+	if (overlapIJK_frac.II < 0 || overlapIJK_frac.JJ < 0 || overlapIJK_frac.KK < 0 || overlapIJK_frac.II > 1 || overlapIJK_frac.JJ > 1 || overlapIJK_frac.KK > 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
 }
 
-void Stack::printParams(std::ofstream *fileHandle) const
+int TileArray::readTileHeight_pix() const
 {
-	*fileHandle << "STACK ************************************************************\n";
-	*fileHandle << std::setprecision(1);
-	*fileHandle << "FOV (stageX, stageY) = (" << mFFOV.XX / um << " um, " << mFFOV.YY / um << " um)\n";
-	*fileHandle << "Pixel size Z = " << mPixelSizeZ / um << " um\n";
-	*fileHandle << "Stack depth Z= " << mDepthZ / um << " um\n";
-	*fileHandle << std::setprecision(2);
-	*fileHandle << "Stack overlap = (" << mOverlapIJK_frac.II << ", " << mOverlapIJK_frac.JJ << ", " << mOverlapIJK_frac.KK << ") (frac)\n";
-	*fileHandle << std::setprecision(1);
-	*fileHandle << "Stack overlap = (" << mOverlapIJK_frac.II * mFFOV.XX / um << " um, " << mOverlapIJK_frac.JJ * mFFOV.YY / um << " um, " << mOverlapIJK_frac.KK * mDepthZ << " um)\n";
-	*fileHandle << "\n";
+	return mTileHeight_pix;
 }
-#pragma endregion "Stack"
 
-#pragma region "Commandline"
-Sequencer::Commandline::Commandline(const Action::ID actionID) :
-	mActionID{ actionID }
-{}
-
-void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
+int TileArray::readTileWidth_pix() const
 {
-	switch (mActionID)
+	return mTileWidth_pix;
+}
+
+int TileArray::readNpix() const
+{
+	return mNpix;
+}
+
+INDICES2 TileArray::readTileArraySizeIJ() const
+{
+	return mArraySize;
+}
+
+int TileArray::readTileArraySize(const Axis axis) const
+{
+	switch (axis)
 	{
-	case Action::ID::MOV:
-		*fileHandle << convertActionIDtoString_(mActionID) << "\t" << mAction.moveStage.readSliceNumber();
-		*fileHandle << "\t(" << mAction.moveStage.readTileIndex(TileArray::Axis::II) << "," << mAction.moveStage.readTileIndex(TileArray::Axis::JJ) << ")\t";
-		*fileHandle << std::setprecision(4);
-		*fileHandle << "(" << mAction.moveStage.readTileCenter(Stage::Axis::XX) / mm << "," << mAction.moveStage.readTileCenter(Stage::Axis::YY) / mm << ")\n";
-		break;
-	case Action::ID::ACQ:
-		*fileHandle << convertActionIDtoString_(mActionID) << "\t\t\t\t\t";
-		*fileHandle << mAction.acqStack.readStackNumber() << "\t";
-		*fileHandle << mAction.acqStack.readWavelength_nm() << "\t";
-		*fileHandle << convertScandirToInt(mAction.acqStack.readScanDirZ()) << "\t";
-		*fileHandle << std::setprecision(3);
-		*fileHandle << mAction.acqStack.readScanZmin() / mm << "\t";
-		*fileHandle << (mAction.acqStack.readScanZmin() + mAction.acqStack.readDepthZ()) / mm << "\t";
-		*fileHandle << std::setprecision(0);
-		*fileHandle << mAction.acqStack.readScanPmin() << "\t" << mAction.acqStack.readScanPexp() << "\n";
-		break;
-	case Action::ID::SAV:
-		*fileHandle << convertActionIDtoString_(mActionID) + "\n";
-		break;
-	case Action::ID::CUT:
-		*fileHandle << convertActionIDtoString_(mActionID);
-		*fileHandle << std::setprecision(3);
-		*fileHandle << "******Stage height for facing the VT = " << mAction.cutSlice.readStageZheightForFacingTheBlade() / mm << " mm";
-		*fileHandle << "******Equivalent sample plane Z = " << mAction.cutSlice.readPlaneZtoCut() / mm << " mm";
-		*fileHandle << "********\n";
-		break;
+	case Axis::II:
+		return mArraySize.II;
+	case Axis::JJ:
+		return mArraySize.JJ;
 	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected tile array axis unavailable");
 	}
 }
 
-void Sequencer::Commandline::printParameters() const
+TILEOVERLAP3 TileArray::readTileOverlapIJK_frac() const
 {
-	switch (mActionID)
-	{
-	case Action::ID::MOV:
-		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
-		std::cout << "Vibratome slice number = " << mAction.moveStage.readSliceNumber() << "\n";
-		std::cout << "Tile ij = (" << mAction.moveStage.readTileIndex(TileArray::Axis::II) << "," << mAction.moveStage.readTileIndex(TileArray::Axis::JJ) << ")\n";
-		std::cout << "Tile center (stageX, stageY) = (" << mAction.moveStage.readTileCenter(Stage::Axis::XX) / mm << "," << mAction.moveStage.readTileCenter(Stage::Axis::YY) / mm << ") mm\n\n";
-		break;
-	case Action::ID::ACQ:
-		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
-		std::cout << "wavelength = " << mAction.acqStack.readWavelength_nm() << " nm\n";
-		std::cout << "scanDirZ = " << convertScandirToInt(mAction.acqStack.readScanDirZ()) << "\n";
-		std::cout << "scanZmin / depthZ = " << mAction.acqStack.readScanZmin() / mm << " mm/" << mAction.acqStack.readDepthZ() << " mm\n";
-		std::cout << "scanPmin / ScanPexp = " << mAction.acqStack.readScanPmin() / mW << " mW/" << mAction.acqStack.readScanPexp() / um << " (um)\n\n";
-		break;
-	case Action::ID::SAV:
-		std::cout << "The command is " << convertActionIDtoString_(mActionID) << "\n";
-		break;
-	case Action::ID::CUT:
-		std::cout << "The command is " << convertActionIDtoString_(mActionID) << "\n";
-		break;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
-	}
+	return mOverlapIJK_frac;
 }
 
-std::string Sequencer::Commandline::convertActionIDtoString_(const Action::ID actionID) const
+//Pixel position of the center of the tiles relative to the center of the array
+PIXELS2 TileArray::determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const
 {
-	switch (actionID)
-	{
-	case Action::ID::CUT:
-		return "CUT";
-	case Action::ID::SAV:
-		return "SAV";
-	case Action::ID::ACQ:
-		return "ACQ";
-	case Action::ID::MOV:
-		return "MOV";
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
-	}
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mArraySize.II)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + std::to_string(mArraySize.II - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mArraySize.JJ)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index JJ must be in the range [0-" + std::to_string(mArraySize.JJ - 1) + "]");
+
+	POSITION2 relativeTileIndicesIJ{ determineRelativeTileIndicesIJ(mOverlapIJK_frac, mArraySize, tileIndicesIJ) };
+
+	return { static_cast<int>(std::round(mTileHeight_pix * relativeTileIndicesIJ.XX)),
+			 static_cast<int>(std::round(mTileWidth_pix * relativeTileIndicesIJ.YY)) };
 }
-#pragma endregion "Commandline"
+#pragma endregion "TileArray"
+
+#pragma region "QuickStitcher"
+//tileHeight_pix = tile height, tileWidth_pix = tile width, tileArraySize = { number of tiles as rows, number of tiles as columns}
+//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
+QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapIJK_frac) :
+	TiffU8{ tileHeight_pix * tileArraySize.II, tileWidth_pix * tileArraySize.JJ, 1 },
+	TileArray{ tileHeight_pix,
+				tileWidth_pix,
+				tileArraySize,
+				overlapIJK_frac }
+{
+	if (tileHeight_pix <= 0 || tileWidth_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile height and width must be > 0");
+
+	if (tileArraySize.II <= 0 || tileArraySize.JJ <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array dimensions must be > 0");
+}
+
+//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
+void QuickStitcher::push(const U8 *tile, const INDICES2 tileIndicesIJ)
+{
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= TileArray::readTileArraySize(Axis::II))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(TileArray::readTileArraySize(Axis::II) - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= TileArray::readTileArraySize(Axis::JJ))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(TileArray::readTileArraySize(Axis::JJ) - 1) + "]");
+
+	//const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
+	//const int tileWidth_pix{ tile.widthPerFrame_pix() };														//Width of the tile
+	const int rowShift_pix{ tileIndicesIJ.II *  TileArray::readTileHeight_pix() };								//In the mTiff image, shift the tile down by this many pixels
+	const int colShift_pix{ tileIndicesIJ.JJ *  TileArray::readTileWidth_pix() };								//In the mTiff image, shift the tile to the right by this many pixels
+	const int tileBytesPerRow{ static_cast<int>(TileArray::readTileWidth_pix() * sizeof(U8)) };					//Bytes per row of the input tile
+	const int stitchedTiffBytesPerRow{ static_cast<int>(TiffU8::readWidthPerFrame_pix() * sizeof(U8)) };		//Bytes per row of the tiled image
+
+	/*
+	//Transfer the data from the input tile to mStitchedTiff. Old way: copy pixel by pixel
+	for (int iterCol_pix = 0; iterCol_pix < tileWidth_pix; iterCol_pix++)
+		for (int iterRow_pix = 0; iterRow_pix < tileHeight_pix; iterRow_pix++)
+			mStitchedTiff.data()[(rowShift_pix + iterRow_pix) * mStitchedTiff.widthPerFrame_pix() + colShift_pix + iterCol_pix] = tile.data()[iterRow_pix * tileWidth_pix + iterCol_pix];*/
+
+			//Transfer the data from the input tile to mStitchedTiff. New way: copy row by row
+	for (int iterRow_pix = 0; iterRow_pix < TileArray::readTileHeight_pix(); iterRow_pix++)
+		std::memcpy(&TiffU8::data()[(rowShift_pix + iterRow_pix) * stitchedTiffBytesPerRow + colShift_pix * sizeof(U8)], &tile[iterRow_pix * tileBytesPerRow], tileBytesPerRow);
+}
+
+void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) const
+{
+	TiffU8::saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
+}
+#pragma endregion "QuickStitcher"
 
 #pragma region "QuickScanXY"
 QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SIZE2 pixelSizeXY, const SIZE2 LOIxy) :
@@ -493,7 +413,7 @@ void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 	for (int II = 0; II < mTileArray.readTileArraySize(TileArray::Axis::II); II++)
 		for (int JJ = 0; JJ < mTileArray.readTileArraySize(TileArray::Axis::JJ); JJ++)
 		{
-			if ( isTileBright({ II, JJ }) )	//If the tile is bright, shade it
+			if (isTileBright({ II, JJ }))	//If the tile is bright, shade it
 			{
 				const PIXELS2 absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_({ II, JJ }) };	//Absolute tile center position wrt the Tiff anchor pixel
 				const int tileTopPos_pix{ absoluteTilePixelPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };
@@ -505,7 +425,7 @@ void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 					for (int iterCol_pix = tileLeftPos_pix; iterCol_pix < tileRightPos_pix; iterCol_pix++)
 					{
 						const int iterPix{ iterRow_pix * mFullWidth_pix + iterCol_pix };
-						if(iterPix >= 0 && iterPix < mNpixFull)
+						if (iterPix >= 0 && iterPix < mNpixFull)
 							(tileMap.data())[iterPix] = pixelColor;
 					}
 			}
@@ -590,6 +510,434 @@ bool Boolmap::isQuadrantBright_(const double threshold, const INDICES2 tileIndic
 }
 #pragma endregion "Boolmap"
 
+#pragma region "FluorMarkerList"
+FluorMarkerList::FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList) :
+	mFluorMarkerList{ fluorMarkerList }
+{}
+
+std::size_t FluorMarkerList::readFluorMarkerListSize() const
+{
+	return mFluorMarkerList.size();
+}
+
+void FluorMarkerList::printFluorParams(std::ofstream *fileHandle) const
+{
+	*fileHandle << "LASERS ************************************************************\n";
+
+	for (std::vector<int>::size_type iterWL = 0; iterWL != mFluorMarkerList.size(); iterWL++)
+	{
+		*fileHandle << "Wavelength = " << mFluorMarkerList.at(iterWL).mWavelength_nm <<
+			" nm\nPower = " << mFluorMarkerList.at(iterWL).mScanPmin / mW <<
+			" mW\nPower exponential length = " << mFluorMarkerList.at(iterWL).mScanPexp / um << " um\n";
+	}
+	*fileHandle << "\n";
+}
+
+//Return the first instance of "fluorMarker" in mFluorMarkerList
+FluorMarkerList::FluorMarker FluorMarkerList::findFluorMarker(const std::string fluorMarker) const
+{
+	for (std::vector<int>::size_type iterMarker = 0; iterMarker < mFluorMarkerList.size(); iterMarker++)
+	{
+		if (!fluorMarker.compare(mFluorMarkerList.at(iterMarker).mName)) //compare() returns 0 if the strings are identical
+			return mFluorMarkerList.at(iterMarker);
+	}
+	//If the requested fluorMarker is not found
+	throw std::runtime_error((std::string)__FUNCTION__ + ": Fluorescent marker " + fluorMarker + " not found");
+}
+
+//indexFluorMarker is the position of the fluorMarker in mFluorMarkerList
+FluorMarkerList::FluorMarker FluorMarkerList::readFluorMarker(const int indexFluorMarker) const
+{
+	return mFluorMarkerList.at(indexFluorMarker);
+}
+
+FluorMarkerList FluorMarkerList::readFluorMarkerList() const
+{ 
+	return mFluorMarkerList;
+}
+#pragma endregion "FluorMarkerList"
+
+#pragma region "Sample"
+Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorMarkerList fluorMarkerList) :
+	mName{ sampleName },
+	mImmersionMedium{ immersionMedium },
+	mObjectiveCollar{ objectiveCollar },
+	mStageSoftPosLimXYZ{ stageSoftPosLimXYZ },
+	FluorMarkerList{ fluorMarkerList }
+{}
+
+Sample::Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 LOIxyz, const double sampleSurfaceZ, const double sliceOffset) :
+	mName{ sample.mName },
+	mImmersionMedium{ sample.mImmersionMedium },
+	mObjectiveCollar{ sample.mObjectiveCollar },
+	mStageSoftPosLimXYZ{ sample.mStageSoftPosLimXYZ },
+	FluorMarkerList{ sample.readFluorMarkerList() },
+	mCenterXY{ centerXY },
+	mLOIxyz_req{ LOIxyz },
+	mSurfaceZ{ sampleSurfaceZ },
+	mCutAboveBottomOfStack{ sliceOffset }
+{
+	if (mLOIxyz_req.XX <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length X must be > 0");
+	if (mLOIxyz_req.YY <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Y must be > 0");
+	if (mCutAboveBottomOfStack < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be >= 0");
+}
+
+void Sample::printSampleParams(std::ofstream *fileHandle) const
+{
+	*fileHandle << "SAMPLE ************************************************************\n";
+	*fileHandle << "Name = " << mName << "\n";
+	*fileHandle << "Immersion medium = " << mImmersionMedium << "\n";
+	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
+	*fileHandle << std::setprecision(4);
+	*fileHandle << "Sample center (stageX, stageY) = (" << mCenterXY.XX / mm << " mm, " << mCenterXY.YY / mm << " mm)\n";
+	*fileHandle << "Requested ROI size (stageX, stageY, stageZ) = (" << mLOIxyz_req.XX / mm << " mm, " << mLOIxyz_req.YY / mm << " mm, " << mLOIxyz_req.ZZ / mm << " mm)\n\n";
+
+	*fileHandle << "SLICE ************************************************************\n";
+	*fileHandle << std::setprecision(1);
+	*fileHandle << "Blade-focal plane vertical offset = " << mBladeFocalplaneOffsetZ / um << " um\n";
+	*fileHandle << "Cut above the bottom of the stack = " << mCutAboveBottomOfStack / um << " um\n";
+	*fileHandle << "\n";
+}
+
+std::string Sample::readName() const
+{
+	return mName;
+
+}
+
+std::string Sample::readImmersionMedium() const
+{
+	return mImmersionMedium;
+}
+
+std::string Sample::readObjectiveCollar() const
+{
+	return mObjectiveCollar;
+}
+
+std::vector<LIMIT2> Sample::readStageSoftPosLimXYZ() const
+{
+	return mStageSoftPosLimXYZ;
+}
+
+double Sample::readStageSoftPosLimXMIN() const
+{
+	return mStageSoftPosLimXYZ.at(Stage::Axis::XX).MIN;
+}
+
+double Sample::readStageSoftPosLimXMAX() const
+{
+	return mStageSoftPosLimXYZ.at(Stage::Axis::XX).MAX;
+}
+
+double Sample::readStageSoftPosLimYMIN() const
+{
+	return mStageSoftPosLimXYZ.at(Stage::Axis::YY).MIN;
+}
+
+double Sample::readStageSoftPosLimYMAX() const
+{
+	return mStageSoftPosLimXYZ.at(Stage::Axis::YY).MAX;
+}
+#pragma endregion "Sample"
+
+#pragma region "Stack"
+Stack::Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix, const double pixelSizeZ, const int nFrames, const TILEOVERLAP3 overlapXYZ_frac) :
+	mFFOV{ FFOV },
+	mTileHeight_pix{ tileHeight_pix },
+	mTileWidth_pix{ tileWidth_pix },
+	mPixelSizeZ{ pixelSizeZ },
+	mDepthZ{ pixelSizeZ *  nFrames },
+	mOverlapIJK_frac{ overlapXYZ_frac }
+{
+	if (FFOV.XX <= 0 || FFOV.YY <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be positive");
+	if (tileHeight_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be > 0");
+	if (tileWidth_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be > 0");
+	if (mPixelSizeZ <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel size Z must be > 0");
+	if (mDepthZ <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack depth Z must be positive");
+	if (mOverlapIJK_frac.II < 0 || mOverlapIJK_frac.JJ < 0 || mOverlapIJK_frac.II > 0.2 || mOverlapIJK_frac.JJ > 0.2 )
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap in XY must be in the range [0-0.2]");
+	if (mOverlapIJK_frac.KK < 0 || mOverlapIJK_frac.KK > 0.5)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap in Z must be in the range [0-0.5]");
+}
+
+void Stack::printParams(std::ofstream *fileHandle) const
+{
+	*fileHandle << "STACK ************************************************************\n";
+	*fileHandle << std::setprecision(1);
+	*fileHandle << "FOV (stageX, stageY) = (" << mFFOV.XX / um << " um, " << mFFOV.YY / um << " um)\n";
+	*fileHandle << "Pixel size Z = " << mPixelSizeZ / um << " um\n";
+	*fileHandle << "Stack depth Z= " << mDepthZ / um << " um\n";
+	*fileHandle << std::setprecision(2);
+	*fileHandle << "Stack overlap = (" << mOverlapIJK_frac.II << ", " << mOverlapIJK_frac.JJ << ", " << mOverlapIJK_frac.KK << ") (frac)\n";
+	*fileHandle << std::setprecision(1);
+	*fileHandle << "Stack overlap = (" << mOverlapIJK_frac.II * mFFOV.XX / um << " um, " << mOverlapIJK_frac.JJ * mFFOV.YY / um << " um, " << mOverlapIJK_frac.KK * mDepthZ << " um)\n";
+	*fileHandle << "\n";
+}
+
+double Stack::readFFOV(const Stage::Axis axis) const
+{
+	switch (axis)
+	{
+	case Stage::Axis::XX:
+		return mFFOV.XX;
+	case Stage::Axis::YY:
+		return mFFOV.YY;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected stage axis unavailable");
+	}
+}
+
+int Stack::readTileHeight_pix() const
+{
+	return mTileHeight_pix;
+}
+
+int Stack::readTileWidth_pix() const
+{
+	return mTileWidth_pix;
+}
+
+double Stack::readPixelSizeZ() const
+{
+	return mPixelSizeZ;
+}
+
+double Stack::readDepthZ() const
+{
+	return mDepthZ;
+}
+
+TILEOVERLAP3 Stack::readOverlapIJK_frac() const
+{
+	return mOverlapIJK_frac;
+}
+
+double Stack::readOverlap_frac(const TileArray::Axis axis) const
+{
+	switch (axis)
+	{
+	case TileArray::Axis::II:
+		return mOverlapIJK_frac.II;
+	case TileArray::Axis::JJ:
+		return mOverlapIJK_frac.JJ;
+	case TileArray::Axis::KK:
+		return mOverlapIJK_frac.KK;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected tile array axis unavailable");
+	}
+}
+#pragma endregion "Stack"
+
+#pragma region "Action"
+void Action::MoveStage::setParam(const int sliceNumber, const INDICES2 tileIndicesIJ, const POSITION2 tileCenterXY)
+{
+	mSliceNumber = sliceNumber;
+	mTileIndicesIJ = tileIndicesIJ;
+	mTileCenterXY = tileCenterXY;
+}
+
+int Action::MoveStage::readSliceNumber() const
+{
+	return mSliceNumber;
+}
+
+int Action::MoveStage::readTileIndex(const TileArray::Axis axis) const
+{
+	switch (axis)
+	{
+	case TileArray::Axis::II:
+		return mTileIndicesIJ.II;
+	case TileArray::Axis::JJ:
+		return mTileIndicesIJ.JJ;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected tile array axis unavailable");
+	}
+}
+
+POSITION2 Action::MoveStage::readTileCenterXY() const
+{
+	return mTileCenterXY;
+}
+
+double Action::MoveStage::readTileCenter(Stage::Axis axis) const
+{
+	switch (axis)
+	{
+	case Stage::Axis::XX:
+		return mTileCenterXY.XX;
+	case Stage::Axis::YY:
+		return mTileCenterXY.YY;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected stage axis unavailable");
+	}
+}
+
+
+void Action::AcqStack::setParam(const int stackNumber, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPexp, const int nFrameBinning)
+{
+	mStackNumber = stackNumber;
+	mWavelength_nm = wavelength_nm;
+	mScanDirZ = scanDirZ;
+	mScanZmin = scanZmin;
+	mDepthZ = depthZ;
+	mScanPmin = scanPmin;
+	mScanPexp = scanPexp;
+	mNframeBinning = nFrameBinning;
+}
+
+int Action::AcqStack::readStackNumber() const
+{
+	return mStackNumber;
+}
+
+int Action::AcqStack::readWavelength_nm() const
+{
+	return mWavelength_nm;
+}
+
+SCANDIR Action::AcqStack::readScanDirZ() const
+{
+	return mScanDirZ;
+}
+
+double Action::AcqStack::readScanZmin() const
+{
+	return mScanZmin;
+}
+
+double Action::AcqStack::readDepthZ() const
+{
+	return mDepthZ;
+}
+
+double Action::AcqStack::readScanPmin() const
+{
+	return mScanPmin;
+}
+
+double Action::AcqStack::readScanPexp() const
+{
+	return mScanPexp;
+}
+
+int Action::AcqStack::readNframeBinning() const
+{
+	return mNframeBinning;
+}
+
+void Action::CutSlice::setParam(const double planeZtoCut, const double stageZheightForFacingTheBlade)
+{
+	mPlaneZtoCut = planeZtoCut;
+	mStageZheightForFacingTheBlade = stageZheightForFacingTheBlade;
+}
+
+double Action::CutSlice::readPlaneZtoCut() const
+{
+	return mPlaneZtoCut;
+}
+
+double Action::CutSlice::readStageZheightForFacingTheBlade() const 
+{
+	return mStageZheightForFacingTheBlade;
+}
+#pragma endregion "Action"
+
+#pragma region "Commandline"
+Sequencer::Commandline::Commandline(const Action::ID actionID) :
+	mActionID{ actionID }
+{}
+
+void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
+{
+	switch (mActionID)
+	{
+	case Action::ID::MOV:
+		*fileHandle << convertActionIDtoString_(mActionID) << "\t" << mAction.moveStage.readSliceNumber();
+		*fileHandle << "\t(" << mAction.moveStage.readTileIndex(TileArray::Axis::II) << "," << mAction.moveStage.readTileIndex(TileArray::Axis::JJ) << ")\t";
+		*fileHandle << std::setprecision(4);
+		*fileHandle << "(" << mAction.moveStage.readTileCenter(Stage::Axis::XX) / mm << "," << mAction.moveStage.readTileCenter(Stage::Axis::YY) / mm << ")\n";
+		break;
+	case Action::ID::ACQ:
+		*fileHandle << convertActionIDtoString_(mActionID) << "\t\t\t\t\t";
+		*fileHandle << mAction.acqStack.readStackNumber() << "\t";
+		*fileHandle << mAction.acqStack.readWavelength_nm() << "\t";
+		*fileHandle << convertScandirToInt(mAction.acqStack.readScanDirZ()) << "\t";
+		*fileHandle << std::setprecision(3);
+		*fileHandle << mAction.acqStack.readScanZmin() / mm << "\t";
+		*fileHandle << (mAction.acqStack.readScanZmin() + mAction.acqStack.readDepthZ()) / mm << "\t";
+		*fileHandle << std::setprecision(0);
+		*fileHandle << mAction.acqStack.readScanPmin() << "\t" << mAction.acqStack.readScanPexp() << "\n";
+		break;
+	case Action::ID::SAV:
+		*fileHandle << convertActionIDtoString_(mActionID) + "\n";
+		break;
+	case Action::ID::CUT:
+		*fileHandle << convertActionIDtoString_(mActionID);
+		*fileHandle << std::setprecision(3);
+		*fileHandle << "******Stage height for facing the VT = " << mAction.cutSlice.readStageZheightForFacingTheBlade() / mm << " mm";
+		*fileHandle << "******Equivalent sample plane Z = " << mAction.cutSlice.readPlaneZtoCut() / mm << " mm";
+		*fileHandle << "********\n";
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
+	}
+}
+
+void Sequencer::Commandline::printParameters() const
+{
+	switch (mActionID)
+	{
+	case Action::ID::MOV:
+		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
+		std::cout << "Vibratome slice number = " << mAction.moveStage.readSliceNumber() << "\n";
+		std::cout << "Tile ij = (" << mAction.moveStage.readTileIndex(TileArray::Axis::II) << "," << mAction.moveStage.readTileIndex(TileArray::Axis::JJ) << ")\n";
+		std::cout << "Tile center (stageX, stageY) = (" << mAction.moveStage.readTileCenter(Stage::Axis::XX) / mm << "," << mAction.moveStage.readTileCenter(Stage::Axis::YY) / mm << ") mm\n\n";
+		break;
+	case Action::ID::ACQ:
+		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
+		std::cout << "wavelength = " << mAction.acqStack.readWavelength_nm() << " nm\n";
+		std::cout << "scanDirZ = " << convertScandirToInt(mAction.acqStack.readScanDirZ()) << "\n";
+		std::cout << "scanZmin / depthZ = " << mAction.acqStack.readScanZmin() / mm << " mm/" << mAction.acqStack.readDepthZ() << " mm\n";
+		std::cout << "scanPmin / ScanPexp = " << mAction.acqStack.readScanPmin() / mW << " mW/" << mAction.acqStack.readScanPexp() / um << " (um)\n\n";
+		break;
+	case Action::ID::SAV:
+		std::cout << "The command is " << convertActionIDtoString_(mActionID) << "\n";
+		break;
+	case Action::ID::CUT:
+		std::cout << "The command is " << convertActionIDtoString_(mActionID) << "\n";
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
+	}
+}
+
+std::string Sequencer::Commandline::convertActionIDtoString_(const Action::ID actionID) const
+{
+	switch (actionID)
+	{
+	case Action::ID::CUT:
+		return "CUT";
+	case Action::ID::SAV:
+		return "SAV";
+	case Action::ID::ACQ:
+		return "ACQ";
+	case Action::ID::MOV:
+		return "MOV";
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
+	}
+}
+#pragma endregion "Commandline"
+
 #pragma region "Sequencer"
 //Constructor using the sample's LOI. The number of stacks is calculated automatically based on the FFOV
 Sequencer::Sequencer(const Sample sample, const Stack stack) :
@@ -611,7 +959,8 @@ void Sequencer::generateCommandList()
 	{
 		initializeIteratorIJ_();		//Reset the tile iterator after every cut
 
-		for (std::vector<int>::size_type iterWL = 0; iterWL != mSample.readNtotalFluorLabels(); iterWL++)
+		//The first marker on the list is read, then the second marker, etc
+		for (std::vector<int>::size_type iterFluorMarker = 0; iterFluorMarker != mSample.readFluorMarkerListSize(); iterFluorMarker++)
 		{
 			//The Y-stage is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
 			while (mJJ >= 0 && mJJ < mTileArray.readTileArraySize(TileArray::Axis::JJ))		//Y-stage direction. JJ iterates from 0 to mTileArraySize.JJ
@@ -619,7 +968,7 @@ void Sequencer::generateCommandList()
 				while (mII >= 0 && mII < mTileArray.readTileArraySize(TileArray::Axis::II))	//X-stage direction. II iterates back and forth between 0 and mTileArraySize.II
 				{
 					moveStage_({ mII, mJJ });
-					acqStack_(iterWL);
+					acqStack_(iterFluorMarker);
 					saveStack_();
 					mII -= convertScandirToInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the X-stage axis
 				}
@@ -808,7 +1157,7 @@ void Sequencer::initializeEffectiveROI_()
 void Sequencer::reserveMemoryBlock_()
 {
 	const int nTotalTilesPerVibratomeSlice{ mTileArray.readTileArraySize(TileArray::Axis::II) * mTileArray.readTileArraySize(TileArray::Axis::JJ) };	//Total number of tiles in a vibratome slice
-	const int nTotalTilesEntireSample{ mNtotalSlices * static_cast<int>(mSample.readNtotalFluorLabels()) * nTotalTilesPerVibratomeSlice };				//Total number of tiles in the entire sample. mNtotalSlices is fixed at 1
+	const int nTotalTilesEntireSample{ mNtotalSlices * static_cast<int>(mSample.readFluorMarkerListSize()) * nTotalTilesPerVibratomeSlice };				//Total number of tiles in the entire sample. mNtotalSlices is fixed at 1
 	mCommandList.reserve(3 * nTotalTilesEntireSample + mNtotalSlices - 1);
 }
 
@@ -869,16 +1218,17 @@ void Sequencer::moveStage_(const INDICES2 tileIndicesIJ)
 	mCommandCounter++;	//Count the number of commands
 }
 
-void Sequencer::acqStack_(const int wavelengthIndex)
+//indexFluorMarker is the position of the fluorMarker in mFluorMarkerList
+void Sequencer::acqStack_(const int indexFluorMarker)
 {
-	if (wavelengthIndex < 0)
+	if (indexFluorMarker < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength index must be >= 0");
 
 	//Read the corresponding laser configuration
-	const FluorLabelList::FluorLabel fluorLabel{ mSample.readFluorLabel(wavelengthIndex) };
+	const FluorMarkerList::FluorMarker fluorMarker{ mSample.readFluorMarker(indexFluorMarker) };
 
 	Commandline commandline{ Action::ID::ACQ };
-	commandline.mAction.acqStack.setParam(mStackCounter, fluorLabel.mWavelength_nm, mIterScanDirXYZ.ZZ, mIterScanZi, mStack.readDepthZ(), fluorLabel.mScanPmin, fluorLabel.mScanPexp, fluorLabel.nFramesBinning);
+	commandline.mAction.acqStack.setParam(mStackCounter, fluorMarker.mWavelength_nm, mIterScanDirXYZ.ZZ, mIterScanZi, mStack.readDepthZ(), fluorMarker.mScanPmin, fluorMarker.mScanPexp, fluorMarker.nFramesBinning);
 	mCommandList.push_back(commandline);
 	mStackCounter++;	//Count the number of stacks acquired
 	mCommandCounter++;	//Count the number of commands

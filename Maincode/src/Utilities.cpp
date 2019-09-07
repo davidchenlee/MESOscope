@@ -148,25 +148,6 @@ void pressAnyKeyToContOrESCtoExit()
 	}
 }
 
-//Take the integer indices II, JJ = 0, 1, 2... of the array of tiles and return new tile indices (now of double type) with overlapping tiles.
-//The returned indices are wrt the center tile and can be negative
-//For an odd number of tiles, the center tile is at the middle of the tile array
-//For an even number of tiles, there are 2 tiles in the middle of the tile array. The one on the top/left is taken as the reference tile
-POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapIJK_frac, const INDICES2 tileArraySize, const INDICES2 tileIndicesIJ)
-{
-	if (overlapIJK_frac.II < 0 || overlapIJK_frac.JJ < 0 || overlapIJK_frac.KK < 0 || overlapIJK_frac.II > 1 || overlapIJK_frac.JJ > 1 || overlapIJK_frac.KK > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
-	if (tileArraySize.II <= 0 || tileArraySize.II <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be > 0");
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= tileArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index II must be in the range [0-" + toString(tileArraySize.II, 0) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= tileArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile index JJ must be in the range [0-" + toString(tileArraySize.JJ, 0) + "]");
-
-	return { (1. - overlapIJK_frac.II) * (tileIndicesIJ.II - static_cast<int>((tileArraySize.II - 1) / 2)),
-			 (1. - overlapIJK_frac.JJ) * (tileIndicesIJ.JJ - static_cast<int>((tileArraySize.JJ - 1) / 2)) };
-}
-
 #pragma region "Logger"
 Logger::Logger(const std::string filename)
 {
@@ -560,16 +541,16 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 			if (TIFFWriteScanline(tiffHandle, buffer, iterRow_pix, 0) < 0)
 				break;
 		}
-		TIFFWriteDirectory(tiffHandle); //Create a page structure. This gives a large overhead
+		TIFFWriteDirectory(tiffHandle);				//Create a page structure. This gives a large overhead
 
 		if (frameIndex == lastFrame)
 			break;
 
-		frameIndex += convertScandirToInt(scanDirZ); //Increasing iterator for UPWARD. Decreasing for DOWNWARD
+		frameIndex += convertScandirToInt(scanDirZ);//Increasing iterator for UPWARD. Decreasing for DOWNWARD
 	} while (true);
 
-	_TIFFfree(buffer);		//Destroy the buffer
-	TIFFClose(tiffHandle);	//Close the output tiff file
+	_TIFFfree(buffer);								//Destroy the buffer
+	TIFFClose(tiffHandle);							//Close the output tiff file
 
 	std::cout << "Successfully saved: " << filename << ".tif\n";
 }
@@ -1057,122 +1038,3 @@ void TiffU8::flattenField(const double maxScaleFactor)
 }
 */
 #pragma endregion "TiffU8"
-
-#pragma region "TileArray"
-TileArray::TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraysize, const TILEOVERLAP3 overlapIJK_frac) :
-	mTileHeight_pix{ tileHeight_pix },
-	mTileWidth_pix{ tileWidth_pix },
-	mNpix{ tileHeight_pix * tileWidth_pix },
-	mArraySize{ tileArraysize },
-	mOverlapIJK_frac{ overlapIJK_frac }
-{
-	if (tileHeight_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be > 0");
-	if (tileWidth_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be > 0");
-	if (tileArraysize.II <= 0 || tileArraysize.II <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile size must be > 0");
-	if (overlapIJK_frac.II < 0 || overlapIJK_frac.JJ < 0 || overlapIJK_frac.KK < 0 || overlapIJK_frac.II > 1 || overlapIJK_frac.JJ > 1 || overlapIJK_frac.KK > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
-}
-
-int TileArray::readTileHeight_pix() const
-{
-	return mTileHeight_pix;
-}
-
-int TileArray::readTileWidth_pix() const
-{
-	return mTileWidth_pix;
-}
-
-int TileArray::readNpix() const
-{
-	return mNpix;
-}
-
-INDICES2 TileArray::readTileArraySizeIJ() const
-{
-	return mArraySize;
-}
-
-int TileArray::readTileArraySize(const Axis axis) const
-{
-	switch (axis)
-	{
-	case Axis::II:
-		return mArraySize.II;
-	case Axis::JJ:
-		return mArraySize.JJ;
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected tile array axis unavailable");
-	}
-}
-
-TILEOVERLAP3 TileArray::readTileOverlapIJK_frac() const
-{
-	return mOverlapIJK_frac;
-}
-
-//Pixel position of the center of the tiles relative to the center of the array
-PIXELS2 TileArray::determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const
-{
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mArraySize.II)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + std::to_string(mArraySize.II - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mArraySize.JJ)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index JJ must be in the range [0-" + std::to_string(mArraySize.JJ - 1) + "]");
-
-	POSITION2 relativeTileIndicesIJ{ determineRelativeTileIndicesIJ(mOverlapIJK_frac, mArraySize, tileIndicesIJ) };
-
-	return { static_cast<int>(std::round(mTileHeight_pix * relativeTileIndicesIJ.XX)),
-			 static_cast<int>(std::round(mTileWidth_pix * relativeTileIndicesIJ.YY)) };
-}
-#pragma endregion "TileArray"
-
-#pragma region "QuickStitcher"
-//tileHeight_pix = tile height, tileWidth_pix = tile width, tileArraySize = { number of tiles as rows, number of tiles as columns}
-//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
-QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySize, const TILEOVERLAP3 overlapIJK_frac) :
-	TiffU8{ tileHeight_pix * tileArraySize.II, tileWidth_pix * tileArraySize.JJ, 1 },
-	TileArray{ tileHeight_pix,
-				tileWidth_pix,
-				tileArraySize,
-				overlapIJK_frac }
-{
-	if (tileHeight_pix <= 0 || tileWidth_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile height and width must be > 0");
-
-	if (tileArraySize.II <= 0 || tileArraySize.JJ <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The array dimensions must be > 0");
-}
-
-//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
-void QuickStitcher::push(const U8 *tile, const INDICES2 tileIndicesIJ)
-{
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= TileArray::readTileArraySize(Axis::II))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(TileArray::readTileArraySize(Axis::II) - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= TileArray::readTileArraySize(Axis::JJ))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(TileArray::readTileArraySize(Axis::JJ) - 1) + "]");
-
-	//const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
-	//const int tileWidth_pix{ tile.widthPerFrame_pix() };														//Width of the tile
-	const int rowShift_pix{ tileIndicesIJ.II *  TileArray::readTileHeight_pix() };								//In the mTiff image, shift the tile down by this many pixels
-	const int colShift_pix{ tileIndicesIJ.JJ *  TileArray::readTileWidth_pix() };								//In the mTiff image, shift the tile to the right by this many pixels
-	const int tileBytesPerRow{ static_cast<int>(TileArray::readTileWidth_pix() * sizeof(U8)) };					//Bytes per row of the input tile
-	const int stitchedTiffBytesPerRow{ static_cast<int>(TiffU8::readWidthPerFrame_pix() * sizeof(U8)) };		//Bytes per row of the tiled image
-
-	/*
-	//Transfer the data from the input tile to mStitchedTiff. Old way: copy pixel by pixel
-	for (int iterCol_pix = 0; iterCol_pix < tileWidth_pix; iterCol_pix++)
-		for (int iterRow_pix = 0; iterRow_pix < tileHeight_pix; iterRow_pix++)
-			mStitchedTiff.data()[(rowShift_pix + iterRow_pix) * mStitchedTiff.widthPerFrame_pix() + colShift_pix + iterCol_pix] = tile.data()[iterRow_pix * tileWidth_pix + iterCol_pix];*/
-
-			//Transfer the data from the input tile to mStitchedTiff. New way: copy row by row
-	for (int iterRow_pix = 0; iterRow_pix < TileArray::readTileHeight_pix(); iterRow_pix++)
-		std::memcpy(&TiffU8::data()[(rowShift_pix + iterRow_pix) * stitchedTiffBytesPerRow + colShift_pix * sizeof(U8)], &tile[iterRow_pix * tileBytesPerRow], tileBytesPerRow);
-}
-
-void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) const
-{
-	TiffU8::saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
-}

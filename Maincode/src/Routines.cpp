@@ -45,7 +45,7 @@ namespace Routines
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("DAPI") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ currentSample.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 40. * um };								//Stack deepth in the Z-stage axis
@@ -56,7 +56,7 @@ namespace Routines
 		const int widthPerFrame_pix{ 300 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
-		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
+		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorMarker.mWavelength_nm, whichLaser);
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -129,7 +129,7 @@ namespace Routines
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont };
 		Mesoscope mesoscope{ whichLaser };
-		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
+		mesoscope.configure(RTcontrol, fluorMarker.mWavelength_nm);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -138,7 +138,7 @@ namespace Routines
 		//SCANNERS
 		const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2.};
 		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
-		//const Galvo rescanner{ RTcontrol, 0, fluorLabel.mWavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		//const Galvo rescanner{ RTcontrol, 0, fluorMarker.mWavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.readStageSoftPosLimXYZ() };
@@ -149,7 +149,7 @@ namespace Routines
 		//CREATE A STACK FOR STORING THE TIFFS
 		const int nLocations{ static_cast<int>(stagePosXYZ.size()) };
 		TiffU8 output{ heightPerFrame_pix, widthPerFrame_pix, nLocations };
-		std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) + "nm" };
+		std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorMarker.mWavelength_nm, 0) + "nm" };
 		
 		//OPEN THE UNIBLITZ SHUTTERS
 		mesoscope.openShutter();					//The destructor will close the shutter automatically
@@ -162,7 +162,7 @@ namespace Routines
 			stage.waitForMotionToStopAll();
 			//stage.printPosXYZ();				//Print the stage position	
 			
-			mesoscope.setPower(exponentialFunction(fluorLabel.mScanPmin, iterLocation * pixelSizeZ, fluorLabel.mScanPexp));	//FIX THIS
+			mesoscope.setPower(exponentialFunction(fluorMarker.mScanPmin, iterLocation * pixelSizeZ, fluorMarker.mScanPexp));	//FIX THIS
 	
 			//Used to optimize the collector lens position
 			if (acqMode == RUNMODE::COLLECTLENS)
@@ -179,7 +179,7 @@ namespace Routines
 			if (acqMode == RUNMODE::SINGLE && !saveAllPMT)
 			{
 				//Save individual files
-				filename.append("_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW" +
+				filename.append("_P=" + toString(fluorMarker.mScanPmin / mW, 1) + "mW" +
 					"_x=" + toString(stagePosXYZ.at(iterLocation).XX / mm, 3) + "_y=" + toString(stagePosXYZ.at(iterLocation).YY / mm, 3) + "_z=" + toString(stagePosXYZ.at(iterLocation).ZZ / mm, 4) + 
 					"_avg=" + toString(nFramesCont, 0));
 				std::cout << "Saving the stack...\n";
@@ -192,7 +192,7 @@ namespace Routines
 
 		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
 		{	
-			filename.append( "_Pmin=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorLabel.mScanPexp / um, 0) + "um" +
+			filename.append( "_Pmin=" + toString(fluorMarker.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorMarker.mScanPexp / um, 0) + "um" +
 				"_x=" + toString(stagePosXYZ.front().XX / mm, 3) + "_y=" + toString(stagePosXYZ.front().YY / mm, 3) +
 				"_zi=" + toString(stagePosXYZ.front().ZZ / mm, 4) + "_zf=" + toString(stagePosXYZ.back().ZZ / mm, 4) + "_Step=" + toString(pixelSizeZ / mm, 4) + 
 				"_avg=" + toString(nFramesCont * nSameLocation, 0) );
@@ -205,7 +205,7 @@ namespace Routines
 
 		if (acqMode == RUNMODE::SCANXY)
 		{
-			filename.append( "_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW" +
+			filename.append( "_P=" + toString(fluorMarker.mScanPmin / mW, 1) + "mW" +
 				"_xi=" + toString(stagePosXYZ.front().XX / mm, 4) + "_xf=" + toString(stagePosXYZ.back().XX / mm, 4) +
 				"_y=" + toString(stagePosXYZ.front().YY / mm, 4) +
 				"_z=" + toString(stagePosXYZ.front().ZZ / mm, 4) + "_Step=" + toString(stepSizeX / mm, 4) +
@@ -229,8 +229,8 @@ namespace Routines
 			datalog.record("\nLASER--------------------------------------------------------");
 			datalog.record("Laser used = ", mesoscope.readCurrentLaser_s(false));
 			datalog.record("Laser wavelength (nm) = ", mesoscope.readCurrentWavelength_nm());
-			datalog.record("Min laser power (mW) = ", fluorLabel.mScanPmin / mW);
-			datalog.record("Power exponential length (um) = ", fluorLabel.mScanPexp / um);
+			datalog.record("Min laser power (mW) = ", fluorMarker.mScanPmin / mW);
+			datalog.record("Power exponential length (um) = ", fluorMarker.mScanPexp / um);
 			datalog.record("Laser repetition period (us) = ", g_laserPulsePeriod / us);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
@@ -259,10 +259,10 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };				//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ currentSample.findFluorMarker("TDT") };				//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
-		const int nFramesBinning{ fluorLabel.nFramesBinning };											//For binning
+		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um  };
 
@@ -273,7 +273,7 @@ namespace Routines
 		const int widthPerFrame_pix{ 300 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };										//Full FOV in the slow axis
 
-		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
+		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorMarker.mWavelength_nm, whichLaser);
 
 		//Center the stack
 		////////////////////////////////////stackCenterXYZ.at(Stage::Z) -= nFramesCont * pixelSizeZbeforeBinning /2;
@@ -294,8 +294,8 @@ namespace Routines
 		//CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames };	//Note the STAGEZ flag
 		Mesoscope mesoscope{ whichLaser };
-		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
-		mesoscope.setPowerExponentialScaling(fluorLabel.mScanPmin, pixelSizeZbeforeBinning, convertScandirToInt(scanDirZ) * fluorLabel.mScanPexp);
+		mesoscope.configure(RTcontrol, fluorMarker.mWavelength_nm);
+		mesoscope.setPowerExponentialScaling(fluorMarker.mScanPmin, pixelSizeZbeforeBinning, convertScandirToInt(scanDirZ) * fluorMarker.mScanPexp);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -328,8 +328,8 @@ namespace Routines
 		image.binFrames(nFramesBinning);
 		//image.correct(RScanner.mFFOV);
 
-		const std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) +
-			"nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorLabel.mScanPexp / um, 0) +
+		const std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorMarker.mWavelength_nm, 0) +
+			"nm_P=" + toString(fluorMarker.mScanPmin / mW, 1) + "mW_Pexp=" + toString(fluorMarker.mScanPexp / um, 0) +
 			"um_x=" + toString(stackCenterXYZ.XX / mm, 3) + "_y=" + toString(stackCenterXYZ.YY / mm, 3) +
 			"_zi=" + toString(stageZi / mm, 4) + "_zf=" + toString(stageZf / mm, 4) + "_Step=" + toString(pixelSizeZafterBinning / mm, 4) +
 			"_bin=" + toString(nFramesBinning, 0) };
@@ -346,7 +346,7 @@ namespace Routines
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Continuous X-stage scanning available for single beam only");
 
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ currentSample.findFluorMarker("TDT") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
@@ -360,15 +360,15 @@ namespace Routines
 
 		QuickScanXY quickScanXY{ {stackCenterXYZ.XX, stackCenterXYZ.YY}, {  tileHeight, tileWidth }, { pixelSizeX, pixelSizeY }, { fullHeight, fullWidth } };
 
-		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorLabel.mWavelength_nm, whichLaser);
+		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorMarker.mWavelength_nm, whichLaser);
 
 		//CONTROL SEQUENCE
 		//The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
 		const int nFrames{ 2 };
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, quickScanXY.readTileWidth_pix(), quickScanXY.readTileHeight_pix() / 2 };
 		Mesoscope mesoscope{ whichLaser };
-		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
-		mesoscope.setPower(fluorLabel.mScanPmin);
+		mesoscope.configure(RTcontrol, fluorMarker.mWavelength_nm);
+		mesoscope.setPower(fluorMarker.mScanPmin);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -417,8 +417,8 @@ namespace Routines
 			reverseSCANDIR(iterScanDirX);
 			pressESCforEarlyTermination();
 		}
-			const std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorLabel.mWavelength_nm, 0) +
-				"nm_P=" + toString(fluorLabel.mScanPmin / mW, 1) +
+			const std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + toString(fluorMarker.mWavelength_nm, 0) +
+				"nm_P=" + toString(fluorMarker.mScanPmin / mW, 1) +
 				"mW_xi=" + toString(stageXi / mm, 3) + "_xf=" + toString(stageXf / mm, 3) +
 				"_yi=" + toString(quickScanXY.mStagePosY.front() / mm, 3) + "_yf=" + toString(quickScanXY.mStagePosY.back() / mm, 3) +
 				"_z=" + toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + toString(pixelSizeX / mm, 4) };
@@ -478,6 +478,10 @@ namespace Routines
 			//CONTROL SEQUENCE
 			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix };
 			Mesoscope mesoscope{ Laser::ID::VISION };
+
+			//RS
+			const ResonantScanner RScanner{ RTcontrol };
+			RScanner.isRunning();		//To make sure that the RS is running
 
 			//Read the commands line by line
 			POSITION2 tileCenterXY;
@@ -557,7 +561,7 @@ namespace Routines
 					std::string tileIndexJ_s{ std::to_string(tileIndexJ) };
 					std::string tileIndexJpad_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;//2 digits in total
 
-					shortName = sliceNumberPad_s + "_" + indexFluorLabel_s(wavelength_nm) + "_" + stackNumberPad_s;
+					shortName = sliceNumberPad_s + "_" + convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + stackNumberPad_s;
 					longName = mesoscope.readCurrentLaser_s(true) + toString(wavelength_nm, 0) + "nm_Pmin=" + toString(scanPmin / mW, 1) + "mW_Pexp=" + toString(scanPexp / um, 0) + "um" +
 						"_x=" + toString(tileCenterXY.XX / mm, 3) +
 						"_y=" + toString(tileCenterXY.YY / mm, 3) +
@@ -602,7 +606,7 @@ namespace Routines
 	void liveScan(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorLabelList::FluorLabel fluorLabel{ currentSample.findFluorLabel("TDT") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
 		const int nFramesCont{ 1 };															//Number of frames for continuous acquisition
 		const double pixelSizeXY{ 0.5 * um };
 		const int heightPerFrame_pix{ 560 };
@@ -612,7 +616,7 @@ namespace Routines
 		//CREATE THE CONTROL SEQUENCE
 		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 		Mesoscope mesoscope{ Laser::ID::VISION };
-		mesoscope.configure(RTcontrol, fluorLabel.mWavelength_nm);
+		mesoscope.configure(RTcontrol, fluorMarker.mWavelength_nm);
 
 		//RS
 		const ResonantScanner RScanner{ RTcontrol };
@@ -627,7 +631,7 @@ namespace Routines
 
 		while (true)
 		{
-			mesoscope.setPower(fluorLabel.mScanPmin);					//Set the laser power
+			mesoscope.setPower(fluorMarker.mScanPmin);					//Set the laser power
 
 			RTcontrol.run();
 			Image image{ RTcontrol };

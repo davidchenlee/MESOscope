@@ -407,7 +407,7 @@ public:
 	Mesoscope(const Mesoscope&) = delete;				//Disable copy-constructor
 	Mesoscope& operator=(const Mesoscope&) = delete;	//Disable assignment-constructor
 	Mesoscope(Mesoscope&&) = delete;					//Disable move constructor
-	Mesoscope& operator=(Mesoscope&&) = delete;			//Disable move-assignment constructor
+	Mesoscope& operator=(Mesoscope&&) = delete;		//Disable move-assignment constructor
 
 	void configure(RTcontrol &RTcontrol, const int wavelength_nm);
 	void setPower(const double laserPower) const;

@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::correctImage();
 			//TestRoutines::quickStitcher();
-			TestRoutines::thresholdSample();
+			TestRoutines::boolmapSample();
 			//TestRoutines::vectorOfObjects();
 
 			//TestRoutines::sequencerConcurrentTest();

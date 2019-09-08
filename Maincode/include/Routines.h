@@ -51,7 +51,7 @@ namespace TestRoutines
 	//Postprocessing
 	void correctImage();
 	void quickStitcher();
-	void thresholdSample();
+	void boolmapSample();
 	void vectorOfObjects();
 
 	//Sequence

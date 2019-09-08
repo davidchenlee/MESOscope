@@ -389,7 +389,7 @@ namespace Routines
 		mesoscope.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 
 		//LOCATIONS on the sample to image
-		const int nLocations{ static_cast<int>(quickScanXY.mStagePosY.size()) };
+		const int nLocations{ quickScanXY.readNstageYpos() };
 		double stageXi, stageXf;		//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
@@ -398,7 +398,7 @@ namespace Routines
 			stageXf = quickScanXY.determineFinalScanPosX(travelOverhead, iterScanDirX);
 
 			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations << "\n";
-			stage.moveXY({ stageXi, quickScanXY.mStagePosY.at(iterLocation) });
+			stage.moveXY({ stageXi, quickScanXY.readStageYposAt(iterLocation) });
 			stage.waitForMotionToStopAll();
 
 			Sleep(300);					//Avoid iterations too close to each other, otherwise the X-stage will fail to trigger the ctl&acq sequence.
@@ -420,16 +420,16 @@ namespace Routines
 			const std::string filename{ currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) +
 				"nm_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) +
 				"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
-				"_yi=" + Util::toString(quickScanXY.mStagePosY.front() / mm, 3) + "_yf=" + Util::toString(quickScanXY.mStagePosY.back() / mm, 3) +
+				"_yi=" + Util::toString(quickScanXY.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(quickScanXY.readStageYposBack() / mm, 3) +
 				"_z=" + Util::toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + Util::toString(pixelSizeX / mm, 4) };
 			std::cout << "Saving the stack...\n";
 			quickScanXY.saveToFile(filename, OVERRIDE::DIS);
 
-			//FIX THIS!!!
-			TiffU8 tmp{ quickScanXY.data(), 14840, 900 };
+			//Tile size for the slow scan. Do not call the tile size from quickScanXY because the tiles are long strips. 
+			const PIXELS2 ssTileSize_pix{ static_cast<int>(std::ceil(tileHeight / pixelSizeX)), static_cast<int>(std::ceil(tileWidth / pixelSizeY)) };
+			const TILEOVERLAP3 ssTileOverlapXYZ_frac{ 0.0, 0.0, 0.0 };
 			const double threshold{ 0.02 };
-			TileArray tileArray{ 280, 300, {14840/280, 900/3} , { 0, 0, 0} };
-			Boolmap boolmap{ tmp, tileArray, threshold };
+			Boolmap boolmap{ quickScanXY, ssTileSize_pix, ssTileOverlapXYZ_frac, threshold };
 			boolmap.saveTileMapToText("Boolmap");
 			boolmap.saveTileMap("TileArrayMap");
 	}
@@ -1198,33 +1198,20 @@ namespace TestRoutines
 		Util::pressAnyKeyToCont();
 	}
 
-	void thresholdSample()
+	void boolmapSample()
 	{
 		std::string inputFilename{ "Liver20190812_02_V1040nm_P=30.0mW_xi=36.020_xf=52.580_yi=24.153_yf=23.853_z=18.1010_Step=0.0010 (3)" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
-		//The tile array used for imaging
-		const int imagingTileHeight_pix{ 560 };
-		const int imagingTileWidth_pix{ 300 };
-		const INDICES2 nImagingTiles{ image.readHeightPerFrame_pix() / imagingTileHeight_pix , image.readWidthPerFrame_pix() / imagingTileWidth_pix };
-		const TileArray imagingTileArray{ imagingTileHeight_pix, imagingTileWidth_pix, nImagingTiles, { 0.0, 0.0, 0.0 } };//Tile array used for imaging
-
-		//The tile array for boolmap does not have to coincide with the tile array used for imaging
-		const int tileHeight_pix{ 280 };
-		const int tileWidth_pix{ 300 };
-		const TILEOVERLAP3 overlapIJK_frac{ 0.0, 0.0, 0.0 };
-		const TileArray tileArray{ tileHeight_pix, tileWidth_pix, { 53, 3 }, overlapIJK_frac };
-
+		//The tile array for boolmapping does not have to coincide with the tile array used for imaging
+		const PIXELS2 ssTileSize_pix{ 280, 300 };
+		const TILEOVERLAP3 ssOverlapIJK_frac{ 0.0, 0.0, 0.0 };
 		const double threshold{ 0.02 };
-		Boolmap boolmap{ image, tileArray, threshold };
+		Boolmap boolmap{ image, ssTileSize_pix, ssOverlapIJK_frac, threshold };
 		boolmap.saveTileMapToText("Boolmap");
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
-		boolmap.saveTileGridOverlap("TileGrid", OVERRIDE::EN);
 		//std::cout << boolmap.isTileBright({ 0, 30 }) << "\n";
-
-		//PIXELS2 positionXY_pix = boolmap.tileIndicesIJtoPixelPosition_pix({0.0, 0.0, 0.0},  { 35, 66 });
-		//std::cout << positionXY_pix.ii << "\t" << positionXY_pix.jj<< "\n";
 
 		Util::pressAnyKeyToCont();
 	}

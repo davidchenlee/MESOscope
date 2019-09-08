@@ -30,7 +30,7 @@ namespace Constants
 	enum class SCANDIR { LEFTWARD, RIGHTWARD, OUTWARD, INWARD, DOWNWARD, UPWARD };
 	struct SCANDIR3 { SCANDIR XX;  SCANDIR YY; SCANDIR ZZ; };
 	struct INDICES2 { int II; int JJ; };
-	struct PIXELS2 { int ii; int jj; };
+
 	struct POSITION2 { double XX; double YY; };
 	struct POSITION3 { double XX; double YY; double ZZ; };
 	struct VELOCITY3 { double XX; double YY; double ZZ; };
@@ -39,6 +39,15 @@ namespace Constants
 	struct ROI4 { double YMIN; double XMIN; double YMAX;  double XMAX; };	//Region of interest
 	struct SIZE2 { double XX; double YY; };									//Size in 2D
 	struct SIZE3 { double XX; double YY; double ZZ; };						//Size in 3D
+
+	//2D pixel type
+	struct PIXELS2 {
+		int ii; int jj;
+		PIXELS2(const int i, const int j) {
+			//if(i <= 0 || j <= 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel size must be > 0");
+			ii = i; jj = j;};
+	};
+
 	struct TILEOVERLAP3 { double II; double JJ; double KK; };				//Tile overlap fraction
 
 	enum class PMTIN { PMT = false, SIM = true };							//*cast

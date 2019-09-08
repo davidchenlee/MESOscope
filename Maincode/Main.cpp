@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::stageConfig();
 
 			//TestRoutines::shutter(fpga);
-			//TestRoutines::pockels(fpga);
+			TestRoutines::pockels(fpga);
 			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::correctImage();
 			//TestRoutines::quickStitcher();
-			TestRoutines::boolmapSample();
+			//TestRoutines::boolmapSample();
 			//TestRoutines::vectorOfObjects();
 
 			//TestRoutines::sequencerConcurrentTest();

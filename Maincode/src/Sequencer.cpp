@@ -470,7 +470,6 @@ void Boolmap::saveTileMapToText(std::string filename)
 	}
 	catch (...) {
 		throw std::out_of_range((std::string)__FUNCTION__);
-
 	}
 
 	fileHandle.close();

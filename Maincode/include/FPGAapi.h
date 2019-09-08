@@ -61,7 +61,7 @@ private:
 	void readChunk_(const int &nPixPerBeamletAllFrames, int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 &FIFOOUTpc, U32* buffer, int &timeout) const;
 };
 
-class RTcontrol final
+class RTseq final
 {
 public:
 	enum class RTCHAN { PIXELCLOCK, SCANNER, RESCANNER, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };				//NCHAN = number of sequence channels available including the channel for the pixelclock
@@ -75,13 +75,13 @@ public:
 	int mHeightPerBeamletAllFrames_pix;					//Total number of lines per beamlet in all the frames
 	int mNpixPerBeamletAllFrames;						//Total number of pixels per beamlet in all the frames
 
-	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames);
-	RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix);
-	~RTcontrol();
-	RTcontrol(const RTcontrol&) = delete;				//Disable copy-constructor
-	RTcontrol& operator=(const RTcontrol&) = delete;	//Disable assignment-constructor
-	RTcontrol(RTcontrol&&) = delete;					//Disable move constructor
-	RTcontrol& operator=(RTcontrol&&) = delete;			//Disable move-assignment constructor
+	RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames);
+	RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix);
+	~RTseq();
+	RTseq(const RTseq&) = delete;				//Disable copy-constructor
+	RTseq& operator=(const RTseq&) = delete;	//Disable assignment-constructor
+	RTseq(RTseq&&) = delete;					//Disable move constructor
+	RTseq& operator=(RTseq&&) = delete;			//Disable move-assignment constructor
 
 	void pushQueue(const RTCHAN chan, QU32& queue);
 	void clearQueue(const RTCHAN chan);

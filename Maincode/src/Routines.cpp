@@ -4,20 +4,20 @@ const std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm
 
 //SAMPLE PARAMETERS
 //POSITION3 stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.840 + 0.000) * mm };
-POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (18.051 + 0.050) * mm };//For contScanX
+//POSITION3 stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (18.051 + 0.000) * mm };//For contScanX
+POSITION3 stackCenterXYZ{ (53.500) * mm, (25.000)* mm, (17.931) * mm };
 
 #if multibeam
 //Sample beads4um{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(50. * mW), multiply16X(0.) }, { "GFP", 920, multiply16X(45. * mW), multiply16X(0.) }, { "TDT", 1040, multiply16X(15. * mW), multiply16X(0.) } }} };
 //Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0) } , { "GFP", 920, multiply16X(40. * mW), multiply16X(0.0) } , { "DAPI", 750, multiply16X(50. * mW), multiply16X(0.) } }} };
-Sample liverDAPITDT{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), 150., 4 }, { "DAPI", 750, multiply16X(20. * mW), 120., 2 } }} };
+Sample currentSample{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), 150., 4 }, { "DAPI", 750, multiply16X(20. * mW), 120., 2 } }} };
 
 #else
-Sample currentSample{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,  {{{"TDT", 1040, 30. * mW, 150. * um, 1 } , { "DAPI", 750, 12. * mW, 120. * um, 1 }}} };
+//Sample currentSample{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,  {{{"TDT", 1040, 30. * mW, 150. * um, 4 } , { "DAPI", 750, 12. * mW, 120. * um, 2 }}} };
 
-//Sample beads4um{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 0.}, { "GFP", 920, 30. * mW, 0. }, { "TDT", 1040, 5. * mW, 0. }}} };
-//Sample beads05um{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. }, { "GFP", 920, 40. * mW, 0. }, { "TDT", 1040, 15. * mW, 0. }}} };
-//Sample fluorSlide{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. }}} };
-//Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{{"TDT", 1040, 30. * mW, 0. } , { "GFP", 920, 25. * mW, 0. }, { "DAPI", 750, 40. * mW, 0. }}} };
+Sample currentSample{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 35. * mW, 1000. * um}, { "GFP", 920, 30. * mW, 1000. * um}, { "TDT", 1040, 7. * mW, 1000. * um}}} };
+//Sample currentSample{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. }, { "GFP", 920, 40. * mW, 0. }, { "TDT", 1040, 15. * mW, 0. }}} };
+//Sample currentSample{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. }}} };
 #endif
 
 double determineChromaticShift(const int wavelength_nm, const Laser::ID whichLaser)
@@ -26,11 +26,14 @@ double determineChromaticShift(const int wavelength_nm, const Laser::ID whichLas
 	if (wavelength_nm == 750)
 		return 6 * um;
 
-	//This is because FIDELITY is chromatically shifted wrt VISION
-	if (wavelength_nm == 1040 && (whichLaser == Laser::ID::FIDELITY || whichLaser == Laser::ID::AUTO))
+	//FIDELITY is chromatically shifted wrt VISION
+	else if ( whichLaser == Laser::ID::FIDELITY ||
+		      whichLaser == Laser::ID::AUTO && wavelength_nm == 1040 && multibeam == 1)
 		return 4 * um;
-}
 
+	else
+		return 0;
+}
 
 namespace Routines
 {
@@ -46,9 +49,9 @@ namespace Routines
 		
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
-		const Laser::ID whichLaser{ Laser::ID::VISION };
+		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const int nFramesCont{ 1 };	
-		const double stackDepthZ{ 40. * um };								//Stack deepth in the Z-stage axis
+		const double stackDepthZ{ 20. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
 	
 		const double pixelSizeXY{ 0.5 * um };
@@ -56,7 +59,7 @@ namespace Routines
 		const int widthPerFrame_pix{ 300 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
-		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorMarker.mWavelength_nm, whichLaser);
+		stackCenterXYZ.ZZ -= determineChromaticShift(fluorMarker.mWavelength_nm, whichLaser);
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -80,9 +83,9 @@ namespace Routines
 		{
 		case RUNMODE::SINGLE:
 			stagePosXYZ.push_back(stackCenterXYZ);
-			if (!multibeam) //For multibeam, no need for saving all the PMT channels
+			if (!multibeam) //No need for saving all the PMT channels for multibeam,
 			{
-				//saveAllPMT = true;
+				saveAllPMT = true;
 			}
 			break;
 		case RUNMODE::AVG:
@@ -127,18 +130,18 @@ namespace Routines
 		}
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont };
+		RTseq rtseq{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont };
 		Mesoscope mesoscope{ whichLaser };
-		mesoscope.configure(RTcontrol, fluorMarker.mWavelength_nm);
+		mesoscope.configure(rtseq, fluorMarker.mWavelength_nm);
 
 		//RS
-		const ResonantScanner RScanner{ RTcontrol };
+		const ResonantScanner RScanner{ rtseq };
 		RScanner.isRunning();						//To make sure that the RS is running
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2.};
-		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
-		//const Galvo rescanner{ RTcontrol, 0, fluorMarker.mWavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		const Galvo scanner{ rtseq, FFOVslowPerBeamlet / 2.};
+		const Galvo rescanner{ rtseq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		//const Galvo rescanner{ rtseq, 0, fluorMarker.mWavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//STAGES
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps, currentSample.readStageSoftPosLimXYZ() };
@@ -169,8 +172,8 @@ namespace Routines
 				mesoscope.moveCollectorLens(cLensPosIni + iterLocation * cLensStep);
 
 			//EXECUTE THE CONTROL SEQUENCE
-			RTcontrol.run();					//Execute the control sequence and acquire the image
-			Image image{ RTcontrol };
+			rtseq.run();					//Execute the control sequence and acquire the image
+			Image image{ rtseq };
 			image.acquire(saveAllPMT);
 			image.averageFrames();				//Average the frames imaged via continuous acquisition
 			//image.averageEvenOddFrames();		//For debugging
@@ -259,7 +262,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ currentSample.findFluorMarker("TDT") };				//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ currentSample.findFluorMarker("TDT") };			//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -273,10 +276,10 @@ namespace Routines
 		const int widthPerFrame_pix{ 300 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };										//Full FOV in the slow axis
 
-		//stackCenterXYZ.ZZ -= determineChromaticShift(fluorMarker.mWavelength_nm, whichLaser);
+		stackCenterXYZ.ZZ -= determineChromaticShift(fluorMarker.mWavelength_nm, whichLaser);
 
 		//Center the stack
-		////////////////////////////////////stackCenterXYZ.at(Stage::Z) -= nFramesCont * pixelSizeZbeforeBinning /2;
+		stackCenterXYZ.ZZ -= nFrames * pixelSizeZbeforeBinning /2;
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -292,18 +295,18 @@ namespace Routines
 		}
 
 		//CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames };	//Note the STAGEZ flag
+		RTseq rtseq{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames };	//Note the STAGEZ flag
 		Mesoscope mesoscope{ whichLaser };
-		mesoscope.configure(RTcontrol, fluorMarker.mWavelength_nm);
+		mesoscope.configure(rtseq, fluorMarker.mWavelength_nm);
 		mesoscope.setPowerExponentialScaling(fluorMarker.mScanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(scanDirZ) * fluorMarker.mScanPexp);
 
 		//RS
-		const ResonantScanner RScanner{ RTcontrol };
+		const ResonantScanner RScanner{ rtseq };
 		RScanner.isRunning();		//To make sure that the RS is running
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2. };
-		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		const Galvo scanner{ rtseq, FFOVslowPerBeamlet / 2. };
+		const Galvo rescanner{ rtseq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//STAGES
 		const double stageZi = determineInitialScanPos(stackCenterXYZ.ZZ, stackDepth, 0. * mm, scanDirZ);
@@ -317,13 +320,13 @@ namespace Routines
 		//EXECUTE THE CONTROL SEQUENCE
 		mesoscope.openShutter();				//Open the shutter. The destructor will close the shutter automatically
 		
-		RTcontrol.initialize(scanDirZ);
+		rtseq.initialize(scanDirZ);
 		std::cout << "Scanning the stack...\n";
 		stage.moveSingle(Stage::ZZ, stageZf);	//Move the stage to trigger the ctl&acq sequence
-		RTcontrol.downloadData();
+		rtseq.downloadData();
 
-		mesoscope.closeShutter();			//Close the shutter manually even though the destructor does it because the post-processing could take a long time
-		Image image{ RTcontrol };
+		mesoscope.closeShutter();				//Close the shutter manually even though the destructor does it because the post-processing could take a long time
+		Image image{ rtseq };
 		image.acquire();
 		image.binFrames(nFramesBinning);
 		//image.correct(RScanner.mFFOV);
@@ -349,13 +352,13 @@ namespace Routines
 		const FluorMarkerList::FluorMarker fluorMarker{ currentSample.findFluorMarker("TDT") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
-		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
-		const double fullWidth{ 10.000 * mm };												//Total width of the tile array
+		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };												//Initial scan direction of stage 
+		const double fullWidth{ 10.000 * mm };													//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
-		const double tileWidth{ 150. * um };												//Width of a strip
-		const double fullHeight{ 53 * tileHeight };											//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
-		const double pixelSizeX{ 1.0 * um };												//WARNING: the image becomes distorted at the edges of the strip when pixelSizeX > 1 um (check this again)
+		const double tileWidth{ 150. * um };													//Width of a strip
+		const double fullHeight{ 53 * tileHeight };												//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
+		const double pixelSizeX{ 1.0 * um };													//WARNING: the image becomes distorted at the edges of the strip when pixelSizeX > 1 um (check this again)
 		const double pixelSizeY{ 0.5 * um };
 
 		QuickScanXY quickScanXY{ {stackCenterXYZ.XX, stackCenterXYZ.YY}, {  tileHeight, tileWidth }, { pixelSizeX, pixelSizeY }, { fullHeight, fullWidth } };
@@ -365,19 +368,19 @@ namespace Routines
 		//CONTROL SEQUENCE
 		//The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
 		const int nFrames{ 2 };
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, quickScanXY.readTileWidth_pix(), quickScanXY.readTileHeight_pix() / 2 };
+		RTseq rtseq{ fpga, LINECLOCK::RS, MAINTRIG::STAGEX, FIFOOUTfpga::EN, nFrames, quickScanXY.readTileWidth_pix(), quickScanXY.readTileHeight_pix() / 2 };
 		Mesoscope mesoscope{ whichLaser };
-		mesoscope.configure(RTcontrol, fluorMarker.mWavelength_nm);
+		mesoscope.configure(rtseq, fluorMarker.mWavelength_nm);
 		mesoscope.setPower(fluorMarker.mScanPmin);
 
 		//RS
-		const ResonantScanner RScanner{ RTcontrol };
+		const ResonantScanner RScanner{ rtseq };
 		RScanner.isRunning();		//To make sure that the RS is running
 
 		//SCANNERS. Keep them fixed at 0
 		const double galvoScanAmplitude{ 0 };
-		const Galvo scanner{ RTcontrol, galvoScanAmplitude };
-		const Galvo rescanner{ RTcontrol, galvoScanAmplitude, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		const Galvo scanner{ rtseq, galvoScanAmplitude };
+		const Galvo rescanner{ rtseq, galvoScanAmplitude, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//STAGES
 		Stage stage{ 5 * mmps, 5 * mmps, 0.5 * mmps, currentSample.readStageSoftPosLimXYZ() };
@@ -404,12 +407,12 @@ namespace Routines
 			Sleep(300);					//Avoid iterations too close to each other, otherwise the X-stage will fail to trigger the ctl&acq sequence.
 										//This might be because of g_postSequenceTimer
 
-			RTcontrol.initialize();
+			rtseq.initialize();
 			std::cout << "Scanning the stack...\n";
 			stage.moveSingle(Stage::XX, stageXf);					//Move the stage to trigger the ctl&acq sequence
-			RTcontrol.downloadData();
+			rtseq.downloadData();
 
-			Image image{ RTcontrol };
+			Image image{ rtseq };
 			image.acquireVerticalStrip(iterScanDirX);
 			image.correctRSdistortion(tileWidth);					//Correct the image distortion induced by the nonlinear scanning of the RS
 			quickScanXY.push(image.data(), { 0, iterLocation });	//for now, only allowed to stack up strips to the right
@@ -450,12 +453,12 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 0.3 * mm, 0.2 * mm, 0.150 * mm };
-		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.50 };										//Stack overlap
-		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };											//Stack overlap
+		const LENGTH3 LOIxyz{ 0.3 * mm, 0.2 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
+		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.50 };										//Stack overlap
+		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };											//Stack overlap
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -485,11 +488,11 @@ namespace Routines
 			stage.waitForMotionToStopAll();
 
 			//CONTROL SEQUENCE
-			RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix };
+			RTseq rtseq{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix };
 			Mesoscope mesoscope{ Laser::ID::VISION };
 
 			//RS
-			const ResonantScanner RScanner{ RTcontrol };
+			const ResonantScanner RScanner{ rtseq };
 			RScanner.isRunning();		//To make sure that the RS is running
 
 			//Read the commands line by line
@@ -502,7 +505,7 @@ namespace Routines
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 
 				//SCANNERS
-				const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2. };
+				const Galvo scanner{ rtseq, FFOVslowPerBeamlet / 2. };
 
 				//These parameters must be accessible to all the cases
 				int wavelength_nm, nFramesBinning, sliceNumber, stackNumber, tileIndexI, tileIndexJ;
@@ -524,7 +527,7 @@ namespace Routines
 						//Set the number of frames considering that binning will be performed
 						nFramesBinning = acqStack.readNframeBinning();
 						const int nFramesBeforeBinning{ nFramesAfterBinning * nFramesBinning };
-						RTcontrol.setNumberOfFrames(nFramesBeforeBinning);
+						rtseq.setNumberOfFrames(nFramesBeforeBinning);
 
 						//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix	
 						const double pixelSizeZbeforeBinning{ stackDepth / nFramesBeforeBinning };
@@ -537,22 +540,22 @@ namespace Routines
 						scanZf = determineFinalScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
 
 						//Update the laser parameters
-						mesoscope.configure(RTcontrol, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
+						mesoscope.configure(rtseq, wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
 						scanPmin = acqStack.readScanPmin();
 						scanPexp = acqStack.readScanPexp();
 						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(iterScanDirZ) * acqStack.readScanPexp());
 
-						Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+						Galvo rescanner{ rtseq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 					}
 					stage.moveSingle(Stage::ZZ, scanZi);	//Move the stage to the initial Z position
-					RTcontrol.initialize(iterScanDirZ);			//Use the scan direction determined dynamically
+					rtseq.initialize(iterScanDirZ);			//Use the scan direction determined dynamically
 					mesoscope.openShutter();				//Re-open the Uniblitz shutter if closed by the pockels destructor
 
 					std::cout << "Scanning slice = " << std::to_string(sliceNumber) << "/" << sequence.readNtotalSlices() << "\tstack = " <<
 														std::to_string(stackNumber) << "/" << sequence.readNtotalStacks() << "\n";
 
 					stage.moveSingle(Stage::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
-					RTcontrol.downloadData();
+					rtseq.downloadData();
 					reverseSCANDIR(iterScanDirZ);
 					break;
 				case Action::ID::SAV:
@@ -577,7 +580,7 @@ namespace Routines
 						"_zi=" + Util::toString(scanZi / mm, 4) + "_zf=" + Util::toString(scanZf / mm, 4) +
 						"_Step=" + Util::toString(pixelSizeZafterBinning / mm, 4) + "_bin=" + Util::toString(nFramesBinning, 0);
 
-						Image image{ RTcontrol };
+						Image image{ rtseq };
 						image.acquire();
 						image.binFrames(nFramesBinning);
 						image.save(shortName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
@@ -623,17 +626,17 @@ namespace Routines
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };								//Full FOV in the slow axis
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
+		RTseq rtseq{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 		Mesoscope mesoscope{ Laser::ID::VISION };
-		mesoscope.configure(RTcontrol, fluorMarker.mWavelength_nm);
+		mesoscope.configure(rtseq, fluorMarker.mWavelength_nm);
 
 		//RS
-		const ResonantScanner RScanner{ RTcontrol };
+		const ResonantScanner RScanner{ rtseq };
 		RScanner.isRunning();					//To make sure that the RS is running
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, FFOVslow / 2. };
-		const Galvo rescanner{ RTcontrol, FFOVslow / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		const Galvo scanner{ rtseq, FFOVslow / 2. };
+		const Galvo rescanner{ rtseq, FFOVslow / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//OPEN THE UNIBLITZ SHUTTERS
 		mesoscope.openShutter();											//The destructor will close the shutter automatically
@@ -642,15 +645,15 @@ namespace Routines
 		{
 			mesoscope.setPower(fluorMarker.mScanPmin);						//Set the laser power
 
-			RTcontrol.run();
-			Image image{ RTcontrol };
+			rtseq.run();
+			Image image{ rtseq };
 			image.acquire();												//Execute the control sequence
 			image.averageFrames();											//Average the frames acquired via continuous acquisition
 			//image.correct(RScanner.mFFOV);
 			image.save("Untitled", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);	//Save individual files
 			Sleep(700);
 
-			Util::pressESCforEarlyTermination();						//Early termination if ESC is pressed
+			Util::pressESCforEarlyTermination();							//Early termination if ESC is pressed
 		}
 	}
 }//namespace
@@ -664,16 +667,16 @@ namespace TestRoutines
 	{
 		const double timeStep{ 4. * us };
 
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
+		RTseq rtseq{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, timeStep, 1);
 
 		//Many short digital pulses to accumulate the error
 		for (U32 ii = 0; ii < 99; ii++)
-			RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
+			rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, timeStep, 0);
 
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, timeStep, 1);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, timeStep, 0);
 	}
 
 	//First calibrate the digital channels, then use it as a time reference
@@ -682,25 +685,25 @@ namespace TestRoutines
 		const double delay{ 400. * us };
 		const double timeStep{ 4. * us };
 
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, timeStep, 10 * V);						//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, timeStep, 0);
-		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, 4 * us, delay, 0, 5 * V, OVERRIDE::DIS);	//Linear ramp to accumulate the error
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, timeStep, 10 * V);						//Initial pulse
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, timeStep, 0);							//Final pulse
+		RTseq rtseq{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
+		rtseq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, timeStep, 10 * V);						//Initial pulse
+		rtseq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, timeStep, 0);
+		rtseq.pushLinearRamp(RTseq::RTCHAN::SCANNER, 4 * us, delay, 0, 5 * V, OVERRIDE::DIS);	//Linear ramp to accumulate the error
+		rtseq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, timeStep, 10 * V);						//Initial pulse
+		rtseq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, timeStep, 0);							//Final pulse
 
 		//DO0
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, delay, 0);
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, timeStep, 1);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, timeStep, 0);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, delay, 0);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, timeStep, 1);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, timeStep, 0);
 	}
 
 	void pixelclock(const FPGA &fpga)
 	{
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, FIFOOUTfpga::DIS, 560, 300, 1 }; 	//Create the control sequence
-		RTcontrol.run();																				//Execute the control sequence
+		RTseq rtseq{ fpga, LINECLOCK::FG, MAINTRIG::STAGEX, FIFOOUTfpga::DIS, 560, 300, 1 }; 	//Create the control sequence
+		rtseq.run();																			//Execute the control sequence
 	}
 
 	//Generate a long digital pulse and check the frameDuration with the oscilloscope
@@ -708,26 +711,26 @@ namespace TestRoutines
 	{
 		const double timeStep{ 400. * us };
 
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 1);
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, timeStep, 0);
+		RTseq rtseq{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, timeStep, 1);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, timeStep, 0);
 	}
 
 	//Test the analog and digital output and the relative timing wrt the pixel clock
 	void analogAndDigitalOut(const FPGA &fpga)
 	{
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
+		RTseq rtseq{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
 		//DO
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, 4 * us, 1);
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, 4 * us, 0);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, 4 * us, 1);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, 4 * us, 0);
 
 		//AO
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, 8 * us, 4 * V);
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, 4 * us, 2 * V);
-		RTcontrol.pushAnalogSinglet(RTcontrol::RTCHAN::SCANNER, 4 * us, 1 * V);
+		rtseq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, 8 * us, 4 * V);
+		rtseq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, 4 * us, 2 * V);
+		rtseq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, 4 * us, 1 * V);
 
-		RTcontrol.mFpga.triggerControlSequence();	//Execute the control sequence
+		rtseq.mFpga.triggerControlSequence();	//Execute the control sequence
 	}
 
 	void analogRamp(const FPGA &fpga)
@@ -735,14 +738,14 @@ namespace TestRoutines
 		const double Vmax{ 5. * V };
 		const double step{ 4. * us };
 
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
-		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, step, 2 * ms, 0, -Vmax, OVERRIDE::DIS);
-		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, step, 20 * ms, -Vmax, Vmax, OVERRIDE::DIS);
-		RTcontrol.pushLinearRamp(RTcontrol::RTCHAN::SCANNER, step, 2 * ms, Vmax, 0, OVERRIDE::DIS);
+		RTseq rtseq{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
+		rtseq.pushLinearRamp(RTseq::RTCHAN::SCANNER, step, 2 * ms, 0, -Vmax, OVERRIDE::DIS);
+		rtseq.pushLinearRamp(RTseq::RTCHAN::SCANNER, step, 20 * ms, -Vmax, Vmax, OVERRIDE::DIS);
+		rtseq.pushLinearRamp(RTseq::RTCHAN::SCANNER, step, 2 * ms, Vmax, 0, OVERRIDE::DIS);
 
 		const double pulsewidth(300. * us);
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, pulsewidth, 1);
-		RTcontrol.pushDigitalSinglet(RTcontrol::RTCHAN::DODEBUG, 4 * us, 0);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, pulsewidth, 1);
+		rtseq.pushDigitalSinglet(RTseq::RTCHAN::DODEBUG, 4 * us, 0);
 	}
 
 	//I think this is for matching the galvos forward and backward scans via imaging beads
@@ -761,25 +764,25 @@ namespace TestRoutines
 		stage.waitForMotionToStopAll();
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
+		RTseq rtseq{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 		Mesoscope mesoscope{ Laser::ID::FIDELITY };
 		const int wavelength_nm{ 1040 };
 		const double laserPower{ 25. * mW };		//Laser power
-		mesoscope.configure(RTcontrol, wavelength_nm);
+		mesoscope.configure(rtseq, wavelength_nm);
 		mesoscope.setPower(laserPower);
 
 		//RS
-		const ResonantScanner RScanner{ RTcontrol };
+		const ResonantScanner RScanner{ rtseq };
 		RScanner.isRunning();		//To make sure that the RS is running
 
 		//SCANNERS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };					//Full FOV in the slow axis
-		Galvo scanner{ RTcontrol, FFOVslow / 2. };
+		Galvo scanner{ rtseq, FFOVslow / 2. };
 
 		//CONTROL SEQUENCE
 		mesoscope.openShutter();	//Open the uniblitz shutter. The destructor will close the shutter automatically
-		RTcontrol.run();
-		Image image{ RTcontrol };
+		rtseq.run();
+		Image image{ rtseq };
 		image.acquire();			//Execute the control sequence and acquire the image via continuous acquisition
 		image.averageEvenOddFrames();
 		image.save("Untitled", TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
@@ -788,9 +791,9 @@ namespace TestRoutines
 	void resonantScanner(const FPGA &fpga)
 	{
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
+		RTseq rtseq{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
-		ResonantScanner RScanner{ RTcontrol };
+		ResonantScanner RScanner{ rtseq };
 		std::cout << "aaa = " << RScanner.downloadControlVoltage() << "\n";
 		//RScanner.turnOn(150 * um);
 		//RScanner.turnOff();
@@ -806,16 +809,16 @@ namespace TestRoutines
 		const int nFramesCont{ 1 };
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
+		RTseq rtseq{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//SCANNERS
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Scan duration in the slow axis
 		const int wavelength_nm{ 750 };
-		Galvo scanner{ RTcontrol, FFOVslow / 2. };
-		Galvo rescanner{ RTcontrol, FFOVslow / 2.,  Laser::ID::VISION, wavelength_nm };
+		Galvo scanner{ rtseq, FFOVslow / 2. };
+		Galvo rescanner{ rtseq, FFOVslow / 2.,  Laser::ID::VISION, wavelength_nm };
 
 		//Execute the control sequence and acquire the image
-		RTcontrol.run();
+		rtseq.run();
 		Util::pressAnyKeyToCont();
 	}
 
@@ -848,19 +851,19 @@ namespace TestRoutines
 		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the Z-stage axis
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont };
+		RTseq rtseq{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont };
 		Mesoscope mesoscope{ Laser::ID::VISION };
 		const int wavelength_nm{ 750 };
-		mesoscope.configure(RTcontrol, wavelength_nm);
+		mesoscope.configure(rtseq, wavelength_nm);
 		mesoscope.setPower(selectPower);
 
 		//SCANNERS
-		const Galvo scanner{ RTcontrol, FFOVslowPerBeamlet / 2. };
-		const Galvo rescanner{ RTcontrol, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
-		//const Galvo rescanner{ RTcontrol, 0, wavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		const Galvo scanner{ rtseq, FFOVslowPerBeamlet / 2. };
+		const Galvo rescanner{ rtseq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		//const Galvo rescanner{ rtseq, 0, wavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//EXECUTE THE CONTROL SEQUENCE
-		RTcontrol.run();
+		rtseq.run();
 	}
 
 	void stagePosition()
@@ -928,9 +931,9 @@ namespace TestRoutines
 	void shutter(const FPGA &fpga)
 	{
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
+		RTseq rtseq{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
-		Pockels fidelity{ RTcontrol, 1040, Laser::ID::FIDELITY };
+		Pockels fidelity{ rtseq, 1040, Laser::ID::FIDELITY };
 		fidelity.setShutter(true);
 		Sleep(5000);
 		fidelity.setShutter(false);
@@ -949,19 +952,20 @@ namespace TestRoutines
 	void pockels(const FPGA &fpga)
 	{
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
+		RTseq rtseq{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
 		//DEFINE THE POCKELS
-		Pockels pockelsVision{ RTcontrol, 1040, Laser::ID::VISION };
-		Pockels pockelsFidelity{ RTcontrol, 1040, Laser::ID::FIDELITY };
+		Pockels pockelsVision{ rtseq, 920, Laser::ID::VISION };
+		Pockels pockelsFidelity{ rtseq, 1040, Laser::ID::FIDELITY };
 
 		Pockels pockels{ pockelsVision };
 		//Pockels pockels{ pockelsFidelity };
 
-		pockels.pushVoltageSinglet(8 * us, 0.0 * V, OVERRIDE::DIS);
+		//pockels.pushVoltageSinglet(8 * us, 0.0 * V, OVERRIDE::DIS);
+		pockels.pushPowerSinglet(8 * us, 0. * mW, OVERRIDE::DIS);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
-		RTcontrol.run();
+		rtseq.run();
 		//pressAnyKeyToCont();
 	}
 
@@ -970,14 +974,14 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
-		const int nFramesCont{ 100 };						//Number of frames for continuous acquisition
+		const int nFramesCont{ 100 };										//Number of frames for continuous acquisition
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
+		RTseq rtseq{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//POCKELS
 		const int wavelength_nm{ 750 };
-		Pockels pockels{ RTcontrol, wavelength_nm, Laser::ID::VISION };
+		Pockels pockels{ rtseq, wavelength_nm, Laser::ID::VISION };
 		const double Pi{ 500. * mW }, Pf{ 1000. * mW };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };
 		const double laserPi = determineInitialLaserPower(Pi, Pf - Pi, scanDirZ);
@@ -995,10 +999,10 @@ namespace TestRoutines
 
 		//Test the voltage setpoint
 		//pockels.pushVoltageSinglet(8* us, 0.0 * V, OVERRIDE::EN);
-		//pockels.pushVoltageLinearRamp(0.5 * V, 1.0 * V);		//Linearly scale the pockels voltage from the first to the last frame
+		//pockels.pushVoltageLinearRamp(0.5 * V, 1.0 * V);					//Linearly scale the pockels voltage from the first to the last frame
 
 		//EXECUTE THE CONTROL SEQUENCE
-		RTcontrol.run();
+		rtseq.run();
 		Util::pressAnyKeyToCont();
 	}
 
@@ -1016,12 +1020,12 @@ namespace TestRoutines
 	void virtualLasers(const FPGA &fpga)
 	{
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
+		RTseq rtseq{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
 		const int wavelength_nm{ 1040 };
 		const double laserPower{ 50. * mW };
 		Mesoscope mesoscope{ Laser::ID::VISION };
-		mesoscope.configure(RTcontrol, wavelength_nm);
+		mesoscope.configure(rtseq, wavelength_nm);
 		mesoscope.setPower(laserPower);
 	}
 
@@ -1032,22 +1036,22 @@ namespace TestRoutines
 		laser.setWavelength(920);
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, 400, 300, 100 };
+		RTseq rtseq{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, 400, 300, 100 };
 
 		//RS
-		ResonantScanner RScanner{ RTcontrol };
+		ResonantScanner RScanner{ rtseq };
 		RScanner.isRunning();		//To make sure that the RS is running
 
 		//SCANNERS. Keep the scanner fixed to bleach a line on the sample
-		Galvo scanner{ RTcontrol, 0 };
+		Galvo scanner{ rtseq, 0 };
 
 		//POCKELS
-		Pockels pockels{ RTcontrol, 920, Laser::ID::VISION };
+		Pockels pockels{ rtseq, 920, Laser::ID::VISION };
 		pockels.pushPowerSinglet(8 * us, 200 * mW, OVERRIDE::DIS);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		pockels.setShutter(true);
-		RTcontrol.run();
+		rtseq.run();
 
 		//Wait until the sequence is over to close the shutter, otherwise this code will finish before the sequence
 		Util::pressAnyKeyToCont();
@@ -1133,7 +1137,7 @@ namespace TestRoutines
 	void correctImage()
 	{
 
-		std::string inputFilename{ "Liver20190812_02_V750nm_P=320.0mW_Pexp=120um_x=45.756_y=28.670_zi=17.6400_zf=17.7500_Step=0.0010_bin=2" };
+		std::string inputFilename{ "Liver20190812_02_F1040nm_P=800.0mW_Pexp=150um_x=44.300_y=24.003_zi=18.0510_zf=18.1610_Step=0.0010_bin=4" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		//image.correctFOVslowCPU(1);
@@ -1160,8 +1164,8 @@ namespace TestRoutines
 
 	void quickStitcher()
 	{
-		//RTcontrol RTcontrol{ fpga };
-		//Image image{ RTcontrol };
+		//RTseq rtseq{ fpga };
+		//Image image{ rtseq };
 		//image.save("empty", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
 		//image.acquireVerticalStrip(SCANDIRX::LEFT);
 
@@ -1339,7 +1343,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const FFOV2 FFOV{ 200. * um, 150. * um };
 		const int nDiffZ{ 100 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double pixelSizeZ{ 0.5 * um };									//Step size in the Z-stage axis
+		const double pixelSizeZ{ 0.5 * um };								//Step size in the Z-stage axis
 		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.05 };			//Stack overlap
 		const Stack stack{ FFOV, pixelSizeZ, nDiffZ, stackOverlap_frac };
 
@@ -1403,7 +1407,7 @@ namespace TestRoutines
 		//PMT.readTemp();
 		PMT.readAllGains();
 		
-		//PMT.suppressGainsLinearly(0.4, RTcontrol::PMT16XCHAN::CH05, RTcontrol::PMT16XCHAN::CH10);
+		//PMT.suppressGainsLinearly(0.4, RTseq::PMT16XCHAN::CH05, RTseq::PMT16XCHAN::CH10);
 		
 		/*
 		//To make the count from all the channels similar,
@@ -1444,20 +1448,20 @@ namespace TestRoutines
 		const int wavelength_nm{ 750 };
 
 		//CREATE THE CONTROL SEQUENCE
-		RTcontrol RTcontrol{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
+		RTseq rtseq{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 		Mesoscope mesoscope{ Laser::ID::VISION };
 		const double laserPower{ 30. * mW };
-		mesoscope.configure(RTcontrol, wavelength_nm);
+		mesoscope.configure(rtseq, wavelength_nm);
 		mesoscope.setPower(laserPower);
 
 		//SCANNERS
-		Galvo scanner{ RTcontrol, FFOVslow / 2. };
-		Galvo rescanner{ RTcontrol, FFOVslow / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
-		//Galvo scanner{ RTcontrol, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
+		Galvo scanner{ rtseq, FFOVslow / 2. };
+		Galvo rescanner{ rtseq, FFOVslow / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		//Galvo scanner{ rtseq, 0 };				//Keep the scanner fixed to see the emitted light swing across the PMT16X channels. The rescanner must be centered
 
 		//EXECUTE THE CONTROL SEQUENCE
-		RTcontrol.run();
-		Image image{ RTcontrol };
+		rtseq.run();
+		Image image{ rtseq };
 		image.acquire();
 		image.save("SingleChannel", TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 	}

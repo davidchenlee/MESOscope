@@ -463,7 +463,6 @@ void FPGA::initializeFpga_() const
 {
 	if (g_FIFOtimeout_tick < 0 || g_DOdelay_tick < 0 || g_pockelsFirstFrameDelay < 0 || g_pockelsSecondaryDelay < 0 || g_scannerDelay < 0 || g_rescannerDelay < 0 || g_linegateTimeout < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
-
 	if (g_linegateTimeout <= 2 * g_lineclockHalfPeriod)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
 
@@ -477,7 +476,7 @@ void FPGA::initializeFpga_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));										//Trigger the AOs of the FPGA externally
 
 	//FIFOIN
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mHandle, NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTcontrol::RTCHAN::NCHAN)));				//Number of input channels
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mHandle, NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTseq::RTCHAN::NCHAN)));					//Number of input channels
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));												//Trigger of the control sequence
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(g_FIFOtimeout_tick)));				//FIFOIN timeout
 
@@ -557,20 +556,20 @@ void FPGA::readChunk_(const int &nPixPerBeamletAllFrames, int &nElemRead, const 
 }
 #pragma endregion "FPGA"
 
-#pragma region "RTcontrol"
-RTcontrol::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell) :
+#pragma region "RTseq"
+RTseq::Pixelclock::Pixelclock(const int widthPerFrame_pix, const double dwell) :
 	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mDwell{ dwell }
 {
 	pushUniformDwellTimes_();
 }
 
-QU32 RTcontrol::Pixelclock::readPixelclock() const
+QU32 RTseq::Pixelclock::readPixelclock() const
 {
 	return mPixelclockQ;
 }
 
-RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames) :
+RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames) :
 	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },	//Initialize the size the vector containing the queues (= # of queues)
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
@@ -602,8 +601,8 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
-//This constructor is meant to be used with RTcontrol::setNumberOfFrames(const int nFrames)
-RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix):
+//This constructor is meant to be used with RTseq::setNumberOfFrames(const int nFrames)
+RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix):
 	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
@@ -620,7 +619,7 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 }
 
 //Set mNframes
-void RTcontrol::setNumberOfFrames(const int nFrames)
+void RTseq::setNumberOfFrames(const int nFrames)
 {
 	if (nFrames <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
@@ -644,9 +643,9 @@ void RTcontrol::setNumberOfFrames(const int nFrames)
 	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
-RTcontrol::~RTcontrol()
+RTseq::~RTseq()
 {
-	//std::cout << "RTcontrol destructor called\n"; //For debugging
+	//std::cout << "RTseq destructor called\n"; //For debugging
 
 	//Before I implemented StopFIFOOUTpc_, the computer crashed every time the code was executed immediately after an exception.
 	//I think this is because FIFOOUTpc used to remain open and clashed with the subsequent call
@@ -656,22 +655,22 @@ RTcontrol::~RTcontrol()
 	delete[] mBufferB;
 }
 
-void RTcontrol::pushQueue(const RTCHAN chan, QU32& queue)
+void RTseq::pushQueue(const RTCHAN chan, QU32& queue)
 {
 	FPGAfunc::concatenateQueues(mVec_queue.at(static_cast<U8>(chan)), queue);
 }
 
-void RTcontrol::clearQueue(const RTCHAN chan)
+void RTseq::clearQueue(const RTCHAN chan)
 {
 	mVec_queue.at(static_cast<U8>(chan)).clear();
 }
 
-void RTcontrol::pushDigitalSinglet(const RTCHAN chan, double timeStep, const bool DO)
+void RTseq::pushDigitalSinglet(const RTCHAN chan, double timeStep, const bool DO)
 {
 	mVec_queue.at(static_cast<U8>(chan)).push_back(FPGAfunc::packDigitalSinglet(timeStep, DO));
 }
 
-void RTcontrol::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override)
+void RTseq::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override)
 {
 	if (timeStep < g_tMinAO)
 	{
@@ -687,12 +686,12 @@ void RTcontrol::pushAnalogSinglet(const RTCHAN chan, double timeStep, const doub
 }
 
 //Push a fixed-point number. For scaling the pockels output
-void RTcontrol::pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor)
+void RTseq::pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor)
 {
 	mVec_queue.at(static_cast<U8>(chan)).push_back(static_cast<U32>(Util::doubleToFx2p14(scalingFactor)));
 }
 
-void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override)
+void RTseq::pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override)
 {
 	if (timeStep <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The time step must be > 0");
@@ -707,7 +706,7 @@ void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double 
 }
 
 //Preset the parameters for the acquisition sequence
-void RTcontrol::initialize(const SCANDIR stackScanDir)
+void RTseq::initialize(const SCANDIR stackScanDir)
 {
 	mFpga.enableFIFOOUTfpga(mEnableFIFOOUTfpga);	//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
 
@@ -724,7 +723,7 @@ void RTcontrol::initialize(const SCANDIR stackScanDir)
 }
 	
 //Scan a single frame
-void RTcontrol::run()
+void RTseq::run()
 {
 	initialize();					//Preset the parameters for the acquisition sequence
 	mFpga.triggerControlSequence();	//Trigger the ctl&acq sequence. If triggered too early, FIFOOUTfpga will probably overflow
@@ -732,7 +731,7 @@ void RTcontrol::run()
 }
 
 //Retrieve the data from the FPGA
-void RTcontrol::downloadData()
+void RTseq::downloadData()
 {
 	if (mEnableFIFOOUTfpga == FIFOOUTfpga::EN)
 	{
@@ -746,25 +745,24 @@ void RTcontrol::downloadData()
 			//throw;//Do not terminate the entire sequence. Notify the exception and continue with the next iteration
 		}
 	}
-	correctInterleaved_();					//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines
-											//In case of pipelining, remove it from RTcontrol::initialize() and call it separately
-
+	correctInterleaved_();									//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines
+															//In case of pipelining, remove it from RTseq::initialize() and call it separately
 	mFpga.setMainTrig(MAINTRIG::PC);						//Disable the stage triggering the ctl&acq sequence to allow positioning the stage after acquisition
 	Sleep(static_cast<DWORD>(g_postSequenceTimer / ms));	//Wait for at least the post-sequence timeout
 }
 
-U32* RTcontrol::dataBufferA() const
+U32* RTseq::dataBufferA() const
 {
 	return mBufferA;
 }
 
-U32* RTcontrol::dataBufferB() const
+U32* RTseq::dataBufferB() const
 {
 	return mBufferB;
 }
 
 //The pixel clock is triggered by the line clock (see the LV implementation) after an initial waiting time
-void RTcontrol::Pixelclock::pushUniformDwellTimes_()
+void RTseq::Pixelclock::pushUniformDwellTimes_()
 {
 	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
 	//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (g_lineclockHalfPeriod-400*125ns)/2
@@ -784,16 +782,16 @@ void RTcontrol::Pixelclock::pushUniformDwellTimes_()
 }
 
 //Determine the setpoint for the rescanner. mPMT16Xchan is called by the classes Galvo and Image
-RTcontrol::PMT16XCHAN RTcontrol::determineRescannerSetpoint_() const
+RTseq::PMT16XCHAN RTseq::determineRescannerSetpoint_() const
 {
 	if (multibeam)
 		return PMT16XCHAN::CENTERED;
 	else
-		return static_cast<RTcontrol::PMT16XCHAN>(g_PMT16Xchan_int);
+		return static_cast<RTseq::PMT16XCHAN>(g_PMT16Xchan_int);
 }
 
 //Ramp up or down the AO for the scanner and rescanner from the current voltage to the first value of the control sequence in mVec_queue to avoid jumps at the start of the sequence
-void RTcontrol::presetScannerPosition_() const
+void RTseq::presetScannerPosition_() const
 {
 	//Read the current voltage of the AOs for the scanner and rescanner. See the LV implementation
 	std::vector<I16> AOlastVoltage_I16(static_cast<U8>(RTCHAN::NCHAN), 0);								//Create a vector of zeros, one zero for each AO channel
@@ -820,21 +818,21 @@ void RTcontrol::presetScannerPosition_() const
 	mFpga.triggerAOext();											//Trigger the initialization ramp externally (not using the internal clocks)
 }
 
-void RTcontrol::initializeStages_(const SCANDIR stackScanDir)
+void RTseq::initializeStages_(const SCANDIR stackScanDir)
 {
 	mScanDir = stackScanDir;															//Initialize mScanDir to set the stage-trigger delay and stack-saving order
 	mFpga.setStageTrigDelay(mMainTrigger, mHeightPerBeamletPerFrame_pix, mScanDir);		//Set the delay for the stage triggering the ctl&acq sequence
 }
 
 //Upload the main control sequence to the FPGA
-void RTcontrol::uploadControlSequence_() const
+void RTseq::uploadControlSequence_() const
 {
 	mFpga.uploadFIFOIN(mVec_queue, static_cast<U8>(RTCHAN::NCHAN));
 }
 
 //The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample
-//For cleaner coding, do not move this function to the Image class since it modify a member of the RTcontrol class
-void RTcontrol::correctInterleaved_()
+//For cleaner coding, do not move this function to the Image class since it modify a member of the RTseq class
+void RTseq::correctInterleaved_()
 {
 	//std::reverse(mBufferA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mBufferA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
 	//reverses all the pixels between and including the indices 'lineIndex * widthPerFrame_pix' and '(lineIndex + 1) * widthPerFrame_pix - 1'
@@ -844,7 +842,7 @@ void RTcontrol::correctInterleaved_()
 		std::reverse(mBufferB + lineIndex * mWidthPerFrame_pix, mBufferB + (lineIndex + 1) * mWidthPerFrame_pix);
 	}
 }
-#pragma endregion "RTcontrol"
+#pragma endregion "RTseq"
 
 
 /* Functions for generating a non-uniform pixel clock
@@ -852,7 +850,7 @@ void RTcontrol::correctInterleaved_()
 extern const double RSpkpk_um = 250 * um;					//Peak-to-peak amplitude of the resonant scanner. Needed for generating a non-uniform pixelclock
 
 //Convert the spatial coordinate of the resonant scanner to time. x in [-RSpkpk_um/2, RSpkpk_um/2]
-double RTcontrol::Pixelclock::convertSpatialCoordToTime_us(const double x) const
+double RTseq::Pixelclock::convertSpatialCoordToTime_us(const double x) const
 {
 double arg = 2 * x / RSpkpk_um;
 if (arg > 1)
@@ -862,27 +860,27 @@ return halfPeriodLineclock / us * asin(arg) / Constants::PI; //The returned valu
 }
 
 //Discretize the spatial coordinate, then convert it to time
-double RTcontrol::Pixelclock::getDiscreteTime_us(const int pix) const
+double RTseq::Pixelclock::getDiscreteTime_us(const int pix) const
 {
 const double dx = 0.5 * um;
 return convertSpatialCoordToTime_us(dx * pix);
 }
 
 //Calculate the dwell time for the pixel
-double RTcontrol::Pixelclock::calculateDwellTime_us(const int pix) const
+double RTseq::Pixelclock::calculateDwellTime_us(const int pix) const
 {
 return getDiscreteTime_us(pix + 1) - getDiscreteTime_us(pix);
 }
 
 //Calculate the practical dwell time of each pixel, considering that the FPGA has discrete time steps
-double RTcontrol::Pixelclock::calculatePracticalDwellTime_us(const int pix) const
+double RTseq::Pixelclock::calculatePracticalDwellTime_us(const int pix) const
 {
 return round(calculateDwellTime_us(pix) * g_tickPerUs) / g_tickPerUs;		// 1/g_tickPerUs is the time step of the FPGA clock (microseconds per tick)
 }
 
 
 //Pixelclock with equal pixel size (spatial).
-void RTcontrol::Pixelclock::pushCorrectedDwellTimes()
+void RTseq::Pixelclock::pushCorrectedDwellTimes()
 {
 
 const int calibCoarse_tick = 2043;	//calibCoarse_tick: Look at the oscilloscope and adjust to center the pixel clock within a line scan

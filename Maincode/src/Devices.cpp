@@ -2,8 +2,8 @@
 
 #pragma region "Image"
 //When multiplexing, create a mTiff to store 16 strips of height 'mRTcontrol.mHeightPerFrame_pix' each
-Image::Image(const RTcontrol &RTcontrol) :
-	mRTcontrol{ RTcontrol },
+Image::Image(const RTseq &rtseq) :
+	mRTcontrol{ rtseq },
 	mTiff{ (static_cast<int>(multibeam) * (g_nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mNframes }
 {}
 
@@ -109,7 +109,7 @@ void Image::demuxSingleChannel_()
 	const unsigned int nBitsToShift{ 4 * static_cast<unsigned int>(mRTcontrol.mPMT16Xchan) };
 
 	//Demultiplex mBufferA (CH00-CH07). Each U32 element in mBufferA has the multiplexed structure | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
-	if (mRTcontrol.mPMT16Xchan >= RTcontrol::PMT16XCHAN::CH00 && mRTcontrol.mPMT16Xchan <= RTcontrol::PMT16XCHAN::CH07)
+	if (mRTcontrol.mPMT16Xchan >= RTseq::PMT16XCHAN::CH00 && mRTcontrol.mPMT16Xchan <= RTseq::PMT16XCHAN::CH07)
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
@@ -118,7 +118,7 @@ void Image::demuxSingleChannel_()
 		}
 	}
 	//Demultiplex mBufferB (CH08-CH15). Each U32 element in mBufferB has the multiplexed structure | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
-	else if (mRTcontrol.mPMT16Xchan >= RTcontrol::PMT16XCHAN::CH08 && mRTcontrol.mPMT16Xchan <= RTcontrol::PMT16XCHAN::CH15)
+	else if (mRTcontrol.mPMT16Xchan >= RTseq::PMT16XCHAN::CH08 && mRTcontrol.mPMT16Xchan <= RTseq::PMT16XCHAN::CH15)
 	{
 		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
 		{
@@ -184,8 +184,8 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 	{
 		//Save all PMT16X channels in separate pages in a Tiff
 		TiffU8 stack{ mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, g_nChanPMT * mRTcontrol.mNframes };
-		stack.pushImage(CountA.data(), static_cast<int>(RTcontrol::PMT16XCHAN::CH00), static_cast<int>(RTcontrol::PMT16XCHAN::CH07));
-		stack.pushImage(CountB.data(), static_cast<int>(RTcontrol::PMT16XCHAN::CH08), static_cast<int>(RTcontrol::PMT16XCHAN::CH15));
+		stack.pushImage(CountA.data(), static_cast<int>(RTseq::PMT16XCHAN::CH00), static_cast<int>(RTseq::PMT16XCHAN::CH07));
+		stack.pushImage(CountB.data(), static_cast<int>(RTseq::PMT16XCHAN::CH08), static_cast<int>(RTseq::PMT16XCHAN::CH15));
 
 		std::string PMT16Xchan_s{ std::to_string(static_cast<int>(mRTcontrol.mPMT16Xchan)) };
 		stack.saveToFile("AllChannels PMT16Xchan=" + PMT16Xchan_s, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
@@ -194,8 +194,8 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 #pragma endregion "Image"
 
 #pragma region "Resonant scanner"
-ResonantScanner::ResonantScanner(const RTcontrol &RTcontrol) :
-	mRTcontrol{ RTcontrol }
+ResonantScanner::ResonantScanner(const RTseq &rtseq) :
+	mRTcontrol{ rtseq }
 {	
 	//Calculate the spatial fill factor
 	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * g_pixelDwellTime / g_lineclockHalfPeriod };
@@ -347,10 +347,10 @@ void PMT16X::readAllGains() const
 		std::cout << "Gain CH" << ii << " (0-255) = " << static_cast<int>(parameters.at(ii + 1)) << "\n";
 }
 
-void PMT16X::setSingleGain(const RTcontrol::PMT16XCHAN chan, const int gain) const
+void PMT16X::setSingleGain(const RTseq::PMT16XCHAN chan, const int gain) const
 {
 	//Check that the inputVector parameters are within range
-	if (chan < RTcontrol::PMT16XCHAN::CH00 || chan > RTcontrol::PMT16XCHAN::CH15)
+	if (chan < RTseq::PMT16XCHAN::CH00 || chan > RTseq::PMT16XCHAN::CH15)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": PMT16X channel number out of range [1-" + std::to_string(g_nChanPMT) + "]");
 
 	if (gain < 0 || gain > 255)
@@ -419,7 +419,7 @@ void PMT16X::setAllGains(std::vector<uint8_t> gains) const
 }
 
 //Suppress the gain of the middle channels of the PMT16X by suppressFactor. Do a linear interpolation towards the lower and higher channels
-void PMT16X::suppressGainsLinearly(const double suppressFactor, const RTcontrol::PMT16XCHAN lowerChan, const RTcontrol::PMT16XCHAN higherChan) const
+void PMT16X::suppressGainsLinearly(const double suppressFactor, const RTseq::PMT16XCHAN lowerChan, const RTseq::PMT16XCHAN higherChan) const
 {
 	//Check that the inputVector parameters are within range
 	if (suppressFactor < 0 || suppressFactor > 1)
@@ -500,41 +500,41 @@ std::vector<uint8_t> PMT16X::sendCommand_(std::vector<uint8_t> command_array) co
 	return RxBuffer;
 }
 
-int PMT16X::PMT16XCHANtoInt_(const RTcontrol::PMT16XCHAN chan) const
+int PMT16X::PMT16XCHANtoInt_(const RTseq::PMT16XCHAN chan) const
 {
 	switch (chan)
 	{
-	case RTcontrol::PMT16XCHAN::CH00:
+	case RTseq::PMT16XCHAN::CH00:
 		return 0;
-	case RTcontrol::PMT16XCHAN::CH01:
+	case RTseq::PMT16XCHAN::CH01:
 		return 1;
-	case RTcontrol::PMT16XCHAN::CH02:
+	case RTseq::PMT16XCHAN::CH02:
 		return 2;
-	case RTcontrol::PMT16XCHAN::CH03:
+	case RTseq::PMT16XCHAN::CH03:
 		return 3;
-	case RTcontrol::PMT16XCHAN::CH04:
+	case RTseq::PMT16XCHAN::CH04:
 		return 4;
-	case RTcontrol::PMT16XCHAN::CH05:
+	case RTseq::PMT16XCHAN::CH05:
 		return 5;
-	case RTcontrol::PMT16XCHAN::CH06:
+	case RTseq::PMT16XCHAN::CH06:
 		return 6;
-	case RTcontrol::PMT16XCHAN::CH07:
+	case RTseq::PMT16XCHAN::CH07:
 		return 7;
-	case RTcontrol::PMT16XCHAN::CH08:
+	case RTseq::PMT16XCHAN::CH08:
 		return 8;
-	case RTcontrol::PMT16XCHAN::CH09:
+	case RTseq::PMT16XCHAN::CH09:
 		return 9;
-	case RTcontrol::PMT16XCHAN::CH10:
+	case RTseq::PMT16XCHAN::CH10:
 		return 10;
-	case RTcontrol::PMT16XCHAN::CH11:
+	case RTseq::PMT16XCHAN::CH11:
 		return 11;
-	case RTcontrol::PMT16XCHAN::CH12:
+	case RTseq::PMT16XCHAN::CH12:
 		return 12;
-	case RTcontrol::PMT16XCHAN::CH13:
+	case RTseq::PMT16XCHAN::CH13:
 		return 13;
-	case RTcontrol::PMT16XCHAN::CH14:
+	case RTseq::PMT16XCHAN::CH14:
 		return 14;
-	case RTcontrol::PMT16XCHAN::CH15:
+	case RTseq::PMT16XCHAN::CH15:
 		return 15;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected PMT16X channel unavailable");
@@ -1579,10 +1579,10 @@ void Shutter::pulse(const double pulsewidth) const
 #pragma region "Pockels"
 //Curently, the output of the pockels is gated on the FPGA side: the output is HIGH when 'framegate' is HIGH
 //Each Uniblitz shutter goes with a specific pockels, so it makes more sense to control the shutters through the Pockels class
-Pockels::Pockels(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID laserSelector) :
-	mRTcontrol{ RTcontrol },
+Pockels::Pockels(RTseq &rtseq, const int wavelength_nm, const Laser::ID laserSelector) :
+	mRTcontrol{ rtseq },
 	mWavelength_nm{ wavelength_nm },
-	mShutter{ RTcontrol.mFpga, laserSelector }
+	mShutter{ rtseq.mFpga, laserSelector }
 {
 	if (laserSelector != Laser::ID::VISION && laserSelector != Laser::ID::FIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
@@ -1590,14 +1590,14 @@ Pockels::Pockels(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID 
 	switch (laserSelector)
 	{
 	case Laser::ID::VISION:
-		mPockelsRTchan = RTcontrol::RTCHAN::VISION;
-		mScalingRTchan = RTcontrol::RTCHAN::SCALINGVISION;
+		mPockelsRTchan = RTseq::RTCHAN::VISION;
+		mScalingRTchan = RTseq::RTCHAN::SCALINGVISION;
 		break;
 	case Laser::ID::FIDELITY:
 		if (wavelength_nm != 1040)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength of FIDELITY can not be different from 1040 nm");
-		mPockelsRTchan = RTcontrol::RTCHAN::FIDELITY;
-		mScalingRTchan = RTcontrol::RTCHAN::SCALINGFIDELITY;
+		mPockelsRTchan = RTseq::RTCHAN::FIDELITY;
+		mScalingRTchan = RTseq::RTCHAN::SCALINGFIDELITY;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
@@ -1776,7 +1776,7 @@ double Pockels::convertPowerToVolt_(const double power) const
 	//VISION
 	switch (mPockelsRTchan)
 	{
-	case RTcontrol::RTCHAN::VISION:
+	case RTseq::RTCHAN::VISION:
 		switch (mWavelength_nm)
 		{
 		case 750://Calibrated 20190904
@@ -1785,12 +1785,12 @@ double Pockels::convertPowerToVolt_(const double power) const
 			angularFreq = 0.647 / V;
 			Vphase = 0.011 * V;
 
-			break;//The calibration is not current!!
+			break;//Calibrated 20190904
 		case 920:
-			powerAmplitude = 1089.0 * mW;
-			powerMin = 0 * mW;
-			angularFreq = 0.507 / V;
-			Vphase = -0.088 * V;
+			powerAmplitude = 969.1 * mW;
+			powerMin = 4.0 * mW;
+			angularFreq = 0.524 / V;
+			Vphase = -0.065 * V;
 			break;
 		case 1040://Calibrated 20190904
 			powerAmplitude = 336.3 * mW;
@@ -1804,7 +1804,7 @@ double Pockels::convertPowerToVolt_(const double power) const
 		break;
 
 		//FIDELITY. Calibrated 201908
-	case RTcontrol::RTCHAN::FIDELITY:
+	case RTseq::RTCHAN::FIDELITY:
 		powerAmplitude = 1601 * mW;
 		powerMin = 23.0 * mW;
 		angularFreq = 0.284 / V;
@@ -1815,13 +1815,26 @@ double Pockels::convertPowerToVolt_(const double power) const
 	}
 
 	if (power < powerMin)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser min power is " + std::to_string(powerMin) + " mW");
+	{
+		std::cerr << "WARNING: The requested laser power is lower than the min power " << std::to_string(powerMin) << " mW. The power was clipped to the min\n";
+		if (Vphase > 0)
+		{
+			return Vphase;
+		}
+		else
+		{
+			return 0;
+		}
 
-	double arg{ sqrt( (power - powerMin) / powerAmplitude) };
-	if (arg > 1)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The argument of asin must be <= 1");
+	}
+	else
+	{
+		double arg{ sqrt((power - powerMin) / powerAmplitude) };
+		if (arg > 1)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The argument of asin must be <= 1");
 
-	return asin(arg) / angularFreq + Vphase;
+		return asin(arg) / angularFreq + Vphase;
+	}
 }
 #pragma endregion "Pockels"
 
@@ -1882,7 +1895,7 @@ void VirtualLaser::isLaserInternalShutterOpen() const
 }
 
 //Change the laser wavelength (tune Vision or switching lasers accordingly) and switch pockels
-void VirtualLaser::setWavelength(RTcontrol &RTcontrol, const int wavelength_nm)
+void VirtualLaser::setWavelength(RTseq &rtseq, const int wavelength_nm)
 {
 	//Select the laser to be used: VISION or FIDELITY
 	Laser::ID newLaser = autoSelectLaser_(wavelength_nm);
@@ -1893,10 +1906,10 @@ void VirtualLaser::setWavelength(RTcontrol &RTcontrol, const int wavelength_nm)
 
 	//For the first call, assign a pointer to mPockelsPtr
 	if (mPockelsPtr == nullptr)
-		mPockelsPtr.reset(new Pockels(RTcontrol, wavelength_nm, newLaser));
+		mPockelsPtr.reset(new Pockels(rtseq, wavelength_nm, newLaser));
 	//For the subsequent calls, destroy the pockels object when switching wavelengths (including switching lasers) to avoid photobleaching the sample (the pockels destructor closes the shutter)
 	else if (readCurrentWavelength_nm() != wavelength_nm || mCurrentLaser != newLaser)
-		mPockelsPtr.reset(new Pockels(RTcontrol, wavelength_nm, newLaser));
+		mPockelsPtr.reset(new Pockels(rtseq, wavelength_nm, newLaser));
 
 	//If VISION is selected, set the new wavelength
 	if (newLaser == Laser::ID::VISION)
@@ -2132,9 +2145,9 @@ void CollectorLens::set(const int wavelength_nm)
 
 #pragma region "Galvo"
 //constructor for the scanner
-Galvo::Galvo(RTcontrol &RTcontrol, const double posMax) :
-	mRTcontrol{ RTcontrol },
-	mWhichGalvo{ RTcontrol::RTCHAN::SCANNER },
+Galvo::Galvo(RTseq &rtseq, const double posMax) :
+	mRTcontrol{ rtseq },
+	mWhichGalvo{ RTseq::RTCHAN::SCANNER },
 	mVoltagePerDistance{ g_scannerCalib.voltagePerDistance },
 	mVoltageOffset{ g_scannerCalib.voltageOffset },
 	mPosMax{ posMax }
@@ -2148,9 +2161,9 @@ Galvo::Galvo(RTcontrol &RTcontrol, const double posMax) :
 }
 
 //Constructor for the rescanner
-Galvo::Galvo(RTcontrol &RTcontrol, const double posMax, const Laser::ID whichLaser, const int wavelength_nm) :
-	mRTcontrol{ RTcontrol },
-	mWhichGalvo{ RTcontrol::RTCHAN::RESCANNER },
+Galvo::Galvo(RTseq &rtseq, const double posMax, const Laser::ID whichLaser, const int wavelength_nm) :
+	mRTcontrol{ rtseq },
+	mWhichGalvo{ RTseq::RTCHAN::RESCANNER },
 	mPosMax{ posMax }
 {
 	//The calibration of the rescanner is slightly different for Vision and Fidelity
@@ -2204,55 +2217,55 @@ double Galvo::readSinglebeamVoltageOffset() const
 	double beamletIndex;
 	switch (mRTcontrol.mPMT16Xchan)
 	{
-	case RTcontrol::PMT16XCHAN::CH00:
+	case RTseq::PMT16XCHAN::CH00:
 		beamletIndex = 7.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH01:
+	case RTseq::PMT16XCHAN::CH01:
 		beamletIndex = 6.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH02:
+	case RTseq::PMT16XCHAN::CH02:
 		beamletIndex = 5.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH03:
+	case RTseq::PMT16XCHAN::CH03:
 		beamletIndex = 4.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH04:
+	case RTseq::PMT16XCHAN::CH04:
 		beamletIndex = 3.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH05:
+	case RTseq::PMT16XCHAN::CH05:
 		beamletIndex = 2.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH06:
+	case RTseq::PMT16XCHAN::CH06:
 		beamletIndex = 1.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH07:
+	case RTseq::PMT16XCHAN::CH07:
 		beamletIndex = 0.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH08:
+	case RTseq::PMT16XCHAN::CH08:
 		beamletIndex = -0.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH09:
+	case RTseq::PMT16XCHAN::CH09:
 		beamletIndex = -1.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH10:
+	case RTseq::PMT16XCHAN::CH10:
 		beamletIndex = -2.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH11:
+	case RTseq::PMT16XCHAN::CH11:
 		beamletIndex = -3.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH12:
+	case RTseq::PMT16XCHAN::CH12:
 		beamletIndex = -4.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH13:
+	case RTseq::PMT16XCHAN::CH13:
 		beamletIndex = -5.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH14:
+	case RTseq::PMT16XCHAN::CH14:
 		beamletIndex = -6.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CH15:
+	case RTseq::PMT16XCHAN::CH15:
 		beamletIndex = -7.5;
 		break;
-	case RTcontrol::PMT16XCHAN::CENTERED:
+	case RTseq::PMT16XCHAN::CENTERED:
 		beamletIndex = 0.0;//No offset ("centered") for multibeam
 		break;
 	default:
@@ -2301,9 +2314,9 @@ Mesoscope::Mesoscope(const Laser::ID whichLaser) :
 {}
 
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
-void Mesoscope::configure(RTcontrol &RTcontrol, const int wavelength_nm)
+void Mesoscope::configure(RTseq &rtseq, const int wavelength_nm)
 {
-	std::future<void> th1{ std::async(&VirtualLaser::setWavelength, this, std::ref(RTcontrol), std::ref(wavelength_nm)) };		//Tune the laser wavelength
+	std::future<void> th1{ std::async(&VirtualLaser::setWavelength, this, std::ref(rtseq), std::ref(wavelength_nm)) };		//Tune the laser wavelength
 	std::future<void> th2{ std::async(&CombinedFilterwheel::turnFilterwheels, &mVirtualFilterWheel, wavelength_nm) };			//Set the filterwheels
 	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };									//Set the collector lens position
 

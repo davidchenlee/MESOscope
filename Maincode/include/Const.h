@@ -29,26 +29,20 @@ namespace Constants
 	//INWARD: the stage Y moves to the center of the optical table
 	enum class SCANDIR { LEFTWARD, RIGHTWARD, OUTWARD, INWARD, DOWNWARD, UPWARD };
 	struct SCANDIR3 { SCANDIR XX;  SCANDIR YY; SCANDIR ZZ; };
-	struct INDICES2 { int II; int JJ; };
 
 	struct POSITION2 { double XX; double YY; };
 	struct POSITION3 { double XX; double YY; double ZZ; };
+	struct LENGTH2 { double XX; double YY; };								//Size in 2D
+	struct LENGTH3 { double XX; double YY; double ZZ; };					//Size in 3D
 	struct VELOCITY3 { double XX; double YY; double ZZ; };
 	struct FFOV2 { double XX; double YY; };
 	struct LIMIT2 { double MIN; double MAX; };
 	struct ROI4 { double YMIN; double XMIN; double YMAX;  double XMAX; };	//Region of interest
-	struct SIZE2 { double XX; double YY; };									//Size in 2D
-	struct SIZE3 { double XX; double YY; double ZZ; };						//Size in 3D
-
-	//2D pixel type
-	struct PIXELS2 {
-		int ii; int jj;
-		PIXELS2(const int i, const int j) {
-			//if(i <= 0 || j <= 0) throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel size must be > 0");
-			ii = i; jj = j;};
-	};
-
+	struct TILEIJ { int II; int JJ; };										//Tile array indices IJ
+	struct TILEDIM2 { int II; int JJ; };									//Tile array dimension in 2D
 	struct TILEOVERLAP3 { double II; double JJ; double KK; };				//Tile overlap fraction
+	struct PIXELij { int ii; int jj; };										//Pixel indices ij
+	struct PIXDIM2 { int ii; int jj; };										//Dimension in 2D pixels
 
 	enum class PMTIN { PMT = false, SIM = true };							//*cast
 	enum class LINECLOCK { RS = false, FG = true  };						//*cast

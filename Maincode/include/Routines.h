@@ -58,7 +58,7 @@ namespace TestRoutines
 	void sequencerConcurrentTest();
 	//void locationSequence();
 	void generateLocationsForBigStitcher();
-	INDICES2 tileNumberToIndicesIJ(const int tileNumber);
+	TILEIJ tileNumberToIndicesIJ(const int tileNumber);
 
 	//PMT16X
 	void PMT16Xconfig();

@@ -57,6 +57,11 @@ namespace Util
 		return int_part + frac_part;
 	}
 
+	int intceil(const double input)
+	{
+		return static_cast<int>(std::ceil(input));
+	}
+
 	int convertScandirToInt(const SCANDIR scanDir)
 	{
 		switch (scanDir)
@@ -270,6 +275,19 @@ TiffU8::TiffU8(const std::string filename) :
 
 	_TIFFfree(buffer);		//Release the memory
 	TIFFClose(tiffHandle);	//Close the tif file. I hope the pointer TIFFTAG_ImageJ is cleaned up here
+}
+
+//Copy constructor
+TiffU8::TiffU8(const TiffU8& tiff):
+	mHeightPerFrame_pix{tiff.mHeightPerFrame_pix },
+	mWidthPerFrame_pix{tiff.mWidthPerFrame_pix },
+	mNframes{tiff.mNframes },
+	mBytesPerLine{tiff.mBytesPerLine },
+	mNpixPerFrame{tiff.mNpixPerFrame },
+	mNpixAllFrames{tiff.mNpixAllFrames }
+{
+	mArray = new U8[mNpixAllFrames];
+	std::memcpy(mArray, tiff.mArray, mNpixAllFrames * sizeof(U8));
 }
 
 //Construct a Tiff from an array

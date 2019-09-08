@@ -117,6 +117,9 @@ namespace FPGAfunc
 
 	void pushLinearRamp(QU32 &queue, double timeStep, const double rampLength, const double Vi, const double Vf)
 	{
+		if (rampLength <= 0)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The ramp length must be > 0");
+
 		if (timeStep < g_tMinAO)
 		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << g_tMinAO / us << " us\n";
@@ -280,8 +283,12 @@ I16 FPGA::readRescannerVoltageMon() const
 //Load the imaging parameters onto the FPGA
 void FPGA::uploadImagingParameters(const int heightPerBeamletAllFrames_pix, const int heightPerBeamletPerFrame_pix, const int nFrames) const
 {
-	if (heightPerBeamletAllFrames_pix <= 0 || heightPerBeamletPerFrame_pix <= 0 || nFrames <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": One or more imaging parameters take negative values");
+	if (heightPerBeamletAllFrames_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");
+	if (heightPerBeamletPerFrame_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");
+	if (nFrames <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be >= 1");
 
 	//IMAGING PARAMETERS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(heightPerBeamletAllFrames_pix)));		//Total number of lines per beamlet in all the frames
@@ -576,6 +583,13 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	mHeightPerBeamletAllFrames_pix{ heightPerBeamletPerFrame_pix * nFrames },
 	mNpixPerBeamletAllFrames{ widthPerFrame_pix * mHeightPerBeamletAllFrames_pix }
 {
+	if (heightPerBeamletPerFrame_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");
+	if (widthPerFrame_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel with must be > 0");
+	if (nFrames <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
+
 	mFpga.uploadImagingParameters(mHeightPerBeamletAllFrames_pix, mHeightPerBeamletPerFrame_pix, mNframes);
 
 	mFpga.setLineclock(mLineclockInput);
@@ -598,11 +612,19 @@ RTcontrol::RTcontrol(const FPGA &fpga, const LINECLOCK lineclockInput, const MAI
 	mPMT16Xchan{ determineRescannerSetpoint_() },
 	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }
-{}
+{
+	if (heightPerBeamletPerFrame_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");
+	if (widthPerFrame_pix <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel with must be > 0");
+}
 
 //Set mNframes
 void RTcontrol::setNumberOfFrames(const int nFrames)
 {
+	if (nFrames <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
+
 	mNframes = nFrames;
 	mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
 	mNpixPerBeamletAllFrames = mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix;
@@ -672,6 +694,11 @@ void RTcontrol::pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingF
 
 void RTcontrol::pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override)
 {
+	if (timeStep <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The time step must be > 0");
+	if (rampLength <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The ramp length must be > 0");
+
 	//Clear the current content
 	if (override == OVERRIDE::EN)
 		mVec_queue.at(static_cast<U8>(chan)).clear();
@@ -755,8 +782,6 @@ void RTcontrol::Pixelclock::pushUniformDwellTimes_()
 	for (int pix = 0; pix < mWidthPerFrame_pix + 1; pix++)
 		mPixelclockQ.push_back(FPGAfunc::packPixelclockSinglet(mDwell, 1));
 }
-
-
 
 //Determine the setpoint for the rescanner. mPMT16Xchan is called by the classes Galvo and Image
 RTcontrol::PMT16XCHAN RTcontrol::determineRescannerSetpoint_() const

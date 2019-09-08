@@ -5,7 +5,7 @@ using namespace Constants;
 
 double multiply16X(const double input);
 void reverseSCANDIR(SCANDIR &scanDir);
-POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapIJK_frac, const INDICES2 tileArraySizeIJ, const INDICES2 tileIndicesIJ);
+POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapIJK_frac, const TILEDIM2 tileArraySizeIJ, const TILEIJ tileIndicesIJ);
 double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
 double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
 double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
@@ -17,26 +17,26 @@ class TileArray
 {
 public:
 	enum Axis { II, JJ, KK };		//Currently, the tile axis II coincides with Stage::Axis::XX, JJ with Stage::Axis::YY, and KK with Stage::Axis::ZZ
-	TileArray(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySizeIJ, const TILEOVERLAP3 overlapIJK_frac);
-	TileArray(const PIXELS2 tileSize_pix, const INDICES2 tileArraySizeIJ, const TILEOVERLAP3 overlapIJK_frac);
+	TileArray(const int tileHeight_pix, const int tileWidth_pix, const TILEDIM2 tileArraySizeIJ, const TILEOVERLAP3 overlapIJK_frac);
+	TileArray(const PIXDIM2 tileSize_pix, const TILEDIM2 tileArraySizeIJ, const TILEOVERLAP3 overlapIJK_frac);
 	int readTileHeight_pix() const;
 	int readTileWidth_pix() const;
-	INDICES2 readTileArraySizeIJ() const;
+	TILEDIM2 readTileArraySizeIJ() const;
 	int readTileArraySizeIJ(const Axis axis) const;
 	TILEOVERLAP3 readTileOverlapIJK_frac() const;
-	PIXELS2 determineTileRelativePixelPos_pix(const INDICES2 tileIndicesIJ) const;
+	PIXELij determineTileRelativePixelPos_pix(const TILEIJ tileIndicesIJ) const;
 protected:
 	const int mTileHeight_pix;		//Pixel height of a single tile
 	const int mTileWidth_pix;		//Pixel width of a single tile
-	INDICES2 mArraySizeIJ;			//Dimension of the array of tiles
+	TILEDIM2 mArraySizeIJ;			//Dimension of the array of tiles
 	TILEOVERLAP3 mOverlapIJK_frac;
 };
 
 class QuickStitcher : public TiffU8, public TileArray
 {
 public:
-	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const INDICES2 tileArraySizeIJ, const TILEOVERLAP3 overlapIJK_frac);
-	void push(const U8 *tile, const INDICES2 tileIndicesIJ);
+	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const TILEDIM2 tileArraySizeIJ, const TILEOVERLAP3 overlapIJK_frac);
+	void push(const U8 *tile, const TILEIJ tileIndicesIJ);
 	void saveToFile(std::string filename, const OVERRIDE override) const;
 	int readFullHeight_pix() const;
 	int readFullWidth_pix() const;
@@ -48,7 +48,7 @@ private:
 class QuickScanXY final: public QuickStitcher
 {
 public:
-	QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const SIZE2 pixelSizeXY, const SIZE2 LOIxy);
+	QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const LENGTH2 pixelSizeXY, const LENGTH2 LOIxy);
 	double determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
 	double determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
 	int readNstageYpos() const;
@@ -59,35 +59,36 @@ private:
 	std::vector<double> mStageYpos;
 	const POSITION2 mROIcenterXY;
 	const FFOV2 mFFOV;
-	const SIZE2 mPixelSizeXY;
-	const SIZE2 mLOIxy;
+	const LENGTH2 mPixelSizeXY;
+	const LENGTH2 mLOIxy;
 	const int mFullWidth_pix;
 
 	int castToOddnumber_(const double input) const;
-	SIZE2 castLOIxy_(const FFOV2 FFOV, const SIZE2 LOIxy) const;
+	LENGTH2 castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const;
 };
 
 class Boolmap final
 {
 public:
-	Boolmap(const TiffU8 &tiff, const PIXELS2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
-	Boolmap(const QuickScanXY &quickScanXY, const PIXELS2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
-	bool isTileBright(const INDICES2 tileIndicesIJ) const;
+	Boolmap(const TiffU8 &tiff, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
+	Boolmap(const QuickScanXY &quickScanXY, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
+	bool isTileBright(const TILEIJ tileIndicesIJ) const;
 	void saveTileMapToText(std::string filename);
 	void saveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 private:
-	const TiffU8 &mTiff;
+	const TiffU8 mTiff;
 	const TileArray mTileArray;
 	const double mThreshold;			//Threshold for generating the boolmap
 	const int mFullHeight_pix;			//Pixel height of the tiled image
 	const int mFullWidth_pix;			//Pixel width of the tiled image
 	const int mNpixFull;				//Total number of pixels in mTiff
-	PIXELS2 mAnchorPixel_pix;			//Reference position for the tile array wrt the Tiff
+	PIXELij mAnchorPixel_pix;			//Reference position for the tile array wrt the Tiff
 	std::vector<bool> mIsBrightMap;
 
-	PIXELS2 determineTileAbsolutePixelPos_pix_(const INDICES2 tileIndicesIJ) const;
-	bool isQuadrantBright_(const double threshold, const INDICES2 tileIndicesIJ) const;
+	PIXELij determineTileAbsolutePixelPos_pix_(const TILEIJ tileIndicesIJ) const;
+	bool isQuadrantBright_(const double threshold, const TILEIJ tileIndicesIJ) const;
+	void generateBoolmap_();
 };
 
 class FluorMarkerList	//Create a list of fluorescent markers
@@ -117,13 +118,13 @@ class Sample : public FluorMarkerList
 public:
 	 //Initialize with std::numeric_limits<double>::quiet_NaN??
 	POSITION2 mCenterXY{-1, -1};						//Sample center (stageX, stageY)
-	SIZE3 mLOIxyz_req{ -1, -1, -1 };					//Requested Length of interest (stageX, stageY, stageZ)
+	LENGTH3 mLOIxyz_req{ -1, -1, -1 };					//Requested Length of interest (stageX, stageY, stageZ)
 	double mSurfaceZ{ -1 };
 	const double mBladeFocalplaneOffsetZ{ 1.06 * mm };	//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack{ 0. * um };			//Specify at what height of the overlapping volume to cut
 
 	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorMarkerList fluorMarkerList = { {} });
-	Sample(const Sample& sample, const POSITION2 centerXY, const SIZE3 LOIxyz, const double sampleSurfaceZ, const double sliceOffset);
+	Sample(const Sample& sample, const POSITION2 centerXY, const LENGTH3 LOIxyz, const double sampleSurfaceZ, const double sliceOffset);
 	void printSampleParams(std::ofstream *fileHandle) const;
 	std::string readName() const;
 	std::string readImmersionMedium() const;
@@ -167,14 +168,14 @@ namespace Action
 	class MoveStage final
 	{
 	public:
-		void setParam(const int sliceNumber, const INDICES2 tileIndicesIJ, const POSITION2 tileCenterXY);
+		void setParam(const int sliceNumber, const TILEIJ tileIndicesIJ, const POSITION2 tileCenterXY);
 		int readSliceNumber() const;
 		int readTileIndex(const TileArray::Axis axis) const;
 		POSITION2 readTileCenterXY() const;
 		double readTileCenter(Stage::Axis axis) const;
 	private:
 		int mSliceNumber;			//Slice number
-		INDICES2 mTileIndicesIJ;	//Indices of the tile array
+		TILEIJ mTileIndicesIJ;	//Indices of the tile array
 		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
 	};
 
@@ -240,7 +241,7 @@ public:
 	Sequencer& operator=(Sequencer&&) = delete;				//Disable move-assignment constructor
 
 	void generateCommandList();
-	POSITION2 convertTileIndicesIJToStagePosXY(const INDICES2 tileIndicesIJ) const;
+	POSITION2 convertTileIndicesIJToStagePosXY(const TILEIJ tileIndicesIJ) const;
 	std::string printHeader() const;
 	std::string printHeaderUnits() const;
 	void printSequenceParams(std::ofstream *fileHandle) const;
@@ -268,14 +269,14 @@ private:
 	int mNtotalSlices;										//Number of vibratome slices in the entire sample
 
 	void initializeVibratomeSlice_();
-	INDICES2 determineTileArraySizeIJ_();
+	TILEDIM2 determineTileArraySizeIJ_();
 	void initializeEffectiveROI_();
 	void reserveMemoryBlock_();
 	void initializeIteratorIJ_();
 	void resetStageScanDirections_();
-	SIZE3 determineEffectiveLOIxyz() const;
+	LENGTH3 determineEffectiveLOIxyz() const;
 
-	void moveStage_(const INDICES2 tileIndicesIJ);
+	void moveStage_(const TILEIJ tileIndicesIJ);
 	void acqStack_(const int indexFluorMarker);
 	void saveStack_();
 	void cutSlice_();

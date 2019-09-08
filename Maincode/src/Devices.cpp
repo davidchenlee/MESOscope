@@ -46,6 +46,9 @@ void Image::acquireVerticalStrip(const SCANDIR scanDirX)
 //Image post processing
 void Image::correct(const double FFOVfast)
 {
+	if (FFOVfast <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FFOV must be > 0");
+
 	mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 
 	if (multibeam)
@@ -58,6 +61,9 @@ void Image::correct(const double FFOVfast)
 //Correct the image distortion induced by the nonlinear scanning of the RS
 void Image::correctRSdistortion(const double FFOVfast)
 {
+	if (FFOVfast <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FFOV must be > 0");
+
 	mTiff.correctRSdistortionGPU(FFOVfast);		
 }
 
@@ -211,6 +217,9 @@ ResonantScanner::ResonantScanner(const RTcontrol &RTcontrol) :
 //Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
 void ResonantScanner::setFFOV(const double FFOV)
 {
+	if (FFOV <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be > 0");
+
 	//Update the scan parameters
 	mFullScan = FFOV / mFillFactor;										//Full scan FOV
 	mControlVoltage = mFullScan * mVoltagePerDistance;					//Control voltage
@@ -228,6 +237,9 @@ void ResonantScanner::setFFOV(const double FFOV)
 //First set the FFOV, then set RSenable on
 void ResonantScanner::turnOn(const double FFOV)
 {
+	if (FFOV <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be > 0");
+
 	setFFOV(FFOV);
 	Sleep(static_cast<DWORD>(mDelay / ms));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
@@ -532,6 +544,9 @@ int PMT16X::PMT16XCHANtoInt_(const RTcontrol::PMT16XCHAN chan) const
 //Return the sumcheck of all the elements in the array
 uint8_t PMT16X::sumCheck_(const std::vector<uint8_t> charArray, const int nElements) const
 {
+	if (nElements <= 0)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": The number of elements must be > 0");
+
 	uint8_t sum{ 0 };
 	for (int ii = 0; ii < nElements; ii++)
 		sum += charArray.at(ii);
@@ -544,6 +559,9 @@ uint8_t PMT16X::sumCheck_(const std::vector<uint8_t> charArray, const int nEleme
 Stage::Stage(const double velX, const double velY, const double velZ, const std::vector<LIMIT2> stageSoftPosLimXYZ) :
 	mSoftPosLimXYZ{ stageSoftPosLimXYZ }
 {
+	if (velX <= 0 || velY <= 0 || velZ <= 0)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": The stage velocities must be > 0");
+
 	const std::string stageIDx{ "116049107" };	//X-stage (V-551.4B)
 	const std::string stageIDy{ "116049105" };	//Y-stage (V-551.2B)
 	const std::string stageIDz{ "0165500631" };	//Z-stage (ES-100)
@@ -647,6 +665,9 @@ double Stage::readCurrentVelocity_(const Axis axis) const
 
 void Stage::setCurrentVelocity_(const Axis axis, const double velocity)
 {
+	if (velocity <= 0)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": The velocity must be > 0");
+
 	switch (axis)
 	{
 	case XX:
@@ -1544,6 +1565,9 @@ void Shutter::setState(const bool state) const
 //Open and close the shutter
 void Shutter::pulse(const double pulsewidth) const
 {
+	if (pulsewidth <= 0)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": The pulse width must be > 0");
+
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), mWhichShutter, true));
 
 	Sleep(static_cast<DWORD>(pulsewidth/ms));
@@ -1593,18 +1617,22 @@ Pockels::Pockels(RTcontrol &RTcontrol, const int wavelength_nm, const Laser::ID 
 
 void Pockels::pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const
 {
+	if (timeStep <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The time step must be > 0");
 	if (AO < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The control voltage of the Pockels cell must be positive");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The control voltage must be >= 0");
 
 	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, AO, override);
 }
 
-void Pockels::pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const
+void Pockels::pushPowerSinglet(const double timeStep, const double laserPower, const OVERRIDE override) const
 {
-	if (P < 0 || P > mMaxPower)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power of the pockels cell must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower / mW)) + "] mW");
+	if (timeStep <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The time step must be > 0");
+	if (laserPower < 0 || laserPower > mMaxPower)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower / mW)) + "] mW");
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, convertPowerToVolt_(P), override);
+	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, convertPowerToVolt_(laserPower), override);
 }
 
 void Pockels::setVoltageToZero() const
@@ -1640,6 +1668,9 @@ void Pockels::voltageLinearScaling(const double Vi, const double Vf) const
 //Linearly scale the laser power from the first to the last frame
 void Pockels::pushPowerLinearScaling(const double Pi, const double Pf) const
 {
+	if (Pi < 0 || Pf < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be >= 0");
+
 	if (mRTcontrol.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
@@ -1683,7 +1714,7 @@ void Pockels::pushPowerExponentialScaling(const double Pmin, const double interf
 
 	const double Pmax{ Util::exponentialFunction(Pmin,(mRTcontrol.mNframes - 1) * interframeDistance, std::abs(decayLengthZ)) };
 	if (Pmax < 0 || Pmax > mMaxPower)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power of the pockels cell must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower / mW)) + "] mW");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower / mW)) + "] mW");
 
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
 	{
@@ -1877,6 +1908,9 @@ void VirtualLaser::setWavelength(RTcontrol &RTcontrol, const int wavelength_nm)
 //Linearly scale the laser power from the first to the last frame
 void VirtualLaser::setPowerLinearScaling(const double Pi, const double Pf) const
 {
+	if (Pi < 0 || Pf < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be >= 0");
+
 	//Set the initial laser power
 	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pi, OVERRIDE::EN);
 
@@ -1888,6 +1922,11 @@ void VirtualLaser::setPowerLinearScaling(const double Pi, const double Pf) const
 //Exponential scale the laser power from the first to the last frame
 void VirtualLaser::setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const
 {
+	if (Pmin < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be >= 0");
+	if (distancePerFrame <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The distance per frame must be > 0");
+
 	//Set the initial laser power
 	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pmin, OVERRIDE::EN);
 

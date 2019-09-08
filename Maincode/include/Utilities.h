@@ -21,6 +21,7 @@ namespace Util
 	void printHex(const std::string input);
 	void printBinary16(const int input);
 	U16 doubleToFx2p14(double n);
+	int intceil(const double input);
 	int convertScandirToInt(const SCANDIR scanDir);
 	double exponentialFunction(const double Pmin, const double depthZ, const double decayLengthZ);
 	template<class T> inline T clip(T x, T lower, T upper);
@@ -49,6 +50,7 @@ class TiffU8
 {
 public:
 	TiffU8(const std::string filename);
+	TiffU8(const TiffU8& tiff);
 	TiffU8(const U8* inputArray, const int heightPerFrame_pix, const int widthPerFrame_pix, int nFrames = 1);
 	TiffU8(const std::vector<U8> &inputImage, const int heightPerFrame_pix, const int widthPerFrame_pix, const int nFrames = 1);
 	TiffU8(const int height_pix, const int width_pix, const int nFrames = 1);

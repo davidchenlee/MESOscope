@@ -78,6 +78,11 @@ int main(int argc, char* argv[])
 			std::cout << "A runtime error has occurred in " << e.what() << "\n";
 			Util::pressAnyKeyToCont();
 		}
+		catch (const std::out_of_range& e)
+		{
+			std::cout << "An out of error has occurred in " << e.what() << "\n";
+			Util::pressAnyKeyToCont();
+		}
 		catch (...)
 		{
 			std::cout << "An unknown error has occurred" << "\n";

@@ -350,7 +350,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };											//Initial scan direction of stage 
-		const double fullWidth{ 0.300 * mm };												//Total width of the tile array
+		const double fullWidth{ 10.000 * mm };												//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };												//Width of a strip
@@ -426,12 +426,13 @@ namespace Routines
 			quickScanXY.saveToFile(filename, OVERRIDE::DIS);
 
 			//Tile size for the slow scan. Do not call the tile size from quickScanXY because the tiles are long strips. 
-			const PIXELS2 ssTileSize_pix{ static_cast<int>(std::ceil(tileHeight / pixelSizeX)), static_cast<int>(std::ceil(tileWidth / pixelSizeY)) };
+			const PIXDIM2 ssTileSize_pix{ Util::intceil(tileHeight / pixelSizeX), Util::intceil(tileWidth / pixelSizeY) };
 			const TILEOVERLAP3 ssTileOverlapXYZ_frac{ 0.0, 0.0, 0.0 };
 			const double threshold{ 0.02 };
+
 			Boolmap boolmap{ quickScanXY, ssTileSize_pix, ssTileOverlapXYZ_frac, threshold };
-			boolmap.saveTileMapToText("Boolmap");
-			boolmap.saveTileMap("TileArrayMap");
+			boolmap.saveTileMapToText("Boolmap_" + filename);
+			boolmap.saveTileMap("TileArrayMap_" + filename);
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -449,10 +450,10 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const SIZE3 LOIxyz{ 0.3 * mm, 0.2 * mm, 0.150 * mm };
+		const LENGTH3 LOIxyz{ 0.3 * mm, 0.2 * mm, 0.150 * mm };
 		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.50 };										//Stack overlap
 		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };											//Stack overlap
-		const double cutAboveBottomOfStack{ 50. * um };												//Distance to cut above the bottom of the stack
+		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
 
@@ -1200,18 +1201,17 @@ namespace TestRoutines
 
 	void boolmapSample()
 	{
-		std::string inputFilename{ "Liver20190812_02_V1040nm_P=30.0mW_xi=36.020_xf=52.580_yi=24.153_yf=23.853_z=18.1010_Step=0.0010 (3)" };
+		std::string inputFilename{ "Liver20190812_02_V1040nm_P=30.0mW_xi=36.020_xf=52.580_yi=28.953_yf=19.053_z=18.1010_Step=0.0010" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
 		//The tile array for boolmapping does not have to coincide with the tile array used for imaging
-		const PIXELS2 ssTileSize_pix{ 280, 300 };
+		const PIXDIM2 ssTileSize_pix{ 280, 300 };
 		const TILEOVERLAP3 ssOverlapIJK_frac{ 0.0, 0.0, 0.0 };
 		const double threshold{ 0.02 };
 		Boolmap boolmap{ image, ssTileSize_pix, ssOverlapIJK_frac, threshold };
 		boolmap.saveTileMapToText("Boolmap");
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
-		//std::cout << boolmap.isTileBright({ 0, 30 }) << "\n";
 
 		Util::pressAnyKeyToCont();
 	}
@@ -1359,7 +1359,7 @@ namespace TestRoutines
 	void generateLocationsForBigStitcher()
 	{
 		// X is vertical and Y is horizontal, to match the directions of the XYZ-stage
-		const INDICES2 tileSize{ 2, 2 };
+		const TILEDIM2 tileSize{ 2, 2 };
 		const int tileShiftX_pix{ 543 };
 		const int tileShiftY_pix{ 291 };
 
@@ -1369,7 +1369,7 @@ namespace TestRoutines
 		for (int tileNumber = 0; tileNumber < tileSize.II * tileSize.JJ; tileNumber++)
 			//for (int tileNumber = 0; tileNumber < 180; tileNumber++)
 		{
-			INDICES2 tileIndicesIJ = tileNumberToIndicesIJ(tileNumber);
+			TILEIJ tileIndicesIJ = tileNumberToIndicesIJ(tileNumber);
 			int totalTileShiftX_pix{ -tileIndicesIJ.II * tileShiftX_pix };
 			int TotalTileShiftY_pix{ -tileIndicesIJ.JJ * tileShiftY_pix };
 			std::string line{ std::to_string(tileNumber) + ";;(" + std::to_string(TotalTileShiftY_pix) + "," + std::to_string(totalTileShiftX_pix) + ",0)" };	//In BigStitcher, X is horizontal and Y is vertical
@@ -1379,9 +1379,9 @@ namespace TestRoutines
 	}
 
 	//Snake pattern starting from the bottom right of the sample and going up
-	INDICES2 tileNumberToIndicesIJ(const int tileNumber)
+	TILEIJ tileNumberToIndicesIJ(const int tileNumber)
 	{
-		const INDICES2 tileSize{ 2, 2 };
+		const TILEDIM2 tileSize{ 2, 2 };
 
 		int II;
 		int JJ{ tileNumber / tileSize.II };

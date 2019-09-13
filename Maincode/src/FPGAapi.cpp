@@ -787,7 +787,7 @@ RTseq::PMT16XCHAN RTseq::determineRescannerSetpoint_() const
 	if (multibeam)
 		return PMT16XCHAN::CENTERED;
 	else
-		return static_cast<RTseq::PMT16XCHAN>(g_PMT16Xchan_int);
+		return static_cast<RTseq::PMT16XCHAN>(g_rescanner1Xchan_int);
 }
 
 //Ramp up or down the AO for the scanner and rescanner from the current voltage to the first value of the control sequence in mVec_queue to avoid jumps at the start of the sequence

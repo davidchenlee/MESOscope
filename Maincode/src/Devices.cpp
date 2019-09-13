@@ -188,7 +188,7 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 		stack.pushImage(CountB.data(), static_cast<int>(RTseq::PMT16XCHAN::CH08), static_cast<int>(RTseq::PMT16XCHAN::CH15));
 
 		std::string PMT16Xchan_s{ std::to_string(static_cast<int>(mRTcontrol.mPMT16Xchan)) };
-		stack.saveToFile("AllChannels PMT16Xchan=" + PMT16Xchan_s, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+		stack.saveToFile("PMT16Xchan=" + PMT16Xchan_s, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
 }
 #pragma endregion "Image"
@@ -1816,16 +1816,11 @@ double Pockels::convertPowerToVolt_(const double power) const
 
 	if (power < powerMin)
 	{
-		std::cerr << "WARNING: The requested laser power is lower than the min power " << std::to_string(powerMin) << " mW. The power was clipped to the min\n";
+		std::cerr << "WARNING: The requested laser power is lower than the min power = " << std::to_string(powerMin) << " mW. The power was clipped to the min\n";
 		if (Vphase > 0)
-		{
 			return Vphase;
-		}
 		else
-		{
 			return 0;
-		}
-
 	}
 	else
 	{

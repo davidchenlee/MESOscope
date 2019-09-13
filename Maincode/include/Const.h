@@ -51,7 +51,7 @@ namespace Constants
 	enum class FIFOOUTfpga { DIS = false, EN = true  };						//*cast
 	enum class TIFFSTRUCT { SINGLEPAGE, MULTIPAGE };
 	enum class OVERRIDE { DIS, EN };
-	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANXY, COLLECTLENS };
+	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANX, COLLECTLENS, FI_MEAS };
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};	//*cast
 
 	extern const std::string folderPath;
@@ -99,7 +99,7 @@ namespace Constants
 	extern const GALVOcalib g_rescannerCalibV920nm;
 	extern const GALVOcalib g_rescannerCalibV1040nm;
 	extern const GALVOcalib g_rescannerCalibF1040nm;
-	extern const int g_PMT16Xchan_int;
+	extern const int g_rescanner1Xchan_int;
 
 	extern const SCANDIR3 g_initialStageScanDirXYZ;
 	extern const double	g_STAGEZtrigAcqDelayTopdown;

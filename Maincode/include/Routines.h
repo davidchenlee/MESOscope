@@ -1,6 +1,7 @@
 #pragma once
 #include "Devices.h"
 #include "Sequencer.h"
+#include "SampleConfig.h"
 
 //MAIN SEQUENCES
 namespace Routines

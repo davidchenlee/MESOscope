@@ -1,5 +1,4 @@
 #include "Const.h"
-
 //Constants that are never changed
 namespace Constants
 {
@@ -60,16 +59,16 @@ namespace Constants
 	extern const double g_rescannerDelay{ 0. * us };							//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
 	extern const GALVOcalib g_scannerCalib{ 0.02417210 * V / um , 0.0 * V };	//Calibration factor and offset of the galvo scanner. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the X-stage)
 
-	//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission fixed at the detector
-	//To find both parameters, image beads with a single laser beam at full FOV (i.e. 300x560 pixels) and look at the tiffs in all the PMT channels
-	//The beads should show up in the selected channel only
-	//Adjust 'mVoltagePerDistance' until all the beads show up in the same selected PMT16X channel. For a larger value, the top beads in a Tiff appear first, then the bottom ones
-	//Adjust 'mVoltageOffset' to center the beads on the selected PMT16X channel. A larger value steers the beam towards CH00 (i.e., positive dir of the X-stage). When looking at the PMT16X anodes with the fan facing up, CH00 is on the left
-	extern const GALVOcalib g_rescannerCalibV750nm{ 0.303 * g_scannerCalib.voltagePerDistance, 0.035 * V };
-	extern const GALVOcalib g_rescannerCalibV920nm{ 0.310 * g_scannerCalib.voltagePerDistance, 0.065 * V };
-	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.33 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//Using Vision
-	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.33 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//Using Fidelity
-	extern const int g_PMT16Xchan_int{ 7 }; //[0-15] when using a singlebeam, direct the rescanner towards a particular channel of the PMT16X
+	//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission aligned to the detector. The format is:
+	//GALVOcalib { double voltagePerDistance, double voltageOffset };
+	//*To find 'mVoltagePerDistance', take a single 1X image of beads4um, save all the PMT16X channels, and adjust the parameter until all the beads are contained in the targeted PMT16X channel 'i'
+	//(if 'mVoltagePerDistance' is too large, the top beads in the Tiff leak through the 'i-1' channel and the bottom beads leak through the 'i+1' channels)
+	//*To find 'mVoltageOffset', take an averaged 16X image of beads centered at the FOV of the Tiff and adjust the parameter to make the crosstalk in the channels i-1 and i+1 have the same fluorescent intensity
+	extern const GALVOcalib g_rescannerCalibV750nm{ 0.295 * g_scannerCalib.voltagePerDistance, 0.050 * V };		//VISION. Last calib 20190909
+	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.075 * V };		//VISION. Last calib 20190909
+	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//VISION. Last calib 20190909
+	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.330 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//FIDELITY. Last calib 20190909 for voltageOffset. voltagePerDistance has not been updated because the power offset of the pockels is too high
+	extern const int g_rescanner1Xchan_int{ 7 }; //When using 1X, direct the rescanner towards the selected channel of the PMT16X. It takes the values 0-15
 
 	//STAGES
 	//Initial scan directions wrt the X-stage, Y-stage, and Z-stage axes. Note that the image formation has the opposite direction
@@ -79,7 +78,7 @@ namespace Constants
 	//To fine tune using beads
 	//1. Position the Z-stage on the plane with beads
 	//2. Do a centered Z scan
-	//3. Adjust the delay until the beads appear in the middle of the Z stack
+	//3. Adjust the delay until the beads are centered at the middle of the Z stack
 	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };		//Delay the Z-stage triggering the acq sequence
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };
 	//Stage X														

@@ -176,6 +176,7 @@
     <ClCompile Include="src\Const.cpp" />
     <ClCompile Include="src\Devices.cpp" />
     <ClCompile Include="src\FPGAapi.cpp" />
+    <ClCompile Include="src\SampleConfig.cpp" />
     <ClCompile Include="src\Sequencer.cpp" />
     <ClCompile Include="src\Routines.cpp" />
     <ClCompile Include="src\serial.cc" />
@@ -187,6 +188,7 @@
     <ClInclude Include="include\Const.h" />
     <ClInclude Include="include\Devices.h" />
     <ClInclude Include="include\FPGAapi.h" />
+    <ClInclude Include="include\SampleConfig.h" />
     <ClInclude Include="include\Sequencer.h" />
     <ClInclude Include="include\Routines.h" />
     <ClInclude Include="include\serial\serial.h" />

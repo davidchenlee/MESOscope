@@ -5,6 +5,7 @@ Code in C++ for controlling the NI USB-7852R card
 ### C++
 - Add chromatic shift to Routines::sequencer
 - Enforce to close the Uniblitz shutter before cutting
+- Choose 1X or 16X dynamically
 - calibrate the z stage delay for pixelSizeZ = 1.0 um
 - convert RTCHAN to int
 - Update the Z position after cutting --> check that it works
@@ -36,4 +37,5 @@ Code in C++ for controlling the NI USB-7852R card
 - Use a grid mask on the PMT16X to reduce the crosstalk
 - Use motorized actuator on the mirrors that align the Ti-Sapphire laser to the microscope because the laser beam slightly wanders with the wavelength tuning
 - Set up the beads next to the sample holder permanently
-- Use a lower power pockels for Fidelity to have a finer control
+- Purchase a 5W power pockels (instead of 10W) for Fidelity to have a finer control
+- Mount the bead and fluorescent slides in the sample container for checking the microscope performance regularly

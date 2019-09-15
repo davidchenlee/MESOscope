@@ -223,7 +223,7 @@ PIXELij TileArray::determineTileRelativePixelPos_pix(const TILEIJ tileIndicesIJ)
 
 #pragma region "QuickStitcher"
 //tileHeight_pix = tile height, tileWidth_pix = tile width, tileArraySizeIJ = { number of tiles as rows, number of tiles as columns}
-//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
+//II is the row index (along the image height) and JJ is the column index (along the image width) wrt the tile array. II and JJ start from 0
 QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const TILEDIM2 tileArraySizeIJ, const TILEOVERLAP3 overlapIJK_frac) :
 	TiffU8{ tileHeight_pix * tileArraySizeIJ.II, tileWidth_pix * tileArraySizeIJ.JJ, 1 },
 	TileArray{ tileHeight_pix,
@@ -241,7 +241,7 @@ QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, 
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
 }
 
-//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
+//II is the row index (along the image height) and JJ is the column index (along the image width) wrt the tile array. II and JJ start from 0
 void QuickStitcher::push(const U8 *tile, const TILEIJ tileIndicesIJ)
 {
 	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= TileArray::readTileArraySizeIJ(Axis::II))
@@ -387,7 +387,7 @@ LENGTH2 QuickScanXY::castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const
 Boolmap::Boolmap(const TiffU8 &tiff, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold) :
 	mTiff{ tiff },
 	mTileArray{ tileSize_pix ,
-				{tiff.readHeightPerFrame_pix() / tileSize_pix.ii, tiff.readWidthPerFrame_pix() / tileSize_pix.jj},
+				{Util::intceil(tiff.readHeightPerFrame_pix() / tileSize_pix.ii), Util::intceil(tiff.readWidthPerFrame_pix() / tileSize_pix.jj)},
 				overlapIJK_frac },
 	mThreshold{ threshold },
 	mFullHeight_pix{ tiff.readHeightPerFrame_pix() },
@@ -436,7 +436,7 @@ Boolmap::Boolmap(const QuickScanXY &quickScanXY, const PIXDIM2 tileSize_pix, con
 }
 
 //Indicate if a specific tile in the array is bright. The tile indices start form 0
-//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array
+//II is the row index (along the image height) and JJ is the column index (along the image width) wrt the tile array
 bool Boolmap::isTileBright(const TILEIJ tileIndicesIJ) const
 {
 	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.readTileArraySizeIJ(TileArray::Axis::II))
@@ -483,34 +483,34 @@ void Boolmap::saveTileGridOverlap(std::string filename, const OVERRIDE override)
 	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ)) };
 	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mTileArray.readTileArraySizeIJ(TileArray::Axis::II)) };
 
-	//Horizontal lines. II is the row index (along the image height) of the tile wrt the tile array
+	//Horizontal lines. II is the row index (along the image height) wrt the tile array
 # pragma omp parallel for schedule(dynamic)
 	for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
 	{
-		const PIXELij absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_({ II, 0 }) };			//Absolute tile center position wrt the Tiff		
-		const int tileTopPos_pix{ absoluteTilePixelPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };		//Top pixels of the tile wrt the Tiff
-		const int tileBottomPos_pix{ absoluteTilePixelPos_pix.ii + mTileArray.readTileHeight_pix() / 2 };	//Bottom pixels of the tile wrt the Tiff
+		const PIXELij tileCenterPos_pix{ determineTileAbsolutePixelPos_pix_({ II, 0 }) };			//Tile center position wrt the Tiff		
+		const int tileTopPos_pix{ tileCenterPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };		//Top pixels of the tile wrt the Tiff
+		const int tileBottomPos_pix{ tileCenterPos_pix.ii + mTileArray.readTileHeight_pix() / 2 };	//Bottom pixels of the tile wrt the Tiff
 		for (int iterCol_pix = 0; iterCol_pix < mFullWidth_pix; iterCol_pix++)
 			for (int iterThickness = -lineThicknessHorizontal / 2; iterThickness < lineThicknessHorizontal / 2; iterThickness++)
 			{
 				const int iterTopRow_pix{ (tileTopPos_pix + iterThickness) * mFullWidth_pix + iterCol_pix };
 				const int iterBottomRow_pix{ (tileBottomPos_pix + iterThickness) * mFullWidth_pix + iterCol_pix };
 
-				if (iterTopRow_pix >= 0 && iterTopRow_pix < mNpixFull)										//Make sure that the pixel is inside the Tiff
+				if (iterTopRow_pix >= 0 && iterTopRow_pix < mNpixFull)								//Make sure that the pixel is inside the Tiff
 					(mTiff.data())[iterTopRow_pix] = lineColor;
 
-				if (iterBottomRow_pix >= 0 && iterBottomRow_pix < mNpixFull)								//Make sure that the pixel is inside the Tiff
+				if (iterBottomRow_pix >= 0 && iterBottomRow_pix < mNpixFull)						//Make sure that the pixel is inside the Tiff
 					(mTiff.data())[(tileBottomPos_pix + iterThickness) * mFullWidth_pix + iterCol_pix] = lineColor;
 			}
 	}
 
-	//Vertical lines. JJ is the column index (along the image width) of the tile wrt the tile array
+	//Vertical lines. JJ is the column index (along the image width) wrt the tile array
 # pragma omp parallel for schedule(dynamic)
 	for (int JJ = 0; JJ < mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ); JJ++)
 	{
-		const PIXELij absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_({ 0, JJ }) };			//Absolute tile center position wrt the Tiff
-		const int tileLeft{ absoluteTilePixelPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };				//Left pixels of the tile wrt the Tiff
-		const int tileRight{ absoluteTilePixelPos_pix.jj + mTileArray.readTileWidth_pix() / 2 };			//Right pixels of the tile wrt the Tiff
+		const PIXELij tileCenterPos_pix{ determineTileAbsolutePixelPos_pix_({ 0, JJ }) };			//Tile center position wrt the Tiff
+		const int tileLeft{ tileCenterPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };			//Left pixels of the tile wrt the Tiff
+		const int tileRight{ tileCenterPos_pix.jj + mTileArray.readTileWidth_pix() / 2 };			//Right pixels of the tile wrt the Tiff
 		for (int iterRow_pix = 0; iterRow_pix < mFullHeight_pix; iterRow_pix++)
 			for (int iterThickness = -lineThicknessVertical / 2; iterThickness < lineThicknessVertical / 2; iterThickness++)
 			{
@@ -527,35 +527,29 @@ void Boolmap::saveTileGridOverlap(std::string filename, const OVERRIDE override)
 	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
 
-//Generate a Tiff with a binary dark or bright grid of tiles
+//Save the input Tiff with the dark tiles shaded
 void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 {
 	const U8 pixelColor{ 200 };	//Shade level
-	TiffU8 tileMap{ mTiff.data(), mFullHeight_pix, mFullWidth_pix, 1 };
+	TiffU8 outputTiff{ std::vector<U8>(mNpixFull, pixelColor), mFullHeight_pix, mFullWidth_pix, 1 };//Create an uniform and empty Tiff
 
-	//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array
+	//II is the row index (along the image height) and JJ is the column index (along the image width) wrt the tile array
 	for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
 		for (int JJ = 0; JJ < mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ); JJ++)
-		{
-			if (!isTileBright({ II, JJ }))	//If the tile is dark, make it white
+			if (isTileBright({ II, JJ }))	//If the tile is bright, copy the pixel from mTiff.data()
 			{
-				const PIXELij absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_({ II, JJ }) };	//Absolute tile center position wrt the Tiff anchor pixel
-				const int tileTopPos_pix{ absoluteTilePixelPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };
+				const PIXELij tileCenterPos_pix{ determineTileAbsolutePixelPos_pix_({ II, JJ }) };	//Tile center position wrt the Tiff anchor pixel
+				const int tileTopPos_pix{ tileCenterPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };
 				const int tileBottomPos_pix{ tileTopPos_pix + mTileArray.readTileHeight_pix() };
-				const int tileLeftPos_pix{ absoluteTilePixelPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };
+				const int tileLeftPos_pix{ tileCenterPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };
 				const int tileRightPos_pix{ tileLeftPos_pix + mTileArray.readTileWidth_pix() };
 
 				for (int iterRow_pix = tileTopPos_pix; iterRow_pix < tileBottomPos_pix; iterRow_pix++)
 					for (int iterCol_pix = tileLeftPos_pix; iterCol_pix < tileRightPos_pix; iterCol_pix++)
-					{
-						const int iterPix{ iterRow_pix * mFullWidth_pix + iterCol_pix };
-						if (iterPix >= 0 && iterPix < mNpixFull)
-							(tileMap.data())[iterPix] = pixelColor;
-					}
+						if (iterRow_pix >= 0 && iterRow_pix < mFullHeight_pix && iterCol_pix >= 0 && iterCol_pix < mFullWidth_pix)//Check that the tile is inside the Tiff
+							(outputTiff.data())[iterRow_pix * mFullWidth_pix + iterCol_pix] = (mTiff.data())[iterRow_pix * mFullWidth_pix + iterCol_pix];
 			}
-		}
-
-	tileMap.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
+	outputTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
 
 //Pixel position of the center of the tiles relative to the center of the Tiff
@@ -571,7 +565,7 @@ PIXELij Boolmap::determineTileAbsolutePixelPos_pix_(const TILEIJ tileIndicesIJ) 
 }
 
 //Take the top frame of the stack and return true if it's bright. Divide the image in quadrants for a better sensitivity
-//II is the row index (along the image height) and JJ is the column index (along the image width) of the tile wrt the tile array. II and JJ start from 0
+//II is the row index (along the image height) and JJ is the column index (along the image width) wrt the tile array. II and JJ start from 0
 bool Boolmap::isQuadrantBright_(const double threshold, const TILEIJ tileIndicesIJ) const
 {
 	if (threshold < 0 || threshold > 1)
@@ -584,13 +578,13 @@ bool Boolmap::isQuadrantBright_(const double threshold, const TILEIJ tileIndices
 	const int threshold_255{ static_cast<int>(threshold * 255) };		//Threshold in the range [0-255]
 
 	//Divide the image in 4 quadrants
-	const PIXELij absoluteTilePixelPos_pix{ determineTileAbsolutePixelPos_pix_(tileIndicesIJ) };	//Absolute tile center position wrt the Tiff anchor pixel
+	const PIXELij tileCenterPos_pix{ determineTileAbsolutePixelPos_pix_(tileIndicesIJ) };	//Tile center position wrt the Tiff anchor pixel
 	const int halfHeight{ mTileArray.readTileHeight_pix() / 2 };
 	const int halfwidth{ mTileArray.readTileWidth_pix() / 2 };
-	const int tileTopPos_pix{ absoluteTilePixelPos_pix.ii - halfHeight };
-	const int tileBottomPos_pix{ absoluteTilePixelPos_pix.ii + halfHeight };
-	const int tileLeftPos_pix{ absoluteTilePixelPos_pix.jj - halfwidth };
-	const int tileRightPos_pix{ absoluteTilePixelPos_pix.jj + halfwidth };
+	const int tileTopPos_pix{ tileCenterPos_pix.ii - halfHeight };
+	const int tileBottomPos_pix{ tileCenterPos_pix.ii + halfHeight };
+	const int tileLeftPos_pix{ tileCenterPos_pix.jj - halfwidth };
+	const int tileRightPos_pix{ tileCenterPos_pix.jj + halfwidth };
 	std::vector<double> vec_sum;	//Vector of the sum for each quadrant
 
 	//Iterate over the 4 quadrants. Start scanning the quadrant from the top-left corner of the image. Scan from left to right, then go back and scan the second row from left to right.

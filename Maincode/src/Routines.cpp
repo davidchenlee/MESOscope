@@ -1132,13 +1132,13 @@ namespace TestRoutines
 	void correctImage()
 	{
 
-		std::string inputFilename{ "Liver20190812_02_F1040nm_P=800.0mW_Pexp=150um_x=44.300_y=24.003_zi=18.0510_zf=18.1610_Step=0.0010_bin=4" };
+		std::string inputFilename{ "Liver20190812_02_F1040nm_P=800.0mW_Pinc=0.0mWpum_x=45.000_y=20.000_zi=18.8640_zf=18.9740_Step=0.0005 (1)" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		//image.correctFOVslowCPU(1);
 		//image.correctRSdistortionGPU(200. * um);	
-		//image.flattenField(2.0, 4, 11);
-		image.suppressCrosstalk(0.25);
+		image.flattenFieldGaussian(0.018);
+		//image.suppressCrosstalk(0.25);
 		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 		//image.binFrames(5);
@@ -1200,12 +1200,12 @@ namespace TestRoutines
 
 	void boolmapSample()
 	{
-		std::string inputFilename{ "Liver20190812_02_V1040nm_P=30.0mW_xi=36.020_xf=52.580_yi=28.953_yf=19.053_z=18.1010_Step=0.0010" };
+		std::string inputFilename{ "Liver20190812_02_V1040nm_P=30.0mW_xi=35.880_xf=52.720_yi=28.953_yf=19.053_z=18.0140_Step=0.0010" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
-		//The tile array for boolmapping does not have to coincide with the tile array used for imaging
-		const PIXDIM2 ssTileSize_pix{ 280, 300 };
+		//The tile array for the slow scan ('ss') does not necessarily coincide with the tile array used for fast scanning
+		const PIXDIM2 ssTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because pixelSizeX=1.0 um was used instead of 0.5 um
 		const TILEOVERLAP3 ssOverlapIJK_frac{ 0.0, 0.0, 0.0 };
 		const double threshold{ 0.02 };
 		Boolmap boolmap{ image, ssTileSize_pix, ssOverlapIJK_frac, threshold };

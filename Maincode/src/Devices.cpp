@@ -53,7 +53,7 @@ void Image::correct(const double FFOVfast)
 
 	if (multibeam)
 	{
-		mTiff.flattenField(2.0, 4, 11);
+		mTiff.flattenFieldLinear(2.0, 4, 11);
 		mTiff.suppressCrosstalk(0.2);
 	}
 }

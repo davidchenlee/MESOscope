@@ -78,7 +78,8 @@ public:
 	void correctRSdistortionCPU(const double FFOVfast);
 	void correctFOVslowCPU(const double FFOVfast);
 	void suppressCrosstalk(const double crosstalkRatio = 1.0);
-	void flattenField(const double scaleFactor, const int lowerChan, const int higherChan);
+	void flattenFieldLinear(const double scaleFactor, const int lowerChan, const int higherChan);
+	void flattenFieldGaussian(const double expFactor);
 private:
 	U8* mArray;
 	int mHeightPerFrame_pix;

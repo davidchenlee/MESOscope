@@ -1211,6 +1211,7 @@ namespace TestRoutines
 		Boolmap boolmap{ image, ssTileSize_pix, ssOverlapIJK_frac, threshold };
 		boolmap.saveTileMapToText("Boolmap");
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
+		//image.saveToFile("TileMap", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
 
 		Util::pressAnyKeyToCont();
 	}

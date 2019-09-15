@@ -527,11 +527,16 @@ void Boolmap::saveTileGridOverlap(std::string filename, const OVERRIDE override)
 	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
 
-//Save the input Tiff with the dark tiles shaded
+//Save a copy of the input Tiff with the dark tiles shaded
 void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 {
-	const U8 pixelColor{ 200 };	//Shade level
-	TiffU8 outputTiff{ std::vector<U8>(mNpixFull, pixelColor), mFullHeight_pix, mFullWidth_pix, 1 };//Create an uniform and empty Tiff
+	
+	TiffU8 outputTiff{ mFullHeight_pix, mFullWidth_pix, 1 };	//Create an empty Tiff
+
+	//Shade the Tiff with a chosen grey level
+	const U8 pixelColor{ 200 };	
+	for (int iterPixel = 0; iterPixel < mNpixFull; iterPixel++)
+		(outputTiff.data())[iterPixel] = pixelColor;
 
 	//II is the row index (along the image height) and JJ is the column index (along the image width) wrt the tile array
 	for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)

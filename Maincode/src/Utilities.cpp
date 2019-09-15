@@ -522,15 +522,15 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 	}
 
 	//Choose whether to save the first frame at the top or bottom of the stack
-	int frameIndex, lastFrame;
+	int iterFrame, lastFrame;
 	switch (scanDirZ)
 	{
 	case SCANDIR::UPWARD:	//Forward saving: the first frame is at the top of the stack
-		frameIndex = 0;
+		iterFrame = 0;
 		lastFrame = nFrames - 1;
 		break;
 	case SCANDIR::DOWNWARD:	//Reverse saving: the first frame is at the bottom of the stack
-		frameIndex = nFrames - 1;
+		iterFrame = nFrames - 1;
 		lastFrame = 0;
 		break;
 	default:
@@ -549,7 +549,7 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 		TIFFSetField(tiffHandle, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);							//Single channel with min as black				
 		TIFFSetField(tiffHandle, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tiffHandle, width_pix));	//Set the strip size of the file to be size of one row of pixels
 		//TIFFSetField(tiffHandle, TIFFTAG_SUBFILETYPE, FILETYPE_PAGE);									//Specify that it's a frame within the multipage file
-		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, frameIndex, nFrames);							//Specify the frame number
+		//TIFFSetField(tiffHandle, TIFFTAG_PAGENUMBER, iterFrame, nFrames);								//Specify the frame number
 
 		//IMAGEJ TAG FOR USING HYPERSTACKS
 		std::string TIFFTAG_ImageJ = "ImageJ=1.52e\nimages=" + std::to_string(nFrames) + "\nchannels=1\nslices=" + std::to_string(nFrames) + "\nhyperstack=true\nmode=grayscale\nunit=\\u00B5m\nloop=false ";
@@ -558,16 +558,20 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 		//Write a frame to the file one strip at a time
 		for (int iterRow_pix = 0; iterRow_pix < height_pix; iterRow_pix++)
 		{
-			std::memcpy(buffer, &mArray[(frameIndex * height_pix + iterRow_pix) * mBytesPerLine], mBytesPerLine);
+			std::memcpy(buffer, &mArray[(iterFrame * height_pix + iterRow_pix) * mBytesPerLine], mBytesPerLine);
 			if (TIFFWriteScanline(tiffHandle, buffer, iterRow_pix, 0) < 0)
 				break;
 		}
-		TIFFWriteDirectory(tiffHandle);						//Create a page structure. This gives a large overhead
 
-		if (frameIndex == lastFrame)
+		//Create a new page if nFrames > 1. It gives a large overhead
+		if(nFrames > 1)
+			TIFFWriteDirectory(tiffHandle);						
+
+		if (iterFrame == lastFrame)
 			break;
 
-		frameIndex += Util::convertScandirToInt(scanDirZ);	//Increase the iterator for UPWARD. Decrease for DOWNWARD
+		//Increase the iterator for UPWARD. Decrease for DOWNWARD
+		iterFrame += Util::convertScandirToInt(scanDirZ);	
 	} while (true);
 
 	_TIFFfree(buffer);										//Destroy the buffer

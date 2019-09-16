@@ -620,7 +620,7 @@ void Stage::printPosXYZ() const
 	std::cout << "Stage Z position = " << mPosXYZ.ZZ / mm << " mm\n";
 }
 
-double Stage::readCurrentPosition_(const Axis axis) const
+double Stage::readCurrentPosition_(const AXIS axis) const
 {
 	switch (axis)
 	{
@@ -635,7 +635,7 @@ double Stage::readCurrentPosition_(const Axis axis) const
 	}
 }
 
-void Stage::setCurrentPosition_(const Axis axis, const double position)
+void Stage::setCurrentPosition_(const AXIS axis, const double position)
 {
 	switch (axis)
 	{
@@ -648,7 +648,7 @@ void Stage::setCurrentPosition_(const Axis axis, const double position)
 	}
 }
 
-double Stage::readCurrentVelocity_(const Axis axis) const
+double Stage::readCurrentVelocity_(const AXIS axis) const
 {
 	switch (axis)
 	{
@@ -663,7 +663,7 @@ double Stage::readCurrentVelocity_(const Axis axis) const
 	}
 }
 
-void Stage::setCurrentVelocity_(const Axis axis, const double velocity)
+void Stage::setCurrentVelocity_(const AXIS axis, const double velocity)
 {
 	if (velocity <= 0)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": The velocity must be > 0");
@@ -680,7 +680,7 @@ void Stage::setCurrentVelocity_(const Axis axis, const double velocity)
 }
 
 //Retrieve the stage position from the controller
-double Stage::downloadPositionSingle_(const Axis axis)
+double Stage::downloadPositionSingle_(const AXIS axis)
 {
 	double position_mm;	//Position in mm
 	if (!PI_qPOS(mHandleXYZ.at(axis), mNstagesPerController, &position_mm))
@@ -690,7 +690,7 @@ double Stage::downloadPositionSingle_(const Axis axis)
 }
 
 //Move the stage to the requested position
-void Stage::moveSingle(const Axis axis, const double position)
+void Stage::moveSingle(const AXIS axis, const double position)
 {
 	//Check if the requested position is within range
 	if (position < mSoftPosLimXYZ.at(axis).MIN || position > mSoftPosLimXYZ.at(axis).MAX)
@@ -724,7 +724,7 @@ void Stage::moveXYZ(const POSITION3 posXYZ)
 	moveSingle(ZZ, posXYZ.ZZ);
 }
 
-bool Stage::isMoving(const Axis axis) const
+bool Stage::isMoving(const AXIS axis) const
 {
 	BOOL isMoving;
 
@@ -734,7 +734,7 @@ bool Stage::isMoving(const Axis axis) const
 	return isMoving;
 }
 
-void Stage::waitForMotionToStopSingle(const Axis axis) const
+void Stage::waitForMotionToStopSingle(const AXIS axis) const
 {
 	std::cout << "Stage " + convertAxisToString_(axis) + " moving to the new position: ";
 
@@ -781,7 +781,7 @@ void Stage::stopAll() const
 }
 
 //Request the velocity of the stage
-double Stage::downloadVelSingle_(const Axis axis) const
+double Stage::downloadVelSingle_(const AXIS axis) const
 {
 	double vel_mmps;
 	if (!PI_qVEL(mHandleXYZ.at(axis), mNstagesPerController, &vel_mmps))
@@ -792,7 +792,7 @@ double Stage::downloadVelSingle_(const Axis axis) const
 }
 
 //Set the velocity of the stage
-void Stage::setVelSingle(const Axis axis, const double vel)
+void Stage::setVelSingle(const AXIS axis, const double vel)
 {
 	//Check if the requested vel is valid
 	if (vel <= 0)
@@ -834,7 +834,7 @@ void Stage::printVelXYZ() const
 //8: start threshold in mm
 //9: stop threshold in mm
 //10: trigger position in mm
-double Stage::downloadDOtriggerParamSingle_(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID) const
+double Stage::downloadDOtriggerParamSingle_(const AXIS axis, const DIOCHAN DOchan, const DOPARAM triggerParamID) const
 {
 	const int triggerParamID_int{ static_cast<int>(triggerParamID) };
 	const int DOchan_int{ static_cast<int>(DOchan) };
@@ -846,7 +846,7 @@ double Stage::downloadDOtriggerParamSingle_(const Axis axis, const DIOCHAN DOcha
 	return value;
 }
 
-void Stage::setDOtriggerParamSingle(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID, const double value) const
+void Stage::setDOtriggerParamSingle(const AXIS axis, const DIOCHAN DOchan, const DOPARAM triggerParamID, const double value) const
 {
 	const int triggerParamID_int{ static_cast<int>(triggerParamID) };
 	const int DOchan_int{ static_cast<int>(DOchan) };
@@ -854,7 +854,7 @@ void Stage::setDOtriggerParamSingle(const Axis axis, const DIOCHAN DOchan, const
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Unable to set the trigger config for the stage " + convertAxisToString_(axis));
 }
 
-void Stage::setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const
+void Stage::setDOtriggerParamAll(const AXIS axis, const DIOCHAN DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const
 {
 	if (triggerStep <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The trigger step must be > 0");
@@ -875,7 +875,7 @@ void Stage::setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const do
 }
 
 //Request the enable/disable status of the stage DO
-bool Stage::isDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan) const
+bool Stage::isDOtriggerEnabled(const AXIS axis, const DIOCHAN DOchan) const
 {
 	BOOL triggerState;
 	const int DOchan_int{ static_cast<int>(DOchan) };
@@ -887,7 +887,7 @@ bool Stage::isDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan) const
 }
 
 //Enable or disable the stage DO
-void Stage::setDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan, const BOOL triggerState) const
+void Stage::setDOtriggerEnabled(const AXIS axis, const DIOCHAN DOchan, const BOOL triggerState) const
 {
 	const int DOchan_int{ static_cast<int>(DOchan) };
 	if (!PI_TRO(mHandleXYZ.at(axis), &DOchan_int, &triggerState, 1))
@@ -896,7 +896,7 @@ void Stage::setDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan, const BOO
 
 //Each stage driver has 4 DO channels that can be used to monitor the stage position, motion, etc
 //Print out the relevant parameters
-void Stage::printStageConfig(const Axis axis, const DIOCHAN chan) const
+void Stage::printStageConfig(const AXIS axis, const DIOCHAN chan) const
 {
 	switch (axis)
 	{
@@ -965,7 +965,7 @@ void Stage::configDOtriggers_() const
 	setDOtriggerParamSingle(ZZ, ZDO2, DOPARAM::TRIGMODE, static_cast<double>(DOTRIGMODE::INMOTION));	//Configure DO2 as motion monitor
 }
 
-std::string Stage::convertAxisToString_(const Axis axis) const
+std::string Stage::convertAxisToString_(const AXIS axis) const
 {
 	switch (axis)
 	{
@@ -1005,11 +1005,11 @@ void Vibratome::sliceTissue(const double planeZtoCut)
 	mStage.moveXYZ({ mStageInitialSlicePosXY.XX, mStageInitialSlicePosXY.YY, planeZtoCut });	//Position the sample in front of the vibratome's blade
 	mStage.waitForMotionToStopAll();
 
-	mStage.setVelSingle(Axis::YY, mSlicingVel);							//Change the y vel for slicing
+	mStage.setVelSingle(AXIS::YY, mSlicingVel);							//Change the y vel for slicing
 	pushStartStopButton();												//Turn on the vibratome
-	mStage.moveSingle(Axis::YY, mStageFinalSlicePosY);					//Slice the sample: move the stage Y towards the blade
-	mStage.waitForMotionToStopSingle(Axis::YY);							//Wait until the motion ends
-	mStage.setVelSingle(Axis::YY, mStageConveyingVelXYZ.YY);			//Set back the y vel to move the sample back to the microscope
+	mStage.moveSingle(AXIS::YY, mStageFinalSlicePosY);					//Slice the sample: move the stage Y towards the blade
+	mStage.waitForMotionToStopSingle(AXIS::YY);							//Wait until the motion ends
+	mStage.setVelSingle(AXIS::YY, mStageConveyingVelXYZ.YY);			//Set back the y vel to move the sample back to the microscope
 
 	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));			//Move the stage Y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
 	//mStage.waitForMotionToStopSingle(Y);								//Wait until the motion ends
@@ -2308,7 +2308,7 @@ Mesoscope::Mesoscope(RTseq &rtseq, const Laser::ID whichLaser) :
 	mRTseq{ rtseq },
 	mStage{ 5. * mmps, 5. * mmps, 0.5 * mmps, g_currentSample.readStageSoftPosLimXYZ() },
 	VirtualLaser{ whichLaser },
-	Vibratome{ rtseq.mFpga, mStage }
+	Vibratome{ rtseq.mFpga, mStage }	
 {}
 
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
@@ -2351,29 +2351,77 @@ void Mesoscope::moveCollectorLens(const double position)
 	mCollectorLens.move(position);
 }
 
-void Mesoscope::moveXYZ(const POSITION3 posXYZ)
-{
-	mStage.moveXYZ(posXYZ);
-}
-
 void Mesoscope::waitForMotionToStopAll()
 {
 	mStage.waitForMotionToStopAll();
 }
 
-void Mesoscope::setVelSingle(const Axis axis, const double vel)
+void Mesoscope::setVelSingle(const AXIS axis, const double vel)
 {
 	mStage.setVelSingle(axis, vel);
 }
 
-void Mesoscope::moveSingle(const Axis stage, const double position)
+void Mesoscope::moveSingle(const AXIS stage, const double position)
 {
-	mStage.moveSingle(stage, position);
+	const POSITION3 chromaticShiftXYZ{ determineChromaticShiftXYZ_() };
+	switch (stage)
+	{
+	case AXIS::XX:
+		mStage.moveSingle(stage, position + chromaticShiftXYZ.XX);
+		break;
+	case AXIS::YY:
+		mStage.moveSingle(stage, position + chromaticShiftXYZ.YY);
+		break;
+	case AXIS::ZZ:
+		mStage.moveSingle(stage, position + chromaticShiftXYZ.ZZ);
+		break;
+	}
 }
 
 void Mesoscope::moveXY(const POSITION2 posXY)
 {
-	mStage.moveXY(posXY);
+	const POSITION3 chromaticShiftXYZ{ determineChromaticShiftXYZ_() };
+	mStage.moveXY({ posXY.XX + chromaticShiftXYZ.XX,
+					posXY.YY + chromaticShiftXYZ.YY });
+}
+
+void Mesoscope::moveXYZ(const POSITION3 posXYZ)
+{
+	const POSITION3 chromaticShiftXYZ{ determineChromaticShiftXYZ_() };
+	mStage.moveXYZ({ posXYZ.XX + chromaticShiftXYZ.XX,
+					 posXYZ.YY + chromaticShiftXYZ.YY,
+					 posXYZ.ZZ + chromaticShiftXYZ.ZZ });
+}
+
+POSITION3 Mesoscope::determineChromaticShiftXYZ_()
+{
+	switch (this->readCurrentLaser())
+	{
+	case Laser::ID::VISION:
+		switch (this->readCurrentWavelength_nm())
+		{
+		case 750:
+			return g_chromaticShiftVision750nm;
+		case 920:
+			return g_chromaticShiftVision920nm;
+		case 1040:
+			return g_chromaticShiftVision1040nm;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The chromatic shift has not been calibrated for the wavelength " + std::to_string(this->readCurrentWavelength_nm()) + " nm");
+		}
+		break;
+	case Laser::ID::FIDELITY:
+		switch (this->readCurrentWavelength_nm())
+		{
+		case 1040:
+			return g_chromaticShiftFidelity1040nm;
+		default:
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": FIDELITY only supports the wavelength 1040 nm\n");
+		}
+		break;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected laser unavailable");
+	}
 }
 #pragma endregion "Mesoscope"
 

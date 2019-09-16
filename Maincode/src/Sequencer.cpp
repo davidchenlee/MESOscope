@@ -188,13 +188,13 @@ TILEDIM2 TileArray::readTileArraySizeIJ() const
 	return mArraySizeIJ;
 }
 
-int TileArray::readTileArraySizeIJ(const Axis axis) const
+int TileArray::readTileArraySizeIJ(const TileArray::Axis axis) const
 {
 	switch (axis)
 	{
-	case Axis::II:
+	case TileArray::Axis::II:
 		return mArraySizeIJ.II;
-	case Axis::JJ:
+	case TileArray::Axis::JJ:
 		return mArraySizeIJ.JJ;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected tile array axis unavailable");
@@ -244,10 +244,10 @@ QuickStitcher::QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, 
 //II is the row index (along the image height) and JJ is the column index (along the image width) wrt the tile array. II and JJ start from 0
 void QuickStitcher::push(const U8 *tile, const TILEIJ tileIndicesIJ)
 {
-	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= TileArray::readTileArraySizeIJ(Axis::II))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(TileArray::readTileArraySizeIJ(Axis::II) - 1) + "]");
-	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= TileArray::readTileArraySizeIJ(Axis::JJ))
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(TileArray::readTileArraySizeIJ(Axis::JJ) - 1) + "]");
+	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= TileArray::readTileArraySizeIJ(TileArray::Axis::II))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile row index II must be in the range [0-" + std::to_string(TileArray::readTileArraySizeIJ(TileArray::Axis::II) - 1) + "]");
+	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= TileArray::readTileArraySizeIJ(TileArray::Axis::JJ))
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile column index JJ must be in the range [0-" + std::to_string(TileArray::readTileArraySizeIJ(TileArray::Axis::JJ) - 1) + "]");
 
 	//const int tileHeight_pix{ tile.heightPerFrame_pix() };													//Height of the tile
 	//const int tileWidth_pix{ tile.widthPerFrame_pix() };														//Width of the tile
@@ -302,7 +302,7 @@ QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 FFOV, const LE
 	if (LOIxy.XX <= 0 || LOIxy.YY <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The length of interest must be > 0");
 
-	for (int JJ = 0; JJ < QuickStitcher::readTileArraySizeIJ(Axis::JJ); JJ++)
+	for (int JJ = 0; JJ < QuickStitcher::readTileArraySizeIJ(TileArray::Axis::JJ); JJ++)
 	{
 		const int II{ 0 };	//Only 1 row
 		const POSITION2 relativeTileIndexIJ{ determineRelativeTileIndicesIJ(readTileOverlapIJK_frac(), readTileArraySizeIJ(), { II, JJ }) };
@@ -679,13 +679,13 @@ void Stack::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "\n";
 }
 
-double Stack::readFFOV(const Axis axis) const
+double Stack::readFFOV(const AXIS axis) const
 {
 	switch (axis)
 	{
-	case Axis::XX:
+	case AXIS::XX:
 		return mFFOV.XX;
-	case Axis::YY:
+	case AXIS::YY:
 		return mFFOV.YY;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected stage axis unavailable");
@@ -769,13 +769,13 @@ POSITION2 Action::MoveStage::readTileCenterXY() const
 	return mTileCenterXY;
 }
 
-double Action::MoveStage::readTileCenter(Axis axis) const
+double Action::MoveStage::readTileCenter(AXIS axis) const
 {
 	switch (axis)
 	{
-	case Axis::XX:
+	case AXIS::XX:
 		return mTileCenterXY.XX;
-	case Axis::YY:
+	case AXIS::YY:
 		return mTileCenterXY.YY;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected stage axis unavailable");
@@ -885,7 +885,7 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << convertActionIDtoString_(mActionID) << "\t" << mAction.moveStage.readSliceNumber();
 		*fileHandle << "\t(" << mAction.moveStage.readTileIndex(TileArray::Axis::II) << "," << mAction.moveStage.readTileIndex(TileArray::Axis::JJ) << ")\t";
 		*fileHandle << std::setprecision(4);
-		*fileHandle << "(" << mAction.moveStage.readTileCenter(Axis::XX) / mm << "," << mAction.moveStage.readTileCenter(Axis::YY) / mm << ")\n";
+		*fileHandle << "(" << mAction.moveStage.readTileCenter(AXIS::XX) / mm << "," << mAction.moveStage.readTileCenter(AXIS::YY) / mm << ")\n";
 		break;
 	case Action::ID::ACQ:
 		*fileHandle << convertActionIDtoString_(mActionID) << "\t\t\t\t\t";
@@ -921,7 +921,7 @@ void Sequencer::Commandline::printParameters() const
 		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
 		std::cout << "Vibratome slice number = " << mAction.moveStage.readSliceNumber() << "\n";
 		std::cout << "Tile ij = (" << mAction.moveStage.readTileIndex(TileArray::Axis::II) << "," << mAction.moveStage.readTileIndex(TileArray::Axis::JJ) << ")\n";
-		std::cout << "Tile center (stageX, stageY) = (" << mAction.moveStage.readTileCenter(Axis::XX) / mm << "," << mAction.moveStage.readTileCenter(Axis::YY) / mm << ") mm\n\n";
+		std::cout << "Tile center (stageX, stageY) = (" << mAction.moveStage.readTileCenter(AXIS::XX) / mm << "," << mAction.moveStage.readTileCenter(AXIS::YY) / mm << ") mm\n\n";
 		break;
 	case Action::ID::ACQ:
 		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
@@ -1018,8 +1018,8 @@ POSITION2 Sequencer::convertTileIndicesIJToStagePosXY(const TILEIJ tileIndicesIJ
 	//The tile centers are (1-a)*FFOV away from each other, where a*L is the tile overlap
 	POSITION2 centeredIJ{ determineRelativeTileIndicesIJ(mStack.readOverlapIJK_frac(), mTileArray.readTileArraySizeIJ(), tileIndicesIJ) };
 	POSITION2 stagePosXY;
-	stagePosXY.XX = mSample.mCenterXY.XX - mStack.readFFOV(Axis::XX)  * centeredIJ.XX;
-	stagePosXY.YY = mSample.mCenterXY.YY - mStack.readFFOV(Axis::YY)  * centeredIJ.YY;
+	stagePosXY.XX = mSample.mCenterXY.XX - mStack.readFFOV(AXIS::XX)  * centeredIJ.XX;
+	stagePosXY.YY = mSample.mCenterXY.YY - mStack.readFFOV(AXIS::YY)  * centeredIJ.YY;
 
 	return stagePosXY;
 }
@@ -1135,8 +1135,8 @@ void Sequencer::initializeVibratomeSlice_()
 //If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
 TILEDIM2 Sequencer::determineTileArraySizeIJ_()
 {
-	const int numberOfTilesII{ Util::intceil(1 + 1. / (1 - mStack.readOverlap_frac(TileArray::Axis::II)) * (mSample.mLOIxyz_req.XX / mStack.readFFOV(Axis::XX) - 1)) };
-	const int numberOfTilesJJ{ Util::intceil(1 + 1. / (1 - mStack.readOverlap_frac(TileArray::Axis::JJ)) * (mSample.mLOIxyz_req.YY / mStack.readFFOV(Axis::YY) - 1)) };
+	const int numberOfTilesII{ Util::intceil(1 + 1. / (1 - mStack.readOverlap_frac(TileArray::Axis::II)) * (mSample.mLOIxyz_req.XX / mStack.readFFOV(AXIS::XX) - 1)) };
+	const int numberOfTilesJJ{ Util::intceil(1 + 1. / (1 - mStack.readOverlap_frac(TileArray::Axis::JJ)) * (mSample.mLOIxyz_req.YY / mStack.readFFOV(AXIS::YY) - 1)) };
 
 	TILEDIM2 output;
 	if (numberOfTilesII > 1)
@@ -1163,10 +1163,10 @@ void Sequencer::initializeEffectiveROI_()
 	const POSITION2 tilePosXYmax = convertTileIndicesIJToStagePosXY({ mTileArray.readTileArraySizeIJ(TileArray::Axis::II) - 1, mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) - 1 });	//Absolute position of the CENTER of the tile
 
 	//The ROI is measured from the border of the tiles. Therefore, add half of the FFOV
-	mROI.XMAX = tilePosXYmin.XX + mStack.readFFOV(Axis::XX) / 2.;
-	mROI.YMAX = tilePosXYmin.YY + mStack.readFFOV(Axis::YY) / 2.;
-	mROI.XMIN = tilePosXYmax.XX - mStack.readFFOV(Axis::XX) / 2.;
-	mROI.YMIN = tilePosXYmax.YY - mStack.readFFOV(Axis::YY) / 2.;
+	mROI.XMAX = tilePosXYmin.XX + mStack.readFFOV(AXIS::XX) / 2.;
+	mROI.YMAX = tilePosXYmin.YY + mStack.readFFOV(AXIS::YY) / 2.;
+	mROI.XMIN = tilePosXYmax.XX - mStack.readFFOV(AXIS::XX) / 2.;
+	mROI.YMIN = tilePosXYmax.YY - mStack.readFFOV(AXIS::YY) / 2.;
 
 	if (mROI.XMIN < mSample.readStageSoftPosLimXMIN() || mROI.XMAX > mSample.readStageSoftPosLimXMAX())
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The ROI goes beyond the soft limits of the stage X");

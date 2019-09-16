@@ -41,7 +41,7 @@ public:
 
 	I16 readScannerVoltageMon() const;
 	I16 readRescannerVoltageMon() const;
-	void uploadImagingParameters(const int mHeightPerBeamletAllFrames_pix, const int mHeightPerBeamletPerFrame_pix, const int mNframes) const;
+	void uploadImagingParameters(const int mHeightPerBeamletPerFrame_pix, const int mNframes) const;
 
 	void triggerAOext() const;
 	void triggerControlSequence() const;

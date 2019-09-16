@@ -281,19 +281,17 @@ I16 FPGA::readRescannerVoltageMon() const
 }
 
 //Load the imaging parameters onto the FPGA
-void FPGA::uploadImagingParameters(const int heightPerBeamletAllFrames_pix, const int heightPerBeamletPerFrame_pix, const int nFrames) const
+void FPGA::uploadImagingParameters(const int heightPerBeamletPerFrame_pix, const int nFrames) const
 {
-	if (heightPerBeamletAllFrames_pix <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");
 	if (heightPerBeamletPerFrame_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");
 	if (nFrames <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be >= 1");
 
 	//IMAGING PARAMETERS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(heightPerBeamletAllFrames_pix)));		//Total number of lines per beamlet in all the frames
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mHandle, NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(heightPerBeamletPerFrame_pix)));	//Number of lines per beamlet in a frame
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mHandle, NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(nFrames)));								//Number of frames to acquire
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_NlinesAll, static_cast<I32>(heightPerBeamletPerFrame_pix * nFrames)));	//Total number of lines per beamlet in all the frames
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mHandle, NiFpga_FPGAvi_ControlI16_NlinesPerFrame, static_cast<I16>(heightPerBeamletPerFrame_pix)));			//Number of lines per beamlet in a frame
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mHandle, NiFpga_FPGAvi_ControlI16_Nframes, static_cast<I16>(nFrames)));										//Number of frames to acquire
 }
 
 //Trigger the AOs of the FPGA externally instead of using the lineclock and frameclock (see the LV implementation)
@@ -589,7 +587,7 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG ma
 	if (nFrames <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
 
-	mFpga.uploadImagingParameters(mHeightPerBeamletAllFrames_pix, mHeightPerBeamletPerFrame_pix, mNframes);
+	mFpga.uploadImagingParameters(mHeightPerBeamletPerFrame_pix, mNframes);
 
 	mFpga.setLineclock(mLineclockInput);
 
@@ -627,7 +625,7 @@ void RTseq::setNumberOfFrames(const int nFrames)
 	mNframes = nFrames;
 	mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
 	mNpixPerBeamletAllFrames = mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix;
-	mFpga.uploadImagingParameters(mHeightPerBeamletAllFrames_pix, mHeightPerBeamletPerFrame_pix, mNframes);
+	mFpga.uploadImagingParameters(mHeightPerBeamletPerFrame_pix, mNframes);
 
 	mFpga.setLineclock(mLineclockInput);
 

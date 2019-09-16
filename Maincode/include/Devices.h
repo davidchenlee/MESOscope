@@ -114,21 +114,21 @@ public:
 
 	POSITION3 readPosXYZ() const;
 	void printPosXYZ() const;
-	void moveSingle(const Axis stage, const double position);
+	void moveSingle(const AXIS stage, const double position);
 	void moveXY(const POSITION2 posXY);
 	void moveXYZ(const POSITION3 posXYZ);
-	bool isMoving(const Axis axis) const;
-	void waitForMotionToStopSingle(const Axis axis) const;
+	bool isMoving(const AXIS axis) const;
+	void waitForMotionToStopSingle(const AXIS axis) const;
 	void waitForMotionToStopAll() const;
 	void stopAll() const;
-	void setVelSingle(const Axis axis, const double vel);
+	void setVelSingle(const AXIS axis, const double vel);
 	void setVelXYZ(const VELOCITY3 vel);
 	void printVelXYZ() const;
-	void setDOtriggerParamSingle(const Axis axis, const DIOCHAN DIOchan, const DOPARAM triggerParamID, const double value) const;
-	void setDOtriggerParamAll(const Axis axis, const DIOCHAN DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const;
-	bool isDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan) const;
-	void setDOtriggerEnabled(const Axis axis, const DIOCHAN DOchan, const BOOL triggerState) const;
-	void printStageConfig(const Axis axis, const DIOCHAN chan) const;
+	void setDOtriggerParamSingle(const AXIS axis, const DIOCHAN DIOchan, const DOPARAM triggerParamID, const double value) const;
+	void setDOtriggerParamAll(const AXIS axis, const DIOCHAN DOchan, const double triggerStep, const DOTRIGMODE triggerMode, const double startThreshold, const double stopThreshold) const;
+	bool isDOtriggerEnabled(const AXIS axis, const DIOCHAN DOchan) const;
+	void setDOtriggerEnabled(const AXIS axis, const DIOCHAN DOchan, const BOOL triggerState) const;
+	void printStageConfig(const AXIS axis, const DIOCHAN chan) const;
 private:
 	const int mPort_z{ 4 };										//COM port
 	const int mBaud_z{ 38400 };
@@ -139,15 +139,15 @@ private:
 	VELOCITY3 mVelXYZ;											//Velocity of the stages
 	std::vector<LIMIT2> mSoftPosLimXYZ{ {0,0},{0,0},{0,0} };	//Travel soft limits (may differ from the hard limits stored in the internal memory of the stages)
 																//Initialized with invalid values (lower limit = upper limit) for safety. It must be overridden by the constructor
-	double readCurrentPosition_(const Axis axis) const;
-	void setCurrentPosition_(const Axis axis, const double position);
-	double readCurrentVelocity_(const Axis axis) const;
-	void setCurrentVelocity_(const Axis axis, const double velocity);
-	double downloadPositionSingle_(const Axis axis);
-	double downloadVelSingle_(const Axis axis) const;
-	double downloadDOtriggerParamSingle_(const Axis axis, const DIOCHAN DOchan, const DOPARAM triggerParamID) const;
+	double readCurrentPosition_(const AXIS axis) const;
+	void setCurrentPosition_(const AXIS axis, const double position);
+	double readCurrentVelocity_(const AXIS axis) const;
+	void setCurrentVelocity_(const AXIS axis, const double velocity);
+	double downloadPositionSingle_(const AXIS axis);
+	double downloadVelSingle_(const AXIS axis) const;
+	double downloadDOtriggerParamSingle_(const AXIS axis, const DIOCHAN DOchan, const DOPARAM triggerParamID) const;
 	void configDOtriggers_() const;
-	std::string convertAxisToString_(const Axis axis) const;
+	std::string convertAxisToString_(const AXIS axis) const;
 };
 
 class Vibratome
@@ -413,14 +413,17 @@ public:
 	void setPower(const double laserPower) const;
 	void openShutter() const;
 	void moveCollectorLens(const double position);
-	void moveXYZ(const POSITION3 posXYZ);
+
 	void waitForMotionToStopAll();
-	void setVelSingle(const Axis axis, const double vel);
-	void moveSingle(const Axis stage, const double position);
+	void setVelSingle(const AXIS axis, const double vel);
+	void moveSingle(const AXIS stage, const double position);
 	void moveXY(const POSITION2 posXY);
+	void moveXYZ(const POSITION3 posXYZ);
 private:
 	RTseq &mRTseq;
 	CombinedFilterwheel mVirtualFilterWheel;
 	CollectorLens mCollectorLens;
 	Stage mStage;
+
+	POSITION3 determineChromaticShiftXYZ_();
 };

@@ -1,16 +1,6 @@
 #include "Routines.h"
 
-POSITION3 correctChromaticShift(const POSITION3 positionXYZ, const int wavelength_nm, const Laser::ID whichLaser)
-{
-	double positionShiftZ{ 0 };
-	if (wavelength_nm == 750)//The beads at 750 nm are chromatically shifted wrt 920 nm and 1040 nm for VISION
-		positionShiftZ =  - 5 * um;	
-	else if ( whichLaser == Laser::ID::FIDELITY ||
-		      (whichLaser == Laser::ID::AUTO && wavelength_nm == 1040 && multibeam == 1))//FIDELITY is chromatically shifted wrt VISION
-		positionShiftZ = - 4 * um;
 
-	return { positionXYZ.XX - 0.8 * um, positionXYZ.YY + 0.8 * um, positionXYZ.ZZ + positionShiftZ };
-}
 
 namespace Routines
 {
@@ -26,9 +16,9 @@ namespace Routines
 		//const RUNMODE acqMode{ RUNMODE::FI_MEAS };		//Field illumination measurement for 16X using beads
 		
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("GFP") };	//Select a particular fluorescence channel
-		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const POSITION3 stackCenterXYZ{ correctChromaticShift(g_stackCenterXYZ, fluorMarker.mWavelength_nm, whichLaser) };;
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
+		const Laser::ID whichLaser{ Laser::ID::FIDELITY };
+		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
 		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 20. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
@@ -151,7 +141,7 @@ namespace Routines
 		std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) + "nm" };
 		
 		//OPEN THE UNIBLITZ SHUTTERS
-		mesoscope.openShutter();					//The destructor will close the shutter automatically
+		mesoscope.openShutter();				//The destructor will close the shutter automatically
 
 		//ACQUIRE FRAMES AT DIFFERENT Zs
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
@@ -273,7 +263,7 @@ namespace Routines
 		const int widthPerFrame_pix{ 300 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };										//Full FOV in the slow axis
 
-		POSITION3 stackCenterXYZ{ correctChromaticShift(g_stackCenterXYZ, fluorMarker.mWavelength_nm, whichLaser) };
+		POSITION3 stackCenterXYZ{ g_stackCenterXYZ };
 		stackCenterXYZ.ZZ -= nFrames * pixelSizeZbeforeBinning /2;//Center the stack<--------------------For beads!
 
 		int heightPerBeamletPerFrame_pix;
@@ -310,14 +300,14 @@ namespace Routines
 		mesoscope.waitForMotionToStopAll();
 		Sleep(500);																	//Give the stages enough time to settle at the initial position
 		//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
-		mesoscope.setVelSingle(Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));		
+		mesoscope.setVelSingle(AXIS::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));		
 
 		//EXECUTE THE CONTROL SEQUENCE
 		mesoscope.openShutter();				//Open the shutter. The destructor will close the shutter automatically
 		
 		realtimeSeq.initialize(scanDirZ);
 		std::cout << "Scanning the stack...\n";
-		mesoscope.moveSingle(Axis::ZZ, stageZf);	//Move the stage to trigger the ctl&acq sequence
+		mesoscope.moveSingle(AXIS::ZZ, stageZf);//Move the stage to trigger the ctl&acq sequence
 		realtimeSeq.downloadData();
 
 		mesoscope.closeShutter();				//Close the shutter manually even though the destructor does it because the post-processing could take a long time
@@ -347,16 +337,16 @@ namespace Routines
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::VISION };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
-		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };												//Initial scan direction of stage 
-		const double fullWidth{ 10.000 * mm };													//Total width of the tile array
+		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };													//Initial scan direction of stage 
+		const double fullWidth{ 10.000 * mm };														//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
-		const double tileWidth{ 150. * um };													//Width of a strip
-		const double fullHeight{ 53 * tileHeight };												//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
-		const double pixelSizeX{ 1.0 * um };													//WARNING: the image becomes distorted at the edges of the strip when pixelSizeX > 1 um (check this again)
+		const double tileWidth{ 150. * um };														//Width of a strip
+		const double fullHeight{ 53 * tileHeight };													//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
+		const double pixelSizeX{ 1.0 * um };														//WARNING: the image becomes distorted at the edges of the strip when pixelSizeX > 1 um (check this again)
 		const double pixelSizeY{ 0.5 * um };
 
-		POSITION3 stackCenterXYZ{ correctChromaticShift(g_stackCenterXYZ, fluorMarker.mWavelength_nm, whichLaser) };
+		POSITION3 stackCenterXYZ{ g_stackCenterXYZ };
 		QuickScanXY quickScanXY{ {stackCenterXYZ.XX, stackCenterXYZ.YY}, {  tileHeight, tileWidth }, { pixelSizeX, pixelSizeY }, { fullHeight, fullWidth } };
 
 		//CONTROL SEQUENCE
@@ -377,10 +367,10 @@ namespace Routines
 		const Galvo rescanner{ realtimeSeq, galvoScanAmplitude, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//STAGES
-		mesoscope.moveXYZ({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ });					//Move the stage to the initial position
+		mesoscope.moveXYZ({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ });			//Move the stage to the initial position
 		mesoscope.waitForMotionToStopAll();
-		Sleep(500);																						//Give the stages enough time to settle at the initial position
-		mesoscope.setVelSingle(Axis::XX, pixelSizeX / g_lineclockHalfPeriod);					//Set the vel for imaging
+		Sleep(500);																				//Give the stages enough time to settle at the initial position
+		mesoscope.setVelSingle(AXIS::XX, pixelSizeX / g_lineclockHalfPeriod);					//Set the vel for imaging
 
 		mesoscope.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 
@@ -402,7 +392,7 @@ namespace Routines
 
 			realtimeSeq.initialize();
 			std::cout << "Scanning the stack...\n";
-			mesoscope.moveSingle(Axis::XX, stageXf);					//Move the stage to trigger the ctl&acq sequence
+			mesoscope.moveSingle(AXIS::XX, stageXf);				//Move the stage to trigger the ctl&acq sequence
 			realtimeSeq.downloadData();
 
 			Image image{ realtimeSeq };
@@ -484,7 +474,7 @@ namespace Routines
 			RScanner.isRunning();		//To make sure that the RS is running
 
 			//STAGES
-			mesoscope.moveSingle(Axis::ZZ, sample.mSurfaceZ);		//Move the Z-stage to the sample surface
+			mesoscope.moveSingle(AXIS::ZZ, sample.mSurfaceZ);		//Move the Z-stage to the sample surface
 			mesoscope.waitForMotionToStopAll();
 
 			//Read the commands line by line
@@ -523,7 +513,7 @@ namespace Routines
 
 						//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix	
 						const double pixelSizeZbeforeBinning{ stackDepth / nFramesBeforeBinning };
-						mesoscope.setVelSingle(Axis::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
+						mesoscope.setVelSingle(AXIS::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
 
 						//These parameters must be accessible for saving the file
 						stackNumber = acqStack.readStackNumber();
@@ -539,14 +529,14 @@ namespace Routines
 
 						Galvo rescanner{ realtimeSeq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 					}
-					mesoscope.moveSingle(Axis::ZZ, scanZi);	//Move the stage to the initial Z position
-					realtimeSeq.initialize(iterScanDirZ);			//Use the scan direction determined dynamically
+					mesoscope.moveSingle(AXIS::ZZ, scanZi);	//Move the stage to the initial Z position
+					realtimeSeq.initialize(iterScanDirZ);	//Use the scan direction determined dynamically
 					mesoscope.openShutter();				//Re-open the Uniblitz shutter if closed by the pockels destructor
 
 					std::cout << "Scanning slice = " << std::to_string(sliceNumber) << "/" << sequence.readNtotalSlices() << "\tstack = " <<
 														std::to_string(stackNumber) << "/" << sequence.readNtotalStacks() << "\n";
 
-					mesoscope.moveSingle(Axis::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
+					mesoscope.moveSingle(AXIS::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
 					realtimeSeq.downloadData();
 					reverseSCANDIR(iterScanDirZ);
 					break;
@@ -554,16 +544,16 @@ namespace Routines
 					{
 					//Paddle the number with zeros on the left
 					std::string sliceNumber_s{ std::to_string(sliceNumber) };
-					std::string sliceNumberPad_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;//3 digits in total
+					std::string sliceNumberPad_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;	//3 digits in total
 
 					std::string stackNumber_s{ std::to_string(stackNumber) };
-					std::string stackNumberPad_s = std::string(7 - stackNumber_s.length(), '0') + stackNumber_s;//7 digits in total
+					std::string stackNumberPad_s = std::string(7 - stackNumber_s.length(), '0') + stackNumber_s;	//7 digits in total
 
 					std::string tileIndexI_s{ std::to_string(tileIndexI) };
-					std::string tileIndexIpad_s = std::string(2 - tileIndexI_s.length(), '0') + tileIndexI_s;//2 digits in total
+					std::string tileIndexIpad_s = std::string(2 - tileIndexI_s.length(), '0') + tileIndexI_s;		//2 digits in total
 
 					std::string tileIndexJ_s{ std::to_string(tileIndexJ) };
-					std::string tileIndexJpad_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;//2 digits in total
+					std::string tileIndexJpad_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;		//2 digits in total
 
 					shortName = sliceNumberPad_s + "_" + convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + stackNumberPad_s;
 					longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_Pexp=" + Util::toString(scanPexp / um, 0) + "um" +
@@ -611,11 +601,11 @@ namespace Routines
 	{
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
-		const int nFramesCont{ 1 };																//Number of frames for continuous acquisition
+		const int nFramesCont{ 1 };																	//Number of frames for continuous acquisition
 		const double pixelSizeXY{ 0.5 * um };
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };								//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };									//Full FOV in the slow axis
 
 		//CREATE THE CONTROL SEQUENCE
 		RTseq realtimeSeq{ fpga, LINECLOCK::RS, MAINTRIG::PC, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
@@ -624,7 +614,7 @@ namespace Routines
 
 		//RS
 		const ResonantScanner RScanner{ realtimeSeq };
-		RScanner.isRunning();					//To make sure that the RS is running
+		RScanner.isRunning();												//To make sure that the RS is running
 
 		//SCANNERS
 		const Galvo scanner{ realtimeSeq, FFOVslow / 2. };
@@ -678,10 +668,10 @@ namespace TestRoutines
 		const double timeStep{ 4. * us };
 
 		RTseq realtimeSeq{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
-		realtimeSeq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, timeStep, 10 * V);						//Initial pulse
+		realtimeSeq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, timeStep, 10 * V);					//Initial pulse
 		realtimeSeq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, timeStep, 0);
 		realtimeSeq.pushLinearRamp(RTseq::RTCHAN::SCANNER, 4 * us, delay, 0, 5 * V, OVERRIDE::DIS);	//Linear ramp to accumulate the error
-		realtimeSeq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, timeStep, 10 * V);						//Initial pulse
+		realtimeSeq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, timeStep, 10 * V);					//Initial pulse
 		realtimeSeq.pushAnalogSinglet(RTseq::RTCHAN::SCANNER, timeStep, 0);							//Final pulse
 
 		//DO0
@@ -767,7 +757,7 @@ namespace TestRoutines
 		mesoscope.waitForMotionToStopAll();
 
 		//SCANNERS
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };					//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 		Galvo scanner{ realtimeSeq, FFOVslow / 2. };
 
 		//CONTROL SEQUENCE
@@ -874,7 +864,7 @@ namespace TestRoutines
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
-		stage.waitForMotionToStopSingle(Axis::ZZ);
+		stage.waitForMotionToStopSingle(AXIS::ZZ);
 
 		std::cout << "Stages final position:" << "\n";
 		stage.printPosXYZ();
@@ -903,7 +893,7 @@ namespace TestRoutines
 		//std::cout << "Stages initial position: \n";
 		//stage.printPosXYZ();
 		std::cout << "Before vel: \n";
-		stage.setVelSingle(Axis::ZZ, 0.4 * mmps);
+		stage.setVelSingle(AXIS::ZZ, 0.4 * mmps);
 
 		//std::cout << "Stages initial vel: \n";
 		//stage.printVelXYZ();

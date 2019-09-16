@@ -80,9 +80,13 @@ namespace Constants
 	//2. Do a centered Z scan
 	//3. Adjust the delay until the beads are centered at the middle of the Z stack
 	extern const double	g_STAGEZtrigAcqDelayTopdown{ 40 * ms };		//Delay the Z-stage triggering the acq sequence
-	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };
-	//Stage X														
-	extern const double	g_STAGEXTrigAcqDelay{ 113.3 * ms };//pixelSizeX = 1.0 um and 36 * 0.280
+	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };	//Delay the Z-stage triggering the acq sequence						
+	extern const double	g_STAGEXTrigAcqDelay{ 113.3 * ms };			//Stage X. pixelSizeX = 1.0 um and 36 * 0.280
+
+	extern const POSITION3 g_chromaticShiftVision750nm{ 0.5 * um, 0, -5. * um };
+	extern const POSITION3 g_chromaticShiftVision920nm{ 0, 0, 0 };
+	extern const POSITION3 g_chromaticShiftVision1040nm{ 0, 0, 0 };
+	extern const POSITION3 g_chromaticShiftFidelity1040nm{ 0.0 * um, 0.8 * um, -4. * um };
 
 	//PMT
 	extern const int g_nChanPMT{ 16 };

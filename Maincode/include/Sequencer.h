@@ -17,13 +17,13 @@ std::string convertWavelengthToFluorMarker_s(const int wavelength_nm);
 class TileArray
 {
 public:
-	enum Axis { II, JJ, KK };		//Currently, the tile axis II coincides with Stage::Axis::XX, JJ with Stage::Axis::YY, and KK with Stage::Axis::ZZ
+	enum Axis { II, JJ, KK };		//Currently, the tile axis II coincides with AXIS::XX, JJ with AXIS::YY, and KK with AXIS::ZZ
 	TileArray(const int tileHeight_pix, const int tileWidth_pix, const TILEDIM2 tileArraySizeIJ, const TILEOVERLAP3 overlapIJK_frac);
 	TileArray(const PIXDIM2 tileSize_pix, const TILEDIM2 tileArraySizeIJ, const TILEOVERLAP3 overlapIJK_frac);
 	int readTileHeight_pix() const;
 	int readTileWidth_pix() const;
 	TILEDIM2 readTileArraySizeIJ() const;
-	int readTileArraySizeIJ(const Axis axis) const;
+	int readTileArraySizeIJ(const TileArray::Axis axis) const;
 	TILEOVERLAP3 readTileOverlapIJK_frac() const;
 	PIXELij determineTileRelativePixelPos_pix(const TILEIJ tileIndicesIJ) const;
 protected:
@@ -97,7 +97,7 @@ class Stack final
 public:
 	Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix, const double pixelSizeZ, const int nFrames, const TILEOVERLAP3 overlapIJK_frac);
 	void printParams(std::ofstream *fileHandle) const;
-	double readFFOV(const Axis axis) const;
+	double readFFOV(const AXIS axis) const;
 	int readTileHeight_pix() const;
 	int readTileWidth_pix() const;
 	double readPixelSizeZ() const;
@@ -123,7 +123,7 @@ namespace Action
 		int readSliceNumber() const;
 		int readTileIndex(const TileArray::Axis axis) const;
 		POSITION2 readTileCenterXY() const;
-		double readTileCenter(Axis axis) const;
+		double readTileCenter(AXIS axis) const;
 	private:
 		int mSliceNumber;			//Slice number
 		TILEIJ mTileIndicesIJ;	//Indices of the tile array

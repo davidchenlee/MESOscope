@@ -29,7 +29,7 @@ namespace Constants
 	//INWARD: the stage Y moves to the center of the optical table
 	enum class SCANDIR { LEFTWARD, RIGHTWARD, OUTWARD, INWARD, DOWNWARD, UPWARD };
 	struct SCANDIR3 { SCANDIR XX;  SCANDIR YY; SCANDIR ZZ; };
-	enum Axis { XX, YY, ZZ };
+	enum AXIS { XX, YY, ZZ };
 
 	struct POSITION2 { double XX; double YY; };
 	struct POSITION3 { double XX; double YY; double ZZ; };
@@ -106,6 +106,10 @@ namespace Constants
 	extern const double	g_STAGEZtrigAcqDelayTopdown;
 	extern const double	g_STAGEZTrigAcqDelayBottomup;
 	extern const double	g_STAGEXTrigAcqDelay;
+	extern const POSITION3 g_chromaticShiftVision750nm;
+	extern const POSITION3 g_chromaticShiftVision920nm;
+	extern const POSITION3 g_chromaticShiftVision1040nm;
+	extern const POSITION3 g_chromaticShiftFidelity1040nm;
 
 	extern const int g_nChanPMT;
 	extern const PMTIN g_photocounterInput;

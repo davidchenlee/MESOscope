@@ -4,12 +4,11 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 - I moved the 'realtimeSeq' argument from mesoscope.configure() to the constructor Mesoscope. Make sure that Routines::sequencer works fine
-- Add chromatic shift to Routines::sequencer
 - Enforce to close the Uniblitz shutter before cutting
 - Choose 1X or 16X dynamically
 - calibrate the z stage delay for pixelSizeZ = 1.0 um
 - convert RTCHAN to int
-- Update the Z position after cutting --> check that it works
+- Updated the Z position after cutting --> check that it works
 - enable/disable using the vibratome in Routines::sequencer
 - Keep an eye on the Z-stage bouncing that triggers the ctl&acq
 - Implement suppressCrosstalk() flattenField() on the GPU

@@ -115,22 +115,22 @@ std::vector<LIMIT2> Sample::readStageSoftPosLimXYZ() const
 
 double Sample::readStageSoftPosLimXMIN() const
 {
-	return mStageSoftPosLimXYZ.at(Axis::XX).MIN;
+	return mStageSoftPosLimXYZ.at(AXIS::XX).MIN;
 }
 
 double Sample::readStageSoftPosLimXMAX() const
 {
-	return mStageSoftPosLimXYZ.at(Axis::XX).MAX;
+	return mStageSoftPosLimXYZ.at(AXIS::XX).MAX;
 }
 
 double Sample::readStageSoftPosLimYMIN() const
 {
-	return mStageSoftPosLimXYZ.at(Axis::YY).MIN;
+	return mStageSoftPosLimXYZ.at(AXIS::YY).MIN;
 }
 
 double Sample::readStageSoftPosLimYMAX() const
 {
-	return mStageSoftPosLimXYZ.at(Axis::YY).MAX;
+	return mStageSoftPosLimXYZ.at(AXIS::YY).MAX;
 }
 #pragma endregion "Sample"
 
@@ -155,8 +155,8 @@ const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", Petri
 /*const extern Sample g_currentSample{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,  {{{"TDT", 1040, 30. * mW, 150. * um, 4 },
 																									  { "DAPI", 750, 12. * mW, 120. * um, 2 }}} };*/
 
-const extern Sample g_currentSample{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 20. * mW, 1000. * um},
-																				  { "GFP", 920, 20. * mW, 1000. * um},
+const extern Sample g_currentSample{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 30. * mW, 1000. * um},
+																				  { "GFP", 920, 40. * mW, 1000. * um},
 																				  { "TDT", 1040, 10. * mW, 1000. * um}}} };
 /*const extern Sample g_currentSample{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. },
 																					{ "GFP", 920, 40. * mW, 0. },

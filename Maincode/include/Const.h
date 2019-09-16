@@ -29,6 +29,7 @@ namespace Constants
 	//INWARD: the stage Y moves to the center of the optical table
 	enum class SCANDIR { LEFTWARD, RIGHTWARD, OUTWARD, INWARD, DOWNWARD, UPWARD };
 	struct SCANDIR3 { SCANDIR XX;  SCANDIR YY; SCANDIR ZZ; };
+	enum Axis { XX, YY, ZZ };
 
 	struct POSITION2 { double XX; double YY; };
 	struct POSITION3 { double XX; double YY; double ZZ; };

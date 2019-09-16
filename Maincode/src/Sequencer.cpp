@@ -638,139 +638,7 @@ void Boolmap::generateBoolmap_()
 }
 #pragma endregion "Boolmap"
 
-#pragma region "FluorMarkerList"
-FluorMarkerList::FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList) :
-	mFluorMarkerList{ fluorMarkerList }
-{}
 
-std::size_t FluorMarkerList::readFluorMarkerListSize() const
-{
-	return mFluorMarkerList.size();
-}
-
-void FluorMarkerList::printFluorParams(std::ofstream *fileHandle) const
-{
-	*fileHandle << "LASERS ************************************************************\n";
-
-	for (std::vector<int>::size_type iterWL = 0; iterWL != mFluorMarkerList.size(); iterWL++)
-	{
-		*fileHandle << "Wavelength = " << mFluorMarkerList.at(iterWL).mWavelength_nm <<
-			" nm\nPower = " << mFluorMarkerList.at(iterWL).mScanPmin / mW <<
-			" mW\nPower exponential length = " << mFluorMarkerList.at(iterWL).mScanPexp / um << " um\n";
-	}
-	*fileHandle << "\n";
-}
-
-//Return the first instance of "fluorMarker" in mFluorMarkerList
-FluorMarkerList::FluorMarker FluorMarkerList::findFluorMarker(const std::string fluorMarker) const
-{
-	for (std::vector<int>::size_type iterMarker = 0; iterMarker < mFluorMarkerList.size(); iterMarker++)
-	{
-		if (!fluorMarker.compare(mFluorMarkerList.at(iterMarker).mName)) //compare() returns 0 if the strings are identical
-			return mFluorMarkerList.at(iterMarker);
-	}
-	//If the requested fluorMarker is not found
-	throw std::runtime_error((std::string)__FUNCTION__ + ": Fluorescent marker " + fluorMarker + " not found");
-}
-
-//indexFluorMarker is the position of the fluorMarker in mFluorMarkerList
-FluorMarkerList::FluorMarker FluorMarkerList::readFluorMarker(const int indexFluorMarker) const
-{
-	return mFluorMarkerList.at(indexFluorMarker);
-}
-
-FluorMarkerList FluorMarkerList::readFluorMarkerList() const
-{ 
-	return mFluorMarkerList;
-}
-#pragma endregion "FluorMarkerList"
-
-#pragma region "Sample"
-Sample::Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorMarkerList fluorMarkerList) :
-	mName{ sampleName },
-	mImmersionMedium{ immersionMedium },
-	mObjectiveCollar{ objectiveCollar },
-	mStageSoftPosLimXYZ{ stageSoftPosLimXYZ },
-	FluorMarkerList{ fluorMarkerList }
-{}
-
-Sample::Sample(const Sample& sample, const POSITION2 centerXY, const LENGTH3 LOIxyz, const double sampleSurfaceZ, const double sliceOffset) :
-	mName{ sample.mName },
-	mImmersionMedium{ sample.mImmersionMedium },
-	mObjectiveCollar{ sample.mObjectiveCollar },
-	mStageSoftPosLimXYZ{ sample.mStageSoftPosLimXYZ },
-	FluorMarkerList{ sample.readFluorMarkerList() },
-	mCenterXY{ centerXY },
-	mLOIxyz_req{ LOIxyz },
-	mSurfaceZ{ sampleSurfaceZ },
-	mCutAboveBottomOfStack{ sliceOffset }
-{
-	if (mLOIxyz_req.XX <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length X must be > 0");
-	if (mLOIxyz_req.YY <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Y must be > 0");
-	if (mCutAboveBottomOfStack < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be >= 0");
-}
-
-void Sample::printSampleParams(std::ofstream *fileHandle) const
-{
-	*fileHandle << "SAMPLE ************************************************************\n";
-	*fileHandle << "Name = " << mName << "\n";
-	*fileHandle << "Immersion medium = " << mImmersionMedium << "\n";
-	*fileHandle << "Correction collar = " << mObjectiveCollar << "\n";
-	*fileHandle << std::setprecision(4);
-	*fileHandle << "Sample center (stageX, stageY) = (" << mCenterXY.XX / mm << " mm, " << mCenterXY.YY / mm << " mm)\n";
-	*fileHandle << "Requested ROI size (stageX, stageY, stageZ) = (" << mLOIxyz_req.XX / mm << " mm, " << mLOIxyz_req.YY / mm << " mm, " << mLOIxyz_req.ZZ / mm << " mm)\n\n";
-
-	*fileHandle << "SLICE ************************************************************\n";
-	*fileHandle << std::setprecision(1);
-	*fileHandle << "Blade-focal plane vertical offset = " << mBladeFocalplaneOffsetZ / um << " um\n";
-	*fileHandle << "Cut above the bottom of the stack = " << mCutAboveBottomOfStack / um << " um\n";
-	*fileHandle << "\n";
-}
-
-std::string Sample::readName() const
-{
-	return mName;
-
-}
-
-std::string Sample::readImmersionMedium() const
-{
-	return mImmersionMedium;
-}
-
-std::string Sample::readObjectiveCollar() const
-{
-	return mObjectiveCollar;
-}
-
-std::vector<LIMIT2> Sample::readStageSoftPosLimXYZ() const
-{
-	return mStageSoftPosLimXYZ;
-}
-
-double Sample::readStageSoftPosLimXMIN() const
-{
-	return mStageSoftPosLimXYZ.at(Stage::Axis::XX).MIN;
-}
-
-double Sample::readStageSoftPosLimXMAX() const
-{
-	return mStageSoftPosLimXYZ.at(Stage::Axis::XX).MAX;
-}
-
-double Sample::readStageSoftPosLimYMIN() const
-{
-	return mStageSoftPosLimXYZ.at(Stage::Axis::YY).MIN;
-}
-
-double Sample::readStageSoftPosLimYMAX() const
-{
-	return mStageSoftPosLimXYZ.at(Stage::Axis::YY).MAX;
-}
-#pragma endregion "Sample"
 
 #pragma region "Stack"
 Stack::Stack(const FFOV2 FFOV, const int tileHeight_pix, int const tileWidth_pix, const double pixelSizeZ, const int nFrames, const TILEOVERLAP3 overlapIJK_frac) :
@@ -811,13 +679,13 @@ void Stack::printParams(std::ofstream *fileHandle) const
 	*fileHandle << "\n";
 }
 
-double Stack::readFFOV(const Stage::Axis axis) const
+double Stack::readFFOV(const Axis axis) const
 {
 	switch (axis)
 	{
-	case Stage::Axis::XX:
+	case Axis::XX:
 		return mFFOV.XX;
-	case Stage::Axis::YY:
+	case Axis::YY:
 		return mFFOV.YY;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected stage axis unavailable");
@@ -901,13 +769,13 @@ POSITION2 Action::MoveStage::readTileCenterXY() const
 	return mTileCenterXY;
 }
 
-double Action::MoveStage::readTileCenter(Stage::Axis axis) const
+double Action::MoveStage::readTileCenter(Axis axis) const
 {
 	switch (axis)
 	{
-	case Stage::Axis::XX:
+	case Axis::XX:
 		return mTileCenterXY.XX;
-	case Stage::Axis::YY:
+	case Axis::YY:
 		return mTileCenterXY.YY;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected stage axis unavailable");
@@ -1017,7 +885,7 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << convertActionIDtoString_(mActionID) << "\t" << mAction.moveStage.readSliceNumber();
 		*fileHandle << "\t(" << mAction.moveStage.readTileIndex(TileArray::Axis::II) << "," << mAction.moveStage.readTileIndex(TileArray::Axis::JJ) << ")\t";
 		*fileHandle << std::setprecision(4);
-		*fileHandle << "(" << mAction.moveStage.readTileCenter(Stage::Axis::XX) / mm << "," << mAction.moveStage.readTileCenter(Stage::Axis::YY) / mm << ")\n";
+		*fileHandle << "(" << mAction.moveStage.readTileCenter(Axis::XX) / mm << "," << mAction.moveStage.readTileCenter(Axis::YY) / mm << ")\n";
 		break;
 	case Action::ID::ACQ:
 		*fileHandle << convertActionIDtoString_(mActionID) << "\t\t\t\t\t";
@@ -1053,7 +921,7 @@ void Sequencer::Commandline::printParameters() const
 		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
 		std::cout << "Vibratome slice number = " << mAction.moveStage.readSliceNumber() << "\n";
 		std::cout << "Tile ij = (" << mAction.moveStage.readTileIndex(TileArray::Axis::II) << "," << mAction.moveStage.readTileIndex(TileArray::Axis::JJ) << ")\n";
-		std::cout << "Tile center (stageX, stageY) = (" << mAction.moveStage.readTileCenter(Stage::Axis::XX) / mm << "," << mAction.moveStage.readTileCenter(Stage::Axis::YY) / mm << ") mm\n\n";
+		std::cout << "Tile center (stageX, stageY) = (" << mAction.moveStage.readTileCenter(Axis::XX) / mm << "," << mAction.moveStage.readTileCenter(Axis::YY) / mm << ") mm\n\n";
 		break;
 	case Action::ID::ACQ:
 		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
@@ -1150,8 +1018,8 @@ POSITION2 Sequencer::convertTileIndicesIJToStagePosXY(const TILEIJ tileIndicesIJ
 	//The tile centers are (1-a)*FFOV away from each other, where a*L is the tile overlap
 	POSITION2 centeredIJ{ determineRelativeTileIndicesIJ(mStack.readOverlapIJK_frac(), mTileArray.readTileArraySizeIJ(), tileIndicesIJ) };
 	POSITION2 stagePosXY;
-	stagePosXY.XX = mSample.mCenterXY.XX - mStack.readFFOV(Stage::Axis::XX)  * centeredIJ.XX;
-	stagePosXY.YY = mSample.mCenterXY.YY - mStack.readFFOV(Stage::Axis::YY)  * centeredIJ.YY;
+	stagePosXY.XX = mSample.mCenterXY.XX - mStack.readFFOV(Axis::XX)  * centeredIJ.XX;
+	stagePosXY.YY = mSample.mCenterXY.YY - mStack.readFFOV(Axis::YY)  * centeredIJ.YY;
 
 	return stagePosXY;
 }
@@ -1267,8 +1135,8 @@ void Sequencer::initializeVibratomeSlice_()
 //If the overlap between consecutive tiles is a*FOV, then N tiles cover the distance L = FOV * ( (1-a)*(N-1) + 1 ), thus N = 1/(1-a) * ( L/FOV - 1 ) + 1
 TILEDIM2 Sequencer::determineTileArraySizeIJ_()
 {
-	const int numberOfTilesII{ Util::intceil(1 + 1. / (1 - mStack.readOverlap_frac(TileArray::Axis::II)) * (mSample.mLOIxyz_req.XX / mStack.readFFOV(Stage::Axis::XX) - 1)) };
-	const int numberOfTilesJJ{ Util::intceil(1 + 1. / (1 - mStack.readOverlap_frac(TileArray::Axis::JJ)) * (mSample.mLOIxyz_req.YY / mStack.readFFOV(Stage::Axis::YY) - 1)) };
+	const int numberOfTilesII{ Util::intceil(1 + 1. / (1 - mStack.readOverlap_frac(TileArray::Axis::II)) * (mSample.mLOIxyz_req.XX / mStack.readFFOV(Axis::XX) - 1)) };
+	const int numberOfTilesJJ{ Util::intceil(1 + 1. / (1 - mStack.readOverlap_frac(TileArray::Axis::JJ)) * (mSample.mLOIxyz_req.YY / mStack.readFFOV(Axis::YY) - 1)) };
 
 	TILEDIM2 output;
 	if (numberOfTilesII > 1)
@@ -1295,10 +1163,10 @@ void Sequencer::initializeEffectiveROI_()
 	const POSITION2 tilePosXYmax = convertTileIndicesIJToStagePosXY({ mTileArray.readTileArraySizeIJ(TileArray::Axis::II) - 1, mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) - 1 });	//Absolute position of the CENTER of the tile
 
 	//The ROI is measured from the border of the tiles. Therefore, add half of the FFOV
-	mROI.XMAX = tilePosXYmin.XX + mStack.readFFOV(Stage::Axis::XX) / 2.;
-	mROI.YMAX = tilePosXYmin.YY + mStack.readFFOV(Stage::Axis::YY) / 2.;
-	mROI.XMIN = tilePosXYmax.XX - mStack.readFFOV(Stage::Axis::XX) / 2.;
-	mROI.YMIN = tilePosXYmax.YY - mStack.readFFOV(Stage::Axis::YY) / 2.;
+	mROI.XMAX = tilePosXYmin.XX + mStack.readFFOV(Axis::XX) / 2.;
+	mROI.YMAX = tilePosXYmin.YY + mStack.readFFOV(Axis::YY) / 2.;
+	mROI.XMIN = tilePosXYmax.XX - mStack.readFFOV(Axis::XX) / 2.;
+	mROI.YMIN = tilePosXYmax.YY - mStack.readFFOV(Axis::YY) / 2.;
 
 	if (mROI.XMIN < mSample.readStageSoftPosLimXMIN() || mROI.XMAX > mSample.readStageSoftPosLimXMAX())
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The ROI goes beyond the soft limits of the stage X");

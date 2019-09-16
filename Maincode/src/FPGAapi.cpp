@@ -609,8 +609,8 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG ma
 	mMainTrigger{ mainTrigger },
 	mEnableFIFOOUTfpga{ enableFIFOOUTfpga },
 	mPMT16Xchan{ determineRescannerSetpoint_() },
-	mWidthPerFrame_pix{ widthPerFrame_pix },
-	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix }
+	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
+	mWidthPerFrame_pix{ widthPerFrame_pix }
 {
 	if (heightPerBeamletPerFrame_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");

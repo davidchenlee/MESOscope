@@ -2,8 +2,8 @@
 
 #pragma region "Image"
 //When multiplexing, create a mTiff to store 16 strips of height 'mRTcontrol.mHeightPerFrame_pix' each
-Image::Image(const RTseq &rtseq) :
-	mRTcontrol{ rtseq },
+Image::Image(const RTseq &realtimeSeq) :
+	mRTcontrol{ realtimeSeq },
 	mTiff{ (static_cast<int>(multibeam) * (g_nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mNframes }
 {}
 
@@ -194,8 +194,8 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 #pragma endregion "Image"
 
 #pragma region "Resonant scanner"
-ResonantScanner::ResonantScanner(const RTseq &rtseq) :
-	mRTcontrol{ rtseq }
+ResonantScanner::ResonantScanner(const RTseq &realtimeSeq) :
+	mRTcontrol{ realtimeSeq }
 {	
 	//Calculate the spatial fill factor
 	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * g_pixelDwellTime / g_lineclockHalfPeriod };
@@ -1005,16 +1005,16 @@ void Vibratome::sliceTissue(const double planeZtoCut)
 	mStage.moveXYZ({ mStageInitialSlicePosXY.XX, mStageInitialSlicePosXY.YY, planeZtoCut });	//Position the sample in front of the vibratome's blade
 	mStage.waitForMotionToStopAll();
 
-	mStage.setVelSingle(Stage::YY, mSlicingVel);							//Change the y vel for slicing
-	pushStartStopButton();													//Turn on the vibratome
-	mStage.moveSingle(Stage::YY, mStageFinalSlicePosY);						//Slice the sample: move the stage Y towards the blade
-	mStage.waitForMotionToStopSingle(Stage::YY);							//Wait until the motion ends
-	mStage.setVelSingle(Stage::YY, mStageConveyingVelXYZ.YY);				//Set back the y vel to move the sample back to the microscope
+	mStage.setVelSingle(Axis::YY, mSlicingVel);							//Change the y vel for slicing
+	pushStartStopButton();												//Turn on the vibratome
+	mStage.moveSingle(Axis::YY, mStageFinalSlicePosY);					//Slice the sample: move the stage Y towards the blade
+	mStage.waitForMotionToStopSingle(Axis::YY);							//Wait until the motion ends
+	mStage.setVelSingle(Axis::YY, mStageConveyingVelXYZ.YY);			//Set back the y vel to move the sample back to the microscope
 
-	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));				//Move the stage Y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
-	//mStage.waitForMotionToStopSingle(Y);									//Wait until the motion ends
+	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));			//Move the stage Y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
+	//mStage.waitForMotionToStopSingle(Y);								//Wait until the motion ends
 
-	pushStartStopButton();													//Turn off the vibratome
+	pushStartStopButton();												//Turn off the vibratome
 }
 
 /*//NOT USING THESE FUNCTIONS ANYMORE
@@ -1579,10 +1579,10 @@ void Shutter::pulse(const double pulsewidth) const
 #pragma region "Pockels"
 //Curently, the output of the pockels is gated on the FPGA side: the output is HIGH when 'framegate' is HIGH
 //Each Uniblitz shutter goes with a specific pockels, so it makes more sense to control the shutters through the Pockels class
-Pockels::Pockels(RTseq &rtseq, const int wavelength_nm, const Laser::ID laserSelector) :
-	mRTcontrol{ rtseq },
+Pockels::Pockels(RTseq &realtimeSeq, const int wavelength_nm, const Laser::ID laserSelector) :
+	mRTcontrol{ realtimeSeq },
 	mWavelength_nm{ wavelength_nm },
-	mShutter{ rtseq.mFpga, laserSelector }
+	mShutter{ realtimeSeq.mFpga, laserSelector }
 {
 	if (laserSelector != Laser::ID::VISION && laserSelector != Laser::ID::FIDELITY)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels channel unavailable");
@@ -1816,7 +1816,7 @@ double Pockels::convertPowerToVolt_(const double power) const
 
 	if (power < powerMin)
 	{
-		std::cerr << "WARNING: The requested laser power is lower than the min power = " << std::to_string(powerMin) << " mW. The power was clipped to the min\n";
+		std::cerr << "WARNING: The requested laser power is lower than the min power = " << Util::toString(powerMin, 0) << " mW. The power was clipped to the min\n";
 		if (Vphase > 0)
 			return Vphase;
 		else
@@ -1890,7 +1890,7 @@ void VirtualLaser::isLaserInternalShutterOpen() const
 }
 
 //Change the laser wavelength (tune Vision or switching lasers accordingly) and switch pockels
-void VirtualLaser::setWavelength(RTseq &rtseq, const int wavelength_nm)
+void VirtualLaser::setWavelength(RTseq &realtimeSeq, const int wavelength_nm)
 {
 	//Select the laser to be used: VISION or FIDELITY
 	Laser::ID newLaser = autoSelectLaser_(wavelength_nm);
@@ -1901,10 +1901,10 @@ void VirtualLaser::setWavelength(RTseq &rtseq, const int wavelength_nm)
 
 	//For the first call, assign a pointer to mPockelsPtr
 	if (mPockelsPtr == nullptr)
-		mPockelsPtr.reset(new Pockels(rtseq, wavelength_nm, newLaser));
+		mPockelsPtr.reset(new Pockels(realtimeSeq, wavelength_nm, newLaser));
 	//For the subsequent calls, destroy the pockels object when switching wavelengths (including switching lasers) to avoid photobleaching the sample (the pockels destructor closes the shutter)
 	else if (readCurrentWavelength_nm() != wavelength_nm || mCurrentLaser != newLaser)
-		mPockelsPtr.reset(new Pockels(rtseq, wavelength_nm, newLaser));
+		mPockelsPtr.reset(new Pockels(realtimeSeq, wavelength_nm, newLaser));
 
 	//If VISION is selected, set the new wavelength
 	if (newLaser == Laser::ID::VISION)
@@ -2140,8 +2140,8 @@ void CollectorLens::set(const int wavelength_nm)
 
 #pragma region "Galvo"
 //constructor for the scanner
-Galvo::Galvo(RTseq &rtseq, const double posMax) :
-	mRTcontrol{ rtseq },
+Galvo::Galvo(RTseq &realtimeSeq, const double posMax) :
+	mRTcontrol{ realtimeSeq },
 	mWhichGalvo{ RTseq::RTCHAN::SCANNER },
 	mVoltagePerDistance{ g_scannerCalib.voltagePerDistance },
 	mVoltageOffset{ g_scannerCalib.voltageOffset },
@@ -2156,8 +2156,8 @@ Galvo::Galvo(RTseq &rtseq, const double posMax) :
 }
 
 //Constructor for the rescanner
-Galvo::Galvo(RTseq &rtseq, const double posMax, const Laser::ID whichLaser, const int wavelength_nm) :
-	mRTcontrol{ rtseq },
+Galvo::Galvo(RTseq &realtimeSeq, const double posMax, const Laser::ID whichLaser, const int wavelength_nm) :
+	mRTcontrol{ realtimeSeq },
 	mWhichGalvo{ RTseq::RTCHAN::RESCANNER },
 	mPosMax{ posMax }
 {
@@ -2204,10 +2204,41 @@ Galvo::Galvo(RTseq &rtseq, const double posMax, const Laser::ID whichLaser, cons
 	//std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
 
 	//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
-	pushPositionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + readSinglebeamVoltageOffset(), OVERRIDE::EN);
+	pushPositionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + readSinglebeamVoltageOffset_(), OVERRIDE::EN);
 }
 
-double Galvo::readSinglebeamVoltageOffset() const
+void Galvo::setVoltageToZero() const
+{
+	mRTcontrol.pushAnalogSinglet(mWhichGalvo, g_tMinAO, 0 * V);
+}
+
+void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
+{
+	mRTcontrol.pushAnalogSinglet(mWhichGalvo, timeStep, AO);
+}
+
+void Galvo::pushVoltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const
+{
+	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, Vi, Vf, override);
+}
+
+//Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with a fixed z)
+void Galvo::pushPositionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset, const OVERRIDE override) const
+{
+	//Limit the number of steps for long ramps because the buffer of the galvos on the fpga currently only supports 5000 elements
+	//For timeStep = 2 us, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned in a single frame
+	double timeStep;
+	if (mRTcontrol.mHeightPerBeamletPerFrame_pix <= 100)
+		timeStep = 2. * us;
+	else
+		timeStep = 8. * us;
+
+	//The position offset allows to compensate for the axis misalignment of the rescanner wrt the PMT
+	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, g_lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
+		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal, override);
+}
+
+double Galvo::readSinglebeamVoltageOffset_() const
 {
 	double beamletIndex;
 	switch (mRTcontrol.mPMT16Xchan)
@@ -2268,52 +2299,24 @@ double Galvo::readSinglebeamVoltageOffset() const
 	}
 	return beamletIndex * mInterBeamletDistance * mVoltagePerDistance;
 }
-
-void Galvo::setVoltageToZero() const
-{
-	mRTcontrol.pushAnalogSinglet(mWhichGalvo, g_tMinAO, 0 * V);
-}
-
-void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
-{
-	mRTcontrol.pushAnalogSinglet(mWhichGalvo, timeStep, AO);
-}
-
-void Galvo::pushVoltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const
-{
-	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, Vi, Vf, override);
-}
-
-//Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with a fixed z)
-void Galvo::pushPositionLinearRamp(const double posInitial, const double posFinal, const double voltageOffset, const OVERRIDE override) const
-{
-	//Limit the number of steps for long ramps because the buffer of the galvos on the fpga currently only supports 5000 elements
-	//For timeStep = 2 us, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned in a single frame
-	double timeStep;
-	if (mRTcontrol.mHeightPerBeamletPerFrame_pix <= 100)
-		timeStep = 2. * us;
-	else
-		timeStep = 8. * us;
-
-	//The position offset allows to compensate for the axis misalignment of the rescanner wrt the PMT
-	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, g_lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
-		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal, override);
-}
 #pragma endregion "Galvo"
 
 #pragma region "Mesoscope"
 //The constructor established a connection with the 2 lasers.
 //Mesoscope::configure() and Mesoscope::setPower() must be called after this constructor!! otherwise some class members will no be properly initialized
-Mesoscope::Mesoscope(const Laser::ID whichLaser) :
-	VirtualLaser{ whichLaser }
+Mesoscope::Mesoscope(RTseq &rtseq, const Laser::ID whichLaser) :
+	mRTseq{ rtseq },
+	mStage{ 5. * mmps, 5. * mmps, 0.5 * mmps, g_currentSample.readStageSoftPosLimXYZ() },
+	VirtualLaser{ whichLaser },
+	Vibratome{ rtseq.mFpga, mStage }
 {}
 
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
-void Mesoscope::configure(RTseq &rtseq, const int wavelength_nm)
+void Mesoscope::configure(const int wavelength_nm)
 {
-	std::future<void> th1{ std::async(&VirtualLaser::setWavelength, this, std::ref(rtseq), std::ref(wavelength_nm)) };		//Tune the laser wavelength
-	std::future<void> th2{ std::async(&CombinedFilterwheel::turnFilterwheels, &mVirtualFilterWheel, wavelength_nm) };			//Set the filterwheels
-	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };									//Set the collector lens position
+	std::future<void> th1{ std::async(&VirtualLaser::setWavelength, this, std::ref(mRTseq), std::ref(wavelength_nm)) };	//Tune the laser wavelength
+	std::future<void> th2{ std::async(&CombinedFilterwheel::turnFilterwheels, &mVirtualFilterWheel, wavelength_nm) };	//Set the filterwheels
+	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };							//Set the collector lens position
 
 	try
 	{
@@ -2346,6 +2349,31 @@ void Mesoscope::openShutter() const
 void Mesoscope::moveCollectorLens(const double position)
 {
 	mCollectorLens.move(position);
+}
+
+void Mesoscope::moveXYZ(const POSITION3 posXYZ)
+{
+	mStage.moveXYZ(posXYZ);
+}
+
+void Mesoscope::waitForMotionToStopAll()
+{
+	mStage.waitForMotionToStopAll();
+}
+
+void Mesoscope::setVelSingle(const Axis axis, const double vel)
+{
+	mStage.setVelSingle(axis, vel);
+}
+
+void Mesoscope::moveSingle(const Axis stage, const double position)
+{
+	mStage.moveSingle(stage, position);
+}
+
+void Mesoscope::moveXY(const POSITION2 posXY)
+{
+	mStage.moveXY(posXY);
 }
 #pragma endregion "Mesoscope"
 

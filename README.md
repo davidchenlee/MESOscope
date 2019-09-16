@@ -3,6 +3,7 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
+- I moved the 'realtimeSeq' argument from mesoscope.configure() to the constructor Mesoscope. Make sure that Routines::sequencer works fine
 - Add chromatic shift to Routines::sequencer
 - Enforce to close the Uniblitz shutter before cutting
 - Choose 1X or 16X dynamically

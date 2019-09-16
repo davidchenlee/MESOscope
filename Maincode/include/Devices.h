@@ -8,11 +8,12 @@
 #include "serial/serial.h"
 #include <memory>										//For smart pointers
 #include "Thorlabs.MotionControl.KCube.StepperMotor.h"	//For the Thorlabs stepper
+#include "SampleConfig.h"
 
 class Image final
 {
 public:
-	Image(const RTseq &rtseq);
+	Image(const RTseq &realtimeSeq);
 	~Image();
 	Image(const Image&) = delete;				//Disable copy-constructor
 	Image& operator=(const Image&) = delete;	//Disable assignment-constructor
@@ -44,7 +45,7 @@ public:
 	double mFFOV;			//Current FFOV
 	double mSampRes;		//Spatial sampling resolution (length/pixel)
 
-	ResonantScanner(const RTseq &rtseq);
+	ResonantScanner(const RTseq &realtimeSeq);
 	ResonantScanner(const ResonantScanner&) = delete;				//Disable copy-constructor
 	ResonantScanner& operator=(const ResonantScanner&) = delete;	//Disable assignment-constructor
 	ResonantScanner(ResonantScanner&&) = delete;					//Disable move constructor
@@ -99,7 +100,6 @@ private:
 class Stage final
 {
 public:
-	enum Axis { XX, YY, ZZ };
 	enum class DOPARAM { TRIGSTEP = 1, AXISNUMBER = 2, TRIGMODE = 3, POLARITY = 7, STARTTHRES = 8, STOPTHRES = 9, TRIGPOS = 10 };		//*cast
 	enum class DOTRIGMODE { POSDIST = 0, ONTARGET = 2, INMOTION = 6, POSOFFSET = 7 };
 	enum class DIOCHAN { D1 = 1, D2 = 2 };
@@ -150,7 +150,7 @@ private:
 	std::string convertAxisToString_(const Axis axis) const;
 };
 
-class Vibratome final
+class Vibratome
 {
 public:
 	const POSITION2 mStageInitialSlicePosXY{ -53. * mm, 2. * mm };	//Position the stages in front oh the vibratome's blade
@@ -292,7 +292,7 @@ private:
 class Pockels final
 {
 public:
-	Pockels(RTseq &rtseq, const int wavelength_nm, const Laser::ID laserSelector);	//Do not set the output to 0 through the destructor to allow latching the last value
+	Pockels(RTseq &realtimeSeq, const int wavelength_nm, const Laser::ID laserSelector);	//Do not set the output to 0 through the destructor to allow latching the last value
 
 	void pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const;
 	void pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const;
@@ -322,7 +322,7 @@ public:
 	std::string readCurrentLaser_s(const bool justTheNameInitials) const;
 	int readCurrentWavelength_nm() const;
 	void isLaserInternalShutterOpen() const;
-	void setWavelength(RTseq &rtseq, const int wavelength_nm);
+	void setWavelength(RTseq &realtimeSeq, const int wavelength_nm);
 	void setPowerLinearScaling(const double Pi, const double Pf) const;
 	void setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const;
 	void openShutter() const;
@@ -373,8 +373,8 @@ public:
 class Galvo final
 {
 public:
-	Galvo::Galvo(RTseq &rtseq, const double posMax);
-	Galvo(RTseq &rtseq, const double posMax, const Laser::ID whichLaser, const int wavelength_nm);
+	Galvo::Galvo(RTseq &realtimeSeq, const double posMax);
+	Galvo(RTseq &realtimeSeq, const double posMax, const Laser::ID whichLaser, const int wavelength_nm);
 	Galvo(const Galvo&) = delete;							//Disable copy-constructor
 	Galvo& operator=(const Galvo&) = delete;				//Disable assignment-constructor
 	Galvo(Galvo&&) = delete;								//Disable move constructor
@@ -396,24 +396,31 @@ private:
 	double mVoltagePerDistance;
 	double mVoltageOffset;
 	double mPosMax;
-	double readSinglebeamVoltageOffset() const;
+	double readSinglebeamVoltageOffset_() const;
 };
 
 //Integrate VirtualLaser, CombinedFilterwheel, and CollectorLens classes in a single class
-class Mesoscope: public VirtualLaser
+class Mesoscope : public VirtualLaser, public Vibratome
 {
 public:
-	Mesoscope(const Laser::ID whichLaser = Laser::ID::AUTO);
+	Mesoscope(RTseq &rtseq, const Laser::ID whichLaser = Laser::ID::AUTO);
 	Mesoscope(const Mesoscope&) = delete;				//Disable copy-constructor
 	Mesoscope& operator=(const Mesoscope&) = delete;	//Disable assignment-constructor
 	Mesoscope(Mesoscope&&) = delete;					//Disable move constructor
 	Mesoscope& operator=(Mesoscope&&) = delete;			//Disable move-assignment constructor
 
-	void configure(RTseq &rtseq, const int wavelength_nm);
+	void configure(const int wavelength_nm);
 	void setPower(const double laserPower) const;
 	void openShutter() const;
 	void moveCollectorLens(const double position);
+	void moveXYZ(const POSITION3 posXYZ);
+	void waitForMotionToStopAll();
+	void setVelSingle(const Axis axis, const double vel);
+	void moveSingle(const Axis stage, const double position);
+	void moveXY(const POSITION2 posXY);
 private:
+	RTseq &mRTseq;
 	CombinedFilterwheel mVirtualFilterWheel;
 	CollectorLens mCollectorLens;
+	Stage mStage;
 };

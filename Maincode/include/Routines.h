@@ -1,7 +1,6 @@
 #pragma once
 #include "Devices.h"
 #include "Sequencer.h"
-#include "SampleConfig.h"
 
 //MAIN SEQUENCES
 namespace Routines
@@ -38,6 +37,7 @@ namespace TestRoutines
 	//Lasers
 	void shutter(const FPGA &fpga);
 	void pockels(const FPGA &fpga);
+	void semiAutoPockelsCalibration(const FPGA &fpga);
 	void pockelsRamp(const FPGA &fpga);
 	void lasers(const FPGA &fpga);
 	void virtualLasers(const FPGA &fpga);

@@ -465,21 +465,21 @@ void FPGA::initializeFpga_() const
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The linegate timeout must be greater than the lineclock period");
 
 	//PMT SIMULATOR (for debugging)
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlBool_PhotocounterInputSelector, static_cast<bool>(g_photocounterInput)));	//Use the PMT simulator as the input of the photocounters
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_nPMTsim, g_nPMTsim));													//Size of g_PMTsimArray
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mHandle, NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, g_PMTsimArray, g_nPMTsim));					//Array that simulates the pulses from the PMTs
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlBool_PhotocounterInputSelector, static_cast<bool>(g_photocounterInput)));							//Use the PMT simulator as the input of the photocounters
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_nPMTsim, g_nPMTsim));																			//Size of g_PMTsimArray
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteArrayBool(mHandle, NiFpga_FPGAvi_ControlArrayBool_PMTsimArray, g_PMTsimArray, g_nPMTsim));											//Array that simulates the pulses from the PMTs
 
 	//TRIGGERS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PcTrigger, false));													//Pc trigger signal
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));										//Trigger the AOs of the FPGA externally
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PcTrigger, false));																			//Pc trigger signal
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																//Trigger the AOs of the FPGA externally
 
 	//FIFOIN
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU16(mHandle, NiFpga_FPGAvi_ControlU16_Nchannels, static_cast<U16>(RTseq::RTCHAN::NCHAN)));					//Number of input channels
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));												//Trigger of the control sequence
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(g_FIFOtimeout_tick)));				//FIFOIN timeout
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_Nchannels, static_cast<U8>(RTseq::RTCHAN::NCHAN)));												//Number of input channels
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOINtrigger, false));																		//Trigger of the control sequence
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI32(mHandle, NiFpga_FPGAvi_ControlI32_FIFOtimeout_tick, static_cast<I32>(g_FIFOtimeout_tick)));										//FIFOIN timeout
 
 	//FIFOOUT
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, false));											//Disable pushing data to the FIFOs by default
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, false));																	//Disable pushing data to the FIFOs by default
 
 	//DELAYS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_DOdelay_tick, static_cast<U32>(g_DOdelay_tick)));												//Delay DO to sync it with AO
@@ -568,7 +568,7 @@ QU32 RTseq::Pixelclock::readPixelclock() const
 }
 
 RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames) :
-	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },	//Initialize the size the vector containing the queues (= # of queues)
+	mVec_queue(mNchan),		//Initialize the size the vector containing the queues (= # of queues). Use round and not curly parenthesis here
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
 	mMainTrigger{ mainTrigger },
@@ -596,12 +596,12 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG ma
 
 	//Generate a pixelclock
 	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
-	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
+	mVec_queue.at(convertRTCHANtoU8_(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
 //This constructor is meant to be used with RTseq::setNumberOfFrames(const int nFrames)
 RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix):
-	mVec_queue{ static_cast<U8>(RTCHAN::NCHAN) },
+	mVec_queue(mNchan),		//Initialize the size the vector containing the queues (= # of queues). Use round and not curly parenthesis here
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
 	mMainTrigger{ mainTrigger },
@@ -638,7 +638,7 @@ void RTseq::setNumberOfFrames(const int nFrames)
 
 	//Generate a pixelclock
 	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
-	mVec_queue.at(static_cast<U8>(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
+	mVec_queue.at(convertRTCHANtoU8_(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
 RTseq::~RTseq()
@@ -779,6 +779,32 @@ void RTseq::Pixelclock::pushUniformDwellTimes_()
 		mPixelclockQ.push_back(FPGAfunc::packPixelclockSinglet(mDwell, 1));
 }
 
+int RTseq::convertRTCHANtoU8_(const RTCHAN chan) const
+{
+	//The current number assignment is enum RTCHAN { PIXELCLOCK, SCANNER, RESCANNER, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };
+	switch (chan)
+	{
+	case RTCHAN::PIXELCLOCK:
+		return 0;
+	case RTCHAN::SCANNER:
+		return 1;
+	case RTCHAN::RESCANNER:
+		return 2;
+	case RTCHAN::DODEBUG:
+		return 3;
+	case RTCHAN::VISION:
+		return 4;
+	case RTCHAN::SCALINGVISION:
+		return 5;
+	case RTCHAN::FIDELITY:
+		return 6;
+	case RTCHAN::SCALINGFIDELITY:
+		return 7;
+	default:
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected RTCHAN unavailable");
+	}
+}
+
 //Determine the setpoint for the rescanner. mPMT16Xchan is called by the classes Galvo and Image
 RTseq::PMT16XCHAN RTseq::determineRescannerSetpoint_() const
 {
@@ -792,16 +818,16 @@ RTseq::PMT16XCHAN RTseq::determineRescannerSetpoint_() const
 void RTseq::presetScannerPosition_() const
 {
 	//Read the current voltage of the AOs for the scanner and rescanner. See the LV implementation
-	std::vector<I16> AOlastVoltage_I16(static_cast<U8>(RTCHAN::NCHAN), 0);								//Create a vector of zeros, one zero for each AO channel
-	AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::SCANNER)) = mFpga.readScannerVoltageMon();
-	AOlastVoltage_I16.at(static_cast<U8>(RTCHAN::RESCANNER)) = mFpga.readRescannerVoltageMon();
+	std::vector<I16> AOlastVoltage_I16(mNchan, 0);								//Create a vector of zeros, one zero for each AO channel
+	AOlastVoltage_I16.at(convertRTCHANtoU8_(RTCHAN::SCANNER)) = mFpga.readScannerVoltageMon();
+	AOlastVoltage_I16.at(convertRTCHANtoU8_(RTCHAN::RESCANNER)) = mFpga.readRescannerVoltageMon();
 
 	//Create a vector of queues for the ramps
-	VQU32 vec_queue{ static_cast<U8>(RTCHAN::NCHAN) };
-	for (int iterChan = 1; iterChan < static_cast<U8>(RTCHAN::NCHAN); iterChan++) //iterChan starts from 1 because the pixelclock (chan = 0) is kept empty
+	VQU32 vec_queue(mNchan);
+	for (int iterChan = 1; iterChan < mNchan; iterChan++) //iterChan starts from 1 because the pixelclock (chan = 0) is kept empty
 		if (mVec_queue.at(iterChan).size() != 0)
 			//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
-			if ((iterChan == static_cast<U8>(RTCHAN::SCANNER) || iterChan == static_cast<U8>(RTCHAN::RESCANNER)))		//Only do the scanner and rescanner for now
+			if ((iterChan == convertRTCHANtoU8_(RTCHAN::SCANNER) || iterChan == convertRTCHANtoU8_(RTCHAN::RESCANNER)))		//Only do the scanner and rescanner for now
 			{
 				const double Vi = FPGAfunc::convertIntToVoltage(AOlastVoltage_I16.at(iterChan));						//Current voltage of the AO outputs
 				const double Vf = FPGAfunc::convertIntToVoltage(static_cast<I16>(mVec_queue.at(iterChan).front()));		//First element of the new control sequence
@@ -812,8 +838,8 @@ void RTseq::presetScannerPosition_() const
 				//std::cout << Vf << "\n";
 			}
 
-	mFpga.uploadFIFOIN(vec_queue, static_cast<U8>(RTCHAN::NCHAN));	//Upload the initialization ramp to the FPGA
-	mFpga.triggerAOext();											//Trigger the initialization ramp externally (not using the internal clocks)
+	mFpga.uploadFIFOIN(vec_queue, mNchan);		//Upload the initialization ramp to the FPGA
+	mFpga.triggerAOext();						//Trigger the initialization ramp externally (not using the internal clocks)
 }
 
 void RTseq::initializeStages_(const SCANDIR stackScanDir)
@@ -825,7 +851,7 @@ void RTseq::initializeStages_(const SCANDIR stackScanDir)
 //Upload the main control sequence to the FPGA
 void RTseq::uploadControlSequence_() const
 {
-	mFpga.uploadFIFOIN(mVec_queue, static_cast<U8>(RTCHAN::NCHAN));
+	mFpga.uploadFIFOIN(mVec_queue, mNchan);
 }
 
 //The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample

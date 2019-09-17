@@ -253,8 +253,8 @@ void QuickStitcher::push(const U8 *tile, const TILEIJ tileIndicesIJ)
 	//const int tileWidth_pix{ tile.widthPerFrame_pix() };														//Width of the tile
 	const int rowShift_pix{ tileIndicesIJ.II *  TileArray::readTileHeight_pix() };								//In the mTiff image, shift the tile down by this many pixels
 	const int colShift_pix{ tileIndicesIJ.JJ *  TileArray::readTileWidth_pix() };								//In the mTiff image, shift the tile to the right by this many pixels
-	const int tileBytesPerRow{ static_cast<int>(TileArray::readTileWidth_pix() * sizeof(U8)) };					//Bytes per row of the input tile
-	const int stitchedTiffBytesPerRow{ static_cast<int>(TiffU8::readWidthPerFrame_pix() * sizeof(U8)) };		//Bytes per row of the tiled image
+	const int tileBytesPerRow{ TileArray::readTileWidth_pix() * static_cast<int>(sizeof(U8)) };					//Bytes per row of the input tile
+	const int stitchedTiffBytesPerRow{ TiffU8::readWidthPerFrame_pix() * static_cast<int>(sizeof(U8)) };		//Bytes per row of the tiled image
 
 	/*
 	//Transfer the data from the input tile to mStitchedTiff. Old way: copy pixel by pixel

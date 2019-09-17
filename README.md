@@ -7,14 +7,13 @@ Code in C++ for controlling the NI USB-7852R card
 - Enforce to close the Uniblitz shutter before cutting
 - Choose 1X or 16X dynamically
 - calibrate the z stage delay for pixelSizeZ = 1.0 um
-- convert RTCHAN to int
 - Updated the Z position after cutting --> check that it works
 - enable/disable using the vibratome in Routines::sequencer
 - Keep an eye on the Z-stage bouncing that triggers the ctl&acq
 - Implement suppressCrosstalk() flattenField() on the GPU
 - Multithread demuxAllChannels_()
 - Do a post-sequence clean up routine to set the pockels outputs to 0
-- maybe switch to smart pointers for the data. Check the overhead
+- Maybe switch to smart pointers for the data. Check the overhead
 - For the vibratome, show a progress bar for the slicing sequence
 - Maybe install VTK to display tiff images
 

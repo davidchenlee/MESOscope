@@ -6,6 +6,10 @@
 #include <Const.h>
 using namespace Constants;
 
+const extern std::vector<LIMIT2> PetridishPosLimit;
+const extern std::vector<LIMIT2> ContainerPosLimit;
+const extern POSITION3 g_stackCenterXYZ;
+
 class FluorMarkerList	//Create a list of fluorescent markers
 {
 public:
@@ -56,7 +60,4 @@ private:
 	std::vector<LIMIT2> mStageSoftPosLimXYZ;			//Soft position limits of the stages
 };
 
-const extern std::vector<LIMIT2> PetridishPosLimit;
-const extern std::vector<LIMIT2> ContainerPosLimit;
-const extern POSITION3 g_stackCenterXYZ;
 const extern Sample g_currentSample;

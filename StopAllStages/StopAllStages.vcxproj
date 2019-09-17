@@ -137,6 +137,7 @@
     <ClCompile Include="..\Maincode\src\Const.cpp" />
     <ClCompile Include="..\Maincode\src\Devices.cpp" />
     <ClCompile Include="..\Maincode\src\FPGAapi.cpp" />
+    <ClCompile Include="..\Maincode\src\SampleConfig.cpp" />
     <ClCompile Include="..\Maincode\src\serial.cc" />
     <ClCompile Include="..\Maincode\src\Utilities.cpp" />
     <ClCompile Include="..\Maincode\src\win.cc" />
@@ -146,6 +147,7 @@
     <ClInclude Include="..\Maincode\include\Const.h" />
     <ClInclude Include="..\Maincode\include\Devices.h" />
     <ClInclude Include="..\Maincode\include\FPGAapi.h" />
+    <ClInclude Include="..\Maincode\include\SampleConfig.h" />
     <ClInclude Include="..\Maincode\include\Utilities.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -1,4 +1,11 @@
 #include "SampleConfig.h"
+const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
+const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };	//Soft limit of the stage for the oil container
+
+//SAMPLE PARAMETERS
+//const extern POSITION3 g_stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.840 + 0.000) * mm };
+//const extern POSITION3 g_stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (18.051 + 0.000) * mm };//For contScanX
+const extern POSITION3 g_stackCenterXYZ{ (53.360 - 0.035) * mm, (25.000 - 0.017)* mm, (17.919) * mm };
 
 #pragma region "FluorMarkerList"
 FluorMarkerList::FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList) :
@@ -134,13 +141,7 @@ double Sample::readStageSoftPosLimYMAX() const
 }
 #pragma endregion "Sample"
 
-const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
-const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };	//Soft limit of the stage for the oil container
 
-//SAMPLE PARAMETERS
-//const extern POSITION3 g_stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.840 + 0.000) * mm };
-//const extern POSITION3 g_stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (18.051 + 0.000) * mm };//For contScanX
-const extern POSITION3 g_stackCenterXYZ{ (53.360 - 0.035) * mm, (25.000 - 0.017)* mm, (17.920) * mm };
 
 #if multibeam
 const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(30. * mW), multiply16X(1000. * um) },

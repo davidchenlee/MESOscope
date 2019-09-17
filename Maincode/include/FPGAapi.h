@@ -66,14 +66,15 @@ class RTseq final
 public:
 	enum class RTCHAN { PIXELCLOCK, SCANNER, RESCANNER, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };				//NCHAN = number of sequence channels available including the channel for the pixelclock
 	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED };	//*cast but not relevant, only for debugging
+	const int mNchan{ static_cast<int>(RTCHAN::NCHAN) };	//Number of RT channels
 	const FPGA &mFpga;
-	SCANDIR mScanDir{ SCANDIR::UPWARD };				//Scan direction of the stage for continuous scan
-	const PMT16XCHAN mPMT16Xchan;						//PMT16X channel to be used
-	const int mHeightPerBeamletPerFrame_pix;			//Height in pixels of a single beamlet in a single frame (slow axis)
-	const int mWidthPerFrame_pix;						//Width in pixels of a single frame (fast axis). I call each swing of the RS a "line"
-	int mNframes;										//Number of frames to acquire
-	int mHeightPerBeamletAllFrames_pix;					//Total number of lines per beamlet in all the frames
-	int mNpixPerBeamletAllFrames;						//Total number of pixels per beamlet in all the frames
+	SCANDIR mScanDir{ SCANDIR::UPWARD };					//Scan direction of the stage for continuous scan
+	const PMT16XCHAN mPMT16Xchan;							//PMT16X channel to be used
+	const int mHeightPerBeamletPerFrame_pix;				//Height in pixels of a single beamlet in a single frame (slow axis)
+	const int mWidthPerFrame_pix;							//Width in pixels of a single frame (fast axis). I call each swing of the RS a "line"
+	int mNframes;											//Number of frames to acquire
+	int mHeightPerBeamletAllFrames_pix;						//Total number of lines per beamlet in all the frames
+	int mNpixPerBeamletAllFrames;							//Total number of pixels per beamlet in all the frames
 
 	RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames);
 	RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix);
@@ -119,6 +120,7 @@ private:
 	U32* mBufferA{ nullptr };				//Buffer array to read FIFOOUTpc A
 	U32* mBufferB{ nullptr };				//Buffer array to read FIFOOUTpc B
 
+	int convertRTCHANtoU8_(const RTCHAN chan) const;
 	PMT16XCHAN determineRescannerSetpoint_() const;
 	void presetScannerPosition_() const;
 	void initializeStages_(const SCANDIR stackScanDir);

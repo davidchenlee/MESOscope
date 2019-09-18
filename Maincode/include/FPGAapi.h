@@ -54,8 +54,8 @@ public:
 	void uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const;
 	void readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 *mBufferB) const;
 private:
-	NiFpga_Session mHandle;												//FPGA handle. Non-const to let the FPGA API assign the handle
-	const std::string mBitfile{ bitfilePath + NiFpga_FPGAvi_Bitfile };	//FPGA bitfile location
+	NiFpga_Session mHandle;													//FPGA handle. Non-const to let the FPGA API assign the handle
+	const std::string mBitfile{ g_bitfilePath + NiFpga_FPGAvi_Bitfile };	//FPGA bitfile location
 
 	void initializeFpga_() const;
 	void readChunk_(const int &nPixPerBeamletAllFrames, int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 &FIFOOUTpc, U32* buffer, int &timeout) const;

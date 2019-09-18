@@ -120,7 +120,7 @@ namespace Util
 	{
 		std::string suffix{ "" };
 
-		for (int ii = 1; std::experimental::filesystem::exists(folderPath + filename + suffix + ".tif"); ii++)
+		for (int ii = 1; std::experimental::filesystem::exists(g_folderPath + filename + suffix + ".tif"); ii++)
 			suffix = " (" + std::to_string(ii) + ")";
 
 		return filename + suffix;
@@ -159,7 +159,7 @@ namespace Util
 #pragma region "Logger"
 Logger::Logger(const std::string filename)
 {
-	mFileHandle.open(folderPath + filename + ".txt");
+	mFileHandle.open(g_folderPath + filename + ".txt");
 };
 
 Logger::~Logger()
@@ -188,7 +188,7 @@ void Logger::record(const std::string description, const std::string input)
 TiffU8::TiffU8(const std::string filename) :
 	mNframes{ 1 }
 {
-	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "r") };
+	TIFF *tiffHandle{ TIFFOpen((g_folderPath + filename + ".tif").c_str(), "r") };
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failed opening the Tiff file");
@@ -508,7 +508,7 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 	if (override == OVERRIDE::DIS)
 		filename = Util::doesFileExist(filename);	//Check if the file exits. It gives some overhead
 
-	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "w") };
+	TIFF *tiffHandle{ TIFFOpen((g_folderPath + filename + ".tif").c_str(), "w") };
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Saving " + filename + ".tif failed");
@@ -584,7 +584,7 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 void TiffU8::saveToTxt(const std::string filename) const
 {
 	std::ofstream fileHandle;									//Create output file
-	fileHandle.open(folderPath + filename + ".txt");			//Open the file
+	fileHandle.open(g_folderPath + filename + ".txt");			//Open the file
 
 	for (int iterPix = 0; iterPix < mNpixAllFrames; iterPix++)
 		fileHandle << mArray[iterPix] << "\n";					//Write each element
@@ -644,7 +644,7 @@ void TiffU8::averageEvenOddFrames()
 			for (int iterPix = 0; iterPix < mNpixPerFrame; iterPix++)
 			{
 				if (iterFrame % 2)
-					avg[iterPix] += mArray[iterFrame * mNpixPerFrame + iterPix];				//Odd frames
+					avg[iterPix] += mArray[iterFrame * mNpixPerFrame + iterPix];					//Odd frames
 				else
 					avg[mNpixPerFrame + iterPix] += mArray[iterFrame * mNpixPerFrame + iterPix];	//Even frames
 			}
@@ -700,13 +700,13 @@ void TiffU8::binFrames(const int nFramesPerBin)
 	//If mNframes = 1, there is only a single image. If nFramesPerBin = 1, no average is performed and the stack remains the same
 	if (mNframes > 1 && nFramesPerBin > 1)
 	{
-		const int nBins{ mNframes / nFramesPerBin };	//Number of bins in the stack
+		const int nBins{ mNframes / nFramesPerBin };								//Number of bins in the stack
 		const int nPixPerBin{ mNpixPerFrame * nFramesPerBin };
 		unsigned int* sum{ new unsigned int[nBins * mNpixPerFrame]() };
 
 		//Take the first nFramesPerBin frames and average them. Then continue averaging every nFramesPerBin frames until the end of the stack
 		for (int binIndex = 0; binIndex < nBins; binIndex++)
-			for (int iterFrame = 0; iterFrame < nFramesPerBin; iterFrame++)		//Frame index within a bin
+			for (int iterFrame = 0; iterFrame < nFramesPerBin; iterFrame++)			//Frame index within a bin
 				for (int iterPix = 0; iterPix < mNpixPerFrame; iterPix++)			//Read the individual pixels
 					sum[binIndex * mNpixPerFrame + iterPix] += mArray[binIndex * nPixPerBin + iterFrame * mNpixPerFrame + iterPix];
 
@@ -796,7 +796,7 @@ void TiffU8::correctRSdistortionGPU(const double FFOVfast)
 
 	//Build a string with the openCl kernel
 	std::string openclFilename{ "openclKernel.cl" };
-	std::ifstream openclKernelCode{ openclFilePath + openclFilename };
+	std::ifstream openclKernelCode{ g_openclFilePath + openclFilename };
 	if (!openclKernelCode.is_open())
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Failed opening the file " + openclFilename);
 	std::string sourceCode{ std::istreambuf_iterator<char>(openclKernelCode), std::istreambuf_iterator<char>() };	//Create a string from the beginning to the end of the file

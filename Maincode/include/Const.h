@@ -3,8 +3,8 @@
 #include <vector>
 #include <array>
 
-#define multibeam 0			//Multibeam or singlebeam. *cast
-#define pockelsAutoOff 1	//For debugging purposes. In LV, let 'framegate' gate the output of the pockels
+#define multibeam 0							//Multibeam or singlebeam. *cast
+#define pockelsAutoOff 1					//For debugging purposes. In LV, let 'framegate' gate the output of the pockels
 
 namespace Constants
 {
@@ -55,9 +55,9 @@ namespace Constants
 	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANX, COLLECTLENS, FI_MEAS };
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};	//*cast
 
-	extern const std::string folderPath;
-	extern const std::string bitfilePath;
-	extern const std::string openclFilePath;
+	extern const std::string g_folderPath;
+	extern const std::string g_bitfilePath;
+	extern const std::string g_openclFilePath;
 
 	extern const double PI;
 	extern const int us;

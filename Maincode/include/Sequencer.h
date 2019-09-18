@@ -126,7 +126,7 @@ namespace Action
 		double readTileCenter(AXIS axis) const;
 	private:
 		int mSliceNumber;			//Slice number
-		TILEIJ mTileIndicesIJ;	//Indices of the tile array
+		TILEIJ mTileIndicesIJ;		//Indices of the tile array
 		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
 	};
 

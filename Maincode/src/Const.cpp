@@ -2,25 +2,25 @@
 //Constants that are never changed
 namespace Constants
 {
-	extern const std::string folderPath{ "D:\\_output_local\\" };
-	//extern const std::string folderPath{ "Z:\\_output_remote\\" };
-	extern const std::string bitfilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" };	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
-	extern const std::string openclFilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\Maincode\\src\\" };		//OpenCL kernel code
+	extern const std::string g_folderPath{ "D:\\_output_local\\" };
+	//extern const std::string g_folderPath{ "Z:\\_output_remote\\" };
+	extern const std::string g_bitfilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" };	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
+	extern const std::string g_openclFilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\Maincode\\src\\" };			//OpenCL kernel code
 
 	//GENERAL CONSTANTS
 	extern const double PI{ 3.1415926535897 };
-	extern const int us{ 1 };								//Microsecond
-	extern const int ms{ 1000 * us };						//Millisecond
-	extern const int seconds{ 1000 * ms };					//Second
-	extern const int um{ 1 };								//Micron	
-	extern const int mm{ 1000 * um };						//Millimeter
-	extern const double mmps{ 1. * mm / seconds };			//Millimeters per second
-	extern const int V{ 1 };								//Volt
-	extern const int mW{ 1 };								//Milliwatt
-	extern const double mWpum{ 1. * mW / um };				//mW per micron
+	extern const int us{ 1 };														//Microsecond
+	extern const int ms{ 1000 * us };												//Millisecond
+	extern const int seconds{ 1000 * ms };											//Second
+	extern const int um{ 1 };														//Micron	
+	extern const int mm{ 1000 * um };												//Millimeter
+	extern const double mmps{ 1. * mm / seconds };									//Millimeters per second
+	extern const int V{ 1 };														//Volt
+	extern const int mW{ 1 };														//Milliwatt
+	extern const double mWpum{ 1. * mW / um };										//mW per micron
 
 	//LASERS
-	extern const double g_laserPulsePeriod{ 0.0125 * us };	//The pulse repetition rate of VISION and FIDELITY is 80 MHz
+	extern const double g_laserPulsePeriod{ 0.0125 * us };							//The pulse repetition rate of VISION and FIDELITY is 80 MHz
 
 	//PIXELCLOCK
 	extern const double g_pixelDwellTime{ 0.1625 * us };							//= 13 * 12.5 ns = 162.5 ns
@@ -33,22 +33,22 @@ namespace Constants
 
 
 	//FPGA
-	extern const int g_AOmax{ 10 * V };						//Max voltage of the AOs
-	extern const int g_tickPerUs{ 160 };					//Number of ticks in 1 us. It corresponds to the FPGA's clock
-	extern const double g_usPerTick{ 1. / 160 };			//Time step of the FPGA's clock
-	extern const U32 g_tMin_tick{ 2 };						//Min ticks allowed for the DOs and AOs. 2 because DO and AO have a latency of 2 ticks
-	extern const int g_tMinAO{ 2 * us };					//Time step of the analog output. The AO channels has a delay of >1 us 
-	extern const int g_DOdelay_tick{ 4 * 74 };				//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
-															//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
-															//because I placed the comparison logics for gating AFTER the line counter instead of before
-	extern const int g_nPreframes{ 4 };						//Number of lineclocks delaying the frameclock (and framegate) wrt the preframeclock (and preframegate)
-															//This is for triggering the pockels and rescanner slightly earlier and adjusting the timing by via delay
-	extern const double g_linegateTimeout{ 100 * ms };		//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
-															//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered
-	extern const double g_postSequenceTimer{ 0 * ms };		//Timer after the sequence ends because the motion monitor of the Z-stage (for cont Z scanning) bounces and false triggers a new acq sequence
-	extern const double g_stageDebounceTimer{ 20. * ms};	//Stage motion monitor debouncer
-	extern const int g_FIFOtimeout_tick{ 100 };				//Timeout of the all the FIFOS on the FPGA
-	extern const int g_FIFOINmax{ 32773 };					//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the LV implementation on the FPGA!
+	extern const int g_AOmax{ 10 * V };							//Max voltage of the AOs
+	extern const int g_tickPerUs{ 160 };						//Number of ticks in 1 us. It corresponds to the FPGA's clock
+	extern const double g_usPerTick{ 1. / 160 };				//Time step of the FPGA's clock
+	extern const U32 g_tMin_tick{ 2 };							//Min ticks allowed for the DOs and AOs. 2 because DO and AO have a latency of 2 ticks
+	extern const int g_tMinAO{ 2 * us };						//Time step of the analog output. The AO channels has a delay of >1 us 
+	extern const int g_DOdelay_tick{ 4 * 74 };					//Relative delay between AO and DO. This is because AO takes longer to write the output than DO 
+																//WARNING: use the same cable length when calibrating different FPGA outputs. It may need re-calibration
+																//because I placed the comparison logics for gating AFTER the line counter instead of before
+	extern const int g_nPreframes{ 4 };							//Number of lineclocks delaying the frameclock (and framegate) wrt the preframeclock (and preframegate)
+																//This is for triggering the pockels and rescanner slightly earlier and adjusting the timing by via delay
+	extern const double g_linegateTimeout{ 100 * ms };			//In LV, timeout the start of the data acquisition. Otherwise, Lineclock (from the RS) could false trigger the acquisition
+																//e.g., 1. the RS is first off; 2. the control sequence is triggered; 3. the RS is turned on. 4. the acquisition will be triggered
+	extern const double g_postSequenceTimer{ 0 * ms };			//Timer after the sequence ends because the motion monitor of the Z-stage (for cont Z scanning) bounces and false triggers a new acq sequence
+	extern const double g_stageDebounceTimer{ 20. * ms};		//Stage motion monitor debouncer
+	extern const int g_FIFOtimeout_tick{ 100 };					//Timeout of the all the FIFOS on the FPGA
+	extern const int g_FIFOINmax{ 32773 };						//Depth of FIFOIN (host-to-target). WARNING: This number MUST match the LV implementation on the FPGA!
 
 	//POCKELS
 	extern const double g_pockelsFirstFrameDelay{ 112. * us };	//Delay of the Pockels wrt the preframeclock. The pockels is turned on early to avoid transient overshooting

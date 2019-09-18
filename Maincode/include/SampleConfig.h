@@ -10,10 +10,10 @@ const extern std::vector<LIMIT2> PetridishPosLimit;
 const extern std::vector<LIMIT2> ContainerPosLimit;
 const extern POSITION3 g_stackCenterXYZ;
 
-class FluorMarkerList	//Create a list of fluorescent markers
+class FluorMarkerList				//Create a list of fluorescent markers
 {
 public:
-	struct FluorMarker //Parameters for a single fluorescent marker
+	struct FluorMarker				//Parameters for a single fluorescent marker
 	{
 		std::string mName{ "" };	//Fluorescent marker name
 		int mWavelength_nm;			//Laser wavelength
@@ -35,7 +35,7 @@ private:
 class Sample : public FluorMarkerList
 {
 public:
-	//Initialize with std::numeric_limits<double>::quiet_NaN??
+	//Should I initialize the members with std::numeric_limits<double>::quiet_NaN?
 	POSITION2 mCenterXY{ -1, -1 };						//Sample center (stageX, stageY)
 	LENGTH3 mLOIxyz_req{ -1, -1, -1 };					//Requested Length of interest (stageX, stageY, stageZ)
 	double mSurfaceZ{ -1 };

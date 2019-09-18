@@ -102,7 +102,6 @@ void Sample::printSampleParams(std::ofstream *fileHandle) const
 std::string Sample::readName() const
 {
 	return mName;
-
 }
 
 std::string Sample::readImmersionMedium() const

@@ -1,7 +1,7 @@
 #pragma once
 #include <future>
 #include <fstream>										//file management
-#include <ctime>										//Clock()
+//#include <ctime>										//Clock()
 #include <algorithm>									//std::max and std::min
 #include "FPGAapi.h"
 #include "PI_GCS2_DLL.h"
@@ -356,11 +356,11 @@ private:
 	//To obtain the calibration, use Thorlabs APT software to set the position in mm, then read the position in internal-units via downloadConfig() implemented in this class
 	double mPosition;
 
-	const char* mSerialNumber;									//Each Thorlabs actuator has a unique serial number
-	const double mCalib{ 26000000. / (12.9442 * mm) };			//Calibration factor to convert mm to the actuator's internal units
+	const char* mSerialNumber;										//Each Thorlabs actuator has a unique serial number
+	const double mCalib{ 26000000. / (12.9442 * mm) };				//Calibration factor to convert mm to the actuator's internal units
 	const std::vector<double> mPosLimit{ 0. * mm, 13. * mm };
-	const int mVel_iu{ 323449856 };								//Equivalent to 3 mm/s
-	const int mAcc_iu{ 11041 };									//Equivalent to 0.5 mm/s^2
+	const int mVel_iu{ 323449856 };									//Equivalent to 3 mm/s
+	const int mAcc_iu{ 11041 };										//Equivalent to 0.5 mm/s^2
 };
 
 class CollectorLens final: public StepperActuator

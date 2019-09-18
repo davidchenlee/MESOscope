@@ -457,7 +457,7 @@ bool Boolmap::isTileBright(const TILEIJ tileIndicesIJ) const
 void Boolmap::saveTileMapToText(std::string filename)
 {
 	std::ofstream fileHandle;
-	fileHandle.open(folderPath + filename + ".txt");
+	fileHandle.open(g_folderPath + filename + ".txt");
 
 	try
 	{
@@ -1070,7 +1070,7 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 //Print the commandlist to file
 void Sequencer::printToFile(const std::string fileName) const
 {
-	std::ofstream *fileHandle{ new std::ofstream(folderPath + fileName + ".txt") };
+	std::ofstream *fileHandle{ new std::ofstream(g_folderPath + fileName + ".txt") };
 
 	*fileHandle << std::fixed;	//Show a fixed number of digits
 
@@ -1159,7 +1159,7 @@ TILEDIM2 Sequencer::determineTileArraySizeIJ_()
 void Sequencer::initializeEffectiveROI_()
 {
 	//II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
-	const POSITION2 tilePosXYmin = convertTileIndicesIJToStagePosXY({ 0, 0 });																											//Absolute position of the CENTER of the tile
+	const POSITION2 tilePosXYmin = convertTileIndicesIJToStagePosXY({ 0, 0 });																												//Absolute position of the CENTER of the tile
 	const POSITION2 tilePosXYmax = convertTileIndicesIJToStagePosXY({ mTileArray.readTileArraySizeIJ(TileArray::Axis::II) - 1, mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) - 1 });	//Absolute position of the CENTER of the tile
 
 	//The ROI is measured from the border of the tiles. Therefore, add half of the FFOV

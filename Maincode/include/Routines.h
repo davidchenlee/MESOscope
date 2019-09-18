@@ -48,6 +48,7 @@ namespace TestRoutines
 	void ethernetSpeed();
 	void multithread();
 	void clipU8();
+	void dataLogger();
 
 	//Postprocessing
 	void correctImage();

@@ -1132,8 +1132,8 @@ namespace TestRoutines
 		std::thread first{ &FUNC::func1, &x, 123 };
 		std::thread second{ &FUNC::func2, &x, 314 };
 
-		first.join();//pauses until first finishes
-		second.join();//pauses until second finishes
+		first.join();	//pauses until first finishes
+		second.join();	//pauses until second finishes
 	}
 
 	void clipU8()
@@ -1141,6 +1141,23 @@ namespace TestRoutines
 		int input{ 260 };
 		U8 output{ Util::clipU8top(input) };
 		std::cout << (int)output << "\n";
+		Util::pressAnyKeyToCont();
+	}
+
+	void dataLogger()
+	{
+		std::ofstream fileHandle;
+		fileHandle.open(g_folderPath + "test.txt", std::ios_base::app);
+
+		// Here system_clock is wall clock time from the system-wide realtime clock 
+		std::time_t timenow{ std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) };
+		std::tm buf;
+		localtime_s(&buf, &timenow);
+		auto ss{ std::put_time(&buf, "%Y-%m-%d %X") };
+		std::cout << ss << std::endl;
+		fileHandle << ss << "\n";
+
+		fileHandle.close();
 		Util::pressAnyKeyToCont();
 	}
 

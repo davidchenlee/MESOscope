@@ -829,8 +829,8 @@ void RTseq::presetScannerPosition_() const
 			//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 			if ((iterChan == convertRTCHANtoU8_(RTCHAN::SCANNER) || iterChan == convertRTCHANtoU8_(RTCHAN::RESCANNER)))		//Only do the scanner and rescanner for now
 			{
-				const double Vi = FPGAfunc::convertIntToVoltage(AOlastVoltage_I16.at(iterChan));						//Current voltage of the AO outputs
-				const double Vf = FPGAfunc::convertIntToVoltage(static_cast<I16>(mVec_queue.at(iterChan).front()));		//First element of the new control sequence
+				const double Vi = FPGAfunc::convertIntToVoltage(AOlastVoltage_I16.at(iterChan));							//Current voltage of the AO outputs
+				const double Vf = FPGAfunc::convertIntToVoltage(static_cast<I16>(mVec_queue.at(iterChan).front()));			//First element of the new control sequence
 
 				FPGAfunc::pushLinearRamp(vec_queue.at(iterChan), 10 * us, 5 * ms, Vi, Vf);
 				//For debugging

@@ -5,7 +5,7 @@ const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.
 //SAMPLE PARAMETERS
 //const extern POSITION3 g_stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.840 + 0.000) * mm };
 //const extern POSITION3 g_stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (18.051 + 0.000) * mm };//For contScanX
-const extern POSITION3 g_stackCenterXYZ{ (53.360 - 0.035) * mm, (25.000 - 0.017)* mm, (17.919) * mm };
+const extern POSITION3 g_stackCenterXYZ{ (53.360 - 0.035) * mm, (25.000 - 0.017)* mm, (17.918 - 0.040) * mm };
 
 #pragma region "FluorMarkerList"
 FluorMarkerList::FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList) :
@@ -155,9 +155,9 @@ const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", Petri
 /*const extern Sample g_currentSample{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,  {{{"TDT", 1040, 30. * mW, 150. * um, 4 },
 																									  { "DAPI", 750, 12. * mW, 120. * um, 2 }}} };*/
 
-const extern Sample g_currentSample{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 30. * mW, 1000. * um},
-																				  { "GFP", 920, 40. * mW, 1000. * um},
-																				  { "TDT", 1040, 10. * mW, 1000. * um}}} };
+const extern Sample g_currentSample{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 25. * mW, 1000. * um, 1},
+																				  { "GFP", 920, 40. * mW, 1000. * um, 1},
+																				  { "TDT", 1040, 10. * mW, 1000. * um, 1}}} };
 /*const extern Sample g_currentSample{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. },
 																					{ "GFP", 920, 40. * mW, 0. },
 																					{ "TDT", 1040, 15. * mW, 0. }}} };*/

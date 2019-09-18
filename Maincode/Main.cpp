@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			//Routines::stepwiseScan(fpga);
+			Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
 			//Routines::contScanX(fpga);
 			//Routines::sequencer(fpga, 0);
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::ethernetSpeed();
 			//TestRoutines::multithread();
 			//TestRoutines::clipU8();
-			TestRoutines::dataLogger();
+			//TestRoutines::dataLogger();
 
 			//TestRoutines::correctImage();
 			//TestRoutines::quickStitcher();

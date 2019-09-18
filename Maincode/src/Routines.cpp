@@ -16,11 +16,11 @@ namespace Routines
 		//const RUNMODE acqMode{ RUNMODE::FI_MEAS };		//Field illumination measurement for 16X using beads
 		
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
 		const int nFramesCont{ 1 };	
-		const double stackDepthZ{ 20. * um };								//Stack deepth in the Z-stage axis
+		const double stackDepthZ{ 100. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
 	
 		const double pixelSizeXY{ 0.5 * um };
@@ -122,8 +122,7 @@ namespace Routines
 		mesoscope.configure(fluorMarker.mWavelength_nm);
 
 		//RS
-		const ResonantScanner RScanner{ realtimeSeq };
-		RScanner.isRunning();						//To make sure that the RS is running
+		mesoscope.ResonantScanner::isRunning();						//To make sure that the RS is running
 
 		//SCANNERS
 		const Galvo scanner{ realtimeSeq, FFOVslowPerBeamlet / 2.};
@@ -155,7 +154,7 @@ namespace Routines
 	
 			//Used to optimize the collector lens position
 			if (acqMode == RUNMODE::COLLECTLENS)
-				mesoscope.moveCollectorLens(cLensPosIni + iterLocation * cLensStep);
+				mesoscope.CollectorLens::move(cLensPosIni + iterLocation * cLensStep);
 
 			//EXECUTE THE CONTROL SEQUENCE
 			realtimeSeq.run();					//Execute the control sequence and acquire the image
@@ -223,10 +222,10 @@ namespace Routines
 			datalog.record("Power exponential length (um) = ", fluorMarker.mScanPexp / um);
 			datalog.record("Laser repetition period (us) = ", g_laserPulsePeriod / us);
 			datalog.record("\nSCAN---------------------------------------------------------");
-			datalog.record("RS FFOV (um) = ", RScanner.mFFOV / um);
+			datalog.record("RS FFOV (um) = ", mesoscope.ResonantScanner::readFFOV() / um);
 			datalog.record("RS period (us) = ", 2 * g_lineclockHalfPeriod / us);
 			datalog.record("Pixel dwell time (us) = ", g_pixelDwellTime / us);
-			datalog.record("RS fill factor = ", RScanner.mFillFactor);
+			datalog.record("RS fill factor = ", mesoscope.ResonantScanner::readFillFactor());
 			datalog.record("Slow axis FFOV (um) = ", FFOVslow / um);
 			datalog.record("nFramesCont = ", nFramesCont);
 			datalog.record("nSameLocation= ", nSameLocation);
@@ -235,7 +234,7 @@ namespace Routines
 			datalog.record("Upscaling factor = ", g_upscalingFactor);
 			datalog.record("Height Y (slow) (pix) = ", heightPerFrame_pix);
 			datalog.record("Width X (fast) (pix) = ", widthPerFrame_pix);
-			datalog.record("Resolution X (fast) (um/pix) = ", RScanner.mSampRes / um);
+			datalog.record("Resolution X (fast) (um/pix) = ", mesoscope.ResonantScanner::readSampleRes() / um);
 			datalog.record("Resolution Y (slow) (um/pix) = ", pixelSizeXY / um);
 			datalog.record("\nSTAGE--------------------------------------------------------");
 			datalog.record("Stack center X (mm) = ", stackCenterXYZ.XX / mm);
@@ -249,9 +248,9 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
+		const SCANDIR scanDirZ{ SCANDIR::DOWNWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um  };
@@ -286,8 +285,7 @@ namespace Routines
 		mesoscope.setPowerExponentialScaling(fluorMarker.mScanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(scanDirZ) * fluorMarker.mScanPexp);
 
 		//RS
-		const ResonantScanner RScanner{ realtimeSeq };
-		RScanner.isRunning();		//To make sure that the RS is running
+		mesoscope.ResonantScanner::isRunning();		//To make sure that the RS is running
 
 		//SCANNERS
 		const Galvo scanner{ realtimeSeq, FFOVslowPerBeamlet / 2. };
@@ -358,8 +356,7 @@ namespace Routines
 		mesoscope.setPower(fluorMarker.mScanPmin);
 
 		//RS
-		const ResonantScanner RScanner{ realtimeSeq };
-		RScanner.isRunning();		//To make sure that the RS is running
+		mesoscope.ResonantScanner::isRunning();		//To make sure that the RS is running
 
 		//SCANNERS. Keep them fixed at 0
 		const double galvoScanAmplitude{ 0 };
@@ -470,8 +467,7 @@ namespace Routines
 			Mesoscope mesoscope{ realtimeSeq, Laser::ID::VISION };
 
 			//RS
-			const ResonantScanner RScanner{ realtimeSeq };
-			RScanner.isRunning();		//To make sure that the RS is running
+			mesoscope.ResonantScanner::isRunning();		//To make sure that the RS is running
 
 			//STAGES
 			mesoscope.moveSingle(AXIS::ZZ, sample.mSurfaceZ);		//Move the Z-stage to the sample surface
@@ -613,8 +609,7 @@ namespace Routines
 		mesoscope.configure(fluorMarker.mWavelength_nm);
 
 		//RS
-		const ResonantScanner RScanner{ realtimeSeq };
-		RScanner.isRunning();												//To make sure that the RS is running
+		mesoscope.ResonantScanner::isRunning();												//To make sure that the RS is running
 
 		//SCANNERS
 		const Galvo scanner{ realtimeSeq, FFOVslow / 2. };
@@ -749,8 +744,7 @@ namespace TestRoutines
 		mesoscope.setPower(laserPower);
 
 		//RS
-		const ResonantScanner RScanner{ realtimeSeq };
-		RScanner.isRunning();		//To make sure that the RS is running
+		mesoscope.ResonantScanner::isRunning();		//To make sure that the RS is running
 
 		//STAGES
 		mesoscope.moveXYZ(stagePosXYZ);
@@ -776,7 +770,7 @@ namespace TestRoutines
 
 		ResonantScanner RScanner{ realtimeSeq };
 		std::cout << "aaa = " << RScanner.downloadControlVoltage() << "\n";
-		//RScanner.turnOn(150 * um);
+		//RScanner.turnOnWithFOV(150 * um);
 		//RScanner.turnOff();
 	}
 

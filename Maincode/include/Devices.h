@@ -38,13 +38,9 @@ private:
 	void demuxAllChannels_(const bool saveAllPMT);
 };
 
-class ResonantScanner final
+class ResonantScanner
 {
 public:
-	double mFillFactor;		//Fill factor: how much of an RS swing is covered by the pixels
-	double mFFOV;			//Current FFOV
-	double mSampRes;		//Spatial sampling resolution (length/pixel)
-
 	ResonantScanner(const RTseq &realtimeSeq);
 	ResonantScanner(const ResonantScanner&) = delete;				//Disable copy-constructor
 	ResonantScanner& operator=(const ResonantScanner&) = delete;	//Disable assignment-constructor
@@ -52,11 +48,14 @@ public:
 	ResonantScanner& operator=(ResonantScanner&&) = delete;			//Disable move-assignment constructor
 
 	void setFFOV(const double FFOV);
-	void turnOn(const double FFOV);
-	void turnOnUsingVoltage(const double controlVoltage);
+	void turnOnWithFOV(const double FFOV);
+	void turnOnWithVoltage(const double controlVoltage);
 	void turnOff();
 	double downloadControlVoltage() const;
 	void isRunning() const;
+	double readFFOV() const;
+	double readFillFactor() const;
+	double readSampleRes() const;
 private:
 	const RTseq &mRTcontrol;								//Needed to retrieve 'mRTcontrol.mWidthPerFrame_pix' to calculate the fill factor
 	const double mVMAX{ 5. * V };							//Max control voltage allowed
@@ -64,6 +63,9 @@ private:
 	const double mVoltagePerDistance{ 0.00595 * V / um };	//Calibration factor. Last calibrated 
 	double mFullScan;										//Full scan = distance between turning points
 	double mControlVoltage;									//Control voltage 0-5V
+	double mFillFactor;		//Fill factor: how much of an RS swing is covered by the pixels
+	double mFFOV;			//Current FFOV
+	double mSampRes;		//Spatial sampling resolution (length/pixel)
 
 	void setVoltage_(const double controlVoltage);
 };
@@ -363,7 +365,7 @@ private:
 	const int mAcc_iu{ 11041 };										//Equivalent to 0.5 mm/s^2
 };
 
-class CollectorLens final: public StepperActuator
+class CollectorLens: public StepperActuator
 {
 public:
 	CollectorLens();
@@ -400,7 +402,7 @@ private:
 };
 
 //Integrate VirtualLaser, CombinedFilterwheel, and CollectorLens classes in a single class
-class Mesoscope : public VirtualLaser, public Vibratome
+class Mesoscope : public VirtualLaser, public Vibratome, public ResonantScanner, public CollectorLens
 {
 public:
 	Mesoscope(RTseq &rtseq, const Laser::ID whichLaser = Laser::ID::AUTO);
@@ -412,7 +414,6 @@ public:
 	void configure(const int wavelength_nm);
 	void setPower(const double laserPower) const;
 	void openShutter() const;
-	void moveCollectorLens(const double position);
 
 	void waitForMotionToStopAll();
 	void setVelSingle(const AXIS axis, const double vel);
@@ -422,7 +423,7 @@ public:
 private:
 	RTseq &mRTseq;
 	CombinedFilterwheel mVirtualFilterWheel;
-	CollectorLens mCollectorLens;
+	//CollectorLens mCollectorLens;
 	Stage mStage;
 
 	POSITION3 determineChromaticShiftXYZ_();

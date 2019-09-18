@@ -235,7 +235,7 @@ void ResonantScanner::setFFOV(const double FFOV)
 }
 
 //First set the FFOV, then set RSenable on
-void ResonantScanner::turnOn(const double FFOV)
+void ResonantScanner::turnOnWithFOV(const double FFOV)
 {
 	if (FFOV <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FOV must be > 0");
@@ -247,7 +247,7 @@ void ResonantScanner::turnOn(const double FFOV)
 }
 
 //First set the control voltage, then set RSenable on
-void ResonantScanner::turnOnUsingVoltage(const double controlVoltage)
+void ResonantScanner::turnOnWithVoltage(const double controlVoltage)
 {
 	setVoltage_(controlVoltage);
 	Sleep(static_cast<DWORD>(mDelay / ms));
@@ -294,6 +294,22 @@ void ResonantScanner::isRunning() const
 		else
 			break; //break the whileloop
 	}
+}
+
+
+double ResonantScanner::readFFOV() const
+{
+	return mFFOV;
+}
+
+double ResonantScanner::readFillFactor() const
+{
+	return mFillFactor;
+}
+
+double ResonantScanner::readSampleRes() const
+{
+	return mSampRes;
 }
 
 //Set the control voltage that determines the scanning amplitude
@@ -2308,7 +2324,8 @@ Mesoscope::Mesoscope(RTseq &rtseq, const Laser::ID whichLaser) :
 	mRTseq{ rtseq },
 	mStage{ 5. * mmps, 5. * mmps, 0.5 * mmps, g_currentSample.readStageSoftPosLimXYZ() },
 	VirtualLaser{ whichLaser },
-	Vibratome{ rtseq.mFpga, mStage }	
+	Vibratome{ rtseq.mFpga, mStage },
+	ResonantScanner{ rtseq }
 {}
 
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens
@@ -2316,7 +2333,7 @@ void Mesoscope::configure(const int wavelength_nm)
 {
 	std::future<void> th1{ std::async(&VirtualLaser::setWavelength, this, std::ref(mRTseq), std::ref(wavelength_nm)) };	//Tune the laser wavelength
 	std::future<void> th2{ std::async(&CombinedFilterwheel::turnFilterwheels, &mVirtualFilterWheel, wavelength_nm) };	//Set the filterwheels
-	std::future<void> th3{ std::async(&CollectorLens::set, &mCollectorLens, wavelength_nm) };							//Set the collector lens position
+	std::future<void> th3{ std::async(&CollectorLens::set, this, wavelength_nm) };										//Set the collector lens position
 
 	try
 	{
@@ -2343,12 +2360,6 @@ void Mesoscope::openShutter() const
 
 	//Open the Uniblitz shutter
 	this->VirtualLaser::openShutter();
-}
-
-//Used for optimizing the collector lens position
-void Mesoscope::moveCollectorLens(const double position)
-{
-	mCollectorLens.move(position);
 }
 
 void Mesoscope::waitForMotionToStopAll()
@@ -2393,6 +2404,8 @@ void Mesoscope::moveXYZ(const POSITION3 posXYZ)
 					 posXYZ.ZZ + chromaticShiftXYZ.ZZ });
 }
 
+//The focal plane of the objective varies slightly with the wavelength because of chromatic aberration
+//The lateral offset between Vision and Fidelity is because the 2 lasers do not perfectly overlap
 POSITION3 Mesoscope::determineChromaticShiftXYZ_()
 {
 	switch (this->readCurrentLaser())

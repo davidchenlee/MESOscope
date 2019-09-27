@@ -59,15 +59,16 @@ namespace Constants
 	extern const double g_rescannerDelay{ 0. * us };							//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
 	extern const GALVOcalib g_scannerCalib{ 0.02417210 * V / um , 0.0 * V };	//Calibration factor and offset of the galvo scanner. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the X-stage)
 
-	//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission aligned to the detector. The format is:
-	//GALVOcalib { double voltagePerDistance, double voltageOffset };
-	//*To find 'mVoltagePerDistance', take a single 1X image of beads4um, save all the PMT16X channels, and adjust the parameter until all the beads are contained in the targeted PMT16X channel 'i'
-	//(if 'mVoltagePerDistance' is too large, the top beads in the Tiff leak through the 'i-1' channel and the bottom beads leak through the 'i+1' channels)
-	//*To find 'mVoltageOffset', take an averaged 16X image of beads centered at the FOV of the Tiff and adjust the parameter to make the crosstalk in the channels i-1 and i+1 have the same fluorescent intensity
-	extern const GALVOcalib g_rescannerCalibV750nm{ 0.295 * g_scannerCalib.voltagePerDistance, 0.135 * V };		//VISION. Last calib 20190923
-	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.150 * V };		//VISION. Last calib 20190923
-	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.160 * V };	//VISION. Last calib 20190923
-	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.331 * g_scannerCalib.voltagePerDistance, 0.180 * V };	//FIDELITY. Last calib 20190923
+	//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission aligned to the detector
+	//To find 'mVoltagePerDistance', take a single 1X image of beads4um, save all the PMT16X channels, and adjust the parameter until all the beads are contained in the targeted PMT16X channel 'i'
+	//To find 'mVoltageOffset', take an averaged 16X image of beads centered at the FOV of the Tiff and adjust the parameter to make the crosstalk in the channels i-1 and i+1 have the same fluorescent intensity.
+	//If 'mVoltagePerDistance' is too large, the top beads in the Tiff leak through the 'i-1' channel and the bottom beads leak through the 'i+1' channels
+	//If 'mVoltageOffset' is too large, the bead signal shifts towards channel 1
+	//The format is GALVOcalib { double voltagePerDistance, double voltageOffset };
+	extern const GALVOcalib g_rescannerCalibV750nm{ 0.290 * g_scannerCalib.voltagePerDistance, 0.015 * V };		//VISION. Last calib 20190928
+	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.020 * V };		//VISION. Last calib 20190928
+	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//VISION.
+	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.320 * g_scannerCalib.voltagePerDistance, 0.050 * V };	//FIDELITY. Last calib 20190928
 	extern const int g_rescanner1Xchan_int{ 7 }; //When using 1X, direct the rescanner towards the selected channel of the PMT16X. It takes the values 0-15
 
 	//STAGES

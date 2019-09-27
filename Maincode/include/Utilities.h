@@ -30,6 +30,8 @@ namespace Util
 	void pressAnyKeyToCont();
 	void pressESCforEarlyTermination();
 	void pressAnyKeyToContOrESCtoExit();
+	double multiply16X(const double input);
+	std::string convertWavelengthToFluorMarker_s(const int wavelength_nm);
 }
 
 //For saving the parameters to a text file

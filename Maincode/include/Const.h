@@ -2,8 +2,7 @@
 #include <deque>
 #include <vector>
 #include <array>
-
-#define multibeam 0							//Multibeam or singlebeam. *cast
+#define multibeam 1							//Multibeam or singlebeam. *cast
 #define pockelsAutoOff 1					//For debugging purposes. In LV, let 'framegate' gate the output of the pockels
 
 namespace Constants

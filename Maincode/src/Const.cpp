@@ -64,10 +64,10 @@ namespace Constants
 	//*To find 'mVoltagePerDistance', take a single 1X image of beads4um, save all the PMT16X channels, and adjust the parameter until all the beads are contained in the targeted PMT16X channel 'i'
 	//(if 'mVoltagePerDistance' is too large, the top beads in the Tiff leak through the 'i-1' channel and the bottom beads leak through the 'i+1' channels)
 	//*To find 'mVoltageOffset', take an averaged 16X image of beads centered at the FOV of the Tiff and adjust the parameter to make the crosstalk in the channels i-1 and i+1 have the same fluorescent intensity
-	extern const GALVOcalib g_rescannerCalibV750nm{ 0.295 * g_scannerCalib.voltagePerDistance, 0.050 * V };		//VISION. Last calib 20190909
-	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.075 * V };		//VISION. Last calib 20190909
-	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//VISION. Last calib 20190909
-	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.330 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//FIDELITY. Last calib 20190909 for voltageOffset. voltagePerDistance has not been updated because the power offset of the pockels is too high
+	extern const GALVOcalib g_rescannerCalibV750nm{ 0.295 * g_scannerCalib.voltagePerDistance, 0.135 * V };		//VISION. Last calib 20190923
+	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.150 * V };		//VISION. Last calib 20190923
+	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.160 * V };	//VISION. Last calib 20190923
+	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.331 * g_scannerCalib.voltagePerDistance, 0.180 * V };	//FIDELITY. Last calib 20190923
 	extern const int g_rescanner1Xchan_int{ 7 }; //When using 1X, direct the rescanner towards the selected channel of the PMT16X. It takes the values 0-15
 
 	//STAGES
@@ -85,7 +85,7 @@ namespace Constants
 
 	extern const POSITION3 g_chromaticShiftVision750nm{ 0.5 * um, 0, -5. * um };
 	extern const POSITION3 g_chromaticShiftVision920nm{ 0, 0, 0 };
-	extern const POSITION3 g_chromaticShiftVision1040nm{ 0, 0, 0 };
+	extern const POSITION3 g_chromaticShiftVision1040nm{ 0, 0, -1. * um };
 	extern const POSITION3 g_chromaticShiftFidelity1040nm{ 0.0 * um, 0.8 * um, -4. * um };
 
 	//PMT

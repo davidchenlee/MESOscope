@@ -1,11 +1,5 @@
 #include "Sequencer.h"
 
-//Used to increase the laser power 16 times
-double multiply16X(const double input)
-{
-	return 16 * input;
-}
-
 //Switch the scan direction. It is important to pass scanDir by reference to be able to modify it
 void reverseSCANDIR(SCANDIR &scanDir)
 {
@@ -133,22 +127,6 @@ double determineFinalLaserPower(const double powerMin, const double totalPowerIn
 		return powerMin;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Invalid scan direction");
-	}
-}
-
-//Assign a fixed number to the fluorescent markers. Used for naming the Tiff files
-std::string convertWavelengthToFluorMarker_s(const int wavelength_nm)
-{
-	switch (wavelength_nm)
-	{
-	case 750:
-		return "0";
-	case 920:
-		return "1";
-	case 1040:
-		return "2";
-	default:
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength " + std::to_string(wavelength_nm) + "has not been assigned a fluorescent marker");
 	}
 }
 

@@ -5,7 +5,7 @@ const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.
 //SAMPLE PARAMETERS
 //const extern POSITION3 g_stackCenterXYZ{ (44.300 + 1.456) * mm, (24.003 + 9.904/2 - 0.285)* mm, (17.840 + 0.000) * mm };
 //const extern POSITION3 g_stackCenterXYZ{ (44.300) * mm, (24.003)* mm, (18.051 + 0.000) * mm };//For contScanX
-const extern POSITION3 g_stackCenterXYZ{ (53.360 - 0.035) * mm, (25.000 - 0.017)* mm, (17.918 - 0.040) * mm };
+const extern POSITION3 g_stackCenterXYZ{ (53.360 - 0.095) * mm, (25.000 - 0.017)* mm, (17.917) * mm };
 
 #pragma region "FluorMarkerList"
 FluorMarkerList::FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList) :
@@ -141,22 +141,22 @@ double Sample::readStageSoftPosLimYMAX() const
 #pragma endregion "Sample"
 
 
-
+//This should really go in Routines.cpp but I'll leave here for now out of convenience to avoid scrolling up and down through Routines.cpp
 #if multibeam
-const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, multiply16X(30. * mW), multiply16X(1000. * um) },
-																				   { "GFP", 920, multiply16X(30. * mW), multiply16X(1000. * um) },
-																				   { "TDT", 1040, multiply16X(15. * mW), multiply16X(1000. * um) } }} };
-/*const extern Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), multiply16X(0.0) },
-																							{ "GFP", 920, multiply16X(40. * mW), multiply16X(0.0) },
-																							{ "DAPI", 750, multiply16X(50. * mW), multiply16X(0.) } }} };*/
+const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, Util::multiply16X(50. * mW), Util::multiply16X(1000. * um) },
+																				   { "GFP", 920, Util::multiply16X(50. * mW), Util::multiply16X(1000. * um) },
+																				   { "TDT", 1040, Util::multiply16X(30. * mW), Util::multiply16X(1000. * um) } }} };
+/*const extern Sample liver{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, Util::multiply16X(50. * mW), Util::multiply16X(0.0) },
+																							{ "GFP", 920, Util::multiply16X(40. * mW), Util::multiply16X(0.0) },
+																							{ "DAPI", 750, Util::multiply16X(50. * mW), Util::multiply16X(0.) } }} };*/
 																							/*Sample g_currentSample{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, multiply16X(50. * mW), 150., 4 },
 																																																  { "DAPI", 750, multiply16X(20. * mW), 120., 2 } }} };*/
 #else
 /*const extern Sample g_currentSample{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,  {{{"TDT", 1040, 30. * mW, 150. * um, 4 },
 																									  { "DAPI", 750, 12. * mW, 120. * um, 2 }}} };*/
 
-const extern Sample g_currentSample{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 25. * mW, 1000. * um, 1},
-																				  { "GFP", 920, 40. * mW, 1000. * um, 1},
+const extern Sample g_currentSample{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 50. * mW, 1000. * um, 1},
+																				  { "GFP", 920, 50. * mW, 1000. * um, 1},
 																				  { "TDT", 1040, 10. * mW, 1000. * um, 1}}} };
 /*const extern Sample g_currentSample{ "Beads1um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 40. * mW, 0. },
 																					{ "GFP", 920, 40. * mW, 0. },

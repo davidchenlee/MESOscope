@@ -2,17 +2,14 @@
 #include "Utilities.h"
 #include "Devices.h"
 #include "SampleConfig.h"
-
 using namespace Constants;
 																																														
-double multiply16X(const double input);
 void reverseSCANDIR(SCANDIR &scanDir);
 POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapIJK_frac, const TILEDIM2 tileArraySizeIJ, const TILEIJ tileIndicesIJ);
 double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
 double determineFinalScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
 double determineInitialLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
 double determineFinalLaserPower(const double powerMin, const double totalPowerInc, const SCANDIR scanDir);
-std::string convertWavelengthToFluorMarker_s(const int wavelength_nm);
 
 class TileArray
 {

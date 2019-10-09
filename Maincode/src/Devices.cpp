@@ -1796,22 +1796,22 @@ double Pockels::convertPowerToVolt_(const double power) const
 		switch (mWavelength_nm)
 		{
 		case 750://Calibrated 20190904
-			powerAmplitude = 1442.1 * mW;
-			powerMin = 2.4 * mW;
-			angularFreq = 0.647 / V;
-			Vphase = 0.011 * V;
+			powerAmplitude = 2140. * mW;
+			powerMin = 0.7 * mW;
+			angularFreq = 0.648 / V;
+			Vphase = 0.020 * V;
 
 			break;//Calibrated 20190904
 		case 920:
-			powerAmplitude = 969.1 * mW;
-			powerMin = 4.0 * mW;
+			powerAmplitude = 1450. * mW;
+			powerMin = 3.4 * mW;
 			angularFreq = 0.524 / V;
-			Vphase = -0.065 * V;
+			Vphase = -0.069 * V;
 			break;
 		case 1040://Calibrated 20190904
-			powerAmplitude = 336.3 * mW;
-			powerMin = 0 * mW;
-			angularFreq = 0.461 / V;
+			powerAmplitude = 521 * mW;
+			powerMin = -0.4 * mW;
+			angularFreq = 0.46 / V;
 			Vphase = 0.054 * V;
 			break;
 		default:

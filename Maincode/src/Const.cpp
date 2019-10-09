@@ -65,11 +65,12 @@ namespace Constants
 	//If 'mVoltagePerDistance' is too large, the top beads in the Tiff leak through the 'i-1' channel and the bottom beads leak through the 'i+1' channels
 	//If 'mVoltageOffset' is too large, the bead signal shifts towards channel 1
 	//The format is GALVOcalib { double voltagePerDistance, double voltageOffset };
-	extern const GALVOcalib g_rescannerCalibV750nm{ 0.290 * g_scannerCalib.voltagePerDistance, 0.015 * V };		//VISION. Last calib 20190928
-	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.020 * V };		//VISION. Last calib 20190928
-	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.065 * V };	//VISION.
-	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.320 * g_scannerCalib.voltagePerDistance, 0.050 * V };	//FIDELITY. Last calib 20190928
+	extern const GALVOcalib g_rescannerCalibV750nm{ 0.300 * g_scannerCalib.voltagePerDistance, 0.040 * V };		//VISION. Last calib 20191008
+	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.040 * V };		//VISION. Last calib 20191008
+	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.075 * V };	//VISION. I just copied the calib from Fidelity
+	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.320 * g_scannerCalib.voltagePerDistance, 0.075 * V };	//FIDELITY. Last calib 20191008
 	extern const int g_rescanner1Xchan_int{ 7 }; //When using 1X, direct the rescanner towards the selected channel of the PMT16X. It takes the values 0-15
+												 //When comparing with Fiji, be aware that Fiji starts indexing from 1
 
 	//STAGES
 	//Initial scan directions wrt the X-stage, Y-stage, and Z-stage axes. Note that the image formation has the opposite direction
@@ -84,10 +85,10 @@ namespace Constants
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ 40 * ms };	//Delay the Z-stage triggering the acq sequence						
 	extern const double	g_STAGEXTrigAcqDelay{ 113.3 * ms };			//Stage X. pixelSizeX = 1.0 um and 36 * 0.280
 
-	extern const POSITION3 g_chromaticShiftVision750nm{ 0.5 * um, 0, -5. * um };
+	extern const POSITION3 g_chromaticShiftVision750nm{ 0.2 * um, -0.1 * um, -5. * um };
 	extern const POSITION3 g_chromaticShiftVision920nm{ 0, 0, 0 };
 	extern const POSITION3 g_chromaticShiftVision1040nm{ 0, 0, -1. * um };
-	extern const POSITION3 g_chromaticShiftFidelity1040nm{ 0.0 * um, 0.8 * um, -4. * um };
+	extern const POSITION3 g_chromaticShiftFidelity1040nm{ -0.3 * um, 1.0 * um, -4. * um };
 
 	//PMT
 	extern const int g_nChanPMT{ 16 };

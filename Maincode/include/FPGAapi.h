@@ -108,8 +108,9 @@ private:
 		const int mLatency_tick{ 2 };		//Latency at detecting the line clock. Calibrate the latency with the oscilloscope
 		double mDwell;
 		int mWidthPerFrame_pix;
-		const int mCalibFine_tick{ -40 };	//Fine tune the relative delay of the pixel clock wrt the line clock. Acquire an averaged image
-											//and align the pixels corresponding to forward and backward scans of the RS
+		const int mCalibFine_tick{ -44 };	//Fine tune the relative delay of the pixel clock wrt the line clock
+											//To adjust it, average beads and align the rows in the tiff corresponding to forward and backwarde scans of the RS
+											//Last calib 20191010
 		void pushUniformDwellTimes_();
 	};
 

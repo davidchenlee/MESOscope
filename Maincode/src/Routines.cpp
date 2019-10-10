@@ -6,19 +6,19 @@ namespace Routines
 	void stepwiseScan(const FPGA &fpga)
 	{
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
-		const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
+		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANX };			//Scan in the X-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		//const RUNMODE acqMode{ RUNMODE::FI_MEAS };		//Field illumination measurement for 16X using beads
 		
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
 		const int nFramesCont{ 1 };	
-		const double stackDepthZ{ 100. * um };								//Stack deepth in the Z-stage axis
+		const double stackDepthZ{ 30. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
 	
 		const double pixelSizeXY{ 0.5 * um };
@@ -248,7 +248,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
-		const SCANDIR scanDirZ{ SCANDIR::DOWNWARD };														//Scan direction for imaging in Z
+		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um  };
@@ -313,7 +313,7 @@ namespace Routines
 		//image.correct(RScanner.mFFOV);
 
 		const std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) +
-			"nm_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_Pexp=" + Util::toString(fluorMarker.mScanPexp / um, 0) +
+			"nm_Pmin=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_Pexp=" + Util::toString(fluorMarker.mScanPexp / um, 0) +
 			"um_x=" + Util::toString(stackCenterXYZ.XX / mm, 3) + "_y=" + Util::toString(stackCenterXYZ.YY / mm, 3) +
 			"_zi=" + Util::toString(stageZi / mm, 4) + "_zf=" + Util::toString(stageZf / mm, 4) + "_Step=" + Util::toString(pixelSizeZafterBinning / mm, 4) +
 			"_bin=" + Util::toString(nFramesBinning, 0) };
@@ -928,14 +928,14 @@ namespace TestRoutines
 		RTseq realtimeSeq{ fpga, LINECLOCK::FG , MAINTRIG::PC, FIFOOUTfpga::DIS, 560, 300, 1 };
 
 		//DEFINE THE POCKELS
-		Pockels pockelsVision{ realtimeSeq, 920, Laser::ID::VISION };
-		Pockels pockels{ pockelsVision };
+		//Pockels pockelsVision{ realtimeSeq, 750, Laser::ID::VISION };
+		//Pockels pockels{ pockelsVision };
 
-		//Pockels pockelsFidelity{ realtimeSeq, 1040, Laser::ID::FIDELITY };
-		//Pockels pockels{ pockelsFidelity };
+		Pockels pockelsFidelity{ realtimeSeq, 1040, Laser::ID::FIDELITY };
+		Pockels pockels{ pockelsFidelity };
 
 		//pockels.pushVoltageSinglet(8 * us, 0.0 * V, OVERRIDE::DIS);
-		pockels.pushPowerSinglet(8 * us, 00. * mW, OVERRIDE::DIS);
+		pockels.pushPowerSinglet(8 * us, 0. * mW, OVERRIDE::DIS);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		realtimeSeq.run();

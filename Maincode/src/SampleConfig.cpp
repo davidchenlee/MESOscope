@@ -1,5 +1,5 @@
 #include "SampleConfig.h"
-const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { 0. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
+const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { -1. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };	//Soft limit of the stage for the oil container
 
 #pragma region "FluorMarkerList"
@@ -150,7 +150,7 @@ const extern Sample g_currentSample{ "FSlide16X", "SiliconeOil", "1.51", Petridi
 
 #else //beads
 
-const extern POSITION3 g_stackCenterXYZ{ (52.478 + 0.0175*(7)) * mm, (24.955)* mm, (17.913) * mm };//For 4um beads
+const extern POSITION3 g_stackCenterXYZ{ (52.478 + 0.0175*(7)) * mm, (24.955)* mm, (17.911) * mm };//For 4um beads
 const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, Util::multiply16X(45. * mW), Util::multiply16X(2000. * um) },
 																				   { "GFP", 920, Util::multiply16X(60. * mW), Util::multiply16X(2000. * um) },
 																				   { "TDT", 1040, Util::multiply16X(15. * mW), Util::multiply16X(2000. * um) } }} };

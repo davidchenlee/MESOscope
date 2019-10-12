@@ -40,5 +40,6 @@ Others:
 - Set up the beads next to the sample holder permanently
 - Purchase a 5W power pockels (instead of 10W) for Fidelity to have a finer control
 - Mount the bead and fluorescent slides in the sample container for checking the microscope performance regularly
-- Improve the dichroic mount to allow fine rotation adjustment
+- Improve the dichroic mount to allow fine rotation
 - The oil in the sample container crawls up through the clamps
+- Add motorized actuators to the last corner mirror before the galvo scanner

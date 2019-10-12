@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			Routines::stepwiseScan(fpga);
+			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
 			//Routines::contScanX(fpga);
 			//Routines::sequencer(fpga, 0);
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::clipU8();
 			//TestRoutines::dataLogger();
 
-			//TestRoutines::correctImage();
+			TestRoutines::correctImage();
 			//TestRoutines::quickStitcher();
 			//TestRoutines::boolmapSample();
 			//TestRoutines::vectorOfObjects();

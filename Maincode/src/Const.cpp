@@ -65,7 +65,7 @@ namespace Constants
 	//If 'mVoltagePerDistance' is too large, the top beads in the Tiff leak through the 'i-1' channel and the bottom beads leak through the 'i+1' channels
 	//If 'mVoltageOffset' is too large, the bead signal shifts towards channel 1
 	//The format is GALVOcalib { double voltagePerDistance, double voltageOffset };
-	extern const GALVOcalib g_rescannerCalibV750nm{ 0.300 * g_scannerCalib.voltagePerDistance, 0.040 * V };		//VISION. Last calib 20191008
+	extern const GALVOcalib g_rescannerCalibV750nm{ 0.300 * g_scannerCalib.voltagePerDistance, 0.045 * V };		//VISION. Last calib 20191008
 	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.040 * V };		//VISION. Last calib 20191008
 	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.075 * V };	//VISION. I just copied the calib from Fidelity
 	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.320 * g_scannerCalib.voltagePerDistance, 0.075 * V };	//FIDELITY. Last calib 20191008
@@ -82,17 +82,17 @@ namespace Constants
 	//2. Do a centered Z scan
 	//3. Adjust the delay until the beads are centered at the middle of the Z stack
 	//For StepZ = 0.5 um, g_STAGEZtrigAcqDelayTopdown = g_STAGEZTrigAcqDelayBottomup = 36 um
-	//For StepZ = 1 um, g_STAGEZtrigAcqDelayTopdown = g_STAGEZTrigAcqDelayBottomup = 73 um
+	//For StepZ = 1 um, g_STAGEZtrigAcqDelayTopdown = g_STAGEZTrigAcqDelayBottomup = 75 um
 	//A larger g_STAGEZtrigAcqDelayTopdown moves the bead closer to the surface of the stack
-	extern const double	g_STAGEZtrigAcqDelayTopdown{ 73 * ms };		//Delay the Z-stage triggering the acq sequence
-	extern const double	g_STAGEZTrigAcqDelayBottomup{ 73 * ms };	//Delay the Z-stage triggering the acq sequence		
+	extern const double	g_STAGEZtrigAcqDelayTopdown{ 75 * ms };		//Delay the Z-stage triggering the acq sequence
+	extern const double	g_STAGEZTrigAcqDelayBottomup{ 75 * ms };	//Delay the Z-stage triggering the acq sequence		
 
 	extern const double	g_STAGEXTrigAcqDelay{ 113.3 * ms };			//Stage X. pixelSizeX = 1.0 um and 36 * 0.280
 
-	extern const POSITION3 g_chromaticShiftVision750nm{ 0.2 * um, -0.1 * um, -5. * um };
+	extern const POSITION3 g_chromaticShiftVision750nm{ 0.0 * um, 0.0 * um, -5. * um };
 	extern const POSITION3 g_chromaticShiftVision920nm{ 0, 0, 0 };
 	extern const POSITION3 g_chromaticShiftVision1040nm{ 0, 0, -1. * um };
-	extern const POSITION3 g_chromaticShiftFidelity1040nm{ -0.3 * um, 1.0 * um, -4. * um };
+	extern const POSITION3 g_chromaticShiftFidelity1040nm{ 0.7 * um, 1.0 * um, -4. * um };
 
 	//PMT
 	extern const int g_nChanPMT{ 16 };

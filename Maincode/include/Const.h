@@ -51,7 +51,7 @@ namespace Constants
 	enum class FIFOOUTfpga { DIS = false, EN = true  };						//*cast
 	enum class TIFFSTRUCT { SINGLEPAGE, MULTIPAGE };
 	enum class OVERRIDE { DIS, EN };
-	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANX, COLLECTLENS, FI_MEAS };
+	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANX, COLLECTLENS, FIELDILLUM };
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};	//*cast
 
 	extern const std::string g_folderPath;

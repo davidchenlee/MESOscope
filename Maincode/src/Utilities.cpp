@@ -1059,7 +1059,7 @@ void TiffU8::flattenFieldLinear(const double scaleFactor, const int lowerChan, c
 					vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]);
 }
 
-////Upscale the pixel counts exponentially. The channel indices go from 0 to g_nChanPMT-1
+//Upscale the pixel counts exponentially by channel. The channel indices go from 0 to g_nChanPMT-1
 void TiffU8::flattenFieldGaussian(const double expFactor)
 {
 	if (expFactor < 0 || expFactor > 0.1)

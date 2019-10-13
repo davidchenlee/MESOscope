@@ -1075,12 +1075,12 @@ void Sequencer::printToFile(const std::string fileName) const
 	fileHandle->close();
 }
 
-int Sequencer::readNtotalSlices() const
+int Sequencer::readSliceCounter() const
 {
-	return mSliceCounter;
+	return mNtotalSlices;
 }
 
-int Sequencer::readNtotalStacks() const
+int Sequencer::readStackCounter() const
 {
 	return mStackCounter;
 }

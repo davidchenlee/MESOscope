@@ -85,7 +85,8 @@ namespace Constants
 	//The calibration seems to depend on the correction collar of the objective
 	//For RI = 1.51 and StepZ = 0.5 um, g_STAGEZtrigAcqDelayTopdown/Bottomup = 36 um
 	//For RI = 1.51 and StepZ = 1 um, g_STAGEZtrigAcqDelayTopdown/Bottomup = 75 um
-	//For RI = 1.49 and StepZ = 1 um, g_STAGEZtrigAcqDelayTopdown/Bottomup = 25 um
+	//For RI = 1.49, StepZ = 1 um, and TDT, g_STAGEZtrigAcqDelayTopdown/Bottomup = 25 um
+	//For RI = 1.49, StepZ = 1 um, and DAPI, g_STAGEZtrigAcqDelayTopdown/Bottomup = 37 um
 	extern const double	g_STAGEZtrigAcqDelayTopdown{ 25 * ms };		//Delay the Z-stage triggering the acq sequence
 	extern const double	g_STAGEZTrigAcqDelayBottomup{ g_STAGEZtrigAcqDelayTopdown };
 

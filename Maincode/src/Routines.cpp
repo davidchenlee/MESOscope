@@ -247,7 +247,7 @@ namespace Routines
 	{
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
-		const Laser::ID whichLaser{ Laser::ID::FIDELITY };
+		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
 		const double stackDepth{ 100. * um };
@@ -334,7 +334,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::FIDELITY };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };													//Initial scan direction of stage 
-		const double fullWidth{ 10.000 * mm };														//Total width of the tile array
+		const double fullWidth{ 0.150 * mm };														//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };														//Width of a strip
@@ -413,9 +413,9 @@ namespace Routines
 			const TILEOVERLAP3 ssTileOverlapXYZ_frac{ 0.0, 0.0, 0.0 };
 			const double threshold{ 0.02 };
 
-			Boolmap boolmap{ quickScanXY, ssTileSize_pix, ssTileOverlapXYZ_frac, threshold };
-			boolmap.saveTileMapToText("Boolmap_" + filename);
-			boolmap.saveTileMap("TileArrayMap_" + filename);
+			//Boolmap boolmap{ quickScanXY, ssTileSize_pix, ssTileOverlapXYZ_frac, threshold };
+			//boolmap.saveTileMapToText("Boolmap_" + filename);
+			//boolmap.saveTileMap("TileArrayMap_" + filename);
 	}
 
 	//Full sequence to image and cut an entire sample automatically
@@ -433,7 +433,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 0.3 * mm, 0.2 * mm, 0.000 * mm };
+		const LENGTH3 LOIxyz{ 0.1 * mm, 0.2 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
@@ -525,15 +525,17 @@ namespace Routines
 
 						Galvo rescanner{ realtimeSeq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 					}
-					mesoscope.moveSingle(AXIS::ZZ, scanZi);	//Move the stage to the initial Z position
+					//Move the stage to the initial Z position
+					mesoscope.moveSingle(AXIS::ZZ, scanZi);
 					mesoscope.waitForMotionToStopAll();
 
 					realtimeSeq.initialize(iterScanDirZ);	//Use the scan direction determined dynamically
 					mesoscope.openShutter();				//Re-open the Uniblitz shutter if closed by the pockels destructor
 
-
-					std::cout << "Scanning slice = " << std::to_string(sliceNumber+1) << "/" << sequence.readNtotalSlices() << "\tstack = " <<
-														std::to_string(stackNumber+1) << "/" << sequence.readNtotalStacks() << "\n";//Show stack number from 1
+					//Print out the stackNumber starting from 1 (stackNumber indexes from 0, so add a 1)
+					//Print out the sliceNumber starting from 1 (sliceNumber indexes from 0, so add a 1). readSliceCounter() gives
+					std::cout << "Scanning slice = " << std::to_string(sliceNumber+1) << "/" << sequence.readSliceCounter() << "\tstack = " <<
+														std::to_string(stackNumber+1) << "/" << sequence.readStackCounter() << "\n";
 
 					mesoscope.moveSingle(AXIS::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
 					realtimeSeq.downloadData();
@@ -573,7 +575,7 @@ namespace Routines
 				{
 					const double planeZtoCut{ commandline.mAction.cutSlice.readStageZheightForFacingTheBlade() };
 
-					std::cout << "Cutting slice = " << std::to_string(sliceNumber) << "/" << sequence.readNtotalSlices() << "\n";
+					std::cout << "Cutting slice = " << std::to_string(sliceNumber) << "/" << sequence.readSliceCounter() << "\n";
 					mesoscope.sliceTissue(planeZtoCut);
 
 					//Reset the scan direction
@@ -1158,14 +1160,12 @@ namespace TestRoutines
 
 	void correctImage()
 	{
-		std::string inputFilename{ "000_2_0000004" };
+		std::string inputFilename{ "000_2_0000003" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
-		//image.correctFOVslowCPU(1);
-		//image.correctRSdistortionGPU(200. * um);	
-
+		image.correctRSdistortionGPU(150. * um);	
 		image.flattenFieldGaussian(0.014);
-		//image.suppressCrosstalk(0.15);
+		image.suppressCrosstalk(0.20);
 
 		//image.flattenFieldGaussianByPixel();
 
@@ -1516,7 +1516,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (19.500) * mm };
+		const double slicePlaneZ{ (20.800) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

@@ -15,9 +15,9 @@ namespace Routines
 		
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
-		const Laser::ID whichLaser{ Laser::ID::FIDELITY };
+		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
-		const int nFramesCont{ 1 };	
+		const int nFramesCont{ 4 };	
 		const double stackDepthZ{ 100. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
 	
@@ -247,7 +247,7 @@ namespace Routines
 	{
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
-		const Laser::ID whichLaser{ Laser::ID::AUTO };
+		const Laser::ID whichLaser{ Laser::ID::FIDELITY };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
 		const double stackDepth{ 100. * um };
@@ -331,7 +331,7 @@ namespace Routines
 
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular laser
-		const Laser::ID whichLaser{ Laser::ID::VISION };
+		const Laser::ID whichLaser{ Laser::ID::FIDELITY };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };													//Initial scan direction of stage 
 		const double fullWidth{ 10.000 * mm };														//Total width of the tile array
@@ -393,11 +393,13 @@ namespace Routines
 			Image image{ realtimeSeq };
 			image.acquireVerticalStrip(iterScanDirX);
 			image.correctRSdistortion(tileWidth);					//Correct the image distortion induced by the nonlinear scanning of the RS
-			quickScanXY.push(image.data(), { 0, iterLocation });	//for now, only allowed to stack up strips to the right
+			quickScanXY.push(image.data(), { 0, iterLocation });	//for now, only allow to stack up strips to the right
 
 			reverseSCANDIR(iterScanDirX);
 			Util::pressESCforEarlyTermination();
 		}
+			mesoscope.closeShutter();
+
 			const std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) +
 				"nm_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) +
 				"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
@@ -435,7 +437,7 @@ namespace Routines
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
-		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.50 };										//Stack overlap
+		const TILEOVERLAP3 stackOverlap_frac{ 0.20, 0.05, 0.50 };										//Stack overlap
 		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };											//Stack overlap
 
 		int heightPerBeamletPerFrame_pix;
@@ -462,10 +464,10 @@ namespace Routines
 		{
 			//CONTROL SEQUENCE
 			RTseq realtimeSeq{ fpga, LINECLOCK::RS, MAINTRIG::STAGEZ, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix };
-			Mesoscope mesoscope{ realtimeSeq, Laser::ID::VISION };
+			Mesoscope mesoscope{ realtimeSeq, Laser::ID::AUTO };
 
 			//RS
-			mesoscope.ResonantScanner::isRunning();		//To make sure that the RS is running
+			mesoscope.ResonantScanner::isRunning();					//To make sure that the RS is running
 
 			//STAGES
 			mesoscope.moveSingle(AXIS::ZZ, sample.mSurfaceZ);		//Move the Z-stage to the sample surface
@@ -519,16 +521,19 @@ namespace Routines
 						mesoscope.configure(wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
 						scanPmin = acqStack.readScanPmin();
 						scanPexp = acqStack.readScanPexp();
-						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(iterScanDirZ) * acqStack.readScanPexp());
+						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(iterScanDirZ) * scanPexp);
 
 						Galvo rescanner{ realtimeSeq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 					}
 					mesoscope.moveSingle(AXIS::ZZ, scanZi);	//Move the stage to the initial Z position
+					mesoscope.waitForMotionToStopAll();
+
 					realtimeSeq.initialize(iterScanDirZ);	//Use the scan direction determined dynamically
 					mesoscope.openShutter();				//Re-open the Uniblitz shutter if closed by the pockels destructor
 
-					std::cout << "Scanning slice = " << std::to_string(sliceNumber) << "/" << sequence.readNtotalSlices() << "\tstack = " <<
-														std::to_string(stackNumber) << "/" << sequence.readNtotalStacks() << "\n";
+
+					std::cout << "Scanning slice = " << std::to_string(sliceNumber+1) << "/" << sequence.readNtotalSlices() << "\tstack = " <<
+														std::to_string(stackNumber+1) << "/" << sequence.readNtotalStacks() << "\n";//Show stack number from 1
 
 					mesoscope.moveSingle(AXIS::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
 					realtimeSeq.downloadData();
@@ -935,7 +940,7 @@ namespace TestRoutines
 		Pockels pockels{ pockelsFidelity };
 
 		//pockels.pushVoltageSinglet(8 * us, 0.0 * V, OVERRIDE::DIS);
-		pockels.pushPowerSinglet(8 * us, 0. * mW, OVERRIDE::DIS);
+		pockels.pushPowerSinglet(8 * us, 000. * mW, OVERRIDE::DIS);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		realtimeSeq.run();
@@ -979,17 +984,18 @@ namespace TestRoutines
 		RTseq realtimeSeq{ fpga, LINECLOCK::FG, MAINTRIG::PC, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont };
 
 		//POCKELS
-		const int wavelength_nm{ 750 };
-		Pockels pockels{ realtimeSeq, wavelength_nm, Laser::ID::VISION };
-		const double Pi{ 500. * mW }, Pf{ 1000. * mW };
-		const SCANDIR scanDirZ{ SCANDIR::UPWARD };
-		const double laserPi = determineInitialLaserPower(Pi, Pf - Pi, scanDirZ);
-		const double laserPf = determineFinalLaserPower(Pi, Pf - Pi, scanDirZ);
+		const int wavelength_nm{ 1040 };
+		Pockels pockels{ realtimeSeq, wavelength_nm, Laser::ID::FIDELITY };
+		const double Pi{ 800. * mW };
+		//const double Pf{ 1000. * mW };
+		//const SCANDIR scanDirZ{ SCANDIR::UPWARD };
+		//const double laserPi = determineInitialLaserPower(Pi, Pf - Pi, scanDirZ);
+		//const double laserPf = determineFinalLaserPower(Pi, Pf - Pi, scanDirZ);
 
-		std::cout << "Pi = " << laserPi << "\n";
-		std::cout << "Pf = " << laserPf << "\n";
+		//std::cout << "Pi = " << laserPi << "\n";
+		//std::cout << "Pf = " << laserPf << "\n";
 		//pockels.pushPowerLinearScaling(laserPi, laserPf);					//Linearly scale the laser power from the first to the last frame
-		pockels.pushPowerExponentialScaling(Pi, 1. * um, 200. * um);
+		pockels.pushPowerExponentialScaling(Pi, 1. * um, 300. * um);
 
 
 		//pockels.pushPowerLinearScaling(0.96 * Pf, Pi);
@@ -1152,14 +1158,14 @@ namespace TestRoutines
 
 	void correctImage()
 	{
-		std::string inputFilename{ "Liver20190812_02_F1040nm_Pmin=800.0mW_Pexp=300um_x=44.450_y=26.000_zi=18.3250_zf=18.4350_Step=0.0010_bin=4 (1)" };
+		std::string inputFilename{ "000_2_0000004" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		//image.correctFOVslowCPU(1);
 		//image.correctRSdistortionGPU(200. * um);	
 
 		image.flattenFieldGaussian(0.014);
-		//image.suppressCrosstalk(0.20);
+		//image.suppressCrosstalk(0.15);
 
 		//image.flattenFieldGaussianByPixel();
 
@@ -1224,6 +1230,7 @@ namespace TestRoutines
 
 	void boolmapSample()
 	{
+		g_folderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
 		std::string inputFilename{ "Liver20190812_02_V1040nm_P=30.0mW_xi=35.880_xf=52.720_yi=28.953_yf=19.053_z=18.0140_Step=0.0010" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
@@ -1259,6 +1266,27 @@ namespace TestRoutines
 
 		Util::pressAnyKeyToCont();
 	}
+	/*
+	void convexHullTest()
+	{
+		typedef boost::tuple<double, double> point;
+		typedef boost::geometry::model::polygon<point> polygon;
+
+		//polygon poly;
+		//boost::geometry::read_wkt("polygon((0.0 0.0, 0.0 1.0, 1.0 0.0, 1.0 1.0, 0.5 0.5, 0.1 0.0))", poly);
+
+		polygon poly{ {{0.0, 0.0}, {0.0, 5.0}, {5.0, 5.0}, {5.0, 0.0}, {0.0, 0.0}} };
+
+		polygon hull;
+		boost::geometry::convex_hull(poly, hull);
+
+		using boost::geometry::dsv;
+		std::cout << "polygon: " << dsv(poly) << std::endl
+				  << "hull: " << dsv(hull) << std::endl;
+
+		Util::pressAnyKeyToCont();
+	}
+	*/
 
 	void sequencerConcurrentTest()
 	{
@@ -1488,7 +1516,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (19.400) * mm };
+		const double slicePlaneZ{ (19.500) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

@@ -2,7 +2,7 @@
 const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { -1. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };	//Soft limit of the stage for the oil container
 
-const extern POSITION3 g_stackCenterXYZ{ (44.450) * mm, (26.000)* mm, (18.325) * mm };//For Liver
+const extern POSITION3 g_stackCenterXYZ{ (44.200) * mm, (24.000)* mm, (18.440) * mm };//For Liver
 
 #pragma region "FluorMarkerList"
 FluorMarkerList::FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList) :
@@ -159,14 +159,15 @@ const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", Petri
 																				   { "GFP", 920, Util::multiply16X(60. * mW), Util::multiply16X(2000. * um) },
 																				   { "TDT", 1040, Util::multiply16X(15. * mW), Util::multiply16X(2000. * um) } }} };
 
-#endif
+#endif//fluorescent slide or beads
 */
 
-const extern Sample g_currentSample{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", PetridishPosLimit, {{ {"TDT", 1040, Util::multiply16X(50. * mW), 300. * um, 4 },
-																							                     { "DAPI", 750, Util::multiply16X(25. * mW), 120. * um, 2 } }} };
+//const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, Util::multiply16X(50. * mW), 300. * um, 4 },
+//																							                     { "DAPI", 750, Util::multiply16X(25. * mW), 120. * um, 2 } }} };
 
+const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, Util::multiply16X(50. * mW), 300. * um, 4 } }} };
 
-#else
+#else//singlebeam
 const extern Sample g_currentSample{ "Liver20190812_02", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,  {{{"TDT", 1040, 30. * mW, 150. * um, 4 },
 																									             { "DAPI", 750, 12. * mW, 120. * um, 2 }}} };
 
@@ -182,4 +183,4 @@ const extern Sample g_currentSample{ "Beads4um1X", "SiliconeOil", "1.51", Petrid
 																					{ "GFP", 920, 40. * mW, 0. },
 																					{ "TDT", 1040, 15. * mW, 0. }}} };*/
 																					/*Sample g_currentSample{ "fluorBlue1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{ "DAPI", 750, 10. * mW, 0. }}} };*/
-#endif
+#endif//singlebeam or multibeam

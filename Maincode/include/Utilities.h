@@ -10,7 +10,12 @@
 #include <windows.h>				//For using the ESC key
 #include <CL/cl.hpp>				//OpenCL
 #include <conio.h>					//For _getch()
+//#include <boost/geometry.hpp>		//conves hull
+//#include <boost/geometry/geometries/polygon.hpp>//conves hull
+//#include <boost/geometry/geometries/adapted/boost_tuple.hpp>//conves hull
 using namespace Constants;
+
+//BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)//conves hull
 
 namespace Util
 {

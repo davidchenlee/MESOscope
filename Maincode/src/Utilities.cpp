@@ -1002,11 +1002,11 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
 		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
 		{
-			//First channel
+			//Channel at the top of the tiff
 			correctedArray[iterFrame * mNpixPerFrame + iterPix] = Util::clipU8dual(
 				mArray[iterFrame * mNpixPerFrame + iterPix] - crosstalkRatio * mArray[iterFrame * mNpixPerFrame + nPixPerFramePerBeamlet + iterPix]);
 
-			//Last channel
+			//Channel at the bottom of the tiff
 			correctedArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
 				mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] - crosstalkRatio * mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 2) * nPixPerFramePerBeamlet + iterPix]);
 

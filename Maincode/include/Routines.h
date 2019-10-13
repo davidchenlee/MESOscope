@@ -56,6 +56,7 @@ namespace TestRoutines
 	void quickStitcher();
 	void boolmapSample();
 	void vectorOfObjects();
+	//void convexHullTest();
 
 	//Sequence
 	void sequencerConcurrentTest();

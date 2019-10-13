@@ -54,7 +54,7 @@ namespace Constants
 	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANX, COLLECTLENS, FIELDILLUM };
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};	//*cast
 
-	extern const std::string g_folderPath;
+	extern std::string g_folderPath;
 	extern const std::string g_bitfilePath;
 	extern const std::string g_openclFilePath;
 

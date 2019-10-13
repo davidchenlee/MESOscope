@@ -649,7 +649,7 @@ void Stack::printParams(std::ofstream *fileHandle) const
 	*fileHandle << std::setprecision(1);
 	*fileHandle << "FOV (stageX, stageY) = (" << mFFOV.XX / um << " um, " << mFFOV.YY / um << " um)\n";
 	*fileHandle << "Pixel size Z = " << mPixelSizeZ / um << " um\n";
-	*fileHandle << "Stack depth Z= " << mDepthZ / um << " um\n";
+	*fileHandle << "Stack depth Z = " << mDepthZ / um << " um\n";
 	*fileHandle << std::setprecision(2);
 	*fileHandle << "Stack overlap = (" << mOverlapIJK_frac.II << ", " << mOverlapIJK_frac.JJ << ", " << mOverlapIJK_frac.KK << ") (frac)\n";
 	*fileHandle << std::setprecision(1);
@@ -1009,7 +1009,7 @@ std::string Sequencer::printHeader() const
 
 std::string Sequencer::printHeaderUnits() const
 {
-	return "\t\t(mm,mm)\t\t\tnm\t\tmm\tmm\tmW\tmW";
+	return "\t\t(mm,mm)\t\t\tnm\t\tmm\tmm\tmW\tum";
 }
 
 void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
@@ -1037,12 +1037,12 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
 
-	const double imagingTimePerStack{ g_lineclockHalfPeriod *  mStack.readTileHeight_pix() * (mStack.readDepthZ() / mStack.readPixelSizeZ()) };
+	const double imagingTimePerStack{ g_lineclockHalfPeriod *  mStack.readTileHeight_pix() * (mStack.readDepthZ() / mStack.readPixelSizeZ()) / (static_cast<int>(multibeam) * (g_nChanPMT - 1) + 1) };
 	const double totalImagingTime_hours{ (mStackCounter + 1) * imagingTimePerStack / seconds / 3600. };
 
-	*fileHandle << "Runtime per stack = " << imagingTimePerStack / ms << " ms\n";
+	*fileHandle << "Runtime per stack = " << imagingTimePerStack / ms << " ms (times nBinning)\n";
 	*fileHandle << std::setprecision(6);
-	*fileHandle << "Estimated total runtime (multibeam + pipelining) = " << totalImagingTime_hours << " hrs\n\n";
+	*fileHandle << "Estimated total runtime (multibeam + pipelining) = " << totalImagingTime_hours << " hrs (times nBinning)\n\n";
 }
 
 //Print the commandlist to file

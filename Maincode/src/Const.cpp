@@ -2,8 +2,8 @@
 //Constants that are never changed
 namespace Constants
 {
-	extern const std::string g_folderPath{ "D:\\_output_local\\" };
-	//extern const std::string g_folderPath{ "Z:\\_output_remote\\" };
+	//extern const std::string g_folderPath{ "D:\\_output_local\\" };
+	extern std::string g_folderPath{ "Z:\\_output_remote\\" };
 	extern const std::string g_bitfilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" };	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
 	extern const std::string g_openclFilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\Maincode\\src\\" };			//OpenCL kernel code
 
@@ -80,12 +80,14 @@ namespace Constants
 	//To fine tune using beads
 	//1. Position the Z-stage on the plane with beads
 	//2. Do a centered Z scan
-	//3. Adjust the delay until the beads are centered at the middle of the Z stack
-	//For StepZ = 0.5 um, g_STAGEZtrigAcqDelayTopdown = g_STAGEZTrigAcqDelayBottomup = 36 um
-	//For StepZ = 1 um, g_STAGEZtrigAcqDelayTopdown = g_STAGEZTrigAcqDelayBottomup = 75 um
-	//A larger g_STAGEZtrigAcqDelayTopdown moves the bead closer to the surface of the stack
-	extern const double	g_STAGEZtrigAcqDelayTopdown{ 75 * ms };		//Delay the Z-stage triggering the acq sequence
-	extern const double	g_STAGEZTrigAcqDelayBottomup{ 75 * ms };	//Delay the Z-stage triggering the acq sequence		
+	//3. Adjust the delay until the beads are centered at the middle of the Z stack. Larger g_STAGEZtrigAcqDelayTopdown/Bottomup moves the bead closer to the surface of the stack
+
+	//The calibration seems to depend on the correction collar of the objective
+	//For RI = 1.51 and StepZ = 0.5 um, g_STAGEZtrigAcqDelayTopdown/Bottomup = 36 um
+	//For RI = 1.51 and StepZ = 1 um, g_STAGEZtrigAcqDelayTopdown/Bottomup = 75 um
+	//For RI = 1.49 and StepZ = 1 um, g_STAGEZtrigAcqDelayTopdown/Bottomup = 25 um
+	extern const double	g_STAGEZtrigAcqDelayTopdown{ 25 * ms };		//Delay the Z-stage triggering the acq sequence
+	extern const double	g_STAGEZTrigAcqDelayBottomup{ g_STAGEZtrigAcqDelayTopdown };
 
 	extern const double	g_STAGEXTrigAcqDelay{ 113.3 * ms };			//Stage X. pixelSizeX = 1.0 um and 36 * 0.280
 

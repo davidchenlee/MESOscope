@@ -115,12 +115,12 @@ namespace Util
 		return str.str();
 	}
 
-	//Check if the file already exists
-	std::string doesFileExist(const std::string filename)
+	//Check if the file already exists. If it already exists, append an indexing number
+	std::string doesFileExist(const std::string filename, const std::string fileExtension)
 	{
-		std::string suffix{ "" };
+		std::string suffix;
 
-		for (int ii = 1; std::experimental::filesystem::exists(g_folderPath + filename + suffix + ".tif"); ii++)
+		for (int ii = 1; std::experimental::filesystem::exists(g_folderPath + filename + suffix + fileExtension); ii++)
 			suffix = " (" + std::to_string(ii) + ")";
 
 		return filename + suffix;
@@ -181,6 +181,7 @@ namespace Util
 #pragma region "Logger"
 Logger::Logger(const std::string filename)
 {
+	Util::doesFileExist(filename, "txt");
 	mFileHandle.open(g_folderPath + filename + ".txt");
 };
 
@@ -528,7 +529,7 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 	*/
 
 	if (override == OVERRIDE::DIS)
-		filename = Util::doesFileExist(filename);	//Check if the file exits. It gives some overhead
+		filename = Util::doesFileExist(filename, "tif");	//Check if the file exits. It gives some overhead
 
 	TIFF *tiffHandle{ TIFFOpen((g_folderPath + filename + ".tif").c_str(), "w") };
 

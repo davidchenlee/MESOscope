@@ -195,8 +195,9 @@ public:
 	std::string printHeader() const;
 	std::string printHeaderUnits() const;
 	void printSequenceParams(std::ofstream *fileHandle) const;
-	void printToFile(const std::string fileName) const;
+	void printToFile(std::string fileName, const OVERRIDE override) const;
 	int readTotalNumberOfSlices() const;
+	int readNumberOfStacksPerSlice() const;
 	int readTotalNumberOfStacks() const;
 	int readNtotalCommands() const;
 	Commandline readCommandline(const int iterCommandline) const;

@@ -1050,9 +1050,12 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 }
 
 //Print the commandlist to file
-void Sequencer::printToFile(const std::string fileName) const
+void Sequencer::printToFile(std::string filename, const OVERRIDE override) const
 {
-	std::ofstream *fileHandle{ new std::ofstream(g_folderPath + fileName + ".txt") };
+	if (override == OVERRIDE::DIS)
+		filename = Util::doesFileExist(filename, "txt");
+
+	std::ofstream *fileHandle{ new std::ofstream(g_folderPath + filename + ".txt") };
 
 	*fileHandle << std::fixed;	//Show a fixed number of digits
 
@@ -1077,6 +1080,11 @@ void Sequencer::printToFile(const std::string fileName) const
 
 	*fileHandle << std::defaultfloat;
 	fileHandle->close();
+}
+
+int Sequencer::readNumberOfStacksPerSlice() const
+{
+	return mTileArray.readTileArraySizeIJ(TileArray::Axis::II) * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ);
 }
 
 int Sequencer::readTotalNumberOfSlices() const

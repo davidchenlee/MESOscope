@@ -256,7 +256,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -341,10 +341,10 @@ namespace Routines
 
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular laser
-		const Laser::ID whichLaser{ Laser::ID::FIDELITY };
+		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };													//Initial scan direction of stage 
-		const double fullWidth{ 2.000 * mm };														//Total width of the tile array
+		const double fullWidth{ 7.000 * mm };														//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };														//Width of a strip
@@ -443,12 +443,11 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 0.3 * mm, 0.3 * mm, 0.150 * mm };
+		const LENGTH3 LOIxyz{ 10.0 * mm, 7.0 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
 		const TILEOVERLAP3 stackOverlap_frac{ 0.20, 0.05, 0.50 };										//Stack overlap
-		//const TILEOVERLAP3 stackOverlap_frac{ 0., 0., 0. };											//Stack overlap
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -468,7 +467,7 @@ namespace Routines
 		const Stack stack{ FFOV, heightPerFrame_pix, widthPerFrame_pix, pixelSizeZafterBinning, nFramesAfterBinning, stackOverlap_frac };
 		Sequencer sequence{ sample, stack };
 		sequence.generateCommandList();
-		sequence.printToFile("Commandlist");
+		sequence.printToFile("Commandlist", OVERRIDE::EN);
 
 		if (run)
 		{
@@ -543,10 +542,9 @@ namespace Routines
 					realtimeSeq.initialize(wavelength_nm, iterScanDirZ);	//Use the scan direction determined dynamically
 					mesoscope.openShutter();								//Re-open the Uniblitz shutter if closed by the pockels destructor
 
-					//Print out the stackNumber starting from 1 (stackNumber indexes from 0, so add a 1)
-					//Print out the sliceNumber starting from 1 (sliceNumber indexes from 0, so add a 1). readTotalNumberOfSlices() gives
+					//Print out the stackNumber starting from 1 (stackNumber indexes from 0, so add a 1) and the sliceNumber starting from 1 (sliceNumber indexes from 0, so add a 1)
 					std::cout << "Scanning slice = " << std::to_string(sliceNumber+1) << "/" << sequence.readTotalNumberOfSlices() << "\tstack = " <<
-														std::to_string(stackNumber+1) << "/" << sequence.readTotalNumberOfStacks() << "\n";
+														std::to_string(stackNumber+1) << "/" << sequence.readNumberOfStacksPerSlice() << "\n";
 
 					mesoscope.moveSingle(AXIS::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
 					realtimeSeq.downloadData();
@@ -1173,7 +1171,7 @@ namespace TestRoutines
 
 	void correctImage()
 	{
-		std::string inputFilename{ "000_2_0000004" };
+		std::string inputFilename{ "Liver_V750nm_Pmin=144.0mW_Pexp=120um_x=47.500_y=26.050_zi=19.7000_zf=19.8100_Step=0.0010_bin=2" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		image.correctRSdistortionGPU(150. * um);
@@ -1254,13 +1252,13 @@ namespace TestRoutines
 
 	void boolmapSample()
 	{
-		g_folderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
-		std::string inputFilename{ "Liver20190812_02_V1040nm_P=30.0mW_xi=35.880_xf=52.720_yi=28.953_yf=19.053_z=18.0140_Step=0.0010" };
+		//g_folderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
+		std::string inputFilename{ "Liver_F1040nm_P=30.0mW_xi=37.720_xf=54.280_yi=27.450_yf=20.550_z=19.7700_Step=0.0010" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
 		//The tile array for the slow scan ('ss') does not necessarily coincide with the tile array used for fast scanning
-		const PIXDIM2 ssTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because pixelSizeX=1.0 um was used instead of 0.5 um
+		const PIXDIM2 ssTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because pixelSizeX=1.0 um was used for contX scanning and not 0.5 um
 		const TILEOVERLAP3 ssOverlapIJK_frac{ 0.0, 0.0, 0.0 };
 		const double threshold{ 0.02 };
 		Boolmap boolmap{ image, ssTileSize_pix, ssOverlapIJK_frac, threshold };
@@ -1347,7 +1345,7 @@ namespace TestRoutines
 		//Create a sequence
 		Sequencer sequence{ sample, stack };
 		sequence.generateCommandList();
-		sequence.printToFile("CommandlistLight");
+		sequence.printToFile("CommandlistLight", OVERRIDE::EN);
 
 		if (1)
 		{

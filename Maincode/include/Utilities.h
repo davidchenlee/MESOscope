@@ -19,7 +19,7 @@ using namespace Constants;
 
 namespace Util
 {
-	std::string doesFileExist(const std::string filename);
+	std::string doesFileExist(const std::string filename, const std::string fileExtension);
 	std::string toString(const double number, const int nDecimalPlaces);
 	void printHex(int input);
 	void printHex(const std::vector<uint8_t>  input);

@@ -6,18 +6,18 @@ namespace Routines
 	void stepwiseScan(const FPGA &fpga)
 	{
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
+		const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANX };			//Scan in the X-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		//const RUNMODE acqMode{ RUNMODE::FIELDILLUM };		//Field illumination measurement for 16X using beads
 		
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
-		const int nFramesCont{ 4 };	
+		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 100. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
 	
@@ -56,9 +56,9 @@ namespace Routines
 			break;
 		case RUNMODE::AVG:
 			if(multibeam)
-				sleepTime_ms = 1000;
+				sleepTime_ms = 100;
 			else sleepTime_ms = 100;
-			nSameLocation = 10;
+			nSameLocation = 20;
 			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
 				stagePosXYZ.push_back(stackCenterXYZ);
 			break;
@@ -184,7 +184,17 @@ namespace Routines
 				"_zi=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_zf=" + Util::toString(stagePosXYZ.back().ZZ / mm, 4) + "_Step=" + Util::toString(pixelSizeZ / mm, 4) +
 				"_avg=" + Util::toString(nFramesCont * nSameLocation, 0) );
 
-			output.binFrames(nSameLocation);									//Divide the images in bins and return the binned image
+			//output.binFrames(nSameLocation);									//Divide the images in bins and return the binned image
+
+			/*
+			if (multibeam)
+			{
+				output.flattenFieldGaussian(0.014);
+				output.suppressCrosstalk(0.20);
+			}*/
+
+
+
 			std::cout << "Saving the stack...\n";
 			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);	//Save the scanZ to file
 			Util::pressESCforEarlyTermination();
@@ -301,7 +311,7 @@ namespace Routines
 		//EXECUTE THE CONTROL SEQUENCE
 		mesoscope.openShutter();				//Open the shutter. The destructor will close the shutter automatically
 		
-		realtimeSeq.initialize(scanDirZ);
+		realtimeSeq.initialize(fluorMarker.mWavelength_nm, scanDirZ);
 		std::cout << "Scanning the stack...\n";
 		mesoscope.moveSingle(AXIS::ZZ, stageZf);//Move the stage to trigger the ctl&acq sequence
 		realtimeSeq.downloadData();
@@ -334,7 +344,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::FIDELITY };
 		//SCANDIR iterScanDirX{ SCANDIR::LEFTWARD };
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };													//Initial scan direction of stage 
-		const double fullWidth{ 0.150 * mm };														//Total width of the tile array
+		const double fullWidth{ 2.000 * mm };														//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };														//Width of a strip
@@ -433,7 +443,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 0.1 * mm, 0.2 * mm, 0.000 * mm };
+		const LENGTH3 LOIxyz{ 0.3 * mm, 0.3 * mm, 0.150 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
@@ -486,7 +496,7 @@ namespace Routines
 				const Galvo scanner{ realtimeSeq, FFOVslowPerBeamlet / 2. };
 
 				//These parameters must be accessible to all the cases
-				int wavelength_nm, nFramesBinning, sliceNumber, stackNumber, tileIndexI, tileIndexJ;
+				int wavelength_nm, nFramesBinning, sliceNumber, stackNumber, stackIndex, tileIndexI, tileIndexJ;
 				double scanZi, scanZf, scanPmin, scanPexp;
 				switch (commandline.mActionID)
 				{
@@ -513,6 +523,7 @@ namespace Routines
 
 						//These parameters must be accessible for saving the file
 						stackNumber = acqStack.readStackNumber();
+						stackIndex = acqStack.readStackIndex();
 						wavelength_nm = acqStack.readWavelength_nm();
 						scanZi = determineInitialScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
 						scanZf = determineFinalScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
@@ -529,13 +540,13 @@ namespace Routines
 					mesoscope.moveSingle(AXIS::ZZ, scanZi);
 					mesoscope.waitForMotionToStopAll();
 
-					realtimeSeq.initialize(iterScanDirZ);	//Use the scan direction determined dynamically
-					mesoscope.openShutter();				//Re-open the Uniblitz shutter if closed by the pockels destructor
+					realtimeSeq.initialize(wavelength_nm, iterScanDirZ);	//Use the scan direction determined dynamically
+					mesoscope.openShutter();								//Re-open the Uniblitz shutter if closed by the pockels destructor
 
 					//Print out the stackNumber starting from 1 (stackNumber indexes from 0, so add a 1)
-					//Print out the sliceNumber starting from 1 (sliceNumber indexes from 0, so add a 1). readSliceCounter() gives
-					std::cout << "Scanning slice = " << std::to_string(sliceNumber+1) << "/" << sequence.readSliceCounter() << "\tstack = " <<
-														std::to_string(stackNumber+1) << "/" << sequence.readStackCounter() << "\n";
+					//Print out the sliceNumber starting from 1 (sliceNumber indexes from 0, so add a 1). readTotalNumberOfSlices() gives
+					std::cout << "Scanning slice = " << std::to_string(sliceNumber+1) << "/" << sequence.readTotalNumberOfSlices() << "\tstack = " <<
+														std::to_string(stackNumber+1) << "/" << sequence.readTotalNumberOfStacks() << "\n";
 
 					mesoscope.moveSingle(AXIS::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
 					realtimeSeq.downloadData();
@@ -547,8 +558,9 @@ namespace Routines
 					std::string sliceNumber_s{ std::to_string(sliceNumber) };
 					std::string sliceNumberPad_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;	//3 digits in total
 
-					std::string stackNumber_s{ std::to_string(stackNumber) };
-					std::string stackNumberPad_s = std::string(7 - stackNumber_s.length(), '0') + stackNumber_s;	//7 digits in total
+					//The stages scan through a snake pattern by the saving is column by column
+					std::string stackIndex_s{ std::to_string(stackIndex) };
+					std::string stackIndexPad_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
 
 					std::string tileIndexI_s{ std::to_string(tileIndexI) };
 					std::string tileIndexIpad_s = std::string(2 - tileIndexI_s.length(), '0') + tileIndexI_s;		//2 digits in total
@@ -556,7 +568,8 @@ namespace Routines
 					std::string tileIndexJ_s{ std::to_string(tileIndexJ) };
 					std::string tileIndexJpad_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;		//2 digits in total
 
-					shortName = sliceNumberPad_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + stackNumberPad_s;
+
+					shortName = sliceNumberPad_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + stackIndexPad_s;
 					longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_Pexp=" + Util::toString(scanPexp / um, 0) + "um" +
 						"_x=" + Util::toString(tileCenterXY.XX / mm, 3) +
 						"_y=" + Util::toString(tileCenterXY.YY / mm, 3) +
@@ -575,7 +588,7 @@ namespace Routines
 				{
 					const double planeZtoCut{ commandline.mAction.cutSlice.readStageZheightForFacingTheBlade() };
 
-					std::cout << "Cutting slice = " << std::to_string(sliceNumber) << "/" << sequence.readSliceCounter() << "\n";
+					std::cout << "Cutting slice = " << std::to_string(sliceNumber) << "/" << sequence.readTotalNumberOfSlices() << "\n";
 					mesoscope.sliceTissue(planeZtoCut);
 
 					//Reset the scan direction
@@ -1160,15 +1173,12 @@ namespace TestRoutines
 
 	void correctImage()
 	{
-		std::string inputFilename{ "000_2_0000003" };
+		std::string inputFilename{ "000_2_0000004" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
-		image.correctRSdistortionGPU(150. * um);	
+		image.correctRSdistortionGPU(150. * um);
 		image.flattenFieldGaussian(0.014);
 		image.suppressCrosstalk(0.20);
-
-		//image.flattenFieldGaussianByPixel();
-
 		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 		//image.binFrames(5);
@@ -1185,6 +1195,20 @@ namespace TestRoutines
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 		*/
 		//pressAnyKeyToCont();
+	}
+
+	void correctImageBatch()
+	{
+		for (int ii = 0; ii < 6; ii++)
+		{
+			std::string inputFilename{ "000_0_000000" + Util::toString(ii,0) };
+			std::string outputFilename{ "output_" + inputFilename };
+			TiffU8 image{ inputFilename };
+			image.correctRSdistortionGPU(150. * um);
+			image.flattenFieldGaussian(0.014);
+			image.suppressCrosstalk(0.20);
+			image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+		}
 	}
 
 	void quickStitcher()

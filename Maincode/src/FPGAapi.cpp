@@ -215,25 +215,27 @@ void FPGA::setMainTrig(const MAINTRIG mainTrigger) const
 }
 
 //Set the delay for the stages triggering the ctl&acq sequence
-void FPGA::setStageTrigDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir) const
+void FPGA::setStageTrigDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir, const int wavelength_nm) const
 {
 	double stageTrigAcqDelay{ 0 };
 	switch (mainTrigger)
 	{
 	case MAINTRIG::STAGEX:
-		stageTrigAcqDelay = g_STAGEXTrigAcqDelay;
+		stageTrigAcqDelay = g_STAGEXtrigAcqDelay;
 		break;
 	case MAINTRIG::STAGEZ:
 		if (heightPerBeamletPerFrame_pix == 35)
 		{
-			switch (scanDir)
+			switch (wavelength_nm)
 			{
-			case SCANDIR::UPWARD:
-				stageTrigAcqDelay = g_STAGEZtrigAcqDelayTopdown;
+			case 750:
+				stageTrigAcqDelay = g_STAGEZtrigAcqDelay750nm;
 				break;
-			case SCANDIR::DOWNWARD:
-				stageTrigAcqDelay = g_STAGEZTrigAcqDelayBottomup;
+			case 1040:
+				stageTrigAcqDelay = g_STAGEZtrigAcqDelay1040nm;
 				break;
+			default:
+				throw std::invalid_argument((std::string)__FUNCTION__ + ": STAGEZ delay has not been calibrated for the wavelength " + Util::toString(wavelength_nm,0) + " nm");
 			}
 		}
 		else if (heightPerBeamletPerFrame_pix >= 400)//Do nothing if mHeightPerFrame_pix is big enough
@@ -704,11 +706,11 @@ void RTseq::pushLinearRamp(const RTCHAN chan, double timeStep, const double ramp
 }
 
 //Preset the parameters for the acquisition sequence
-void RTseq::initialize(const SCANDIR stackScanDir)
+void RTseq::initialize(const int wavelength_nm, const SCANDIR stackScanDir)
 {
 	mFpga.enableFIFOOUTfpga(mEnableFIFOOUTfpga);	//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
 
-	initializeStages_(stackScanDir);				//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
+	initializeStages_(stackScanDir, wavelength_nm);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
 	presetScannerPosition_();						//Preset the scanner positions
 	Sleep(10);										//Give the FPGA enough time to settle (> 5 ms) to avoid presetScannerPosition_() clashing with the subsequent call of uploadControlSequence_()
 													//(I realized this after running VS in release mode, which communicate faster with the FPGA than the debug mode)
@@ -842,10 +844,10 @@ void RTseq::presetScannerPosition_() const
 	mFpga.triggerAOext();						//Trigger the initialization ramp externally (not using the internal clocks)
 }
 
-void RTseq::initializeStages_(const SCANDIR stackScanDir)
+void RTseq::initializeStages_(const SCANDIR stackScanDir,const int wavelength_nm)
 {
-	mScanDir = stackScanDir;															//Initialize mScanDir to set the stage-trigger delay and stack-saving order
-	mFpga.setStageTrigDelay(mMainTrigger, mHeightPerBeamletPerFrame_pix, mScanDir);		//Set the delay for the stage triggering the ctl&acq sequence
+	mScanDir = stackScanDir;																		//Initialize mScanDir to set the stage-trigger delay and stack-saving order
+	mFpga.setStageTrigDelay(mMainTrigger, mHeightPerBeamletPerFrame_pix, mScanDir, wavelength_nm);	//Set the delay for the stage triggering the ctl&acq sequence
 }
 
 //Upload the main control sequence to the FPGA

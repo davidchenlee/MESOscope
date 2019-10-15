@@ -102,9 +102,9 @@ namespace Constants
 	extern const int g_rescanner1Xchan_int;
 
 	extern const SCANDIR3 g_initialStageScanDirXYZ;
-	extern const double	g_STAGEZtrigAcqDelayTopdown;
-	extern const double	g_STAGEZTrigAcqDelayBottomup;
-	extern const double	g_STAGEXTrigAcqDelay;
+	extern const double	g_STAGEZtrigAcqDelay750nm;
+	extern const double	g_STAGEZtrigAcqDelay1040nm;
+	extern const double	g_STAGEXtrigAcqDelay;
 	extern const POSITION3 g_chromaticShiftVision750nm;
 	extern const POSITION3 g_chromaticShiftVision920nm;
 	extern const POSITION3 g_chromaticShiftVision1040nm;

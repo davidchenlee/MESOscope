@@ -989,6 +989,7 @@ void TiffU8::correctFOVslowCPU(const double FFOVslow)
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
 
+//NOTE THE FACTOR OF 2.5 THAT WAS ADDED BY EYE FOR THE TOP CHANNEL OF THE TIFF
 //The PMT16X channels have some crosstalk. The image in every strip corresponding to a PMT16X channel is ghost-imaged on the neighbor top and bottom strips
 //To correct for this, substract a lineThicknessFactor of the neighbor top and neighbor bottom strips
 void TiffU8::suppressCrosstalk(const double crosstalkRatio)
@@ -1004,7 +1005,7 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 		{
 			//Channel at the top of the tiff
 			correctedArray[iterFrame * mNpixPerFrame + iterPix] = Util::clipU8dual(
-				mArray[iterFrame * mNpixPerFrame + iterPix] - crosstalkRatio * mArray[iterFrame * mNpixPerFrame + nPixPerFramePerBeamlet + iterPix]);
+				mArray[iterFrame * mNpixPerFrame + iterPix] - 2.5 * crosstalkRatio * mArray[iterFrame * mNpixPerFrame + nPixPerFramePerBeamlet + iterPix]);
 
 			//Channel at the bottom of the tiff
 			correctedArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(

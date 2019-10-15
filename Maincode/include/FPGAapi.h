@@ -35,7 +35,7 @@ public:
 
 	void setLineclock(const LINECLOCK lineclockInput) const;
 	void setMainTrig(const MAINTRIG mainTrigger) const;
-	void setStageTrigDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir) const;
+	void setStageTrigDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir, const int wavelength_nm) const;
 	void enableFIFOOUTfpga(const FIFOOUTfpga enableFIFOOUTfpga) const;
 	void enablePockelsScaling() const;
 
@@ -92,7 +92,7 @@ public:
 	void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override);
 
 	void setNumberOfFrames(const int nFrames);
-	void initialize(const SCANDIR scanDirZ = SCANDIR::UPWARD);
+	void initialize(const int wavelength_nm = 750, const SCANDIR scanDirZ = SCANDIR::UPWARD);
 	void run();
 	void downloadData();
 	U32* dataBufferA() const;
@@ -124,7 +124,7 @@ private:
 	int convertRTCHANtoU8_(const RTCHAN chan) const;
 	PMT16XCHAN determineRescannerSetpoint_() const;
 	void presetScannerPosition_() const;
-	void initializeStages_(const SCANDIR stackScanDir);
+	void initializeStages_(const SCANDIR stackScanDir, const int wavelength_nm);
 	void uploadControlSequence_() const;
 	void correctInterleaved_();
 };

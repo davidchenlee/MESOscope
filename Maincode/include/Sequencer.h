@@ -130,8 +130,9 @@ namespace Action
 	class AcqStack final
 	{
 	public:
-		void setParam(const int stackNumber, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPexp, const int nFrameBinning);
+		void setParam(const int stackNumber, const int stackIndex, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPexp, const int nFrameBinning);
 		int readStackNumber() const;
+		int readStackIndex() const;
 		int readWavelength_nm() const;
 		SCANDIR readScanDirZ() const;
 		double readScanZmin() const;
@@ -140,7 +141,8 @@ namespace Action
 		double readScanPexp() const;
 		int readNframeBinning() const;
 	private:
-		int mStackNumber;
+		int mStackNumber;		//Number of the stack following the scan pattern (e.g. snake)
+		int mStackIndex;		//Number of the stack column by column from top to bottom and left to right (used for saving the tiff)
 		int mWavelength_nm;
 		SCANDIR mScanDirZ;		//THIS IS NOT READ BY THE SEQUENCER ANYMORE!!
 		double mScanZmin;		//Min z position of a stack scan
@@ -194,10 +196,11 @@ public:
 	std::string printHeaderUnits() const;
 	void printSequenceParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string fileName) const;
-	int readSliceCounter() const;
-	int readStackCounter() const;
+	int readTotalNumberOfSlices() const;
+	int readTotalNumberOfStacks() const;
 	int readNtotalCommands() const;
 	Commandline readCommandline(const int iterCommandline) const;
+	int readTileArraySizeIJ(const TileArray::Axis axis) const;
 private:
 	const Sample mSample;									//Sample
 	const Stack mStack;										//Stack
@@ -207,7 +210,7 @@ private:
 	int mCommandCounter{ 0 };
 	ROI4 mROI;												//Effective ROI covered by the tile array. It could be slightly larger than the size specified by mSample.mLOIxyz_req
 	int mStackCounter{ 0 };									//Count the number of stacks
-	int mSliceCounter{ 0 };									//Count the number of the slices
+	int mSliceCounter{ 0 };									//Count the number of slices
 	TileArray mTileArray;
 	SCANDIR3 mIterScanDirXYZ{ g_initialStageScanDirXYZ };	//Scan directions wrt the X-stage, Y-stage, and Z-stage axes	
 	double mIterScanZi;										//Initial Z-stage position for a stack scan

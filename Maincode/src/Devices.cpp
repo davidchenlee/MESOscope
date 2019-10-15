@@ -1995,7 +1995,8 @@ Laser::ID VirtualLaser::autoSelectLaser_(const int wavelength_nm) const
 			if(multibeam)
 				return Laser::ID::FIDELITY;
 			else
-				return Laser::ID::VISION;
+				//return Laser::ID::VISION;
+				return Laser::ID::FIDELITY;	//For 1040 nm, only use FIDELITY for now
 		}
 		else
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": Wavelengths > 1040 nm is not implemented in the VirtualLaser class");

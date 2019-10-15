@@ -497,7 +497,7 @@ void FPGA::initializeFpga_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU32(mHandle, NiFpga_FPGAvi_ControlU32_StageDebouncerTimer_tick, static_cast<U32>(g_stageDebounceTimer / us * g_tickPerUs)));		//Stage motion monitor debouncer
 
 	//POCKELS
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, pockelsAutoOff));														//Enable or disable gating the pockels by framegate. For debugging purposes
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, g_pockelsAutoOff));													//Enable or disable gating the pockels by framegate. For debugging purposes
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsScalingFactorEnable, false));														//Enable or disable scaling the pockels output. Disabled by default
 
 	//VIBRATOME
@@ -569,16 +569,16 @@ QU32 RTseq::Pixelclock::readPixelclock() const
 	return mPixelclockQ;
 }
 
-RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames) :
+RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam) :
 	mVec_queue(mNchan),		//Initialize the size the vector containing the queues (= # of queues). Use round and not curly parenthesis here
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
-	mMainTrigger{ mainTrigger },
 	mEnableFIFOOUTfpga{ enableFIFOOUTfpga },
-	mPMT16Xchan{ determineRescannerSetpoint_() },
+	mPMT16Xchan{ determineRescannerSetpoint_(multibeam) },
 	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
 	mNframes{ nFrames },
+	mMultibeam{ multibeam },
 	mHeightPerBeamletAllFrames_pix{ heightPerBeamletPerFrame_pix * nFrames },
 	mNpixPerBeamletAllFrames{ widthPerFrame_pix * mHeightPerBeamletAllFrames_pix }
 {
@@ -601,30 +601,29 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG ma
 	mVec_queue.at(convertRTCHANtoU8_(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
-//This constructor is meant to be used with RTseq::setNumberOfFrames(const int nFrames)
-RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix):
+//This constructor is meant to be used with RTseq::configureFrames(const int nFrames)
+RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga enableFIFOOUTfpga):
 	mVec_queue(mNchan),		//Initialize the size the vector containing the queues (= # of queues). Use round and not curly parenthesis here
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
-	mMainTrigger{ mainTrigger },
 	mEnableFIFOOUTfpga{ enableFIFOOUTfpga },
-	mPMT16Xchan{ determineRescannerSetpoint_() },
-	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
-	mWidthPerFrame_pix{ widthPerFrame_pix }
+	mPMT16Xchan{ determineRescannerSetpoint_(mMultibeam) }
+{}
+
+//Set mNframes
+void RTseq::configureFrames(const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam)
 {
+	if (nFrames <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
 	if (heightPerBeamletPerFrame_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");
 	if (widthPerFrame_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel with must be > 0");
-}
 
-//Set mNframes
-void RTseq::setNumberOfFrames(const int nFrames)
-{
-	if (nFrames <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
-
+	mMultibeam = multibeam;
 	mNframes = nFrames;
+	mHeightPerBeamletPerFrame_pix = heightPerBeamletPerFrame_pix;
+	mWidthPerFrame_pix = widthPerFrame_pix;
 	mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
 	mNpixPerBeamletAllFrames = mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix;
 	mFpga.uploadImagingParameters(mHeightPerBeamletPerFrame_pix, mNframes);
@@ -706,26 +705,26 @@ void RTseq::pushLinearRamp(const RTCHAN chan, double timeStep, const double ramp
 }
 
 //Preset the parameters for the acquisition sequence
-void RTseq::initialize(const int wavelength_nm, const SCANDIR stackScanDir)
+void RTseq::initialize(const MAINTRIG mainTrigger, const int wavelength_nm, const SCANDIR stackScanDir)
 {
-	mFpga.enableFIFOOUTfpga(mEnableFIFOOUTfpga);	//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
+	mFpga.enableFIFOOUTfpga(mEnableFIFOOUTfpga);					//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
 
-	initializeStages_(stackScanDir, wavelength_nm);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
-	presetScannerPosition_();						//Preset the scanner positions
-	Sleep(10);										//Give the FPGA enough time to settle (> 5 ms) to avoid presetScannerPosition_() clashing with the subsequent call of uploadControlSequence_()
-													//(I realized this after running VS in release mode, which communicate faster with the FPGA than the debug mode)
-	uploadControlSequence_();						//Upload the control sequence to the FPGA
+	initializeStages_(mainTrigger, stackScanDir, wavelength_nm);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
+	presetScannerPosition_();										//Preset the scanner positions
+	Sleep(10);														//Give the FPGA enough time to settle (> 5 ms) to avoid presetScannerPosition_() clashing with the subsequent call of uploadControlSequence_()
+																	//(I realized this after running VS in release mode, which communicate faster with the FPGA than the debug mode)
+	uploadControlSequence_();										//Upload the control sequence to the FPGA
 
-	mFpga.startFIFOOUTpc();							//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the control sequence to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
-	mFpga.collectFIFOOUTpcGarbage();				//Clean up any residual data from the previous run
-	mFpga.setMainTrig(mMainTrigger);				//Enable the stage triggering the ctl&acq sequence
-	//Sleep(20);									//When continuous scanning, collectFIFOOUTpcGarbage() is being called late. Maybe this will fix it
+	mFpga.startFIFOOUTpc();											//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the control sequence to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
+	mFpga.collectFIFOOUTpcGarbage();								//Clean up any residual data from the previous run
+	mFpga.setMainTrig(mainTrigger);									//Enable the stage triggering the ctl&acq sequence
+	//Sleep(20);													//When continuous scanning, collectFIFOOUTpcGarbage() is being called late. Maybe this will fix it
 }
 	
 //Scan a single frame
 void RTseq::run()
 {
-	initialize();					//Preset the parameters for the acquisition sequence
+	initialize(MAINTRIG::PC);		//Preset the parameters for the acquisition sequence
 	mFpga.triggerControlSequence();	//Trigger the ctl&acq sequence. If triggered too early, FIFOOUTfpga will probably overflow
 	downloadData();					//Retrieve the data from the FPGA
 }
@@ -808,7 +807,7 @@ int RTseq::convertRTCHANtoU8_(const RTCHAN chan) const
 }
 
 //Determine the setpoint for the rescanner. mPMT16Xchan is called by the classes Galvo and Image
-RTseq::PMT16XCHAN RTseq::determineRescannerSetpoint_() const
+RTseq::PMT16XCHAN RTseq::determineRescannerSetpoint_(const bool multibeam) const
 {
 	if (multibeam)
 		return PMT16XCHAN::CENTERED;
@@ -844,10 +843,10 @@ void RTseq::presetScannerPosition_() const
 	mFpga.triggerAOext();						//Trigger the initialization ramp externally (not using the internal clocks)
 }
 
-void RTseq::initializeStages_(const SCANDIR stackScanDir,const int wavelength_nm)
+void RTseq::initializeStages_(const MAINTRIG mainTrigger, const SCANDIR stackScanDir,const int wavelength_nm)
 {
 	mScanDir = stackScanDir;																		//Initialize mScanDir to set the stage-trigger delay and stack-saving order
-	mFpga.setStageTrigDelay(mMainTrigger, mHeightPerBeamletPerFrame_pix, mScanDir, wavelength_nm);	//Set the delay for the stage triggering the ctl&acq sequence
+	mFpga.setStageTrigDelay(mainTrigger, mHeightPerBeamletPerFrame_pix, mScanDir, wavelength_nm);	//Set the delay for the stage triggering the ctl&acq sequence
 }
 
 //Upload the main control sequence to the FPGA

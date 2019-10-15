@@ -70,14 +70,15 @@ public:
 	const FPGA &mFpga;
 	SCANDIR mScanDir{ SCANDIR::UPWARD };					//Scan direction of the stage for continuous scan
 	const PMT16XCHAN mPMT16Xchan;							//PMT16X channel to be used
-	const int mHeightPerBeamletPerFrame_pix;				//Height in pixels of a single beamlet in a single frame (slow axis)
-	const int mWidthPerFrame_pix;							//Width in pixels of a single frame (fast axis). I call each swing of the RS a "line"
+	int mHeightPerBeamletPerFrame_pix;						//Height in pixels of a single beamlet in a single frame (slow axis)
+	int mWidthPerFrame_pix;									//Width in pixels of a single frame (fast axis). I call each swing of the RS a "line"
 	int mNframes;											//Number of frames to acquire
 	int mHeightPerBeamletAllFrames_pix;						//Total number of lines per beamlet in all the frames
 	int mNpixPerBeamletAllFrames;							//Total number of pixels per beamlet in all the frames
+	bool mMultibeam;
 
-	RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames);
-	RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const MAINTRIG mainTrigger, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix);
+	RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam);
+	RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga enableFIFOOUTfpga);
 	~RTseq();
 	RTseq(const RTseq&) = delete;				//Disable copy-constructor
 	RTseq& operator=(const RTseq&) = delete;	//Disable assignment-constructor
@@ -91,8 +92,8 @@ public:
 	void pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor);
 	void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override);
 
-	void setNumberOfFrames(const int nFrames);
-	void initialize(const int wavelength_nm = 750, const SCANDIR scanDirZ = SCANDIR::UPWARD);
+	void configureFrames(const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam);
+	void initialize(const MAINTRIG mainTrigger, const int wavelength_nm = 750, const SCANDIR scanDirZ = SCANDIR::UPWARD);
 	void run();
 	void downloadData();
 	U32* dataBufferA() const;
@@ -115,16 +116,16 @@ private:
 	};
 
 	const LINECLOCK mLineclockInput;		//Resonant scanner (RS) or Function generator (FG)
-	const MAINTRIG mMainTrigger;			//Trigger the acquisition with the Z-stage: enable (0), disable (1)
+	//const MAINTRIG mMainTrigger;			//Trigger the acquisition with the Z-stage: enable (0), disable (1)
 	const FIFOOUTfpga mEnableFIFOOUTfpga;	//Enable or disable the FIFOOUTfpga on the FPGA
 	VQU32 mVec_queue;
 	U32* mBufferA{ nullptr };				//Buffer array to read FIFOOUTpc A
 	U32* mBufferB{ nullptr };				//Buffer array to read FIFOOUTpc B
 
 	int convertRTCHANtoU8_(const RTCHAN chan) const;
-	PMT16XCHAN determineRescannerSetpoint_() const;
+	PMT16XCHAN determineRescannerSetpoint_(const bool multibeam) const;
 	void presetScannerPosition_() const;
-	void initializeStages_(const SCANDIR stackScanDir, const int wavelength_nm);
+	void initializeStages_(const MAINTRIG mainTrigger, const SCANDIR stackScanDir, const int wavelength_nm);
 	void uploadControlSequence_() const;
 	void correctInterleaved_();
 };

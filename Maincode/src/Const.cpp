@@ -1,4 +1,5 @@
 #include "Const.h"
+
 //Constants that are never changed
 namespace Constants
 {

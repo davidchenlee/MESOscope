@@ -4,7 +4,7 @@
 //When multiplexing, create a mTiff to store 16 strips of height 'mRTcontrol.mHeightPerFrame_pix' each
 Image::Image(const RTseq &realtimeSeq) :
 	mRTcontrol{ realtimeSeq },
-	mTiff{ (static_cast<int>(multibeam) * (g_nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mNframes }
+	mTiff{ (static_cast<int>(realtimeSeq.mMultibeam) * (g_nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mNframes }
 {}
 
 Image::~Image()
@@ -51,7 +51,7 @@ void Image::correct(const double FFOVfast)
 
 	mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 
-	if (multibeam)
+	if (mRTcontrol.mMultibeam)
 	{
 		mTiff.flattenFieldLinear(2.0, 4, 11);
 		mTiff.suppressCrosstalk(0.2);
@@ -94,7 +94,7 @@ void Image::save(std::string filename, const TIFFSTRUCT pageStructure, const OVE
 //Demultiplex the image
 void Image::demultiplex_(const bool saveAllPMT)
 {	
-	if (multibeam || saveAllPMT)
+	if (mRTcontrol.mMultibeam || saveAllPMT)
 		demuxAllChannels_(saveAllPMT);
 	else
 		demuxSingleChannel_();
@@ -176,7 +176,7 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 		}
 
 	//Merge all the PMT16X channels into a single image. The strip ordering depends on the scanning direction of the galvos (forward or backwards)
-	if (multibeam)
+	if (mRTcontrol.mMultibeam)
 		mTiff.mergePMT16Xchan(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());						//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
 
 	//For debugging
@@ -1280,14 +1280,15 @@ std::string Filterwheel::convertColorToString_(const COLOR color) const
 #pragma endregion "Filterwheel"
 
 #pragma region "CombinedFilterwheel"
-CombinedFilterwheel::CombinedFilterwheel() :
+CombinedFilterwheel::CombinedFilterwheel(const RTseq &realtimeSeq) :
+	mRTseq{ realtimeSeq },
 	mFWexcitation{ Filterwheel::ID::EXC },
 	mFWdetection{ Filterwheel::ID::DET }
 {}
 
 void CombinedFilterwheel::turnFilterwheels(const int wavelength_nm)
 {
-	if (multibeam)//Multiplex. Turn both filterwheels concurrently
+	if (mRTseq.mMultibeam)//Multiplex. Turn both filterwheels concurrently
 	{
 		std::future<void> th1{ std::async(&Filterwheel::setWavelength, &mFWexcitation, wavelength_nm) };
 		std::future<void> th2{ std::async(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm) };
@@ -1620,11 +1621,10 @@ Pockels::Pockels(RTseq &realtimeSeq, const int wavelength_nm, const Laser::ID la
 	}
 
 	//Initialize the power softlimit
-#if multibeam
-	mMaxPower = 1600 * mW;//Multibeam		
-#else	
-	mMaxPower = 150 * mW;//Singlebeam	
-#endif
+	if (realtimeSeq.mMultibeam)
+		mMaxPower = 1600 * mW;//Multibeam		
+	else
+		mMaxPower = 150 * mW;//Singlebeam	
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
 	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
@@ -1992,9 +1992,9 @@ Laser::ID VirtualLaser::autoSelectLaser_(const int wavelength_nm) const
 			return Laser::ID::VISION;
 		else if (wavelength_nm == 1040)
 		{
-			if(multibeam)
-				return Laser::ID::FIDELITY;
-			else
+			//if(g_multibeam)
+			//	return Laser::ID::FIDELITY;
+			//else
 				//return Laser::ID::VISION;
 				return Laser::ID::FIDELITY;	//For 1040 nm, only use FIDELITY for now
 		}
@@ -2321,12 +2321,13 @@ double Galvo::readSinglebeamVoltageOffset_() const
 #pragma region "Mesoscope"
 //The constructor established a connection with the 2 lasers.
 //Mesoscope::configure() and Mesoscope::setPower() must be called after this constructor!! otherwise some class members will no be properly initialized
-Mesoscope::Mesoscope(RTseq &rtseq, const Laser::ID whichLaser) :
-	mRTseq{ rtseq },
+Mesoscope::Mesoscope(RTseq &realtimeSeq, const Laser::ID whichLaser) :
+	mRTseq{ realtimeSeq },
 	mStage{ 5. * mmps, 5. * mmps, 0.5 * mmps, g_currentSample.readStageSoftPosLimXYZ() },
+	mVirtualFilterWheel{ realtimeSeq },
 	VirtualLaser{ whichLaser },
-	Vibratome{ rtseq.mFpga, mStage },
-	ResonantScanner{ rtseq }
+	Vibratome{ realtimeSeq.mFpga, mStage },
+	ResonantScanner{ realtimeSeq }
 {}
 
 //Tune the laser wavelength, set the exc and emission filterwheels, and position the collector lens

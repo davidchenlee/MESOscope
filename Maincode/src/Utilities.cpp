@@ -181,7 +181,7 @@ namespace Util
 #pragma region "Logger"
 Logger::Logger(const std::string filename)
 {
-	Util::doesFileExist(filename, "txt");
+	Util::doesFileExist(filename, ".txt");
 	mFileHandle.open(g_folderPath + filename + ".txt");
 };
 
@@ -529,7 +529,7 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 	*/
 
 	if (override == OVERRIDE::DIS)
-		filename = Util::doesFileExist(filename, "tif");	//Check if the file exits. It gives some overhead
+		filename = Util::doesFileExist(filename, ".tif");	//Check if the file exits. It gives some overhead
 
 	TIFF *tiffHandle{ TIFFOpen((g_folderPath + filename + ".tif").c_str(), "w") };
 

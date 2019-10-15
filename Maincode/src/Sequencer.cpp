@@ -854,6 +854,19 @@ double Action::CutSlice::readStageZheightForFacingTheBlade() const
 {
 	return mStageZheightForFacingTheBlade;
 }
+
+void Action::OverviewScan::setParam(const double planeZ)
+{
+	if (planeZ < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The Z stage height must be >= 0");
+
+	mPlaneZOverviewScan = planeZ + 50. * um;
+}
+
+double Action::OverviewScan::readPlaneZ() const
+{
+	return mPlaneZOverviewScan;
+}
 #pragma endregion "Action"
 
 #pragma region "Commandline"
@@ -891,11 +904,17 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << "******Equivalent sample plane Z = " << mAction.cutSlice.readPlaneZtoCut() / mm << " mm";
 		*fileHandle << "********\n";
 		break;
+	case Action::ID::OVW:
+		*fileHandle << convertActionIDtoString_(mActionID);
+		*fileHandle << std::setprecision(3);
+		*fileHandle << "******************************Overview scan at plane z = " << mAction.overviewScan.readPlaneZ() / mm << " mm";
+		*fileHandle << "********************************\n";
+		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
 	}
 }
-
+/*
 void Sequencer::Commandline::printParameters() const
 {
 	switch (mActionID)
@@ -923,6 +942,7 @@ void Sequencer::Commandline::printParameters() const
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
 	}
 }
+*/
 
 std::string Sequencer::Commandline::convertActionIDtoString_(const Action::ID actionID) const
 {
@@ -936,6 +956,8 @@ std::string Sequencer::Commandline::convertActionIDtoString_(const Action::ID ac
 		return "ACQ";
 	case Action::ID::MOV:
 		return "MOV";
+	case Action::ID::OVW:
+		return "OVW";
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
 	}
@@ -961,9 +983,11 @@ void Sequencer::generateCommandList()
 	std::cout << "Generating the command list..." << "\n";
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
+		//overviewScanXY_();
+
 		initializeIteratorIJ_();		//Reset the tile iterator after every cut
 
-		//The first marker on the list is read, then the second marker, etc
+		//The first fluor-marker on the list is read, then the second marker, etc
 		for (std::vector<int>::size_type iterFluorMarker = 0; iterFluorMarker != mSample.readFluorMarkerListSize(); iterFluorMarker++)
 		{
 			//The Y-stage is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
@@ -1041,7 +1065,7 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
 
-	const double imagingTimePerStack{ g_lineclockHalfPeriod *  mStack.readTileHeight_pix() * (mStack.readDepthZ() / mStack.readPixelSizeZ()) / (static_cast<int>(multibeam) * (g_nChanPMT - 1) + 1) };
+	const double imagingTimePerStack{ g_lineclockHalfPeriod *  mStack.readTileHeight_pix() * (mStack.readDepthZ() / mStack.readPixelSizeZ()) / (static_cast<int>(g_multibeam) * (g_nChanPMT - 1) + 1) };
 	const double totalImagingTime_hours{ (mStackCounter + 1) * imagingTimePerStack / seconds / 3600. };
 
 	*fileHandle << "Runtime per stack = " << imagingTimePerStack / ms << " ms (times nBinning)\n";
@@ -1053,7 +1077,7 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 void Sequencer::printToFile(std::string filename, const OVERRIDE override) const
 {
 	if (override == OVERRIDE::DIS)
-		filename = Util::doesFileExist(filename, "txt");
+		filename = Util::doesFileExist(filename, ".txt");
 
 	std::ofstream *fileHandle{ new std::ofstream(g_folderPath + filename + ".txt") };
 
@@ -1280,5 +1304,13 @@ void Sequencer::cutSlice_()
 	mIterScanZi += heightIncrease;
 	mIterSamplePlaneZtoCut += heightIncrease;
 	mIterStageZheightForFacingTheBlade += heightIncrease;
+}
+
+void Sequencer::overviewScanXY_()
+{
+	Commandline commandline{ Action::ID::OVW };
+	commandline.mAction.overviewScan.setParam(mIterScanZi);
+	mCommandList.push_back(commandline);
+	mCommandCounter++;
 }
 #pragma endregion "sequencer"

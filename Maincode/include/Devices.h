@@ -240,9 +240,10 @@ private:
 class CombinedFilterwheel
 {
 public:
-	CombinedFilterwheel();
+	CombinedFilterwheel(const RTseq &realtimeSeq);
 	void turnFilterwheels(const int wavelength_nm);
 private:
+	const RTseq &mRTseq;
 	Filterwheel mFWexcitation;
 	Filterwheel mFWdetection;
 };
@@ -405,7 +406,7 @@ private:
 class Mesoscope : public VirtualLaser, public Vibratome, public ResonantScanner, public CollectorLens
 {
 public:
-	Mesoscope(RTseq &rtseq, const Laser::ID whichLaser = Laser::ID::AUTO);
+	Mesoscope(RTseq &realtimeSeq, const Laser::ID whichLaser = Laser::ID::AUTO);
 	Mesoscope(const Mesoscope&) = delete;				//Disable copy-constructor
 	Mesoscope& operator=(const Mesoscope&) = delete;	//Disable assignment-constructor
 	Mesoscope(Mesoscope&&) = delete;					//Disable move constructor

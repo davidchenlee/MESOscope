@@ -112,7 +112,7 @@ private:
 
 namespace Action
 {
-	enum class ID { CUT, ACQ, SAV, MOV };
+	enum class ID { CUT, ACQ, SAV, MOV, OVW };
 	class MoveStage final
 	{
 	public:
@@ -162,6 +162,15 @@ namespace Action
 		double mPlaneZtoCut;
 		double mStageZheightForFacingTheBlade;
 	};
+
+	class OverviewScan final
+	{
+	public:
+		void setParam(const double planeZ);
+		double readPlaneZ() const;
+	private:
+		double mPlaneZOverviewScan;
+	};
 }
 
 //A list of commands that form a full sequence
@@ -176,6 +185,7 @@ public:
 			Action::MoveStage moveStage;
 			Action::AcqStack acqStack;
 			Action::CutSlice cutSlice;
+			Action::OverviewScan overviewScan;
 		} mAction;
 
 		Commandline(const Action::ID actionID);
@@ -214,7 +224,7 @@ private:
 	int mSliceCounter{ 0 };									//Count the number of slices
 	TileArray mTileArray;
 	SCANDIR3 mIterScanDirXYZ{ g_initialStageScanDirXYZ };	//Scan directions wrt the X-stage, Y-stage, and Z-stage axes	
-	double mIterScanZi;										//Initial Z-stage position for a stack scan
+	double mIterScanZi;										//Stage Z position for a stack scan
 	double mIterSamplePlaneZtoCut;							//Sample plane to cut (height of the stage Z)
 	double mIterStageZheightForFacingTheBlade;				//Actual height of the stage Z for cutting the sample at mIterSamplePlaneZtoCut
 															//(It defers from mIterSamplePlaneZtoCut by the height offset of the blade wrt the imaging plane)
@@ -232,4 +242,5 @@ private:
 	void acqStack_(const int indexFluorMarker);
 	void saveStack_();
 	void cutSlice_();
+	void overviewScanXY_();
 };

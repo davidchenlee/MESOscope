@@ -72,8 +72,8 @@ private:
 class Boolmap final
 {
 public:
-	Boolmap(const TiffU8 &tiff, const PIXDIM2 LOIij_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
-	Boolmap(const QuickScanXY &quickScanXY, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
+	Boolmap(const TiffU8 &tiff, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
+	Boolmap(const QuickScanXY &quickScanXY, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	bool isTileBright(const TILEIJ tileIndicesIJ) const;
 	void saveBoolmapToText(std::string filename, const OVERRIDE override);
 	void saveTileGridOverlay(std::string filename, const OVERRIDE override) const;

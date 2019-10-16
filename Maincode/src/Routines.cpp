@@ -666,7 +666,7 @@ namespace Routines
 					//Tile size for the slow scan. Do not call the tile size from quickScanXY because the tiles are long strips. 
 					const PIXDIM2 ssTileSize_pix{ Util::intceil(tileHeight / pixelSizeX), Util::intceil(tileWidth / pixelSizeY) };//HERE I SHOULD REALLY USE THE PARAMETERS OF THE STACKS (WITH HALF THE HEIGHT)
 					const double threshold{ 0.02 };
-					Boolmap boolmap{ quickScanXY, ssTileSize_pix, stackOverlap_frac, threshold };
+					Boolmap boolmap{ quickScanXY, { LOIxyz.XX/ pixelSizeXY, LOIxyz.YY / pixelSizeXY}, ssTileSize_pix, stackOverlap_frac, threshold };
 					boolmap.copyBoolmap(vec_boolmap);//Save the boolmap for the next iterations
 					boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
 				}
@@ -1334,7 +1334,7 @@ namespace TestRoutines
 	void boolmapSample()
 	{
 		//g_folderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
-		std::string inputFilename{ "Liver_F1040nm_P=30.0mW_xi=39.220_xf=55.780_yi=29.500_yf=22.600_z=19.7200_Step=0.0010 (1)" };
+		std::string inputFilename{ "Liver20190812_02_V1040nm_P=30.0mW_xi=35.880_xf=52.720_yi=28.953_yf=19.053_z=18.0140_Step=0.0010" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
@@ -1342,13 +1342,18 @@ namespace TestRoutines
 		const PIXDIM2 ssTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because contX uses pixelSizeX=1.0 um for speed and not 0.5 um
 		const TILEOVERLAP3 ssOverlapIJK_frac{ 0.15, 0.05, 0.0 };
 		const double threshold{ 0.02 };
-		Boolmap boolmap{ image, ssTileSize_pix, ssOverlapIJK_frac, threshold };
+
+
+		LENGTH2 LOIxy_pix{ 1.3 * image.readHeightPerFrame_pix(), 1.1 * image.readWidthPerFrame_pix() }; //Length of interest
+		
+
+		Boolmap boolmap{ image, LOIxy_pix, ssTileSize_pix, ssOverlapIJK_frac, threshold };
 		boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
 		boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
 		boolmap.fillTileMapHoles();
 		boolmap.saveBoolmapToText("Boolmap_filled", OVERRIDE::EN);
-		boolmap.saveTileMap("TileMap_filled", OVERRIDE::EN);
+		//boolmap.saveTileMap("TileMap_filled", OVERRIDE::EN);
 		Util::pressAnyKeyToCont();
 	}
 

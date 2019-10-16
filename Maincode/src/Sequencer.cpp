@@ -361,11 +361,11 @@ LENGTH2 QuickScanXY::castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const
 #pragma endregion "QuickScanXY"
 
 #pragma region "Boolmap"
-//Lay a tile array over the center of the tiff
-Boolmap::Boolmap(const TiffU8 &tiff, const PIXDIM2 LOIij_pix, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold) :
+//Lay a tile array over the center of the tiff. LOI is the lenfth of interest
+Boolmap::Boolmap(const TiffU8 &tiff, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold) :
 	mTiff{ tiff },
 	mTileArray{ tileSizeij_pix ,
-				{Util::intceil(tiff.readHeightPerFrame_pix() / tileSizeij_pix.ii), Util::intceil(tiff.readWidthPerFrame_pix() / tileSizeij_pix.jj)},
+				{ Util::intceil(LOIxy_pix.XX / tileSizeij_pix.ii), Util::intceil(LOIxy_pix.YY / tileSizeij_pix.jj) },
 				overlapIJK_frac },
 	mThreshold{ threshold },
 	mFullHeight_pix{ tiff.readHeightPerFrame_pix() },
@@ -386,13 +386,13 @@ Boolmap::Boolmap(const TiffU8 &tiff, const PIXDIM2 LOIij_pix, const PIXDIM2 tile
 	generateBoolmap_();
 }
 
-Boolmap::Boolmap(const QuickScanXY &quickScanXY, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold):
+Boolmap::Boolmap(const QuickScanXY &quickScanXY, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold):
 	mTiff{ quickScanXY.data(),
 		   quickScanXY.readFullHeight_pix(),
 		   quickScanXY.readFullWidth_pix(),
 		   1 },
 	mTileArray{ tileSizeij_pix,
-				{quickScanXY.readFullHeight_pix() / tileSizeij_pix.ii , quickScanXY.readFullWidth_pix() / tileSizeij_pix.jj},
+				{ Util::intceil(LOIxy_pix.XX / tileSizeij_pix.ii), Util::intceil(LOIxy_pix.YY / tileSizeij_pix.jj) },
 				overlapIJK_frac },
 	mThreshold{ threshold },
 	mFullHeight_pix{ quickScanXY.readFullHeight_pix() },

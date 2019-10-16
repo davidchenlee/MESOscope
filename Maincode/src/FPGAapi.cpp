@@ -433,7 +433,7 @@ void FPGA::readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 
 	int nTotalPixReadA{ 0 }, nTotalPixReadB{ 0 }; 		//Total number of elements read from FIFOOUTpc A and B
 	while (nTotalPixReadA < nPixPerBeamletAllFrames || nTotalPixReadB < nPixPerBeamletAllFrames)
 	{
-		Sleep(readFifoWaitingTime_ms); //Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
+		Sleep(readFifoWaitingTime_ms);					//Wait till collecting big chuncks of data. Adjust the waiting time for max transfer bandwidth
 
 		readChunk_(nPixPerBeamletAllFrames, nTotalPixReadA, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, mBufferA, nullReadCounterA);	//FIFOOUTpc A
 		readChunk_(nPixPerBeamletAllFrames, nTotalPixReadB, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, mBufferB, nullReadCounterB);	//FIFOOUTpc B
@@ -449,7 +449,7 @@ void FPGA::readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 
 	//Stop the stopwatch
 	duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 	std::cout << "Elapsed time: " << duration << " ms" << "\n";
-	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * mRTcontrol.mNpixAllFrames / duration / 1000 << " Mbps" << "\n"; //2 FIFOOUTs of 32 bits each
+	std::cout << "FIFOOUT bandwidth: " << 2 * 32 * mRTseq.mNpixAllFrames / duration / 1000 << " Mbps" << "\n"; //2 FIFOOUTs of 32 bits each
 	std::cout << "Total of elements read: " << nTotalPixReadA << "\t" << nTotalPixReadB << "\n"; //Print out the total number of elements read
 	*/
 
@@ -526,8 +526,8 @@ void FPGA::initializeFpga_() const
 void FPGA::readChunk_(const int &nPixPerBeamletAllFrames, int &nElemRead, const NiFpga_FPGAvi_TargetToHostFifoU32 &FIFOOUTpc, U32* buffer, int &nullReadCounter) const
 {
 	U32 dummy;
-	U32 nElemToRead{ 0 };				//Elements remaining in FIFOOUTpc
-	const U32 timeout_ms{ 100 };		//FIFOOUTpc timeout
+	U32 nElemToRead{ 0 };							//Elements remaining in FIFOOUTpc
+	const U32 timeout_ms{ 100 };					//FIFOOUTpc timeout
 
 	if (nElemRead < nPixPerBeamletAllFrames)		//Skip if all the data have already been transferred
 	{
@@ -548,10 +548,10 @@ void FPGA::readChunk_(const int &nPixPerBeamletAllFrames, int &nElemRead, const 
 			//Keep track of the total number of elements read
 			nElemRead += nElemToRead;
 
-			nullReadCounter = 0;	//Reset the iteration counter
+			nullReadCounter = 0;					//Reset the iteration counter
 		}
 		else
-			nullReadCounter++;		//keep track of the null reads
+			nullReadCounter++;						//keep track of the null reads
 	}
 }
 #pragma endregion "FPGA"
@@ -578,9 +578,9 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga
 	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
 	mNframes{ nFrames },
-	mMultibeam{ multibeam },
 	mHeightPerBeamletAllFrames_pix{ heightPerBeamletPerFrame_pix * nFrames },
-	mNpixPerBeamletAllFrames{ widthPerFrame_pix * mHeightPerBeamletAllFrames_pix }
+	mNpixPerBeamletAllFrames{ widthPerFrame_pix * mHeightPerBeamletAllFrames_pix },
+	mMultibeam{ multibeam }
 {
 	if (heightPerBeamletPerFrame_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");
@@ -606,19 +606,20 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga
 	mVec_queue(mNchan),		//Initialize the size the vector containing the queues (= # of queues). Use round and not curly parenthesis here
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
-	mEnableFIFOOUTfpga{ enableFIFOOUTfpga },
-	mPMT16Xchan{ determineRescannerSetpoint_(mMultibeam) }
+	mEnableFIFOOUTfpga{ enableFIFOOUTfpga }
 {}
 
 //Set mNframes
 void RTseq::configureFrames(const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam)
 {
-	if (nFrames <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
 	if (heightPerBeamletPerFrame_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");
 	if (widthPerFrame_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel with must be > 0");
+	if (nFrames <= 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
+
+	mPMT16Xchan = determineRescannerSetpoint_(multibeam);
 
 	mMultibeam = multibeam;
 	mNframes = nFrames;
@@ -626,6 +627,7 @@ void RTseq::configureFrames(const int heightPerBeamletPerFrame_pix, const int wi
 	mWidthPerFrame_pix = widthPerFrame_pix;
 	mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
 	mNpixPerBeamletAllFrames = mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix;
+
 	mFpga.uploadImagingParameters(mHeightPerBeamletPerFrame_pix, mNframes);
 
 	mFpga.setLineclock(mLineclockInput);
@@ -724,9 +726,9 @@ void RTseq::initialize(const MAINTRIG mainTrigger, const int wavelength_nm, cons
 //Scan a single frame
 void RTseq::run()
 {
-	initialize(MAINTRIG::PC);		//Preset the parameters for the acquisition sequence
-	mFpga.triggerControlSequence();	//Trigger the ctl&acq sequence. If triggered too early, FIFOOUTfpga will probably overflow
-	downloadData();					//Retrieve the data from the FPGA
+	initialize(MAINTRIG::PC);										//Preset the parameters for the acquisition sequence
+	mFpga.triggerControlSequence();									//Trigger the ctl&acq sequence. If triggered too early, FIFOOUTfpga will probably overflow
+	downloadData();													//Retrieve the data from the FPGA
 }
 
 //Retrieve the data from the FPGA
@@ -819,13 +821,13 @@ RTseq::PMT16XCHAN RTseq::determineRescannerSetpoint_(const bool multibeam) const
 void RTseq::presetScannerPosition_() const
 {
 	//Read the current voltage of the AOs for the scanner and rescanner. See the LV implementation
-	std::vector<I16> AOlastVoltage_I16(mNchan, 0);								//Create a vector of zeros, one zero for each AO channel
+	std::vector<I16> AOlastVoltage_I16(mNchan, 0);																			//Create a vector of zeros, one zero for each AO channel
 	AOlastVoltage_I16.at(convertRTCHANtoU8_(RTCHAN::SCANNER)) = mFpga.readScannerVoltageMon();
 	AOlastVoltage_I16.at(convertRTCHANtoU8_(RTCHAN::RESCANNER)) = mFpga.readRescannerVoltageMon();
 
 	//Create a vector of queues for the ramps
 	VQU32 vec_queue(mNchan);
-	for (int iterChan = 1; iterChan < mNchan; iterChan++) //iterChan starts from 1 because the pixelclock (chan = 0) is kept empty
+	for (int iterChan = 1; iterChan < mNchan; iterChan++)																	//iterChan starts from 1 because the pixelclock (chan = 0) is kept empty
 		if (mVec_queue.at(iterChan).size() != 0)
 			//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 			if ((iterChan == convertRTCHANtoU8_(RTCHAN::SCANNER) || iterChan == convertRTCHANtoU8_(RTCHAN::RESCANNER)))		//Only do the scanner and rescanner for now
@@ -859,7 +861,7 @@ void RTseq::uploadControlSequence_() const
 //For cleaner coding, do not move this function to the Image class since it modify a member of the RTseq class
 void RTseq::correctInterleaved_()
 {
-	//std::reverse(mBufferA + lineIndex * mRTcontrol.mWidthPerFrame_pix, mBufferA + (lineIndex + 1) * mRTcontrol.mWidthPerFrame_pix)
+	//std::reverse(mBufferA + lineIndex * mRTseq.mWidthPerFrame_pix, mBufferA + (lineIndex + 1) * mRTseq.mWidthPerFrame_pix)
 	//reverses all the pixels between and including the indices 'lineIndex * widthPerFrame_pix' and '(lineIndex + 1) * widthPerFrame_pix - 1'
 	for (int lineIndex = 0; lineIndex < mHeightPerBeamletAllFrames_pix; lineIndex += 2)
 	{

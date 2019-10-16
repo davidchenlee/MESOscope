@@ -454,10 +454,10 @@ void Boolmap::saveTileMapToText(std::string filename)
 }
 
 //Overlay a grid with the tiles on the stitched image
-void Boolmap::saveTileGridOverlap(std::string filename, const OVERRIDE override) const
+void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override) const
 {
-	const U8 lineColor{ 200 };
-	const double lineThicknessFactor{ 0.7 };//If too small (<0.7), the grid will not show properly on ImageJ
+	const U8 lineColor{ 100 };
+	const double lineThicknessFactor{ 0.1 };//If too small (<0.7), the grid will not show properly on ImageJ
 	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ)) };
 	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mTileArray.readTileArraySizeIJ(TileArray::Axis::II)) };
 

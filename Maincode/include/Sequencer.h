@@ -72,7 +72,7 @@ public:
 	Boolmap(const QuickScanXY &quickScanXY, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	bool isTileBright(const TILEIJ tileIndicesIJ) const;
 	void saveTileMapToText(std::string filename);
-	void saveTileGridOverlap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+	void saveTileGridOverlay(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
 private:
 	const TiffU8 mTiff;

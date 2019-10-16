@@ -1,10 +1,10 @@
 #include "Devices.h"
 
 #pragma region "Image"
-//When multiplexing, create a mTiff to store 16 strips of height 'mRTcontrol.mHeightPerFrame_pix' each
+//When multiplexing, create a mTiff to store 16 strips of height 'mRTseq.mHeightPerFrame_pix' each
 Image::Image(const RTseq &realtimeSeq) :
-	mRTcontrol{ realtimeSeq },
-	mTiff{ (static_cast<int>(realtimeSeq.mMultibeam) * (g_nChanPMT - 1) + 1) *  mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mNframes }
+	mRTseq{ realtimeSeq },
+	mTiff{ (static_cast<int>(realtimeSeq.mMultibeam) * (g_nChanPMT - 1) + 1) *  mRTseq.mHeightPerBeamletPerFrame_pix, mRTseq.mWidthPerFrame_pix, mRTseq.mNframes }
 {}
 
 Image::~Image()
@@ -51,7 +51,7 @@ void Image::correct(const double FFOVfast)
 
 	mTiff.correctRSdistortionGPU(FFOVfast);		//Correct the image distortion induced by the nonlinear scanning of the RS
 
-	if (mRTcontrol.mMultibeam)
+	if (mRTseq.mMultibeam)
 	{
 		mTiff.flattenFieldLinear(2.0, 4, 11);
 		mTiff.suppressCrosstalk(0.2);
@@ -88,13 +88,13 @@ void Image::binFrames(const int nFramesPerBin)
 //Save each frame in mTiff in either a single Tiff page or different Tiff pages
 void Image::save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const
 {
-	mTiff.saveToFile(filename, pageStructure, override, mRTcontrol.mScanDir);
+	mTiff.saveToFile(filename, pageStructure, override, mRTseq.mScanDir);
 }
 
 //Demultiplex the image
 void Image::demultiplex_(const bool saveAllPMT)
 {	
-	if (mRTcontrol.mMultibeam || saveAllPMT)
+	if (mRTseq.mMultibeam || saveAllPMT)
 		demuxAllChannels_(saveAllPMT);
 	else
 		demuxSingleChannel_();
@@ -106,24 +106,24 @@ void Image::demuxSingleChannel_()
 	//Shift mBufferA and  mBufferB to the right a number of bits depending on the PMT channel to be read
 	//For mBufferA, shift 0 bits for CH00, 4 bits for CH01, 8 bits for CH02, etc...
 	//For mMultiplexedArrayAB, shift 0 bits for CH08, 4 bits for CH09, 8 bits for CH10, etc...
-	const unsigned int nBitsToShift{ 4 * static_cast<unsigned int>(mRTcontrol.mPMT16Xchan) };
+	const unsigned int nBitsToShift{ 4 * static_cast<unsigned int>(mRTseq.mPMT16Xchan) };
 
 	//Demultiplex mBufferA (CH00-CH07). Each U32 element in mBufferA has the multiplexed structure | CH07 (MSB) | CH06 | CH05 | CH04 | CH03 | CH02 | CH01 | CH00 (LSB) |
-	if (mRTcontrol.mPMT16Xchan >= RTseq::PMT16XCHAN::CH00 && mRTcontrol.mPMT16Xchan <= RTseq::PMT16XCHAN::CH07)
+	if (mRTseq.mPMT16Xchan >= RTseq::PMT16XCHAN::CH00 && mRTseq.mPMT16Xchan <= RTseq::PMT16XCHAN::CH07)
 	{
-		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
+		for (int pixIndex = 0; pixIndex < mRTseq.mNpixPerBeamletAllFrames; pixIndex++)
 		{
-			const int upscaled{ g_upscalingFactor * (((mRTcontrol.dataBufferA())[pixIndex] >> nBitsToShift) & 0x0000000F) };			//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.data())[pixIndex] = Util::clipU8top(upscaled);																		//Clip if overflow
+			const int upscaled{ g_upscalingFactor * (((mRTseq.dataBufferA())[pixIndex] >> nBitsToShift) & 0x0000000F) };			//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
+			(mTiff.data())[pixIndex] = Util::clipU8top(upscaled);																	//Clip if overflow
 		}
 	}
 	//Demultiplex mBufferB (CH08-CH15). Each U32 element in mBufferB has the multiplexed structure | CH15 (MSB) | CH14 | CH13 | CH12 | CH11 | CH10 | CH09 | CH08 (LSB) |
-	else if (mRTcontrol.mPMT16Xchan >= RTseq::PMT16XCHAN::CH08 && mRTcontrol.mPMT16Xchan <= RTseq::PMT16XCHAN::CH15)
+	else if (mRTseq.mPMT16Xchan >= RTseq::PMT16XCHAN::CH08 && mRTseq.mPMT16Xchan <= RTseq::PMT16XCHAN::CH15)
 	{
-		for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
+		for (int pixIndex = 0; pixIndex < mRTseq.mNpixPerBeamletAllFrames; pixIndex++)
 		{
-			const int upscaled{ g_upscalingFactor * (((mRTcontrol.dataBufferB())[pixIndex] >> nBitsToShift) & 0x0000000F) };			//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
-			(mTiff.data())[pixIndex] = Util::clipU8top(upscaled);																		//Clip if overflow
+			const int upscaled{ g_upscalingFactor * (((mRTseq.dataBufferB())[pixIndex] >> nBitsToShift) & 0x0000000F) };			//Extract the count from the last 4 bits and upscale it to have a 8-bit pixel
+			(mTiff.data())[pixIndex] = Util::clipU8top(upscaled);																	//Clip if overflow
 		}
 	}
 	else
@@ -136,8 +136,8 @@ void Image::demuxSingleChannel_()
 void Image::demuxAllChannels_(const bool saveAllPMT)
 {
 	//Use 2 separate arrays to allow parallelization in the future
-	TiffU8 CountA{ g_nChanPMT / 2 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH00-CH07
-	TiffU8 CountB{ g_nChanPMT / 2 * mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, mRTcontrol.mNframes };		//Tiff for storing the photocounts in CH08-CH15
+	TiffU8 CountA{ g_nChanPMT / 2 * mRTseq.mHeightPerBeamletPerFrame_pix, mRTseq.mWidthPerFrame_pix, mRTseq.mNframes };		//Tiff for storing the photocounts in CH00-CH07
+	TiffU8 CountB{ g_nChanPMT / 2 * mRTseq.mHeightPerBeamletPerFrame_pix, mRTseq.mWidthPerFrame_pix, mRTseq.mNframes };		//Tiff for storing the photocounts in CH08-CH15
 
 	/*Iterate over all the pixels and frames (all the frames are concatenated in a single-long image), demultiplex the counts, and store them in CountA and CountB
 	CountA = |CH00 f1|
@@ -161,33 +161,33 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 			 |CH15 fN|
 	*/
 
-	for (int pixIndex = 0; pixIndex < mRTcontrol.mNpixPerBeamletAllFrames; pixIndex++)
+	for (int pixIndex = 0; pixIndex < mRTseq.mNpixPerBeamletAllFrames; pixIndex++)
 		for (int chanIndex = 0; chanIndex < g_nChanPMT / 2; chanIndex++)
 		{
 			//Buffer A (CH00-CH07)
-			const int upscaledA{ g_upscalingFactor * ((mRTcontrol.dataBufferA())[pixIndex] & 0x0000000F) };					//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountA.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = Util::clipU8top(upscaledA);		//Clip if overflow
-			(mRTcontrol.dataBufferA())[pixIndex] = (mRTcontrol.dataBufferA())[pixIndex] >> 4;								//Shift 4 places to the right for the next iteration
+			const int upscaledA{ g_upscalingFactor * ((mRTseq.dataBufferA())[pixIndex] & 0x0000000F) };					//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			(CountA.data())[chanIndex * mRTseq.mNpixPerBeamletAllFrames + pixIndex] = Util::clipU8top(upscaledA);		//Clip if overflow
+			(mRTseq.dataBufferA())[pixIndex] = (mRTseq.dataBufferA())[pixIndex] >> 4;									//Shift 4 places to the right for the next iteration
 
 			//Buffer B (CH08-CH15)
-			const int upscaledB{ g_upscalingFactor * ((mRTcontrol.dataBufferB())[pixIndex] & 0x0000000F) };					//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
-			(CountB.data())[chanIndex * mRTcontrol.mNpixPerBeamletAllFrames + pixIndex] = Util::clipU8top(upscaledB);		//Clip if overflow
-			(mRTcontrol.dataBufferB())[pixIndex] = (mRTcontrol.dataBufferB())[pixIndex] >> 4;								//Shift 4 places to the right for the next iteration
+			const int upscaledB{ g_upscalingFactor * ((mRTseq.dataBufferB())[pixIndex] & 0x0000000F) };					//Extract the count from the first 4 bits and upscale it to have a 8-bit pixel
+			(CountB.data())[chanIndex * mRTseq.mNpixPerBeamletAllFrames + pixIndex] = Util::clipU8top(upscaledB);		//Clip if overflow
+			(mRTseq.dataBufferB())[pixIndex] = (mRTseq.dataBufferB())[pixIndex] >> 4;									//Shift 4 places to the right for the next iteration
 		}
 
 	//Merge all the PMT16X channels into a single image. The strip ordering depends on the scanning direction of the galvos (forward or backwards)
-	if (mRTcontrol.mMultibeam)
-		mTiff.mergePMT16Xchan(mRTcontrol.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());						//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
+	if (mRTseq.mMultibeam)
+		mTiff.mergePMT16Xchan(mRTseq.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());						//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
 
 	//For debugging
 	if (saveAllPMT)
 	{
 		//Save all PMT16X channels in separate pages in a Tiff
-		TiffU8 stack{ mRTcontrol.mHeightPerBeamletPerFrame_pix, mRTcontrol.mWidthPerFrame_pix, g_nChanPMT * mRTcontrol.mNframes };
+		TiffU8 stack{ mRTseq.mHeightPerBeamletPerFrame_pix, mRTseq.mWidthPerFrame_pix, g_nChanPMT * mRTseq.mNframes };
 		stack.pushImage(CountA.data(), static_cast<int>(RTseq::PMT16XCHAN::CH00), static_cast<int>(RTseq::PMT16XCHAN::CH07));
 		stack.pushImage(CountB.data(), static_cast<int>(RTseq::PMT16XCHAN::CH08), static_cast<int>(RTseq::PMT16XCHAN::CH15));
 
-		std::string PMT16Xchan_s{ std::to_string(static_cast<int>(mRTcontrol.mPMT16Xchan)) };
+		std::string PMT16Xchan_s{ std::to_string(static_cast<int>(mRTseq.mPMT16Xchan)) };
 		stack.saveToFile("PMT16Xchan=" + PMT16Xchan_s, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
 }
@@ -195,10 +195,10 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 
 #pragma region "Resonant scanner"
 ResonantScanner::ResonantScanner(const RTseq &realtimeSeq) :
-	mRTcontrol{ realtimeSeq }
+	mRTseq{ realtimeSeq }
 {	
 	//Calculate the spatial fill factor
-	const double temporalFillFactor{ mRTcontrol.mWidthPerFrame_pix * g_pixelDwellTime / g_lineclockHalfPeriod };
+	const double temporalFillFactor{ mRTseq.mWidthPerFrame_pix * g_pixelDwellTime / g_lineclockHalfPeriod };
 	if (temporalFillFactor > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pixelclock overflow");
 	else
@@ -211,7 +211,7 @@ ResonantScanner::ResonantScanner(const RTseq &realtimeSeq) :
 	mControlVoltage = downloadControlVoltage();							//Control voltage
 	mFullScan = mControlVoltage / mVoltagePerDistance;					//Full scan FOV = distance between the turning points
 	mFFOV = mFullScan * mFillFactor;									//FFOV
-	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;					//Spatial sampling resolution (length/pixel)
+	mSampRes = mFFOV / mRTseq.mWidthPerFrame_pix;						//Spatial sampling resolution (length/pixel)
 }
 
 //Set the full FOV of the microscope. FFOV does not include the cropped out areas at the turning points
@@ -224,14 +224,14 @@ void ResonantScanner::setFFOV(const double FFOV)
 	mFullScan = FFOV / mFillFactor;										//Full scan FOV
 	mControlVoltage = mFullScan * mVoltagePerDistance;					//Control voltage
 	mFFOV = FFOV;														//FFOV
-	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;					//Spatial sampling resolution (length/pixel)
+	mSampRes = mFFOV / mRTseq.mWidthPerFrame_pix;						//Spatial sampling resolution (length/pixel)
 	//std::cout << "mControlVoltage = " << mControlVoltage << "\n";		//For debugging
 
 	if (mControlVoltage < 0 || mControlVoltage > mVMAX)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested FFOV must be in the range [0-" + std::to_string(mVMAX / mVoltagePerDistance / um) + "] um");
 
 	//Upload the control voltage
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::convertVoltageToI16(mControlVoltage)));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTseq.mFpga.handle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::convertVoltageToI16(mControlVoltage)));
 }
 
 //First set the FFOV, then set RSenable on
@@ -242,7 +242,7 @@ void ResonantScanner::turnOnWithFOV(const double FFOV)
 
 	setFFOV(FFOV);
 	Sleep(static_cast<DWORD>(mDelay / ms));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTseq.mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
 	std::cout << "RS FFOV successfully set to: " << FFOV / um << " um\n";
 }
 
@@ -251,14 +251,14 @@ void ResonantScanner::turnOnWithVoltage(const double controlVoltage)
 {
 	setVoltage_(controlVoltage);
 	Sleep(static_cast<DWORD>(mDelay / ms));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTseq.mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSrun, true));
 	std::cout << "RS control voltage successfully set to: " << controlVoltage / V << " V\n";
 }
 
 //First set RSenable off, then set the control voltage to 0
 void ResonantScanner::turnOff()
 {
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSrun, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mRTseq.mFpga.handle(), NiFpga_FPGAvi_ControlBool_RSrun, false));
 	Sleep(static_cast<DWORD>(mDelay / ms));
 	setVoltage_(0);
 	std::cout << "RS successfully turned off" << "\n";
@@ -268,7 +268,7 @@ void ResonantScanner::turnOff()
 double ResonantScanner::downloadControlVoltage() const
 {
 	I16 control_I16;
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadI16(mRTseq.mFpga.handle(), NiFpga_FPGAvi_IndicatorI16_RSvoltageMon_I16, &control_I16));
 
 	return FPGAfunc::convertIntToVoltage(control_I16);
 }
@@ -282,7 +282,7 @@ void ResonantScanner::isRunning() const
 	char input_char;
 	while (true)
 	{
-		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadBool(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_IndicatorBool_RSisRunning, &isRunning));
+		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadBool(mRTseq.mFpga.handle(), NiFpga_FPGAvi_IndicatorBool_RSisRunning, &isRunning));
 		if (!isRunning)
 		{
 			std::cout << "RS seems OFF. Press ESC to exit or any other key to try again\n";
@@ -322,10 +322,10 @@ void ResonantScanner::setVoltage_(const double controlVoltage)
 	mControlVoltage = controlVoltage;							//Control voltage
 	mFullScan = controlVoltage / mVoltagePerDistance;			//Full scan FOV
 	mFFOV = mFullScan * mFillFactor;							//FFOV
-	mSampRes = mFFOV / mRTcontrol.mWidthPerFrame_pix;			//Spatial sampling resolution (length/pixel)
+	mSampRes = mFFOV / mRTseq.mWidthPerFrame_pix;				//Spatial sampling resolution (length/pixel)
 
 	//Upload the control voltage
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTcontrol.mFpga.handle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::convertVoltageToI16(mControlVoltage)));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteI16(mRTseq.mFpga.handle(), NiFpga_FPGAvi_ControlI16_RSvoltage_I16, FPGAfunc::convertVoltageToI16(mControlVoltage)));
 }
 #pragma endregion "Resonant scanner"
 
@@ -1111,7 +1111,7 @@ Filterwheel::Filterwheel(const ID whichFilterwheel) :
 	try
 	{
 		mSerial = std::unique_ptr<serial::Serial>(new serial::Serial("COM" + std::to_string(static_cast<int>(mPort)), mBaud, serial::Timeout::simpleTimeout(mTimeout / ms)));
-		mPosition = downloadPosition_();		//Download the current filter position
+		mPosition = downloadPosition_();					//Download the current filter position
 		mColor = convertPositionToColor_(mPosition);
 	}
 	catch (const serial::IOException)
@@ -1597,7 +1597,7 @@ void Shutter::pulse(const double pulsewidth) const
 //Curently, the output of the pockels is gated on the FPGA side: the output is HIGH when 'framegate' is HIGH
 //Each Uniblitz shutter goes with a specific pockels, so it makes more sense to control the shutters through the Pockels class
 Pockels::Pockels(RTseq &realtimeSeq, const int wavelength_nm, const Laser::ID laserSelector) :
-	mRTcontrol{ realtimeSeq },
+	mRTseq{ realtimeSeq },
 	mWavelength_nm{ wavelength_nm },
 	mShutter{ realtimeSeq.mFpga, laserSelector }
 {
@@ -1620,15 +1620,9 @@ Pockels::Pockels(RTseq &realtimeSeq, const int wavelength_nm, const Laser::ID la
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
 	}
 
-	//Initialize the power softlimit
-	if (realtimeSeq.mMultibeam)
-		mMaxPower = 1600 * mW;//Multibeam		
-	else
-		mMaxPower = 150 * mW;//Singlebeam	
-
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
-	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
-		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1.0);
+	for (int ii = 0; ii < mRTseq.mNframes; ii++)
+		mRTseq.pushAnalogSingletFx2p14(mScalingRTchan, 1.0);
 }
 
 void Pockels::pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const
@@ -1638,29 +1632,37 @@ void Pockels::pushVoltageSinglet(const double timeStep, const double AO, const O
 	if (AO < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The control voltage must be >= 0");
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, AO, override);
+	mRTseq.pushAnalogSinglet(mPockelsRTchan, timeStep, AO, override);
 }
 
 void Pockels::pushPowerSinglet(const double timeStep, const double laserPower, const OVERRIDE override) const
 {
 	if (timeStep <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The time step must be > 0");
-	if (laserPower < 0 || laserPower > mMaxPower)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower / mW)) + "] mW");
 
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, timeStep, convertPowerToVolt_(laserPower), override);
+	//Softlimit for the laser power
+	double maxPower;							
+	if (mRTseq.mMultibeam)
+		maxPower = mMaxPower16X;//Multibeam		
+	else
+		maxPower = mMaxPower1X; //Singlebeam	
+
+	if (laserPower < 0 || laserPower > maxPower)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be in the range [0-" + std::to_string(static_cast<int>(maxPower / mW)) + "] mW");
+
+	mRTseq.pushAnalogSinglet(mPockelsRTchan, timeStep, convertPowerToVolt_(laserPower), override);
 }
 
 void Pockels::setVoltageToZero() const
 {
-	mRTcontrol.pushAnalogSinglet(mPockelsRTchan, g_tMinAO, 0 * V);
+	mRTseq.pushAnalogSinglet(mPockelsRTchan, g_tMinAO, 0 * V);
 }
 
 /*
 //Linearly scale the pockels voltage from the first to the last frame
 void Pockels::voltageLinearScaling(const double Vi, const double Vf) const
 {
-	if (mRTcontrol.mNframes < 2)
+	if (mRTseq.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
 	//Make sure that Fx2p14 will not overflow
@@ -1669,16 +1671,16 @@ void Pockels::voltageLinearScaling(const double Vi, const double Vf) const
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 
 	//Delete the default scaling factors = 1.0 created in the Pockels constructor
-	mRTcontrol.clearQueue(mScalingRTchan);
+	mRTseq.clearQueue(mScalingRTchan);
 
 	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
 
 	//Push the scaling factors
-	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
-		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, 1. + (Vratio - 1) / (mRTcontrol.mNframes - 1) * ii);
+	for (int ii = 0; ii < mRTseq.mNframes; ii++)
+		mRTseq.pushAnalogSingletFx2p14(mScalingRTchan, 1. + (Vratio - 1) / (mRTseq.mNframes - 1) * ii);
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
-	mRTcontrol.mFpga.enablePockelsScaling();
+	mRTseq.mFpga.enablePockelsScaling();
 }*/
 
 //Linearly scale the laser power from the first to the last frame
@@ -1687,19 +1689,19 @@ void Pockels::pushPowerLinearScaling(const double Pi, const double Pf) const
 	if (Pi < 0 || Pf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be >= 0");
 
-	if (mRTcontrol.mNframes < 2)
+	if (mRTseq.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 
 	//Delete the default scaling factors = 1.0 created in the Pockels constructor
-	mRTcontrol.clearQueue(mScalingRTchan);
+	mRTseq.clearQueue(mScalingRTchan);
 
 	const double Vi{ convertPowerToVolt_(Pi) };
 
 	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
 
-	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
+	for (int ii = 0; ii < mRTseq.mNframes; ii++)
 	{
-		const double VV{ convertPowerToVolt_(Pi + (Pf - Pi) / (mRTcontrol.mNframes - 1) * ii) };
+		const double VV{ convertPowerToVolt_(Pi + (Pf - Pi) / (mRTseq.mNframes - 1) * ii) };
 		const double Vratio{ VV / Vi };
 
 		//Make sure that Fx2p14 does not overflow
@@ -1707,32 +1709,39 @@ void Pockels::pushPowerLinearScaling(const double Pi, const double Pf) const
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 		
 		//Push the scaling factors for the frames
-		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, Vratio);
+		mRTseq.pushAnalogSingletFx2p14(mScalingRTchan, Vratio);
 	}
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
-	mRTcontrol.mFpga.enablePockelsScaling();
+	mRTseq.mFpga.enablePockelsScaling();
 }
 
 //Exponentially scale the laser power from the first to the last frame
 void Pockels::pushPowerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const
 {
-	if (mRTcontrol.mNframes < 2)
+	if (mRTseq.mNframes < 2)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
 	if (decayLengthZ == 0 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The exponential length must be > 0 or < 0");
 
 	//Delete the default scaling factors = 1.0 created in the Pockels constructor
-	mRTcontrol.clearQueue(mScalingRTchan);
+	mRTseq.clearQueue(mScalingRTchan);
 
 	const double Vmin{ convertPowerToVolt_(Pmin) };
 	pushVoltageSinglet(timeStep, Vmin, OVERRIDE::EN);	//Set the laser power for the first frame
 
-	const double Pmax{ Util::exponentialFunction(Pmin,(mRTcontrol.mNframes - 1) * interframeDistance, std::abs(decayLengthZ)) };
-	if (Pmax < 0 || Pmax > mMaxPower)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be in the range [0-" + std::to_string(static_cast<int>(mMaxPower / mW)) + "] mW");
+	//Softlimit for the laser power
+	double maxPower;
+	if (mRTseq.mMultibeam)
+		maxPower = mMaxPower16X;//Multibeam		
+	else
+		maxPower = mMaxPower1X; //Singlebeam	
 
-	for (int ii = 0; ii < mRTcontrol.mNframes; ii++)
+	const double Pmax{ Util::exponentialFunction(Pmin,(mRTseq.mNframes - 1) * interframeDistance, std::abs(decayLengthZ)) };
+	if (Pmax < 0 || Pmax > maxPower)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be in the range [0-" + std::to_string(static_cast<int>(maxPower / mW)) + "] mW");
+
+	for (int ii = 0; ii < mRTseq.mNframes; ii++)
 	{
 		double VV;
 		if (decayLengthZ > 0)
@@ -1751,11 +1760,11 @@ void Pockels::pushPowerExponentialScaling(const double Pmin, const double interf
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 
 		//Push the scaling factors for the frames
-		mRTcontrol.pushAnalogSingletFx2p14(mScalingRTchan, Vratio);
+		mRTseq.pushAnalogSingletFx2p14(mScalingRTchan, Vratio);
 	}
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
-	mRTcontrol.mFpga.enablePockelsScaling();
+	mRTseq.mFpga.enablePockelsScaling();
 
 }
 
@@ -1771,7 +1780,7 @@ void Pockels::voltageLinearRampInFrame(const double timeStep, const double rampD
 	if (Vi < 0 || Vf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTcontrol.pushLinearRamp(mPockelsRTchan, timeStep, rampDuration, Vi, Vf);
+	mRTseq.pushLinearRamp(mPockelsRTchan, timeStep, rampDuration, Vi, Vf);
 }
 
 //Ramp up or down the pockels within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
@@ -1780,7 +1789,7 @@ void  Pockels::powerLinearRampInFrame(const double timeStep, const double rampDu
 	if (Pi < 0 || Pf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
 
-	mRTcontrol.pushLinearRamp(mPockelsRTchan, timeStep, rampDuration, convertPowerToVolt_(Pi), convertPowerToVolt_(Pf));
+	mRTseq.pushLinearRamp(mPockelsRTchan, timeStep, rampDuration, convertPowerToVolt_(Pi), convertPowerToVolt_(Pf));
 }
 */
 
@@ -2158,7 +2167,7 @@ void CollectorLens::set(const int wavelength_nm)
 #pragma region "Galvo"
 //constructor for the scanner
 Galvo::Galvo(RTseq &realtimeSeq, const double posMax) :
-	mRTcontrol{ realtimeSeq },
+	mRTseq{ realtimeSeq },
 	mWhichGalvo{ RTseq::RTCHAN::SCANNER },
 	mVoltagePerDistance{ g_scannerCalib.voltagePerDistance },
 	mVoltageOffset{ g_scannerCalib.voltageOffset },
@@ -2174,7 +2183,7 @@ Galvo::Galvo(RTseq &realtimeSeq, const double posMax) :
 
 //Constructor for the rescanner
 Galvo::Galvo(RTseq &realtimeSeq, const double posMax, const Laser::ID whichLaser, const int wavelength_nm) :
-	mRTcontrol{ realtimeSeq },
+	mRTseq{ realtimeSeq },
 	mWhichGalvo{ RTseq::RTCHAN::RESCANNER },
 	mPosMax{ posMax }
 {
@@ -2226,17 +2235,17 @@ Galvo::Galvo(RTseq &realtimeSeq, const double posMax, const Laser::ID whichLaser
 
 void Galvo::setVoltageToZero() const
 {
-	mRTcontrol.pushAnalogSinglet(mWhichGalvo, g_tMinAO, 0 * V);
+	mRTseq.pushAnalogSinglet(mWhichGalvo, g_tMinAO, 0 * V);
 }
 
 void Galvo::pushVoltageSinglet(const double timeStep, const double AO) const
 {
-	mRTcontrol.pushAnalogSinglet(mWhichGalvo, timeStep, AO);
+	mRTseq.pushAnalogSinglet(mWhichGalvo, timeStep, AO);
 }
 
 void Galvo::pushVoltageLinearRamp(const double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override) const
 {
-	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, rampLength, Vi, Vf, override);
+	mRTseq.pushLinearRamp(mWhichGalvo, timeStep, rampLength, Vi, Vf, override);
 }
 
 //Generate a linear ramp to scan the galvo across a frame (i.e., in a plane with a fixed z)
@@ -2245,20 +2254,20 @@ void Galvo::pushPositionLinearRamp(const double posInitial, const double posFina
 	//Limit the number of steps for long ramps because the buffer of the galvos on the fpga currently only supports 5000 elements
 	//For timeStep = 2 us, the max ramp duration is 10 ms. Therefore, 10 ms/ 62.5 us = 160 lines scanned in a single frame
 	double timeStep;
-	if (mRTcontrol.mHeightPerBeamletPerFrame_pix <= 100)
+	if (mRTseq.mHeightPerBeamletPerFrame_pix <= 100)
 		timeStep = 2. * us;
 	else
 		timeStep = 8. * us;
 
 	//The position offset allows to compensate for the axis misalignment of the rescanner wrt the PMT
-	mRTcontrol.pushLinearRamp(mWhichGalvo, timeStep, g_lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
+	mRTseq.pushLinearRamp(mWhichGalvo, timeStep, g_lineclockHalfPeriod * mRTseq.mHeightPerBeamletPerFrame_pix + mRampDurationFineTuning,
 		voltageOffset + mVoltagePerDistance * posInitial, voltageOffset + mVoltagePerDistance * posFinal, override);
 }
 
 double Galvo::readSinglebeamVoltageOffset_() const
 {
 	double beamletIndex;
-	switch (mRTcontrol.mPMT16Xchan)
+	switch (mRTseq.mPMT16Xchan)
 	{
 	case RTseq::PMT16XCHAN::CH00:
 		beamletIndex = 7.5;

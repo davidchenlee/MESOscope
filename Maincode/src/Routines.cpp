@@ -7,7 +7,7 @@ namespace Routines
 	void stepwiseScan(const FPGA &fpga)
 	{
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		const RUNMODE acqMode{ RUNMODE::AVG };				//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANX };			//Scan in the X-stage axis stepwise
@@ -247,7 +247,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -328,13 +328,13 @@ namespace Routines
 	void contScanX(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };													//Initial scan direction of stage 
-		const double fullWidth{ 7.000 * mm };														//Total width of the tile array
+		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };			//Initial scan direction of stage 
+		const double fullWidth{ 0.150 * mm };				//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
-		const double tileWidth{ 150. * um };														//Width of a strip
-		const double fullHeight{ 53 * tileHeight };													//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
-		const double pixelSizeX{ 1.0 * um };														//WARNING: the image becomes distorted at the edges of the strip when pixelSizeX > 1 um (check this again)
+		const double tileWidth{ 150. * um };				//Width of a strip
+		const double fullHeight{ 53 * tileHeight };			//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
+		const double pixelSizeX{ 1.0 * um };				//WARNING: the image becomes distorted at the edges of the strip when pixelSizeX > 1 um (check this again)
 		const double pixelSizeY{ 0.5 * um };
 		const int wavelength_nm{ 1040 };
 		const double laserPower{ 30. * mW };
@@ -349,7 +349,7 @@ namespace Routines
 		mesoscope.setPower(laserPower);
 
 		//RS
-		mesoscope.ResonantScanner::isRunning();		//To make sure that the RS is running
+		mesoscope.ResonantScanner::isRunning();				//To make sure that the RS is running
 
 		//SCANNERS. Keep them fixed at 0
 		const double galvoScanAmplitude{ 0 };
@@ -377,8 +377,8 @@ namespace Routines
 			mesoscope.moveXY({ stageXi, quickScanXY.readStageYposAt(iterLocation) });
 			mesoscope.waitForMotionToStopAll();
 
-			Sleep(300);					//Avoid iterations too close to each other, otherwise the X-stage will fail to trigger the ctl&acq sequence.
-										//This might be because of g_postSequenceTimer
+			Sleep(300);												//Avoid iterations too close to each other, otherwise the X-stage will fail to trigger the ctl&acq sequence.
+																	//This might be because of g_postSequenceTimer
 
 			realtimeSeq.initialize(MAINTRIG::STAGEX);
 			std::cout << "Scanning the stack...\n";
@@ -432,7 +432,7 @@ namespace Routines
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
-		const TILEOVERLAP3 stackOverlap_frac{ 0.20, 0.05, 0.50 };										//Stack overlap
+		const TILEOVERLAP3 stackOverlap_frac{ 0.15, 0.05, 0.50 };										//Stack overlap
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -457,16 +457,12 @@ namespace Routines
 		if (run)
 		{
 			//CONTROL SEQUENCE
-			RTseq realtimeSeq{ fpga, LINECLOCK::RS, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, 100, g_multibeam };
+			RTseq realtimeSeq{ fpga, LINECLOCK::RS, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, 100, 1 };
 			Mesoscope mesoscope{ realtimeSeq, Laser::ID::AUTO };
 			mesoscope.configure(1040);								//Initialize the laser wavelength for determining the initial chromatic shift correction of the stages
 
 			//RS
 			mesoscope.ResonantScanner::isRunning();					//To make sure that the RS is running
-
-			//STAGES
-			//mesoscope.moveSingle(AXIS::ZZ, sample.mSurfaceZ);		//Move the Z-stage to the sample surface
-			//mesoscope.waitForMotionToStopAll();
 
 			//Read the commands line by line
 			POSITION2 tileCenterXY;
@@ -477,17 +473,13 @@ namespace Routines
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 
-				//SCANNERS
-				const Galvo scanner{ realtimeSeq, FFOVslowPerBeamlet / 2. };
-
 				//These parameters must be accessible to all the cases
-				int wavelength_nm, nFramesBinning, sliceNumber, stackNumber, stackIndex, tileIndexI, tileIndexJ;
+				int wavelength_nm, nFramesBinning, sliceNumber, stackIndex, tileIndexI, tileIndexJ;
 				double scanZi, scanZf, scanPmin, scanPexp;
 				switch (commandline.mActionID)
 				{
 				case Action::ID::MOV://Move the X and Y-stages to mStackCenterXY
 					sliceNumber = commandline.mAction.moveStage.readSliceNumber();
-
 					tileIndexI = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::II);
 					tileIndexJ = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::JJ);
 					tileCenterXY = commandline.mAction.moveStage.readTileCenterXY();
@@ -506,19 +498,20 @@ namespace Routines
 						const double pixelSizeZbeforeBinning{ stackDepth / nFramesBeforeBinning };
 						mesoscope.setVelSingle(AXIS::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
 
-						//These parameters must be accessible for saving the file
-						stackNumber = acqStack.readStackNumber();
+						//These parameters must be accessible to the file saving block
 						stackIndex = acqStack.readStackIndex();
 						wavelength_nm = acqStack.readWavelength_nm();
 						scanZi = determineInitialScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
 						scanZf = determineFinalScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
 
 						//Update the laser parameters
-						mesoscope.configure(wavelength_nm);		//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
+						mesoscope.configure(wavelength_nm);									//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
 						scanPmin = acqStack.readScanPmin();
 						scanPexp = acqStack.readScanPexp();
 						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(iterScanDirZ) * scanPexp);
 
+						//SCANNERS
+						const Galvo scanner{ realtimeSeq, FFOVslowPerBeamlet / 2. };
 						Galvo rescanner{ realtimeSeq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 					}
 					//Move the stage to the initial Z position
@@ -526,11 +519,11 @@ namespace Routines
 					mesoscope.waitForMotionToStopAll();
 
 					realtimeSeq.initialize(MAINTRIG::STAGEZ, wavelength_nm, iterScanDirZ);	//Use the scan direction determined dynamically
-					mesoscope.openShutter();								//Re-open the Uniblitz shutter if closed by the pockels destructor
+					mesoscope.openShutter();												//Re-open the Uniblitz shutter if closed by the pockels destructor
 
-					//Print out the stackNumber starting from 1 (stackNumber indexes from 0, so add a 1) and the sliceNumber starting from 1 (sliceNumber indexes from 0, so add a 1)
+					//Print out the stackIndex starting from 1 (stackIndex indexes from 0, so add a 1) and the sliceNumber starting from 1 (sliceNumber indexes from 0, so add a 1)
 					std::cout << "Scanning slice = " << std::to_string(sliceNumber+1) << "/" << sequence.readTotalNumberOfSlices() << "\tstack = " <<
-														std::to_string(stackNumber+1) << "/" << sequence.readNumberOfStacksPerSlice() << "\n";
+														std::to_string(stackIndex+1) << "/" << sequence.readNumberOfStacksPerSlice() << "\n";
 
 					mesoscope.moveSingle(AXIS::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
 					realtimeSeq.downloadData();
@@ -572,7 +565,7 @@ namespace Routines
 				{
 					const double planeZtoCut{ commandline.mAction.cutSlice.readStageZheightForFacingTheBlade() };
 
-					std::cout << "Cutting slice = " << std::to_string(sliceNumber) << "/" << sequence.readTotalNumberOfSlices() << "\n";
+					std::cout << "Cutting slice = " << std::to_string(sliceNumber+1) << "/" << sequence.readTotalNumberOfSlices() << "\n";
 					mesoscope.sliceTissue(planeZtoCut);
 
 					//Reset the scan direction
@@ -581,33 +574,32 @@ namespace Routines
 					break;
 				case Action::ID::OVW:
 				{
-					SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };													//Initial scan direction of stage 
-					const double fullWidth{ 7.000 * mm };														//Total width of the tile array
+					const double planeZ{ commandline.mAction.overviewScan.readPlaneZ() };
+					const double fullWidth{ 0.150 * mm };													//Total width of the tile array
 
+					SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };												//Initial scan direction of stage 
 					const double tileHeight{ 280. * um };
-					const double tileWidth{ 150. * um };														//Width of a strip
-					const double fullHeight{ 53 * tileHeight };													//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
-					const double pixelSizeX{ 1.0 * um };														//WARNING: the image becomes distorted at the edges of the strip when pixelSizeX > 1 um (check this again)
+					const double tileWidth{ 150. * um };													//Width of a strip
+					const double fullHeight{ 53 * tileHeight };												//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
+					const double pixelSizeX{ 1.0 * um };													//WARNING: the image becomes distorted at the edges of the strip when pixelSizeX > 1 um (check this again)
 					const double pixelSizeY{ 0.5 * um };
-					const double laserPower{ 30. * mW };
-					const int wavelength_nm{ 1040 };
+					const double OVWlaserPower{ 30. * mW };
+					const int OVWwavelength_nm{ 1040 };
 
 					POSITION3 stackCenterXYZ{ g_stackCenterXYZ };
 					QuickScanXY quickScanXY{ { stackCenterXYZ.XX, stackCenterXYZ.YY }, { tileHeight, tileWidth }, { pixelSizeX, pixelSizeY }, { fullHeight, fullWidth } };
 
 					//CONTROL SEQUENCE. The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
 					realtimeSeq.configureFrames(2, quickScanXY.readTileWidth_pix(), quickScanXY.readTileHeight_pix() / 2, 0);
-					mesoscope.configure(wavelength_nm);
-					mesoscope.setPower(laserPower);
-
-					Util::pressAnyKeyToCont();
+					mesoscope.configure(OVWwavelength_nm);
+					mesoscope.setPower(OVWlaserPower);
 
 					//SCANNERS. Keep them fixed at 0
 					const Galvo scanner{ realtimeSeq, 0 };
 					const Galvo rescanner{ realtimeSeq, 0, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 					//STAGES
-					mesoscope.moveXYZ({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ });			//Move the stage to the initial position
+					mesoscope.moveXYZ({ stackCenterXYZ.XX, stackCenterXYZ.YY, planeZ });			//Move the stage to the initial position
 					mesoscope.waitForMotionToStopAll();
 					Sleep(500);																				//Give the stages enough time to settle at the initial position
 					mesoscope.setVelSingle(AXIS::XX, pixelSizeX / g_lineclockHalfPeriod);					//Set the vel for imaging
@@ -627,8 +619,8 @@ namespace Routines
 						mesoscope.moveXY({ stageXi, quickScanXY.readStageYposAt(iterLocation) });
 						mesoscope.waitForMotionToStopAll();
 
-						Sleep(300);					//Avoid iterations too close to each other, otherwise the X-stage will fail to trigger the ctl&acq sequence.
-													//This might be because of g_postSequenceTimer
+						Sleep(300);												//Avoid iterations too close to each other, otherwise the X-stage will fail to trigger the ctl&acq sequence.
+																				//This might be because of g_postSequenceTimer
 
 						realtimeSeq.initialize(MAINTRIG::STAGEX);
 						std::cout << "Scanning the stack...\n";
@@ -646,7 +638,7 @@ namespace Routines
 					mesoscope.closeShutter();
 
 					const std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) +
-						"nm_P=" + Util::toString(laserPower / mW, 1) +
+						"nm_P=" + Util::toString(OVWlaserPower / mW, 1) +
 						"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
 						"_yi=" + Util::toString(quickScanXY.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(quickScanXY.readStageYposBack() / mm, 3) +
 						"_z=" + Util::toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + Util::toString(pixelSizeX / mm, 4) };
@@ -691,7 +683,7 @@ namespace Routines
 		mesoscope.configure(fluorMarker.mWavelength_nm);
 
 		//RS
-		mesoscope.ResonantScanner::isRunning();												//To make sure that the RS is running
+		mesoscope.ResonantScanner::isRunning();														//To make sure that the RS is running
 
 		//SCANNERS
 		const Galvo scanner{ realtimeSeq, FFOVslow / 2. };
@@ -761,8 +753,8 @@ namespace TestRoutines
 
 	void pixelclock(const FPGA &fpga)
 	{
-		RTseq realtimeSeq{ fpga, LINECLOCK::FG, FIFOOUTfpga::DIS, 560, 300, 1, g_multibeam }; 	//Create the control sequence
-		realtimeSeq.run();																							//Execute the control sequence
+		RTseq realtimeSeq{ fpga, LINECLOCK::FG, FIFOOUTfpga::DIS, 560, 300, 1, g_multibeam }; 		//Create the control sequence
+		realtimeSeq.run();																			//Execute the control sequence
 	}
 
 	//Generate a long digital pulse and check the frameDuration with the oscilloscope
@@ -1263,13 +1255,13 @@ namespace TestRoutines
 
 	void correctImageBatch()
 	{
-		for (int ii = 0; ii < 6; ii++)
+		for (int ii = 0; ii < 4; ii++)
 		{
-			std::string inputFilename{ "000_0_000000" + Util::toString(ii,0) };
+			std::string inputFilename{ "000_2_000000" + Util::toString(ii,0) };
 			std::string outputFilename{ "output_" + inputFilename };
 			TiffU8 image{ inputFilename };
 			image.correctRSdistortionGPU(150. * um);
-			image.flattenFieldGaussian(0.014);
+			image.flattenFieldGaussian(0.009);
 			image.suppressCrosstalk(0.20);
 			image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 		}
@@ -1319,18 +1311,18 @@ namespace TestRoutines
 	void boolmapSample()
 	{
 		//g_folderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
-		std::string inputFilename{ "Liver_F1040nm_P=30.0mW_xi=37.720_xf=54.280_yi=27.450_yf=20.550_z=19.7700_Step=0.0010" };
+		std::string inputFilename{ "Liver_F1040nm_P=30.0mW_xi=39.220_xf=55.780_yi=29.500_yf=22.600_z=19.7200_Step=0.0010" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
 		//The tile array for the slow scan ('ss') does not necessarily coincide with the tile array used for fast scanning
-		const PIXDIM2 ssTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because pixelSizeX=1.0 um was used for contX scanning and not 0.5 um
-		const TILEOVERLAP3 ssOverlapIJK_frac{ 0.0, 0.0, 0.0 };
+		const PIXDIM2 ssTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because contX uses pixelSizeX=1.0 um for speed and not 0.5 um
+		const TILEOVERLAP3 ssOverlapIJK_frac{ 0.15, 0.05, 0.0 };
 		const double threshold{ 0.02 };
 		Boolmap boolmap{ image, ssTileSize_pix, ssOverlapIJK_frac, threshold };
 		boolmap.saveTileMapToText("Boolmap");
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
-		//image.saveToFile("TileMap", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
+		boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
 
 		Util::pressAnyKeyToCont();
 	}

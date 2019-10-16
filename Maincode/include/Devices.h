@@ -30,7 +30,7 @@ public:
 	void binFrames(const int nFramesPerBin);
 	void save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const;
 private:
-	const RTseq &mRTcontrol;					//Const because the variables referenced by mRTcontrol are not changed by the methods in this class
+	const RTseq &mRTseq;						//Const because the variables referenced by mRTseq are not changed by the methods in this class
 	TiffU8 mTiff;								//Tiff that stores the content of mBufferA and mBufferB
 
 	void demultiplex_(const bool saveAllPMT);
@@ -57,15 +57,15 @@ public:
 	double readFillFactor() const;
 	double readSampleRes() const;
 private:
-	const RTseq &mRTcontrol;								//Needed to retrieve 'mRTcontrol.mWidthPerFrame_pix' to calculate the fill factor
+	const RTseq &mRTseq;									//Needed to retrieve 'mRTseq.mWidthPerFrame_pix' to calculate the fill factor
 	const double mVMAX{ 5. * V };							//Max control voltage allowed
 	const double mDelay{ 10. * ms };
 	const double mVoltagePerDistance{ 0.00595 * V / um };	//Calibration factor. Last calibrated 
 	double mFullScan;										//Full scan = distance between turning points
 	double mControlVoltage;									//Control voltage 0-5V
-	double mFillFactor;		//Fill factor: how much of an RS swing is covered by the pixels
-	double mFFOV;			//Current FFOV
-	double mSampRes;		//Spatial sampling resolution (length/pixel)
+	double mFillFactor;										//Fill factor: how much of an RS swing is covered by the pixels
+	double mFFOV;											//Current FFOV
+	double mSampRes;										//Spatial sampling resolution (length/pixel)
 
 	void setVoltage_(const double controlVoltage);
 };
@@ -173,9 +173,9 @@ private:
 	const double mSlicingVel{ 0.5 * mmps };											//Move the Y-stage at this velocity for slicing
 	const VELOCITY3 mStageConveyingVelXYZ{ 10. * mmps, 10.  *mmps, 0.5 * mmps };	//Transport the sample between the objective and vibratome at this velocity
 	//enum MotionDir { BACKWARD = -1, FORWARD = 1 };
-	//double mCuttingSpeed{ 0.5 * mmps };	//Speed of the vibratome for cutting (manual setting)
-	//double mMovingSpeed{ 2.495 * mmps };	//Measured moving speed of the head: 52.4 mm in 21 seconds = 2.495 mm/s. Set by hardware. Cannot be changed
-	//double mTravelRange{ 52.4 * mm };		//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
+	//double mCuttingSpeed{ 0.5 * mmps };											//Speed of the vibratome for cutting (manual setting)
+	//double mMovingSpeed{ 2.495 * mmps };											//Measured moving speed of the head: 52.4 mm in 21 seconds = 2.495 mm/s. Set by hardware. Cannot be changed
+	//double mTravelRange{ 52.4 * mm };												//(horizontal) travel range of the head. I measured 104.8 seconds at 0.5 mm/s = 52.4 mm
 	//void moveHead_(const double duration, const MotionDir motionDir) const;
 	//void cutAndRetractDistance(const double distance) const;
 	//void retractDistance(const double distance) const;
@@ -305,13 +305,14 @@ public:
 	void pushPowerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const;
 	void setShutter(const bool state) const;
 private:
-	RTseq &mRTcontrol;							//Non-const because the laser power is pushed into the queues in RTseq						
+	RTseq &mRTseq;								//Non-const because the laser power is pushed into the queues in RTseq						
 	RTseq::RTCHAN mPockelsRTchan;
 	RTseq::RTCHAN mScalingRTchan;
 	int mWavelength_nm;							//Laser wavelength
 	const double timeStep{ 8. * us };
-	double mMaxPower;							//Softlimit for the laser power
 	const Shutter mShutter;
+	const double mMaxPower1X{ 150. * mW };		//Softlimit for the laser power 1X
+	const double mMaxPower16X{ 1600. * mW };		//Softlimit for the laser power 16X
 
 	double convertPowerToVolt_(const double power) const;
 };
@@ -389,12 +390,12 @@ public:
 	void pushPositionLinearRamp(const double posInitial, const double posFinal, const double posOffset, const OVERRIDE override) const;
 private:
 	const double mRampDurationFineTuning{ -30. * us };		//Slightly decrease the ramp duration, otherwise the ramp overflow in each frame accumulates over a continuous scan (e.g. over 200 frames)
-															//Ideally, the ramp duration of the galvo is exactly g_lineclockHalfPeriod * mRTcontrol.mHeightPerBeamletPerFrame_pix
+															//Ideally, the ramp duration of the galvo is exactly g_lineclockHalfPeriod * mRTseq.mHeightPerBeamletPerFrame_pix
 															//However, in practice g_lineclockHalfPeriod  is not fixed but seems to depend on the RS amplitude
 															//If mRampDurationFineTuning is changed, then g_scannerDelay has to be readjusted to match the galvo's forward and backward scans
 
 	const double mInterBeamletDistance{ 17.5 * um };		//Set by the beamsplitter specs
-	RTseq &mRTcontrol;										//Non-const because some methods in this class change the variables referenced by mRTcontrol	
+	RTseq &mRTseq;											//Non-const because some methods in this class change the variables referenced by mRTseq	
 	RTseq::RTCHAN mWhichGalvo;
 	double mVoltagePerDistance;
 	double mVoltageOffset;

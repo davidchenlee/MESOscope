@@ -30,7 +30,7 @@ public:
 	FPGA(FPGA&&) = delete;					//Disable move constructor
 	FPGA& operator=(FPGA&&) = delete;		//Disable move-assignment constructor
 
-	NiFpga_Session handle() const;										//Access the handle indirectly to avoid modifying it by mistake
+	NiFpga_Session handle() const;			//Access the handle indirectly to avoid modifying it by mistake
 	void close(const FPGARESET reset = FPGARESET::DIS) const;
 
 	void setLineclock(const LINECLOCK lineclockInput) const;
@@ -69,7 +69,7 @@ public:
 	const int mNchan{ static_cast<int>(RTCHAN::NCHAN) };	//Number of RT channels
 	const FPGA &mFpga;
 	SCANDIR mScanDir{ SCANDIR::UPWARD };					//Scan direction of the stage for continuous scan
-	const PMT16XCHAN mPMT16Xchan;							//PMT16X channel to be used
+	PMT16XCHAN mPMT16Xchan;							//PMT16X channel to be used
 	int mHeightPerBeamletPerFrame_pix;						//Height in pixels of a single beamlet in a single frame (slow axis)
 	int mWidthPerFrame_pix;									//Width in pixels of a single frame (fast axis). I call each swing of the RS a "line"
 	int mNframes;											//Number of frames to acquire

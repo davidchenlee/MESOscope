@@ -575,12 +575,12 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga
 	mLineclockInput{ lineclockInput },
 	mEnableFIFOOUTfpga{ enableFIFOOUTfpga },
 	mPMT16Xchan{ determineRescannerSetpoint_(multibeam) },
-	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mHeightPerBeamletPerFrame_pix{ heightPerBeamletPerFrame_pix },
+	mWidthPerFrame_pix{ widthPerFrame_pix },
 	mNframes{ nFrames },
+	mMultibeam{ multibeam },
 	mHeightPerBeamletAllFrames_pix{ heightPerBeamletPerFrame_pix * nFrames },
-	mNpixPerBeamletAllFrames{ widthPerFrame_pix * mHeightPerBeamletAllFrames_pix },
-	mMultibeam{ multibeam }
+	mNpixPerBeamletAllFrames{ widthPerFrame_pix * mHeightPerBeamletAllFrames_pix }
 {
 	if (heightPerBeamletPerFrame_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");
@@ -590,7 +590,6 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
 
 	mFpga.uploadImagingParameters(mHeightPerBeamletPerFrame_pix, mNframes);
-
 	mFpga.setLineclock(mLineclockInput);
 
 	mBufferA = new U32[mNpixPerBeamletAllFrames];
@@ -601,7 +600,7 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga
 	mVec_queue.at(convertRTCHANtoU8_(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
-//This constructor is meant to be used with RTseq::configureFrames(const int nFrames)
+//This constructor is meant to be used with RTseq::configureFrames()
 RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga enableFIFOOUTfpga):
 	mVec_queue(mNchan),		//Initialize the size the vector containing the queues (= # of queues). Use round and not curly parenthesis here
 	mFpga{ fpga },
@@ -620,16 +619,14 @@ void RTseq::configureFrames(const int heightPerBeamletPerFrame_pix, const int wi
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
 
 	mPMT16Xchan = determineRescannerSetpoint_(multibeam);
-
-	mMultibeam = multibeam;
-	mNframes = nFrames;
 	mHeightPerBeamletPerFrame_pix = heightPerBeamletPerFrame_pix;
 	mWidthPerFrame_pix = widthPerFrame_pix;
+	mNframes = nFrames;
+	mMultibeam = multibeam;
 	mHeightPerBeamletAllFrames_pix = mHeightPerBeamletPerFrame_pix * mNframes;
 	mNpixPerBeamletAllFrames = mWidthPerFrame_pix * mHeightPerBeamletAllFrames_pix;
 
 	mFpga.uploadImagingParameters(mHeightPerBeamletPerFrame_pix, mNframes);
-
 	mFpga.setLineclock(mLineclockInput);
 
 	delete[] mBufferA;

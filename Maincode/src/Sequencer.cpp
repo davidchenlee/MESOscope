@@ -432,9 +432,13 @@ bool Boolmap::isTileBright(const TILEIJ tileIndicesIJ) const
 }
 
 //Save the boolmap as a text file
-void Boolmap::saveTileMapToText(std::string filename)
+void Boolmap::saveTileMapToText(std::string filename, const OVERRIDE override)
 {
 	std::ofstream fileHandle;
+
+	if (override == OVERRIDE::DIS)
+		filename = Util::doesFileExist(filename, ".txt");
+
 	fileHandle.open(g_folderPath + filename + ".txt");
 
 	try
@@ -575,7 +579,8 @@ bool Boolmap::isQuadrantBright_(const double threshold, const TILEIJ tileIndices
 		for (int iterQuadCol = 0; iterQuadCol < 2; iterQuadCol++)
 		{
 			int sum{ 0 };
-			int nPixQuad{ 0 };				//Calculate the number of pixels in a quadrant dynamically to take into account the partial tiles at the tiff edges
+			int nPixQuad{ 0 };		//Calculate the number of pixels in a quadrant dynamically to take into account the fractional tiles at the tiff edges
+
 			//Iterate over all the pixels inside a quadrant
 			for (int iterQuadRow_pix = tileTopPos_pix + (iterQuadRow * halfHeight); iterQuadRow_pix < tileTopPos_pix + ((iterQuadRow + 1) * halfHeight); iterQuadRow_pix++)
 				for (int iterQuadCol_pix = tileLeftPos_pix + (iterQuadCol * halfwidth); iterQuadCol_pix < tileLeftPos_pix + ((iterQuadCol + 1)* halfwidth); iterQuadCol_pix++)
@@ -613,6 +618,41 @@ void Boolmap::generateBoolmap_()
 	for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
 		for (int JJ = 0; JJ < mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ); JJ++)
 			mIsBrightMap.push_back(isQuadrantBright_(mThreshold, { II, JJ }));
+}
+
+void Boolmap::fillTileMapHoles()
+{
+	TILEDIM2 tileArrayDim{ mTileArray.readTileArraySizeIJ() };
+
+	std::vector<int> minII(tileArrayDim.JJ, tileArrayDim.II);	//min II for each JJ. Vector of length tileArrayDim.JJ initialized with the max II = tileArrayDim.II
+	std::vector<int> maxII(tileArrayDim.JJ, 0);					//max II for each JJ. Vector of length tileArrayDim.JJ initialized with the min II = 0
+	std::vector<int> minJJ(tileArrayDim.II, tileArrayDim.JJ);	//min JJ for each II. Vector of length tileArrayDim.II initialized with the max JJ = tileArrayDim.JJ
+	std::vector<int> maxJJ(tileArrayDim.II, 0);					//max JJ for each II. Vector of length tileArrayDim.II initialized with the min JJ = 0
+
+	//Find the min and max IIs and JJs
+	for (int II = 0; II < tileArrayDim.II; II++)
+		for (int JJ = 0; JJ < tileArrayDim.JJ; JJ++)
+			if (mIsBrightMap.at(II * tileArrayDim.JJ + JJ) == 1)
+			{
+				if (II < minII.at(JJ))
+					minII.at(JJ) = II;
+				if (II > maxII.at(JJ))
+					maxII.at(JJ) = II;
+				if (JJ < minJJ.at(II))
+					minJJ.at(II) = JJ;
+				if (JJ > maxJJ.at(II))
+					maxJJ.at(II) = JJ;
+			}
+
+	//For debugging
+	//for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
+	//	std::cout << minJJ.at(II) << "\n";
+
+	//Update mIsBrightMap with the holes filled
+	for (int II = 0; II < tileArrayDim.II; II++)
+		for (int JJ = 0; JJ < tileArrayDim.JJ; JJ++)
+			if (II >= minII.at(JJ) && II <= maxII.at(JJ) && JJ >= minJJ.at(II) && JJ <= maxJJ.at(II))
+				mIsBrightMap.at(II * tileArrayDim.JJ + JJ) = 1;
 }
 #pragma endregion "Boolmap"
 
@@ -1065,7 +1105,7 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
 
-	const double imagingTimePerStack{ g_lineclockHalfPeriod *  mStack.readTileHeight_pix() * (mStack.readDepthZ() / mStack.readPixelSizeZ()) / (static_cast<int>(g_multibeam) * (g_nChanPMT - 1) + 1) };
+	const double imagingTimePerStack{ g_lineclockHalfPeriod *  mStack.readTileHeight_pix() * (mStack.readDepthZ() / mStack.readPixelSizeZ()) / 16 };
 	const double totalImagingTime_hours{ (mStackCounter + 1) * imagingTimePerStack / seconds / 3600. };
 
 	*fileHandle << "Runtime per stack = " << imagingTimePerStack / ms << " ms (times nBinning)\n";

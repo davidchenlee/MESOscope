@@ -15,7 +15,7 @@ namespace Routines
 		//const RUNMODE acqMode{ RUNMODE::FIELDILLUM };		//Field illumination measurement for 16X using beads
 		
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
 		const int nFramesCont{ 1 };	
@@ -207,7 +207,7 @@ namespace Routines
 
 		//DATALOG
 		{
-			Logger datalog(filename);
+			Logger datalog(filename, OVERRIDE::DIS);
 			datalog.record("SAMPLE-------------------------------------------------------");
 			datalog.record("Sample = ", g_currentSample.readName());
 			datalog.record("Immersion medium = ", g_currentSample.readImmersionMedium());
@@ -247,7 +247,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -468,7 +468,7 @@ namespace Routines
 			POSITION2 tileCenterXY;
 			std::string shortName, longName;
 			SCANDIR iterScanDirZ{ ScanDirZini };
-			Logger datalog(g_currentSample.readName() + "_locations");
+			Logger datalog(g_currentSample.readName() + "_locations", OVERRIDE::DIS);
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
@@ -884,17 +884,19 @@ namespace TestRoutines
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet, selectPower;
 
-#if g_multibeam
-		//Multibeam
-		heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / g_nChanPMT);
-		FFOVslowPerBeamlet = static_cast<int>(FFOVslow / g_nChanPMT);
-		selectPower = 1400. * mW;
-#else
-		//Singlebeam
-		heightPerBeamletPerFrame_pix = heightPerFrame_pix;
-		FFOVslowPerBeamlet = FFOVslow;
-		selectPower = 50. * mW;
-#endif
+		if (g_multibeam) //Multibeam
+		{
+			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / g_nChanPMT);
+			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / g_nChanPMT);
+			selectPower = 1400. * mW;
+		}
+		else             //Singlebeam
+		{		
+			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
+			FFOVslowPerBeamlet = FFOVslow;
+			selectPower = 50. * mW;
+		}
+
 		//STACK
 		const double pixelSizeZ{ 1.0 * um };
 		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the Z-stage axis
@@ -1257,7 +1259,7 @@ namespace TestRoutines
 	{
 		for (int ii = 0; ii < 4; ii++)
 		{
-			std::string inputFilename{ "000_2_000000" + Util::toString(ii,0) };
+			std::string inputFilename{ "000_0_000000" + Util::toString(ii,0) };
 			std::string outputFilename{ "output_" + inputFilename };
 			TiffU8 image{ inputFilename };
 			image.correctRSdistortionGPU(150. * um);
@@ -1311,19 +1313,21 @@ namespace TestRoutines
 	void boolmapSample()
 	{
 		//g_folderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
-		std::string inputFilename{ "Liver_F1040nm_P=30.0mW_xi=39.220_xf=55.780_yi=29.500_yf=22.600_z=19.7200_Step=0.0010" };
+		std::string inputFilename{ "Liver_F1040nm_P=30.0mW_xi=39.220_xf=55.780_yi=29.500_yf=22.600_z=19.7200_Step=0.0010 (1)" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
-		//The tile array for the slow scan ('ss') does not necessarily coincide with the tile array used for fast scanning
+		//The tile array for the slow scan (ss) does not necessarily coincide with the tile array used in fast scanning
 		const PIXDIM2 ssTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because contX uses pixelSizeX=1.0 um for speed and not 0.5 um
 		const TILEOVERLAP3 ssOverlapIJK_frac{ 0.15, 0.05, 0.0 };
 		const double threshold{ 0.02 };
 		Boolmap boolmap{ image, ssTileSize_pix, ssOverlapIJK_frac, threshold };
-		boolmap.saveTileMapToText("Boolmap");
+		boolmap.saveTileMapToText("Boolmap", OVERRIDE::EN);
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
-		boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
-
+		//boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
+		boolmap.fillTileMapHoles();
+		boolmap.saveTileMapToText("Boolmap_filled", OVERRIDE::EN);
+		boolmap.saveTileMap("TileMap_filled", OVERRIDE::EN);
 		Util::pressAnyKeyToCont();
 	}
 
@@ -1346,16 +1350,23 @@ namespace TestRoutines
 
 		Util::pressAnyKeyToCont();
 	}
+
 	/*
-	void convexHullTest()
+	void convexHull()
 	{
 		typedef boost::tuple<double, double> point;
 		typedef boost::geometry::model::polygon<point> polygon;
-
+		
 		//polygon poly;
 		//boost::geometry::read_wkt("polygon((0.0 0.0, 0.0 1.0, 1.0 0.0, 1.0 1.0, 0.5 0.5, 0.1 0.0))", poly);
 
-		polygon poly{ {{0.0, 0.0}, {0.0, 5.0}, {5.0, 5.0}, {5.0, 0.0}, {0.0, 0.0}} };
+		polygon poly;
+
+		boost::geometry::append(poly, point(0.0, 0.0));
+		boost::geometry::append(poly, point(0.0, 5.0));
+		boost::geometry::append(poly, point(5.0, 5.0));
+		boost::geometry::append(poly, point(5.0, 0.0));
+		boost::geometry::append(poly, point(0.0, 0.0));
 
 		polygon hull;
 		boost::geometry::convex_hull(poly, hull);
@@ -1365,8 +1376,8 @@ namespace TestRoutines
 				  << "hull: " << dsv(hull) << std::endl;
 
 		Util::pressAnyKeyToCont();
-	}
-	*/
+	}*/
+	
 
 	void sequencerConcurrentTest()
 	{
@@ -1495,7 +1506,7 @@ namespace TestRoutines
 		const int tileShiftX_pix{ 543 };
 		const int tileShiftY_pix{ 291 };
 
-		Logger datalog(g_currentSample.readName() + "_locations");
+		Logger datalog(g_currentSample.readName() + "_locations", OVERRIDE::EN);
 		datalog.record("dim=3"); //Needed for the BigStitcher
 
 		for (int tileNumber = 0; tileNumber < tileSize.II * tileSize.JJ; tileNumber++)

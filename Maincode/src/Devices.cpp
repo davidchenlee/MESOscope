@@ -1288,7 +1288,7 @@ CombinedFilterwheel::CombinedFilterwheel(const RTseq &realtimeSeq) :
 
 void CombinedFilterwheel::turnFilterwheels(const int wavelength_nm)
 {
-	if (mRTseq.mMultibeam)//Multiplex. Turn both filterwheels concurrently
+	if (mRTseq.mMultibeam) //Multiplex. Turn both filterwheels concurrently
 	{
 		std::future<void> th1{ std::async(&Filterwheel::setWavelength, &mFWexcitation, wavelength_nm) };
 		std::future<void> th2{ std::async(&Filterwheel::setWavelength, &mFWdetection, wavelength_nm) };
@@ -1303,7 +1303,6 @@ void CombinedFilterwheel::turnFilterwheels(const int wavelength_nm)
 			throw;
 		}
 	}
-
 	else //Single beam. Turn both filterwheels concurrently
 	{
 		std::future<void> th1{ std::async(&Filterwheel::setColor, &mFWexcitation, Filterwheel::COLOR::OPEN) };
@@ -1640,12 +1639,11 @@ void Pockels::pushPowerSinglet(const double timeStep, const double laserPower, c
 	if (timeStep <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The time step must be > 0");
 
-	//Softlimit for the laser power
-	double maxPower;							
+	double maxPower;				//Softlimit for the laser power					
 	if (mRTseq.mMultibeam)
-		maxPower = mMaxPower16X;//Multibeam		
+		maxPower = mMaxPower16X;	//Multibeam		
 	else
-		maxPower = mMaxPower1X; //Singlebeam	
+		maxPower = mMaxPower1X;		//Singlebeam	
 
 	if (laserPower < 0 || laserPower > maxPower)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be in the range [0-" + std::to_string(static_cast<int>(maxPower / mW)) + "] mW");
@@ -2228,6 +2226,7 @@ Galvo::Galvo(RTseq &realtimeSeq, const double posMax, const Laser::ID whichLaser
 	//For debugging
 	//std::cout << "Rescanner mVoltagePerDistance = " << mVoltagePerDistance << "\n";
 	//std::cout << "Rescanner mVoltageOffset = " << mVoltageOffset << "\n";
+	//Util::pressAnyKeyToCont();
 
 	//Rescan in the direction opposite to the scan galvo to keep the fluorescent spot fixed at the detector. If using a single beam (no multiplexing), aim it at a specific channel of the PMT16X
 	pushPositionLinearRamp(mPosMax, -mPosMax, mVoltageOffset + readSinglebeamVoltageOffset_(), OVERRIDE::EN);

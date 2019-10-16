@@ -2,8 +2,12 @@
 #include "Utilities.h"
 #include "Devices.h"
 #include "SampleConfig.h"
-using namespace Constants;
-																																														
+//#include <boost/geometry.hpp>									//conves hull
+//#include <boost/geometry/geometries/polygon.hpp>				//conves hull
+//#include <boost/geometry/geometries/adapted/boost_tuple.hpp>	//conves hull
+//BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)			//convex hull
+using namespace Constants;	
+
 void reverseSCANDIR(SCANDIR &scanDir);
 POSITION2 determineRelativeTileIndicesIJ(const TILEOVERLAP3 overlapIJK_frac, const TILEDIM2 tileArraySizeIJ, const TILEIJ tileIndicesIJ);
 double determineInitialScanPos(const double posMin, const double travel, const double travelOverhead, const SCANDIR scanDir);
@@ -71,9 +75,10 @@ public:
 	Boolmap(const TiffU8 &tiff, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	Boolmap(const QuickScanXY &quickScanXY, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	bool isTileBright(const TILEIJ tileIndicesIJ) const;
-	void saveTileMapToText(std::string filename);
-	void saveTileGridOverlay(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
-	void saveTileMap(std::string filename, const OVERRIDE override = OVERRIDE::DIS) const;
+	void saveTileMapToText(std::string filename, const OVERRIDE override);
+	void saveTileGridOverlay(std::string filename, const OVERRIDE override) const;
+	void saveTileMap(std::string filename, const OVERRIDE override) const;
+	void fillTileMapHoles();
 private:
 	const TiffU8 mTiff;
 	const TileArray mTileArray;

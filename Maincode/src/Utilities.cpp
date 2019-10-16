@@ -179,9 +179,11 @@ namespace Util
 }
 
 #pragma region "Logger"
-Logger::Logger(const std::string filename)
+Logger::Logger(std::string filename, const OVERRIDE override)
 {
-	Util::doesFileExist(filename, ".txt");
+	if (override == OVERRIDE::DIS)
+		filename = Util::doesFileExist(filename, ".txt");
+
 	mFileHandle.open(g_folderPath + filename + ".txt");
 };
 

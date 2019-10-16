@@ -10,12 +10,7 @@
 #include <windows.h>				//For using the ESC key
 #include <CL/cl.hpp>				//OpenCL
 #include <conio.h>					//For _getch()
-//#include <boost/geometry.hpp>		//conves hull
-//#include <boost/geometry/geometries/polygon.hpp>//conves hull
-//#include <boost/geometry/geometries/adapted/boost_tuple.hpp>//conves hull
 using namespace Constants;
-
-//BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)//conves hull
 
 namespace Util
 {
@@ -43,7 +38,7 @@ namespace Util
 class Logger final
 {
 public:
-	Logger(const std::string filename);
+	Logger(std::string filename, const OVERRIDE override);
 	~Logger();
 	void record(const std::string description);
 	void record(const std::string description, const double input);
@@ -73,7 +68,7 @@ public:
 	void splitFrames(const int nFrames);
 	void mergeFrames();
 	void mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
-	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override = OVERRIDE::DIS, const SCANDIR scanDirZ = SCANDIR::UPWARD) const;
+	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const SCANDIR scanDirZ = SCANDIR::UPWARD) const;
 	void saveToTxt(const std::string fileName) const;
 
 	void mirrorOddFrames();

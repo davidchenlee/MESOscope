@@ -47,10 +47,10 @@ private:
 	int mFullWidth;
 };
 
-class QuickScanXY final: public QuickStitcher
+class PanoramicScanXY final: public QuickStitcher
 {
 public:
-	QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const LENGTH2 pixelSizeXY, const LENGTH2 LOIxy);
+	PanoramicScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const LENGTH2 pixelSizeXY, const LENGTH2 LOIxy);
 	double determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
 	double determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
 	int readNumberStageYpos() const;
@@ -63,7 +63,7 @@ private:
 	const FFOV2 mFFOV;
 	const LENGTH2 mPixelSizeXY;
 	const LENGTH2 mLOIxy;
-	const int mFullWidth_pix;
+	const int mPanoramicWidth_pix;
 
 	int castToOddnumber_(const double input) const;
 	LENGTH2 castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const;
@@ -73,7 +73,7 @@ class Boolmap final
 {
 public:
 	Boolmap(const TiffU8 &tiff, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
-	Boolmap(const QuickScanXY &quickScanXY, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
+	Boolmap(const PanoramicScanXY &panoramicScanXY, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	bool isTileBright(const TILEIJ tileIndicesIJ) const;
 	void saveBoolmapToText(std::string filename, const OVERRIDE override);
 	void saveTileGridOverlay(std::string filename, const OVERRIDE override) const;
@@ -84,9 +84,9 @@ private:
 	const TiffU8 mTiff;
 	const TileArray mTileArray;
 	const double mThreshold;			//Threshold for generating the boolmap
-	const int mFullHeight_pix;			//Pixel height of the tiled image
-	const int mFullWidth_pix;			//Pixel width of the tiled image
-	const int mNpixFull;				//Total number of pixels in mTiff
+	const int mPanoramicHeight_pix;			//Pixel height of the tiled image
+	const int mPanoramicWidth_pix;			//Pixel width of the tiled image
+	const int mNpixPanoramic;				//Total number of pixels in mTiff
 	PIXELij mAnchorPixel_pix;			//Reference position for the tile array wrt the Tiff
 	std::vector<bool> mIsBrightMap;
 

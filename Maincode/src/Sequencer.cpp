@@ -261,13 +261,13 @@ int QuickStitcher::readFullWidth_pix() const
 }
 #pragma endregion "QuickStitcher"
 
-#pragma region "QuickScanXY"
-QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 FFOV, const LENGTH2 pixelSizeXY, const LENGTH2 LOIxy) :
+#pragma region "PanoramicScanXY"
+PanoramicScanXY::PanoramicScanXY(const POSITION2 ROIcenterXY, const FFOV2 FFOV, const LENGTH2 pixelSizeXY, const LENGTH2 LOIxy) :
 	mROIcenterXY{ ROIcenterXY },
 	mFFOV{ FFOV },
 	mPixelSizeXY{ pixelSizeXY },													//Pixel resolution (unit of length per pixel)
 	mLOIxy{ castLOIxy_(FFOV, LOIxy) },												//Cast the length of interest (LOI) to odd numbers to have an exact center tile. LOI covers from tile edge to tile edge
-	mFullWidth_pix{ Util::intceil(castLOIxy_(FFOV, LOIxy).YY / pixelSizeXY.YY) },	//Full width. Note that the cast mLOIxy is being used
+	mPanoramicWidth_pix{ Util::intceil(castLOIxy_(FFOV, LOIxy).YY / pixelSizeXY.YY) },	//Full width. Note that the cast mLOIxy is being used
 	QuickStitcher{ Util::intceil(castLOIxy_(FFOV, LOIxy).XX / pixelSizeXY.XX),		//tileHeight_pix. The tile height is the same as the full height (because a tile is a long vertical strip). Note that the cast mLOIxy is being used
 				   Util::intceil(FFOV.YY / pixelSizeXY.YY),							//tileWidth_pix
 				   { 1, Util::intceil(castLOIxy_(FFOV, LOIxy).YY / FFOV.YY) },		//tile array size = { 1, JJ }. Only 1 row and many columns. Note that the cast mLOIxy is being used
@@ -288,7 +288,7 @@ QuickScanXY::QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 FFOV, const LE
 	}
 }
 
-double QuickScanXY::determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const
+double PanoramicScanXY::determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const
 {
 	if (travelOverhead < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The travel overhead must be > 0");
@@ -300,7 +300,7 @@ double QuickScanXY::determineInitialScanPosX(const double travelOverhead, const 
 	return determineInitialScanPos(tilePosXmin, travelX, travelOverhead, scanDir);
 }
 
-double QuickScanXY::determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const
+double PanoramicScanXY::determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const
 {
 	if (travelOverhead < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The travel overhead must be > 0");
@@ -312,28 +312,28 @@ double QuickScanXY::determineFinalScanPosX(const double travelOverhead, const SC
 	return determineFinalScanPos(tilePosXmin, travelX, travelOverhead, scanDir);
 }
 
-int QuickScanXY::readNumberStageYpos() const
+int PanoramicScanXY::readNumberStageYpos() const
 {
 	return static_cast<int>(mStageYpos.size());
 }
 
-double QuickScanXY::readStageYposFront() const
+double PanoramicScanXY::readStageYposFront() const
 {
 	return mStageYpos.front();
 }
 
-double QuickScanXY::readStageYposBack() const
+double PanoramicScanXY::readStageYposBack() const
 {
 	return mStageYpos.back();
 }
 
-double QuickScanXY::readStageYposAt(const int index) const
+double PanoramicScanXY::readStageYposAt(const int index) const
 {
 	return mStageYpos.at(index);
 }
 
 //Cast the input to int and return an odd int
-int QuickScanXY::castToOddnumber_(const double inputNumber) const
+int PanoramicScanXY::castToOddnumber_(const double inputNumber) const
 {
 	int inputNumber_int{ Util::intceil(inputNumber) };
 	if (inputNumber_int % 2)	//Odd number
@@ -346,7 +346,7 @@ int QuickScanXY::castToOddnumber_(const double inputNumber) const
 }
 
 //Return a cast LOI that covers an odd number of tiles
-LENGTH2 QuickScanXY::castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const
+LENGTH2 PanoramicScanXY::castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const
 {
 	if (FFOV.XX <= 0 || FFOV.YY <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FFOV must be > 0");
@@ -358,19 +358,19 @@ LENGTH2 QuickScanXY::castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const
 
 	return { numberOfTilesII * FFOV.XX , numberOfTilesJJ * FFOV.YY };
 }
-#pragma endregion "QuickScanXY"
+#pragma endregion "PanoramicScanXY"
 
 #pragma region "Boolmap"
-//Lay a tile array over the center of the tiff. LOI is the lenfth of interest
+//Lay a tile array over the center of the tiff. LOI is the length of interest
 Boolmap::Boolmap(const TiffU8 &tiff, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold) :
 	mTiff{ tiff },
 	mTileArray{ tileSizeij_pix ,
 				{ Util::intceil(LOIxy_pix.XX / tileSizeij_pix.ii), Util::intceil(LOIxy_pix.YY / tileSizeij_pix.jj) },
 				overlapIJK_frac },
 	mThreshold{ threshold },
-	mFullHeight_pix{ tiff.readHeightPerFrame_pix() },
-	mFullWidth_pix{ tiff.readWidthPerFrame_pix() },
-	mNpixFull{ tiff.readHeightPerFrame_pix() * tiff.readWidthPerFrame_pix() },
+	mPanoramicHeight_pix{ tiff.readHeightPerFrame_pix() },
+	mPanoramicWidth_pix{ tiff.readWidthPerFrame_pix() },
+	mNpixPanoramic{ tiff.readHeightPerFrame_pix() * tiff.readWidthPerFrame_pix() },
 	mAnchorPixel_pix{ tiff.readHeightPerFrame_pix() / 2,
 					  tiff.readWidthPerFrame_pix() / 2}		//Set the anchor pixels to the center of the image
 {
@@ -386,20 +386,20 @@ Boolmap::Boolmap(const TiffU8 &tiff, const LENGTH2 LOIxy_pix, const PIXDIM2 tile
 	generateBoolmap_();
 }
 
-Boolmap::Boolmap(const QuickScanXY &quickScanXY, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold):
-	mTiff{ quickScanXY.data(),
-		   quickScanXY.readFullHeight_pix(),
-		   quickScanXY.readFullWidth_pix(),
+Boolmap::Boolmap(const PanoramicScanXY &panoramicScanXY, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold):
+	mTiff{ panoramicScanXY.data(),
+		   panoramicScanXY.readFullHeight_pix(),
+		   panoramicScanXY.readFullWidth_pix(),
 		   1 },
 	mTileArray{ tileSizeij_pix,
 				{ Util::intceil(LOIxy_pix.XX / tileSizeij_pix.ii), Util::intceil(LOIxy_pix.YY / tileSizeij_pix.jj) },
 				overlapIJK_frac },
 	mThreshold{ threshold },
-	mFullHeight_pix{ quickScanXY.readFullHeight_pix() },
-	mFullWidth_pix{ quickScanXY.readFullWidth_pix() },
-	mNpixFull{ quickScanXY.readFullHeight_pix() * quickScanXY.readFullWidth_pix() },
-	mAnchorPixel_pix{ quickScanXY.readFullHeight_pix() / 2,
-					  quickScanXY.readFullWidth_pix() / 2 }		//Set the anchor pixels to the center of the image
+	mPanoramicHeight_pix{ panoramicScanXY.readFullHeight_pix() },
+	mPanoramicWidth_pix{ panoramicScanXY.readFullWidth_pix() },
+	mNpixPanoramic{ panoramicScanXY.readFullHeight_pix() * panoramicScanXY.readFullWidth_pix() },
+	mAnchorPixel_pix{ panoramicScanXY.readFullHeight_pix() / 2,
+					  panoramicScanXY.readFullWidth_pix() / 2 }		//Set the anchor pixels to the center of the image
 {
 	if (tileSizeij_pix.ii <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be > 0");
@@ -472,17 +472,17 @@ void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override)
 		const PIXELij tileCenterPos_pix{ determineTileAbsolutePixelPos_pix_({ II, 0 }) };			//Tile center position wrt the Tiff		
 		const int tileTopPos_pix{ tileCenterPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };		//Top pixels of the tile wrt the Tiff
 		const int tileBottomPos_pix{ tileCenterPos_pix.ii + mTileArray.readTileHeight_pix() / 2 };	//Bottom pixels of the tile wrt the Tiff
-		for (int iterCol_pix = 0; iterCol_pix < mFullWidth_pix; iterCol_pix++)
+		for (int iterCol_pix = 0; iterCol_pix < mPanoramicWidth_pix; iterCol_pix++)
 			for (int iterThickness = -lineThicknessHorizontal / 2; iterThickness < lineThicknessHorizontal / 2; iterThickness++)
 			{
-				const int iterTopRow_pix{ (tileTopPos_pix + iterThickness) * mFullWidth_pix + iterCol_pix };
-				const int iterBottomRow_pix{ (tileBottomPos_pix + iterThickness) * mFullWidth_pix + iterCol_pix };
+				const int iterTopRow_pix{ (tileTopPos_pix + iterThickness) * mPanoramicWidth_pix + iterCol_pix };
+				const int iterBottomRow_pix{ (tileBottomPos_pix + iterThickness) * mPanoramicWidth_pix + iterCol_pix };
 
-				if (iterTopRow_pix >= 0 && iterTopRow_pix < mNpixFull)								//Make sure that the pixel is inside the Tiff
+				if (iterTopRow_pix >= 0 && iterTopRow_pix < mNpixPanoramic)								//Make sure that the pixel is inside the Tiff
 					(mTiff.data())[iterTopRow_pix] = lineColor;
 
-				if (iterBottomRow_pix >= 0 && iterBottomRow_pix < mNpixFull)						//Make sure that the pixel is inside the Tiff
-					(mTiff.data())[(tileBottomPos_pix + iterThickness) * mFullWidth_pix + iterCol_pix] = lineColor;
+				if (iterBottomRow_pix >= 0 && iterBottomRow_pix < mNpixPanoramic)						//Make sure that the pixel is inside the Tiff
+					(mTiff.data())[(tileBottomPos_pix + iterThickness) * mPanoramicWidth_pix + iterCol_pix] = lineColor;
 			}
 	}
 
@@ -493,16 +493,16 @@ void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override)
 		const PIXELij tileCenterPos_pix{ determineTileAbsolutePixelPos_pix_({ 0, JJ }) };			//Tile center position wrt the Tiff
 		const int tileLeft{ tileCenterPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };			//Left pixels of the tile wrt the Tiff
 		const int tileRight{ tileCenterPos_pix.jj + mTileArray.readTileWidth_pix() / 2 };			//Right pixels of the tile wrt the Tiff
-		for (int iterRow_pix = 0; iterRow_pix < mFullHeight_pix; iterRow_pix++)
+		for (int iterRow_pix = 0; iterRow_pix < mPanoramicHeight_pix; iterRow_pix++)
 			for (int iterThickness = -lineThicknessVertical / 2; iterThickness < lineThicknessVertical / 2; iterThickness++)
 			{
-				const int iterLeftColumn_pix{ iterRow_pix * mFullWidth_pix + tileLeft + iterThickness };
-				const int iterRightColumn_pix{ iterRow_pix * mFullWidth_pix + tileRight + iterThickness };
+				const int iterLeftColumn_pix{ iterRow_pix * mPanoramicWidth_pix + tileLeft + iterThickness };
+				const int iterRightColumn_pix{ iterRow_pix * mPanoramicWidth_pix + tileRight + iterThickness };
 
-				if (iterLeftColumn_pix >= 0 && iterLeftColumn_pix < mNpixFull)						//Make sure that the pixel is inside the Tiff
+				if (iterLeftColumn_pix >= 0 && iterLeftColumn_pix < mNpixPanoramic)						//Make sure that the pixel is inside the Tiff
 					(mTiff.data())[iterLeftColumn_pix] = lineColor;
 
-				if (iterRightColumn_pix >= 0 && iterRightColumn_pix < mNpixFull)					//Make sure that the pixel is inside the Tiff
+				if (iterRightColumn_pix >= 0 && iterRightColumn_pix < mNpixPanoramic)					//Make sure that the pixel is inside the Tiff
 					(mTiff.data())[iterRightColumn_pix] = lineColor;
 			}
 	}
@@ -513,11 +513,11 @@ void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override)
 void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 {
 	
-	TiffU8 outputTiff{ mFullHeight_pix, mFullWidth_pix, 1 };	//Create an empty Tiff
+	TiffU8 outputTiff{ mPanoramicHeight_pix, mPanoramicWidth_pix, 1 };	//Create an empty Tiff
 
 	//Shade the Tiff with a chosen grey level
 	const U8 pixelColor{ 200 };	
-	for (int iterPixel = 0; iterPixel < mNpixFull; iterPixel++)
+	for (int iterPixel = 0; iterPixel < mNpixPanoramic; iterPixel++)
 		(outputTiff.data())[iterPixel] = pixelColor;
 
 	//II is the row index (along the image height) and JJ is the column index (along the image width) wrt the tile array
@@ -533,8 +533,8 @@ void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 
 				for (int iterRow_pix = tileTopPos_pix; iterRow_pix < tileBottomPos_pix; iterRow_pix++)
 					for (int iterCol_pix = tileLeftPos_pix; iterCol_pix < tileRightPos_pix; iterCol_pix++)
-						if (iterRow_pix >= 0 && iterRow_pix < mFullHeight_pix && iterCol_pix >= 0 && iterCol_pix < mFullWidth_pix)//Check that the tile is inside the Tiff
-							(outputTiff.data())[iterRow_pix * mFullWidth_pix + iterCol_pix] = (mTiff.data())[iterRow_pix * mFullWidth_pix + iterCol_pix];
+						if (iterRow_pix >= 0 && iterRow_pix < mPanoramicHeight_pix && iterCol_pix >= 0 && iterCol_pix < mPanoramicWidth_pix)//Check that the tile is inside the Tiff
+							(outputTiff.data())[iterRow_pix * mPanoramicWidth_pix + iterCol_pix] = (mTiff.data())[iterRow_pix * mPanoramicWidth_pix + iterCol_pix];
 			}
 	outputTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
@@ -585,8 +585,8 @@ bool Boolmap::isQuadrantBright_(const double threshold, const TILEIJ tileIndices
 			for (int iterQuadRow_pix = tileTopPos_pix + (iterQuadRow * halfHeight); iterQuadRow_pix < tileTopPos_pix + ((iterQuadRow + 1) * halfHeight); iterQuadRow_pix++)
 				for (int iterQuadCol_pix = tileLeftPos_pix + (iterQuadCol * halfwidth); iterQuadCol_pix < tileLeftPos_pix + ((iterQuadCol + 1)* halfwidth); iterQuadCol_pix++)
 				{
-					const int pixelIndex{ iterQuadRow_pix * mFullWidth_pix + iterQuadCol_pix };
-					if (pixelIndex >= 0 && pixelIndex < mFullHeight_pix * mFullWidth_pix)
+					const int pixelIndex{ iterQuadRow_pix * mPanoramicWidth_pix + iterQuadCol_pix };
+					if (pixelIndex >= 0 && pixelIndex < mPanoramicHeight_pix * mPanoramicWidth_pix)
 					{
 						sum += (mTiff.data())[pixelIndex];
 						nPixQuad++;

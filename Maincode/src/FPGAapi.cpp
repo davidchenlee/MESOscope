@@ -676,7 +676,7 @@ void RTseq::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double A
 		timeStep = g_tMinAO;
 	}
 
-	//Clear the current content
+	//Clear the current content in the queue
 	if (override == OVERRIDE::EN)
 		mVec_queue.at(static_cast<U8>(chan)).clear();
 

@@ -176,6 +176,37 @@ namespace Util
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength " + std::to_string(wavelength_nm) + "has not been assigned a fluorescent marker");
 		}
 	}
+
+	bool isBright(const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const TILEIJ tileIndicesIJ)
+	{
+		return vec_boolmap.at(tileIndicesIJ.II * tileArraySizeIJ.JJ + tileIndicesIJ.JJ);
+	}
+
+	//Save the boolmap as a text file
+	void saveBoolmapToText(std::string filename, const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const OVERRIDE override)
+	{
+		std::ofstream fileHandle;
+
+		if (override == OVERRIDE::DIS)
+			filename = Util::doesFileExist(filename, ".txt");
+
+		fileHandle.open(g_folderPath + filename + ".txt");
+
+		try
+		{
+			for (int II = 0; II < tileArraySizeIJ.II; II++)
+			{
+				for (int JJ = 0; JJ < tileArraySizeIJ.JJ; JJ++)
+					fileHandle << static_cast<int>(vec_boolmap.at(II * tileArraySizeIJ.JJ + JJ));
+				fileHandle << "\n";	//End the row
+			}
+		}
+		catch (...) {
+			throw std::out_of_range((std::string)__FUNCTION__);
+		}
+
+		fileHandle.close();
+	}
 }
 
 #pragma region "Logger"

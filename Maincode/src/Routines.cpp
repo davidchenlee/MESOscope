@@ -365,7 +365,7 @@ namespace Routines
 		mesoscope.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 
 		//LOCATIONS on the sample to image
-		const int nLocations{ quickScanXY.readNstageYpos() };
+		const int nLocations{ quickScanXY.readNumberStageYpos() };
 		double stageXi, stageXf;		//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
@@ -409,7 +409,7 @@ namespace Routines
 			const double threshold{ 0.02 };
 
 			//Boolmap boolmap{ quickScanXY, ssTileSize_pix, ssTileOverlapXYZ_frac, threshold };
-			//boolmap.saveTileMapToText("Boolmap_" + filename);
+			//boolmap.saveBoolmapToText("Boolmap_" + filename);
 			//boolmap.saveTileMap("TileArrayMap_" + filename);
 	}
 
@@ -469,24 +469,32 @@ namespace Routines
 			std::string shortName, longName;
 			SCANDIR iterScanDirZ{ ScanDirZini };
 			Logger datalog(g_currentSample.readName() + "_locations", OVERRIDE::DIS);
+
+			std::vector<bool> vec_boolmap;
+			const int tileArrayDimII{ sequence.readTileArraySizeIJ(TileArray::Axis::II) };
+			const int tileArrayDimJJ{ sequence.readTileArraySizeIJ(TileArray::Axis::JJ) };
+
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 
 				//These parameters must be accessible to all the cases
-				int wavelength_nm, nFramesBinning, sliceNumber, stackIndex, tileIndexI, tileIndexJ;
+				int wavelength_nm, nFramesBinning, sliceNumber, stackIndex, tileIndexII, tileIndexJJ;
 				double scanZi, scanZf, scanPmin, scanPexp;
+
 				switch (commandline.mActionID)
 				{
 				case Action::ID::MOV://Move the X and Y-stages to mStackCenterXY
 					sliceNumber = commandline.mAction.moveStage.readSliceNumber();
-					tileIndexI = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::II);
-					tileIndexJ = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::JJ);
+					tileIndexII = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::II);
+					tileIndexJJ = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::JJ);
 					tileCenterXY = commandline.mAction.moveStage.readTileCenterXY();
 					mesoscope.moveXY(tileCenterXY);
 					mesoscope.waitForMotionToStopAll();
 					break;
 				case Action::ID::ACQ://Acquire a stack
+				if(1)
+				{
 					Action::AcqStack acqStack{ commandline.mAction.acqStack };
 					{
 						//Set the number of frames considering that binning will be performed
@@ -522,31 +530,36 @@ namespace Routines
 					mesoscope.openShutter();												//Re-open the Uniblitz shutter if closed by the pockels destructor
 
 					//Print out the stackIndex starting from 1 (stackIndex indexes from 0, so add a 1) and the sliceNumber starting from 1 (sliceNumber indexes from 0, so add a 1)
-					std::cout << "Scanning slice = " << std::to_string(sliceNumber+1) << "/" << sequence.readTotalNumberOfSlices() << "\tstack = " <<
-														std::to_string(stackIndex+1) << "/" << sequence.readNumberOfStacksPerSlice() << "\n";
+					std::cout << "Scanning stack ( " << tileIndexII << ", " << tileIndexJJ << " )\t" << std::to_string(sliceNumber + 1) << "/" << sequence.readTotalNumberOfSlices() << "\tstack = " <<
+																									  std::to_string(stackIndex + 1) << "/" << sequence.readNumberOfStacksPerSlice() << "\n";
+
+					//std::cout << "is bright? = " << Util::isBright(vec_boolmap, { tileArrayDimII ,tileArrayDimJJ }, { tileIndexII, tileIndexJJ });
+					//Util::pressAnyKeyToCont();
 
 					mesoscope.moveSingle(AXIS::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
 					realtimeSeq.downloadData();
 					reverseSCANDIR(iterScanDirZ);
 					break;
+				}//if
+
 				case Action::ID::SAV:
 					{
 					//Paddle the number with zeros on the left
 					std::string sliceNumber_s{ std::to_string(sliceNumber) };
-					std::string sliceNumberPad_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;	//3 digits in total
+					std::string sliceNumberPadded_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;	//3 digits in total
 
 					//The stages scan through a snake pattern by the saving is column by column
 					std::string stackIndex_s{ std::to_string(stackIndex) };
-					std::string stackIndexPad_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
+					std::string stackIndexPadded_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
 
-					std::string tileIndexI_s{ std::to_string(tileIndexI) };
-					std::string tileIndexIpad_s = std::string(2 - tileIndexI_s.length(), '0') + tileIndexI_s;		//2 digits in total
+					std::string tileIndexI_s{ std::to_string(tileIndexII) };
+					std::string tileIndexIpadded_s = std::string(2 - tileIndexI_s.length(), '0') + tileIndexI_s;		//2 digits in total
 
-					std::string tileIndexJ_s{ std::to_string(tileIndexJ) };
-					std::string tileIndexJpad_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;		//2 digits in total
+					std::string tileIndexJ_s{ std::to_string(tileIndexJJ) };
+					std::string tileIndexJpadded_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;		//2 digits in total
 
 
-					shortName = sliceNumberPad_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + stackIndexPad_s;
+					shortName = sliceNumberPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + stackIndexPadded_s;
 					longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_Pexp=" + Util::toString(scanPexp / um, 0) + "um" +
 						"_x=" + Util::toString(tileCenterXY.XX / mm, 3) +
 						"_y=" + Util::toString(tileCenterXY.YY / mm, 3) +
@@ -557,7 +570,7 @@ namespace Routines
 						image.acquire();
 						image.binFrames(nFramesBinning);
 						image.save(shortName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
-						datalog.record(shortName + "\t(" + tileIndexIpad_s + "," + tileIndexJpad_s + ")\t" + longName);
+						datalog.record(shortName + "\t(" + tileIndexIpadded_s + "," + tileIndexJpadded_s + ")\t" + longName);
 						std::cout << "\n";
 					}
 					break;
@@ -574,6 +587,11 @@ namespace Routines
 					break;
 				case Action::ID::OVW:
 				{
+					//Paddle the slice number with zeros on the left
+					const int sliceNum{ commandline.mAction.overviewScan.readSliceNumber() };
+					std::string sliceNum_s{ std::to_string(sliceNum) };
+					std::string sliceNumPadded_s = std::string(3 - sliceNum_s.length(), '0') + sliceNum_s;	//3 digits in total
+
 					const double planeZ{ commandline.mAction.overviewScan.readPlaneZ() };
 					const double fullWidth{ 0.150 * mm };													//Total width of the tile array
 
@@ -607,7 +625,7 @@ namespace Routines
 					mesoscope.openShutter();	//Open the shutter. The destructor will close the shutter automatically
 
 					//LOCATIONS on the sample to image
-					const int nLocations{ quickScanXY.readNstageYpos() };
+					const int nLocations{ quickScanXY.readNumberStageYpos() };
 					double stageXi, stageXf;		//Stage final position
 					for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 					{
@@ -637,7 +655,7 @@ namespace Routines
 					}
 					mesoscope.closeShutter();
 
-					const std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) +
+					const std::string filename{ sliceNumPadded_s + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(OVWwavelength_nm, 0) +
 						"nm_P=" + Util::toString(OVWlaserPower / mW, 1) +
 						"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
 						"_yi=" + Util::toString(quickScanXY.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(quickScanXY.readStageYposBack() / mm, 3) +
@@ -646,9 +664,11 @@ namespace Routines
 					quickScanXY.saveToFile(filename, OVERRIDE::DIS);
 
 					//Tile size for the slow scan. Do not call the tile size from quickScanXY because the tiles are long strips. 
-					const PIXDIM2 ssTileSize_pix{ Util::intceil(tileHeight / pixelSizeX), Util::intceil(tileWidth / pixelSizeY) };
-					const TILEOVERLAP3 ssTileOverlapXYZ_frac{ 0.0, 0.0, 0.0 };
+					const PIXDIM2 ssTileSize_pix{ Util::intceil(tileHeight / pixelSizeX), Util::intceil(tileWidth / pixelSizeY) };//HERE I SHOULD REALLY USE THE PARAMETERS OF THE STACKS (WITH HALF THE HEIGHT)
 					const double threshold{ 0.02 };
+					Boolmap boolmap{ quickScanXY, ssTileSize_pix, stackOverlap_frac, threshold };
+					boolmap.copyBoolmap(vec_boolmap);//Save the boolmap for the next iterations
+					boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
 				}
 					break;
 				default:
@@ -660,7 +680,8 @@ namespace Routines
 				//double duration{ std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count() };
 				//std::cout << "Elapsed time: " << duration << " ms" << "\n";
 				Util::pressESCforEarlyTermination();
-			}//for
+			}//Commands-or
+
 		}//if
 		Util::pressAnyKeyToCont();
 	}
@@ -1322,11 +1343,11 @@ namespace TestRoutines
 		const TILEOVERLAP3 ssOverlapIJK_frac{ 0.15, 0.05, 0.0 };
 		const double threshold{ 0.02 };
 		Boolmap boolmap{ image, ssTileSize_pix, ssOverlapIJK_frac, threshold };
-		boolmap.saveTileMapToText("Boolmap", OVERRIDE::EN);
+		boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
-		//boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
+		boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
 		boolmap.fillTileMapHoles();
-		boolmap.saveTileMapToText("Boolmap_filled", OVERRIDE::EN);
+		boolmap.saveBoolmapToText("Boolmap_filled", OVERRIDE::EN);
 		boolmap.saveTileMap("TileMap_filled", OVERRIDE::EN);
 		Util::pressAnyKeyToCont();
 	}

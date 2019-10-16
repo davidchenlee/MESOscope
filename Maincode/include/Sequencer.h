@@ -53,7 +53,7 @@ public:
 	QuickScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const LENGTH2 pixelSizeXY, const LENGTH2 LOIxy);
 	double determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
 	double determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
-	int readNstageYpos() const;
+	int readNumberStageYpos() const;
 	double readStageYposFront() const;
 	double readStageYposBack() const;
 	double readStageYposAt(const int index) const;
@@ -72,13 +72,14 @@ private:
 class Boolmap final
 {
 public:
-	Boolmap(const TiffU8 &tiff, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
+	Boolmap(const TiffU8 &tiff, const PIXDIM2 LOIij_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	Boolmap(const QuickScanXY &quickScanXY, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	bool isTileBright(const TILEIJ tileIndicesIJ) const;
-	void saveTileMapToText(std::string filename, const OVERRIDE override);
+	void saveBoolmapToText(std::string filename, const OVERRIDE override);
 	void saveTileGridOverlay(std::string filename, const OVERRIDE override) const;
 	void saveTileMap(std::string filename, const OVERRIDE override) const;
 	void fillTileMapHoles();
+	void copyBoolmap(std::vector<bool> input);
 private:
 	const TiffU8 mTiff;
 	const TileArray mTileArray;
@@ -171,10 +172,12 @@ namespace Action
 	class OverviewScan final
 	{
 	public:
-		void setParam(const double planeZ);
+		void setParam(const int sliceNumber, const double planeZ);
 		double readPlaneZ() const;
+		int readSliceNumber() const;
 	private:
-		double mPlaneZOverviewScan;
+		int mSliceNumber;				//Slice number
+		double mPlaneZ;
 	};
 }
 

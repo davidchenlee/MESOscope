@@ -161,10 +161,10 @@ const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", Petri
 #endif//fluorescent slide or beads
 */
 
-const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "TDT", 1040, Util::multiply16X(60. * mW), 300. * um, 4 },
-																							          { "DAPI", 750, Util::multiply16X(9. * mW), 120. * um, 2 } }} };
+//const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "TDT", 1040, Util::multiply16X(55. * mW), 300. * um, 4 },
+//																							          { "DAPI", 750, Util::multiply16X(9. * mW), 120. * um, 2 } }} };
 
-//const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, Util::multiply16X(60. * mW), 300. * um, 4 } }} };
+const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ {"TDT", 1040, Util::multiply16X(55. * mW), 300. * um, 4 } }} };
 //const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "DAPI", 750, Util::multiply16X(9. * mW), 120. * um, 2 } }} };
 
 #else//singlebeam

@@ -32,6 +32,8 @@ namespace Util
 	void pressAnyKeyToContOrESCtoExit();
 	double multiply16X(const double input);
 	std::string convertWavelengthToFluorMarker_s(const int wavelength_nm);
+	bool isBright(const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const TILEIJ tileIndicesIJ);
+	void saveBoolmapToText(std::string filename, const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const OVERRIDE override);
 }
 
 //For saving the parameters to a text file

@@ -312,7 +312,7 @@ double QuickScanXY::determineFinalScanPosX(const double travelOverhead, const SC
 	return determineFinalScanPos(tilePosXmin, travelX, travelOverhead, scanDir);
 }
 
-int QuickScanXY::readNstageYpos() const
+int QuickScanXY::readNumberStageYpos() const
 {
 	return static_cast<int>(mStageYpos.size());
 }
@@ -362,10 +362,10 @@ LENGTH2 QuickScanXY::castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const
 
 #pragma region "Boolmap"
 //Lay a tile array over the center of the tiff
-Boolmap::Boolmap(const TiffU8 &tiff, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold) :
+Boolmap::Boolmap(const TiffU8 &tiff, const PIXDIM2 LOIij_pix, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold) :
 	mTiff{ tiff },
-	mTileArray{ tileSize_pix ,
-				{Util::intceil(tiff.readHeightPerFrame_pix() / tileSize_pix.ii), Util::intceil(tiff.readWidthPerFrame_pix() / tileSize_pix.jj)},
+	mTileArray{ tileSizeij_pix ,
+				{Util::intceil(tiff.readHeightPerFrame_pix() / tileSizeij_pix.ii), Util::intceil(tiff.readWidthPerFrame_pix() / tileSizeij_pix.jj)},
 				overlapIJK_frac },
 	mThreshold{ threshold },
 	mFullHeight_pix{ tiff.readHeightPerFrame_pix() },
@@ -374,9 +374,9 @@ Boolmap::Boolmap(const TiffU8 &tiff, const PIXDIM2 tileSize_pix, const TILEOVERL
 	mAnchorPixel_pix{ tiff.readHeightPerFrame_pix() / 2,
 					  tiff.readWidthPerFrame_pix() / 2}		//Set the anchor pixels to the center of the image
 {
-	if (tileSize_pix.ii <= 0)
+	if (tileSizeij_pix.ii <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be > 0");
-	if (tileSize_pix.jj <= 0)
+	if (tileSizeij_pix.jj <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be > 0");
 	if (overlapIJK_frac.II < 0 || overlapIJK_frac.JJ < 0 || overlapIJK_frac.KK < 0 || overlapIJK_frac.II > 1 || overlapIJK_frac.JJ > 1 || overlapIJK_frac.KK > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
@@ -386,13 +386,13 @@ Boolmap::Boolmap(const TiffU8 &tiff, const PIXDIM2 tileSize_pix, const TILEOVERL
 	generateBoolmap_();
 }
 
-Boolmap::Boolmap(const QuickScanXY &quickScanXY, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold):
+Boolmap::Boolmap(const QuickScanXY &quickScanXY, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold):
 	mTiff{ quickScanXY.data(),
 		   quickScanXY.readFullHeight_pix(),
 		   quickScanXY.readFullWidth_pix(),
 		   1 },
-	mTileArray{ tileSize_pix,
-				{quickScanXY.readFullHeight_pix() / tileSize_pix.ii , quickScanXY.readFullWidth_pix() / tileSize_pix.jj},
+	mTileArray{ tileSizeij_pix,
+				{quickScanXY.readFullHeight_pix() / tileSizeij_pix.ii , quickScanXY.readFullWidth_pix() / tileSizeij_pix.jj},
 				overlapIJK_frac },
 	mThreshold{ threshold },
 	mFullHeight_pix{ quickScanXY.readFullHeight_pix() },
@@ -401,9 +401,9 @@ Boolmap::Boolmap(const QuickScanXY &quickScanXY, const PIXDIM2 tileSize_pix, con
 	mAnchorPixel_pix{ quickScanXY.readFullHeight_pix() / 2,
 					  quickScanXY.readFullWidth_pix() / 2 }		//Set the anchor pixels to the center of the image
 {
-	if (tileSize_pix.ii <= 0)
+	if (tileSizeij_pix.ii <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be > 0");
-	if (tileSize_pix.jj <= 0)
+	if (tileSizeij_pix.jj <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile width must be > 0");
 	if (overlapIJK_frac.II < 0 || overlapIJK_frac.JJ < 0 || overlapIJK_frac.KK < 0 || overlapIJK_frac.II > 1 || overlapIJK_frac.JJ > 1 || overlapIJK_frac.KK > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack overlap must be in the range [0-1]");
@@ -432,7 +432,7 @@ bool Boolmap::isTileBright(const TILEIJ tileIndicesIJ) const
 }
 
 //Save the boolmap as a text file
-void Boolmap::saveTileMapToText(std::string filename, const OVERRIDE override)
+void Boolmap::saveBoolmapToText(std::string filename, const OVERRIDE override)
 {
 	std::ofstream fileHandle;
 
@@ -611,6 +611,7 @@ bool Boolmap::isQuadrantBright_(const double threshold, const TILEIJ tileIndices
 	//return false;
 }
 
+//Note that when the tiles have some overlap, the tile array will not cover the entire Tiff
 void Boolmap::generateBoolmap_()
 {
 	//Divide the large image into tiles of size tileHeight_pix * tileWidth_pix and return an array of tiles indicating if the tile is bright
@@ -653,6 +654,13 @@ void Boolmap::fillTileMapHoles()
 		for (int JJ = 0; JJ < tileArrayDim.JJ; JJ++)
 			if (II >= minII.at(JJ) && II <= maxII.at(JJ) && JJ >= minJJ.at(II) && JJ <= maxJJ.at(II))
 				mIsBrightMap.at(II * tileArrayDim.JJ + JJ) = 1;
+}
+
+void Boolmap::copyBoolmap(std::vector<bool> input)
+{
+	input.clear();
+	for (std::vector<int>::size_type iter = 0; iter != mIsBrightMap.size(); iter++)
+		input.push_back(mIsBrightMap.at(iter));
 }
 #pragma endregion "Boolmap"
 
@@ -895,17 +903,25 @@ double Action::CutSlice::readStageZheightForFacingTheBlade() const
 	return mStageZheightForFacingTheBlade;
 }
 
-void Action::OverviewScan::setParam(const double planeZ)
+void Action::OverviewScan::setParam(const int sliceNumber, const double planeZ)
 {
+	if (sliceNumber < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice number must be >= 0");
 	if (planeZ < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The Z stage height must be >= 0");
 
-	mPlaneZOverviewScan = planeZ + 50. * um;
+	mSliceNumber = sliceNumber;
+	mPlaneZ = planeZ + 50. * um;
 }
 
 double Action::OverviewScan::readPlaneZ() const
 {
-	return mPlaneZOverviewScan;
+	return mPlaneZ;
+}
+
+int Action::OverviewScan::readSliceNumber() const
+{
+	return mSliceNumber;
 }
 #pragma endregion "Action"
 
@@ -1023,10 +1039,9 @@ void Sequencer::generateCommandList()
 	std::cout << "Generating the command list..." << "\n";
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
-		//overviewScanXY_();
+		overviewScanXY_();
 
 		initializeIteratorIJ_();		//Reset the tile iterator after every cut
-
 		//The first fluor-marker on the list is read, then the second marker, etc
 		for (std::vector<int>::size_type iterFluorMarker = 0; iterFluorMarker != mSample.readFluorMarkerListSize(); iterFluorMarker++)
 		{
@@ -1035,9 +1050,9 @@ void Sequencer::generateCommandList()
 			{
 				while (mII >= 0 && mII < mTileArray.readTileArraySizeIJ(TileArray::Axis::II))	//X-stage iteration
 				{
-					moveStage_({ mII, mJJ });
-					acqStack_(iterFluorMarker);
-					saveStack_();
+					//moveStage_({ mII, mJJ });
+					//acqStack_(iterFluorMarker);
+					//saveStack_();
 					mII -= Util::convertScandirToInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the X-stage axis
 				}
 				mII += Util::convertScandirToInt(mIterScanDirXYZ.XX);		//Re-initialize II by going back one step to start from 0 or mTileArraySizeIJ.II - 1
@@ -1349,7 +1364,7 @@ void Sequencer::cutSlice_()
 void Sequencer::overviewScanXY_()
 {
 	Commandline commandline{ Action::ID::OVW };
-	commandline.mAction.overviewScan.setParam(mIterScanZi);
+	commandline.mAction.overviewScan.setParam(mSliceCounter, mIterScanZi);
 	mCommandList.push_back(commandline);
 	mCommandCounter++;
 }

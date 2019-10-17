@@ -261,8 +261,8 @@ int QuickStitcher::readFullWidth_pix() const
 }
 #pragma endregion "QuickStitcher"
 
-#pragma region "PanoramicScanXY"
-PanoramicScanXY::PanoramicScanXY(const POSITION2 ROIcenterXY, const FFOV2 FFOV, const LENGTH2 pixelSizeXY, const LENGTH2 LOIxy) :
+#pragma region "PanoramicScan"
+PanoramicScan::PanoramicScan(const POSITION2 ROIcenterXY, const FFOV2 FFOV, const LENGTH2 pixelSizeXY, const LENGTH2 LOIxy) :
 	mROIcenterXY{ ROIcenterXY },
 	mFFOV{ FFOV },
 	mPixelSizeXY{ pixelSizeXY },													//Pixel resolution (unit of length per pixel)
@@ -288,7 +288,7 @@ PanoramicScanXY::PanoramicScanXY(const POSITION2 ROIcenterXY, const FFOV2 FFOV, 
 	}
 }
 
-double PanoramicScanXY::determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const
+double PanoramicScan::determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const
 {
 	if (travelOverhead < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The travel overhead must be > 0");
@@ -300,7 +300,7 @@ double PanoramicScanXY::determineInitialScanPosX(const double travelOverhead, co
 	return determineInitialScanPos(tilePosXmin, travelX, travelOverhead, scanDir);
 }
 
-double PanoramicScanXY::determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const
+double PanoramicScan::determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const
 {
 	if (travelOverhead < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The travel overhead must be > 0");
@@ -312,28 +312,28 @@ double PanoramicScanXY::determineFinalScanPosX(const double travelOverhead, cons
 	return determineFinalScanPos(tilePosXmin, travelX, travelOverhead, scanDir);
 }
 
-int PanoramicScanXY::readNumberStageYpos() const
+int PanoramicScan::readNumberStageYpos() const
 {
 	return static_cast<int>(mStageYpos.size());
 }
 
-double PanoramicScanXY::readStageYposFront() const
+double PanoramicScan::readStageYposFront() const
 {
 	return mStageYpos.front();
 }
 
-double PanoramicScanXY::readStageYposBack() const
+double PanoramicScan::readStageYposBack() const
 {
 	return mStageYpos.back();
 }
 
-double PanoramicScanXY::readStageYposAt(const int index) const
+double PanoramicScan::readStageYposAt(const int index) const
 {
 	return mStageYpos.at(index);
 }
 
 //Cast the input to int and return an odd int
-int PanoramicScanXY::castToOddnumber_(const double inputNumber) const
+int PanoramicScan::castToOddnumber_(const double inputNumber) const
 {
 	int inputNumber_int{ Util::intceil(inputNumber) };
 	if (inputNumber_int % 2)	//Odd number
@@ -346,7 +346,7 @@ int PanoramicScanXY::castToOddnumber_(const double inputNumber) const
 }
 
 //Return a cast LOI that covers an odd number of tiles
-LENGTH2 PanoramicScanXY::castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const
+LENGTH2 PanoramicScan::castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const
 {
 	if (FFOV.XX <= 0 || FFOV.YY <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The FFOV must be > 0");
@@ -358,7 +358,7 @@ LENGTH2 PanoramicScanXY::castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const
 
 	return { numberOfTilesII * FFOV.XX , numberOfTilesJJ * FFOV.YY };
 }
-#pragma endregion "PanoramicScanXY"
+#pragma endregion "PanoramicScan"
 
 #pragma region "Boolmap"
 //Lay a tile array over the center of the tiff. LOI is the length of interest
@@ -386,20 +386,20 @@ Boolmap::Boolmap(const TiffU8 &tiff, const LENGTH2 LOIxy_pix, const PIXDIM2 tile
 	generateBoolmap_();
 }
 
-Boolmap::Boolmap(const PanoramicScanXY &panoramicScanXY, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold):
-	mTiff{ panoramicScanXY.data(),
-		   panoramicScanXY.readFullHeight_pix(),
-		   panoramicScanXY.readFullWidth_pix(),
+Boolmap::Boolmap(const PanoramicScan &panoramicScan, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold):
+	mTiff{ panoramicScan.data(),
+		   panoramicScan.readFullHeight_pix(),
+		   panoramicScan.readFullWidth_pix(),
 		   1 },
 	mTileArray{ tileSizeij_pix,
 				{ Util::intceil(LOIxy_pix.XX / tileSizeij_pix.ii), Util::intceil(LOIxy_pix.YY / tileSizeij_pix.jj) },
 				overlapIJK_frac },
 	mThreshold{ threshold },
-	mPanoramicHeight_pix{ panoramicScanXY.readFullHeight_pix() },
-	mPanoramicWidth_pix{ panoramicScanXY.readFullWidth_pix() },
-	mNpixPanoramic{ panoramicScanXY.readFullHeight_pix() * panoramicScanXY.readFullWidth_pix() },
-	mAnchorPixel_pix{ panoramicScanXY.readFullHeight_pix() / 2,
-					  panoramicScanXY.readFullWidth_pix() / 2 }		//Set the anchor pixels to the center of the image
+	mPanoramicHeight_pix{ panoramicScan.readFullHeight_pix() },
+	mPanoramicWidth_pix{ panoramicScan.readFullWidth_pix() },
+	mNpixPanoramic{ panoramicScan.readFullHeight_pix() * panoramicScan.readFullWidth_pix() },
+	mAnchorPixel_pix{ panoramicScan.readFullHeight_pix() / 2,
+					  panoramicScan.readFullWidth_pix() / 2 }		//Set the anchor pixels to the center of the image
 {
 	if (tileSizeij_pix.ii <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be > 0");
@@ -460,10 +460,11 @@ void Boolmap::saveBoolmapToText(std::string filename, const OVERRIDE override)
 //Overlay a grid with the tiles on the stitched image
 void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override) const
 {
-	const U8 lineColor{ 100 };
-	const double lineThicknessFactor{ 0.1 };//If too small (<0.7), the grid will not show properly on ImageJ
-	const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ)) };
-	const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mTileArray.readTileArraySizeIJ(TileArray::Axis::II)) };
+	const U8 lineColor{ 200 };
+	const int lineThickness{ 6 };
+	//const double lineThicknessFactor{ 0.1 };//If too small (<0.7), the grid will not show properly on ImageJ
+	//const int lineThicknessVertical{ static_cast<int>(lineThicknessFactor * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ)) };
+	//const int lineThicknessHorizontal{ static_cast<int>(lineThicknessFactor * mTileArray.readTileArraySizeIJ(TileArray::Axis::II)) };
 
 	//Horizontal lines. II is the row index (along the image height) wrt the tile array
 # pragma omp parallel for schedule(dynamic)
@@ -473,7 +474,7 @@ void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override)
 		const int tileTopPos_pix{ tileCenterPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };		//Top pixels of the tile wrt the Tiff
 		const int tileBottomPos_pix{ tileCenterPos_pix.ii + mTileArray.readTileHeight_pix() / 2 };	//Bottom pixels of the tile wrt the Tiff
 		for (int iterCol_pix = 0; iterCol_pix < mPanoramicWidth_pix; iterCol_pix++)
-			for (int iterThickness = -lineThicknessHorizontal / 2; iterThickness < lineThicknessHorizontal / 2; iterThickness++)
+			for (int iterThickness = -lineThickness / 2; iterThickness < lineThickness / 2; iterThickness++)
 			{
 				const int iterTopRow_pix{ (tileTopPos_pix + iterThickness) * mPanoramicWidth_pix + iterCol_pix };
 				const int iterBottomRow_pix{ (tileBottomPos_pix + iterThickness) * mPanoramicWidth_pix + iterCol_pix };
@@ -494,7 +495,7 @@ void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override)
 		const int tileLeft{ tileCenterPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };			//Left pixels of the tile wrt the Tiff
 		const int tileRight{ tileCenterPos_pix.jj + mTileArray.readTileWidth_pix() / 2 };			//Right pixels of the tile wrt the Tiff
 		for (int iterRow_pix = 0; iterRow_pix < mPanoramicHeight_pix; iterRow_pix++)
-			for (int iterThickness = -lineThicknessVertical / 2; iterThickness < lineThicknessVertical / 2; iterThickness++)
+			for (int iterThickness = -lineThickness / 2; iterThickness < lineThickness / 2; iterThickness++)
 			{
 				const int iterLeftColumn_pix{ iterRow_pix * mPanoramicWidth_pix + tileLeft + iterThickness };
 				const int iterRightColumn_pix{ iterRow_pix * mPanoramicWidth_pix + tileRight + iterThickness };
@@ -903,7 +904,7 @@ double Action::CutSlice::readStageZheightForFacingTheBlade() const
 	return mStageZheightForFacingTheBlade;
 }
 
-void Action::OverviewScan::setParam(const int sliceNumber, const double planeZ)
+void Action::PanoramicScan::setParam(const int sliceNumber, const double planeZ)
 {
 	if (sliceNumber < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice number must be >= 0");
@@ -914,12 +915,12 @@ void Action::OverviewScan::setParam(const int sliceNumber, const double planeZ)
 	mPlaneZ = planeZ + 50. * um;
 }
 
-double Action::OverviewScan::readPlaneZ() const
+double Action::PanoramicScan::readPlaneZ() const
 {
 	return mPlaneZ;
 }
 
-int Action::OverviewScan::readSliceNumber() const
+int Action::PanoramicScan::readSliceNumber() const
 {
 	return mSliceNumber;
 }
@@ -960,10 +961,10 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << "******Equivalent sample plane Z = " << mAction.cutSlice.readPlaneZtoCut() / mm << " mm";
 		*fileHandle << "********\n";
 		break;
-	case Action::ID::OVW:
+	case Action::ID::PAN:
 		*fileHandle << convertActionIDtoString_(mActionID);
 		*fileHandle << std::setprecision(3);
-		*fileHandle << "******************************Overview scan at plane z = " << mAction.overviewScan.readPlaneZ() / mm << " mm";
+		*fileHandle << "******************************Panoramic scan at plane z = " << mAction.panoramicScan.readPlaneZ() / mm << " mm";
 		*fileHandle << "********************************\n";
 		break;
 	default:
@@ -1012,8 +1013,8 @@ std::string Sequencer::Commandline::convertActionIDtoString_(const Action::ID ac
 		return "ACQ";
 	case Action::ID::MOV:
 		return "MOV";
-	case Action::ID::OVW:
-		return "OVW";
+	case Action::ID::PAN:
+		return "PAN";
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
 	}
@@ -1039,7 +1040,7 @@ void Sequencer::generateCommandList()
 	std::cout << "Generating the command list..." << "\n";
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
-		overviewScanXY_();
+		panoramicScan_();
 
 		initializeIteratorIJ_();		//Reset the tile iterator after every cut
 		//The first fluor-marker on the list is read, then the second marker, etc
@@ -1050,9 +1051,9 @@ void Sequencer::generateCommandList()
 			{
 				while (mII >= 0 && mII < mTileArray.readTileArraySizeIJ(TileArray::Axis::II))	//X-stage iteration
 				{
-					//moveStage_({ mII, mJJ });
-					//acqStack_(iterFluorMarker);
-					//saveStack_();
+					moveStage_({ mII, mJJ });
+					acqStack_(iterFluorMarker);
+					saveStack_();
 					mII -= Util::convertScandirToInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the X-stage axis
 				}
 				mII += Util::convertScandirToInt(mIterScanDirXYZ.XX);		//Re-initialize II by going back one step to start from 0 or mTileArraySizeIJ.II - 1
@@ -1361,10 +1362,10 @@ void Sequencer::cutSlice_()
 	mIterStageZheightForFacingTheBlade += heightIncrease;
 }
 
-void Sequencer::overviewScanXY_()
+void Sequencer::panoramicScan_()
 {
-	Commandline commandline{ Action::ID::OVW };
-	commandline.mAction.overviewScan.setParam(mSliceCounter, mIterScanZi);
+	Commandline commandline{ Action::ID::PAN };
+	commandline.mAction.panoramicScan.setParam(mSliceCounter, mIterScanZi);
 	mCommandList.push_back(commandline);
 	mCommandCounter++;
 }

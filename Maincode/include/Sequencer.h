@@ -47,10 +47,10 @@ private:
 	int mFullWidth;
 };
 
-class PanoramicScanXY final: public QuickStitcher
+class PanoramicScan final: public QuickStitcher
 {
 public:
-	PanoramicScanXY(const POSITION2 ROIcenterXY, const FFOV2 ffov, const LENGTH2 pixelSizeXY, const LENGTH2 LOIxy);
+	PanoramicScan(const POSITION2 ROIcenterXY, const FFOV2 ffov, const LENGTH2 pixelSizeXY, const LENGTH2 LOIxy);
 	double determineInitialScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
 	double determineFinalScanPosX(const double travelOverhead, const SCANDIR scanDir) const;
 	int readNumberStageYpos() const;
@@ -73,7 +73,7 @@ class Boolmap final
 {
 public:
 	Boolmap(const TiffU8 &tiff, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
-	Boolmap(const PanoramicScanXY &panoramicScanXY, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
+	Boolmap(const PanoramicScan &panoramicScan, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	bool isTileBright(const TILEIJ tileIndicesIJ) const;
 	void saveBoolmapToText(std::string filename, const OVERRIDE override);
 	void saveTileGridOverlay(std::string filename, const OVERRIDE override) const;
@@ -118,7 +118,7 @@ private:
 
 namespace Action
 {
-	enum class ID { CUT, ACQ, SAV, MOV, OVW };
+	enum class ID { CUT, ACQ, SAV, MOV, PAN };
 	class MoveStage final
 	{
 	public:
@@ -169,7 +169,7 @@ namespace Action
 		double mStageZheightForFacingTheBlade;
 	};
 
-	class OverviewScan final
+	class PanoramicScan final
 	{
 	public:
 		void setParam(const int sliceNumber, const double planeZ);
@@ -193,12 +193,12 @@ public:
 			Action::MoveStage moveStage;
 			Action::AcqStack acqStack;
 			Action::CutSlice cutSlice;
-			Action::OverviewScan overviewScan;
+			Action::PanoramicScan panoramicScan;
 		} mAction;
 
 		Commandline(const Action::ID actionID);
 		void printToFile(std::ofstream *fileHandle) const;
-		void printParameters() const;
+		//void printParameters() const;
 	private:
 		std::string convertActionIDtoString_(const Action::ID actionID) const;
 	};
@@ -250,5 +250,5 @@ private:
 	void acqStack_(const int indexFluorMarker);
 	void saveStack_();
 	void cutSlice_();
-	void overviewScanXY_();
+	void panoramicScan_();
 };

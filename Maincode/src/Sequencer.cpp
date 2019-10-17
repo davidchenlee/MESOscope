@@ -362,10 +362,10 @@ LENGTH2 PanoramicScan::castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const
 
 #pragma region "Boolmap"
 //Lay a tile array over the center of the tiff. LOI is the length of interest
-Boolmap::Boolmap(const TiffU8 &tiff, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold) :
+Boolmap::Boolmap(const TiffU8 &tiff, const TILEDIM2 tileArraySizeIJ, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold) :
 	mTiff{ tiff },
 	mTileArray{ tileSizeij_pix ,
-				{ Util::intceil(LOIxy_pix.XX / tileSizeij_pix.ii), Util::intceil(LOIxy_pix.YY / tileSizeij_pix.jj) },
+				{ tileArraySizeIJ.II, tileArraySizeIJ.JJ },
 				overlapIJK_frac },
 	mThreshold{ threshold },
 	mPanoramicHeight_pix{ tiff.readHeightPerFrame_pix() },
@@ -386,13 +386,13 @@ Boolmap::Boolmap(const TiffU8 &tiff, const LENGTH2 LOIxy_pix, const PIXDIM2 tile
 	generateBoolmap_();
 }
 
-Boolmap::Boolmap(const PanoramicScan &panoramicScan, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold):
+Boolmap::Boolmap(const PanoramicScan &panoramicScan, const TILEDIM2 tileArraySizeIJ, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold):
 	mTiff{ panoramicScan.data(),
 		   panoramicScan.readFullHeight_pix(),
 		   panoramicScan.readFullWidth_pix(),
 		   1 },
 	mTileArray{ tileSizeij_pix,
-				{ Util::intceil(LOIxy_pix.XX / tileSizeij_pix.ii), Util::intceil(LOIxy_pix.YY / tileSizeij_pix.jj) },
+				{ tileArraySizeIJ.II, tileArraySizeIJ.JJ },
 				overlapIJK_frac },
 	mThreshold{ threshold },
 	mPanoramicHeight_pix{ panoramicScan.readFullHeight_pix() },
@@ -624,17 +624,17 @@ void Boolmap::generateBoolmap_()
 
 void Boolmap::fillTileMapHoles()
 {
-	TILEDIM2 tileArrayDim{ mTileArray.readTileArraySizeIJ() };
+	const TILEDIM2 tileArraySizeIJ{ mTileArray.readTileArraySizeIJ() };
 
-	std::vector<int> minII(tileArrayDim.JJ, tileArrayDim.II);	//min II for each JJ. Vector of length tileArrayDim.JJ initialized with the max II = tileArrayDim.II
-	std::vector<int> maxII(tileArrayDim.JJ, 0);					//max II for each JJ. Vector of length tileArrayDim.JJ initialized with the min II = 0
-	std::vector<int> minJJ(tileArrayDim.II, tileArrayDim.JJ);	//min JJ for each II. Vector of length tileArrayDim.II initialized with the max JJ = tileArrayDim.JJ
-	std::vector<int> maxJJ(tileArrayDim.II, 0);					//max JJ for each II. Vector of length tileArrayDim.II initialized with the min JJ = 0
+	std::vector<int> minII(tileArraySizeIJ.JJ, tileArraySizeIJ.II);	//min II for each JJ. Vector of length tileArraySizeIJ.JJ initialized with the max II = tileArraySizeIJ.II
+	std::vector<int> maxII(tileArraySizeIJ.JJ, 0);					//max II for each JJ. Vector of length tileArraySizeIJ.JJ initialized with the min II = 0
+	std::vector<int> minJJ(tileArraySizeIJ.II, tileArraySizeIJ.JJ);	//min JJ for each II. Vector of length tileArraySizeIJ.II initialized with the max JJ = tileArraySizeIJ.JJ
+	std::vector<int> maxJJ(tileArraySizeIJ.II, 0);					//max JJ for each II. Vector of length tileArraySizeIJ.II initialized with the min JJ = 0
 
 	//Find the min and max IIs and JJs
-	for (int II = 0; II < tileArrayDim.II; II++)
-		for (int JJ = 0; JJ < tileArrayDim.JJ; JJ++)
-			if (mIsBrightMap.at(II * tileArrayDim.JJ + JJ) == 1)
+	for (int II = 0; II < tileArraySizeIJ.II; II++)
+		for (int JJ = 0; JJ < tileArraySizeIJ.JJ; JJ++)
+			if (mIsBrightMap.at(II * tileArraySizeIJ.JJ + JJ) == 1)
 			{
 				if (II < minII.at(JJ))
 					minII.at(JJ) = II;
@@ -651,17 +651,17 @@ void Boolmap::fillTileMapHoles()
 	//	std::cout << minJJ.at(II) << "\n";
 
 	//Update mIsBrightMap with the holes filled
-	for (int II = 0; II < tileArrayDim.II; II++)
-		for (int JJ = 0; JJ < tileArrayDim.JJ; JJ++)
+	for (int II = 0; II < tileArraySizeIJ.II; II++)
+		for (int JJ = 0; JJ < tileArraySizeIJ.JJ; JJ++)
 			if (II >= minII.at(JJ) && II <= maxII.at(JJ) && JJ >= minJJ.at(II) && JJ <= maxJJ.at(II))
-				mIsBrightMap.at(II * tileArrayDim.JJ + JJ) = 1;
+				mIsBrightMap.at(II * tileArraySizeIJ.JJ + JJ) = 1;
 }
 
-void Boolmap::copyBoolmap(std::vector<bool> input)
+void Boolmap::copyBoolmap(std::vector<bool> &vec_input)
 {
-	input.clear();
+	vec_input.clear();
 	for (std::vector<int>::size_type iter = 0; iter != mIsBrightMap.size(); iter++)
-		input.push_back(mIsBrightMap.at(iter));
+		vec_input.push_back(mIsBrightMap.at(iter));
 }
 #pragma endregion "Boolmap"
 
@@ -1192,6 +1192,11 @@ int Sequencer::readTileArraySizeIJ(const TileArray::Axis axis) const
 	return mTileArray.readTileArraySizeIJ(axis);
 }
 
+TILEDIM2 Sequencer::readTileArraySizeIJ() const
+{
+	return mTileArray.readTileArraySizeIJ();
+}
+
 void Sequencer::initializeVibratomeSlice_()
 {
 	mIterScanZi = mSample.mSurfaceZ; 	//Initialize the Z-stage with the position of the surface of the sample
@@ -1323,7 +1328,7 @@ void Sequencer::acqStack_(const int indexFluorMarker)
 	//Read the corresponding laser configuration
 	const FluorMarkerList::FluorMarker fluorMarker{ mSample.readFluorMarker(indexFluorMarker) };
 
-	//The stages scan through a snake pattern by the saving is column by column
+	//The stages scan through a snake pattern but the saving is column by column
 	//Stack index for identifying the saved tiff file
 	const int stackIndex{ mJJ * readTileArraySizeIJ(TileArray::Axis::II) + mII };
 

@@ -72,14 +72,14 @@ private:
 class Boolmap final
 {
 public:
-	Boolmap(const TiffU8 &tiff, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
-	Boolmap(const PanoramicScan &panoramicScan, const LENGTH2 LOIxy_pix, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
+	Boolmap(const TiffU8 &tiff, const TILEDIM2 tileArraySizeIJ, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
+	Boolmap(const PanoramicScan &panoramicScan, const TILEDIM2 tileArraySizeIJ, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	bool isTileBright(const TILEIJ tileIndicesIJ) const;
 	void saveBoolmapToText(std::string filename, const OVERRIDE override);
 	void saveTileGridOverlay(std::string filename, const OVERRIDE override) const;
 	void saveTileMap(std::string filename, const OVERRIDE override) const;
 	void fillTileMapHoles();
-	void copyBoolmap(std::vector<bool> input);
+	void copyBoolmap(std::vector<bool> &vec_input);
 private:
 	const TiffU8 mTiff;
 	const TileArray mTileArray;
@@ -220,6 +220,7 @@ public:
 	int readNtotalCommands() const;
 	Commandline readCommandline(const int iterCommandline) const;
 	int readTileArraySizeIJ(const TileArray::Axis axis) const;
+	TILEDIM2 readTileArraySizeIJ() const;
 private:
 	const Sample mSample;									//Sample
 	const Stack mStack;										//Stack

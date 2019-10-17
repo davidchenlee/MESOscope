@@ -58,7 +58,8 @@ namespace Routines
 		case RUNMODE::AVG:
 			if(g_multibeam)
 				sleepTime_ms = 100;
-			else sleepTime_ms = 100;
+			else
+				sleepTime_ms = 100;
 			nSameLocation = 10;
 			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
 				stagePosXYZ.push_back(stackCenterXYZ);
@@ -334,7 +335,7 @@ namespace Routines
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };				//Width of a strip
 		const double fullHeight{ 53 * tileHeight };			//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
-		const double pixelSizeX{ 1.0 * um };				//WARNING: the image becomes distorted at the edges of the strip when pixelSizeX > 1 um (check this again)
+		const double pixelSizeX{ 1.0 * um };				//WARNING: the image becomes distorted at the edges of the strip when PANpixelSizeX > 1 um (check this again)
 		const double pixelSizeY{ 0.5 * um };
 		const int wavelength_nm{ 1040 };
 		const double laserPower{ 30. * mW };
@@ -351,7 +352,7 @@ namespace Routines
 		//RS
 		mesoscope.ResonantScanner::isRunning();				//To make sure that the RS is running
 
-		//SCANNERS. Keep them fixed at 0
+		//SCANNERS. Keep them fixed at amplitude 0
 		const double galvoScanAmplitude{ 0 };
 		const Galvo scanner{ realtimeSeq, galvoScanAmplitude };
 		const Galvo rescanner{ realtimeSeq, galvoScanAmplitude, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
@@ -404,11 +405,11 @@ namespace Routines
 			panoramicScan.saveToFile(filename, OVERRIDE::DIS);
 
 			//Tile size for the slow scan. Do not call the tile size from panoramicScan because the tiles are long strips. 
-			const PIXDIM2 ssTileSize_pix{ Util::intceil(tileHeight / pixelSizeX), Util::intceil(tileWidth / pixelSizeY) };
-			const TILEOVERLAP3 ssTileOverlapXYZ_frac{ 0.0, 0.0, 0.0 };
+			const PIXDIM2 overlayTileSize_pix{ Util::intceil(tileHeight / pixelSizeX), Util::intceil(tileWidth / pixelSizeY) };
+			const TILEOVERLAP3 overlayTileOverlapXYZ_frac{ 0.0, 0.0, 0.0 };
 			const double threshold{ 0.02 };
 
-			//Boolmap boolmap{ panoramicScan, ssTileSize_pix, ssTileOverlapXYZ_frac, threshold };
+			//Boolmap boolmap{ panoramicScan, overlayTileSize_pix, overlayTileOverlapXYZ_frac, threshold };
 			//boolmap.saveBoolmapToText("Boolmap_" + filename);
 			//boolmap.saveTileMap("TileArrayMap_" + filename);
 	}
@@ -422,17 +423,29 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const double stackDepth{ 100. * um };
 		const double pixelSizeZafterBinning{ 1.0 * um };												//Step size in the Z-stage axis
-		
+
+		//TILE SCAN
 		const int nFramesAfterBinning{ static_cast<int>(stackDepth / pixelSizeZafterBinning) };
 		const double pixelSizeXY{ 0.5 * um };
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 0.3 * mm, 0.2 * mm, 0.000 * mm };
+		const LENGTH3 LOIxyz{ 3.000 * mm, 1.000 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
 		const TILEOVERLAP3 stackOverlap_frac{ 0.15, 0.05, 0.50 };										//Stack overlap
+
+		//PANORAMIC SCAN
+		const double PANwidth{ 3.000 * mm };															//Total width of the panoramic scan
+		const double PANtileHeight{ heightPerFrame_pix * pixelSizeXY };
+		const double PANtileWidth{ widthPerFrame_pix * pixelSizeXY };									//Width of a strip of the panoramic scan
+		const double PANheight{ 53 * PANtileHeight };													//Total height of the panoramic scan = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
+		const double PANpixelSizeX{ 1.0 * um };															//WARNING: the image becomes distorted at the edges of the strip when PANpixelSizeX > 1 um (check this again)
+		const double PANpixelSizeY{ pixelSizeXY };
+		const double PANlaserPower{ 30. * mW };
+		const int PANwavelength_nm{ 1040 };
+		const double threshold{ 0.02 };
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -468,11 +481,13 @@ namespace Routines
 			POSITION2 tileCenterXY;
 			std::string shortName, longName;
 			SCANDIR iterScanDirZ{ ScanDirZini };
-			Logger datalog(g_currentSample.readName() + "_locations", OVERRIDE::DIS);
+			Logger datalogStacks(g_currentSample.readName() + "_stacks", OVERRIDE::DIS);
+			Logger datalogPanoramics(g_currentSample.readName() + "_panoramics", OVERRIDE::DIS);
 
-			const int tileArrayDimII{ sequence.readTileArraySizeIJ(TileArray::Axis::II) };
-			const int tileArrayDimJJ{ sequence.readTileArraySizeIJ(TileArray::Axis::JJ) };
-			std::vector<bool> vec_boolmap;
+			const TILEDIM2 tileArraySizeIJ{ sequence.readTileArraySizeIJ() };
+
+			//to allow passing the boolmap between actions
+			std::vector<bool> vec_boolmap(sequence.readTotalNumberOfStacks(), true);//Initialize it with 1s to allow skipping the panoramic scan
 
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
 			{
@@ -489,88 +504,93 @@ namespace Routines
 					tileIndexII = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::II);
 					tileIndexJJ = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::JJ);
 					tileCenterXY = commandline.mAction.moveStage.readTileCenterXY();
-					mesoscope.moveXY(tileCenterXY);
-					mesoscope.waitForMotionToStopAll();
+
+					if (Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ }))
+					{
+						mesoscope.moveXY(tileCenterXY);
+						mesoscope.waitForMotionToStopAll();
+					}
 					break;
 				case Action::ID::ACQ://Acquire a stack
-				if(1)
-				{
-					Action::AcqStack acqStack{ commandline.mAction.acqStack };
+					std::cout << "is (" << tileIndexII << "," << tileIndexJJ << ") bright? = " << Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ });
+					Util::pressAnyKeyToCont();
+
+					if (Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ }))
 					{
-						//Set the number of frames considering that binning will be performed
-						nFramesBinning = acqStack.readNframeBinning();
-						const int nFramesBeforeBinning{ nFramesAfterBinning * nFramesBinning };
-						realtimeSeq.configureFrames(heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesBeforeBinning, g_multibeam);
+						Action::AcqStack acqStack{ commandline.mAction.acqStack };
+						{
+							//Set the number of frames considering that binning will be performed
+							nFramesBinning = acqStack.readNframeBinning();
+							const int nFramesBeforeBinning{ nFramesAfterBinning * nFramesBinning };
+							realtimeSeq.configureFrames(heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesBeforeBinning, g_multibeam);
 
-						//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix	
-						const double pixelSizeZbeforeBinning{ stackDepth / nFramesBeforeBinning };
-						mesoscope.setVelSingle(AXIS::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
+							//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix	
+							const double pixelSizeZbeforeBinning{ stackDepth / nFramesBeforeBinning };
+							mesoscope.setVelSingle(AXIS::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
 
-						//These parameters must be accessible to the file saving block
-						stackIndex = acqStack.readStackIndex();
-						wavelength_nm = acqStack.readWavelength_nm();
-						scanZi = determineInitialScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
-						scanZf = determineFinalScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
+							//These parameters must be accessible to the file saving block
+							stackIndex = acqStack.readStackIndex();
+							wavelength_nm = acqStack.readWavelength_nm();
+							scanZi = determineInitialScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
+							scanZf = determineFinalScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
 
-						//Update the laser parameters
-						mesoscope.configure(wavelength_nm);									//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
-						scanPmin = acqStack.readScanPmin();
-						scanPexp = acqStack.readScanPexp();
-						mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(iterScanDirZ) * scanPexp);
+							//Update the laser parameters
+							mesoscope.configure(wavelength_nm);									//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
+							scanPmin = acqStack.readScanPmin();
+							scanPexp = acqStack.readScanPexp();
+							mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(iterScanDirZ) * scanPexp);
 
-						//SCANNERS
-						const Galvo scanner{ realtimeSeq, FFOVslowPerBeamlet / 2. };
-						Galvo rescanner{ realtimeSeq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
-					}
-					//Move the stage to the initial Z position
-					mesoscope.moveSingle(AXIS::ZZ, scanZi);
-					mesoscope.waitForMotionToStopAll();
+							//SCANNERS
+							const Galvo scanner{ realtimeSeq, FFOVslowPerBeamlet / 2. };
+							Galvo rescanner{ realtimeSeq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+						}
+						//Move the stage to the initial Z position
+						mesoscope.moveSingle(AXIS::ZZ, scanZi);
+						mesoscope.waitForMotionToStopAll();
 
-					realtimeSeq.initialize(MAINTRIG::STAGEZ, wavelength_nm, iterScanDirZ);	//Use the scan direction determined dynamically
-					mesoscope.openShutter();												//Re-open the Uniblitz shutter if closed by the pockels destructor
+						realtimeSeq.initialize(MAINTRIG::STAGEZ, wavelength_nm, iterScanDirZ);	//Use the scan direction determined dynamically
+						mesoscope.openShutter();												//Re-open the Uniblitz shutter if closed by the pockels destructor
 
-					//Print out the stackIndex starting from 1 (stackIndex indexes from 0, so add a 1) and the sliceNumber starting from 1 (sliceNumber indexes from 0, so add a 1)
-					std::cout << "Scanning stack ( " << tileIndexII << ", " << tileIndexJJ << " )\t" << std::to_string(sliceNumber + 1) << "/" << sequence.readTotalNumberOfSlices() << "\tstack = " <<
-																									  std::to_string(stackIndex + 1) << "/" << sequence.readNumberOfStacksPerSlice() << "\n";
+						//Print out the stackIndex starting from 1 (stackIndex indexes from 0, so add a 1) and the sliceNumber starting from 1 (sliceNumber indexes from 0, so add a 1)
+						std::cout << "Scanning slice = " << std::to_string(sliceNumber + 1) << "/" << sequence.readTotalNumberOfSlices() <<
+							"\tstack = " << std::to_string(stackIndex + 1) << "/" << sequence.readNumberOfStacksPerSlice() <<
+							"\tScanning index = (" << tileIndexII << "," << tileIndexJJ << ")\n";
 
-					//std::cout << "is bright? = " << Util::isBright(vec_boolmap, { tileArrayDimII ,tileArrayDimJJ }, { tileIndexII, tileIndexJJ });
-					//Util::pressAnyKeyToCont();
-
-					mesoscope.moveSingle(AXIS::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
-					realtimeSeq.downloadData();
-					reverseSCANDIR(iterScanDirZ);
+						mesoscope.moveSingle(AXIS::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
+						realtimeSeq.downloadData();
+						reverseSCANDIR(iterScanDirZ);
+					}//if
 					break;
-				}//if
-
 				case Action::ID::SAV:
+					if (Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ }))
 					{
-					//Paddle the number with zeros on the left
-					std::string sliceNumber_s{ std::to_string(sliceNumber) };
-					std::string sliceNumberPadded_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;	//3 digits in total
+						//Paddle the numbers with zeros on the left
+						std::string sliceNumber_s{ std::to_string(sliceNumber) };
+						std::string sliceNumberPadded_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;		//3 digits in total
 
-					//The stages scan through a snake pattern by the saving is column by column
-					std::string stackIndex_s{ std::to_string(stackIndex) };
-					std::string stackIndexPadded_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
+						//The stages scan through a snake pattern but the saving is column by column
+						std::string stackIndex_s{ std::to_string(stackIndex) };
+						std::string stackIndexPadded_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
 
-					std::string tileIndexI_s{ std::to_string(tileIndexII) };
-					std::string tileIndexIpadded_s = std::string(2 - tileIndexI_s.length(), '0') + tileIndexI_s;		//2 digits in total
+						std::string tileIndexI_s{ std::to_string(tileIndexII) };
+						std::string tileIndexIpadded_s = std::string(2 - tileIndexI_s.length(), '0') + tileIndexI_s;		//2 digits in total
 
-					std::string tileIndexJ_s{ std::to_string(tileIndexJJ) };
-					std::string tileIndexJpadded_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;		//2 digits in total
+						std::string tileIndexJ_s{ std::to_string(tileIndexJJ) };
+						std::string tileIndexJpadded_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;		//2 digits in total
 
 
-					shortName = sliceNumberPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + stackIndexPadded_s;
-					longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_Pexp=" + Util::toString(scanPexp / um, 0) + "um" +
-						"_x=" + Util::toString(tileCenterXY.XX / mm, 3) +
-						"_y=" + Util::toString(tileCenterXY.YY / mm, 3) +
-						"_zi=" + Util::toString(scanZi / mm, 4) + "_zf=" + Util::toString(scanZf / mm, 4) +
-						"_Step=" + Util::toString(pixelSizeZafterBinning / mm, 4) + "_bin=" + Util::toString(nFramesBinning, 0);
+						shortName = sliceNumberPadded_s + "_" + stackIndexPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm);
+						longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_Pexp=" + Util::toString(scanPexp / um, 0) + "um" +
+							"_x=" + Util::toString(tileCenterXY.XX / mm, 3) +
+							"_y=" + Util::toString(tileCenterXY.YY / mm, 3) +
+							"_zi=" + Util::toString(scanZi / mm, 4) + "_zf=" + Util::toString(scanZf / mm, 4) +
+							"_Step=" + Util::toString(pixelSizeZafterBinning / mm, 4) + "_bin=" + Util::toString(nFramesBinning, 0);
 
 						Image image{ realtimeSeq };
 						image.acquire();
 						image.binFrames(nFramesBinning);
 						image.save(shortName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
-						datalog.record(shortName + "\t(" + tileIndexIpadded_s + "," + tileIndexJpadded_s + ")\t" + longName);
+						datalogStacks.record(shortName + "\t(" + tileIndexIpadded_s + "," + tileIndexJpadded_s + ")\t" + longName);
 						std::cout << "\n";
 					}
 					break;
@@ -578,51 +598,35 @@ namespace Routines
 				{
 					const double planeZtoCut{ commandline.mAction.cutSlice.readStageZheightForFacingTheBlade() };
 
-					std::cout << "Cutting slice = " << std::to_string(sliceNumber+1) << "/" << sequence.readTotalNumberOfSlices() << "\n";
+					std::cout << "Cutting slice = " << std::to_string(sliceNumber + 1) << "/" << sequence.readTotalNumberOfSlices() << "\n";
 					mesoscope.sliceTissue(planeZtoCut);
 
 					//Reset the scan direction
 					iterScanDirZ = ScanDirZini;
-				}		
-					break;
+				}
+				break;
 				case Action::ID::PAN:
 				{
-					//Paddle the slice number with zeros on the left
-					const int sliceNum{ commandline.mAction.panoramicScan.readSliceNumber() };
-					std::string sliceNum_s{ std::to_string(sliceNum) };
-					std::string sliceNumPadded_s = std::string(3 - sliceNum_s.length(), '0') + sliceNum_s;	//3 digits in total
-
-					const double planeZ{ commandline.mAction.panoramicScan.readPlaneZ() };
-					const double fullWidth{ 0.150 * mm };													//Total width of the tile array
-
+					const double PANplaneZ{ commandline.mAction.panoramicScan.readPlaneZ() };
 					SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };												//Initial scan direction of stage 
-					const double tileHeight{ 280. * um };
-					const double tileWidth{ 150. * um };													//Width of a strip
-					const double fullHeight{ 53 * tileHeight };												//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
-					const double pixelSizeX{ 1.0 * um };													//WARNING: the image becomes distorted at the edges of the strip when pixelSizeX > 1 um (check this again)
-					const double pixelSizeY{ 0.5 * um };
-					const double OVWlaserPower{ 30. * mW };
-					const int OVWwavelength_nm{ 1040 };
 
-					POSITION3 stackCenterXYZ{ g_stackCenterXYZ };
-					PanoramicScan panoramicScan{ { stackCenterXYZ.XX, stackCenterXYZ.YY }, { tileHeight, tileWidth }, { pixelSizeX, pixelSizeY }, { fullHeight, fullWidth } };
-
-					//CONTROL SEQUENCE. The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
+					//CONTROL SEQUENCE. The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix
+					PanoramicScan panoramicScan{ { g_stackCenterXYZ.XX, g_stackCenterXYZ.YY }, { PANtileHeight, PANtileWidth }, { PANpixelSizeX, PANpixelSizeY }, { PANheight, PANwidth } };
 					realtimeSeq.configureFrames(2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix() / 2, 0);
-					mesoscope.configure(OVWwavelength_nm);
-					mesoscope.setPower(OVWlaserPower);
+					mesoscope.configure(PANwavelength_nm);
+					mesoscope.setPower(PANlaserPower);
 
-					//SCANNERS. Keep them fixed at 0
+					//SCANNERS. Keep them fixed at amplitude 0
 					const Galvo scanner{ realtimeSeq, 0 };
 					const Galvo rescanner{ realtimeSeq, 0, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 					//STAGES
-					mesoscope.moveXYZ({ stackCenterXYZ.XX, stackCenterXYZ.YY, planeZ });					//Move the stage to the initial position
+					mesoscope.moveXYZ({ g_stackCenterXYZ.XX, g_stackCenterXYZ.YY, PANplaneZ });				//Move the stage to the initial position
 					mesoscope.waitForMotionToStopAll();
 					Sleep(500);																				//Give the stages enough time to settle at the initial position
-					mesoscope.setVelSingle(AXIS::XX, pixelSizeX / g_lineclockHalfPeriod);					//Set the vel for imaging
+					mesoscope.setVelSingle(AXIS::XX, PANpixelSizeX / g_lineclockHalfPeriod);				//Set the vel for imaging
 
-					mesoscope.openShutter();	//Open the shutter. The destructor will close the shutter automatically
+					mesoscope.openShutter();																//Open the shutter. The destructor will close the shutter automatically
 
 					//LOCATIONS on the sample to image
 					const int nLocations{ panoramicScan.readNumberStageYpos() };
@@ -647,41 +651,47 @@ namespace Routines
 
 						Image image{ realtimeSeq };
 						image.acquireVerticalStrip(iterScanDirX);
-						image.correctRSdistortion(tileWidth);						//Correct the image distortion induced by the nonlinear scanning of the RS
-						panoramicScan.push(image.data(), { 0, iterLocation });	//for now, only allow to stack up strips to the right
+						image.correctRSdistortion(PANtileWidth);					//Correct the image distortion induced by the nonlinear scanning of the RS
+						panoramicScan.push(image.data(), { 0, iterLocation });		//for now, only allow to stack up strips to the right
 
 						reverseSCANDIR(iterScanDirX);
 						Util::pressESCforEarlyTermination();
 					}
 					mesoscope.closeShutter();
 
-					const std::string filename{ sliceNumPadded_s + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(OVWwavelength_nm, 0) +
-						"nm_P=" + Util::toString(OVWlaserPower / mW, 1) +
+					//SAVE THE FILES
+					const int PANsliceNumber{ commandline.mAction.panoramicScan.readSliceNumber() };
+					std::string PANsliceNumber_s{ std::to_string(PANsliceNumber) };
+					std::string PANsliceNumberPadded_s = std::string(3 - PANsliceNumber_s.length(), '0') + PANsliceNumber_s;	//Paddle with zeros on the left. 3 digits in total
+
+					const std::string PANshortName{ PANsliceNumberPadded_s };
+					const std::string PANlongName{ mesoscope.readCurrentLaser_s(true) + Util::toString(PANwavelength_nm, 0) +
+						"nm_P=" + Util::toString(PANlaserPower / mW, 1) +
 						"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
 						"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
-						"_z=" + Util::toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + Util::toString(pixelSizeX / mm, 4) };
+						"_z=" + Util::toString(PANplaneZ / mm, 4) + "_Step=" + Util::toString(PANpixelSizeX / mm, 4) };
 					std::cout << "Saving the stack...\n";
-					panoramicScan.saveToFile(filename, OVERRIDE::DIS);
+					panoramicScan.saveToFile(PANshortName, OVERRIDE::DIS);
 
-					//Tile size for the slow scan. Do not call the tile size from panoramicScan because the tiles are long strips. 
-					const PIXDIM2 ssTileSize_pix{ Util::intceil(tileHeight / pixelSizeX), Util::intceil(tileWidth / pixelSizeY) };//HERE I SHOULD REALLY USE THE PARAMETERS OF THE STACKS (WITH HALF THE HEIGHT)
-					const double threshold{ 0.02 };
-					Boolmap boolmap{ panoramicScan, { LOIxyz.XX/ (2*pixelSizeXY), LOIxyz.YY / pixelSizeXY}, ssTileSize_pix, stackOverlap_frac, threshold };//NOTE THE FACTOR OF 2 IN X
+					datalogPanoramics.record(PANshortName + "\t" + PANlongName);
+
+					//DETERMINE THE BOOLMAP
+					const LENGTH2 LOIxy_pix{ LOIxyz.XX / (2 * pixelSizeXY), LOIxyz.YY / pixelSizeXY };
+					const PIXDIM2 overlayTileSize_pix{ heightPerFrame_pix / 2, widthPerFrame_pix };											//Tile size for the slow scan. Do not call the tile size from panoramicScan because the tiles are long strips
+																																			//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
+					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };	//NOTE THE FACTOR OF 2 IN X
+					boolmap.fillTileMapHoles();
 					boolmap.copyBoolmap(vec_boolmap);//Save the boolmap for the next iterations
 
 					//For debugging
 					boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
 					boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
 				}
-					break;
+				break;
 				default:
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
 				}//switch
 
-				//Stopwatch
-				//auto t_start{ std::chrono::high_resolution_clock::now() };
-				//double duration{ std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count() };
-				//std::cout << "Elapsed time: " << duration << " ms" << "\n";
 				Util::pressESCforEarlyTermination();
 			}//Commands-or
 
@@ -1245,9 +1255,9 @@ namespace TestRoutines
 		std::time_t timenow{ std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) };
 		std::tm buf;
 		localtime_s(&buf, &timenow);
-		auto ss{ std::put_time(&buf, "%Y-%m-%d %X") };
-		std::cout << ss << std::endl;
-		fileHandle << ss << "\n";
+		auto timeStamp{ std::put_time(&buf, "%Y-%m-%d %X") };
+		std::cout << timeStamp << std::endl;
+		fileHandle << timeStamp << "\n";
 
 		fileHandle.close();
 		Util::pressAnyKeyToCont();
@@ -1255,7 +1265,7 @@ namespace TestRoutines
 
 	void correctImage()
 	{
-		std::string inputFilename{ "Liver_V750nm_Pmin=144.0mW_Pexp=120um_x=47.500_y=26.050_zi=19.7000_zf=19.8100_Step=0.0010_bin=2" };
+		std::string inputFilename{ "Liver_F1040nm_Pmin=880.0mW_Pexp=300um_x=47.400_y=26.050_zi=19.8500_zf=19.8500_Step=0.0010_avg=10" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		image.correctRSdistortionGPU(150. * um);
@@ -1334,29 +1344,31 @@ namespace TestRoutines
 		Util::pressAnyKeyToCont();
 	}
 
-	void boolmapSample()
+	void boolmap()
 	{
 		//g_folderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
-		std::string inputFilename{ "000_F1040nm_P=30.0mW_xi=39.120_xf=55.680_yi=26.050_yf=26.050_z=19.8150_Step=0.0010" };
+		std::string inputFilename{ "000" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
-		//The tile array for the slow scan (ss) does not necessarily coincide with the tile array used in fast scanning
-		const PIXDIM2 ssTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because contX uses pixelSizeX=1.0 um for speed and not 0.5 um
-		const TILEOVERLAP3 ssOverlapIJK_frac{ 0.15, 0.05, 0.0 };
+		//The tile array for the slow scan (overlay tile array) does not necessarily coincide with the tile array used in fast scanning
+		const PIXDIM2 overlayTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because contX uses PANpixelSizeX=1.0 um for speed and not 0.5 um
+		const TILEDIM2 overlayTileArraySizeIJ{ 12, 7 };
+		const TILEOVERLAP3 overlayOverlapIJK_frac{ 0.15, 0.05, 0.0 };
 		const double threshold{ 0.02 };
-
-		//image.readHeightPerFrame_pix()
-		LENGTH2 LOIxy_pix{ 280*2, 300 }; //Length of interest
-		//LENGTH2 LOIxy_pix{ 1.3 * image.readHeightPerFrame_pix(), 1.1 * image.readWidthPerFrame_pix() }; //Length of interest
 		
-		Boolmap boolmap{ image, LOIxy_pix, ssTileSize_pix, ssOverlapIJK_frac, threshold };
+		Boolmap boolmap{ image, overlayTileArraySizeIJ, overlayTileSize_pix, overlayOverlapIJK_frac, threshold };
 		boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
 		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
 		boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
 		boolmap.fillTileMapHoles();
 		boolmap.saveBoolmapToText("Boolmap_filled", OVERRIDE::EN);
 		//boolmap.saveTileMap("TileMap_filled", OVERRIDE::EN);
+
+		std::vector<bool> vec_boolmap;
+		boolmap.copyBoolmap(vec_boolmap);
+		Util::saveBoolmapToText("Boolmap_filled_copy", vec_boolmap, overlayTileArraySizeIJ, OVERRIDE::EN);
+
 		Util::pressAnyKeyToCont();
 	}
 

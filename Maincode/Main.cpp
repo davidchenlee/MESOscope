@@ -8,10 +8,10 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			//Routines::stepwiseScan(fpga);
-			Routines::contScanZ(fpga);
+			Routines::stepwiseScan(fpga);
+			//Routines::contScanZ(fpga);
 			//Routines::panoramicScan(fpga);
-			//Routines::sequencer(fpga, 0);
+			//Routines::sequencer(fpga, 1);
 			//Routines::liveScan(fpga);
 
 			//TESTS
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::correctImage();
 			//TestRoutines::correctImageBatch();
 			//TestRoutines::quickStitcher();
-			//TestRoutines::boolmapSample();
+			//TestRoutines::boolmap();
 			//TestRoutines::vectorOfObjects();
 			//TestRoutines::convexHull();
 

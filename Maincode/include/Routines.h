@@ -55,7 +55,7 @@ namespace TestRoutines
 	void correctImage();
 	void correctImageBatch();
 	void quickStitcher();
-	void boolmapSample();
+	void boolmap();
 	void vectorOfObjects();
 	void convexHull();
 

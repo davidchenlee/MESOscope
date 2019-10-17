@@ -66,7 +66,7 @@ namespace Constants
 	//If 'mVoltagePerDistance' is too large, the top beads in the Tiff leak through the 'i-1' channel and the bottom beads leak through the 'i+1' channels
 	//If 'mVoltageOffset' is too large, the bead signal shifts towards channel 1
 	//The format is GALVOcalib { double voltagePerDistance, double voltageOffset };
-	extern const GALVOcalib g_rescannerCalibV750nm{ 0.300 * g_scannerCalib.voltagePerDistance, 0.045 * V };		//VISION. Last calib 20191008
+	extern const GALVOcalib g_rescannerCalibV750nm{ 0.300 * g_scannerCalib.voltagePerDistance, 0.07 * V };		//VISION. Last calib 20191008
 	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.040 * V };		//VISION. Last calib 20191008
 	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.075 * V };	//VISION. I just copied the calib from Fidelity
 	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.320 * g_scannerCalib.voltagePerDistance, 0.075 * V };	//FIDELITY. Last calib 20191008

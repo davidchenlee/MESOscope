@@ -254,7 +254,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -894,9 +894,9 @@ namespace TestRoutines
 	void galvosSync(const FPGA &fpga)
 	{
 		const double pixelSizeXY{ 0.5 * um };
-		const int heightPerFrame_pix{ 35 };
+		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
-		const int nFramesCont{ 1 };
+		const int nFramesCont{ 10 };
 
 		//CREATE THE CONTROL SEQUENCE
 		RTseq realtimeSeq{ fpga, LINECLOCK::FG, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont, g_multibeam };
@@ -913,7 +913,7 @@ namespace TestRoutines
 	}
 
 	//Test the synchronization of the 2 galvos and the laser
-	void gavosLaserSync(const FPGA &fpga)
+	void galvosLaserSync(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
@@ -1053,8 +1053,8 @@ namespace TestRoutines
 		Pockels pockelsFidelity{ realtimeSeq, 1040, Laser::ID::FIDELITY };
 		Pockels pockels{ pockelsFidelity };
 
-		//pockels.pushVoltageSinglet(8 * us, 0.0 * V, OVERRIDE::DIS);
-		pockels.pushPowerSinglet(8 * us, 000. * mW, OVERRIDE::DIS);
+		pockels.pushVoltageSinglet(3.0 * V);
+		//pockels.pushPowerSinglet(000. * mW);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		realtimeSeq.run();
@@ -1076,7 +1076,7 @@ namespace TestRoutines
 		for (double voltage_V = 0; voltage_V < 3.5; voltage_V +=0.2)
 		{
 			std::cout << "Current voltage = " << voltage_V << " V\n";
-			pockels.pushVoltageSinglet(8 * us, voltage_V * V, OVERRIDE::DIS);
+			pockels.pushVoltageSinglet(voltage_V * V);
 			//realtimeSeq.run();
 			//Sleep(30000);
 		}
@@ -1085,7 +1085,6 @@ namespace TestRoutines
 	
 		Util::pressAnyKeyToCont();
 	}
-
 
 	void pockelsRamp(const FPGA &fpga)
 	{
@@ -1100,7 +1099,7 @@ namespace TestRoutines
 		//POCKELS
 		const int wavelength_nm{ 1040 };
 		Pockels pockels{ realtimeSeq, wavelength_nm, Laser::ID::FIDELITY };
-		const double Pi{ 800. * mW };
+		const double Pi{ 100. * mW };
 		//const double Pf{ 1000. * mW };
 		//const SCANDIR scanDirZ{ SCANDIR::UPWARD };
 		//const double laserPi = determineInitialLaserPower(Pi, Pf - Pi, scanDirZ);
@@ -1108,17 +1107,15 @@ namespace TestRoutines
 
 		//std::cout << "Pi = " << laserPi << "\n";
 		//std::cout << "Pf = " << laserPf << "\n";
-		//pockels.pushPowerLinearScaling(laserPi, laserPf);					//Linearly scale the laser power from the first to the last frame
-		pockels.pushPowerExponentialScaling(Pi, 1. * um, 300. * um);
+		//pockels.linearPowerRampAcrossFrames(laserPi, laserPf);					//Linearly scale the laser power from the first to the last frame
+		pockels.exponentialPowerRampAcrossFrames(Pi, 1. * um, 150. * um);
 
-
-		//pockels.pushPowerLinearScaling(0.96 * Pf, Pi);
-
+		//pockels.linearPowerRampAcrossFrames(0.96 * Pf, Pi);
 		//pockels.pushPowerSinglet(400 * us, Pi, OVERRIDE::EN);
 
 		//Test the voltage setpoint
 		//pockels.pushVoltageSinglet(8* us, 0.0 * V, OVERRIDE::EN);
-		//pockels.pushVoltageLinearRamp(0.5 * V, 1.0 * V);					//Linearly scale the pockels voltage from the first to the last frame
+		//pockels.linearVoltageRampAcrossFrames(4. * V, 2. * V);					//Linearly scale the pockels voltage from the first to the last frame
 
 		//EXECUTE THE CONTROL SEQUENCE
 		realtimeSeq.run();
@@ -1166,7 +1163,7 @@ namespace TestRoutines
 
 		//POCKELS
 		Pockels pockels{ realtimeSeq, 920, Laser::ID::VISION };
-		pockels.pushPowerSinglet(8 * us, 200 * mW, OVERRIDE::DIS);
+		pockels.pushPowerSinglet(200 * mW);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		pockels.setShutter(true);

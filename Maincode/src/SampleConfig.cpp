@@ -3,7 +3,7 @@ const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { -1.
 const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };	//Soft limit of the stage for the oil container
 
 //const extern POSITION3 g_stackCenterXYZ{ ((40.+52.)/2 + 0) * mm, ((21.+28.)/2 + 0.000)* mm, (19.720 + 0.000) * mm };//For Liver
-const extern POSITION3 g_stackCenterXYZ{ (47.600 - 0*0.300) * mm, (26.050 - 0.500) * mm, (19.825 + 0.000) * mm };//For Liver
+const extern POSITION3 g_stackCenterXYZ{ (47.600 + 1*0.300) * mm, (26.050 - 0.500) * mm, (19.825 + 0.000) * mm };//For Liver
 
 #pragma region "FluorMarkerList"
 FluorMarkerList::FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList) :
@@ -161,10 +161,10 @@ const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", Petri
 #endif//fluorescent slide or beads
 */
 
-const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "TDT", 1040, Util::multiply16X(60. * mW), 300. * um, 4 },
-																							          { "DAPI", 750, Util::multiply16X(9. * mW), 120. * um, 2 } }} };
+const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "TDT", 1040, Util::multiply16X(55. * mW), 300. * um, 4 },
+																							          { "DAPI", 750, Util::multiply16X(12. * mW), 120. * um, 2 } }} };
 
-//const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "TDT", 1040, Util::multiply16X(60. * mW), 300. * um, 4 } }} };
+//const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "TDT", 1040, Util::multiply16X(55. * mW), 300. * um, 4 } }} };
 //const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "DAPI", 750, Util::multiply16X(9. * mW), 120. * um, 2 } }} };
 
 #else//singlebeam

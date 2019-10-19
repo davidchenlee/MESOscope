@@ -668,25 +668,14 @@ void RTseq::pushDigitalSinglet(const RTCHAN chan, double timeStep, const bool DO
 	mVec_queue.at(static_cast<U8>(chan)).push_back(FPGAfunc::packDigitalSinglet(timeStep, DO));
 }
 
-void RTseq::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override)
+void RTseq::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO)
 {
 	if (timeStep < g_tMinAO)
 	{
 		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << g_tMinAO / us << " us\n";
 		timeStep = g_tMinAO;
 	}
-
-	//Clear the current content in the queue
-	if (override == OVERRIDE::EN)
-		mVec_queue.at(static_cast<U8>(chan)).clear();
-
 	mVec_queue.at(static_cast<U8>(chan)).push_back(FPGAfunc::packAnalogSinglet(timeStep, AO));
-}
-
-//Push a fixed-point number. For scaling the pockels output
-void RTseq::pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor)
-{
-	mVec_queue.at(static_cast<U8>(chan)).push_back(static_cast<U32>(Util::doubleToFx2p14(scalingFactor)));
 }
 
 void RTseq::pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override)

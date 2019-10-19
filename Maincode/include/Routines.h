@@ -29,7 +29,7 @@ namespace TestRoutines
 	void fineTuneScanGalvo(const FPGA &fpga);
 	void resonantScanner(const FPGA &fpga);
 	void galvosSync(const FPGA &fpga);
-	void gavosLaserSync(const FPGA &fpga);
+	void galvosLaserSync(const FPGA &fpga);
 
 	//Stages
 	void stagePosition();

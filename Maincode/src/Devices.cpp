@@ -1607,38 +1607,32 @@ Pockels::Pockels(RTseq &realtimeSeq, const int wavelength_nm, const Laser::ID la
 	{
 	case Laser::ID::VISION:
 		mPockelsRTchan = RTseq::RTCHAN::VISION;
-		mScalingRTchan = RTseq::RTCHAN::SCALINGVISION;
 		break;
 	case Laser::ID::FIDELITY:
 		if (wavelength_nm != 1040)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The wavelength of FIDELITY can not be different from 1040 nm");
 		mPockelsRTchan = RTseq::RTCHAN::FIDELITY;
-		mScalingRTchan = RTseq::RTCHAN::SCALINGFIDELITY;
 		break;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected pockels cell unavailable");
 	}
 
 	//Initialize all the scaling factors to 1.0. In LV, I could not sucessfully default the LUT to 0d16384 = 0b0100000000000000 = 1 for a fixed point Fx2.14
-	for (int ii = 0; ii < mRTseq.mNframes; ii++)
-		mRTseq.pushAnalogSingletFx2p14(mScalingRTchan, 1.0);
+	//for (int ii = 0; ii < mRTseq.mNframes; ii++)
+		//mRTseq.pushAnalogSingletFx2p14(mScalingRTchan, 1.0);
 }
 
-void Pockels::pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const
+void Pockels::pushVoltageSinglet(const double AO) const
 {
-	if (timeStep <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The time step must be > 0");
 	if (AO < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The control voltage must be >= 0");
 
-	mRTseq.pushAnalogSinglet(mPockelsRTchan, timeStep, AO, override);
+	//mTimeStep does not have any effect because the pockels AO is kept constant throughout each frame (see LV)
+	mRTseq.pushAnalogSinglet(mPockelsRTchan, mTimeStep, AO);
 }
 
-void Pockels::pushPowerSinglet(const double timeStep, const double laserPower, const OVERRIDE override) const
+void Pockels::pushPowerSinglet(const double laserPower) const
 {
-	if (timeStep <= 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The time step must be > 0");
-
 	double maxPower;				//Softlimit for the laser power					
 	if (mRTseq.mMultibeam)
 		maxPower = mMaxPower16X;	//Multibeam		
@@ -1648,7 +1642,8 @@ void Pockels::pushPowerSinglet(const double timeStep, const double laserPower, c
 	if (laserPower < 0 || laserPower > maxPower)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be in the range [0-" + std::to_string(static_cast<int>(maxPower / mW)) + "] mW");
 
-	mRTseq.pushAnalogSinglet(mPockelsRTchan, timeStep, convertPowerToVolt_(laserPower), override);
+	//mTimeStep does not have any effect because the pockels AO is kept constant throughout each frame (see LV)
+	mRTseq.pushAnalogSinglet(mPockelsRTchan, mTimeStep, convertPowerToVolt_(laserPower));
 }
 
 void Pockels::setVoltageToZero() const
@@ -1656,77 +1651,53 @@ void Pockels::setVoltageToZero() const
 	mRTseq.pushAnalogSinglet(mPockelsRTchan, g_tMinAO, 0 * V);
 }
 
-/*
-//Linearly scale the pockels voltage from the first to the last frame
-void Pockels::voltageLinearScaling(const double Vi, const double Vf) const
+//Linearly vary the pockels voltage from the first to the last frame
+void Pockels::linearVoltageRampAcrossFrames(const double Vi, const double Vf) const
 {
-	if (mRTseq.mNframes < 2)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
+	if (Vi < 0 || Vf < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pockels voltage must be >= 0");
 
-	//Make sure that Fx2p14 will not overflow
-	const double Vratio{ Vf / Vi };
-	if (Vratio > 4)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
+	if (mRTseq.mNframes < 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
 
-	//Delete the default scaling factors = 1.0 created in the Pockels constructor
-	mRTseq.clearQueue(mScalingRTchan);
-
-	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
+	//Clear the current content (if any) in the queue as precaution
+	mRTseq.clearQueue(mPockelsRTchan);
 
 	//Push the scaling factors
 	for (int ii = 0; ii < mRTseq.mNframes; ii++)
-		mRTseq.pushAnalogSingletFx2p14(mScalingRTchan, 1. + (Vratio - 1) / (mRTseq.mNframes - 1) * ii);
-
-	//Enable scaling the pockels on the FPGA (see the LV implementation)
-	mRTseq.mFpga.enablePockelsScaling();
+		pushVoltageSinglet( Vi + (Vf - Vi) / (mRTseq.mNframes - 1) * ii);
 }
 
-//Linearly scale the laser power from the first to the last frame
-void Pockels::pushPowerLinearScaling(const double Pi, const double Pf) const
+//Linearly vary the laser power from the first to the last frame
+void Pockels::linearPowerRampAcrossFrames(const double Pi, const double Pf) const
 {
 	if (Pi < 0 || Pf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be >= 0");
 
-	if (mRTseq.mNframes < 2)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
+	if (mRTseq.mNframes < 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
 
-	//Delete the default scaling factors = 1.0 created in the Pockels constructor
-	mRTseq.clearQueue(mScalingRTchan);
+	//Clear the current content (if any) in the queue as precaution
+	mRTseq.clearQueue(mPockelsRTchan);
 
 	const double Vi{ convertPowerToVolt_(Pi) };
-
-	pushVoltageSinglet(timeStep, Vi, OVERRIDE::EN);	//Set the laser power for the first frame
-
 	for (int ii = 0; ii < mRTseq.mNframes; ii++)
 	{
-		const double VV{ convertPowerToVolt_(Pi + (Pf - Pi) / (mRTseq.mNframes - 1) * ii) };
-		const double Vratio{ VV / Vi };
-
-		//Make sure that Fx2p14 does not overflow
-		if (Vratio > 4)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
-		
-		//Push the scaling factors across the frames
-		mRTseq.pushAnalogSingletFx2p14(mScalingRTchan, Vratio);
+		const double Vf{ convertPowerToVolt_(Pi + (Pf - Pi) / (mRTseq.mNframes - 1) * ii) };	
+		pushVoltageSinglet(Vi + (Vf - Vi) / (mRTseq.mNframes - 1) * ii);
 	}
+}
 
-	//Enable scaling the pockels on the FPGA (see the LV implementation)
-	mRTseq.mFpga.enablePockelsScaling();
-}*/
-
-//Exponentially scale the laser power from the first to the last frame
-void Pockels::pushPowerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const
+//Exponentially vary the laser power from the first to the last frame
+void Pockels::exponentialPowerRampAcrossFrames(const double Pmin, const double interframeDistance, const double decayLengthZ) const
 {
-	if (mRTseq.mNframes < 2)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 1");
+	if (mRTseq.mNframes < 1)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
 	if (decayLengthZ == 0 )
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The exponential length must be > 0 or < 0");
 
-	//Delete the default scaling factors = 1.0 created in the Pockels constructor
-	mRTseq.clearQueue(mScalingRTchan);
-
-	const double Vmin{ convertPowerToVolt_(Pmin) };
-	pushVoltageSinglet(timeStep, Vmin, OVERRIDE::EN);	//Set the laser power for the first frame
+	//Clear the current content (if any) in the queue as precaution
+	mRTseq.clearQueue(mPockelsRTchan);
 
 	//Softlimit for the laser power
 	double maxPower;
@@ -1751,45 +1722,15 @@ void Pockels::pushPowerExponentialScaling(const double Pmin, const double interf
 			const double Vmax{ convertPowerToVolt_(Pmax) };
 			VV = convertPowerToVolt_(Util::exponentialFunction(Pmax, ii * interframeDistance, decayLengthZ));	//Exponential decay because decayLengthZ < 0
 		}
-
-		//Make sure that Fx2p14 does not overflow
-		const double Vratio{ VV / Vmin };
-		if (Vratio > 4)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
-
-		//Push the scaling factors for the frames
-		mRTseq.pushAnalogSingletFx2p14(mScalingRTchan, Vratio);
+		pushVoltageSinglet(VV);
+		//std::cout << VV << "\n";//For debugging
 	}
-
-	//Enable scaling the pockels on the FPGA (see the LV implementation)
-	mRTseq.mFpga.enablePockelsScaling();
-
 }
 
 void Pockels::setShutter(const bool state) const
 {
 	mShutter.setState(state);
 }
-
-/*
-//Ramp up or down the pockels within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
-void Pockels::voltageLinearRampInFrame(const double timeStep, const double rampDuration, const double Vi, const double Vf) const
-{
-	if (Vi < 0 || Vf < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
-
-	mRTseq.pushLinearRamp(mPockelsRTchan, timeStep, rampDuration, Vi, Vf);
-}
-
-//Ramp up or down the pockels within a frame. The bandwidth is limited by the HV amp = 40 kHz ~ 25 us
-void  Pockels::powerLinearRampInFrame(const double timeStep, const double rampDuration, const double Pi, const double Pf) const
-{
-	if (Pi < 0 || Pf < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Pockels cell's control voltage must be positive");
-
-	mRTseq.pushLinearRamp(mPockelsRTchan, timeStep, rampDuration, convertPowerToVolt_(Pi), convertPowerToVolt_(Pf));
-}
-*/
 
 // power = powerAmplitude * sin( angularFreq * (V - Vphase))^2 + powerMin;
 double Pockels::convertPowerToVolt_(const double power) const
@@ -1936,20 +1877,16 @@ void VirtualLaser::setWavelength(RTseq &realtimeSeq, const int wavelength_nm)
 	mCurrentLaser = newLaser;
 }
 
+
 //Linearly scale the laser power from the first to the last frame
 void VirtualLaser::setPowerLinearScaling(const double Pi, const double Pf) const
 {
 	if (Pi < 0 || Pf < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power must be >= 0");
 
-	//Set the initial laser power
-	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pi, OVERRIDE::EN);
-
-	//I don't use linear scaling anymore
-	//Linearly scale the laser power across the frames
-	//if (Pf != Pi)
-	//	mPockelsPtr->pushPowerLinearScaling(Pi, Pf);
+	mPockelsPtr->linearPowerRampAcrossFrames(Pi, Pf);
 }
+
 
 //Exponential scale the laser power from the first to the last frame
 void VirtualLaser::setPowerExponentialScaling(const double Pmin, const double distancePerFrame, const double decayLengthZ) const
@@ -1959,11 +1896,8 @@ void VirtualLaser::setPowerExponentialScaling(const double Pmin, const double di
 	if (distancePerFrame <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The distance per frame must be > 0");
 
-	//Set the initial laser power
-	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pmin, OVERRIDE::EN);
-
-	//Exponentially scale the laser power across the frames
-	mPockelsPtr->pushPowerExponentialScaling(Pmin, distancePerFrame, decayLengthZ);
+	//Exponentially vary the laser power across the frames
+	mPockelsPtr->exponentialPowerRampAcrossFrames(Pmin, distancePerFrame, decayLengthZ);
 }
 
 void VirtualLaser::openShutter() const
@@ -2358,10 +2292,12 @@ void Mesoscope::configure(const int wavelength_nm)
 	}
 }
 
+
 void Mesoscope::setPower(const double laserPower) const
 {
 	this->VirtualLaser::setPowerLinearScaling(laserPower, laserPower);
 }
+
 
 //Open the Uniblitz shutter
 void Mesoscope::openShutter() const

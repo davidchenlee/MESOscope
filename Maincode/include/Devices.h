@@ -297,22 +297,21 @@ class Pockels final
 public:
 	Pockels(RTseq &realtimeSeq, const int wavelength_nm, const Laser::ID laserSelector);	//Do not set the output to 0 through the destructor to allow latching the last value
 
-	void pushVoltageSinglet(const double timeStep, const double AO, const OVERRIDE override) const;
-	void pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const;
+	void pushVoltageSinglet(const double AO) const;
+	void pushPowerSinglet(const double P) const;
 	void setVoltageToZero() const;
-	//void voltageLinearScaling(const double Vi, const double Vf) const;
-	//void pushPowerLinearScaling(const double Pi, const double Pf) const;
-	void pushPowerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const;
+	void linearVoltageRampAcrossFrames(const double Vi, const double Vf) const;
+	void linearPowerRampAcrossFrames(const double Pi, const double Pf) const;
+	void exponentialPowerRampAcrossFrames(const double Pmin, const double interframeDistance, const double decayLengthZ) const;
 	void setShutter(const bool state) const;
 private:
 	RTseq &mRTseq;								//Non-const because the laser power is pushed into the queues in RTseq						
 	RTseq::RTCHAN mPockelsRTchan;
-	RTseq::RTCHAN mScalingRTchan;
 	int mWavelength_nm;							//Laser wavelength
-	const double timeStep{ 8. * us };
+	const double mTimeStep{ 8. * us };			//mTimeStep does not have any effect because the pockels AO is kept constant throughout each frame (see LV)
 	const Shutter mShutter;
 	const double mMaxPower1X{ 150. * mW };		//Softlimit for the laser power 1X
-	const double mMaxPower16X{ 1600. * mW };		//Softlimit for the laser power 16X
+	const double mMaxPower16X{ 1600. * mW };	//Softlimit for the laser power 16X
 
 	double convertPowerToVolt_(const double power) const;
 };

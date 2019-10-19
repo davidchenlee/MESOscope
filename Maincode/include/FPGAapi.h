@@ -88,8 +88,7 @@ public:
 	void pushQueue(const RTCHAN chan, QU32& queue);
 	void clearQueue(const RTCHAN chan);
 	void pushDigitalSinglet(const RTCHAN chan, double timeStep, const bool DO);
-	void pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO, const OVERRIDE override = OVERRIDE::DIS);
-	void pushAnalogSingletFx2p14(const RTCHAN chan, const double scalingFactor);
+	void pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO);
 	void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override);
 
 	void configureFrames(const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam);

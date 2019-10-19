@@ -301,7 +301,7 @@ public:
 	void pushPowerSinglet(const double timeStep, const double P, const OVERRIDE override) const;
 	void setVoltageToZero() const;
 	//void voltageLinearScaling(const double Vi, const double Vf) const;
-	void pushPowerLinearScaling(const double Pi, const double Pf) const;
+	//void pushPowerLinearScaling(const double Pi, const double Pf) const;
 	void pushPowerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const;
 	void setShutter(const bool state) const;
 private:

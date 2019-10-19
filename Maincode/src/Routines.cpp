@@ -1,25 +1,24 @@
 #include "Routines.h"
 
-
 namespace Routines
 {
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		const RUNMODE acqMode{ RUNMODE::AVG };				//Single frame. The same location is imaged stepwise and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
+		//const RUNMODE acqMode{ RUNMODE::AVG };				//Single frame. The same location is imaged stepwise and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANX };			//Scan in the X-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		//const RUNMODE acqMode{ RUNMODE::FIELDILLUM };		//Field illumination measurement for 16X using beads
 		
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
-		const int nFramesCont{ 1 };	
-		const double stackDepthZ{ 100. * um };								//Stack deepth in the Z-stage axis
+		const int nFramesCont{ 10 };	
+		const double stackDepthZ{ 150. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
 	
 		const double pixelSizeXY{ 0.5 * um };
@@ -56,11 +55,13 @@ namespace Routines
 			}
 			break;
 		case RUNMODE::AVG:
+			//saveAllPMT = true;
+
 			if(g_multibeam)
 				sleepTime_ms = 100;
 			else
 				sleepTime_ms = 100;
-			nSameLocation = 10;
+			nSameLocation = 20;
 			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
 				stagePosXYZ.push_back(stackCenterXYZ);
 			break;
@@ -89,8 +90,8 @@ namespace Routines
 			if(g_multibeam)
 				throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector-lens scanning available only for single beam");
 			saveAllPMT = true;
-			cLensPosIni = 8.0 * mm;
-			cLensPosFinal = 12.0 * mm;
+			cLensPosIni = 0.0 * mm;
+			cLensPosFinal = 5.0 * mm;
 			cLensStep = 0.5 * mm;;
 			nSameLocation = static_cast<int>( std::floor((cLensPosFinal - cLensPosIni)/ cLensStep) ) + 1;
 			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
@@ -154,7 +155,12 @@ namespace Routines
 	
 			//Used to optimize the collector lens position
 			if (acqMode == RUNMODE::COLLECTLENS)
+			{
+				mesoscope.closeShutter();	//To avoid photobleaching when the galvo is on standby
 				mesoscope.CollectorLens::move(cLensPosIni + iterLocation * cLensStep);
+				mesoscope.openShutter();
+				Sleep(100);
+			}
 
 			//EXECUTE THE CONTROL SEQUENCE
 			realtimeSeq.run();					//Execute the control sequence and acquire the image
@@ -323,22 +329,23 @@ namespace Routines
 		std::cout << "Saving the stack...\n";
 		image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 
-		//pressAnyKeyToCont();
+		//Util::pressAnyKeyToCont();
 	}
 
 	void panoramicScan(const FPGA &fpga)
 	{
+		FluorMarkerList fluorMarkerList{ {{"TDT", 1040, 30. * mW }, { "DAPI", 750, 6.5 * mW }} };
+
 		//ACQUISITION SETTINGS
+		const FluorMarkerList::FluorMarker fluorMarker{ fluorMarkerList.findFluorMarker("TDT") };	//Select a particular fluorescence channel
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };			//Initial scan direction of stage 
-		const double fullWidth{ 0.150 * mm };				//Total width of the tile array
+		const double fullWidth{ 3.000 * mm };				//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };				//Width of a strip
 		const double fullHeight{ 53 * tileHeight };			//Total height of the tile array = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
 		const double pixelSizeX{ 1.0 * um };				//WARNING: the image becomes distorted at the edges of the strip when PANpixelSizeX > 1 um (check this again)
 		const double pixelSizeY{ 0.5 * um };
-		const int wavelength_nm{ 1040 };
-		const double laserPower{ 30. * mW };
 
 		POSITION3 stackCenterXYZ{ g_stackCenterXYZ };
 		PanoramicScan panoramicScan{ { stackCenterXYZ.XX, stackCenterXYZ.YY }, { tileHeight, tileWidth }, { pixelSizeX, pixelSizeY }, { fullHeight, fullWidth } };
@@ -346,8 +353,8 @@ namespace Routines
 		//CONTROL SEQUENCE. The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix. Note the STAGEX flag
 		RTseq realtimeSeq{ fpga, LINECLOCK::RS, FIFOOUTfpga::EN, 2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix() / 2, 0 };
 		Mesoscope mesoscope{ realtimeSeq, Laser::ID::AUTO };
-		mesoscope.configure(wavelength_nm);
-		mesoscope.setPower(laserPower);
+		mesoscope.configure(fluorMarker.mWavelength_nm);
+		mesoscope.setPower(fluorMarker.mScanPmin);
 
 		//RS
 		mesoscope.ResonantScanner::isRunning();				//To make sure that the RS is running
@@ -396,8 +403,8 @@ namespace Routines
 		}
 			mesoscope.closeShutter();
 
-			const std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) +
-				"nm_P=" + Util::toString(laserPower / mW, 1) +
+			const std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) +
+				"nm_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) +
 				"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
 				"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
 				"_z=" + Util::toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + Util::toString(pixelSizeX / mm, 4) };
@@ -464,6 +471,8 @@ namespace Routines
 		const Sample sample{ g_currentSample, {g_stackCenterXYZ.XX, g_stackCenterXYZ.YY}, LOIxyz, sampleSurfaceZ, cutAboveBottomOfStack };
 		const Stack stack{ FFOV, heightPerFrame_pix, widthPerFrame_pix, pixelSizeZafterBinning, nFramesAfterBinning, stackOverlap_frac };
 		Sequencer sequence{ sample, stack };
+		const TILEDIM2 tileArraySizeIJ{ sequence.readTileArraySizeIJ() };	//Dimension of the tile array
+
 		sequence.generateCommandList();
 		sequence.printToFile("Commandlist", OVERRIDE::EN);
 
@@ -484,10 +493,8 @@ namespace Routines
 			Logger datalogStacks(g_currentSample.readName() + "_stacks", OVERRIDE::DIS);
 			Logger datalogPanoramics(g_currentSample.readName() + "_panoramics", OVERRIDE::DIS);
 
-			const TILEDIM2 tileArraySizeIJ{ sequence.readTileArraySizeIJ() };
-
-			//to allow passing the boolmap between actions
-			std::vector<bool> vec_boolmap(sequence.readTotalNumberOfStacks(), true);//Initialize it with 1s to allow skipping the panoramic scan
+			//BOOLMAP. Declare the boolmap here to pass it between different actions
+			std::vector<bool> vec_boolmap(sequence.readTotalNumberOfStacks(), true);	//Initialize it with TRUEs in case the panoramic scan is disabled
 
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
 			{
@@ -1265,7 +1272,7 @@ namespace TestRoutines
 
 	void correctImage()
 	{
-		std::string inputFilename{ "Liver_F1040nm_Pmin=880.0mW_Pexp=300um_x=47.400_y=26.050_zi=19.8500_zf=19.8500_Step=0.0010_avg=10" };
+		std::string inputFilename{ "Liver_F1040nm_Pmin=960.0mW_Pexp=300um_x=46.600_y=25.550_zi=19.8300_zf=19.8300_Step=0.0010_avg=10 (1)" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		image.correctRSdistortionGPU(150. * um);

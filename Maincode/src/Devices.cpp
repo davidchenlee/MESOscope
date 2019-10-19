@@ -1679,7 +1679,7 @@ void Pockels::voltageLinearScaling(const double Vi, const double Vf) const
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
 	mRTseq.mFpga.enablePockelsScaling();
-}*/
+}
 
 //Linearly scale the laser power from the first to the last frame
 void Pockels::pushPowerLinearScaling(const double Pi, const double Pf) const
@@ -1706,13 +1706,13 @@ void Pockels::pushPowerLinearScaling(const double Pi, const double Pf) const
 		if (Vratio > 4)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The requested scaling factor must be in the range [0-4]");
 		
-		//Push the scaling factors for the frames
+		//Push the scaling factors across the frames
 		mRTseq.pushAnalogSingletFx2p14(mScalingRTchan, Vratio);
 	}
 
 	//Enable scaling the pockels on the FPGA (see the LV implementation)
 	mRTseq.mFpga.enablePockelsScaling();
-}
+}*/
 
 //Exponentially scale the laser power from the first to the last frame
 void Pockels::pushPowerExponentialScaling(const double Pmin, const double interframeDistance, const double decayLengthZ) const
@@ -1945,9 +1945,10 @@ void VirtualLaser::setPowerLinearScaling(const double Pi, const double Pf) const
 	//Set the initial laser power
 	mPockelsPtr->pushPowerSinglet(mPockelTimeStep, Pi, OVERRIDE::EN);
 
+	//I don't use linear scaling anymore
 	//Linearly scale the laser power across the frames
-	if (Pf != Pi)
-		mPockelsPtr->pushPowerLinearScaling(Pi, Pf);
+	//if (Pf != Pi)
+	//	mPockelsPtr->pushPowerLinearScaling(Pi, Pf);
 }
 
 //Exponential scale the laser power from the first to the last frame

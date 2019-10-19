@@ -7,15 +7,15 @@ const extern std::vector<LIMIT2> PetridishPosLimit;
 const extern std::vector<LIMIT2> ContainerPosLimit;
 const extern POSITION3 g_stackCenterXYZ;
 
-class FluorMarkerList				//Create a list of fluorescent markers
+class FluorMarkerList						//Create a list of fluorescent markers
 {
 public:
-	struct FluorMarker				//Parameters for a single fluorescent marker
+	struct FluorMarker						//Parameters for a single fluorescent marker
 	{
-		std::string mName{ "" };	//Fluorescent marker name
-		int mWavelength_nm;			//Laser wavelength
-		double mScanPmin;			//Initial laser power for a stack scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mScanPexp;			//Length constant for the exponential power increase
+		std::string mName{ "" };			//Fluorescent marker name
+		int mWavelength_nm;					//Laser wavelength
+		double mScanPmin;					//Initial laser power for a stack scan. It could be >= or <= than the final laser power depending on the scan direction
+		double mScanPexp{ 5000. * um };		//Length constant for the exponential power increase
 		int nFramesBinning{ 1 };
 	};
 

@@ -268,6 +268,15 @@ void FPGA::enablePockelsScaling() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsScalingFactorEnable, true));
 }
 
+//Flush the internal FIFOs on the FPGA as precaution. 
+void FPGA::flushRAM() const
+{
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
+	//std::cout << "flushBRAMs called\n";	//For debugging
+}
+
 I16 FPGA::readScannerVoltageMon() const
 {
 	I16 value;
@@ -505,12 +514,6 @@ void FPGA::initializeFpga_() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_VTback, false));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_VTforward, false));
 
-	//Flush the RAM buffers on the FPGA as precaution. 
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
-	//std::cout << "flushBRAMs called\n";	//For debugging
-
 	/*
 	//SHUTTERS. Commented out to allow keeping the shutter on
 	checkStatus(__FUNCTION__,  NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_Shutter1, false));
@@ -696,10 +699,11 @@ void RTseq::pushLinearRamp(const RTCHAN chan, double timeStep, const double ramp
 void RTseq::initialize(const MAINTRIG mainTrigger, const int wavelength_nm, const SCANDIR stackScanDir)
 {
 	mFpga.enableFIFOOUTfpga(mEnableFIFOOUTfpga);					//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
+	mFpga.flushRAM();												//Flush all the internal FIFOs on the FPGA as precaution
 
 	initializeStages_(mainTrigger, stackScanDir, wavelength_nm);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
-	presetScannerPosition_();										//Preset the scanner positions
-	Sleep(10);														//Give the FPGA enough time to settle (> 5 ms) to avoid presetScannerPosition_() clashing with the subsequent call of uploadControlSequence_()
+	presetAOs_();										//Preset the scanner positions
+	Sleep(10);														//Give the FPGA enough time to settle (> 5 ms) to avoid presetAOs_() clashing with the subsequent call of uploadControlSequence_()
 																	//(I realized this after running VS in release mode, which communicate faster with the FPGA than the debug mode)
 	uploadControlSequence_();										//Upload the control sequence to the FPGA
 
@@ -803,8 +807,8 @@ RTseq::PMT16XCHAN RTseq::determineRescannerSetpoint_(const bool multibeam) const
 		return static_cast<RTseq::PMT16XCHAN>(g_rescanner1Xchan_int);
 }
 
-//Ramp up or down the AO for the scanner and rescanner from the current voltage to the first value of the control sequence in mVec_queue to avoid jumps at the start of the sequence
-void RTseq::presetScannerPosition_() const
+//Ramp up or down the scanner and rescanner from the current voltage to the first value of the control sequence in mVec_queue to avoid jumps at the start of the sequence
+void RTseq::presetAOs_() const
 {
 	//Read the current voltage of the AOs for the scanner and rescanner. See the LV implementation
 	std::vector<I16> AOlastVoltage_I16(mNchan, 0);																			//Create a vector of zeros, one zero for each AO channel

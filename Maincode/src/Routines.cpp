@@ -18,7 +18,7 @@ namespace Routines
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
 		const int nFramesCont{ 10 };	
-		const double stackDepthZ{ 150. * um };								//Stack deepth in the Z-stage axis
+		const double stackDepthZ{ 100. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
 	
 		const double pixelSizeXY{ 0.5 * um };
@@ -407,7 +407,7 @@ namespace Routines
 				"nm_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) +
 				"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
 				"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
-				"_z=" + Util::toString(stackCenterXYZ.ZZ / mm, 4) + "_Step=" + Util::toString(pixelSizeX / mm, 4) };
+				"_z=" + Util::toString(stackCenterXYZ.ZZ / mm, 4) };
 			std::cout << "Saving the stack...\n";
 			panoramicScan.saveToFile(filename, OVERRIDE::DIS);
 
@@ -919,7 +919,7 @@ namespace TestRoutines
 		const double pixelSizeXY{ 0.5 * um };
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
-		const int nFramesCont{ 2 };
+		const int nFramesCont{ 400 };
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
 
 		int heightPerBeamletPerFrame_pix;
@@ -929,7 +929,7 @@ namespace TestRoutines
 		{
 			heightPerBeamletPerFrame_pix = static_cast<int>(heightPerFrame_pix / g_nChanPMT);
 			FFOVslowPerBeamlet = static_cast<int>(FFOVslow / g_nChanPMT);
-			selectPower = 1400. * mW;
+			selectPower = 800. * mW;
 		}
 		else             //Singlebeam
 		{		
@@ -940,12 +940,12 @@ namespace TestRoutines
 
 		//STACK
 		const double pixelSizeZ{ 1.0 * um };
-		const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the Z-stage axis
+		//const double stackDepthZ{ 20. * um };	//Acquire a stack this deep in the Z-stage axis
 
 		//CREATE THE CONTROL SEQUENCE
-		const int wavelength_nm{ 750 };
+		const int wavelength_nm{ 1040 };
 		RTseq realtimeSeq{ fpga, LINECLOCK::FG, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont, g_multibeam };
-		Mesoscope mesoscope{ realtimeSeq, Laser::ID::VISION };
+		Mesoscope mesoscope{ realtimeSeq, Laser::ID::AUTO };
 		mesoscope.configure(wavelength_nm);
 		mesoscope.setPower(selectPower);
 
@@ -1044,7 +1044,7 @@ namespace TestRoutines
 	void pockels(const FPGA &fpga)
 	{
 		//CREATE THE CONTROL SEQUENCE
-		RTseq realtimeSeq{ fpga, LINECLOCK::FG , FIFOOUTfpga::DIS, 560, 300, 1, g_multibeam };
+		RTseq realtimeSeq{ fpga, LINECLOCK::FG , FIFOOUTfpga::DIS, 350, 300, 1, g_multibeam };
 
 		//DEFINE THE POCKELS
 		//Pockels pockelsVision{ realtimeSeq, 750, Laser::ID::VISION };
@@ -1054,7 +1054,7 @@ namespace TestRoutines
 		Pockels pockels{ pockelsFidelity };
 
 		pockels.pushVoltageSinglet(3.0 * V);
-		//pockels.pushPowerSinglet(000. * mW);
+		//pockels.pushPowerSinglet(0. * mW);
 
 		//LOAD AND EXECUTE THE CONTROL SEQUENCE ON THE FPGA
 		realtimeSeq.run();
@@ -1099,16 +1099,16 @@ namespace TestRoutines
 		//POCKELS
 		const int wavelength_nm{ 1040 };
 		Pockels pockels{ realtimeSeq, wavelength_nm, Laser::ID::FIDELITY };
-		const double Pi{ 100. * mW };
-		//const double Pf{ 1000. * mW };
-		//const SCANDIR scanDirZ{ SCANDIR::UPWARD };
-		//const double laserPi = determineInitialLaserPower(Pi, Pf - Pi, scanDirZ);
-		//const double laserPf = determineFinalLaserPower(Pi, Pf - Pi, scanDirZ);
+		const double Pi{ 500. * mW };
+		const double Pf{ 1000. * mW };
+		const SCANDIR scanDirZ{ SCANDIR::UPWARD };
+		const double laserPi = determineInitialLaserPower(Pi, Pf - Pi, scanDirZ);
+		const double laserPf = determineFinalLaserPower(Pi, Pf - Pi, scanDirZ);
 
 		//std::cout << "Pi = " << laserPi << "\n";
 		//std::cout << "Pf = " << laserPf << "\n";
 		//pockels.linearPowerRampAcrossFrames(laserPi, laserPf);					//Linearly scale the laser power from the first to the last frame
-		pockels.exponentialPowerRampAcrossFrames(Pi, 1. * um, 150. * um);
+		pockels.exponentialPowerRampAcrossFrames(800. * mW, 1. * um, 150. * um);
 
 		//pockels.linearPowerRampAcrossFrames(0.96 * Pf, Pi);
 		//pockels.pushPowerSinglet(400 * us, Pi, OVERRIDE::EN);
@@ -1269,7 +1269,7 @@ namespace TestRoutines
 
 	void correctImage()
 	{
-		std::string inputFilename{ "Liver_F1040nm_Pmin=960.0mW_Pexp=300um_x=46.600_y=25.550_zi=19.8300_zf=19.8300_Step=0.0010_avg=10 (1)" };
+		std::string inputFilename{ "Liver_F1040nm_Pmin=880.0mW_Pexp=300um_x=48.750_y=25.800_zi=19.8250_zf=19.9350_Step=0.0010_bin=4" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		image.correctRSdistortionGPU(150. * um);

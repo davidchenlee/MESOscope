@@ -38,6 +38,7 @@ public:
 	void setStageTrigDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir, const int wavelength_nm) const;
 	void enableFIFOOUTfpga(const FIFOOUTfpga enableFIFOOUTfpga) const;
 	void enablePockelsScaling() const;
+	void flushRAM() const;
 
 	I16 readScannerVoltageMon() const;
 	I16 readRescannerVoltageMon() const;
@@ -123,7 +124,7 @@ private:
 
 	int convertRTCHANtoU8_(const RTCHAN chan) const;
 	PMT16XCHAN determineRescannerSetpoint_(const bool multibeam) const;
-	void presetScannerPosition_() const;
+	void presetAOs_() const;
 	void initializeStages_(const MAINTRIG mainTrigger, const SCANDIR stackScanDir, const int wavelength_nm);
 	void uploadControlSequence_() const;
 	void correctInterleaved_();

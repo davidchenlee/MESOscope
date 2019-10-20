@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 		{
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
-			//Routines::contScanZ(fpga);
+			Routines::contScanZ(fpga);
 			//Routines::panoramicScan(fpga);
 			//Routines::sequencer(fpga, 1);
 			//Routines::liveScan(fpga);
@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::analogAndDigitalOut(fpga);
 			//TestRoutines::analogRamp(fpga);
 
-			TestRoutines::galvosSync(fpga);
+			//TestRoutines::galvosSync(fpga);
 			//TestRoutines::fineTuneScanGalvo(fpga);
 			//TestRoutines::resonantScanner(fpga);
 			//TestRoutines::galvosLaserSync(fpga);

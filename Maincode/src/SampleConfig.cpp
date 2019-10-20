@@ -3,7 +3,8 @@ const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { -1.
 const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };	//Soft limit of the stage for the oil container
 
 //const extern POSITION3 g_stackCenterXYZ{ ((40.+52.)/2 + 0) * mm, ((21.+28.)/2 + 0.000)* mm, (19.720 + 0.000) * mm };//For Liver
-const extern POSITION3 g_stackCenterXYZ{ (47.600 + 3*0.300 + 0.250) * mm, (26.050 - 0.250) * mm, (19.825 + 0.000) * mm };//For Liver
+const extern POSITION3 g_stackCenterXYZ{ (47.600 + 2*0.300 + 0.250) * mm, (26.050 - 0.250) * mm, (19.840 + 0.000) * mm };//For Liver
+
 
 #pragma region "FluorMarkerList"
 FluorMarkerList::FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList) :
@@ -23,7 +24,7 @@ void FluorMarkerList::printFluorParams(std::ofstream *fileHandle) const
 	{
 		*fileHandle << "Wavelength = " << mFluorMarkerList.at(iterWL).mWavelength_nm <<
 			" nm\nPower = " << mFluorMarkerList.at(iterWL).mScanPmin / mW <<
-			" mW\nPower exponential length = " << mFluorMarkerList.at(iterWL).mScanPexp / um << " um\n";
+			" mW\nPower exponential length = " << mFluorMarkerList.at(iterWL).mScanPLexp / um << " um\n";
 	}
 	*fileHandle << "\n";
 }
@@ -165,7 +166,7 @@ const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", 
 																							          { "DAPI", 750, Util::multiply16X(12. * mW), 120. * um, 2 } }} };
 
 //const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "TDT", 1040, Util::multiply16X(55. * mW), 300. * um, 4 } }} };
-//const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "DAPI", 750, Util::multiply16X(9. * mW), 120. * um, 2 } }} };
+//const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "DAPI", 750, Util::multiply16X(12. * mW), 120. * um, 2 } }} };
 
 #else//singlebeam
 const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,  {{{ "TDT", 1040, 28. * mW, 160. * um, 1 },

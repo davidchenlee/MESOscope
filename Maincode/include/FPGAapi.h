@@ -37,7 +37,6 @@ public:
 	void setMainTrig(const MAINTRIG mainTrigger) const;
 	void setStageTrigDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir, const int wavelength_nm) const;
 	void enableFIFOOUTfpga(const FIFOOUTfpga enableFIFOOUTfpga) const;
-	void enablePockelsScaling() const;
 	void flushRAM() const;
 
 	I16 readScannerVoltageMon() const;
@@ -65,7 +64,7 @@ private:
 class RTseq final
 {
 public:
-	enum class RTCHAN { PIXELCLOCK, SCANNER, RESCANNER, DODEBUG, VISION, SCALINGVISION, FIDELITY, SCALINGFIDELITY, NCHAN };				//NCHAN = number of sequence channels available including the channel for the pixelclock
+	enum class RTCHAN { PIXELCLOCK, SCANNER, RESCANNER, DODEBUG, VISION, FIDELITY, NCHAN };				//NCHAN = number of sequence channels available including the channel for the pixelclock
 	enum class PMT16XCHAN { CH00, CH01, CH02, CH03, CH04, CH05, CH06, CH07, CH08, CH09, CH10, CH11, CH12, CH13, CH14, CH15, CENTERED };	//*cast but not relevant, only for debugging
 	const int mNchan{ static_cast<int>(RTCHAN::NCHAN) };	//Number of RT channels
 	const FPGA &mFpga;

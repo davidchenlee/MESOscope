@@ -5,19 +5,19 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };				//Single frame. The same location is imaged stepwise and the average is returned
-		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
+		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANX };			//Scan in the X-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
-		//const RUNMODE acqMode{ RUNMODE::FIELDILLUM };		//Field illumination measurement for 16X using beads
+		//const RUNMODE acqMode{ RUNMODE::FIELD_ILLUM };		//Field illumination measurement for 16X using beads
 		
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
-		const int nFramesCont{ 10 };	
+		const int nFramesCont{ 1 };	
 		const double stackDepthZ{ 100. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
 	
@@ -97,7 +97,7 @@ namespace Routines
 			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
 				stagePosXYZ.push_back(stackCenterXYZ);
 			break;
-		case RUNMODE::FIELDILLUM:
+		case RUNMODE::FIELD_ILLUM:
 		{
 			//Measure how the fluorescence intensity differs across the FOV in 16X
 			//Move the beads across the 16 PMT channels and average several images at each location
@@ -151,7 +151,7 @@ namespace Routines
 			mesoscope.waitForMotionToStopAll();
 			//stage.printPosXYZ();				//Print the stage position	
 			
-			mesoscope.setPower(Util::exponentialFunction(fluorMarker.mScanPmin, iterLocation * pixelSizeZ, fluorMarker.mScanPexp));
+			mesoscope.setPower(Util::exponentialFunction(fluorMarker.mScanPmin, iterLocation * pixelSizeZ, fluorMarker.mScanPLexp));
 	
 			//Used to optimize the collector lens position
 			if (acqMode == RUNMODE::COLLECTLENS)
@@ -183,33 +183,42 @@ namespace Routines
 			Sleep(sleepTime_ms);
 
 			Util::pressESCforEarlyTermination();
-		}//locations
+		}//for-loop
 
-		if (acqMode == RUNMODE::AVG || acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
-		{	
-			filename.append( "_Pmin=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_Pexp=" + Util::toString(fluorMarker.mScanPexp / um, 0) + "um" +
+		if (acqMode == RUNMODE::AVG)
+		{
+			filename.append("_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) +
 				"_x=" + Util::toString(stagePosXYZ.front().XX / mm, 3) + "_y=" + Util::toString(stagePosXYZ.front().YY / mm, 3) +
-				"_zi=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_zf=" + Util::toString(stagePosXYZ.back().ZZ / mm, 4) + "_Step=" + Util::toString(pixelSizeZ / mm, 4) +
-				"_avg=" + Util::toString(nFramesCont * nSameLocation, 0) );
+				"_z=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_avg=" + Util::toString(nFramesCont * nSameLocation, 0));
 
-			output.binFrames(nSameLocation);									//Divide the images in bins and return the binned image
+			output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
-			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);	//Save the scanZ to file
-			Util::pressESCforEarlyTermination();
+			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 		}
 
-		if (acqMode == RUNMODE::SCANX || acqMode == RUNMODE::FIELDILLUM)
+		if (acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
+		{	
+			filename.append( "_Pmin=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_PLexp=" + Util::toString(fluorMarker.mScanPLexp / um, 0) + "um" +
+				"_x=" + Util::toString(stagePosXYZ.front().XX / mm, 3) + "_y=" + Util::toString(stagePosXYZ.front().YY / mm, 3) +
+				"_zi=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_zf=" + Util::toString(stagePosXYZ.back().ZZ / mm, 4) + "_StepZ=" + Util::toString(pixelSizeZ / mm, 4) +
+				"_avg=" + Util::toString(nFramesCont * nSameLocation, 0) );
+
+			output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
+			std::cout << "Saving the stack...\n";
+			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+		}
+
+		if (acqMode == RUNMODE::SCANX || acqMode == RUNMODE::FIELD_ILLUM)
 		{
 			filename.append( "_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW" +
 				"_xi=" + Util::toString(stagePosXYZ.front().XX / mm, 4) + "_xf=" + Util::toString(stagePosXYZ.back().XX / mm, 4) +
 				"_y=" + Util::toString(stagePosXYZ.front().YY / mm, 4) +
-				"_z=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_Step=" + Util::toString(stepSizeX / mm, 4) +
+				"_z=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_StepX=" + Util::toString(stepSizeX / mm, 4) +
 				"_avg=" + Util::toString(nFramesCont, 0) );
 
-			output.binFrames(nSameLocation);									//Divide the images in bins and return the binned image
+			output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
-			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);	//Save the scanXY to file
-			Util::pressESCforEarlyTermination();
+			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 		}
 
 		//DATALOG
@@ -225,7 +234,7 @@ namespace Routines
 			datalog.record("Laser used = ", mesoscope.readCurrentLaser_s(false));
 			datalog.record("Laser wavelength (nm) = ", mesoscope.readCurrentWavelength_nm());
 			datalog.record("Min laser power (mW) = ", fluorMarker.mScanPmin / mW);
-			datalog.record("Power exponential length (um) = ", fluorMarker.mScanPexp / um);
+			datalog.record("Power exponential length (um) = ", fluorMarker.mScanPLexp / um);
 			datalog.record("Laser repetition period (us) = ", g_laserPulsePeriod / us);
 			datalog.record("\nSCAN---------------------------------------------------------");
 			datalog.record("RS FFOV (um) = ", mesoscope.ResonantScanner::readFFOV() / um);
@@ -254,7 +263,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -288,7 +297,7 @@ namespace Routines
 		RTseq realtimeSeq{ fpga, LINECLOCK::RS, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFrames, g_multibeam };	//Note the STAGEZ flag
 		Mesoscope mesoscope{ realtimeSeq, whichLaser };
 		mesoscope.configure(fluorMarker.mWavelength_nm);
-		mesoscope.setPowerExponentialScaling(fluorMarker.mScanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(scanDirZ) * fluorMarker.mScanPexp);
+		mesoscope.setPowerExponentialScaling(fluorMarker.mScanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(scanDirZ) * fluorMarker.mScanPLexp);
 
 		//RS
 		mesoscope.ResonantScanner::isRunning();		//To make sure that the RS is running
@@ -307,9 +316,8 @@ namespace Routines
 		mesoscope.setVelSingle(AXIS::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));		
 
 		//EXECUTE THE CONTROL SEQUENCE
-		mesoscope.openShutter();				//Open the shutter. The destructor will close the shutter automatically
-		
 		realtimeSeq.initialize(MAINTRIG::STAGEZ, fluorMarker.mWavelength_nm, scanDirZ);
+		mesoscope.openShutter();				//Open the shutter. The destructor will close the shutter automatically
 		std::cout << "Scanning the stack...\n";
 		mesoscope.moveSingle(AXIS::ZZ, stageZf);//Move the stage to trigger the ctl&acq sequence
 		realtimeSeq.downloadData();
@@ -321,7 +329,7 @@ namespace Routines
 		//image.correct(RScanner.mFFOV);
 
 		const std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) +
-			"nm_Pmin=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_Pexp=" + Util::toString(fluorMarker.mScanPexp / um, 0) +
+			"nm_Pmin=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_PLexp=" + Util::toString(fluorMarker.mScanPLexp / um, 0) +
 			"um_x=" + Util::toString(stackCenterXYZ.XX / mm, 3) + "_y=" + Util::toString(stackCenterXYZ.YY / mm, 3) +
 			"_zi=" + Util::toString(stageZi / mm, 4) + "_zf=" + Util::toString(stageZf / mm, 4) + "_Step=" + Util::toString(pixelSizeZafterBinning / mm, 4) +
 			"_bin=" + Util::toString(nFramesBinning, 0) };
@@ -437,7 +445,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 3.000 * mm, 1.000 * mm, 0.000 * mm };
+		const LENGTH3 LOIxyz{ 0.300 * mm, 0.200 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
@@ -502,7 +510,7 @@ namespace Routines
 
 				//These parameters must be accessible to all the cases
 				int wavelength_nm, nFramesBinning, sliceNumber, stackIndex, tileIndexII, tileIndexJJ;
-				double scanZi, scanZf, scanPmin, scanPexp;
+				double scanZi, scanZf, scanPmin, scanPLexp;
 
 				switch (commandline.mActionID)
 				{
@@ -519,12 +527,13 @@ namespace Routines
 					}
 					break;
 				case Action::ID::ACQ://Acquire a stack
-					std::cout << "is (" << tileIndexII << "," << tileIndexJJ << ") bright? = " << Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ });
-					Util::pressAnyKeyToCont();
+					//std::cout << "is (" << tileIndexII << "," << tileIndexJJ << ") bright? = " << Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ });
+					//Util::pressAnyKeyToCont();
 
 					if (Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ }))
 					{
 						Action::AcqStack acqStack{ commandline.mAction.acqStack };
+
 						{
 							//Set the number of frames considering that binning will be performed
 							nFramesBinning = acqStack.readNframeBinning();
@@ -544,13 +553,14 @@ namespace Routines
 							//Update the laser parameters
 							mesoscope.configure(wavelength_nm);									//The uniblitz shutter is closed by the pockels destructor when switching wavelengths
 							scanPmin = acqStack.readScanPmin();
-							scanPexp = acqStack.readScanPexp();
-							mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(iterScanDirZ) * scanPexp);
+							scanPLexp = acqStack.readScanPLexp();
+							mesoscope.setPowerExponentialScaling(scanPmin, pixelSizeZbeforeBinning, Util::convertScandirToInt(iterScanDirZ) * scanPLexp);
 
 							//SCANNERS
 							const Galvo scanner{ realtimeSeq, FFOVslowPerBeamlet / 2. };
 							Galvo rescanner{ realtimeSeq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 						}
+
 						//Move the stage to the initial Z position
 						mesoscope.moveSingle(AXIS::ZZ, scanZi);
 						mesoscope.waitForMotionToStopAll();
@@ -585,9 +595,9 @@ namespace Routines
 						std::string tileIndexJ_s{ std::to_string(tileIndexJJ) };
 						std::string tileIndexJpadded_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;		//2 digits in total
 
-
-						shortName = sliceNumberPadded_s + "_" + stackIndexPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm);
-						longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_Pexp=" + Util::toString(scanPexp / um, 0) + "um" +
+						//shortName = sliceNumberPadded_s + "_" + stackIndexPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm);		//sliceNumber_stackIndex_wavelengthIndex
+						shortName = sliceNumberPadded_s + "_" + tileIndexIpadded_s + "_" + tileIndexJpadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm);		//sliceNumber_stackIndex_wavelengthIndex
+						longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_PLexp=" + Util::toString(scanPLexp / um, 0) + "um" +
 							"_x=" + Util::toString(tileCenterXY.XX / mm, 3) +
 							"_y=" + Util::toString(tileCenterXY.YY / mm, 3) +
 							"_zi=" + Util::toString(scanZi / mm, 4) + "_zf=" + Util::toString(scanZf / mm, 4) +
@@ -1098,7 +1108,7 @@ namespace TestRoutines
 
 		//POCKELS
 		const int wavelength_nm{ 1040 };
-		Pockels pockels{ realtimeSeq, wavelength_nm, Laser::ID::FIDELITY };
+		Pockels pockels{ realtimeSeq, wavelength_nm, Laser::ID::FIDELITY};
 		const double Pi{ 500. * mW };
 		const double Pf{ 1000. * mW };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };
@@ -1108,7 +1118,7 @@ namespace TestRoutines
 		//std::cout << "Pi = " << laserPi << "\n";
 		//std::cout << "Pf = " << laserPf << "\n";
 		//pockels.linearPowerRampAcrossFrames(laserPi, laserPf);					//Linearly scale the laser power from the first to the last frame
-		pockels.exponentialPowerRampAcrossFrames(800. * mW, 1. * um, 150. * um);
+		pockels.exponentialPowerRampAcrossFrames(100. * mW, 1. * um, 200. * um);
 
 		//pockels.linearPowerRampAcrossFrames(0.96 * Pf, Pi);
 		//pockels.pushPowerSinglet(400 * us, Pi, OVERRIDE::EN);
@@ -1269,7 +1279,7 @@ namespace TestRoutines
 
 	void correctImage()
 	{
-		std::string inputFilename{ "Liver_F1040nm_Pmin=880.0mW_Pexp=300um_x=48.750_y=25.800_zi=19.8250_zf=19.9350_Step=0.0010_bin=4" };
+		std::string inputFilename{ "" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		image.correctRSdistortionGPU(150. * um);

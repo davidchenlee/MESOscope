@@ -84,9 +84,9 @@ private:
 	const TiffU8 mTiff;
 	const TileArray mTileArray;
 	const double mThreshold;			//Threshold for generating the boolmap
-	const int mPanoramicHeight_pix;			//Pixel height of the tiled image
-	const int mPanoramicWidth_pix;			//Pixel width of the tiled image
-	const int mNpixPanoramic;				//Total number of pixels in mTiff
+	const int mPanoramicHeight_pix;		//Pixel height of the tiled image
+	const int mPanoramicWidth_pix;		//Pixel width of the tiled image
+	const int mNpixPanoramic;			//Total number of pixels in mTiff
 	PIXELij mAnchorPixel_pix;			//Reference position for the tile array wrt the Tiff
 	std::vector<bool> mIsBrightMap;
 
@@ -136,7 +136,7 @@ namespace Action
 	class AcqStack final
 	{
 	public:
-		void setParam(const int stackNumber, const int stackIndex, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPexp, const int nFrameBinning);
+		void setParam(const int stackNumber, const int stackIndex, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPLexp, const int nFrameBinning);
 		int readStackNumber() const;
 		int readStackIndex() const;
 		int readWavelength_nm() const;
@@ -144,7 +144,7 @@ namespace Action
 		double readScanZmin() const;
 		double readDepthZ() const;
 		double readScanPmin() const;
-		double readScanPexp() const;
+		double readScanPLexp() const;
 		int readNframeBinning() const;
 	private:
 		int mStackNumber;		//Number of the stack following the scan pattern (e.g. snake)
@@ -154,7 +154,7 @@ namespace Action
 		double mScanZmin;		//Min z position of a stack scan
 		double mDepthZ;			//Stack depth (thickness)
 		double mScanPmin;		//Min laser power of the stack scan (at the top of the stack)
-		double mScanPexp;		//Laser power increase in the Z-stage axis per unit of distance
+		double mScanPLexp;		//Laser power increase in the Z-stage axis per unit of distance
 		int mNframeBinning;
 	};
 

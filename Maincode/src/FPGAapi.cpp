@@ -89,21 +89,21 @@ namespace FPGAfunc
 	//Send out an analog instruction, where the analog output 'AO' is held for 'timeStep'
 	U32 packAnalogSinglet(const double timeStep, const double AO)
 	{
-		const U16 AOlatency_tick{ 2 };	//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
+		const U16 AOlatency_tick{ 2 };			//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 		return packU32(convertTimeToTick(timeStep) - AOlatency_tick, convertVoltageToI16(AO / V));
 	}
 
 	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 	U32 packDigitalSinglet(const double timeStep, const bool DO)
 	{
-		const U16 DOlatency_tick{ 2 };	//To calibrate, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
+		const U16 DOlatency_tick{ 2 };			//To calibrate, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 		return packU32(convertTimeToTick(timeStep) - DOlatency_tick, static_cast<U16>(DO));
 	}
 
 	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'
 	U32 packPixelclockSinglet(const double timeStep, const bool DO)
 	{
-		const U16 PixelclockLatency_tick{ 1 };//The pixel-clock is implemented using a SCTL. I think the latency comes from reading the LUT buffer
+		const U16 PixelclockLatency_tick{ 1 };	//The pixel-clock is implemented using a SCTL. I think the latency comes from reading the LUT buffer
 		return packU32(convertTimeToTick(timeStep) - PixelclockLatency_tick, static_cast<U16>(DO));
 	}
 
@@ -123,7 +123,7 @@ namespace FPGAfunc
 		if (timeStep < g_tMinAO)
 		{
 			std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << g_tMinAO / us << " us\n";
-			timeStep = g_tMinAO;		//Analog Out time increment in us
+			timeStep = g_tMinAO;				//Analog Out time increment in us
 		}
 
 		const int nPoints{ static_cast<int>(rampLength / timeStep) };		//Number of points
@@ -263,11 +263,6 @@ void FPGA::enableFIFOOUTfpga(const FIFOOUTfpga enableFIFOOUTfpga) const
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
 }
 
-void FPGA::enablePockelsScaling() const
-{
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsScalingFactorEnable, true));
-}
-
 //Flush the internal FIFOs on the FPGA as precaution. 
 void FPGA::flushRAM() const
 {
@@ -366,13 +361,13 @@ void FPGA::collectFIFOOUTpcGarbage() const
 
 		if (nElemToReadA > 0)
 		{
-			nElemToReadA = (std::min)(bufSize, nElemToReadA);	//Min between bufSize and nElemToReadA
+			nElemToReadA = (std::min)(bufSize, nElemToReadA);				//Min between bufSize and nElemToReadA
 			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTa, garbage, nElemToReadA, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
 			nElemTotalA += nElemToReadA;
 		}
 		if (nElemToReadB > 0)
 		{
-			nElemToReadB = (std::min)(bufSize, nElemToReadB);	//Min between bufSize and nElemToReadB
+			nElemToReadB = (std::min)(bufSize, nElemToReadB);				//Min between bufSize and nElemToReadB
 			FPGAfunc::checkStatus(__FUNCTION__, NiFpga_ReadFifoU32(mHandle, NiFpga_FPGAvi_TargetToHostFifoU32_FIFOOUTb, garbage, nElemToReadB, timeout_ms, &dummy));	//Retrieve the elements in FIFOOUTpc
 			nElemTotalB += nElemToReadB;
 		}
@@ -482,7 +477,7 @@ void FPGA::initializeFpga_() const
 
 	//TRIGGERS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PcTrigger, false));																			//Pc trigger signal
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																//Trigger the AOs of the FPGA externally
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																//Trigger the FPGA AOs externally
 
 	//FIFOIN
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_Nchannels, static_cast<U8>(RTseq::RTCHAN::NCHAN)));												//Number of input channels
@@ -507,7 +502,6 @@ void FPGA::initializeFpga_() const
 
 	//POCKELS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsAutoOffEnable, g_pockelsAutoOff));													//Enable or disable gating the pockels by framegate. For debugging purposes
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PockelsScalingFactorEnable, false));														//Enable or disable scaling the pockels output. Disabled by default
 
 	//VIBRATOME
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_VTstart, false));
@@ -595,8 +589,14 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga
 	mFpga.uploadImagingParameters(mHeightPerBeamletPerFrame_pix, mNframes);
 	mFpga.setLineclock(mLineclockInput);
 
-	mBufferA = new U32[mNpixPerBeamletAllFrames];
-	mBufferB = new U32[mNpixPerBeamletAllFrames];
+	//Currently compiling for x86 only. The max 32-bit memory that can be assigned is 2^32/32 = 134217728
+	if (mNpixPerBeamletAllFrames > 134217728)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
+	else
+	{
+		mBufferA = new U32[mNpixPerBeamletAllFrames];
+		mBufferB = new U32[mNpixPerBeamletAllFrames];
+	}
 
 	//Generate a pixelclock
 	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
@@ -632,12 +632,18 @@ void RTseq::configureFrames(const int heightPerBeamletPerFrame_pix, const int wi
 	mFpga.uploadImagingParameters(mHeightPerBeamletPerFrame_pix, mNframes);
 	mFpga.setLineclock(mLineclockInput);
 
-	delete[] mBufferA;
-	delete[] mBufferB;
-	U32* newBufferA = new U32[mNpixPerBeamletAllFrames];
-	U32* newBufferB = new U32[mNpixPerBeamletAllFrames];
-	mBufferA = newBufferA;
-	mBufferB = newBufferB;
+	//Currently compiling for x86 only. The max 32-bit memory that can be assigned is 2^32/32 = 134217728
+	if (mNpixPerBeamletAllFrames > 134217728)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The number of frames must be > 0");
+	else
+	{
+		delete[] mBufferA;
+		delete[] mBufferB;
+		U32* newBufferA = new U32[mNpixPerBeamletAllFrames];
+		U32* newBufferB = new U32[mNpixPerBeamletAllFrames];
+		mBufferA = newBufferA;
+		mBufferB = newBufferB;
+	}
 
 	//Generate a pixelclock
 	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
@@ -702,7 +708,7 @@ void RTseq::initialize(const MAINTRIG mainTrigger, const int wavelength_nm, cons
 	mFpga.flushRAM();												//Flush all the internal FIFOs on the FPGA as precaution
 
 	initializeStages_(mainTrigger, stackScanDir, wavelength_nm);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
-	presetAOs_();										//Preset the scanner positions
+	presetAOs_();													//Preset the scanner positions
 	Sleep(10);														//Give the FPGA enough time to settle (> 5 ms) to avoid presetAOs_() clashing with the subsequent call of uploadControlSequence_()
 																	//(I realized this after running VS in release mode, which communicate faster with the FPGA than the debug mode)
 	uploadControlSequence_();										//Upload the control sequence to the FPGA
@@ -787,12 +793,8 @@ int RTseq::convertRTCHANtoU8_(const RTCHAN chan) const
 		return 3;
 	case RTCHAN::VISION:
 		return 4;
-	case RTCHAN::SCALINGVISION:
-		return 5;
 	case RTCHAN::FIDELITY:
-		return 6;
-	case RTCHAN::SCALINGFIDELITY:
-		return 7;
+		return 5;
 	default:
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected RTCHAN unavailable");
 	}

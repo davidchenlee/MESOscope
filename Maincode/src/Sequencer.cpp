@@ -810,7 +810,7 @@ double Action::MoveStage::readTileCenter(AXIS axis) const
 }
 
 //stackNumber is the number of the stack following the scan pattern (e.g. snake). stackIndex is the number of the stack column by column from top to bottom and left to right (used for saving the tiff)
-void Action::AcqStack::setParam(const int stackNumber, const int stackIndex, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPexp, const int nFrameBinning)
+void Action::AcqStack::setParam(const int stackNumber, const int stackIndex, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPLexp, const int nFrameBinning)
 {
 	if (stackIndex < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The stack number must be >= 0");
@@ -822,7 +822,7 @@ void Action::AcqStack::setParam(const int stackNumber, const int stackIndex, con
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The scan depth must be > 0");
 	if (scanPmin < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The laser power be >= 0");
-	if (scanPexp <= 0)
+	if (scanPLexp <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The power exponential constant must be > 0");
 	if (nFrameBinning <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The binning number must be >= 1");
@@ -834,7 +834,7 @@ void Action::AcqStack::setParam(const int stackNumber, const int stackIndex, con
 	mScanZmin = scanZmin;
 	mDepthZ = depthZ;
 	mScanPmin = scanPmin;
-	mScanPexp = scanPexp;
+	mScanPLexp = scanPLexp;
 	mNframeBinning = nFrameBinning;
 }
 
@@ -873,9 +873,9 @@ double Action::AcqStack::readScanPmin() const
 	return mScanPmin;
 }
 
-double Action::AcqStack::readScanPexp() const
+double Action::AcqStack::readScanPLexp() const
 {
-	return mScanPexp;
+	return mScanPLexp;
 }
 
 int Action::AcqStack::readNframeBinning() const
@@ -949,7 +949,7 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 		*fileHandle << mAction.acqStack.readScanZmin() / mm << "\t";
 		*fileHandle << (mAction.acqStack.readScanZmin() + mAction.acqStack.readDepthZ()) / mm << "\t";
 		*fileHandle << std::setprecision(0);
-		*fileHandle << mAction.acqStack.readScanPmin() << "\t" << mAction.acqStack.readScanPexp() << "\n";
+		*fileHandle << mAction.acqStack.readScanPmin() << "\t" << mAction.acqStack.readScanPLexp() << "\n";
 		break;
 	case Action::ID::SAV:
 		*fileHandle << convertActionIDtoString_(mActionID) + "\n";
@@ -987,7 +987,7 @@ void Sequencer::Commandline::printParameters() const
 		std::cout << "wavelength = " << mAction.acqStack.readWavelength_nm() << " nm\n";
 		std::cout << "scanDirZ = " << Util::convertScandirToInt(mAction.acqStack.readScanDirZ()) << "\n";
 		std::cout << "scanZmin / depthZ = " << mAction.acqStack.readScanZmin() / mm << " mm/" << mAction.acqStack.readDepthZ() << " mm\n";
-		std::cout << "scanPmin / ScanPexp = " << mAction.acqStack.readScanPmin() / mW << " mW/" << mAction.acqStack.readScanPexp() / um << " (um)\n\n";
+		std::cout << "scanPmin / ScanPLexp = " << mAction.acqStack.readScanPmin() / mW << " mW/" << mAction.acqStack.readScanPLexp() / um << " (um)\n\n";
 		break;
 	case Action::ID::SAV:
 		std::cout << "The command is " << convertActionIDtoString_(mActionID) << "\n";
@@ -1040,7 +1040,7 @@ void Sequencer::generateCommandList()
 	std::cout << "Generating the command list..." << "\n";
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
-		panoramicScan_();
+		//panoramicScan_();
 
 		initializeIteratorIJ_();		//Reset the tile iterator after every cut
 		//The first fluor-marker on the list is read, then the second marker, etc
@@ -1089,7 +1089,7 @@ POSITION2 Sequencer::convertTileIndicesIJToStagePosXY(const TILEIJ tileIndicesIJ
 
 std::string Sequencer::printHeader() const
 {
-	return 	"Action\tSlice#\tTileIJ\t(stageX,stageY)\tStackID\tWavlen\tstageZ<\tstageZ>\tPmin\tPexp";
+	return 	"Action\tSlice#\tTileIJ\t(stageX,stageY)\tStackID\tWavlen\tstageZ<\tstageZ>\tPmin\tPLexp";
 }
 
 std::string Sequencer::printHeaderUnits() const
@@ -1333,7 +1333,7 @@ void Sequencer::acqStack_(const int indexFluorMarker)
 	const int stackIndex{ mJJ * readTileArraySizeIJ(TileArray::Axis::II) + mII };
 
 	Commandline commandline{ Action::ID::ACQ };
-	commandline.mAction.acqStack.setParam(mStackCounter, stackIndex, fluorMarker.mWavelength_nm, mIterScanDirXYZ.ZZ, mIterScanZi, mStack.readDepthZ(), fluorMarker.mScanPmin, fluorMarker.mScanPexp, fluorMarker.nFramesBinning);
+	commandline.mAction.acqStack.setParam(mStackCounter, stackIndex, fluorMarker.mWavelength_nm, mIterScanDirXYZ.ZZ, mIterScanZi, mStack.readDepthZ(), fluorMarker.mScanPmin, fluorMarker.mScanPLexp, fluorMarker.nFramesBinning);
 	mCommandList.push_back(commandline);
 	mStackCounter++;	//Count the number of stacks
 	mCommandCounter++;	//Count the number of commands

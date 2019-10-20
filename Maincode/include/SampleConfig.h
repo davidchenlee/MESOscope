@@ -15,7 +15,7 @@ public:
 		std::string mName{ "" };			//Fluorescent marker name
 		int mWavelength_nm;					//Laser wavelength
 		double mScanPmin;					//Initial laser power for a stack scan. It could be >= or <= than the final laser power depending on the scan direction
-		double mScanPexp{ 5000. * um };		//Length constant for the exponential power increase
+		double mScanPLexp{ 5000. * um };	//Length constant for the exponential power increase
 		int nFramesBinning{ 1 };
 	};
 

@@ -54,6 +54,7 @@ namespace TestRoutines
 	//Postprocessing
 	void correctImage();
 	void correctImageBatch();
+	void correctImageReadStacksFromFile();
 	void quickStitcher();
 	void boolmap();
 	void vectorOfObjects();

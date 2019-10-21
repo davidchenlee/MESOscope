@@ -326,7 +326,7 @@ namespace Routines
 		Image image{ realtimeSeq };
 		image.acquire();
 		image.binFrames(nFramesBinning);
-		//image.correct(RScanner.mFFOV);
+		//image.correct(mesoscope.readFFOV());
 
 		const std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) +
 			"nm_Pmin=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_PLexp=" + Util::toString(fluorMarker.mScanPLexp / um, 0) +
@@ -445,7 +445,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 0.300 * mm, 0.200 * mm, 0.000 * mm };
+		const LENGTH3 LOIxyz{ 0.400 * mm, 0.300 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
@@ -527,7 +527,7 @@ namespace Routines
 					}
 					break;
 				case Action::ID::ACQ://Acquire a stack
-					//std::cout << "is (" << tileIndexII << "," << tileIndexJJ << ") bright? = " << Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ });
+					//std::cout << "is (" << tileIndexII_s << "," << tileIndexJJ_s << ") bright? = " << Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII_s, tileIndexJJ_s });
 					//Util::pressAnyKeyToCont();
 
 					if (Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ }))
@@ -568,7 +568,7 @@ namespace Routines
 						realtimeSeq.initialize(MAINTRIG::STAGEZ, wavelength_nm, iterScanDirZ);	//Use the scan direction determined dynamically
 						mesoscope.openShutter();												//Re-open the Uniblitz shutter if closed by the pockels destructor
 
-						//Print out the stackIndex starting from 1 (stackIndex indexes from 0, so add a 1) and the sliceNumber starting from 1 (sliceNumber indexes from 0, so add a 1)
+						//Print out the stackIndex starting from 1 (stackIndex indexes from 0, so add a 1) and the sliceNumber_s starting from 1 (sliceNumber_s indexes from 0, so add a 1)
 						std::cout << "Scanning slice = " << std::to_string(sliceNumber + 1) << "/" << sequence.readTotalNumberOfSlices() <<
 							"\tstack = " << std::to_string(stackIndex + 1) << "/" << sequence.readNumberOfStacksPerSlice() <<
 							"\tScanning index = (" << tileIndexII << "," << tileIndexJJ << ")\n";
@@ -589,14 +589,14 @@ namespace Routines
 						std::string stackIndex_s{ std::to_string(stackIndex) };
 						std::string stackIndexPadded_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
 
-						std::string tileIndexI_s{ std::to_string(tileIndexII) };
-						std::string tileIndexIpadded_s = std::string(2 - tileIndexI_s.length(), '0') + tileIndexI_s;		//2 digits in total
+						std::string tileIndexII_s{ std::to_string(tileIndexII) };
+						std::string tileIndexIpadded_s = std::string(2 - tileIndexII_s.length(), '0') + tileIndexII_s;		//2 digits in total
 
-						std::string tileIndexJ_s{ std::to_string(tileIndexJJ) };
-						std::string tileIndexJpadded_s = std::string(2 - tileIndexJ_s.length(), '0') + tileIndexJ_s;		//2 digits in total
+						std::string tileIndexJJ_s{ std::to_string(tileIndexJJ) };
+						std::string tileIndexJpadded_s = std::string(2 - tileIndexJJ_s.length(), '0') + tileIndexJJ_s;		//2 digits in total
 
-						//shortName = sliceNumberPadded_s + "_" + stackIndexPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm);		//sliceNumber_stackIndex_wavelengthIndex
-						shortName = sliceNumberPadded_s + "_" + tileIndexIpadded_s + "_" + tileIndexJpadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm);		//sliceNumber_stackIndex_wavelengthIndex
+						//shortName = sliceNumberPadded_s + "_" + stackIndexPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelengthIndex_s);								//sliceNumber_stackIndex_wavelengthIndex
+						shortName = sliceNumberPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + tileIndexIpadded_s + "_" + tileIndexJpadded_s;		//sliceNumber_stackIndex_wavelengthIndex
 						longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_PLexp=" + Util::toString(scanPLexp / um, 0) + "um" +
 							"_x=" + Util::toString(tileCenterXY.XX / mm, 3) +
 							"_y=" + Util::toString(tileCenterXY.YY / mm, 3) +
@@ -686,9 +686,9 @@ namespace Routines
 						"nm_P=" + Util::toString(PANlaserPower / mW, 1) +
 						"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
 						"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
-						"_z=" + Util::toString(PANplaneZ / mm, 4) + "_Step=" + Util::toString(PANpixelSizeX / mm, 4) };
+						"_z=" + Util::toString(PANplaneZ / mm, 4) };
 					std::cout << "Saving the stack...\n";
-					panoramicScan.saveToFile(PANshortName, OVERRIDE::DIS);
+					panoramicScan.saveToFile(PANshortName + "_panoramic", OVERRIDE::DIS);
 
 					datalogPanoramics.record(PANshortName + "\t" + PANlongName);
 
@@ -701,8 +701,8 @@ namespace Routines
 					boolmap.copyBoolmap(vec_boolmap);//Save the boolmap for the next iterations
 
 					//For debugging
-					boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
-					boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
+					//boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
+					//boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
 				}
 				break;
 				default:
@@ -962,7 +962,7 @@ namespace TestRoutines
 		//SCANNERS
 		const Galvo scanner{ realtimeSeq, FFOVslowPerBeamlet / 2. };
 		const Galvo rescanner{ realtimeSeq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
-		//const Galvo rescanner{ realtimeSeq, 0, wavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		//const Galvo rescanner{ realtimeSeq, 0, wavelengthIndex_s, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 		//EXECUTE THE CONTROL SEQUENCE
 		realtimeSeq.run();
@@ -1279,11 +1279,11 @@ namespace TestRoutines
 
 	void correctImage()
 	{
-		std::string inputFilename{ "" };
+		std::string inputFilename{ "Liver_F1040nm_Pmin=960.0mW_PLexp=300um_x=46.000_y=25.800_zi=19.8000_zf=19.9100_Step=0.0010_bin=4" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		image.correctRSdistortionGPU(150. * um);
-		image.flattenFieldGaussian(0.014);
+		image.flattenFieldGaussian(0.015);
 		image.suppressCrosstalk(0.20);
 		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
@@ -1291,30 +1291,109 @@ namespace TestRoutines
 		//image.splitFrames(10);
 		//image.mirrorOddFrames();
 		//image.averageEvenOddFrames();
-
-		/*
+		
 		//Declare and start a stopwatch
 		double duration;
 		auto t_start{ std::chrono::high_resolution_clock::now() };
 		//Stop the stopwatch
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
-		*/
+		
 		//pressAnyKeyToCont();
 	}
 
+
+
 	void correctImageBatch()
 	{
+		/*
 		for (int ii = 0; ii < 4; ii++)
 		{
-			std::string inputFilename{ "000_0_000000" + Util::toString(ii,0) };
-			std::string outputFilename{ "output_" + inputFilename };
-			TiffU8 image{ inputFilename };
+			std::string inputTiff{ "000_0_000000" + Util::toString(ii,0) };
+			std::string outputFilename{ "output_" + inputTiff };
+			TiffU8 image{ inputTiff };
 			image.correctRSdistortionGPU(150. * um);
 			image.flattenFieldGaussian(0.009);
 			image.suppressCrosstalk(0.20);
 			image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+		}*/
+	}
+
+	void correctImageReadStacksFromFile()
+	{
+		//READ THE TEXT FILES WITH THE STACKS ACQUIRED
+
+		std::string filename{ "Liver_stacks" };
+		std::ifstream input{ g_folderPath + filename + ".txt" };
+
+		if (!input)
+			throw std::runtime_error((std::string)__FUNCTION__ + ": The file " + filename + ".txt failed to open");
+
+		struct StackParam
+		{
+			std::string sliceNumber_s;
+			std::string wavelengthIndex_s;
+			std::string tileIndexII_s;
+			std::string tileIndexJJ_s;
+		};
+
+		std::vector<StackParam> v_stackParams;
+		std::string line;
+		while (getline(input, line))
+		{
+			std::string fileNumber = line.substr(0, line.find("\t"));	//Get the file number at the beginning of each line in the text file
+			//std::cout << fileNumber << '\n';
+
+			// Tokenizing wrt '_' 
+			std::vector<std::string> v_isolatedNumbers;					// Vector of strings with the stack parameters 
+			std::stringstream fileNumber_ss(fileNumber);
+			std::string isolatedNumber;
+			while (getline(fileNumber_ss, isolatedNumber, '_'))
+				v_isolatedNumbers.push_back(isolatedNumber);
+
+			StackParam stackParam;
+			stackParam.sliceNumber_s = v_isolatedNumbers.at(0);
+			stackParam.wavelengthIndex_s = v_isolatedNumbers.at(1);
+			stackParam.tileIndexII_s = v_isolatedNumbers.at(2);
+			stackParam.tileIndexJJ_s = v_isolatedNumbers.at(3);
+			v_stackParams.push_back(stackParam);
+
+		//For debugging
+		//std::cout << stackParam.sliceNumber_s << "\t" << stackParam.wavelengthIndex_s  << stackParam.tileIndexII_s << "\t" << stackParam.tileIndexJJ_s << "\t" << "\n";
 		}
+		input.close();
+
+		//GENERATE TileConfiguration for Fiji's GridStitcher
+		Logger datalog("TileConfiguration", OVERRIDE::EN);
+		datalog.record("# Define the number of dimensions we are working on");
+		datalog.record("dim=3"); //Needed for the BigStitcher
+		for (std::vector<int>::size_type iterStack = 0; iterStack != v_stackParams.size(); iterStack++)
+		{
+			std::string inputTiff{ v_stackParams.at(iterStack).sliceNumber_s + "_" + v_stackParams.at(iterStack).wavelengthIndex_s + "_" + v_stackParams.at(iterStack).tileIndexII_s + "_" + v_stackParams.at(iterStack).tileIndexJJ_s };
+			std::string outputFilename{ "output_" + inputTiff };
+			const int wavelengthIndex{ std::stoi(v_stackParams.at(iterStack).wavelengthIndex_s) };
+			const int tileIndexII{ std::stoi(v_stackParams.at(iterStack).tileIndexII_s) };
+			const int tileIndexJJ{ std::stoi(v_stackParams.at(iterStack).tileIndexJJ_s) };
+	
+			const int pixIndexII{ tileIndexII * 476 };
+			const int pixIndexJJ{ tileIndexJJ * 286 };
+
+			//SELECT THE WAVELENGTH INDEX (0 FOR DAPI, 1 FOR GFP, 2 FOR TDT)
+			//if(wavelengthIndex == 0)
+				datalog.record(outputFilename + ".tif;;\t (" + Util::toString(pixIndexJJ, 1) + "," + Util::toString(pixIndexII, 1) + "," + "0.0)");
+
+			//APPLY CORRECTION
+			if (1)
+			{
+				TiffU8 image{ inputTiff };
+				image.correctRSdistortionGPU(150. * um);
+				image.flattenFieldGaussian(0.015);
+				image.suppressCrosstalk(0.20);
+				image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+			}//if
+		}
+
+		Util::pressAnyKeyToCont();
 	}
 
 	void quickStitcher()
@@ -1433,7 +1512,6 @@ namespace TestRoutines
 		Util::pressAnyKeyToCont();
 	}*/
 	
-
 	void sequencerConcurrentTest()
 	{
 		class FUNC
@@ -1683,8 +1761,8 @@ namespace TestRoutines
 		else
 			wavelength_nm = 750;
 
-		//FWexcitation.setWavelength(wavelength_nm);
-		//FWdetection.setWavelength(wavelength_nm);
+		//FWexcitation.setWavelength(wavelengthIndex_s);
+		//FWdetection.setWavelength(wavelengthIndex_s);
 
 		if (1)//Multibeam. Turn both filterwheels concurrently
 		{

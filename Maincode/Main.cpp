@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
 			//Routines::panoramicScan(fpga);
-			//Routines::sequencer(fpga, 0);
+			//Routines::sequencer(fpga, 1);
 			//Routines::liveScan(fpga);
 
 			//TESTS
@@ -46,6 +46,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::correctImage();
 			//TestRoutines::correctImageBatch();
+			TestRoutines::correctImageReadStacksFromFile();
 			//TestRoutines::quickStitcher();
 			//TestRoutines::boolmap();
 			//TestRoutines::vectorOfObjects();

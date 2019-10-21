@@ -1040,7 +1040,7 @@ void Sequencer::generateCommandList()
 	std::cout << "Generating the command list..." << "\n";
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
-		//panoramicScan_();
+		panoramicScan_();
 
 		initializeIteratorIJ_();		//Reset the tile iterator after every cut
 		//The first fluor-marker on the list is read, then the second marker, etc

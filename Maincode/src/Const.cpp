@@ -96,7 +96,7 @@ namespace Constants
 	extern const POSITION3 g_chromaticShiftVision750nm{ 0.0 * um, 0.0 * um, 0. * um };//-5um
 	extern const POSITION3 g_chromaticShiftVision920nm{ 0, 0, 0 };
 	extern const POSITION3 g_chromaticShiftVision1040nm{ 0, 0, -1. * um };
-	extern const POSITION3 g_chromaticShiftFidelity1040nm{ 0.7 * um, 1.0 * um, -7. * um };//-4um
+	extern const POSITION3 g_chromaticShiftFidelity1040nm{ 0.7 * um, 1.0 * um, -6. * um };//-4um
 
 	//PMT
 	extern const int g_nChanPMT{ 16 };

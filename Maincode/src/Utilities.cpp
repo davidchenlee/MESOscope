@@ -216,6 +216,9 @@ Logger::Logger(std::string filename, const OVERRIDE override)
 		filename = Util::doesFileExist(filename, ".txt");
 
 	mFileHandle.open(g_folderPath + filename + ".txt");
+
+	if (!mFileHandle)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": The file " + filename + ".txt failed to open");
 };
 
 Logger::~Logger()

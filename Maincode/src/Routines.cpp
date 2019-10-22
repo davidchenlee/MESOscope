@@ -1454,7 +1454,7 @@ namespace TestRoutines
 
 		//The tile array for the slow scan (overlay tile array) does not necessarily coincide with the tile array used in fast scanning
 		const PIXDIM2 overlayTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because contX uses PANpixelSizeX=1.0 um for speed and not 0.5 um
-		const TILEDIM2 overlayTileArraySizeIJ{ 20, 30 };
+		const TILEDIM2 overlayTileArraySizeIJ{ 50, 30 };
 		const TILEOVERLAP3 overlayOverlapIJK_frac{ 0.15, 0.10, 0.0 };
 		const double threshold{ 0.02 };
 		

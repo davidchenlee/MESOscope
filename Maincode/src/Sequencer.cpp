@@ -185,7 +185,7 @@ TILEOVERLAP3 TileArray::readTileOverlapIJK_frac() const
 }
 
 //Pixel position of the center of the tiles relative to the center of the array
-PIXELij TileArray::determineTileRelativePixelPos_pix(const TILEIJ tileIndicesIJ) const
+PIXELij TileArray::determineTilePosWrtCenterTileArray_pix(const TILEIJ tileIndicesIJ) const
 {
 	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mArraySizeIJ.II)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + std::to_string(mArraySizeIJ.II - 1) + "]");
@@ -470,42 +470,47 @@ void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override)
 # pragma omp parallel for schedule(dynamic)
 	for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
 	{
-		const PIXELij tileCenterPos_pix{ determineTileAbsolutePixelPos_pix_({ II, 0 }) };			//Tile center position wrt the Tiff		
-		const int tileTopPos_pix{ tileCenterPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };		//Top pixels of the tile wrt the Tiff
-		const int tileBottomPos_pix{ tileCenterPos_pix.ii + mTileArray.readTileHeight_pix() / 2 };	//Bottom pixels of the tile wrt the Tiff
-		for (int iterCol_pix = 0; iterCol_pix < mPanoramicWidth_pix; iterCol_pix++)
-			for (int iterThickness = -lineThickness / 2; iterThickness < lineThickness / 2; iterThickness++)
-			{
-				const int iterTopRow_pix{ (tileTopPos_pix + iterThickness) * mPanoramicWidth_pix + iterCol_pix };
-				const int iterBottomRow_pix{ (tileBottomPos_pix + iterThickness) * mPanoramicWidth_pix + iterCol_pix };
+		const PIXELij tileCenterPos_pix{ determineTilePosWrtPanoramic_pix_({ II, 0 }) };					//Tile center position wrt the Tiff		
+		const int tileTopPos_pix{ tileCenterPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };				//Top pixels of the tile wrt the Tiff
+		const int tileBottomPos_pix{ tileCenterPos_pix.ii + mTileArray.readTileHeight_pix() / 2 };			//Bottom pixels of the tile wrt the Tiff
+	
+		if (tileTopPos_pix >= 0 && tileBottomPos_pix < mPanoramicHeight_pix)								//Make sure that the pixels lie inside the panoramic tiff
+			for (int iterCol_pix = 0; iterCol_pix < mPanoramicWidth_pix; iterCol_pix++)
+				for (int iterThickness = -lineThickness / 2; iterThickness < lineThickness / 2; iterThickness++)
+				{
+					const int iterTopRow_pix{ (tileTopPos_pix + iterThickness) * mPanoramicWidth_pix + iterCol_pix };
+					const int iterBottomRow_pix{ (tileBottomPos_pix + iterThickness) * mPanoramicWidth_pix + iterCol_pix };
 
-				if (iterTopRow_pix >= 0 && iterTopRow_pix < mNpixPanoramic)								//Make sure that the pixel is inside the Tiff
-					(mTiff.data())[iterTopRow_pix] = lineColor;
+					if (iterTopRow_pix >= 0 && iterTopRow_pix < mNpixPanoramic)								//Make sure that the pixel is inside the Tiff
+						(mTiff.data())[iterTopRow_pix] = lineColor;
 
-				if (iterBottomRow_pix >= 0 && iterBottomRow_pix < mNpixPanoramic)						//Make sure that the pixel is inside the Tiff
-					(mTiff.data())[(tileBottomPos_pix + iterThickness) * mPanoramicWidth_pix + iterCol_pix] = lineColor;
-			}
+					if (iterBottomRow_pix >= 0 && iterBottomRow_pix < mNpixPanoramic)						//Make sure that the pixel is inside the Tiff
+						(mTiff.data())[(tileBottomPos_pix + iterThickness) * mPanoramicWidth_pix + iterCol_pix] = lineColor;
+				}
 	}
 
 	//Vertical lines. JJ is the column index (along the image width) wrt the tile array
 # pragma omp parallel for schedule(dynamic)
 	for (int JJ = 0; JJ < mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ); JJ++)
 	{
-		const PIXELij tileCenterPos_pix{ determineTileAbsolutePixelPos_pix_({ 0, JJ }) };			//Tile center position wrt the Tiff
-		const int tileLeft{ tileCenterPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };			//Left pixels of the tile wrt the Tiff
-		const int tileRight{ tileCenterPos_pix.jj + mTileArray.readTileWidth_pix() / 2 };			//Right pixels of the tile wrt the Tiff
-		for (int iterRow_pix = 0; iterRow_pix < mPanoramicHeight_pix; iterRow_pix++)
-			for (int iterThickness = -lineThickness / 2; iterThickness < lineThickness / 2; iterThickness++)
-			{
-				const int iterLeftColumn_pix{ iterRow_pix * mPanoramicWidth_pix + tileLeft + iterThickness };
-				const int iterRightColumn_pix{ iterRow_pix * mPanoramicWidth_pix + tileRight + iterThickness };
+		const PIXELij tileCenterPos_pix{ determineTilePosWrtPanoramic_pix_({ 0, JJ }) };					//Tile center position wrt the Tiff
+		const int tileLeftPos_pix{ tileCenterPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };				//Left pixels of the tile wrt the Tiff
+		const int tileRightPos_pix{ tileCenterPos_pix.jj + mTileArray.readTileWidth_pix() / 2 };			//Right pixels of the tile wrt the Tiff
 
-				if (iterLeftColumn_pix >= 0 && iterLeftColumn_pix < mNpixPanoramic)						//Make sure that the pixel is inside the Tiff
-					(mTiff.data())[iterLeftColumn_pix] = lineColor;
+		
+		if (tileLeftPos_pix >= 0 && tileRightPos_pix < mPanoramicWidth_pix)									//Make sure that the pixels lie inside the panoramic tiff
+			for (int iterRow_pix = 0; iterRow_pix < mPanoramicHeight_pix; iterRow_pix++)
+				for (int iterThickness = -lineThickness / 2; iterThickness < lineThickness / 2; iterThickness++)
+				{
+					const int iterLeftColumn_pix{ iterRow_pix * mPanoramicWidth_pix + tileLeftPos_pix + iterThickness };
+					const int iterRightColumn_pix{ iterRow_pix * mPanoramicWidth_pix + tileRightPos_pix + iterThickness };
 
-				if (iterRightColumn_pix >= 0 && iterRightColumn_pix < mNpixPanoramic)					//Make sure that the pixel is inside the Tiff
-					(mTiff.data())[iterRightColumn_pix] = lineColor;
-			}
+					if (iterLeftColumn_pix >= 0 && iterLeftColumn_pix < mNpixPanoramic)						//Make sure that the pixel is inside the Tiff
+						(mTiff.data())[iterLeftColumn_pix] = lineColor;
+
+					if (iterRightColumn_pix >= 0 && iterRightColumn_pix < mNpixPanoramic)					//Make sure that the pixel is inside the Tiff
+						(mTiff.data())[iterRightColumn_pix] = lineColor;
+				}
 	}
 	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
@@ -525,7 +530,7 @@ void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 		for (int JJ = 0; JJ < mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ); JJ++)
 			if (isTileBright({ II, JJ }))	//If the tile is bright, copy the pixel from mTiff.data()
 			{
-				const PIXELij tileCenterPos_pix{ determineTileAbsolutePixelPos_pix_({ II, JJ }) };	//Tile center position wrt the Tiff anchor pixel
+				const PIXELij tileCenterPos_pix{ determineTilePosWrtPanoramic_pix_({ II, JJ }) };	//Tile center position wrt the Tiff anchor pixel
 				const int tileTopPos_pix{ tileCenterPos_pix.ii - mTileArray.readTileHeight_pix() / 2 };
 				const int tileBottomPos_pix{ tileTopPos_pix + mTileArray.readTileHeight_pix() };
 				const int tileLeftPos_pix{ tileCenterPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };
@@ -539,19 +544,21 @@ void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 	outputTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
 
-//Pixel position of the center of the tiles relative to the center of the Tiff
-PIXELij Boolmap::determineTileAbsolutePixelPos_pix_(const TILEIJ tileIndicesIJ) const
+//Overlay the tile array on top of the panoramic
+//The center of the tile array is fixed to the anchor pixel of the panoramic
+//The pixels are wrt the origin of the panoramix, i.e., the top-left corner of the tiff
+PIXELij Boolmap::determineTilePosWrtPanoramic_pix_(const TILEIJ tileIndicesIJ) const
 {
 	if (tileIndicesIJ.II < 0 || tileIndicesIJ.II >= mTileArray.readTileArraySizeIJ(TileArray::Axis::II))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The row index II must be in the range [0-" + std::to_string(mTileArray.readTileArraySizeIJ(TileArray::Axis::II) - 1) + "]");
 	if (tileIndicesIJ.JJ < 0 || tileIndicesIJ.JJ >= mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ))
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The column index JJ must be in the range [0-" + std::to_string(mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) - 1) + "]");
 
-	return { mAnchorPixel_pix.ii + mTileArray.determineTileRelativePixelPos_pix(tileIndicesIJ).ii,
-			 mAnchorPixel_pix.jj + mTileArray.determineTileRelativePixelPos_pix(tileIndicesIJ).jj };
+	return { mAnchorPixel_pix.ii + mTileArray.determineTilePosWrtCenterTileArray_pix(tileIndicesIJ).ii,
+			 mAnchorPixel_pix.jj + mTileArray.determineTilePosWrtCenterTileArray_pix(tileIndicesIJ).jj };
 }
 
-//Take the top frame of the stack and return true if it's bright. Divide the image in quadrants for a better sensitivity
+//Take the first frame of the stack and return true if it's bright. Divide the image in quadrants for a better sensitivity
 //II is the row index (along the image height) and JJ is the column index (along the image width) wrt the tile array. II and JJ start from 0
 bool Boolmap::isQuadrantBright_(const double threshold, const TILEIJ tileIndicesIJ) const
 {
@@ -565,50 +572,55 @@ bool Boolmap::isQuadrantBright_(const double threshold, const TILEIJ tileIndices
 	const int threshold_255{ static_cast<int>(threshold * 255) };		//Threshold in the range [0-255]
 
 	//Divide the image in 4 quadrants
-	const PIXELij tileCenterPos_pix{ determineTileAbsolutePixelPos_pix_(tileIndicesIJ) };	//Tile center position wrt the Tiff anchor pixel
+	const PIXELij tileCenterPos_pix{ determineTilePosWrtPanoramic_pix_(tileIndicesIJ) };	//Tile center position wrt the Tiff anchor pixel
 	const int halfHeight{ mTileArray.readTileHeight_pix() / 2 };
 	const int halfwidth{ mTileArray.readTileWidth_pix() / 2 };
 	const int tileTopPos_pix{ tileCenterPos_pix.ii - halfHeight };
 	const int tileBottomPos_pix{ tileCenterPos_pix.ii + halfHeight };
 	const int tileLeftPos_pix{ tileCenterPos_pix.jj - halfwidth };
 	const int tileRightPos_pix{ tileCenterPos_pix.jj + halfwidth };
-	std::vector<double> vec_sum;	//Vector of the sum for each quadrant
 
-	//Iterate over the 4 quadrants. Start scanning the quadrant from the top-left corner of the image. Scan from left to right, then go back and scan the second row from left to right.
-	for (int iterQuadRow = 0; iterQuadRow < 2; iterQuadRow++)
-		for (int iterQuadCol = 0; iterQuadCol < 2; iterQuadCol++)
-		{
-			int sum{ 0 };
-			int nPixQuad{ 0 };		//Calculate the number of pixels in a quadrant dynamically to take into account the fractional tiles at the tiff edges
+	//Make sure that the pixels lie inside the panoramic tiff
+	if (tileTopPos_pix >= 0 && tileBottomPos_pix < mPanoramicHeight_pix && tileLeftPos_pix >= 0 && tileRightPos_pix < mPanoramicWidth_pix)
+	{
+		//Iterate over the 4 quadrants. Start scanning the quadrant from the top-left corner of the image. Scan from left to right, then go back and scan the second row from left to right
+		std::vector<double> vec_sum;	//Vector of the sum for each quadrant
+		for (int iterQuadRow = 0; iterQuadRow < 2; iterQuadRow++)
+			for (int iterQuadCol = 0; iterQuadCol < 2; iterQuadCol++)
+			{
+				int sum{ 0 };
+				int nPixQuad{ 0 };		//Calculate the number of pixels in a quadrant dynamically to take into account the fractional tiles at the tiff edges
 
-			//Iterate over all the pixels inside a quadrant
-			for (int iterQuadRow_pix = tileTopPos_pix + (iterQuadRow * halfHeight); iterQuadRow_pix < tileTopPos_pix + ((iterQuadRow + 1) * halfHeight); iterQuadRow_pix++)
-				for (int iterQuadCol_pix = tileLeftPos_pix + (iterQuadCol * halfwidth); iterQuadCol_pix < tileLeftPos_pix + ((iterQuadCol + 1)* halfwidth); iterQuadCol_pix++)
-				{
-					const int pixelIndex{ iterQuadRow_pix * mPanoramicWidth_pix + iterQuadCol_pix };
-					if (pixelIndex >= 0 && pixelIndex < mPanoramicHeight_pix * mPanoramicWidth_pix)
+				//Iterate over all the pixels inside a quadrant
+				for (int iterQuadRow_pix = tileTopPos_pix + (iterQuadRow * halfHeight); iterQuadRow_pix < tileTopPos_pix + ((iterQuadRow + 1) * halfHeight); iterQuadRow_pix++)
+					for (int iterQuadCol_pix = tileLeftPos_pix + (iterQuadCol * halfwidth); iterQuadCol_pix < tileLeftPos_pix + ((iterQuadCol + 1)* halfwidth); iterQuadCol_pix++)
 					{
-						sum += (mTiff.data())[pixelIndex];
-						nPixQuad++;
+						const int pixelIndex{ iterQuadRow_pix * mPanoramicWidth_pix + iterQuadCol_pix };
+						if (pixelIndex >= 0 && pixelIndex < mPanoramicHeight_pix * mPanoramicWidth_pix)//I think this is redundant, but it does not hurt
+						{
+							sum += (mTiff.data())[pixelIndex];
+							nPixQuad++;
+						}
 					}
-				}
-			vec_sum.push_back(1. * sum / nPixQuad);
-		}
+				vec_sum.push_back(1. * sum / nPixQuad);
+			}
 
-	const double sumTL{ 1. * vec_sum.at(0) };	//Average count top-left
-	const double sumTR{ 1. * vec_sum.at(1) };	//Average count top-right
-	const double sumBL{ 1. * vec_sum.at(2) };	//Average count bottom-left
-	const double sumBR{ 1. * vec_sum.at(3) };	//Average count bottom-right
+		const double sumTL{ 1. * vec_sum.at(0) };	//Average count top-left
+		const double sumTR{ 1. * vec_sum.at(1) };	//Average count top-right
+		const double sumBL{ 1. * vec_sum.at(2) };	//Average count bottom-left
+		const double sumBR{ 1. * vec_sum.at(3) };	//Average count bottom-right
 
-	/*
-	//For debuging
-	std::cout << "Average count TL = " << sumTL << "\n";
-	std::cout << "Average count TR = " << sumTR << "\n";
-	std::cout << "Average count BL = " << sumBL << "\n";
-	std::cout << "Average count BR = " << sumBR << "\n";
-	*/
-	return (sumTL > threshold_255 || sumTR > threshold_255 || sumBL > threshold_255 || sumBR > threshold_255);
-	//return false;
+		/*
+		//For debuging
+		std::cout << "Average count TL = " << sumTL << "\n";
+		std::cout << "Average count TR = " << sumTR << "\n";
+		std::cout << "Average count BL = " << sumBL << "\n";
+		std::cout << "Average count BR = " << sumBR << "\n";
+		*/
+		return (sumTL > threshold_255 || sumTR > threshold_255 || sumBL > threshold_255 || sumBR > threshold_255);
+	}
+	else
+		return false;
 }
 
 //Note that when the tiles have some overlap, the tile array will not cover the entire Tiff

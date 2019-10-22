@@ -26,7 +26,7 @@ public:
 	TILEDIM2 readTileArraySizeIJ() const;
 	int readTileArraySizeIJ(const TileArray::Axis axis) const;
 	TILEOVERLAP3 readTileOverlapIJK_frac() const;
-	PIXELij determineTileRelativePixelPos_pix(const TILEIJ tileIndicesIJ) const;
+	PIXELij determineTilePosWrtCenterTileArray_pix(const TILEIJ tileIndicesIJ) const;
 protected:
 	const int mTileHeight_pix;		//Pixel height of a single tile
 	const int mTileWidth_pix;		//Pixel width of a single tile
@@ -90,7 +90,7 @@ private:
 	PIXELij mAnchorPixel_pix;			//Reference position for the tile array wrt the Tiff
 	std::vector<bool> mBoolmap;
 
-	PIXELij determineTileAbsolutePixelPos_pix_(const TILEIJ tileIndicesIJ) const;
+	PIXELij determineTilePosWrtPanoramic_pix_(const TILEIJ tileIndicesIJ) const;
 	bool isQuadrantBright_(const double threshold, const TILEIJ tileIndicesIJ) const;
 	void generateBoolmap_();
 };

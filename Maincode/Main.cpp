@@ -46,9 +46,9 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::correctImage();
 			//TestRoutines::correctImageBatch();
-			TestRoutines::correctImageReadStacksFromFile();
+			//TestRoutines::correctImageReadStacksFromFile();
 			//TestRoutines::quickStitcher();
-			//TestRoutines::boolmap();
+			TestRoutines::boolmap();
 			//TestRoutines::vectorOfObjects();
 			//TestRoutines::convexHull();
 

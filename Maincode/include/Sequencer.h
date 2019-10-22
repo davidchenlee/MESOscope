@@ -79,7 +79,7 @@ public:
 	void saveTileGridOverlay(std::string filename, const OVERRIDE override) const;
 	void saveTileMap(std::string filename, const OVERRIDE override) const;
 	void fillTileMapHoles();
-	void copyBoolmap(std::vector<bool> &vec_input);
+	void copyBoolmapToVector(std::vector<bool> &vec_input);
 private:
 	const TiffU8 mTiff;
 	const TileArray mTileArray;
@@ -88,7 +88,7 @@ private:
 	const int mPanoramicWidth_pix;		//Pixel width of the tiled image
 	const int mNpixPanoramic;			//Total number of pixels in mTiff
 	PIXELij mAnchorPixel_pix;			//Reference position for the tile array wrt the Tiff
-	std::vector<bool> mIsBrightMap;
+	std::vector<bool> mBoolmap;
 
 	PIXELij determineTileAbsolutePixelPos_pix_(const TILEIJ tileIndicesIJ) const;
 	bool isQuadrantBright_(const double threshold, const TILEIJ tileIndicesIJ) const;

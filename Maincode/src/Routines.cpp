@@ -263,7 +263,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -326,7 +326,7 @@ namespace Routines
 		Image image{ realtimeSeq };
 		image.acquire();
 		image.binFrames(nFramesBinning);
-		//image.correct(mesoscope.readFFOV());
+		image.correct(mesoscope.readFFOV());
 
 		const std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) +
 			"nm_Pmin=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_PLexp=" + Util::toString(fluorMarker.mScanPLexp / um, 0) +
@@ -445,11 +445,11 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 0.400 * mm, 0.300 * mm, 0.000 * mm };
+		const LENGTH3 LOIxyz{ 3.000 * mm, 2.000 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
-		const TILEOVERLAP3 stackOverlap_frac{ 0.15, 0.05, 0.50 };										//Stack overlap
+		const TILEOVERLAP3 stackOverlap_frac{ 0.15, 0.10, 0.50 };										//Stack overlap
 
 		//PANORAMIC SCAN
 		const double PANwidth{ 3.000 * mm };															//Total width of the panoramic scan
@@ -698,10 +698,10 @@ namespace Routines
 																																			//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
 					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };	//NOTE THE FACTOR OF 2 IN X
 					boolmap.fillTileMapHoles();
-					boolmap.copyBoolmap(vec_boolmap);//Save the boolmap for the next iterations
-
+					boolmap.copyBoolmapToVector(vec_boolmap);//Save the boolmap for the next iterations
+					boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
+					
 					//For debugging
-					//boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
 					//boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
 				}
 				break;
@@ -1367,29 +1367,37 @@ namespace TestRoutines
 		Logger datalog("TileConfiguration", OVERRIDE::EN);
 		datalog.record("# Define the number of dimensions we are working on");
 		datalog.record("dim=3"); //Needed for the BigStitcher
+		int counter{ 0 };
 		for (std::vector<int>::size_type iterStack = 0; iterStack != v_stackParams.size(); iterStack++)
 		{
 			std::string inputTiff{ v_stackParams.at(iterStack).sliceNumber_s + "_" + v_stackParams.at(iterStack).wavelengthIndex_s + "_" + v_stackParams.at(iterStack).tileIndexII_s + "_" + v_stackParams.at(iterStack).tileIndexJJ_s };
 			std::string outputFilename{ "output_" + inputTiff };
+
+			//std::string outputFilename{ Util::toString(counter,0) };
+			//outputFilename = std::string(3 - outputFilename.length(), '0') + outputFilename;	//Paddle with zeros on the left. 3 digits in total
+
+
 			const int wavelengthIndex{ std::stoi(v_stackParams.at(iterStack).wavelengthIndex_s) };
 			const int tileIndexII{ std::stoi(v_stackParams.at(iterStack).tileIndexII_s) };
 			const int tileIndexJJ{ std::stoi(v_stackParams.at(iterStack).tileIndexJJ_s) };
 	
 			const int pixIndexII{ tileIndexII * 476 };
-			const int pixIndexJJ{ tileIndexJJ * 286 };
+			const int pixIndexJJ{ tileIndexJJ * 270 };
 
 			//SELECT THE WAVELENGTH INDEX (0 FOR DAPI, 1 FOR GFP, 2 FOR TDT)
 			//if(wavelengthIndex == 0)
+			//if(tileIndexII == 7)
 				datalog.record(outputFilename + ".tif;;\t (" + Util::toString(pixIndexJJ, 1) + "," + Util::toString(pixIndexII, 1) + "," + "0.0)");
 
 			//APPLY CORRECTION
-			if (1)
+			if (0)
 			{
 				TiffU8 image{ inputTiff };
 				image.correctRSdistortionGPU(150. * um);
 				image.flattenFieldGaussian(0.015);
 				image.suppressCrosstalk(0.20);
 				image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+				counter++;
 			}//if
 		}
 
@@ -1440,14 +1448,14 @@ namespace TestRoutines
 	void boolmap()
 	{
 		//g_folderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
-		std::string inputFilename{ "000" };
+		std::string inputFilename{ "000_panoramic" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
 		//The tile array for the slow scan (overlay tile array) does not necessarily coincide with the tile array used in fast scanning
 		const PIXDIM2 overlayTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because contX uses PANpixelSizeX=1.0 um for speed and not 0.5 um
-		const TILEDIM2 overlayTileArraySizeIJ{ 12, 7 };
-		const TILEOVERLAP3 overlayOverlapIJK_frac{ 0.15, 0.05, 0.0 };
+		const TILEDIM2 overlayTileArraySizeIJ{ 20, 30 };
+		const TILEOVERLAP3 overlayOverlapIJK_frac{ 0.15, 0.10, 0.0 };
 		const double threshold{ 0.02 };
 		
 		Boolmap boolmap{ image, overlayTileArraySizeIJ, overlayTileSize_pix, overlayOverlapIJK_frac, threshold };
@@ -1457,10 +1465,6 @@ namespace TestRoutines
 		boolmap.fillTileMapHoles();
 		boolmap.saveBoolmapToText("Boolmap_filled", OVERRIDE::EN);
 		//boolmap.saveTileMap("TileMap_filled", OVERRIDE::EN);
-
-		std::vector<bool> vec_boolmap;
-		boolmap.copyBoolmap(vec_boolmap);
-		Util::saveBoolmapToText("Boolmap_filled_copy", vec_boolmap, overlayTileArraySizeIJ, OVERRIDE::EN);
 
 		Util::pressAnyKeyToCont();
 	}

@@ -424,7 +424,7 @@ bool Boolmap::isTileBright(const TILEIJ tileIndicesIJ) const
 
 	try
 	{
-		return mIsBrightMap.at(tileIndicesIJ.II * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) + tileIndicesIJ.JJ);
+		return mBoolmap.at(tileIndicesIJ.II * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) + tileIndicesIJ.JJ);
 	}
 	catch (...) {
 		throw std::out_of_range((std::string)__FUNCTION__);
@@ -446,7 +446,7 @@ void Boolmap::saveBoolmapToText(std::string filename, const OVERRIDE override)
 		for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
 		{
 			for (int JJ = 0; JJ < mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ); JJ++)
-				fileHandle << static_cast<int>(mIsBrightMap.at(II * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) + JJ));
+				fileHandle << static_cast<int>(mBoolmap.at(II * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) + JJ));
 			fileHandle << "\n";	//End the row
 		}
 	}
@@ -513,7 +513,6 @@ void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override)
 //Save a copy of the input Tiff with the dark tiles shaded
 void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
 {
-	
 	TiffU8 outputTiff{ mPanoramicHeight_pix, mPanoramicWidth_pix, 1 };	//Create an empty Tiff
 
 	//Shade the Tiff with a chosen grey level
@@ -619,22 +618,22 @@ void Boolmap::generateBoolmap_()
 	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
 	for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
 		for (int JJ = 0; JJ < mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ); JJ++)
-			mIsBrightMap.push_back(isQuadrantBright_(mThreshold, { II, JJ }));
+			mBoolmap.push_back(isQuadrantBright_(mThreshold, { II, JJ }));
 }
 
 void Boolmap::fillTileMapHoles()
 {
 	const TILEDIM2 tileArraySizeIJ{ mTileArray.readTileArraySizeIJ() };
 
-	std::vector<int> minII(tileArraySizeIJ.JJ, tileArraySizeIJ.II);	//min II for each JJ. Vector of length tileArraySizeIJ.JJ initialized with the max II = tileArraySizeIJ.II
-	std::vector<int> maxII(tileArraySizeIJ.JJ, 0);					//max II for each JJ. Vector of length tileArraySizeIJ.JJ initialized with the min II = 0
-	std::vector<int> minJJ(tileArraySizeIJ.II, tileArraySizeIJ.JJ);	//min JJ for each II. Vector of length tileArraySizeIJ.II initialized with the max JJ = tileArraySizeIJ.JJ
-	std::vector<int> maxJJ(tileArraySizeIJ.II, 0);					//max JJ for each II. Vector of length tileArraySizeIJ.II initialized with the min JJ = 0
+	std::vector<int> minII(tileArraySizeIJ.JJ, tileArraySizeIJ.II-1);	//min II for each JJ. Vector of length tileArraySizeIJ.JJ initialized with the max II = tileArraySizeIJ.II - 1
+	std::vector<int> maxII(tileArraySizeIJ.JJ, 0);						//max II for each JJ. Vector of length tileArraySizeIJ.JJ initialized with the min II = 0
+	std::vector<int> minJJ(tileArraySizeIJ.II, tileArraySizeIJ.JJ-1);	//min JJ for each II. Vector of length tileArraySizeIJ.II initialized with the max JJ = tileArraySizeIJ.JJ - 1
+	std::vector<int> maxJJ(tileArraySizeIJ.II, 0);						//max JJ for each II. Vector of length tileArraySizeIJ.II initialized with the min JJ = 0
 
 	//Find the min and max IIs and JJs
 	for (int II = 0; II < tileArraySizeIJ.II; II++)
 		for (int JJ = 0; JJ < tileArraySizeIJ.JJ; JJ++)
-			if (mIsBrightMap.at(II * tileArraySizeIJ.JJ + JJ) == 1)
+			if (mBoolmap.at(II * tileArraySizeIJ.JJ + JJ) == 1)
 			{
 				if (II < minII.at(JJ))
 					minII.at(JJ) = II;
@@ -650,18 +649,60 @@ void Boolmap::fillTileMapHoles()
 	//for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
 	//	std::cout << minJJ.at(II) << "\n";
 
-	//Update mIsBrightMap with the holes filled
+	//Fill the holes in mBoolmap
 	for (int II = 0; II < tileArraySizeIJ.II; II++)
 		for (int JJ = 0; JJ < tileArraySizeIJ.JJ; JJ++)
 			if (II >= minII.at(JJ) && II <= maxII.at(JJ) && JJ >= minJJ.at(II) && JJ <= maxJJ.at(II))
-				mIsBrightMap.at(II * tileArraySizeIJ.JJ + JJ) = 1;
+				mBoolmap.at(II * tileArraySizeIJ.JJ + JJ) = 1;
+
+	//Enlarge the boolmap by 1 place in the vertical direction of the tiff
+	std::vector<bool> mBoolmapAugmentedV{ mBoolmap };
+	for (int JJ = 0; JJ < tileArraySizeIJ.JJ; JJ++)
+	{
+		//
+		if (mBoolmapAugmentedV.at(minII.at(JJ) * tileArraySizeIJ.JJ + JJ) == 1)
+		{
+			const int minIIminus1{ (minII.at(JJ) - 1) * tileArraySizeIJ.JJ + JJ };
+			if (minIIminus1 >= 0)
+				mBoolmapAugmentedV.at(minIIminus1) = 1;
+		}	
+
+		if (mBoolmapAugmentedV.at(maxII.at(JJ) * tileArraySizeIJ.JJ + JJ) == 1)
+		{
+			const int maxIIplus1{ (maxII.at(JJ) + 1) * tileArraySizeIJ.JJ + JJ };
+			if (maxIIplus1 < tileArraySizeIJ.II * tileArraySizeIJ.JJ)
+				mBoolmapAugmentedV.at(maxIIplus1) = 1;
+		}
+	}
+
+	//Enlarge the boolmap by 1 place in the horizontal direction of the tiff
+	std::vector<bool> mBoolmapAugmentedH{ mBoolmap };
+	for (int II = 0; II < tileArraySizeIJ.II; II++)
+	{
+		if (mBoolmapAugmentedH.at(II * tileArraySizeIJ.JJ + minJJ.at(II)) == 1)
+		{
+			const int minJJminus1{ II * tileArraySizeIJ.JJ + (minJJ.at(II)-1) };
+			if (minJJminus1 >= 0)
+				mBoolmapAugmentedH.at(minJJminus1) = 1;
+		}
+		if (mBoolmapAugmentedH.at(II * tileArraySizeIJ.JJ + maxJJ.at(II)) == 1)
+		{
+			const int maxJJplus1{ II * tileArraySizeIJ.JJ + (maxJJ.at(II)+1) };
+			if (maxJJplus1 < tileArraySizeIJ.II * tileArraySizeIJ.JJ)
+				mBoolmapAugmentedH.at(maxJJplus1) = 1;
+		}
+	}
+
+	//Combine the horizontal and vertical maps
+	for (std::vector<int>::size_type iter = 0; iter != mBoolmapAugmentedV.size(); iter++)
+		mBoolmap.at(iter) = mBoolmapAugmentedV.at(iter) || mBoolmapAugmentedH.at(iter);
 }
 
-void Boolmap::copyBoolmap(std::vector<bool> &vec_input)
+void Boolmap::copyBoolmapToVector(std::vector<bool> &vec_input)
 {
 	vec_input.clear();
-	for (std::vector<int>::size_type iter = 0; iter != mIsBrightMap.size(); iter++)
-		vec_input.push_back(mIsBrightMap.at(iter));
+	for (std::vector<int>::size_type iter = 0; iter != mBoolmap.size(); iter++)
+		vec_input.push_back(mBoolmap.at(iter));
 }
 #pragma endregion "Boolmap"
 

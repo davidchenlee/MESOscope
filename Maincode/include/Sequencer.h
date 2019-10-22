@@ -130,7 +130,7 @@ namespace Action
 	private:
 		int mSliceNumber;			//Slice number
 		TILEIJ mTileIndicesIJ;		//Indices of the tile array
-		POSITION2 mTileCenterXY;	//X-stage and Y-stage positions corresponding to the center of the tile
+		POSITION2 mTileCenterXY;	//X and Y stage positions for the tile center
 	};
 
 	class AcqStack final

@@ -54,7 +54,7 @@ namespace TestRoutines
 	//Postprocessing
 	void correctImage();
 	void correctImageBatch();
-	void correctImageReadStacksFromFile();
+	void correctImageFromTileConfiguration();
 	void quickStitcher();
 	void boolmap();
 	void vectorOfObjects();

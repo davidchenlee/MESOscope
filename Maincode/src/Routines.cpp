@@ -263,7 +263,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -445,7 +445,8 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 3.000 * mm, 2.000 * mm, 0.000 * mm };
+		//const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 0.000 * mm };
+		const LENGTH3 LOIxyz{ 0.300 * mm, 0.200 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
@@ -498,8 +499,10 @@ namespace Routines
 			POSITION2 tileCenterXY;
 			std::string shortName, longName;
 			SCANDIR iterScanDirZ{ ScanDirZini };
-			Logger datalogStacks(g_currentSample.readName() + "_stacks", OVERRIDE::DIS);
 			Logger datalogPanoramics(g_currentSample.readName() + "_panoramics", OVERRIDE::DIS);
+			Logger datalogStacks("TileConfiguration", OVERRIDE::DIS);
+			datalogStacks.record("# Define the number of dimensions we are working on");
+			datalogStacks.record("dim=3"); //Needed for GridStitcher on Fiji
 
 			//BOOLMAP. Declare the boolmap here to pass it between different actions
 			std::vector<bool> vec_boolmap(sequence.readTotalNumberOfStacks(), true);	//Initialize it with TRUEs in case the panoramic scan is disabled
@@ -544,7 +547,7 @@ namespace Routines
 							const double pixelSizeZbeforeBinning{ stackDepth / nFramesBeforeBinning };
 							mesoscope.setVelSingle(AXIS::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
 
-							//These parameters must be accessible to the file saving block
+							//These parameters must be accessible for saving the tiff
 							stackIndex = acqStack.readStackIndex();
 							wavelength_nm = acqStack.readWavelength_nm();
 							scanZi = determineInitialScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
@@ -590,13 +593,13 @@ namespace Routines
 						std::string stackIndexPadded_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
 
 						std::string tileIndexII_s{ std::to_string(tileIndexII) };
-						std::string tileIndexIpadded_s = std::string(2 - tileIndexII_s.length(), '0') + tileIndexII_s;		//2 digits in total
+						std::string tileIndexIIpadded_s = std::string(2 - tileIndexII_s.length(), '0') + tileIndexII_s;		//2 digits in total
 
 						std::string tileIndexJJ_s{ std::to_string(tileIndexJJ) };
-						std::string tileIndexJpadded_s = std::string(2 - tileIndexJJ_s.length(), '0') + tileIndexJJ_s;		//2 digits in total
+						std::string tileIndexJJpadded_s = std::string(2 - tileIndexJJ_s.length(), '0') + tileIndexJJ_s;		//2 digits in total
 
 						//shortName = sliceNumberPadded_s + "_" + stackIndexPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelengthIndex_s);								//sliceNumber_stackIndex_wavelengthIndex
-						shortName = sliceNumberPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + tileIndexIpadded_s + "_" + tileIndexJpadded_s;		//sliceNumber_stackIndex_wavelengthIndex
+						shortName = sliceNumberPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + tileIndexIIpadded_s + "_" + tileIndexJJpadded_s;		//sliceNumber_stackIndex_wavelengthIndex
 						longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_PLexp=" + Util::toString(scanPLexp / um, 0) + "um" +
 							"_x=" + Util::toString(tileCenterXY.XX / mm, 3) +
 							"_y=" + Util::toString(tileCenterXY.YY / mm, 3) +
@@ -607,7 +610,10 @@ namespace Routines
 						image.acquire();
 						image.binFrames(nFramesBinning);
 						image.save(shortName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
-						datalogStacks.record(shortName + "\t(" + tileIndexIpadded_s + "," + tileIndexJpadded_s + ")\t" + longName);
+						datalogStacks.record(shortName + ".tif;;\t(" + Util::toString(-tileCenterXY.YY/pixelSizeXY, 0) + "," +	//Note that in Fiji II and JJ are interchanged
+																	   Util::toString(-tileCenterXY.XX/pixelSizeXY, 0) + "," +
+																	   Util::toString((std::min)(scanZi, scanZf)/pixelSizeZafterBinning, 0) + ")");
+						datalogStacks.record("#(" + tileIndexIIpadded_s + "," + tileIndexJJpadded_s + ")\t" + longName);
 						std::cout << "\n";
 					}
 					break;
@@ -1279,7 +1285,7 @@ namespace TestRoutines
 
 	void correctImage()
 	{
-		std::string inputFilename{ "Liver_F1040nm_Pmin=960.0mW_PLexp=300um_x=46.000_y=25.800_zi=19.8000_zf=19.9100_Step=0.0010_bin=4" };
+		std::string inputFilename{ "000_2_00_01" };
 		std::string outputFilename{ "output_" + inputFilename };
 		TiffU8 image{ inputFilename };
 		image.correctRSdistortionGPU(150. * um);
@@ -1319,88 +1325,36 @@ namespace TestRoutines
 		}*/
 	}
 
-	void correctImageReadStacksFromFile()
+	void correctImageFromTileConfiguration()
 	{
 		//READ THE TEXT FILES WITH THE STACKS ACQUIRED
-
-		std::string filename{ "Liver_stacks" };
-		std::ifstream input{ g_folderPath + filename + ".txt" };
+		std::string tileConfigFileName{ "TileConfiguration" };
+		std::ifstream input{ g_folderPath + tileConfigFileName + ".txt" };
 
 		if (!input)
-			throw std::runtime_error((std::string)__FUNCTION__ + ": The file " + filename + ".txt failed to open");
+			throw std::runtime_error((std::string)__FUNCTION__ + ": The file " + tileConfigFileName + ".txt failed to open");
 
-		struct StackParam
-		{
-			std::string sliceNumber_s;
-			std::string wavelengthIndex_s;
-			std::string tileIndexII_s;
-			std::string tileIndexJJ_s;
-		};
+		//Generate TileConfiguration for Fiji's GridStitcher
+		Logger datalog("TileConfigurationCorrected", OVERRIDE::EN);
+		datalog.record("dim=3"); //Needed for the BigStitcher
 
-		std::vector<StackParam> v_stackParams;
 		std::string line;
+		getline(input, line);//Skip the first line that contains "dim=3"
 		while (getline(input, line))
 		{
-			std::string fileNumber = line.substr(0, line.find("\t"));	//Get the file number at the beginning of each line in the text file
-			//std::cout << fileNumber << '\n';
-
-			// Tokenizing wrt '_' 
-			std::vector<std::string> v_isolatedNumbers;					// Vector of strings with the stack parameters 
-			std::stringstream fileNumber_ss(fileNumber);
-			std::string isolatedNumber;
-			while (getline(fileNumber_ss, isolatedNumber, '_'))
-				v_isolatedNumbers.push_back(isolatedNumber);
-
-			StackParam stackParam;
-			stackParam.sliceNumber_s = v_isolatedNumbers.at(0);
-			stackParam.wavelengthIndex_s = v_isolatedNumbers.at(1);
-			stackParam.tileIndexII_s = v_isolatedNumbers.at(2);
-			stackParam.tileIndexJJ_s = v_isolatedNumbers.at(3);
-			v_stackParams.push_back(stackParam);
-
-		//For debugging
-		//std::cout << stackParam.sliceNumber_s << "\t" << stackParam.wavelengthIndex_s  << stackParam.tileIndexII_s << "\t" << stackParam.tileIndexJJ_s << "\t" << "\n";
-		}
-		input.close();
-
-		//GENERATE TileConfiguration for Fiji's GridStitcher
-		Logger datalog("TileConfiguration", OVERRIDE::EN);
-		datalog.record("# Define the number of dimensions we are working on");
-		datalog.record("dim=3"); //Needed for the BigStitcher
-		int counter{ 0 };
-		for (std::vector<int>::size_type iterStack = 0; iterStack != v_stackParams.size(); iterStack++)
-		{
-			std::string inputTiff{ v_stackParams.at(iterStack).sliceNumber_s + "_" + v_stackParams.at(iterStack).wavelengthIndex_s + "_" + v_stackParams.at(iterStack).tileIndexII_s + "_" + v_stackParams.at(iterStack).tileIndexJJ_s };
-			std::string outputFilename{ "output_" + inputTiff };
-
-			//std::string outputFilename{ Util::toString(counter,0) };
-			//outputFilename = std::string(3 - outputFilename.length(), '0') + outputFilename;	//Paddle with zeros on the left. 3 digits in total
-
-
-			const int wavelengthIndex{ std::stoi(v_stackParams.at(iterStack).wavelengthIndex_s) };
-			const int tileIndexII{ std::stoi(v_stackParams.at(iterStack).tileIndexII_s) };
-			const int tileIndexJJ{ std::stoi(v_stackParams.at(iterStack).tileIndexJJ_s) };
-	
-			const int pixIndexII{ tileIndexII * 476 };
-			const int pixIndexJJ{ tileIndexJJ * 270 };
-
-			//SELECT THE WAVELENGTH INDEX (0 FOR DAPI, 1 FOR GFP, 2 FOR TDT)
-			//if(wavelengthIndex == 0)
-			//if(tileIndexII == 7)
-				datalog.record(outputFilename + ".tif;;\t (" + Util::toString(pixIndexJJ, 1) + "," + Util::toString(pixIndexII, 1) + "," + "0.0)");
-
-			//APPLY CORRECTION
-			if (0)
+			if (line.front() != '#')
 			{
-				TiffU8 image{ inputTiff };
+				std::string fileNumber = line.substr(0, line.find(".tif"));	//Get the file number at the beginning of each line in the text file
+				datalog.record("corrected_" + line);
+
+				TiffU8 image{ fileNumber };
 				image.correctRSdistortionGPU(150. * um);
 				image.flattenFieldGaussian(0.015);
 				image.suppressCrosstalk(0.20);
-				image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-				counter++;
-			}//if
+				image.saveToFile("corrected_" + fileNumber, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+			}
 		}
-
+		input.close();
 		Util::pressAnyKeyToCont();
 	}
 

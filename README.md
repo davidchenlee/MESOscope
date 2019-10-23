@@ -4,7 +4,7 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 Caution on:
-- I moved the 'realtimeSeq' argument from mesoscope.configure() to the constructor Mesoscope. Make sure that Routines::sequencer works fine
+- In Mesoscope::openShutter(), I commented out VirtualLaser::isLaserInternalShutterOpen() to check that the laser has the shutter open because it is not needed when running the full sequence and any comm error will stop the routine
 - Keep an eye on the Z-stage bouncing that triggers the ctl&acq
 Sequencer:
 - The last time I imaged liver, I noticed that stepwise and contZ scanning were vertically shifted wrt each other. I thought it was because I used pixelSizeZ = 1.0 um instead of 0.5 um,

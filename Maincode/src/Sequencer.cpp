@@ -628,8 +628,9 @@ void Boolmap::generateBoolmap_()
 {
 	//Divide the large image into tiles of size tileHeight_pix * tileWidth_pix and return an array of tiles indicating if the tile is bright
 	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
-	for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
-		for (int JJ = 0; JJ < mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ); JJ++)
+	const TILEDIM2 tileArraySizeIJ{ mTileArray.readTileArraySizeIJ() };
+	for (int II = 0; II < tileArraySizeIJ.II; II++)
+		for (int JJ = 0; JJ < tileArraySizeIJ.JJ; JJ++)
 			mBoolmap.push_back(isQuadrantBright_(mThreshold, { II, JJ }));
 }
 
@@ -658,8 +659,8 @@ void Boolmap::fillTileMapHoles()
 			}
 
 	//For debugging
-	//for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
-	//	std::cout << minJJ.at(II) << "\n";
+	for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
+		std::cout << minJJ.at(II) << "\t" << maxJJ.at(II) << "\n";
 
 	//Fill the holes in mBoolmap
 	for (int II = 0; II < tileArraySizeIJ.II; II++)
@@ -667,7 +668,8 @@ void Boolmap::fillTileMapHoles()
 			if (II >= minII.at(JJ) && II <= maxII.at(JJ) && JJ >= minJJ.at(II) && JJ <= maxJJ.at(II))
 				mBoolmap.at(II * tileArraySizeIJ.JJ + JJ) = 1;
 
-	//Enlarge the boolmap by 1 place in the vertical direction of the tiff
+	/*
+		//Enlarge the boolmap by 1 place in the vertical direction of the tiff
 	std::vector<bool> mBoolmapAugmentedV{ mBoolmap };
 	for (int JJ = 0; JJ < tileArraySizeIJ.JJ; JJ++)
 	{
@@ -708,13 +710,16 @@ void Boolmap::fillTileMapHoles()
 	//Combine the horizontal and vertical maps
 	for (std::vector<int>::size_type iter = 0; iter != mBoolmapAugmentedV.size(); iter++)
 		mBoolmap.at(iter) = mBoolmapAugmentedV.at(iter) || mBoolmapAugmentedH.at(iter);
+	*/
 }
 
-void Boolmap::copyBoolmapToVector(std::vector<bool> &vec_input)
+void Boolmap::replaceByUnionBoolmap(std::vector<bool> &vec_input)
 {
-	vec_input.clear();
 	for (std::vector<int>::size_type iter = 0; iter != mBoolmap.size(); iter++)
-		vec_input.push_back(mBoolmap.at(iter));
+	{
+		const bool aux{ mBoolmap.at(iter) || vec_input.at(iter) };
+		vec_input.at(iter) = aux;
+	}
 }
 #pragma endregion "Boolmap"
 
@@ -957,15 +962,15 @@ double Action::CutSlice::readStageZheightForFacingTheBlade() const
 	return mStageZheightForFacingTheBlade;
 }
 
-void Action::PanoramicScan::setParam(const int sliceNumber, const double planeZ)
+void Action::PanoramicScan::setParam(const int sliceNumber, const double distanceUnderTheSurface, const double stageZpos)
 {
 	if (sliceNumber < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice number must be >= 0");
-	if (planeZ < 0)
+	if (stageZpos < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The Z stage height must be >= 0");
 
 	mSliceNumber = sliceNumber;
-	mPlaneZ = planeZ + 50. * um;
+	mPlaneZ = stageZpos + distanceUnderTheSurface;
 }
 
 double Action::PanoramicScan::readPlaneZ() const
@@ -1093,7 +1098,8 @@ void Sequencer::generateCommandList()
 	std::cout << "Generating the command list..." << "\n";
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
-		//panoramicScan_();
+		panoramicScan_(30. * um);
+		panoramicScan_(100. * um);
 
 		initializeIteratorIJ_();		//Reset the tile iterator after every cut
 		//The first fluor-marker on the list is read, then the second marker, etc
@@ -1420,10 +1426,10 @@ void Sequencer::cutSlice_()
 	mIterStageZheightForFacingTheBlade += heightIncrease;
 }
 
-void Sequencer::panoramicScan_()
+void Sequencer::panoramicScan_(const double distanceUnderTheSurface)
 {
 	Commandline commandline{ Action::ID::PAN };
-	commandline.mAction.panoramicScan.setParam(mSliceCounter, mIterScanZi);
+	commandline.mAction.panoramicScan.setParam(mSliceCounter, distanceUnderTheSurface, mIterScanZi);
 	mCommandList.push_back(commandline);
 	mCommandCounter++;
 }

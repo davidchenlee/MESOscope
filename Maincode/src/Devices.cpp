@@ -1663,9 +1663,14 @@ void Pockels::linearVoltageRampAcrossFrames(const double Vi, const double Vf) co
 	//Clear the current content (if any) in the queue as precaution
 	mRTseq.clearQueue(mPockelsRTchan);
 
-	//Push the scaling factors
-	for (int ii = 0; ii < mRTseq.mNframes; ii++)
-		pushVoltageSinglet( Vi + (Vf - Vi) / (mRTseq.mNframes - 1) * ii);
+	if (mRTseq.mNframes > 1)
+	{
+		//Push the scaling factors
+		for (int ii = 0; ii < mRTseq.mNframes; ii++)
+			pushVoltageSinglet(Vi + (Vf - Vi) / (mRTseq.mNframes - 1) * ii);
+	}
+	else
+		pushVoltageSinglet(Vi);
 }
 
 //Linearly vary the laser power from the first to the last frame
@@ -1680,12 +1685,17 @@ void Pockels::linearPowerRampAcrossFrames(const double Pi, const double Pf) cons
 	//Clear the current content (if any) in the queue as precaution
 	mRTseq.clearQueue(mPockelsRTchan);
 
-	const double Vi{ convertPowerToVolt_(Pi) };
-	for (int ii = 0; ii < mRTseq.mNframes; ii++)
+	if (mRTseq.mNframes > 1)
 	{
-		const double Vf{ convertPowerToVolt_(Pi + (Pf - Pi) / (mRTseq.mNframes - 1) * ii) };	
-		pushVoltageSinglet(Vi + (Vf - Vi) / (mRTseq.mNframes - 1) * ii);
+		const double Vi{ convertPowerToVolt_(Pi) };
+		for (int ii = 0; ii < mRTseq.mNframes; ii++)
+		{
+			const double Vf{ convertPowerToVolt_(Pi + (Pf - Pi) / (mRTseq.mNframes - 1) * ii) };
+			pushVoltageSinglet(Vi + (Vf - Vi) / (mRTseq.mNframes - 1) * ii);
+		}
 	}
+	else
+		pushVoltageSinglet(convertPowerToVolt_(Pi));
 }
 
 //Exponentially vary the laser power from the first to the last frame
@@ -2292,18 +2302,16 @@ void Mesoscope::configure(const int wavelength_nm)
 	}
 }
 
-
 void Mesoscope::setPower(const double laserPower) const
 {
 	this->VirtualLaser::setPowerLinearScaling(laserPower, laserPower);
 }
 
-
 //Open the Uniblitz shutter
 void Mesoscope::openShutter() const
 {
 	//Check if the laser internal shutter is open
-	this->VirtualLaser::isLaserInternalShutterOpen();
+	//this->VirtualLaser::isLaserInternalShutterOpen();	//When imaging large volumes, this gave me an error. Comment out for now
 
 	//Open the Uniblitz shutter
 	this->VirtualLaser::openShutter();

@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>	//For creating directories
 #include "Devices.h"
 #include "Sequencer.h"
 #include "SampleConfig.h"
@@ -9,7 +10,7 @@ namespace Routines
 	void stepwiseScan(const FPGA &fpga);
 	void contScanZ(const FPGA &fpga);
 	void panoramicScan(const FPGA &fpga);
-	void sequencer(const FPGA &fpga, const bool run);
+	void sequencer(const FPGA &fpga, const bool forceScanStacks, const bool run);
 	void liveScan(const FPGA &fpga);
 	//void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice);
 }
@@ -58,6 +59,7 @@ namespace TestRoutines
 	void quickStitcher();
 	void boolmap();
 	void vectorOfObjects();
+	void createFolder();
 	void convexHull();
 
 	//Sequence

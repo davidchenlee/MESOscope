@@ -263,7 +263,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -429,9 +429,9 @@ namespace Routines
 			//boolmap.saveTileMap("TileArrayMap_" + filename);
 	}
 
-	//Full sequence to image and cut an entire sample automatically
-	//Note that the stack starts at stackCenterXYZ.at(Z) (i.e., the stack is not centered at stackCenterXYZ.at(Z))
-	void sequencer(const FPGA &fpga, const bool run)
+	//Full sequence to image and cut an entire sample automatically. Note that the stack starts at stackCenterXYZ.at(Z) (i.e., the stack is not centered at stackCenterXYZ.at(Z))
+	//When forceScanStacks = true, the full boolmap is set to 1, i.e., the sample detection is disabled
+	void sequencer(const FPGA &fpga, const bool forceScanStacks, const bool run)
 	{
 		//for beads, center the stack around g_stackCenterXYZ.at(Z) -----> //const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ - nFramesCont * pixelSizeZ / 2 };
 
@@ -445,15 +445,15 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		//const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 0.000 * mm };
-		const LENGTH3 LOIxyz{ 0.300 * mm, 0.200 * mm, 0.000 * mm };
+		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 0.150 * mm };
+		//const LENGTH3 LOIxyz{ 0.300 * mm, 0.200 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
 		const TILEOVERLAP3 stackOverlap_frac{ 0.15, 0.10, 0.50 };										//Stack overlap
 
 		//PANORAMIC SCAN
-		const double PANwidth{ 3.000 * mm };															//Total width of the panoramic scan
+		const double PANwidth{ 10.000 * mm };															//Total width of the panoramic scan
 		const double PANtileHeight{ heightPerFrame_pix * pixelSizeXY };
 		const double PANtileWidth{ widthPerFrame_pix * pixelSizeXY };									//Width of a strip of the panoramic scan
 		const double PANheight{ 53 * PANtileHeight };													//Total height of the panoramic scan = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
@@ -501,12 +501,10 @@ namespace Routines
 			SCANDIR iterScanDirZ{ ScanDirZini };
 			Logger datalogPanoramics(g_currentSample.readName() + "_panoramics", OVERRIDE::DIS);
 			Logger datalogStacks("TileConfiguration", OVERRIDE::DIS);
-			datalogStacks.record("# Define the number of dimensions we are working on");
 			datalogStacks.record("dim=3"); //Needed for GridStitcher on Fiji
 
 			//BOOLMAP. Declare the boolmap here to pass it between different actions
-			std::vector<bool> vec_boolmap(sequence.readTotalNumberOfStacks(), true);	//Initialize it with TRUEs in case the panoramic scan is disabled
-
+			std::vector<bool> vec_boolmap(tileArraySizeIJ.II * tileArraySizeIJ.JJ, forceScanStacks);
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
@@ -619,6 +617,8 @@ namespace Routines
 					break;
 				case Action::ID::CUT://Move the stage to the vibratome and then cut a slice off
 				{
+					mesoscope.closeShutter();
+
 					const double planeZtoCut{ commandline.mAction.cutSlice.readStageZheightForFacingTheBlade() };
 
 					std::cout << "Cutting slice = " << std::to_string(sliceNumber + 1) << "/" << sequence.readTotalNumberOfSlices() << "\n";
@@ -635,7 +635,7 @@ namespace Routines
 
 					//CONTROL SEQUENCE. The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix
 					PanoramicScan panoramicScan{ { g_stackCenterXYZ.XX, g_stackCenterXYZ.YY }, { PANtileHeight, PANtileWidth }, { PANpixelSizeX, PANpixelSizeY }, { PANheight, PANwidth } };
-					realtimeSeq.configureFrames(2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix() / 2, 0);
+					realtimeSeq.configureFrames(2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix()/2, 0);
 					mesoscope.configure(PANwavelength_nm);
 					mesoscope.setPower(PANlaserPower);
 
@@ -648,8 +648,7 @@ namespace Routines
 					mesoscope.waitForMotionToStopAll();
 					Sleep(500);																				//Give the stages enough time to settle at the initial position
 					mesoscope.setVelSingle(AXIS::XX, PANpixelSizeX / g_lineclockHalfPeriod);				//Set the vel for imaging
-
-					mesoscope.openShutter();																//Open the shutter. The destructor will close the shutter automatically
+					mesoscope.openShutter();																//Open the shutter
 
 					//LOCATIONS on the sample to image
 					const int nLocations{ panoramicScan.readNumberStageYpos() };
@@ -663,7 +662,6 @@ namespace Routines
 						std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations << "\n";
 						mesoscope.moveXY({ stageXi, panoramicScan.readStageYposAt(iterLocation) });
 						mesoscope.waitForMotionToStopAll();
-
 						Sleep(300);													//Avoid iterations too close to each other, otherwise the X-stage will fail to trigger the ctl&acq sequence.
 																					//This might be because of g_postSequenceTimer
 
@@ -683,42 +681,40 @@ namespace Routines
 					mesoscope.closeShutter();
 
 					//SAVE THE FILES
-					const int PANsliceNumber{ commandline.mAction.panoramicScan.readSliceNumber() };
-					std::string PANsliceNumber_s{ std::to_string(PANsliceNumber) };
+					std::string PANsliceNumber_s{ std::to_string(commandline.mAction.panoramicScan.readSliceNumber()) };
 					std::string PANsliceNumberPadded_s = std::string(3 - PANsliceNumber_s.length(), '0') + PANsliceNumber_s;	//Paddle with zeros on the left. 3 digits in total
 
-					const std::string PANshortName{ PANsliceNumberPadded_s };
 					const std::string PANlongName{ mesoscope.readCurrentLaser_s(true) + Util::toString(PANwavelength_nm, 0) +
 						"nm_P=" + Util::toString(PANlaserPower / mW, 1) +
 						"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
 						"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
 						"_z=" + Util::toString(PANplaneZ / mm, 4) };
 					std::cout << "Saving the stack...\n";
-					panoramicScan.saveToFile(PANshortName + "_panoramic", OVERRIDE::DIS);
+					panoramicScan.saveToFile(PANsliceNumberPadded_s + "_panoramic", OVERRIDE::DIS);
 
-					datalogPanoramics.record(PANshortName + "\t" + PANlongName);
+					datalogPanoramics.record(PANsliceNumberPadded_s + "\t" + PANlongName);
 
 					//DETERMINE THE BOOLMAP
 					const LENGTH2 LOIxy_pix{ LOIxyz.XX / (2 * pixelSizeXY), LOIxyz.YY / pixelSizeXY };
-					const PIXDIM2 overlayTileSize_pix{ heightPerFrame_pix / 2, widthPerFrame_pix };											//Tile size for the slow scan. Do not call the tile size from panoramicScan because the tiles are long strips
-																																			//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
-					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };	//NOTE THE FACTOR OF 2 IN X
+					const PIXDIM2 overlayTileSize_pix{ heightPerFrame_pix / 2, widthPerFrame_pix };								//Tile size for the slow scan. Do not call the tile size from panoramicScan because the tiles are long strips
+																																//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
+					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };		//NOTE THE FACTOR OF 2 IN X
 					boolmap.fillTileMapHoles();
-					boolmap.copyBoolmapToVector(vec_boolmap);//Save the boolmap for the next iterations
-					boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
-					
+					boolmap.saveBoolmapToText(PANsliceNumberPadded_s + "_boolmap", OVERRIDE::DIS);
+					boolmap.replaceByUnionBoolmap(vec_boolmap);																	//Save the boolmap for the next iterations
+				
 					//For debugging
 					//boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
 				}
 				break;
 				default:
 					throw std::invalid_argument((std::string)__FUNCTION__ + ": Selected action invalid");
-				}//switch
-
+				}//switch(mAction)
 				Util::pressESCforEarlyTermination();
-			}//Commands-or
+			}//for(iterCommandline)
 
-		}//if
+			Util::saveBoolmapToText("intersection", vec_boolmap, tileArraySizeIJ, OVERRIDE::EN);//For debugging
+		}//if (run)
 		Util::pressAnyKeyToCont();
 	}
 
@@ -1402,13 +1398,13 @@ namespace TestRoutines
 	void boolmap()
 	{
 		//g_folderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
-		std::string inputFilename{ "000_panoramic" };
+		std::string inputFilename{ "000_panoramic (1)" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
 		//The tile array for the slow scan (overlay tile array) does not necessarily coincide with the tile array used in fast scanning
 		const PIXDIM2 overlayTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because contX uses PANpixelSizeX=1.0 um for speed and not 0.5 um
-		const TILEDIM2 overlayTileArraySizeIJ{ 50, 30 };
+		const TILEDIM2 overlayTileArraySizeIJ{ 40, 70 };
 		const TILEOVERLAP3 overlayOverlapIJK_frac{ 0.15, 0.10, 0.0 };
 		const double threshold{ 0.02 };
 		
@@ -1441,6 +1437,11 @@ namespace TestRoutines
 		aaa.push_back(a);
 
 		Util::pressAnyKeyToCont();
+	}
+
+	void TestRoutines::createFolder()
+	{
+		std::filesystem::create_directory(g_folderPath + "aaa");
 	}
 
 	/*

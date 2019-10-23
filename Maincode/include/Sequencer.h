@@ -79,7 +79,7 @@ public:
 	void saveTileGridOverlay(std::string filename, const OVERRIDE override) const;
 	void saveTileMap(std::string filename, const OVERRIDE override) const;
 	void fillTileMapHoles();
-	void copyBoolmapToVector(std::vector<bool> &vec_input);
+	void replaceByUnionBoolmap(std::vector<bool> &vec_input);
 private:
 	const TiffU8 mTiff;
 	const TileArray mTileArray;
@@ -172,7 +172,7 @@ namespace Action
 	class PanoramicScan final
 	{
 	public:
-		void setParam(const int sliceNumber, const double planeZ);
+		void setParam(const int sliceNumber, const double distanceUnderTheSurface, const double stageZpos);
 		double readPlaneZ() const;
 		int readSliceNumber() const;
 	private:
@@ -251,5 +251,5 @@ private:
 	void acqStack_(const int indexFluorMarker);
 	void saveStack_();
 	void cutSlice_();
-	void panoramicScan_();
+	void panoramicScan_(const double distanceUnderTheSurface);
 };

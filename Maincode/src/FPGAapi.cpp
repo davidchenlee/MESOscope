@@ -303,8 +303,8 @@ void FPGA::uploadImagingParameters(const int heightPerBeamletPerFrame_pix, const
 //Trigger the AOs of the FPGA externally instead of using the lineclock and frameclock (see the LV implementation)
 void FPGA::triggerAOext() const
 {
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, true));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_AsyncTrigger, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_AsyncTrigger, false));
 }
 
 //Trigger the ctl&acq sequence
@@ -383,7 +383,7 @@ void FPGA::collectFIFOOUTpcGarbage() const
 void FPGA::uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const
 {
 	{
-		QU32 allQueues;		//Create a single long queue
+		QU32 allQueues;														//Create a single long queue
 		for (int chan = 0; chan < nChan; chan++)
 		{
 			allQueues.push_back(queue_vec.at(chan).size());					//Push the number of elements in each individual queue ii, 'vec_queue.at(ii)'	
@@ -402,10 +402,10 @@ void FPGA::uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const
 			FIFOIN.at(ii) = allQueues.front();								//Transfer the queue elements to the array
 			allQueues.pop_front();
 		}
-		allQueues = {};					//Cleanup the queue C++11 style
+		allQueues = {};														//Cleanup the queue C++11 style
 
 		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
-		U32 r;							//Elements remaining
+		U32 r;																//Elements remaining
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mHandle, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
 
 		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
@@ -477,7 +477,7 @@ void FPGA::initializeFpga_() const
 
 	//TRIGGERS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PcTrigger, false));																			//Pc trigger signal
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_TriggerAODOexternal, false));																//Trigger the FPGA AOs externally
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_AsyncTrigger, false));																//Trigger the FPGA AOs externally
 
 	//FIFOIN
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_Nchannels, static_cast<U8>(RTseq::RTCHAN::NCHAN)));												//Number of input channels
@@ -821,16 +821,15 @@ void RTseq::presetAOs_() const
 	VQU32 vec_queue(mNchan);
 	for (int iterChan = 1; iterChan < mNchan; iterChan++)																	//iterChan starts from 1 because the pixelclock (chan = 0) is kept empty
 		if (mVec_queue.at(iterChan).size() != 0)
-			//Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
-			if ((iterChan == convertRTCHANtoU8_(RTCHAN::SCANNER) || iterChan == convertRTCHANtoU8_(RTCHAN::RESCANNER)))		//Only do the scanner and rescanner for now
+			//SCAN AND RESCAN GALVOS. Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
+			if ((iterChan == convertRTCHANtoU8_(RTCHAN::SCANNER) || iterChan == convertRTCHANtoU8_(RTCHAN::RESCANNER)))
 			{
 				const double Vi = FPGAfunc::convertIntToVoltage(AOlastVoltage_I16.at(iterChan));							//Current voltage of the AO outputs
 				const double Vf = FPGAfunc::convertIntToVoltage(static_cast<I16>(mVec_queue.at(iterChan).front()));			//First element of the new control sequence
 
 				FPGAfunc::pushLinearRamp(vec_queue.at(iterChan), 10 * us, 5 * ms, Vi, Vf);
 				//For debugging
-				//std::cout << Vi << "\n";
-				//std::cout << Vf << "\n";
+				//std::cout << Vi << "\t" << Vf << "\n";
 			}
 
 	mFpga.uploadFIFOIN(vec_queue, mNchan);		//Upload the initialization ramp to the FPGA

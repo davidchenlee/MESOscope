@@ -499,7 +499,7 @@ namespace Routines
 			POSITION2 tileCenterXY;
 			std::string shortName, longName;
 			SCANDIR iterScanDirZ{ ScanDirZini };
-			Logger datalogPanoramics(g_currentSample.readName() + "_panoramics", OVERRIDE::DIS);
+			Logger datalogPanoramic(g_currentSample.readName() + "_panoramics", OVERRIDE::DIS);
 			Logger datalogStacks("TileConfiguration", OVERRIDE::DIS);
 			datalogStacks.record("dim=3"); //Needed for GridStitcher on Fiji
 
@@ -644,7 +644,7 @@ namespace Routines
 					const Galvo rescanner{ realtimeSeq, 0, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
 					//STAGES
-					mesoscope.moveXYZ({ g_stackCenterXYZ.XX, g_stackCenterXYZ.YY, PANplaneZ });				//Move the stage to the initial position
+					mesoscope.moveXYZ({ g_stackCenterXYZ.XX, g_stackCenterXYZ.YY, PANplaneZ });				//Move the stage to the center of the panoramic view
 					mesoscope.waitForMotionToStopAll();
 					Sleep(500);																				//Give the stages enough time to settle at the initial position
 					mesoscope.setVelSingle(AXIS::XX, PANpixelSizeX / g_lineclockHalfPeriod);				//Set the vel for imaging
@@ -660,20 +660,19 @@ namespace Routines
 						stageXf = panoramicScan.determineFinalScanPosX(travelOverhead, iterScanDirX);
 
 						std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations << "\n";
-						mesoscope.moveXY({ stageXi, panoramicScan.readStageYposAt(iterLocation) });
+						mesoscope.moveXY({ stageXi, panoramicScan.readStageYposAt(iterLocation) });			//Move the stage to the start of the "ribbon" scan
 						mesoscope.waitForMotionToStopAll();
-						Sleep(300);													//Avoid iterations too close to each other, otherwise the X-stage will fail to trigger the ctl&acq sequence.
-																					//This might be because of g_postSequenceTimer
-
+						Sleep(300);																			//Avoid iterations too close to each other, otherwise the X-stage will fail to trigger the ctl&acq sequence.
+																											//This might be because of g_postSequenceTimer
 						realtimeSeq.initialize(MAINTRIG::STAGEX);
 						std::cout << "Scanning the stack...\n";
-						mesoscope.moveSingle(AXIS::XX, stageXf);					//Move the stage to trigger the ctl&acq sequence
+						mesoscope.moveSingle(AXIS::XX, stageXf);											//Move the stage to trigger the ctl&acq sequence
 						realtimeSeq.downloadData();
 
 						Image image{ realtimeSeq };
 						image.acquireVerticalStrip(iterScanDirX);
-						image.correctRSdistortion(PANtileWidth);					//Correct the image distortion induced by the nonlinear scanning of the RS
-						panoramicScan.push(image.data(), { 0, iterLocation });		//for now, only allow to stack up strips to the right
+						image.correctRSdistortion(PANtileWidth);											//Correct the image distortion induced by the nonlinear scanning of the RS
+						panoramicScan.push(image.data(), { 0, iterLocation });								//for now, only allow to stack up strips to the right
 
 						reverseSCANDIR(iterScanDirX);
 						Util::pressESCforEarlyTermination();
@@ -692,7 +691,7 @@ namespace Routines
 					std::cout << "Saving the stack...\n";
 					panoramicScan.saveToFile(PANsliceNumberPadded_s + "_panoramic", OVERRIDE::DIS);
 
-					datalogPanoramics.record(PANsliceNumberPadded_s + "\t" + PANlongName);
+					datalogPanoramic.record(PANsliceNumberPadded_s + "\t" + PANlongName);
 
 					//DETERMINE THE BOOLMAP
 					const LENGTH2 LOIxy_pix{ LOIxyz.XX / (2 * pixelSizeXY), LOIxyz.YY / pixelSizeXY };

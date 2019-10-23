@@ -301,7 +301,7 @@ void FPGA::uploadImagingParameters(const int heightPerBeamletPerFrame_pix, const
 }
 
 //Trigger the AOs of the FPGA externally instead of using the lineclock and frameclock (see the LV implementation)
-void FPGA::triggerAOext() const
+void FPGA::asyncTriggerAO() const
 {
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_AsyncTrigger, true));
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_AsyncTrigger, false));
@@ -477,7 +477,7 @@ void FPGA::initializeFpga_() const
 
 	//TRIGGERS
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_PcTrigger, false));																			//Pc trigger signal
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_AsyncTrigger, false));																//Trigger the FPGA AOs externally
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_AsyncTrigger, false));																		//Trigger the FPGA AOs externally
 
 	//FIFOIN
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteU8(mHandle, NiFpga_FPGAvi_ControlU8_Nchannels, static_cast<U8>(RTseq::RTCHAN::NCHAN)));												//Number of input channels
@@ -705,7 +705,6 @@ void RTseq::pushLinearRamp(const RTCHAN chan, double timeStep, const double ramp
 void RTseq::initialize(const MAINTRIG mainTrigger, const int wavelength_nm, const SCANDIR stackScanDir)
 {
 	mFpga.enableFIFOOUTfpga(mEnableFIFOOUTfpga);					//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
-	mFpga.flushRAM();												//Flush all the internal FIFOs on the FPGA as precaution
 
 	initializeStages_(mainTrigger, stackScanDir, wavelength_nm);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
 	presetAOs_();													//Preset the scanner positions
@@ -745,7 +744,9 @@ void RTseq::downloadData()
 	correctInterleaved_();									//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines
 															//In case of pipelining, remove it from RTseq::initialize() and call it separately
 	mFpga.setMainTrig(MAINTRIG::PC);						//Disable the stage triggering the ctl&acq sequence to allow positioning the stage after acquisition
+	mFpga.flushRAM();										//Flush all the internal FIFOs on the FPGA as precaution
 	Sleep(static_cast<DWORD>(g_postSequenceTimer / ms));	//Wait for at least the post-sequence timeout
+
 }
 
 U32* RTseq::dataBufferA() const
@@ -835,14 +836,15 @@ void RTseq::presetAOs_() const
 			}
 
 		//POCKELS FOR VISION AND FIDELITY. Set the output to 0
-		if ((iterChan == convertRTCHANtoU8_(RTCHAN::VISION) || iterChan == convertRTCHANtoU8_(RTCHAN::FIDELITY)))
-		{
-			vec_queue.at(iterChan).push_back(FPGAfunc::packAnalogSinglet(8. * us, 0));
-		}
+		//Not needed anymore because async triggering is disabled for the pockels (see LV)
+		//if ((iterChan == convertRTCHANtoU8_(RTCHAN::VISION) || iterChan == convertRTCHANtoU8_(RTCHAN::FIDELITY)))
+		//{
+		//	vec_queue.at(iterChan).push_back(FPGAfunc::packAnalogSinglet(8. * us, 0));
+		//}
 	}
 
 	mFpga.uploadFIFOIN(vec_queue, mNchan);		//Upload the initialization ramp to the FPGA
-	mFpga.triggerAOext();						//Trigger the initialization ramp externally (not using the internal clocks)
+	mFpga.asyncTriggerAO();						//Trigger the initialization ramp externally (not using the internal clocks)
 }
 
 void RTseq::initializeStages_(const MAINTRIG mainTrigger, const SCANDIR stackScanDir,const int wavelength_nm)

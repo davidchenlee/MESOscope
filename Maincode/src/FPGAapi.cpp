@@ -664,17 +664,17 @@ RTseq::~RTseq()
 
 void RTseq::pushQueue(const RTCHAN chan, QU32& queue)
 {
-	FPGAfunc::concatenateQueues(mVec_queue.at(static_cast<U8>(chan)), queue);
+	FPGAfunc::concatenateQueues(mVec_queue.at(convertRTCHANtoU8_(chan)), queue);
 }
 
 void RTseq::clearQueue(const RTCHAN chan)
 {
-	mVec_queue.at(static_cast<U8>(chan)).clear();
+	mVec_queue.at(convertRTCHANtoU8_(chan)).clear();
 }
 
 void RTseq::pushDigitalSinglet(const RTCHAN chan, double timeStep, const bool DO)
 {
-	mVec_queue.at(static_cast<U8>(chan)).push_back(FPGAfunc::packDigitalSinglet(timeStep, DO));
+	mVec_queue.at(convertRTCHANtoU8_(chan)).push_back(FPGAfunc::packDigitalSinglet(timeStep, DO));
 }
 
 void RTseq::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO)
@@ -684,7 +684,7 @@ void RTseq::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double A
 		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << g_tMinAO / us << " us\n";
 		timeStep = g_tMinAO;
 	}
-	mVec_queue.at(static_cast<U8>(chan)).push_back(FPGAfunc::packAnalogSinglet(timeStep, AO));
+	mVec_queue.at(convertRTCHANtoU8_(chan)).push_back(FPGAfunc::packAnalogSinglet(timeStep, AO));
 }
 
 void RTseq::pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override)
@@ -696,9 +696,9 @@ void RTseq::pushLinearRamp(const RTCHAN chan, double timeStep, const double ramp
 
 	//Clear the current content
 	if (override == OVERRIDE::EN)
-		mVec_queue.at(static_cast<U8>(chan)).clear();
+		mVec_queue.at(convertRTCHANtoU8_(chan)).clear();
 
-	FPGAfunc::pushLinearRamp(mVec_queue.at(static_cast<U8>(chan)), timeStep, rampLength, Vi, Vf);
+	FPGAfunc::pushLinearRamp(mVec_queue.at(convertRTCHANtoU8_(chan)), timeStep, rampLength, Vi, Vf);
 }
 
 //Preset the parameters for the acquisition sequence
@@ -709,7 +709,7 @@ void RTseq::initialize(const MAINTRIG mainTrigger, const int wavelength_nm, cons
 
 	initializeStages_(mainTrigger, stackScanDir, wavelength_nm);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
 	presetAOs_();													//Preset the scanner positions
-	Sleep(10);														//Give the FPGA enough time to settle (> 5 ms) to avoid presetAOs_() clashing with the subsequent call of uploadControlSequence_()
+	Sleep(10);														//Give the FPGA enough time (> 5 ms) to settle to avoid presetAOs_() clashing with the subsequent call of uploadControlSequence_()
 																	//(I realized this after running VS in release mode, which communicate faster with the FPGA than the debug mode)
 	uploadControlSequence_();										//Upload the control sequence to the FPGA
 
@@ -817,12 +817,14 @@ void RTseq::presetAOs_() const
 	AOlastVoltage_I16.at(convertRTCHANtoU8_(RTCHAN::SCANNER)) = mFpga.readScannerVoltageMon();
 	AOlastVoltage_I16.at(convertRTCHANtoU8_(RTCHAN::RESCANNER)) = mFpga.readRescannerVoltageMon();
 
-	//Create a vector of queues for the ramps
-	VQU32 vec_queue(mNchan);
-	for (int iterChan = 1; iterChan < mNchan; iterChan++)																	//iterChan starts from 1 because the pixelclock (chan = 0) is kept empty
-		if (mVec_queue.at(iterChan).size() != 0)
-			//SCAN AND RESCAN GALVOS. Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
-			if ((iterChan == convertRTCHANtoU8_(RTCHAN::SCANNER) || iterChan == convertRTCHANtoU8_(RTCHAN::RESCANNER)))
+	
+	//iterChan starts from 1 because the pixelclock (chan = 0) is kept empty
+	VQU32 vec_queue(mNchan);	//Create a new vector of queues for the AO preset values
+	for (int iterChan = 1; iterChan < mNchan; iterChan++)
+	{	
+		//SCAN AND RESCAN GALVOS. Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
+		if ((iterChan == convertRTCHANtoU8_(RTCHAN::SCANNER) || iterChan == convertRTCHANtoU8_(RTCHAN::RESCANNER)))
+			if (mVec_queue.at(iterChan).size() != 0)
 			{
 				const double Vi = FPGAfunc::convertIntToVoltage(AOlastVoltage_I16.at(iterChan));							//Current voltage of the AO outputs
 				const double Vf = FPGAfunc::convertIntToVoltage(static_cast<I16>(mVec_queue.at(iterChan).front()));			//First element of the new control sequence
@@ -831,6 +833,13 @@ void RTseq::presetAOs_() const
 				//For debugging
 				//std::cout << Vi << "\t" << Vf << "\n";
 			}
+
+		//POCKELS FOR VISION AND FIDELITY. Set the output to 0
+		if ((iterChan == convertRTCHANtoU8_(RTCHAN::VISION) || iterChan == convertRTCHANtoU8_(RTCHAN::FIDELITY)))
+		{
+			vec_queue.at(iterChan).push_back(FPGAfunc::packAnalogSinglet(8. * us, 0));
+		}
+	}
 
 	mFpga.uploadFIFOIN(vec_queue, mNchan);		//Upload the initialization ramp to the FPGA
 	mFpga.triggerAOext();						//Trigger the initialization ramp externally (not using the internal clocks)

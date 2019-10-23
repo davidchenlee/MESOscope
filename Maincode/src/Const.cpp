@@ -26,9 +26,9 @@ namespace Constants
 	//PIXELCLOCK
 	extern const double g_pixelDwellTime{ 0.1625 * us };							//= 13 * 12.5 ns = 162.5 ns
 	extern const double g_lineclockHalfPeriod{ 63.05 * us };						//Half-period of the resonant scanner. I measure 25.220 ms over 400 half oscillations. Therefore, the average half-period is 25200us/400 = 63.05 us
-																					//The forward and backward times differ slightly and the difference depends on the scanning amplitude
+																					//The forward and backward times differ slightly and the difference depends on the scan amplitude
 																					//For example, forward = 63.14 us, backwards = 62.99 us, diff = 150 ns (i.e., ~ 1 pixel)
-																					//The measured RS period (126.1 us) seems to be independent of the scanning amplitude
+																					//The measured RS period (126.1 us) seems to be independent of the scan amplitude
 	extern const double g_pulsesPerPix{ g_pixelDwellTime / g_laserPulsePeriod };	//Max number of laser pulses per pixel
 	extern const U8 g_upscalingFactor{ static_cast<U8>(255 / g_pulsesPerPix) };		//Upscale 4-bit counts to 8-bit range [0-255] for compatibility with ImageJ's standards
 

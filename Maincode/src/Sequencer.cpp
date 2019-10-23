@@ -659,8 +659,8 @@ void Boolmap::fillTileMapHoles()
 			}
 
 	//For debugging
-	for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
-		std::cout << minJJ.at(II) << "\t" << maxJJ.at(II) << "\n";
+	//for (int II = 0; II < mTileArray.readTileArraySizeIJ(TileArray::Axis::II); II++)
+	//	std::cout << minJJ.at(II) << "\t" << maxJJ.at(II) << "\n";
 
 	//Fill the holes in mBoolmap
 	for (int II = 0; II < tileArraySizeIJ.II; II++)
@@ -1101,10 +1101,13 @@ void Sequencer::generateCommandList()
 		panoramicScan_(30. * um);
 		panoramicScan_(100. * um);
 
-		initializeIteratorIJ_();		//Reset the tile iterator after every cut
+		//initializeIteratorIJ_();			//Reset the tile iterator after every cut
 		//The first fluor-marker on the list is read, then the second marker, etc
 		for (std::vector<int>::size_type iterFluorMarker = 0; iterFluorMarker != mSample.readFluorMarkerListSize(); iterFluorMarker++)
 		{
+			initializeIteratorIJ_();		//Reset the tile iterator after every wavelength. Use the same scan order with all the wavelengths
+											//because of the stage drift over time
+
 			//The Y-stage is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
 			while (mJJ >= 0 && mJJ < mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ))		//Y-stage iteration
 			{
@@ -1116,11 +1119,12 @@ void Sequencer::generateCommandList()
 					mII -= Util::convertScandirToInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the X-stage axis
 				}
 				mII += Util::convertScandirToInt(mIterScanDirXYZ.XX);		//Re-initialize II by going back one step to start from 0 or mTileArraySizeIJ.II - 1
-				reverseSCANDIR(mIterScanDirXYZ.XX);							//Reverse the scanning direction
+				reverseSCANDIR(mIterScanDirXYZ.XX);							//Reverse the scan direction
 				mJJ -= Util::convertScandirToInt(mIterScanDirXYZ.YY);		//Increase/decrease the iterator in the Y-stage axis
 			}
 			mJJ += Util::convertScandirToInt(mIterScanDirXYZ.YY);			//Re-initialize JJ by going back one step to start from 0 or mTileArraySizeIJ.JJ - 1
-			reverseSCANDIR(mIterScanDirXYZ.YY);								//Reverse the scanning direction
+				
+			//reverseSCANDIR(mIterScanDirXYZ.YY);							//Reverse the scan direction after every wavelength
 		}
 		//Only need to cut the sample 'nVibratomeSlices -1' times
 		if (iterSlice < mNtotalSlices - 1)
@@ -1398,7 +1402,7 @@ void Sequencer::acqStack_(const int indexFluorMarker)
 	mCommandCounter++;	//Count the number of commands
 
 	//Update the parameters for the next iteration
-	reverseSCANDIR(mIterScanDirXYZ.ZZ);								//Reverse the scanning direction in the Z-stage axis
+	reverseSCANDIR(mIterScanDirXYZ.ZZ);								//Reverse the scan direction in the Z-stage axis
 }
 
 void Sequencer::saveStack_()

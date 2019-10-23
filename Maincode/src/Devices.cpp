@@ -175,7 +175,7 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 			(mRTseq.dataBufferB())[pixIndex] = (mRTseq.dataBufferB())[pixIndex] >> 4;									//Shift 4 places to the right for the next iteration
 		}
 
-	//Merge all the PMT16X channels into a single image. The strip ordering depends on the scanning direction of the galvos (forward or backwards)
+	//Merge all the PMT16X channels into a single image. The strip ordering depends on the scan direction of the galvos (forward or backwards)
 	if (mRTseq.mMultibeam)
 		mTiff.mergePMT16Xchan(mRTseq.mHeightPerBeamletPerFrame_pix, CountA.data(), CountB.data());						//mHeightPerBeamletPerFrame_pix is the height for a single PMT16X channel
 
@@ -312,7 +312,7 @@ double ResonantScanner::readSampleRes() const
 	return mSampRes;
 }
 
-//Set the control voltage that determines the scanning amplitude
+//Set the control voltage that determines the scan amplitude
 void ResonantScanner::setVoltage_(const double controlVoltage)
 {
 	if (controlVoltage < 0 || controlVoltage > mVMAX)

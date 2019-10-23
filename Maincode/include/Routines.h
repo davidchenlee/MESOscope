@@ -12,7 +12,6 @@ namespace Routines
 	void panoramicScan(const FPGA &fpga);
 	void sequencer(const FPGA &fpga, const bool forceScanStacks, const bool run);
 	void liveScan(const FPGA &fpga);
-	//void frameByFrameZscanTilingXY(const FPGA &fpga, const int nSlice);
 }
 
 //TESTS

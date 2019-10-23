@@ -258,12 +258,12 @@ namespace Routines
 		//pressAnyKeyToCont();
 	}
 
-	//I triggered the stack acquisition using DO2 (stage motion) for both scanning directions: top-down and bottom-up. In both cases the bead z-position looks almost identical with a difference of maybe only 1 plane (0.5 um)
+	//I triggered the stack acquisition using DO2 (stage motion) for both scan directions: top-down and bottom-up. In both cases the bead z-position looks almost identical with a difference of maybe only 1 plane (0.5 um)
 	//Remember that I do not use MACROS on the stages anymore*/
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -404,7 +404,7 @@ namespace Routines
 			Image image{ realtimeSeq };
 			image.acquireVerticalStrip(iterScanDirX);
 			image.correctRSdistortion(tileWidth);						//Correct the image distortion induced by the nonlinear scanning of the RS
-			panoramicScan.push(image.data(), { 0, iterLocation });	//for now, only allow to stack up strips to the right
+			panoramicScan.push(image.data(), { 0, iterLocation });		//for now, only allow to stack up strips to the right
 
 			reverseSCANDIR(iterScanDirX);
 			Util::pressESCforEarlyTermination();
@@ -1103,7 +1103,7 @@ namespace TestRoutines
 		//ACQUISITION SETTINGS
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
-		const int nFramesCont{ 100 };										//Number of frames for continuous acquisition
+		const int nFramesCont{ 1 };										//Number of frames for continuous acquisition
 
 		//CREATE THE CONTROL SEQUENCE
 		RTseq realtimeSeq{ fpga, LINECLOCK::FG, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont, g_multibeam };
@@ -1120,14 +1120,14 @@ namespace TestRoutines
 		//std::cout << "Pi = " << laserPi << "\n";
 		//std::cout << "Pf = " << laserPf << "\n";
 		//pockels.linearPowerRampAcrossFrames(laserPi, laserPf);					//Linearly scale the laser power from the first to the last frame
-		pockels.exponentialPowerRampAcrossFrames(100. * mW, 1. * um, 200. * um);
+		//pockels.exponentialPowerRampAcrossFrames(100. * mW, 1. * um, 200. * um);
 
 		//pockels.linearPowerRampAcrossFrames(0.96 * Pf, Pi);
 		//pockels.pushPowerSinglet(400 * us, Pi, OVERRIDE::EN);
 
 		//Test the voltage setpoint
 		//pockels.pushVoltageSinglet(8* us, 0.0 * V, OVERRIDE::EN);
-		//pockels.linearVoltageRampAcrossFrames(4. * V, 2. * V);					//Linearly scale the pockels voltage from the first to the last frame
+		pockels.linearVoltageRampAcrossFrames(4. * V, 2. * V);					//Linearly scale the pockels voltage from the first to the last frame
 
 		//EXECUTE THE CONTROL SEQUENCE
 		realtimeSeq.run();

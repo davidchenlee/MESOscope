@@ -76,10 +76,11 @@ public:
 	Boolmap(const PanoramicScan &panoramicScan, const TILEDIM2 tileArraySizeIJ, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	bool isTileBright(const TILEIJ tileIndicesIJ) const;
 	void saveBoolmapToText(std::string filename, const OVERRIDE override);
-	void saveTileGridOverlay(std::string filename, const OVERRIDE override) const;
-	void saveTileMap(std::string filename, const OVERRIDE override) const;
-	void fillTileMapHoles();
-	void replaceByUnionBoolmap(std::vector<bool> &vec_input);
+	void saveTiffWithBoolmapGridOverlay(std::string filename, const OVERRIDE override) const;
+	void saveTiffWithBoolmapTileOverlay(std::string filename, const OVERRIDE override) const;
+	void fillBoolmapHoles();
+	void replaceInputBoolmapByUnion(std::vector<bool> &vec_input) const;
+	int readNumberOfBrightStacks() const;
 private:
 	const TiffU8 mTiff;
 	const TileArray mTileArray;
@@ -89,6 +90,7 @@ private:
 	const int mNpixPanoramic;			//Total number of pixels in mTiff
 	PIXELij mAnchorPixel_pix;			//Reference position for the tile array wrt the Tiff
 	std::vector<bool> mBoolmap;
+	int mNbrightStacks{ 0 };					//Number of stacks with TRUE in the boolmap
 
 	PIXELij determineTilePosWrtPanoramic_pix_(const TILEIJ tileIndicesIJ) const;
 	bool isQuadrantBright_(const double threshold, const TILEIJ tileIndicesIJ) const;

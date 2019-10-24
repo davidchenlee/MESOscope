@@ -34,6 +34,7 @@ namespace Util
 	std::string convertWavelengthToFluorMarker_s(const int wavelength_nm);
 	bool isBright(const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const TILEIJ tileIndicesIJ);
 	void saveBoolmapToText(std::string filename, const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const OVERRIDE override);
+	int determineNumberOf1s(const std::vector<bool> vec_boolmap);
 }
 
 //For saving the parameters to a text file

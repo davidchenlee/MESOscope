@@ -458,7 +458,7 @@ void Boolmap::saveBoolmapToText(std::string filename, const OVERRIDE override)
 }
 
 //Overlay a grid with the tiles on the stitched image
-void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override) const
+void Boolmap::saveTiffWithBoolmapGridOverlay(std::string filename, const OVERRIDE override) const
 {
 	const U8 lineColor{ 200 };
 	const int lineThickness{ 6 };
@@ -496,7 +496,6 @@ void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override)
 		const PIXELij tileCenterPos_pix{ determineTilePosWrtPanoramic_pix_({ 0, JJ }) };					//Tile center position wrt the Tiff
 		const int tileLeftPos_pix{ tileCenterPos_pix.jj - mTileArray.readTileWidth_pix() / 2 };				//Left pixels of the tile wrt the Tiff
 		const int tileRightPos_pix{ tileCenterPos_pix.jj + mTileArray.readTileWidth_pix() / 2 };			//Right pixels of the tile wrt the Tiff
-
 		
 		if (tileLeftPos_pix >= 0 && tileRightPos_pix < mPanoramicWidth_pix)									//Make sure that the pixels lie inside the panoramic tiff
 			for (int iterRow_pix = 0; iterRow_pix < mPanoramicHeight_pix; iterRow_pix++)
@@ -516,7 +515,7 @@ void Boolmap::saveTileGridOverlay(std::string filename, const OVERRIDE override)
 }
 
 //Save a copy of the input Tiff with the dark tiles shaded
-void Boolmap::saveTileMap(std::string filename, const OVERRIDE override) const
+void Boolmap::saveTiffWithBoolmapTileOverlay(std::string filename, const OVERRIDE override) const
 {
 	TiffU8 outputTiff{ mPanoramicHeight_pix, mPanoramicWidth_pix, 1 };	//Create an empty Tiff
 
@@ -626,15 +625,19 @@ bool Boolmap::isQuadrantBright_(const double threshold, const TILEIJ tileIndices
 //Note that when the tiles have some overlap, the tile array will not cover the entire Tiff
 void Boolmap::generateBoolmap_()
 {
-	//Divide the large image into tiles of size tileHeight_pix * tileWidth_pix and return an array of tiles indicating if the tile is bright
+	//Divide the image into tiles of size tileHeight_pix * tileWidth_pix and return an array of tiles indicating if the tile is bright (TRUE) or dark (FALSE)
 	//Start scanning the tiles from the top-left corner of the image. Scan the first row from left to right. Go back and scan the second row from left to right. Etc...
+	mNbrightStacks = 0;
 	const TILEDIM2 tileArraySizeIJ{ mTileArray.readTileArraySizeIJ() };
 	for (int II = 0; II < tileArraySizeIJ.II; II++)
 		for (int JJ = 0; JJ < tileArraySizeIJ.JJ; JJ++)
+		{
 			mBoolmap.push_back(isQuadrantBright_(mThreshold, { II, JJ }));
+			mNbrightStacks++;
+		}
 }
 
-void Boolmap::fillTileMapHoles()
+void Boolmap::fillBoolmapHoles()
 {
 	const TILEDIM2 tileArraySizeIJ{ mTileArray.readTileArraySizeIJ() };
 
@@ -663,13 +666,17 @@ void Boolmap::fillTileMapHoles()
 	//	std::cout << minJJ.at(II) << "\t" << maxJJ.at(II) << "\n";
 
 	//Fill the holes in mBoolmap
+	mNbrightStacks = 0;
 	for (int II = 0; II < tileArraySizeIJ.II; II++)
 		for (int JJ = 0; JJ < tileArraySizeIJ.JJ; JJ++)
 			if (II >= minII.at(JJ) && II <= maxII.at(JJ) && JJ >= minJJ.at(II) && JJ <= maxJJ.at(II))
+			{
 				mBoolmap.at(II * tileArraySizeIJ.JJ + JJ) = 1;
+				mNbrightStacks++;
+			}
 
 	/*
-		//Enlarge the boolmap by 1 place in the vertical direction of the tiff
+	//Enlarge the boolmap by 1 place in the vertical direction of the tiff
 	std::vector<bool> mBoolmapAugmentedV{ mBoolmap };
 	for (int JJ = 0; JJ < tileArraySizeIJ.JJ; JJ++)
 	{
@@ -713,13 +720,18 @@ void Boolmap::fillTileMapHoles()
 	*/
 }
 
-void Boolmap::replaceByUnionBoolmap(std::vector<bool> &vec_input)
+void Boolmap::replaceInputBoolmapByUnion(std::vector<bool> &vec_input) const
 {
 	for (std::vector<int>::size_type iter = 0; iter != mBoolmap.size(); iter++)
 	{
 		const bool aux{ mBoolmap.at(iter) || vec_input.at(iter) };
 		vec_input.at(iter) = aux;
 	}
+}
+
+int Boolmap::readNumberOfBrightStacks() const
+{
+	return mNbrightStacks;
 }
 #pragma endregion "Boolmap"
 
@@ -1184,12 +1196,12 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 	*fileHandle << "Total # stacks entire sample = " << mStackCounter << "\n";
 	*fileHandle << "Total # commandlines = " << mCommandCounter << "\n";
 
-	const double imagingTimePerStack{ g_lineclockHalfPeriod *  mStack.readTileHeight_pix() * (mStack.readDepthZ() / mStack.readPixelSizeZ()) / 16 };
-	const double totalImagingTime_hours{ (mStackCounter + 1) * imagingTimePerStack / seconds / 3600. };
+	//const double imagingTimePerStack{ g_lineclockHalfPeriod *  mStack.readTileHeight_pix() * (mStack.readDepthZ() / mStack.readPixelSizeZ()) / 16 };
+	//const double totalImagingTime_hours{ (mStackCounter + 1) * imagingTimePerStack / seconds / 3600. };
 
-	*fileHandle << "Runtime per stack = " << imagingTimePerStack / ms << " ms (times nBinning)\n";
-	*fileHandle << std::setprecision(6);
-	*fileHandle << "Estimated total runtime (multibeam + pipelining) = " << totalImagingTime_hours << " hrs (times nBinning)\n\n";
+	//*fileHandle << "Runtime per stack = " << imagingTimePerStack / ms << " ms (times nBinning)\n";
+	//*fileHandle << std::setprecision(6);
+	//*fileHandle << "Estimated total runtime (multibeam + pipelining) = " << totalImagingTime_hours << " hrs (times nBinning)\n\n";
 }
 
 //Print the commandlist to file

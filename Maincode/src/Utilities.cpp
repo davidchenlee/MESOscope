@@ -207,6 +207,15 @@ namespace Util
 
 		fileHandle.close();
 	}
+
+	int determineNumberOf1s(const std::vector<bool> vec_boolmap)
+	{
+		int nStacksBright{ 0 };
+		for (std::vector<int>::size_type iter = 0; iter != vec_boolmap.size(); iter++)
+			nStacksBright++;
+		
+		return nStacksBright;
+	}
 }
 
 #pragma region "Logger"

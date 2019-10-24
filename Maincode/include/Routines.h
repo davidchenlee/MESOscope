@@ -10,8 +10,9 @@ namespace Routines
 	void stepwiseScan(const FPGA &fpga);
 	void contScanZ(const FPGA &fpga);
 	void panoramicScan(const FPGA &fpga);
-	void sequencer(const FPGA &fpga, const bool forceScanStacks, const bool run);
+	void sequencer(const FPGA &fpga, const bool forceScanAllStacks, const bool run);
 	void liveScan(const FPGA &fpga);
+	void correctImageFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex);
 }
 
 //TESTS
@@ -54,7 +55,6 @@ namespace TestRoutines
 	//Postprocessing
 	void correctImage();
 	void correctImageBatch();
-	void correctImageFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex);
 	void quickStitcher();
 	void boolmap();
 	void vectorOfObjects();

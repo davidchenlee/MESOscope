@@ -426,12 +426,12 @@ namespace Routines
 
 			//Boolmap boolmap{ panoramicScan, overlayTileSize_pix, overlayTileOverlapXYZ_frac, threshold };
 			//boolmap.saveBoolmapToText("Boolmap_" + filename);
-			//boolmap.saveTileMap("TileArrayMap_" + filename);
+			//boolmap.saveTiffWithBoolmapTileOverlay("TileArrayMap_" + filename);
 	}
 
 	//Full sequence to image and cut an entire sample automatically. Note that the stack starts at stackCenterXYZ.at(Z) (i.e., the stack is not centered at stackCenterXYZ.at(Z))
-	//When forceScanStacks = true, the full boolmap is set to 1, i.e., the sample detection is disabled
-	void sequencer(const FPGA &fpga, const bool forceScanStacks, const bool run)
+	//When forceScanAllStacks = true, the full boolmap is set to 1 (i.e., the boolmap does not have any effect on the scanning)
+	void sequencer(const FPGA &fpga, const bool forceScanAllStacks, const bool run)
 	{
 		//for beads, center the stack around g_stackCenterXYZ.at(Z) -----> //const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ - nFramesCont * pixelSizeZ / 2 };
 
@@ -504,15 +504,14 @@ namespace Routines
 			datalogStacks.record("dim=3"); //Needed for GridStitcher on Fiji
 
 			//BOOLMAP. Declare the boolmap here to pass it between different actions
-			std::vector<bool> vec_boolmap(tileArraySizeIJ.II * tileArraySizeIJ.JJ, forceScanStacks);
+			std::vector<bool> vec_boolmap(tileArraySizeIJ.II * tileArraySizeIJ.JJ, forceScanAllStacks);
 			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 
-				//These parameters must be accessible to all the cases
-				int wavelength_nm, nFramesBinning, sliceNumber, stackIndex, tileIndexII, tileIndexJJ;
+				//These parameters must be accessible to all the switch-cases
+				int wavelength_nm, nFramesBinning, sliceNumber, tileIndexII, tileIndexJJ, brightStackIndex{ 0 };
 				double scanZi, scanZf, scanPmin, scanPLexp;
-
 				switch (commandline.mActionID)
 				{
 				case Action::ID::MOV://Move the X and Y-stages to mStackCenterXY
@@ -534,7 +533,6 @@ namespace Routines
 					if (Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ }))
 					{
 						Action::AcqStack acqStack{ commandline.mAction.acqStack };
-
 						{
 							//Set the number of frames considering that binning will be performed
 							nFramesBinning = acqStack.readNframeBinning();
@@ -546,7 +544,7 @@ namespace Routines
 							mesoscope.setVelSingle(AXIS::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
 
 							//These parameters must be accessible for saving the tiff
-							stackIndex = acqStack.readStackIndex();
+							//stackIndex = acqStack.readStackIndex();
 							wavelength_nm = acqStack.readWavelength_nm();
 							scanZi = determineInitialScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
 							scanZf = determineFinalScanPos(acqStack.readScanZmin(), stackDepth, 0. * mm, iterScanDirZ);
@@ -571,12 +569,13 @@ namespace Routines
 
 						//Print out the stackIndex starting from 1 (stackIndex indexes from 0, so add a 1) and the sliceNumber_s starting from 1 (sliceNumber_s indexes from 0, so add a 1)
 						std::cout << "Scanning slice = " << std::to_string(sliceNumber + 1) << "/" << sequence.readTotalNumberOfSlices() <<
-							"\tstack = " << std::to_string(stackIndex + 1) << "/" << sequence.readNumberOfStacksPerSlice() <<
+							"\tstack = " << std::to_string(brightStackIndex + 1) << "/" << Util::determineNumberOf1s(vec_boolmap) <<
 							"\tScanning index = (" << tileIndexII << "," << tileIndexJJ << ")\n";
 
 						mesoscope.moveSingle(AXIS::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
 						realtimeSeq.downloadData();
 						reverseSCANDIR(iterScanDirZ);
+						brightStackIndex++;
 					}//if
 					break;
 				case Action::ID::SAV:
@@ -587,8 +586,8 @@ namespace Routines
 						std::string sliceNumberPadded_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;		//3 digits in total
 
 						//The stages scan through a snake pattern but the saving is column by column
-						std::string stackIndex_s{ std::to_string(stackIndex) };
-						std::string stackIndexPadded_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
+						//std::string stackIndex_s{ std::to_string(stackIndex) };
+						//std::string stackIndexPadded_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
 
 						std::string tileIndexII_s{ std::to_string(tileIndexII) };
 						std::string tileIndexIIpadded_s = std::string(2 - tileIndexII_s.length(), '0') + tileIndexII_s;		//2 digits in total
@@ -596,7 +595,6 @@ namespace Routines
 						std::string tileIndexJJ_s{ std::to_string(tileIndexJJ) };
 						std::string tileIndexJJpadded_s = std::string(2 - tileIndexJJ_s.length(), '0') + tileIndexJJ_s;		//2 digits in total
 
-						//shortName = sliceNumberPadded_s + "_" + stackIndexPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelengthIndex_s);								//sliceNumber_stackIndex_wavelengthIndex
 						shortName = sliceNumberPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + tileIndexIIpadded_s + "_" + tileIndexJJpadded_s;		//sliceNumber_stackIndex_wavelengthIndex
 						longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_PLexp=" + Util::toString(scanPLexp / um, 0) + "um" +
 							"_x=" + Util::toString(tileCenterXY.XX / mm, 3) +
@@ -608,7 +606,7 @@ namespace Routines
 						image.acquire();
 						image.binFrames(nFramesBinning);
 						image.save(shortName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
-						datalogStacks.record(shortName + ".tif;;\t(" + Util::toString(-tileCenterXY.YY/pixelSizeXY, 0) + "," +	//Note that in Fiji II and JJ are interchanged
+						datalogStacks.record(shortName + ".tif;;\t(" + Util::toString(-tileCenterXY.YY/pixelSizeXY, 0) + "," +	//Note that in Fiji II and JJ are interchanged. Also note the negative signs
 																	   Util::toString(-tileCenterXY.XX/pixelSizeXY, 0) + "," +
 																	   Util::toString((std::min)(scanZi, scanZf)/pixelSizeZafterBinning, 0) + ")");
 						datalogStacks.record("#(" + tileIndexIIpadded_s + "," + tileIndexJJpadded_s + ")\t" + longName);
@@ -698,12 +696,12 @@ namespace Routines
 					const PIXDIM2 overlayTileSize_pix{ heightPerFrame_pix / 2, widthPerFrame_pix };								//Tile size for the slow scan. Do not call the tile size from panoramicScan because the tiles are long strips
 																																//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
 					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };		//NOTE THE FACTOR OF 2 IN X
-					boolmap.fillTileMapHoles();
+					boolmap.fillBoolmapHoles();
 					boolmap.saveBoolmapToText("Boolmap" + PANsliceNumberPadded_s, OVERRIDE::DIS);
-					boolmap.replaceByUnionBoolmap(vec_boolmap);																	//Save the boolmap for the next iterations
+					boolmap.replaceInputBoolmapByUnion(vec_boolmap);															//Save the boolmap for the next iterations
 				
 					//For debugging
-					//boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
+					//boolmap.saveTiffWithBoolmapGridOverlay("GridOverlay", OVERRIDE::EN);
 				}
 				break;
 				default:
@@ -711,7 +709,7 @@ namespace Routines
 				}//switch(mAction)
 				Util::pressESCforEarlyTermination();
 			}//for(iterCommandline)
-
+			mesoscope.closeShutter();
 			//Util::saveBoolmapToText("Union", vec_boolmap, tileArraySizeIJ, OVERRIDE::EN);//For debugging
 		}//if (run)
 		Util::pressAnyKeyToCont();
@@ -758,6 +756,69 @@ namespace Routines
 
 			Util::pressESCforEarlyTermination();							//Early termination if ESC is pressed
 		}
+	}
+
+	void correctImageFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex)
+	{
+		if (firstSliceNumber > lastSliceNumber)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first slice number must be <= last slice number");
+		if (vec_wavelengthIndex.size() == 0)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
+
+		//Iterate over the vibratome slices
+		for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
+		{
+			//Iterate over the laser wavelengths
+			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
+			{
+				//Open the text file with the filenames for the stacks
+				std::string tileConfigFileName{ "_TileConfiguration" };
+				std::ifstream input{ g_folderPath + tileConfigFileName + ".txt" };
+
+				if (!input)
+					throw std::runtime_error((std::string)__FUNCTION__ + ": The file " + tileConfigFileName + ".txt failed to open");
+
+				//Generate TileConfiguration for Fiji's GridStitcher
+				std::string iterSliceNumber_s{ Util::toString(iterSliceNumber,0) };
+				std::string iterSliceNumberPadded_s = std::string(3 - iterSliceNumber_s.length(), '0') + iterSliceNumber_s;		//Pad the number to 3 digits in total
+				Logger datalog("_TileConfigurationCorrected_" + iterSliceNumberPadded_s + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0), OVERRIDE::EN);
+				datalog.record("dim=3"); //Needed for the BigStitcher
+
+				std::string line;
+				getline(input, line);//Skip the first line that contains "dim=3"
+				while (getline(input, line))
+				{
+					if (line.front() != '#')
+					{
+						std::string fileNumber = line.substr(0, line.find(".tif"));	//Get the file number at the beginning of each line in the text file
+
+						// Tokenizing wrt '_' 
+						std::vector<std::string> v_isolatedNumbers;					// Vector of strings with the stack parameters 
+						std::stringstream fileNumber_ss(fileNumber);
+						std::string isolatedNumber;
+						while (getline(fileNumber_ss, isolatedNumber, '_'))
+							v_isolatedNumbers.push_back(isolatedNumber);
+
+						const int sliceNumber{ std::stoi(v_isolatedNumbers.at(0)) };
+						const int wavelengthIndex{ std::stoi(v_isolatedNumbers.at(1)) };
+						const int tileIndexII{ std::stoi(v_isolatedNumbers.at(2)) };
+						const int tileIndexJJ{ std::stoi(v_isolatedNumbers.at(3)) };
+
+						if (tileIndexJJ >= 17 && sliceNumber == iterSliceNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
+						{
+							TiffU8 image{ fileNumber };
+							image.correctRSdistortionGPU(150. * um);
+							image.flattenFieldGaussian(0.015);
+							image.suppressCrosstalk(0.20);
+							image.saveToFile("corrected_" + fileNumber, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+							datalog.record("corrected_" + line);
+						}
+					}//if-line.front != '#'
+				}//while-getline
+				input.close();
+			}//for-iterWavelengthIndex
+		}//for-iterSliceNumber
+		Util::pressAnyKeyToCont();
 	}
 }//namespace
 
@@ -1321,72 +1382,6 @@ namespace TestRoutines
 		}*/
 	}
 
-	void correctImageFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex)
-	{
-		if (firstSliceNumber > lastSliceNumber)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first slice number must be <= last slice number");
-		if (vec_wavelengthIndex.size() == 0)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
-
-		//Iterate over the vibratome slices
-		for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
-		{
-			//Iterate over the laser wavelengths
-			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
-			{
-				//Open the text file with the filenames for the stacks
-				std::string tileConfigFileName{ "_TileConfiguration" };
-				std::ifstream input{ g_folderPath + tileConfigFileName + ".txt" };
-
-				if (!input)
-					throw std::runtime_error((std::string)__FUNCTION__ + ": The file " + tileConfigFileName + ".txt failed to open");
-
-				//Generate TileConfiguration for Fiji's GridStitcher
-				std::string iterSliceNumber_s{ Util::toString(iterSliceNumber,0) };
-				std::string iterSliceNumberPadded_s = std::string(3 - iterSliceNumber_s.length(), '0') + iterSliceNumber_s;		//Pad the number to 3 digits in total
-				Logger datalog("_TileConfigurationCorrected_" + iterSliceNumberPadded_s + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0), OVERRIDE::EN);
-				datalog.record("dim=3"); //Needed for the BigStitcher
-
-				std::string line;
-				getline(input, line);//Skip the first line that contains "dim=3"
-				while (getline(input, line))
-				{
-					if (line.front() != '#')
-					{
-						std::string fileNumber = line.substr(0, line.find(".tif"));	//Get the file number at the beginning of each line in the text file
-
-						// Tokenizing wrt '_' 
-						std::vector<std::string> v_isolatedNumbers;					// Vector of strings with the stack parameters 
-						std::stringstream fileNumber_ss(fileNumber);
-						std::string isolatedNumber;
-						while (getline(fileNumber_ss, isolatedNumber, '_'))
-							v_isolatedNumbers.push_back(isolatedNumber);
-
-						const int sliceNumber{ std::stoi(v_isolatedNumbers.at(0)) };
-						const int wavelengthIndex{ std::stoi(v_isolatedNumbers.at(1)) };
-						const int tileIndexII{ std::stoi(v_isolatedNumbers.at(2)) };
-						const int tileIndexJJ{ std::stoi(v_isolatedNumbers.at(3)) };
-
-						if (tileIndexJJ >= 17 && sliceNumber == iterSliceNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
-						{
-							TiffU8 image{ fileNumber };
-							image.correctRSdistortionGPU(150. * um);
-							image.flattenFieldGaussian(0.015);
-							image.suppressCrosstalk(0.20);
-							image.saveToFile("corrected_" + fileNumber, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-							datalog.record("corrected_" + line);
-						}
-					}//if-line.front != '#'
-				}//while-getline
-				input.close();
-			}//for-iterWavelengthIndex
-
-
-		}//for-iterSliceNumber
-
-		Util::pressAnyKeyToCont();
-	}
-
 	void quickStitcher()
 	{
 		//RTseq realtimeSeq{ fpga };
@@ -1431,7 +1426,7 @@ namespace TestRoutines
 	void boolmap()
 	{
 		//g_folderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
-		std::string inputFilename{ "000_panoramic (1)" };
+		std::string inputFilename{ "000_panoramic" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ inputFilename };
 
@@ -1443,12 +1438,13 @@ namespace TestRoutines
 		
 		Boolmap boolmap{ image, overlayTileArraySizeIJ, overlayTileSize_pix, overlayOverlapIJK_frac, threshold };
 		boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
-		boolmap.saveTileMap("TileMap", OVERRIDE::EN);
-		boolmap.saveTileGridOverlay("GridOverlay", OVERRIDE::EN);
-		boolmap.fillTileMapHoles();
+		boolmap.saveTiffWithBoolmapTileOverlay("TileMap", OVERRIDE::EN);
+		boolmap.saveTiffWithBoolmapGridOverlay("GridOverlay", OVERRIDE::EN);
+		boolmap.fillBoolmapHoles();
 		boolmap.saveBoolmapToText("Boolmap_filled", OVERRIDE::EN);
-		//boolmap.saveTileMap("TileMap_filled", OVERRIDE::EN);
-
+		//boolmap.saveTiffWithBoolmapTileOverlay("TileMap_filled", OVERRIDE::EN);
+		
+		std::cout << "# bright stacks = " << boolmap.readNumberOfBrightStacks() << "\n";
 		Util::pressAnyKeyToCont();
 	}
 

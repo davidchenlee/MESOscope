@@ -483,7 +483,7 @@ namespace Routines
 		const TILEDIM2 tileArraySizeIJ{ sequence.readTileArraySizeIJ() };	//Dimension of the tile array
 
 		sequence.generateCommandList();
-		sequence.printToFile("Commandlist", OVERRIDE::EN);
+		sequence.printToFile("_Commandlist", OVERRIDE::EN);
 
 		if (run)
 		{
@@ -499,8 +499,8 @@ namespace Routines
 			POSITION2 tileCenterXY;
 			std::string shortName, longName;
 			SCANDIR iterScanDirZ{ ScanDirZini };
-			Logger datalogPanoramic(g_currentSample.readName() + "_panoramics", OVERRIDE::DIS);
-			Logger datalogStacks("TileConfiguration", OVERRIDE::DIS);
+			Logger datalogPanoramic("_Panoramic", OVERRIDE::DIS);
+			Logger datalogStacks("_TileConfiguration", OVERRIDE::DIS);
 			datalogStacks.record("dim=3"); //Needed for GridStitcher on Fiji
 
 			//BOOLMAP. Declare the boolmap here to pass it between different actions
@@ -689,7 +689,7 @@ namespace Routines
 						"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
 						"_z=" + Util::toString(PANplaneZ / mm, 4) };
 					std::cout << "Saving the stack...\n";
-					panoramicScan.saveToFile(PANsliceNumberPadded_s + "_panoramic", OVERRIDE::DIS);
+					panoramicScan.saveToFile("Panoramic_" + PANsliceNumberPadded_s, OVERRIDE::DIS);
 
 					datalogPanoramic.record(PANsliceNumberPadded_s + "\t" + PANlongName);
 
@@ -699,7 +699,7 @@ namespace Routines
 																																//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
 					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };		//NOTE THE FACTOR OF 2 IN X
 					boolmap.fillTileMapHoles();
-					boolmap.saveBoolmapToText(PANsliceNumberPadded_s + "_boolmap", OVERRIDE::DIS);
+					boolmap.saveBoolmapToText("Boolmap" + PANsliceNumberPadded_s, OVERRIDE::DIS);
 					boolmap.replaceByUnionBoolmap(vec_boolmap);																	//Save the boolmap for the next iterations
 				
 					//For debugging
@@ -712,7 +712,7 @@ namespace Routines
 				Util::pressESCforEarlyTermination();
 			}//for(iterCommandline)
 
-			Util::saveBoolmapToText("intersection", vec_boolmap, tileArraySizeIJ, OVERRIDE::EN);//For debugging
+			//Util::saveBoolmapToText("Union", vec_boolmap, tileArraySizeIJ, OVERRIDE::EN);//For debugging
 		}//if (run)
 		Util::pressAnyKeyToCont();
 	}
@@ -1100,9 +1100,9 @@ namespace TestRoutines
 	void pockelsRamp(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const int heightPerFrame_pix{ 560 };
+		const int heightPerFrame_pix{ 35 };
 		const int widthPerFrame_pix{ 300 };
-		const int nFramesCont{ 1 };										//Number of frames for continuous acquisition
+		const int nFramesCont{ 100 };		//Number of frames for continuous acquisition
 
 		//CREATE THE CONTROL SEQUENCE
 		RTseq realtimeSeq{ fpga, LINECLOCK::FG, FIFOOUTfpga::DIS, heightPerFrame_pix, widthPerFrame_pix, nFramesCont, g_multibeam };
@@ -1110,23 +1110,24 @@ namespace TestRoutines
 		//POCKELS
 		const int wavelength_nm{ 1040 };
 		Pockels pockels{ realtimeSeq, wavelength_nm, Laser::ID::FIDELITY};
-		const double Pi{ 500. * mW };
-		const double Pf{ 1000. * mW };
-		const SCANDIR scanDirZ{ SCANDIR::UPWARD };
-		const double laserPi = determineInitialLaserPower(Pi, Pf - Pi, scanDirZ);
-		const double laserPf = determineFinalLaserPower(Pi, Pf - Pi, scanDirZ);
 
+		//Exponential ramp
+		pockels.exponentialPowerRampAcrossFrames(1.0*960. * mW, 1. * um, -300. * um);
+
+		//Linear ramp
+		//const double Pi{ 500. * mW };
+		//const double Pf{ 1000. * mW };
+		//const SCANDIR scanDirZ{ SCANDIR::UPWARD };
+		//const double laserPi = determineInitialLaserPower(Pi, Pf - Pi, scanDirZ);
+		//const double laserPf = determineFinalLaserPower(Pi, Pf - Pi, scanDirZ);
 		//std::cout << "Pi = " << laserPi << "\n";
 		//std::cout << "Pf = " << laserPf << "\n";
-		//pockels.linearPowerRampAcrossFrames(laserPi, laserPf);					//Linearly scale the laser power from the first to the last frame
-		//pockels.exponentialPowerRampAcrossFrames(100. * mW, 1. * um, 200. * um);
-
+		//pockels.linearPowerRampAcrossFrames(laserPi, laserPf);
 		//pockels.linearPowerRampAcrossFrames(0.96 * Pf, Pi);
-		//pockels.pushPowerSinglet(400 * us, Pi, OVERRIDE::EN);
 
-		//Test the voltage setpoint
+		//pockels.pushPowerSinglet(400 * us, Pi, OVERRIDE::EN);
 		//pockels.pushVoltageSinglet(8* us, 0.0 * V, OVERRIDE::EN);
-		pockels.linearVoltageRampAcrossFrames(4. * V, 2. * V);					//Linearly scale the pockels voltage from the first to the last frame
+		//pockels.linearVoltageRampAcrossFrames(4. * V, 2. * V);	
 
 		//EXECUTE THE CONTROL SEQUENCE
 		realtimeSeq.run();
@@ -1320,36 +1321,69 @@ namespace TestRoutines
 		}*/
 	}
 
-	void correctImageFromTileConfiguration()
+	void correctImageFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex)
 	{
-		//READ THE TEXT FILES WITH THE STACKS ACQUIRED
-		std::string tileConfigFileName{ "TileConfiguration" };
-		std::ifstream input{ g_folderPath + tileConfigFileName + ".txt" };
+		if (firstSliceNumber > lastSliceNumber)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first slice number must be <= last slice number");
+		if (vec_wavelengthIndex.size() == 0)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
 
-		if (!input)
-			throw std::runtime_error((std::string)__FUNCTION__ + ": The file " + tileConfigFileName + ".txt failed to open");
-
-		//Generate TileConfiguration for Fiji's GridStitcher
-		Logger datalog("TileConfigurationCorrected", OVERRIDE::EN);
-		datalog.record("dim=3"); //Needed for the BigStitcher
-
-		std::string line;
-		getline(input, line);//Skip the first line that contains "dim=3"
-		while (getline(input, line))
+		//Iterate over the vibratome slices
+		for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
 		{
-			if (line.front() != '#')
+			//Iterate over the laser wavelengths
+			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
 			{
-				std::string fileNumber = line.substr(0, line.find(".tif"));	//Get the file number at the beginning of each line in the text file
-				datalog.record("corrected_" + line);
+				//Open the text file with the filenames for the stacks
+				std::string tileConfigFileName{ "_TileConfiguration" };
+				std::ifstream input{ g_folderPath + tileConfigFileName + ".txt" };
 
-				TiffU8 image{ fileNumber };
-				image.correctRSdistortionGPU(150. * um);
-				image.flattenFieldGaussian(0.015);
-				image.suppressCrosstalk(0.20);
-				image.saveToFile("corrected_" + fileNumber, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-			}
-		}
-		input.close();
+				if (!input)
+					throw std::runtime_error((std::string)__FUNCTION__ + ": The file " + tileConfigFileName + ".txt failed to open");
+
+				//Generate TileConfiguration for Fiji's GridStitcher
+				std::string iterSliceNumber_s{ Util::toString(iterSliceNumber,0) };
+				std::string iterSliceNumberPadded_s = std::string(3 - iterSliceNumber_s.length(), '0') + iterSliceNumber_s;		//Pad the number to 3 digits in total
+				Logger datalog("_TileConfigurationCorrected_" + iterSliceNumberPadded_s + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0), OVERRIDE::EN);
+				datalog.record("dim=3"); //Needed for the BigStitcher
+
+				std::string line;
+				getline(input, line);//Skip the first line that contains "dim=3"
+				while (getline(input, line))
+				{
+					if (line.front() != '#')
+					{
+						std::string fileNumber = line.substr(0, line.find(".tif"));	//Get the file number at the beginning of each line in the text file
+
+						// Tokenizing wrt '_' 
+						std::vector<std::string> v_isolatedNumbers;					// Vector of strings with the stack parameters 
+						std::stringstream fileNumber_ss(fileNumber);
+						std::string isolatedNumber;
+						while (getline(fileNumber_ss, isolatedNumber, '_'))
+							v_isolatedNumbers.push_back(isolatedNumber);
+
+						const int sliceNumber{ std::stoi(v_isolatedNumbers.at(0)) };
+						const int wavelengthIndex{ std::stoi(v_isolatedNumbers.at(1)) };
+						const int tileIndexII{ std::stoi(v_isolatedNumbers.at(2)) };
+						const int tileIndexJJ{ std::stoi(v_isolatedNumbers.at(3)) };
+
+						if (tileIndexJJ >= 17 && sliceNumber == iterSliceNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
+						{
+							TiffU8 image{ fileNumber };
+							image.correctRSdistortionGPU(150. * um);
+							image.flattenFieldGaussian(0.015);
+							image.suppressCrosstalk(0.20);
+							image.saveToFile("corrected_" + fileNumber, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+							datalog.record("corrected_" + line);
+						}
+					}//if-line.front != '#'
+				}//while-getline
+				input.close();
+			}//for-iterWavelengthIndex
+
+
+		}//for-iterSliceNumber
+
 		Util::pressAnyKeyToCont();
 	}
 
@@ -1505,7 +1539,7 @@ namespace TestRoutines
 		//Create a sequence
 		Sequencer sequence{ sample, stack };
 		sequence.generateCommandList();
-		sequence.printToFile("CommandlistLight", OVERRIDE::EN);
+		sequence.printToFile("_CommandlistLight", OVERRIDE::EN);
 
 		if (1)
 		{

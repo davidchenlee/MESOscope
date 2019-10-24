@@ -54,7 +54,7 @@ namespace TestRoutines
 	//Postprocessing
 	void correctImage();
 	void correctImageBatch();
-	void correctImageFromTileConfiguration();
+	void correctImageFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex);
 	void quickStitcher();
 	void boolmap();
 	void vectorOfObjects();

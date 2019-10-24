@@ -263,6 +263,8 @@ void FPGA::enableFIFOOUTfpga(const FIFOOUTfpga enableFIFOOUTfpga) const
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FIFOOUTgateEnable, true));
 }
 
+/*
+//20191024 - the FPGA internal FIFOs are automatically flushed after each sequence triggered by the framegate (see LV)
 //Flush the internal FIFOs on the FPGA as precaution. 
 void FPGA::flushRAM() const
 {
@@ -271,6 +273,7 @@ void FPGA::flushRAM() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
 	//std::cout << "flushBRAMs called\n";	//For debugging
 }
+*/
 
 I16 FPGA::readScannerVoltageMon() const
 {
@@ -744,7 +747,7 @@ void RTseq::downloadData()
 	correctInterleaved_();									//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines
 															//In case of pipelining, remove it from RTseq::initialize() and call it separately
 	mFpga.setMainTrig(MAINTRIG::PC);						//Disable the stage triggering the ctl&acq sequence to allow positioning the stage after acquisition
-	mFpga.flushRAM();										//Flush all the internal FIFOs on the FPGA as precaution
+	//mFpga.flushRAM();										//Flush all the internal FIFOs on the FPGA as precaution
 	Sleep(static_cast<DWORD>(g_postSequenceTimer / ms));	//Wait for at least the post-sequence timeout
 
 }

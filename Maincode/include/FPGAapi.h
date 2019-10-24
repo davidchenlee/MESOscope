@@ -37,7 +37,7 @@ public:
 	void setMainTrig(const MAINTRIG mainTrigger) const;
 	void setStageTrigDelay(const MAINTRIG mainTrigger, const int heightPerBeamletPerFrame_pix, const SCANDIR scanDir, const int wavelength_nm) const;
 	void enableFIFOOUTfpga(const FIFOOUTfpga enableFIFOOUTfpga) const;
-	void flushRAM() const;
+	//void flushRAM() const;
 
 	I16 readScannerVoltageMon() const;
 	I16 readRescannerVoltageMon() const;

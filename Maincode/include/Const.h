@@ -53,6 +53,7 @@ namespace Constants
 	enum class OVERRIDE { DIS, EN };
 	enum class RUNMODE { SINGLE, LIVE, AVG, SCANZ, SCANZCENTERED, SCANX, COLLECTLENS, FIELD_ILLUM };
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};	//*cast
+	enum class RUN { DIS = false, EN = true };
 
 	extern std::string g_folderPath;
 	extern const std::string g_bitfilePath;

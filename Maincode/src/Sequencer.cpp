@@ -879,7 +879,7 @@ double Action::MoveStage::readTileCenter(AXIS axis) const
 	}
 }
 
-//stackNumber is the number of the stack following the scan pattern (e.g. snake). stackIndex is the number of the stack column by column from top to bottom and left to right (used for saving the tiff)
+//stackNumber is the number of the stack on the scan pattern (e.g. snake, column-by-column, etc). stackIndex is the number of the stack column-by-column from top to bottom and left to right (used for saving the tiff)
 void Action::AcqStack::setParam(const int stackNumber, const int stackIndex, const int wavelength_nm, const SCANDIR scanDirZ, const double scanZmin, const double depthZ, const double scanPmin, const double scanPLexp, const int nFrameBinning)
 {
 	if (stackIndex < 0)
@@ -1105,6 +1105,9 @@ Sequencer::Sequencer(const Sample sample, const Stack stack) :
 
 //Generate a scan pattern and use the vibratome to slice the sample
 //II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
+//For some reason, a snake-pattern results in alternating columns of brighter and darker tiles
+//Use the same scan order for all the wavelengths because the stages may drift over time
+//Currently performing column-by-column scan
 void Sequencer::generateCommandList()
 {
 	std::cout << "Generating the command list..." << "\n";
@@ -1113,12 +1116,11 @@ void Sequencer::generateCommandList()
 		panoramicScan_(30. * um);			//Panoramic scan 30 um below the surface
 		panoramicScan_(100. * um);			//Panoramic scan 100 um below the surface
 
-		//initializeIteratorIJ_();			//Reset the tile iterator after every cut
+		//initializeScanDirIJ_();			//For snake-scan. Reset the tile iterator after every cut
 		//The first fluor-marker on the list is read, then the second marker, etc
 		for (std::vector<int>::size_type iterFluorMarker = 0; iterFluorMarker != mSample.readFluorMarkerListSize(); iterFluorMarker++)
 		{
-			initializeIteratorIJ_();		//Reset the tile iterator after every wavelength. Use the same scan order with all the wavelengths
-											//because of the stage drift over time
+			initializeScanDirIJ_();			//Reset the X-stage and Y-stage scan directions for every wavelength
 
 			//The Y-stage is the slowest to react because it sits under the 2 other stages. For the best performance, iterate over II often and over JJ less often
 			while (mJJ >= 0 && mJJ < mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ))		//Y-stage iteration
@@ -1130,11 +1132,15 @@ void Sequencer::generateCommandList()
 					saveStack_();
 					mII -= Util::convertScandirToInt(mIterScanDirXYZ.XX);	//Increase/decrease the iterator in the X-stage axis
 				}
-				mII += Util::convertScandirToInt(mIterScanDirXYZ.XX);		//Re-initialize II by going back one step to start from 0 or mTileArraySizeIJ.II - 1
-				reverseSCANDIR(mIterScanDirXYZ.XX);							//Reverse the scan direction
+
+				initializeScanDirII_();		//Reset the X-stage scan direction
+
+				//mII += Util::convertScandirToInt(mIterScanDirXYZ.XX);		//For snake-scan. Re-initialize mII by going back one step to start from 0 or mTileArraySizeIJ.II - 1
+				//reverseSCANDIR(mIterScanDirXYZ.XX);						//For snake-scan. Reverse the scan direction in X
+
 				mJJ -= Util::convertScandirToInt(mIterScanDirXYZ.YY);		//Increase/decrease the iterator in the Y-stage axis
 			}
-			mJJ += Util::convertScandirToInt(mIterScanDirXYZ.YY);			//Re-initialize JJ by going back one step to start from 0 or mTileArraySizeIJ.JJ - 1		
+			//mJJ += Util::convertScandirToInt(mIterScanDirXYZ.YY);			//For snake-scan. Re-initialize JJ by going back one step to start from 0 or mTileArraySizeIJ.JJ - 1		
 			//reverseSCANDIR(mIterScanDirXYZ.YY);							//Reverse the scan direction after every wavelength
 		}
 		//Only need to cut the sample 'nVibratomeSlices -1' times
@@ -1336,11 +1342,11 @@ void Sequencer::reserveMemoryBlock_()
 	mCommandList.reserve(3 * nTotalTilesEntireSample + mNtotalSlices - 1);
 }
 
-//Reset the iterators mII and mJJ to the initial values
+//Reset the X-stage and Y-stage scan directions to the initial values
 //II is the row index (along the image height and X-stage) and JJ is the column index (along the image width and Y-stage) of the tile. II and JJ start from 0
-void Sequencer::initializeIteratorIJ_()
+void Sequencer::initializeScanDirIJ_()
 {
-	resetStageScanDirections_();	//Reset the scan directions
+	mIterScanDirXYZ = g_initialStageScanDirXYZ;	//Reset the scan directions
 
 	switch (mIterScanDirXYZ.XX)
 	{
@@ -1363,9 +1369,20 @@ void Sequencer::initializeIteratorIJ_()
 	}
 }
 
-void Sequencer::resetStageScanDirections_()
+//Reset the X-stage direction to the initial values
+void Sequencer::initializeScanDirII_()
 {
-	mIterScanDirXYZ = g_initialStageScanDirXYZ;
+	mIterScanDirXYZ.XX = g_initialStageScanDirXYZ.XX;	//Reset the scan directions in X
+
+	switch (mIterScanDirXYZ.XX)
+	{
+	case SCANDIR::RIGHTWARD:	//The X-stage moves to the right, therefore, the sample is imaged from right to left
+		mII = mTileArray.readTileArraySizeIJ(TileArray::Axis::II) - 1;
+		break;
+	case SCANDIR::LEFTWARD:		//The X-stage moves to the left, therefore, the sample is imaged from left to right
+		mII = 0;
+		break;
+	}
 }
 
 //Convert a ROI = {ymin, xmin, ymax, xmax} to the equivalent length of interest (LOI) in the X-stage and Y-stage axes
@@ -1402,7 +1419,7 @@ void Sequencer::acqStack_(const int indexFluorMarker)
 	//Read the corresponding laser configuration
 	const FluorMarkerList::FluorMarker fluorMarker{ mSample.readFluorMarker(indexFluorMarker) };
 
-	//The stages scan through a snake pattern but the saving is column by column
+	//The stack saving is column by column
 	//Stack index for identifying the saved tiff file
 	const int stackIndex{ mJJ * readTileArraySizeIJ(TileArray::Axis::II) + mII };
 

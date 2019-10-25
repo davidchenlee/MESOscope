@@ -263,7 +263,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -431,7 +431,7 @@ namespace Routines
 
 	//Full sequence to image and cut an entire sample automatically. Note that the stack starts at stackCenterXYZ.at(Z) (i.e., the stack is not centered at stackCenterXYZ.at(Z))
 	//When forceScanAllStacks = true, the full boolmap is set to 1 (i.e., the boolmap does not have any effect on the scanning)
-	void sequencer(const FPGA &fpga, const bool forceScanAllStacks, const bool run)
+	void sequencer(const FPGA &fpga, const int firstCommandIndex, const int lastCommandIndex, const bool forceScanAllStacks, const RUN runSeq)
 	{
 		//for beads, center the stack around g_stackCenterXYZ.at(Z) -----> //const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ - nFramesCont * pixelSizeZ / 2 };
 
@@ -445,7 +445,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 0.150 * mm };
+		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 0.000 * mm };
 		//const LENGTH3 LOIxyz{ 0.300 * mm, 0.200 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
@@ -485,7 +485,7 @@ namespace Routines
 		sequence.generateCommandList();
 		sequence.printToFile("_Commandlist", OVERRIDE::EN);
 
-		if (run)
+		if (runSeq == RUN::EN)
 		{
 			//CONTROL SEQUENCE
 			RTseq realtimeSeq{ fpga, LINECLOCK::RS, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, 100, 1 };
@@ -506,7 +506,7 @@ namespace Routines
 			//BOOLMAP. Declare the boolmap here to pass it between different actions
 			std::vector<bool> vec_boolmap(tileArraySizeIJ.II * tileArraySizeIJ.JJ, forceScanAllStacks);
 			int brightStackIndex{ 0 };
-			for (std::vector<int>::size_type iterCommandline = 15123; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
+			for (int iterCommandline = firstCommandIndex; iterCommandline < sequence.readNtotalCommands(); iterCommandline++)
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 
@@ -586,7 +586,7 @@ namespace Routines
 						std::string sliceNumber_s{ std::to_string(sliceNumber) };
 						std::string sliceNumberPadded_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;		//3 digits in total
 
-						//The stages scan through a snake pattern but the saving is column by column
+						//The stack saving is column by column
 						//std::string stackIndex_s{ std::to_string(stackIndex) };
 						//std::string stackIndexPadded_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
 

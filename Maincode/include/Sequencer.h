@@ -149,7 +149,7 @@ namespace Action
 		double readScanPLexp() const;
 		int readNframeBinning() const;
 	private:
-		int mStackNumber;		//Number of the stack following the scan pattern (e.g. snake)
+		int mStackNumber;		//Number of the stack on the scan pattern (e.g. snake, column-by-column, etc)
 		int mStackIndex;		//Number of the stack column by column from top to bottom and left to right (used for saving the tiff)
 		int mWavelength_nm;
 		SCANDIR mScanDirZ;		//THIS IS NOT READ BY THE SEQUENCER ANYMORE!!
@@ -245,8 +245,8 @@ private:
 	TILEDIM2 determineTileArraySizeIJ_();
 	void initializeEffectiveROI_();
 	void reserveMemoryBlock_();
-	void initializeIteratorIJ_();
-	void resetStageScanDirections_();
+	void initializeScanDirIJ_();
+	void initializeScanDirII_();
 	LENGTH3 determineEffectiveLOIxyz() const;
 
 	void moveStage_(const TILEIJ tileIndicesIJ);

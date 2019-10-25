@@ -51,7 +51,7 @@ public:
 	void configureFIFOOUTpc(const U32 depth) const;
 	void collectFIFOOUTpcGarbage() const;
 
-	void uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const;
+	void uploadFIFOIN(VQU32 &vecOfqueues, const U8 nChan) const;
 	void readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 *mBufferB) const;
 private:
 	NiFpga_Session mHandle;													//FPGA handle. Non-const to let the FPGA API assign the handle
@@ -116,7 +116,7 @@ private:
 
 	const LINECLOCK mLineclockInput;		//Resonant scanner (RS) or Function generator (FG)
 	const FIFOOUTfpga mEnableFIFOOUTfpga;	//Enable or disable the FIFOOUTfpga on the FPGA
-	VQU32 mVec_queue;
+	VQU32 mVecOfqueue;
 	U32* mBufferA{ nullptr };				//Buffer array to read FIFOOUTpc A
 	U32* mBufferB{ nullptr };				//Buffer array to read FIFOOUTpc B
 
@@ -124,7 +124,8 @@ private:
 	PMT16XCHAN determineRescannerSetpoint_(const bool multibeam) const;
 	void presetAOs_() const;
 	void initializeStages_(const MAINTRIG mainTrigger, const SCANDIR stackScanDir, const int wavelength_nm);
-	void uploadControlSequence_() const;
+	void uploadPixelclock_();
+	void uploadControlSequence_();
 	void correctInterleaved_();
 };
 

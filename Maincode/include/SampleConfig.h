@@ -36,7 +36,7 @@ public:
 	POSITION2 mCenterXY{ -1, -1 };						//Sample center (stageX, stageY)
 	LENGTH3 mLOIxyz_req{ -1, -1, -1 };					//Requested Length of interest (stageX, stageY, stageZ)
 	double mSurfaceZ{ -1 };
-	const double mBladeFocalplaneOffsetZ{ 1.130 * mm };	//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
+	const double mBladeFocalplaneOffsetZ{ 1.140 * mm };	//Positive distance if the blade is higher than the microscope's focal plane; negative otherwise
 	double mCutAboveBottomOfStack{ 0. * um };			//Specify at what height of the overlapping volume to cut
 
 	Sample(const std::string sampleName, const std::string immersionMedium, const std::string objectiveCollar, const std::vector<LIMIT2> stageSoftPosLimXYZ, const FluorMarkerList fluorMarkerList = { {} });

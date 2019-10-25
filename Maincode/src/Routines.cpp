@@ -263,7 +263,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -505,12 +505,13 @@ namespace Routines
 
 			//BOOLMAP. Declare the boolmap here to pass it between different actions
 			std::vector<bool> vec_boolmap(tileArraySizeIJ.II * tileArraySizeIJ.JJ, forceScanAllStacks);
-			for (std::vector<int>::size_type iterCommandline = 0; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
+			int brightStackIndex{ 0 };
+			for (std::vector<int>::size_type iterCommandline = 15123; iterCommandline != sequence.readNtotalCommands(); iterCommandline++)
 			{
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 
 				//These parameters must be accessible to all the switch-cases
-				int wavelength_nm, nFramesBinning, sliceNumber, tileIndexII, tileIndexJJ, brightStackIndex{ 0 };
+				int wavelength_nm, nFramesBinning, sliceNumber, tileIndexII, tileIndexJJ;
 				double scanZi, scanZf, scanPmin, scanPLexp;
 				switch (commandline.mActionID)
 				{
@@ -570,7 +571,7 @@ namespace Routines
 						//Print out the stackIndex starting from 1 (stackIndex indexes from 0, so add a 1) and the sliceNumber_s starting from 1 (sliceNumber_s indexes from 0, so add a 1)
 						std::cout << "Scanning slice = " << std::to_string(sliceNumber + 1) << "/" << sequence.readTotalNumberOfSlices() <<
 							"\tstack = " << std::to_string(brightStackIndex + 1) << "/" << Util::determineNumberOf1s(vec_boolmap) <<
-							"\tScanning index = (" << tileIndexII << "," << tileIndexJJ << ")\n";
+							"\tStack index = (" << tileIndexII << "," << tileIndexJJ << ")\n";
 
 						mesoscope.moveSingle(AXIS::ZZ, scanZf);	//Move the stage to trigger the ctl&acq sequence
 						realtimeSeq.downloadData();
@@ -617,9 +618,8 @@ namespace Routines
 				{
 					mesoscope.closeShutter();
 
-					const double planeZtoCut{ commandline.mAction.cutSlice.readStageZheightForFacingTheBlade() };
-
 					std::cout << "Cutting slice = " << std::to_string(sliceNumber + 1) << "/" << sequence.readTotalNumberOfSlices() << "\n";
+					const double planeZtoCut{ commandline.mAction.cutSlice.readStageZheightForFacingTheBlade() };
 					mesoscope.sliceTissue(planeZtoCut);
 
 					//Reset the scan direction
@@ -648,7 +648,7 @@ namespace Routines
 					mesoscope.setVelSingle(AXIS::XX, PANpixelSizeX / g_lineclockHalfPeriod);				//Set the vel for imaging
 					mesoscope.openShutter();																//Open the shutter
 
-					//LOCATIONS on the sample to image
+					//LOCATIONS of the sample to image
 					const int nLocations{ panoramicScan.readNumberStageYpos() };
 					double stageXi, stageXf;		//Stage final position
 					for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
@@ -697,7 +697,7 @@ namespace Routines
 																																//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
 					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };		//NOTE THE FACTOR OF 2 IN X
 					boolmap.fillBoolmapHoles();
-					boolmap.saveBoolmapToText("Boolmap" + PANsliceNumberPadded_s, OVERRIDE::DIS);
+					boolmap.saveBoolmapToText("Boolmap_" + PANsliceNumberPadded_s, OVERRIDE::DIS);
 					boolmap.replaceInputBoolmapByUnion(vec_boolmap);															//Save the boolmap for the next iterations
 				
 					//For debugging
@@ -1192,6 +1192,14 @@ namespace TestRoutines
 
 		//EXECUTE THE CONTROL SEQUENCE
 		realtimeSeq.run();
+
+
+
+		Sleep(400);
+		Pockels pockelsV{ realtimeSeq, 750, Laser::ID::VISION };
+		pockelsV.exponentialPowerRampAcrossFrames(1.0*960. * mW, 1. * um, 300. * um);
+		realtimeSeq.run();
+
 		Util::pressAnyKeyToCont();
 	}
 

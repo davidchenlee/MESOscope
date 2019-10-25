@@ -1110,8 +1110,8 @@ void Sequencer::generateCommandList()
 	std::cout << "Generating the command list..." << "\n";
 	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
 	{
-		panoramicScan_(30. * um);
-		panoramicScan_(100. * um);
+		panoramicScan_(30. * um);			//Panoramic scan 30 um below the surface
+		panoramicScan_(100. * um);			//Panoramic scan 100 um below the surface
 
 		//initializeIteratorIJ_();			//Reset the tile iterator after every cut
 		//The first fluor-marker on the list is read, then the second marker, etc
@@ -1134,8 +1134,7 @@ void Sequencer::generateCommandList()
 				reverseSCANDIR(mIterScanDirXYZ.XX);							//Reverse the scan direction
 				mJJ -= Util::convertScandirToInt(mIterScanDirXYZ.YY);		//Increase/decrease the iterator in the Y-stage axis
 			}
-			mJJ += Util::convertScandirToInt(mIterScanDirXYZ.YY);			//Re-initialize JJ by going back one step to start from 0 or mTileArraySizeIJ.JJ - 1
-				
+			mJJ += Util::convertScandirToInt(mIterScanDirXYZ.YY);			//Re-initialize JJ by going back one step to start from 0 or mTileArraySizeIJ.JJ - 1		
 			//reverseSCANDIR(mIterScanDirXYZ.YY);							//Reverse the scan direction after every wavelength
 		}
 		//Only need to cut the sample 'nVibratomeSlices -1' times

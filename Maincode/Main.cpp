@@ -11,9 +11,9 @@ int main(int argc, char* argv[])
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
 			//Routines::panoramicScan(fpga);
-			//Routines::sequencer(fpga, false, 0);
+			Routines::sequencer(fpga, false, 0);
 			//Routines::liveScan(fpga);
-			Routines::correctImageFromTileConfiguration(0, 1, { 2 });
+			//Routines::correctImageFromTileConfiguration(0, 1, { 0, 2 });
 
 			//TESTS
 			//TestRoutines::digitalLatency(fpga);

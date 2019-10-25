@@ -56,14 +56,14 @@ namespace Constants
 	extern const double g_pockelsSecondaryDelay{ 0 };			//Delay of the Pockels wrt the preframeclock in the subsequent frames 
 
 	//GALVO SCANNERS
-	extern const double g_scannerDelay{ 150 * us };								//Adjust 'g_scannerDelay' until the bead position in a fordward scan coincides with that of a backward scan
+	extern const double g_scannerDelay{ 150 * us };								//Adjust g_scannerDelay until the bead position in a fordward scan coincides with that of a backward scan
 	extern const double g_rescannerDelay{ 0. * us };							//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
 	extern const GALVOcalib g_scannerCalib{ 0.02417210 * V / um , 0.0 * V };	//Calibration factor and offset of the galvo scanner. Last calib 31/7/2018 (a larger voltage steers the excitation beam towards the negative dir of the X-stage)
 
 	//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission aligned to the detector
-	//To find 'mVoltagePerDistance', take a single 1X image of beads4um, save all the PMT16X channels, and adjust the parameter until all the beads are contained in the targeted PMT16X channel 'i'
+	//To find 'mVoltagePerDistance', take a single 1X image of beads4um, save all the PMT16X channels, and adjust the parameter until all the beads are contained in the targeted PMT16X channel i
 	//To find 'mVoltageOffset', take an averaged 16X image of beads centered at the FOV of the Tiff and adjust the parameter to make the crosstalk in the channels i-1 and i+1 have the same fluorescent intensity.
-	//If 'mVoltagePerDistance' is too large, the top beads in the Tiff leak through the 'i-1' channel and the bottom beads leak through the 'i+1' channels
+	//If 'mVoltagePerDistance' is too large, the top beads in the Tiff leak through the i-1 channel and the bottom beads leak through the i+1 channels
 	//If 'mVoltageOffset' is too large, the bead signal shifts towards channel 1
 	//The format is GALVOcalib { double voltagePerDistance, double voltageOffset };
 	extern const GALVOcalib g_rescannerCalibV750nm{ 0.310 * g_scannerCalib.voltagePerDistance, 0.075 * V };		//VISION. Last calib 20191017

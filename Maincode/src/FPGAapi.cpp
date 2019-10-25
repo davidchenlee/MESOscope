@@ -86,21 +86,21 @@ namespace FPGAfunc
 		return (t_tick << 16) | (0x0000FFFF & AO_U16);
 	}
 
-	//Send out an analog instruction, where the analog output 'AO' is held for 'timeStep'
+	//Send out an analog instruction, where the analog output AO is held for timeStep
 	U32 packAnalogSinglet(const double timeStep, const double AO)
 	{
 		const U16 AOlatency_tick{ 2 };			//To calibrate, run AnalogLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 		return packU32(convertTimeToTick(timeStep) - AOlatency_tick, convertVoltageToI16(AO / V));
 	}
 
-	//Send out a single digital instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
+	//Send out a single digital instruction, where DO is held LOW or HIGH for the amount of time timeStep. The DOs in Connector1 are rated at 10MHz, Connector0 at 80MHz.
 	U32 packDigitalSinglet(const double timeStep, const bool DO)
 	{
 		const U16 DOlatency_tick{ 2 };			//To calibrate, run DigitalLatencyCalib(). I think the latency comes from the memory block, which takes 2 cycles to read
 		return packU32(convertTimeToTick(timeStep) - DOlatency_tick, static_cast<U16>(DO));
 	}
 
-	//Generate a single pixel-clock instruction, where 'DO' is held LOW or HIGH for the amount of time 'timeStep'
+	//Generate a single pixel-clock instruction, where DO is held LOW or HIGH for the amount of time timeStep
 	U32 packPixelclockSinglet(const double timeStep, const bool DO)
 	{
 		const U16 PixelclockLatency_tick{ 1 };	//The pixel-clock is implemented using a SCTL. I think the latency comes from reading the LUT buffer
@@ -145,7 +145,7 @@ namespace FPGAfunc
 		//getchar();	//For debugging
 	}
 
-	//Push all the elements in 'tailQ' into 'headQ'
+	//Push all the elements in tailQ into headQ
 	void concatenateQueues(QU32& receivingQueue, QU32& givingQueue)
 	{
 		while (!givingQueue.empty())
@@ -268,9 +268,9 @@ void FPGA::enableFIFOOUTfpga(const FIFOOUTfpga enableFIFOOUTfpga) const
 //Flush the internal FIFOs on the FPGA as precaution. 
 void FPGA::flushRAM() const
 {
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, true));
-	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushTrigger, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushFIFOs, false));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushFIFOs, true));
+	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mHandle, NiFpga_FPGAvi_ControlBool_FlushFIFOs, false));
 	//std::cout << "flushBRAMs called\n";	//For debugging
 }
 */
@@ -379,19 +379,20 @@ void FPGA::collectFIFOOUTpcGarbage() const
 		std::cout << "FIFOOUTpc garbage collector called. Number of elements cleaned up in FIFOOUTpc A/B: " << nElemTotalA << "/" << nElemTotalB << "\n";
 }
 
-//Send every single queue in 'vec_queue' to the FPGA buffer
-//For this, concatenate all the individual queues 'vec_queue.at(ii)' in the queue 'allQueues'.
+//Send every single queue in vecOfqueue to the FPGA buffer
+//For this, concatenate all the individual queues vecOfqueue.at(ii) in the queue allQueues.
 //The data structure is allQueues = [# elements ch1| elements ch1 | # elements ch 2 | elements ch 2 | etc]. THE QUEUE POSITION DETERMINES THE TARGETED CHANNEL
-//Then transfer all the elements in 'allQueues' to the vector FIFOIN to interface the FPGA
-void FPGA::uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const
+//Then transfer all the elements in allQueues to the vector FIFOIN and then to the FPGA
+void FPGA::uploadFIFOIN(VQU32 &vecOfqueues, const U8 nChan) const
 {
 	{
 		QU32 allQueues;														//Create a single long queue
 		for (int chan = 0; chan < nChan; chan++)
 		{
-			allQueues.push_back(queue_vec.at(chan).size());					//Push the number of elements in each individual queue ii, 'vec_queue.at(ii)'	
-			for (std::vector<int>::size_type iter = 0; iter != queue_vec.at(chan).size(); iter++)
-				allQueues.push_back(queue_vec.at(chan).at(iter));			//Push vec_queue[i]
+			allQueues.push_back(vecOfqueues.at(chan).size());				//The first element of each individual queue, vecOfqueue.at(ii),	
+			for (std::vector<int>::size_type iter = 0; iter != vecOfqueues.at(chan).size(); iter++)
+				allQueues.push_back(vecOfqueues.at(chan).at(iter));			//Push the elements in queue vecOfqueue.at(chan)
+
 		}
 
 		const int sizeFIFOINqueue{ static_cast<int>(allQueues.size()) };	//Total number of elements in all the queues 
@@ -405,10 +406,14 @@ void FPGA::uploadFIFOIN(const VQU32 &queue_vec, const U8 nChan) const
 			FIFOIN.at(ii) = allQueues.front();								//Transfer the queue elements to the array
 			allQueues.pop_front();
 		}
-		allQueues = {};														//Cleanup the queue C++11 style
+
+		//Cleanup the queues to start the next sequence from zero
+		for (int chan = 0; chan < nChan; chan++)
+			vecOfqueues.at(chan).clear();
+		allQueues.clear();														
 
 		//Send the data to the FPGA through FIFOIN. I measured a minimum time of 10 ms to execute
-		U32 r;																//Elements remaining
+		U32 r; //Elements remaining
 		FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteFifoU32(mHandle, NiFpga_FPGAvi_HostToTargetFifoU32_FIFOIN, &FIFOIN[0], sizeFIFOINqueue, NiFpga_InfiniteTimeout, &r));
 
 		//On the FPGA, transfer the commands from FIFOIN to the sub-channel buffers. 
@@ -423,7 +428,7 @@ void FPGA::readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 
 {
 	//TODO: save the data concurrently
 	//I ran a test and found that two 32-bit FIFOOUTfpga have a larger bandwidth than a single 64 - bit FIFOOUTfpga
-	//Test if the bandwidth can be increased by using 'NiFpga_AcquireFifoReadElementsU32'.Ref: http://zone.ni.com/reference/en-XX/help/372928G-01/capi/functions_fifo_read_acquire/
+	//Test if the bandwidth can be increased by using NiFpga_AcquireFifoReadElementsU32.Ref: http://zone.ni.com/reference/en-XX/help/372928G-01/capi/functions_fifo_read_acquire/
 	//pass an array to a function: https://stackoverflow.com/questions/2838038/c-programming-malloc-inside-another-function
 	//review of pointers and references in C++: https://www.ntu.edu.sg/home/ehchua/programming/cpp/cp4_PointerReference.html
 
@@ -465,7 +470,7 @@ void FPGA::readFIFOOUTpc(const int &nPixPerBeamletAllFrames, U32 *mBufferA, U32 
 		throw DataDownloadException((std::string)__FUNCTION__ + ": Received less FIFO elements than expected");
 }
 
-//Load the imaging parameters onto the FPGA. See 'Const.cpp' for the definition of each variable
+//Load the imaging parameters onto the FPGA. See Const.cpp for the definition of each variable
 void FPGA::initializeFpga_() const
 {
 	if (g_FIFOtimeout_tick < 0 || g_DOdelay_tick < 0 || g_pockelsFirstFrameDelay < 0 || g_pockelsSecondaryDelay < 0 || g_scannerDelay < 0 || g_rescannerDelay < 0 || g_linegateTimeout < 0)
@@ -570,7 +575,7 @@ QU32 RTseq::Pixelclock::readPixelclock() const
 }
 
 RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam) :
-	mVec_queue(mNchan),		//Initialize the size the vector containing the queues (= # of queues). Use round and not curly parenthesis here
+	mVecOfqueue(mNchan),		//Initialize the size the vector containing the queues (= # of queues). Use round and not curly parenthesis here
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
 	mEnableFIFOOUTfpga{ enableFIFOOUTfpga },
@@ -600,15 +605,11 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga
 		mBufferA = new U32[mNpixPerBeamletAllFrames];
 		mBufferB = new U32[mNpixPerBeamletAllFrames];
 	}
-
-	//Generate a pixelclock
-	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
-	mVec_queue.at(convertRTCHANtoU8_(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
 //This constructor is meant to be used with RTseq::configureFrames()
 RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga enableFIFOOUTfpga):
-	mVec_queue(mNchan),		//Initialize the size the vector containing the queues (= # of queues). Use round and not curly parenthesis here
+	mVecOfqueue(mNchan),		//Initialize the size the vector containing the queues (= # of queues). Use round and not curly parenthesis here
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
 	mEnableFIFOOUTfpga{ enableFIFOOUTfpga }
@@ -647,10 +648,6 @@ void RTseq::configureFrames(const int heightPerBeamletPerFrame_pix, const int wi
 		mBufferA = newBufferA;
 		mBufferB = newBufferB;
 	}
-
-	//Generate a pixelclock
-	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
-	mVec_queue.at(convertRTCHANtoU8_(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
 RTseq::~RTseq()
@@ -667,17 +664,17 @@ RTseq::~RTseq()
 
 void RTseq::pushQueue(const RTCHAN chan, QU32& queue)
 {
-	FPGAfunc::concatenateQueues(mVec_queue.at(convertRTCHANtoU8_(chan)), queue);
+	FPGAfunc::concatenateQueues(mVecOfqueue.at(convertRTCHANtoU8_(chan)), queue);
 }
 
 void RTseq::clearQueue(const RTCHAN chan)
 {
-	mVec_queue.at(convertRTCHANtoU8_(chan)).clear();
+	mVecOfqueue.at(convertRTCHANtoU8_(chan)).clear();
 }
 
 void RTseq::pushDigitalSinglet(const RTCHAN chan, double timeStep, const bool DO)
 {
-	mVec_queue.at(convertRTCHANtoU8_(chan)).push_back(FPGAfunc::packDigitalSinglet(timeStep, DO));
+	mVecOfqueue.at(convertRTCHANtoU8_(chan)).push_back(FPGAfunc::packDigitalSinglet(timeStep, DO));
 }
 
 void RTseq::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO)
@@ -687,7 +684,7 @@ void RTseq::pushAnalogSinglet(const RTCHAN chan, double timeStep, const double A
 		std::cerr << "WARNING in " << __FUNCTION__ << ": Time step too small. Time step cast to " << g_tMinAO / us << " us\n";
 		timeStep = g_tMinAO;
 	}
-	mVec_queue.at(convertRTCHANtoU8_(chan)).push_back(FPGAfunc::packAnalogSinglet(timeStep, AO));
+	mVecOfqueue.at(convertRTCHANtoU8_(chan)).push_back(FPGAfunc::packAnalogSinglet(timeStep, AO));
 }
 
 void RTseq::pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override)
@@ -699,20 +696,21 @@ void RTseq::pushLinearRamp(const RTCHAN chan, double timeStep, const double ramp
 
 	//Clear the current content
 	if (override == OVERRIDE::EN)
-		mVec_queue.at(convertRTCHANtoU8_(chan)).clear();
+		mVecOfqueue.at(convertRTCHANtoU8_(chan)).clear();
 
-	FPGAfunc::pushLinearRamp(mVec_queue.at(convertRTCHANtoU8_(chan)), timeStep, rampLength, Vi, Vf);
+	FPGAfunc::pushLinearRamp(mVecOfqueue.at(convertRTCHANtoU8_(chan)), timeStep, rampLength, Vi, Vf);
 }
 
 //Preset the parameters for the acquisition sequence
 void RTseq::initialize(const MAINTRIG mainTrigger, const int wavelength_nm, const SCANDIR stackScanDir)
 {
 	mFpga.enableFIFOOUTfpga(mEnableFIFOOUTfpga);					//Push data from the FPGA to FIFOOUTfpga. It is disabled when debugging
-
 	initializeStages_(mainTrigger, stackScanDir, wavelength_nm);	//Set the delay of the stage triggering the ctl&acq and specify the stack-saving order
 	presetAOs_();													//Preset the scanner positions
 	Sleep(10);														//Give the FPGA enough time (> 5 ms) to settle to avoid presetAOs_() clashing with the subsequent call of uploadControlSequence_()
 																	//(I realized this after running VS in release mode, which communicate faster with the FPGA than the debug mode)
+	
+	uploadPixelclock_();											//Upload the pixelclock to the FPGA
 	uploadControlSequence_();										//Upload the control sequence to the FPGA
 
 	mFpga.startFIFOOUTpc();											//Establish connection between FIFOOUTpc and FIFOOUTfpga to send the control sequence to the FGPA. Optional according to NI, but if not called, sometimes garbage is generated
@@ -747,7 +745,6 @@ void RTseq::downloadData()
 	correctInterleaved_();									//The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines
 															//In case of pipelining, remove it from RTseq::initialize() and call it separately
 	mFpga.setMainTrig(MAINTRIG::PC);						//Disable the stage triggering the ctl&acq sequence to allow positioning the stage after acquisition
-	//mFpga.flushRAM();										//Flush all the internal FIFOs on the FPGA as precaution
 	Sleep(static_cast<DWORD>(g_postSequenceTimer / ms));	//Wait for at least the post-sequence timeout
 
 }
@@ -765,7 +762,7 @@ U32* RTseq::dataBufferB() const
 //The pixel clock is triggered by the line clock (see the LV implementation) after an initial waiting time
 void RTseq::Pixelclock::pushUniformDwellTimes_()
 {
-	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time 'InitialWaitingTime'. At 160MHz, the clock increment is 6.25ns = 0.00625us
+	//The pixel clock is triggered by the line clock (see the LV implementation), followed by a waiting time InitialWaitingTime. At 160MHz, the clock increment is 6.25ns = 0.00625us
 	//For example, for a dwell time = 125ns and 400 pixels, the initial waiting time is (g_lineclockHalfPeriod-400*125ns)/2
 
 	const double initialWaitingTime{ (g_lineclockHalfPeriod - mWidthPerFrame_pix * mDwell) / 2. }; //Relative delay of the pixel clock wrt the line clock
@@ -813,7 +810,7 @@ RTseq::PMT16XCHAN RTseq::determineRescannerSetpoint_(const bool multibeam) const
 		return static_cast<RTseq::PMT16XCHAN>(g_rescanner1Xchan_int);
 }
 
-//Ramp up or down the scanner and rescanner from the current voltage to the first value of the control sequence in mVec_queue to avoid jumps at the start of the sequence
+//Ramp up or down the scanner and rescanner from the current voltage to the first value of the control sequence in mVecOfqueue to avoid jumps at the start of the sequence
 void RTseq::presetAOs_() const
 {
 	//Read the current voltage of the AOs for the scanner and rescanner. See the LV implementation
@@ -823,17 +820,17 @@ void RTseq::presetAOs_() const
 
 	
 	//iterChan starts from 1 because the pixelclock (chan = 0) is kept empty
-	VQU32 vec_queue(mNchan);	//Create a new vector of queues for the AO preset values
+	VQU32 vecOfqueue(mNchan);	//Create a new vector of queues for the AO preset values
 	for (int iterChan = 1; iterChan < mNchan; iterChan++)
 	{	
 		//SCAN AND RESCAN GALVOS. Linear ramp the output to smoothly transition from the end point of the previous run to the start point of the next run
 		if ((iterChan == convertRTCHANtoU8_(RTCHAN::SCANNER) || iterChan == convertRTCHANtoU8_(RTCHAN::RESCANNER)))
-			if (mVec_queue.at(iterChan).size() != 0)
+			if (mVecOfqueue.at(iterChan).size() != 0)
 			{
 				const double Vi = FPGAfunc::convertIntToVoltage(AOlastVoltage_I16.at(iterChan));							//Current voltage of the AO outputs
-				const double Vf = FPGAfunc::convertIntToVoltage(static_cast<I16>(mVec_queue.at(iterChan).front()));			//First element of the new control sequence
+				const double Vf = FPGAfunc::convertIntToVoltage(static_cast<I16>(mVecOfqueue.at(iterChan).front()));			//First element of the new control sequence
 
-				FPGAfunc::pushLinearRamp(vec_queue.at(iterChan), 10 * us, 5 * ms, Vi, Vf);
+				FPGAfunc::pushLinearRamp(vecOfqueue.at(iterChan), 10 * us, 5 * ms, Vi, Vf);
 				//For debugging
 				//std::cout << Vi << "\t" << Vf << "\n";
 			}
@@ -842,12 +839,19 @@ void RTseq::presetAOs_() const
 		//Not needed anymore because async triggering is disabled for the pockels (see LV)
 		//if ((iterChan == convertRTCHANtoU8_(RTCHAN::VISION) || iterChan == convertRTCHANtoU8_(RTCHAN::FIDELITY)))
 		//{
-		//	vec_queue.at(iterChan).push_back(FPGAfunc::packAnalogSinglet(8. * us, 0));
+		//	vecOfqueue.at(iterChan).push_back(FPGAfunc::packAnalogSinglet(8. * us, 0));
 		//}
 	}
 
-	mFpga.uploadFIFOIN(vec_queue, mNchan);		//Upload the initialization ramp to the FPGA
+	mFpga.uploadFIFOIN(vecOfqueue, mNchan);		//Upload the initialization ramp to the FPGA
 	mFpga.asyncTriggerAO();						//Trigger the initialization ramp externally (not using the internal clocks)
+}
+
+void RTseq::uploadPixelclock_()
+{
+	//Generate the pixelclock
+	const Pixelclock pixelclock(mWidthPerFrame_pix, g_pixelDwellTime);
+	mVecOfqueue.at(convertRTCHANtoU8_(RTCHAN::PIXELCLOCK)) = pixelclock.readPixelclock();
 }
 
 void RTseq::initializeStages_(const MAINTRIG mainTrigger, const SCANDIR stackScanDir,const int wavelength_nm)
@@ -857,9 +861,9 @@ void RTseq::initializeStages_(const MAINTRIG mainTrigger, const SCANDIR stackSca
 }
 
 //Upload the main control sequence to the FPGA
-void RTseq::uploadControlSequence_() const
+void RTseq::uploadControlSequence_()
 {
-	mFpga.uploadFIFOIN(mVec_queue, mNchan);
+	mFpga.uploadFIFOIN(mVecOfqueue, mNchan);
 }
 
 //The RS scans bi-directionally. The pixel order has to be reversed either for the odd or even lines. Currently I reverse the EVEN lines so that the resulting image matches the orientation of the sample
@@ -867,7 +871,7 @@ void RTseq::uploadControlSequence_() const
 void RTseq::correctInterleaved_()
 {
 	//std::reverse(mBufferA + lineIndex * mRTseq.mWidthPerFrame_pix, mBufferA + (lineIndex + 1) * mRTseq.mWidthPerFrame_pix)
-	//reverses all the pixels between and including the indices 'lineIndex * widthPerFrame_pix' and '(lineIndex + 1) * widthPerFrame_pix - 1'
+	//reverses all the pixels between and including the indices lineIndex * widthPerFrame_pix and (lineIndex + 1) * widthPerFrame_pix - 1
 	for (int lineIndex = 0; lineIndex < mHeightPerBeamletAllFrames_pix; lineIndex += 2)
 	{
 		std::reverse(mBufferA + lineIndex * mWidthPerFrame_pix, mBufferA + (lineIndex + 1) * mWidthPerFrame_pix);

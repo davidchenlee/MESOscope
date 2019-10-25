@@ -212,7 +212,8 @@ namespace Util
 	{
 		int nStacksBright{ 0 };
 		for (std::vector<int>::size_type iter = 0; iter != vec_boolmap.size(); iter++)
-			nStacksBright++;
+			if (vec_boolmap.at(iter) == true)
+				nStacksBright++;
 		
 		return nStacksBright;
 	}
@@ -316,7 +317,7 @@ TiffU8::TiffU8(const std::string filename) :
 	mNpixPerFrame = mHeightPerFrame_pix * mWidthPerFrame_pix;
 	mNpixAllFrames = mNpixPerFrame * mNframes;
 
-	//Length in memory of one row of pixel in the image. Targeting 'U8' only. Alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
+	//Length in memory of one row of pixel in the image. Targeting U8 only. Alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
 	mBytesPerLine = mWidthPerFrame_pix * sizeof(U8);	
 
 	U8* buffer{ (U8*)_TIFFmalloc(mBytesPerLine) };
@@ -527,7 +528,7 @@ void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* input
 	const int heightPerChannelAllFrames{ heightPerChannelPerFrame * mNframes };
 	const int nChanPMThalf{ g_nChanPMT / 2 };
 
-	//Even 'iterFrame' (Raster scan the sample from the positive to the negative direction of the X-stage)
+	//Even iterFrame (Raster scan the sample from the positive to the negative direction of the X-stage)
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame += 2)
 		for (int chanIndex = 0; chanIndex < nChanPMThalf; chanIndex++)
 		{
@@ -536,7 +537,7 @@ void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* input
 			//CH08-CH15
 			std::memcpy(&mArray[((7 - chanIndex) * heightPerChannelPerFrame + iterFrame * heightAllChannelsPerFrame) * mBytesPerLine], &inputArrayB[(iterFrame * heightPerChannelPerFrame + chanIndex * heightPerChannelAllFrames) * mBytesPerLine], heightPerChannelPerFrame * mBytesPerLine);
 		}
-	//Odd 'iterFrame' (Raster scan the sample from the negative to the positive direction of the X-stage)
+	//Odd iterFrame (Raster scan the sample from the negative to the positive direction of the X-stage)
 	for (int iterFrame = 1; iterFrame < mNframes; iterFrame += 2)
 		for (int chanIndex = 0; chanIndex < nChanPMThalf; chanIndex++)
 		{
@@ -717,7 +718,7 @@ void TiffU8::averageEvenOddFrames()
 					avg[mNpixPerFrame + iterPix] += mArray[iterFrame * mNpixPerFrame + iterPix];	//Even frames
 			}
 
-		//Put 'evenImage' and 'oddImage' back into mArray. Concatenate 'oddImage' after 'evenImage'. Ignore the rest of the data in mArray
+		//Put evenImage and oddImage back into mArray. Concatenate oddImage after evenImage. Ignore the rest of the data in mArray
 		const int nFramesHalf{ mNframes / 2 };
 		for (int iterPix = 0; iterPix < 2 * mNpixPerFrame; iterPix++)
 		{

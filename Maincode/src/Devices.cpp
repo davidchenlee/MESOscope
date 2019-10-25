@@ -1,7 +1,7 @@
 #include "Devices.h"
 
 #pragma region "Image"
-//When multiplexing, create a mTiff to store 16 strips of height 'mRTseq.mHeightPerFrame_pix' each
+//When multiplexing, create a mTiff to store 16 strips of height mRTseq.mHeightPerFrame_pix each
 Image::Image(const RTseq &realtimeSeq) :
 	mRTseq{ realtimeSeq },
 	mTiff{ (static_cast<int>(realtimeSeq.mMultibeam) * (g_nChanPMT - 1) + 1) *  mRTseq.mHeightPerBeamletPerFrame_pix, mRTseq.mWidthPerFrame_pix, mRTseq.mNframes }
@@ -1593,7 +1593,7 @@ void Shutter::pulse(const double pulsewidth) const
 #pragma endregion "Shutters"
 
 #pragma region "Pockels"
-//Curently, the output of the pockels is gated on the FPGA side: the output is HIGH when 'framegate' is HIGH
+//Curently, the output of the pockels is gated on the FPGA side: the output is HIGH when Framegate is HIGH
 //Each Uniblitz shutter goes with a specific pockels, so it makes more sense to control the shutters through the Pockels class
 Pockels::Pockels(RTseq &realtimeSeq, const int wavelength_nm, const Laser::ID laserSelector) :
 	mRTseq{ realtimeSeq },

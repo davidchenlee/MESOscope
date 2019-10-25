@@ -57,7 +57,7 @@ public:
 	double readFillFactor() const;
 	double readSampleRes() const;
 private:
-	const RTseq &mRTseq;									//Needed to retrieve 'mRTseq.mWidthPerFrame_pix' to calculate the fill factor
+	const RTseq &mRTseq;									//Needed to retrieve mRTseq.mWidthPerFrame_pix to calculate the fill factor
 	const double mVMAX{ 5. * V };							//Max control voltage allowed
 	const double mDelay{ 10. * ms };
 	const double mVoltagePerDistance{ 0.00595 * V / um };	//Calibration factor. Last calibrated 

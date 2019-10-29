@@ -10,7 +10,7 @@ namespace Routines
 	void stepwiseScan(const FPGA &fpga);
 	void contScanZ(const FPGA &fpga);
 	void panoramicScan(const FPGA &fpga);
-	void sequencer(const FPGA &fpga, const int firstCommandIndex, const int lastCommandIndex, const bool forceScanAllStacks, const RUN runSeq);
+	void sequencer(const FPGA &fpga, const int firstCommandIndex, const bool forceScanAllStacks, const RUN runSeq);
 	void liveScan(const FPGA &fpga);
 	void correctImageFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex);
 }

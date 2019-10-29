@@ -347,7 +347,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ fluorMarkerList.findFluorMarker("TDT") };	//Select a particular fluorescence channel
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };			//Initial scan direction of stage 
-		const double fullWidth{ 3.000 * mm };				//Total width of the tile array
+		const double fullWidth{ 5.000 * mm };				//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };				//Width of a strip
@@ -431,7 +431,7 @@ namespace Routines
 
 	//Full sequence to image and cut an entire sample automatically. Note that the stack starts at stackCenterXYZ.at(Z) (i.e., the stack is not centered at stackCenterXYZ.at(Z))
 	//When forceScanAllStacks = true, the full boolmap is set to 1 (i.e., the boolmap does not have any effect on the scanning)
-	void sequencer(const FPGA &fpga, const int firstCommandIndex, const int lastCommandIndex, const bool forceScanAllStacks, const RUN runSeq)
+	void sequencer(const FPGA &fpga, const int firstCommandIndex, const bool forceScanAllStacks, const RUN runSeq)
 	{
 		//for beads, center the stack around g_stackCenterXYZ.at(Z) -----> //const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ - nFramesCont * pixelSizeZ / 2 };
 
@@ -445,7 +445,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 0.000 * mm };
+		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 4.000 * mm };
 		//const LENGTH3 LOIxyz{ 0.300 * mm, 0.200 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
@@ -624,6 +624,11 @@ namespace Routines
 
 					//Reset the scan direction
 					iterScanDirZ = ScanDirZini;
+
+					brightStackIndex = 0;
+
+					//Reset the boolmap
+					vec_boolmap.assign(tileArraySizeIJ.II * tileArraySizeIJ.JJ, forceScanAllStacks);
 				}
 				break;
 				case Action::ID::PAN:
@@ -686,17 +691,19 @@ namespace Routines
 						"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
 						"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
 						"_z=" + Util::toString(PANplaneZ / mm, 4) };
-					std::cout << "Saving the stack...\n";
-					panoramicScan.saveToFile("Panoramic_" + PANsliceNumberPadded_s, OVERRIDE::DIS);
-
+					
+					//panoramicScan.saveToFile("Panoramic_" + PANsliceNumberPadded_s, OVERRIDE::DIS);//For large tiffs, tifflib sometimes returns "no space for output buffer" error
 					datalogPanoramic.record(PANsliceNumberPadded_s + "\t" + PANlongName);
 
 					//DETERMINE THE BOOLMAP
 					const LENGTH2 LOIxy_pix{ LOIxyz.XX / (2 * pixelSizeXY), LOIxyz.YY / pixelSizeXY };
 					const PIXDIM2 overlayTileSize_pix{ heightPerFrame_pix / 2, widthPerFrame_pix };								//Tile size for the slow scan. Do not call the tile size from panoramicScan because the tiles are long strips
 																																//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
+					std::cout << "before Boolmap boolmap\n";
 					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };		//NOTE THE FACTOR OF 2 IN X
+					std::cout << "after Boolmap boolmap\n";
 					boolmap.fillBoolmapHoles();
+					std::cout << "after fillBoolmapHoles()\n";
 					boolmap.saveBoolmapToText("Boolmap_" + PANsliceNumberPadded_s, OVERRIDE::DIS);
 					boolmap.replaceInputBoolmapByUnion(vec_boolmap);															//Save the boolmap for the next iterations
 				
@@ -804,7 +811,7 @@ namespace Routines
 						const int tileIndexII{ std::stoi(v_isolatedNumbers.at(2)) };
 						const int tileIndexJJ{ std::stoi(v_isolatedNumbers.at(3)) };
 
-						if (tileIndexJJ >= 17 && sliceNumber == iterSliceNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
+						if (tileIndexJJ >= 15 && tileIndexJJ < 50 && sliceNumber == iterSliceNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
 						{
 							TiffU8 image{ fileNumber };
 							image.correctRSdistortionGPU(150. * um);
@@ -1736,7 +1743,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (20.800) * mm };
+		const double slicePlaneZ{ (20.920) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

@@ -699,11 +699,8 @@ namespace Routines
 					const LENGTH2 LOIxy_pix{ LOIxyz.XX / (2 * pixelSizeXY), LOIxyz.YY / pixelSizeXY };
 					const PIXDIM2 overlayTileSize_pix{ heightPerFrame_pix / 2, widthPerFrame_pix };								//Tile size for the slow scan. Do not call the tile size from panoramicScan because the tiles are long strips
 																																//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
-					std::cout << "before Boolmap boolmap\n";
 					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };		//NOTE THE FACTOR OF 2 IN X
-					std::cout << "after Boolmap boolmap\n";
 					boolmap.fillBoolmapHoles();
-					std::cout << "after fillBoolmapHoles()\n";
 					boolmap.saveBoolmapToText("Boolmap_" + PANsliceNumberPadded_s, OVERRIDE::DIS);
 					boolmap.replaceInputBoolmapByUnion(vec_boolmap);															//Save the boolmap for the next iterations
 				

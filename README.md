@@ -4,14 +4,12 @@ Code in C++ for controlling the NI USB-7852R card
 ## To do:
 ### C++
 Caution on:
-- In Mesoscope::openShutter(), I commented out VirtualLaser::isLaserInternalShutterOpen() to check that the laser has the shutter open because it is not needed when running the full sequence and any comm error will stop the routine
+- In Routines::Sequencer, when calling Boolmap boolmap{ panoramicScan,...) and the used RAM reaches ~ 1GB, the memory allocation through new in TiffU8::TiffU8() throws an error.
+I think this has to do with the 2GB memory limitation in x86
+- When saving the panoramic scan, Tifflib was throwing "No Space for output buffer" error. Maybe this is related to the issue above
+- In Mesoscope::openShutter(), I commented out VirtualLaser::isLaserInternalShutterOpen(), which checks that the laser shutter is open, because it is not needed when running the full sequence and any comm error will stop the routine
 - Keep an eye on the Z-stage bouncing that triggers the ctl&acq
 Sequencer:
-- The last time I imaged liver, I noticed that stepwise and contZ scanning were vertically shifted wrt each other. I thought it was because I used pixelSizeZ = 1.0 um instead of 0.5 um,
-and therefore, the timing has to be re-calibrated for 1.0 um. However, I checked the bead position for stepwise and contZ (upward and downward) and the match perfectly.
-- Choose 1X or 16X dynamically
-- Enforce to close the Uniblitz shutter before cutting
-- Updated the Z position after cutting --> check that it works
 - enable/disable using the vibratome in Routines::sequencer
 Post-processing
 - Implement suppressCrosstalk() flattenField() on the GPU
@@ -26,12 +24,10 @@ Others:
 - I detected that shutter #2 is triggered when the FPGA resets at the end of the code. I see a small voltage on the scope, like ~50mV that seems to be enough to trigger the shutter
 
 ### Hardware
-- realign the dichroic and rescanner mounts. Fine tune the galvo parameters
-- Screw down the PMT16X
-- Test cooling down the PMT16X
 
 
 ### Things that could be improved in the future
+- Compile in 64 bits
 - Mount the collector lens on the detector platform
 - Use a motorized stage for the PMT16X mount
 - Use an apodizing filter to make the fluorescence emission even for the different beamlets

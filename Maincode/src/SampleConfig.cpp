@@ -2,7 +2,6 @@
 const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { -1. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };	//Soft limit of the stage for the oil container
 
-//const extern POSITION3 g_stackCenterXYZ{ ((40.+52.)/2 + 0) * mm, ((21.+28.)/2 + 0.000)* mm, (18.950 + 0.000) * mm };//For Liver
 const extern POSITION3 g_stackCenterXYZ{ (46.240) * mm, (24.500 - 1.2000 ) * mm, (19.060) * mm };//For Liver
 
 

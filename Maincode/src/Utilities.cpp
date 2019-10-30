@@ -371,10 +371,14 @@ TiffU8::TiffU8(const U8* inputArray, const int heightPerFrame_pix, const int wid
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
 
+	std::cout << "In TiffU8:TiffU8, before new U8\n";
 	mArray = new U8[mNpixAllFrames];
 
+	std::cout << "In TiffU8:TiffU8, after new U8 and before std::memcpy()\n";
 	//Copy input image onto mArray
 	std::memcpy(mArray, inputArray, mNpixAllFrames * sizeof(U8));
+
+	std::cout << "In TiffU8:TiffU8, after std::memcpy()\n";
 }
 
 //Construct a Tiff from a vector

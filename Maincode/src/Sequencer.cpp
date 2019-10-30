@@ -408,7 +408,9 @@ Boolmap::Boolmap(const PanoramicScan &panoramicScan, const TILEDIM2 tileArraySiz
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
 
+	std::cout << "In Boolmap::Boolmap, before generateBoolmap_()\n";
 	generateBoolmap_();
+	std::cout << "In Boolmap::Boolmap, after generateBoolmap_()\n";
 }
 
 //Indicate if a specific tile in the array is bright. The tile indices start form 0
@@ -620,7 +622,6 @@ bool Boolmap::isQuadrantBright_(const double threshold, const TILEIJ tileIndices
 		return false;
 }
 
-//Note that when the tiles have some overlap, the tile array will not cover the entire Tiff
 void Boolmap::generateBoolmap_()
 {
 	//Divide the image into tiles of size tileHeight_pix * tileWidth_pix and return an array of tiles indicating if the tile is bright (TRUE) or dark (FALSE)

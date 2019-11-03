@@ -12,7 +12,7 @@ namespace Routines
 	void panoramicScan(const FPGA &fpga);
 	void sequencer(const FPGA &fpga, const int firstCommandIndex, const bool forceScanAllStacks, const RUN runSeq);
 	void liveScan(const FPGA &fpga);
-	void correctImageFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex);
+	void correctTiffReadFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex);
 }
 
 //TESTS
@@ -59,7 +59,7 @@ namespace TestRoutines
 	void boolmap();
 	void vectorOfObjects();
 	void createFolder();
-	void convexHull();
+	//void convexHull();
 
 	//Sequence
 	void sequencerConcurrentTest();

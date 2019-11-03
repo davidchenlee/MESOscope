@@ -3,8 +3,10 @@
 //Constants that are never changed
 namespace Constants
 {
-	//extern const std::string g_folderPath{ "D:\\_output_local\\" };
-	extern std::string g_folderPath{ "Z:\\_output_remote\\" };
+	//extern const std::string g_imagingFolderPath{ "D:\\_output_local\\" };
+	extern std::string g_imagingFolderPath{ "Z:\\_output_remote\\" };
+	extern std::string g_postprocessInputPath{ "D:\\20191028_Liver20190812_01_copy\\" };
+	extern std::string g_postprocessOutputPath{ "D:\\_output_corrected\\" };
 	extern const std::string g_bitfilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\LabView\\FPGA Bitfiles\\" };	//Define the full path of the bitfile (compiled LV code that runs on the FPGA)
 	extern const std::string g_openclFilePath{ "D:\\OwnCloud\\Codes\\MESOscope\\Maincode\\src\\" };			//OpenCL kernel code
 

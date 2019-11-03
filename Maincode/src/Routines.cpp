@@ -177,7 +177,7 @@ namespace Routines
 					"_x=" + Util::toString(stagePosXYZ.at(iterLocation).XX / mm, 3) + "_y=" + Util::toString(stagePosXYZ.at(iterLocation).YY / mm, 3) + "_z=" + Util::toString(stagePosXYZ.at(iterLocation).ZZ / mm, 4) +
 					"_avg=" + Util::toString(nFramesCont, 0));
 				std::cout << "Saving the stack...\n";
-				image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+				image.save(g_imagingFolderPath, filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 			}
 			output.pushImage(image.data(), iterLocation);
 			Sleep(sleepTime_ms);
@@ -193,7 +193,7 @@ namespace Routines
 
 			output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
-			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+			output.saveToFile(g_imagingFolderPath, filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 		}
 
 		if (acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
@@ -205,7 +205,7 @@ namespace Routines
 
 			output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
-			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+			output.saveToFile(g_imagingFolderPath, filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 		}
 
 		if (acqMode == RUNMODE::SCANX || acqMode == RUNMODE::FIELD_ILLUM)
@@ -218,12 +218,12 @@ namespace Routines
 
 			output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
-			output.saveToFile(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+			output.saveToFile(g_imagingFolderPath, filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 		}
 
 		//DATALOG
 		{
-			Logger datalog(filename, OVERRIDE::DIS);
+			Logger datalog(g_imagingFolderPath, filename, OVERRIDE::DIS);
 			datalog.record("SAMPLE-------------------------------------------------------");
 			datalog.record("Sample = ", g_currentSample.readName());
 			datalog.record("Immersion medium = ", g_currentSample.readImmersionMedium());
@@ -335,7 +335,7 @@ namespace Routines
 			"_bin=" + Util::toString(nFramesBinning, 0) };
 		
 		std::cout << "Saving the stack...\n";
-		image.save(filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+		image.save(g_imagingFolderPath, filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 
 		//Util::pressAnyKeyToCont();
 	}
@@ -417,7 +417,7 @@ namespace Routines
 				"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
 				"_z=" + Util::toString(stackCenterXYZ.ZZ / mm, 4) };
 			std::cout << "Saving the stack...\n";
-			panoramicScan.saveToFile(filename, OVERRIDE::DIS);
+			panoramicScan.saveToFile(g_imagingFolderPath, filename, OVERRIDE::DIS);
 
 			//Tile size for the slow scan. Do not call the tile size from panoramicScan because the tiles are long strips. 
 			const PIXDIM2 overlayTileSize_pix{ Util::intceil(tileHeight / pixelSizeX), Util::intceil(tileWidth / pixelSizeY) };
@@ -483,7 +483,7 @@ namespace Routines
 		const TILEDIM2 tileArraySizeIJ{ sequence.readTileArraySizeIJ() };	//Dimension of the tile array
 
 		sequence.generateCommandList();
-		sequence.printToFile("_Commandlist", OVERRIDE::EN);
+		sequence.printToFile(g_imagingFolderPath, "_Commandlist", OVERRIDE::EN);
 
 		if (runSeq == RUN::EN)
 		{
@@ -499,8 +499,8 @@ namespace Routines
 			POSITION2 tileCenterXY;
 			std::string shortName, longName;
 			SCANDIR iterScanDirZ{ ScanDirZini };
-			Logger datalogPanoramic("_Panoramic", OVERRIDE::DIS);
-			Logger datalogStacks("_TileConfiguration", OVERRIDE::DIS);
+			Logger datalogPanoramic(g_imagingFolderPath, "_Panoramic", OVERRIDE::DIS);
+			Logger datalogStacks(g_imagingFolderPath, "_TileConfiguration", OVERRIDE::DIS);
 			datalogStacks.record("dim=3"); //Needed for GridStitcher on Fiji
 
 			//BOOLMAP. Declare the boolmap here to pass it between different actions
@@ -606,7 +606,7 @@ namespace Routines
 						Image image{ realtimeSeq };
 						image.acquire();
 						image.binFrames(nFramesBinning);
-						image.save(shortName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+						image.save(g_imagingFolderPath, shortName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 						datalogStacks.record(shortName + ".tif;;\t(" + Util::toString(-tileCenterXY.YY/pixelSizeXY, 0) + "," +	//Note that in Fiji II and JJ are interchanged. Also note the negative signs
 																	   Util::toString(-tileCenterXY.XX/pixelSizeXY, 0) + "," +
 																	   Util::toString((std::min)(scanZi, scanZf)/pixelSizeZafterBinning, 0) + ")");
@@ -692,7 +692,7 @@ namespace Routines
 						"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
 						"_z=" + Util::toString(PANplaneZ / mm, 4) };
 					
-					//panoramicScan.saveToFile("Panoramic_" + PANsliceNumberPadded_s, OVERRIDE::DIS);//For large tiffs, tifflib sometimes returns "no space for output buffer" error
+					panoramicScan.saveToFile(g_imagingFolderPath, "Panoramic_" + PANsliceNumberPadded_s, OVERRIDE::DIS);//For large tiffs, tifflib sometimes returns "no space for output buffer" error
 					datalogPanoramic.record(PANsliceNumberPadded_s + "\t" + PANlongName);
 
 					//DETERMINE THE BOOLMAP
@@ -701,11 +701,10 @@ namespace Routines
 																																//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
 					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };		//NOTE THE FACTOR OF 2 IN X
 					boolmap.fillBoolmapHoles();
-					boolmap.saveBoolmapToText("Boolmap_" + PANsliceNumberPadded_s, OVERRIDE::DIS);
+					boolmap.saveBoolmapToText(g_imagingFolderPath, "Boolmap_" + PANsliceNumberPadded_s, OVERRIDE::DIS);
 					boolmap.replaceInputBoolmapByUnion(vec_boolmap);															//Save the boolmap for the next iterations
-				
-					//For debugging
-					//boolmap.saveTiffWithBoolmapGridOverlay("GridOverlay", OVERRIDE::EN);
+					
+					//boolmap.saveTiffWithBoolmapGridOverlay("GridOverlay", OVERRIDE::EN);//For debugging
 				}
 				break;
 				default:
@@ -755,73 +754,97 @@ namespace Routines
 			image.acquire();												//Execute the control sequence
 			image.averageFrames();											//Average the frames acquired via continuous acquisition
 			//image.correct(RScanner.mFFOV);
-			image.save("Untitled", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);	//Save individual files
+			image.save(g_imagingFolderPath, "Untitled", TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);	//Save individual files
 			Sleep(700);
 
 			Util::pressESCforEarlyTermination();							//Early termination if ESC is pressed
 		}
 	}
 
-	void correctImageFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex)
+	void correctTiffReadFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex)
 	{
 		if (firstSliceNumber > lastSliceNumber)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first slice number must be <= last slice number");
 		if (vec_wavelengthIndex.size() == 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
 
-		//Iterate over the vibratome slices
+		//Open the text file with the filenames for the stacks
+		std::ifstream input{ g_postprocessInputPath + "_TileConfiguration.txt" };
+
+		if (!input)
+			throw std::runtime_error((std::string)__FUNCTION__ + ": The file _TileConfiguration.txt failed to open");
+
+
+		//Create a text file for each vibratome slice and laser wavelength
+		std::vector<std::ofstream> vec_handle( (lastSliceNumber - firstSliceNumber + 1) * vec_wavelengthIndex.size());
 		for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
-		{
-			//Iterate over the laser wavelengths
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
 			{
-				//Open the text file with the filenames for the stacks
-				std::string tileConfigFileName{ "_TileConfiguration" };
-				std::ifstream input{ g_folderPath + tileConfigFileName + ".txt" };
-
-				if (!input)
-					throw std::runtime_error((std::string)__FUNCTION__ + ": The file " + tileConfigFileName + ".txt failed to open");
-
 				//Generate TileConfiguration for Fiji's GridStitcher
 				std::string iterSliceNumber_s{ Util::toString(iterSliceNumber,0) };
 				std::string iterSliceNumberPadded_s = std::string(3 - iterSliceNumber_s.length(), '0') + iterSliceNumber_s;		//Pad the number to 3 digits in total
-				Logger datalog("_TileConfigurationCorrected_" + iterSliceNumberPadded_s + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0), OVERRIDE::EN);
-				datalog.record("dim=3"); //Needed for the BigStitcher
 
-				std::string line;
-				getline(input, line);//Skip the first line that contains "dim=3"
-				while (getline(input, line))
+				const unsigned int index{ (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec };
+				vec_handle.at(index).open(g_postprocessOutputPath + "_TileConfigurationCorrected_" + iterSliceNumberPadded_s + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
+				vec_handle.at(index) << "dim=3\n";//Needed for BigStitcher
+			}
+
+		
+		std::string line;
+		getline(input, line);//Skip the first line that contains "dim=3"
+		while (getline(input, line))
+		{
+			if (line.front() != '#')
+			{
+				std::string fileNumber = line.substr(0, line.find(".tif"));	//Get the file number at the beginning of each line in the text file
+
+				// Tokenizing wrt '_' 
+				std::vector<std::string> v_isolatedNumbers;					// Vector of strings with the stack parameters 
+				std::stringstream fileNumber_ss(fileNumber);
+				std::string isolatedNumber;
+				while (getline(fileNumber_ss, isolatedNumber, '_'))
+					v_isolatedNumbers.push_back(isolatedNumber);
+
+				const int sliceNumber{ std::stoi(v_isolatedNumbers.at(0)) };
+				const int wavelengthIndex{ std::stoi(v_isolatedNumbers.at(1)) };
+				const int tileIndexII{ std::stoi(v_isolatedNumbers.at(2)) };
+				const int tileIndexJJ{ std::stoi(v_isolatedNumbers.at(3)) };
+
+				//Iterate over the vibratome slices
+				for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
 				{
-					if (line.front() != '#')
+					//Iterate over the laser wavelengths
+					for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
 					{
-						std::string fileNumber = line.substr(0, line.find(".tif"));	//Get the file number at the beginning of each line in the text file
-
-						// Tokenizing wrt '_' 
-						std::vector<std::string> v_isolatedNumbers;					// Vector of strings with the stack parameters 
-						std::stringstream fileNumber_ss(fileNumber);
-						std::string isolatedNumber;
-						while (getline(fileNumber_ss, isolatedNumber, '_'))
-							v_isolatedNumbers.push_back(isolatedNumber);
-
-						const int sliceNumber{ std::stoi(v_isolatedNumbers.at(0)) };
-						const int wavelengthIndex{ std::stoi(v_isolatedNumbers.at(1)) };
-						const int tileIndexII{ std::stoi(v_isolatedNumbers.at(2)) };
-						const int tileIndexJJ{ std::stoi(v_isolatedNumbers.at(3)) };
-
-						if (tileIndexJJ >= 15 && tileIndexJJ < 50 && sliceNumber == iterSliceNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
+						if (sliceNumber == iterSliceNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
 						{
-							TiffU8 image{ fileNumber };
+							//std::cout << "Slice number = " << sliceNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
+
+							TiffU8 image{ g_postprocessInputPath, fileNumber };
 							image.correctRSdistortionGPU(150. * um);
 							image.flattenFieldGaussian(0.015);
 							image.suppressCrosstalk(0.20);
-							image.saveToFile("corrected_" + fileNumber, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-							datalog.record("corrected_" + line);
+							image.saveToFile(g_postprocessOutputPath, "corrected_" + fileNumber, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+
+							const unsigned int index{ (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec };
+							vec_handle.at(index) << "corrected_" << line << "\n";
 						}
-					}//if-line.front != '#'
-				}//while-getline
-				input.close();
-			}//for-iterWavelengthIndex
-		}//for-iterSliceNumber
+
+					}//for-iterWavelengthIndex
+				}//for-iterSliceNumber
+			}//if-line.front() != '#'
+		}//while-getline
+		
+		input.close();
+
+		//Close the text files
+		for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
+			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
+			{
+				const unsigned int index{ (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec };
+				vec_handle.at(index).close();
+			}
+
 		Util::pressAnyKeyToCont();
 	}
 }//namespace
@@ -951,7 +974,7 @@ namespace TestRoutines
 		Image image{ realtimeSeq };
 		image.acquire();			//Execute the control sequence and acquire the image via continuous acquisition
 		image.averageEvenOddFrames();
-		image.save("Untitled", TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+		image.save(g_imagingFolderPath, "Untitled", TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 	}
 
 	void resonantScanner(const FPGA &fpga)
@@ -1286,7 +1309,7 @@ namespace TestRoutines
 
 		//overriding the file saving has some travelOverhead
 		//Splitting the stackDiffZ into a page structure (by assigning nFramesCont = 200 in saveToFile) gives a large travelOverhead
-		image.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
+		image.saveToFile(g_imagingFolderPath, filename, TIFFSTRUCT::SINGLEPAGE, OVERRIDE::EN);
 
 		//Stop the stopwatch
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
@@ -1338,7 +1361,7 @@ namespace TestRoutines
 	void dataLogger()
 	{
 		std::ofstream fileHandle;
-		fileHandle.open(g_folderPath + "test.txt", std::ios_base::app);
+		fileHandle.open(g_imagingFolderPath + "test.txt", std::ios_base::app);
 
 		// Here system_clock is wall clock time from the system-wide realtime clock 
 		std::time_t timenow{ std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) };
@@ -1356,11 +1379,11 @@ namespace TestRoutines
 	{
 		std::string inputFilename{ "000_2_00_01" };
 		std::string outputFilename{ "output_" + inputFilename };
-		TiffU8 image{ inputFilename };
+		TiffU8 image{ g_imagingFolderPath, inputFilename };
 		image.correctRSdistortionGPU(150. * um);
 		image.flattenFieldGaussian(0.015);
 		image.suppressCrosstalk(0.20);
-		image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+		image.saveToFile(g_imagingFolderPath, outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 		//image.binFrames(5);
 		//image.splitFrames(10);
@@ -1376,8 +1399,6 @@ namespace TestRoutines
 		
 		//pressAnyKeyToCont();
 	}
-
-
 
 	void correctImageBatch()
 	{
@@ -1425,22 +1446,22 @@ namespace TestRoutines
 		std::string outputFilename{ "stitched" };
 		const int height{ 8000 };
 		const int width{ 300 };
-		TiffU8 image00{ "Tile_01" };
-		TiffU8 image01{ "Tile_02" };
+		TiffU8 image00{ g_imagingFolderPath, "Tile_01" };
+		TiffU8 image01{ g_imagingFolderPath, "Tile_02" };
 		QuickStitcher stitched{ height, width, {2, 1}, {0, 0, 0} };
 		stitched.push(image00.data(), { 0, 0 });
 		stitched.push(image01.data(), { 1, 0 });
-		stitched.saveToFile(outputFilename, OVERRIDE::DIS);
+		stitched.saveToFile(g_imagingFolderPath, outputFilename, OVERRIDE::DIS);
 
 		Util::pressAnyKeyToCont();
 	}
 
 	void boolmap()
 	{
-		//g_folderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
+		//g_imagingFolderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
 		std::string inputFilename{ "000_panoramic" };
 		std::string outputFilename{ "output" };
-		TiffU8 image{ inputFilename };
+		TiffU8 image{ g_imagingFolderPath, inputFilename };
 
 		//The tile array for the slow scan (overlay tile array) does not necessarily coincide with the tile array used in fast scanning
 		const PIXDIM2 overlayTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because contX uses PANpixelSizeX=1.0 um for speed and not 0.5 um
@@ -1449,11 +1470,11 @@ namespace TestRoutines
 		const double threshold{ 0.02 };
 		
 		Boolmap boolmap{ image, overlayTileArraySizeIJ, overlayTileSize_pix, overlayOverlapIJK_frac, threshold };
-		boolmap.saveBoolmapToText("Boolmap", OVERRIDE::EN);
-		boolmap.saveTiffWithBoolmapTileOverlay("TileMap", OVERRIDE::EN);
-		boolmap.saveTiffWithBoolmapGridOverlay("GridOverlay", OVERRIDE::EN);
+		boolmap.saveBoolmapToText(g_imagingFolderPath, "Boolmap", OVERRIDE::EN);
+		boolmap.saveTiffWithBoolmapTileOverlay(g_imagingFolderPath, "TileMap", OVERRIDE::EN);
+		boolmap.saveTiffWithBoolmapGridOverlay(g_imagingFolderPath, "GridOverlay", OVERRIDE::EN);
 		boolmap.fillBoolmapHoles();
-		boolmap.saveBoolmapToText("Boolmap_filled", OVERRIDE::EN);
+		boolmap.saveBoolmapToText(g_imagingFolderPath, "Boolmap_filled", OVERRIDE::EN);
 		//boolmap.saveTiffWithBoolmapTileOverlay("TileMap_filled", OVERRIDE::EN);
 		
 		std::cout << "# bright stacks = " << boolmap.readNumberOfBrightStacks() << "\n";
@@ -1482,7 +1503,7 @@ namespace TestRoutines
 
 	void TestRoutines::createFolder()
 	{
-		std::filesystem::create_directory(g_folderPath + "aaa");
+		std::filesystem::create_directory(g_imagingFolderPath + "aaa");
 	}
 
 	/*
@@ -1547,7 +1568,7 @@ namespace TestRoutines
 		//Create a sequence
 		Sequencer sequence{ sample, stack };
 		sequence.generateCommandList();
-		sequence.printToFile("_CommandlistLight", OVERRIDE::EN);
+		sequence.printToFile(g_imagingFolderPath, "_CommandlistLight", OVERRIDE::EN);
 
 		if (1)
 		{
@@ -1639,7 +1660,7 @@ namespace TestRoutines
 		const int tileShiftX_pix{ 543 };
 		const int tileShiftY_pix{ 291 };
 
-		Logger datalog(g_currentSample.readName() + "_locations", OVERRIDE::EN);
+		Logger datalog{ g_imagingFolderPath, g_currentSample.readName() + "_locations", OVERRIDE::EN };
 		datalog.record("dim=3"); //Needed for the BigStitcher
 
 		for (int tileNumber = 0; tileNumber < tileSize.II * tileSize.JJ; tileNumber++)
@@ -1735,7 +1756,7 @@ namespace TestRoutines
 		realtimeSeq.run();
 		Image image{ realtimeSeq };
 		image.acquire();
-		image.save("SingleChannel", TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+		image.save(g_imagingFolderPath, "SingleChannel", TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 	}
 
 	void vibratome(const FPGA &fpga)

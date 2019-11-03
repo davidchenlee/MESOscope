@@ -86,9 +86,9 @@ void Image::binFrames(const int nFramesPerBin)
 }
 
 //Save each frame in mTiff in either a single Tiff page or different Tiff pages
-void Image::save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const
+void Image::save(const std::string folderPath, std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const
 {
-	mTiff.saveToFile(filename, pageStructure, override, mRTseq.mScanDir);
+	mTiff.saveToFile(folderPath, filename, pageStructure, override, mRTseq.mScanDir);
 }
 
 //Demultiplex the image
@@ -188,7 +188,7 @@ void Image::demuxAllChannels_(const bool saveAllPMT)
 		stack.pushImage(CountB.data(), static_cast<int>(RTseq::PMT16XCHAN::CH08), static_cast<int>(RTseq::PMT16XCHAN::CH15));
 
 		std::string PMT16Xchan_s{ std::to_string(static_cast<int>(mRTseq.mPMT16Xchan)) };
-		stack.saveToFile("PMT16Xchan=" + PMT16Xchan_s, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+		stack.saveToFile(g_imagingFolderPath, "PMT16Xchan=" + PMT16Xchan_s, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);		//I will leave the global variable g_imagingFolderPath here for now to avoid using too many args when calling the functions
 	}
 }
 #pragma endregion "Image"

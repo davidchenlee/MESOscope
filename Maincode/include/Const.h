@@ -55,7 +55,9 @@ namespace Constants
 	enum class COM { VISION = 1, FIDELITY = 8, FWDET = 5, FWEXC = 9, PMT16X = 6};	//*cast
 	enum class RUN { DIS = false, EN = true };
 
-	extern std::string g_folderPath;
+	extern std::string g_imagingFolderPath;
+	extern std::string g_postprocessInputPath;
+	extern std::string g_postprocessOutputPath;
 	extern const std::string g_bitfilePath;
 	extern const std::string g_openclFilePath;
 

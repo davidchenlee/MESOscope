@@ -245,9 +245,9 @@ void QuickStitcher::push(const U8 *tile, const TILEIJ tileIndicesIJ)
 		std::memcpy(&TiffU8::data()[(rowShift_pix + iterRow_pix) * stitchedTiffBytesPerRow + colShift_pix * sizeof(U8)], &tile[iterRow_pix * tileBytesPerRow], tileBytesPerRow);
 }
 
-void QuickStitcher::saveToFile(std::string filename, const OVERRIDE override) const
+void QuickStitcher::saveToFile(const std::string folderPath, std::string filename, const OVERRIDE override) const
 {
-	TiffU8::saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
+	TiffU8::saveToFile(folderPath, filename, TIFFSTRUCT::SINGLEPAGE, override, SCANDIR::UPWARD);
 }
 
 int QuickStitcher::readFullHeight_pix() const
@@ -408,9 +408,7 @@ Boolmap::Boolmap(const PanoramicScan &panoramicScan, const TILEDIM2 tileArraySiz
 	if (threshold < 0 || threshold > 1)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The threshold must be in the range [0-1]");
 
-	std::cout << "In Boolmap::Boolmap, before generateBoolmap_()\n";
 	generateBoolmap_();
-	std::cout << "In Boolmap::Boolmap, after generateBoolmap_()\n";
 }
 
 //Indicate if a specific tile in the array is bright. The tile indices start form 0
@@ -432,14 +430,14 @@ bool Boolmap::isTileBright(const TILEIJ tileIndicesIJ) const
 }
 
 //Save the boolmap as a text file
-void Boolmap::saveBoolmapToText(std::string filename, const OVERRIDE override)
+void Boolmap::saveBoolmapToText(const std::string folderPath, std::string filename, const OVERRIDE override)
 {
 	std::ofstream fileHandle;
 
 	if (override == OVERRIDE::DIS)
-		filename = Util::doesFileExist(filename, ".txt");
+		filename = Util::doesFileExist(folderPath, filename, ".txt");
 
-	fileHandle.open(g_folderPath + filename + ".txt");
+	fileHandle.open(folderPath + filename + ".txt");
 
 	try
 	{
@@ -458,7 +456,7 @@ void Boolmap::saveBoolmapToText(std::string filename, const OVERRIDE override)
 }
 
 //Overlay a grid with the tiles on the stitched image
-void Boolmap::saveTiffWithBoolmapGridOverlay(std::string filename, const OVERRIDE override) const
+void Boolmap::saveTiffWithBoolmapGridOverlay(const std::string folderPath, std::string filename, const OVERRIDE override) const
 {
 	const U8 lineColor{ 200 };
 	const int lineThickness{ 6 };
@@ -511,11 +509,11 @@ void Boolmap::saveTiffWithBoolmapGridOverlay(std::string filename, const OVERRID
 						(mTiff.data())[iterRightColumn_pix] = lineColor;
 				}
 	}
-	mTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
+	mTiff.saveToFile(folderPath, filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
 
 //Save a copy of the input Tiff with the dark tiles shaded
-void Boolmap::saveTiffWithBoolmapTileOverlay(std::string filename, const OVERRIDE override) const
+void Boolmap::saveTiffWithBoolmapTileOverlay(const std::string folderPath, std::string filename, const OVERRIDE override) const
 {
 	TiffU8 outputTiff{ mPanoramicHeight_pix, mPanoramicWidth_pix, 1 };	//Create an empty Tiff
 
@@ -540,7 +538,7 @@ void Boolmap::saveTiffWithBoolmapTileOverlay(std::string filename, const OVERRID
 						if (iterRow_pix >= 0 && iterRow_pix < mPanoramicHeight_pix && iterCol_pix >= 0 && iterCol_pix < mPanoramicWidth_pix)//Check that the tile is inside the Tiff
 							(outputTiff.data())[iterRow_pix * mPanoramicWidth_pix + iterCol_pix] = (mTiff.data())[iterRow_pix * mPanoramicWidth_pix + iterCol_pix];
 			}
-	outputTiff.saveToFile(filename, TIFFSTRUCT::SINGLEPAGE, override);
+	outputTiff.saveToFile(folderPath, filename, TIFFSTRUCT::SINGLEPAGE, override);
 }
 
 //Overlay the tile array on top of the panoramic
@@ -1205,12 +1203,12 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 }
 
 //Print the commandlist to file
-void Sequencer::printToFile(std::string filename, const OVERRIDE override) const
+void Sequencer::printToFile(const std::string folderPath, std::string filename, const OVERRIDE override) const
 {
 	if (override == OVERRIDE::DIS)
-		filename = Util::doesFileExist(filename, ".txt");
+		filename = Util::doesFileExist(folderPath, filename, ".txt");
 
-	std::ofstream *fileHandle{ new std::ofstream(g_folderPath + filename + ".txt") };
+	std::ofstream *fileHandle{ new std::ofstream(folderPath + filename + ".txt") };
 
 	*fileHandle << std::fixed;	//Show a fixed number of digits
 

@@ -39,7 +39,7 @@ class QuickStitcher : public TiffU8, public TileArray
 public:
 	QuickStitcher(const int tileHeight_pix, const int tileWidth_pix, const TILEDIM2 tileArraySizeIJ, const TILEOVERLAP3 overlapIJK_frac);
 	void push(const U8 *tile, const TILEIJ tileIndicesIJ);
-	void saveToFile(std::string filename, const OVERRIDE override) const;
+	void saveToFile(const std::string folderPath, std::string filename, const OVERRIDE override) const;
 	int readFullHeight_pix() const;
 	int readFullWidth_pix() const;
 private:
@@ -75,9 +75,9 @@ public:
 	Boolmap(const TiffU8 &tiff, const TILEDIM2 tileArraySizeIJ, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	Boolmap(const PanoramicScan &panoramicScan, const TILEDIM2 tileArraySizeIJ, const PIXDIM2 tileSize_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold);
 	bool isTileBright(const TILEIJ tileIndicesIJ) const;
-	void saveBoolmapToText(std::string filename, const OVERRIDE override);
-	void saveTiffWithBoolmapGridOverlay(std::string filename, const OVERRIDE override) const;
-	void saveTiffWithBoolmapTileOverlay(std::string filename, const OVERRIDE override) const;
+	void saveBoolmapToText(const std::string folderPath, std::string filename, const OVERRIDE override);
+	void saveTiffWithBoolmapGridOverlay(const std::string folderPath, std::string filename, const OVERRIDE override) const;
+	void saveTiffWithBoolmapTileOverlay(const std::string folderPath, std::string filename, const OVERRIDE override) const;
 	void fillBoolmapHoles();
 	void replaceInputBoolmapByUnion(std::vector<bool> &vec_input) const;
 	int readNumberOfBrightStacks() const;
@@ -215,7 +215,7 @@ public:
 	std::string printHeader() const;
 	std::string printHeaderUnits() const;
 	void printSequenceParams(std::ofstream *fileHandle) const;
-	void printToFile(std::string fileName, const OVERRIDE override) const;
+	void printToFile(const std::string folderPath, std::string fileName, const OVERRIDE override) const;
 	int readTotalNumberOfSlices() const;
 	int readNumberOfStacksPerSlice() const;
 	int readTotalNumberOfStacks() const;

@@ -116,11 +116,11 @@ namespace Util
 	}
 
 	//Check if the file already exists. If it already exists, append an indexing number
-	std::string doesFileExist(const std::string filename, const std::string fileExtension)
+	std::string doesFileExist(const std::string folderPath, const std::string filename, const std::string fileExtension)
 	{
 		std::string suffix;
 
-		for (int ii = 1; std::experimental::filesystem::exists(g_folderPath + filename + suffix + fileExtension); ii++)
+		for (int ii = 1; std::experimental::filesystem::exists(folderPath + filename + suffix + fileExtension); ii++)
 			suffix = " (" + std::to_string(ii) + ")";
 
 		return filename + suffix;
@@ -183,14 +183,14 @@ namespace Util
 	}
 
 	//Save the boolmap as a text file
-	void saveBoolmapToText(std::string filename, const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const OVERRIDE override)
+	void saveBoolmapToText(const std::string folderPath, std::string filename, const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const OVERRIDE override)
 	{
 		std::ofstream fileHandle;
 
 		if (override == OVERRIDE::DIS)
-			filename = Util::doesFileExist(filename, ".txt");
+			filename = Util::doesFileExist(folderPath, filename, ".txt");
 
-		fileHandle.open(g_folderPath + filename + ".txt");
+		fileHandle.open(folderPath + filename + ".txt");
 
 		try
 		{
@@ -220,12 +220,12 @@ namespace Util
 }
 
 #pragma region "Logger"
-Logger::Logger(std::string filename, const OVERRIDE override)
+Logger::Logger(const std::string folderPath, std::string filename, const OVERRIDE override)
 {
 	if (override == OVERRIDE::DIS)
-		filename = Util::doesFileExist(filename, ".txt");
+		filename = Util::doesFileExist(folderPath, filename, ".txt");
 
-	mFileHandle.open(g_folderPath + filename + ".txt");
+	mFileHandle.open(folderPath + filename + ".txt");
 
 	if (!mFileHandle)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": The file " + filename + ".txt failed to open");
@@ -254,10 +254,10 @@ void Logger::record(const std::string description, const std::string input)
 
 #pragma region "TiffU8"
 //Construct a tiff from a file
-TiffU8::TiffU8(const std::string filename) :
+TiffU8::TiffU8(const std::string folderPath, const std::string filename) :
 	mNframes{ 1 }
 {
-	TIFF *tiffHandle{ TIFFOpen((g_folderPath + filename + ".tif").c_str(), "r") };
+	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "r") };
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Failed opening the Tiff file");
@@ -371,14 +371,10 @@ TiffU8::TiffU8(const U8* inputArray, const int heightPerFrame_pix, const int wid
 	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
 
-	std::cout << "In TiffU8:TiffU8, before new U8\n";
 	mArray = new U8[mNpixAllFrames];
 
-	std::cout << "In TiffU8:TiffU8, after new U8 and before std::memcpy()\n";
 	//Copy input image onto mArray
 	std::memcpy(mArray, inputArray, mNpixAllFrames * sizeof(U8));
-
-	std::cout << "In TiffU8:TiffU8, after std::memcpy()\n";
 }
 
 //Construct a Tiff from a vector
@@ -553,7 +549,7 @@ void TiffU8::mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* input
 }
 
 //Divide the concatenated images in a stack of nFrames and save it (the microscope concatenates all the images and hands over a long image that has to be resized into individual images)
-void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const SCANDIR scanDirZ) const
+void TiffU8::saveToFile(const std::string folderPath, std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const SCANDIR scanDirZ) const
 {
 	int height_pix, width_pix, nFrames;
 
@@ -579,9 +575,9 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 	*/
 
 	if (override == OVERRIDE::DIS)
-		filename = Util::doesFileExist(filename, ".tif");	//Check if the file exits. It gives some overhead
+		filename = Util::doesFileExist(folderPath, filename, ".tif");	//Check if the file exits. It gives some overhead
 
-	TIFF *tiffHandle{ TIFFOpen((g_folderPath + filename + ".tif").c_str(), "w") };
+	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "w") };
 
 	if (tiffHandle == nullptr)
 		throw std::runtime_error((std::string)__FUNCTION__ + ": Saving " + filename + ".tif failed");
@@ -654,10 +650,10 @@ void TiffU8::saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const
 }
 
 //Save mArray as a text file
-void TiffU8::saveToTxt(const std::string filename) const
+void TiffU8::saveToTxt(const std::string folderPath, const std::string filename) const
 {
 	std::ofstream fileHandle;									//Create output file
-	fileHandle.open(g_folderPath + filename + ".txt");			//Open the file
+	fileHandle.open(folderPath + filename + ".txt");			//Open the file
 
 	for (int iterPix = 0; iterPix < mNpixAllFrames; iterPix++)
 		fileHandle << mArray[iterPix] << "\n";					//Write each element

@@ -14,7 +14,7 @@ using namespace Constants;
 
 namespace Util
 {
-	std::string doesFileExist(const std::string filename, const std::string fileExtension);
+	std::string doesFileExist(const std::string folderPath, const std::string filename, const std::string fileExtension);
 	std::string toString(const double number, const int nDecimalPlaces);
 	void printHex(int input);
 	void printHex(const std::vector<uint8_t>  input);
@@ -33,7 +33,7 @@ namespace Util
 	double multiply16X(const double input);
 	std::string convertWavelengthToFluorMarker_s(const int wavelength_nm);
 	bool isBright(const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const TILEIJ tileIndicesIJ);
-	void saveBoolmapToText(std::string filename, const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const OVERRIDE override);
+	void saveBoolmapToText(const std::string folderPath, std::string filename, const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const OVERRIDE override);
 	int determineNumberOf1s(const std::vector<bool> vec_boolmap);
 }
 
@@ -41,7 +41,7 @@ namespace Util
 class Logger final
 {
 public:
-	Logger(std::string filename, const OVERRIDE override);
+	Logger(const std::string folderPath, std::string filename, const OVERRIDE override);
 	~Logger();
 	void record(const std::string description);
 	void record(const std::string description, const double input);
@@ -54,7 +54,7 @@ private:
 class TiffU8
 {
 public:
-	TiffU8(const std::string filename);
+	TiffU8(const std::string folderPath, const std::string filename);
 	TiffU8(const TiffU8& tiff);
 	TiffU8(const U8* inputArray, const int heightPerFrame_pix, const int widthPerFrame_pix, int nFrames = 1);
 	TiffU8(const std::vector<U8> &inputImage, const int heightPerFrame_pix, const int widthPerFrame_pix, const int nFrames = 1);
@@ -71,8 +71,8 @@ public:
 	void splitFrames(const int nFrames);
 	void mergeFrames();
 	void mergePMT16Xchan(const int heightPerChannelPerFrame, const U8* inputArrayA, const U8* inputArrayB) const;
-	void saveToFile(std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const SCANDIR scanDirZ = SCANDIR::UPWARD) const;
-	void saveToTxt(const std::string fileName) const;
+	void saveToFile(const std::string folderPath, std::string filename, const TIFFSTRUCT tiffStruct, const OVERRIDE override, const SCANDIR scanDirZ = SCANDIR::UPWARD) const;
+	void saveToTxt(const std::string folderPath, const std::string fileName) const;
 
 	void mirrorOddFrames();
 	void mirrorSingleFrame();

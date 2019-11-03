@@ -28,11 +28,10 @@ public:
 	void averageFrames();
 	void averageEvenOddFrames();
 	void binFrames(const int nFramesPerBin);
-	void save(std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const;
+	void save(const std::string folderPath, std::string filename, const TIFFSTRUCT pageStructure, const OVERRIDE override) const;
 private:
 	const RTseq &mRTseq;						//Const because the variables referenced by mRTseq are not changed by the methods in this class
 	TiffU8 mTiff;								//Tiff that stores the content of mBufferA and mBufferB
-
 	void demultiplex_(const bool saveAllPMT);
 	void demuxSingleChannel_();
 	void demuxAllChannels_(const bool saveAllPMT);

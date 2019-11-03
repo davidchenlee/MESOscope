@@ -647,6 +647,14 @@ void RTseq::configureFrames(const int heightPerBeamletPerFrame_pix, const int wi
 		U32* newBufferB = new U32[mNpixPerBeamletAllFrames];
 		mBufferA = newBufferA;
 		mBufferB = newBufferB;
+
+		/*Try this the next time
+		delete[] mBufferA;
+		delete[] mBufferB;
+		mBufferA = new U32[mNpixPerBeamletAllFrames];
+		mBufferB = new U32[mNpixPerBeamletAllFrames];
+		*/
+		//Another option is do a new allocation ONLY if the new array is larger
 	}
 }
 

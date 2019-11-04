@@ -34,6 +34,7 @@ Global
 		{2B627A59-8784-490E-9A8F-51FB3B87738B}.Debug|x86.ActiveCfg = Release|Win32
 		{2B627A59-8784-490E-9A8F-51FB3B87738B}.Release|x64.ActiveCfg = Release|Win32
 		{2B627A59-8784-490E-9A8F-51FB3B87738B}.Release|x86.ActiveCfg = Release|Win32
+		{2B627A59-8784-490E-9A8F-51FB3B87738B}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

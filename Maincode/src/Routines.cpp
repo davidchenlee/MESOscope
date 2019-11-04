@@ -263,7 +263,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -827,6 +827,8 @@ namespace Routines
 							//image.saveToFile(g_postprocessOutputPath, "corrected_" + fileParameters, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 							vec_handle.at( (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec ) << "corrected_" << line << "\n";
+
+							Util::pressESCforEarlyTermination();
 						}
 			}//if-line.front() != '#'
 		

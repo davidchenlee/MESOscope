@@ -9,11 +9,11 @@ int main(int argc, char* argv[])
 		{
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
-			Routines::contScanZ(fpga);
+			//Routines::contScanZ(fpga);
 			//Routines::panoramicScan(fpga);
 			//Routines::sequencer(fpga, 0, false, RUN::DIS);
 			//Routines::liveScan(fpga);
-			//Routines::correctTiffReadFromTileConfiguration(0, 60, { 0, 2 });
+			Routines::correctTiffReadFromTileConfiguration(0, 60, { 0, 2 });
 
 			//TESTS
 			//TestRoutines::digitalLatency(fpga);

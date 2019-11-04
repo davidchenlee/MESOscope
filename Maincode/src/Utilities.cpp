@@ -217,6 +217,14 @@ namespace Util
 		
 		return nStacksBright;
 	}
+
+	//Pad the input interger with zeros and return the string
+	std::string zeroPadding(const int inputNumber, const int digits)
+	{
+		const std::string number_s{ std::to_string(inputNumber) };
+		
+		return std::string(digits - number_s.length(), '0') + number_s;	
+	}
 }
 
 #pragma region "Logger"

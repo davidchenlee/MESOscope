@@ -56,8 +56,6 @@ namespace Constants
 	enum class RUN { DIS = false, EN = true };
 
 	extern std::string g_imagingFolderPath;
-	extern std::string g_postprocessInputPath;
-	extern std::string g_postprocessOutputPath;
 	extern const std::string g_bitfilePath;
 	extern const std::string g_openclFilePath;
 

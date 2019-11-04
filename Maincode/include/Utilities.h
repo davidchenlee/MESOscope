@@ -35,6 +35,7 @@ namespace Util
 	bool isBright(const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const TILEIJ tileIndicesIJ);
 	void saveBoolmapToText(const std::string folderPath, std::string filename, const std::vector<bool> vec_boolmap, const TILEDIM2 tileArraySizeIJ, const OVERRIDE override);
 	int determineNumberOf1s(const std::vector<bool> vec_boolmap);
+	std::string zeroPadding(const int inputNumber, const int digits);
 }
 
 //For saving the parameters to a text file

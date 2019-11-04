@@ -445,7 +445,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 4.000 * mm };
+		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 0.000 * mm };
 		//const LENGTH3 LOIxyz{ 0.300 * mm, 0.200 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
@@ -582,21 +582,10 @@ namespace Routines
 				case Action::ID::SAV:
 					if (Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ }))
 					{
-						//Paddle the numbers with zeros on the left
-						const std::string sliceNumber_s{ std::to_string(sliceNumber) };
-						const std::string sliceNumberPadded_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;		//3 digits in total
+						const std::string tileIndexIIpadded{ Util::zeroPadding(tileIndexII, 2) };
+						const std::string tileIndexJJpadded{ Util::zeroPadding(tileIndexJJ, 2) };
 
-						//The stack saving is column by column
-						//std::string stackIndex_s{ std::to_string(stackIndex) };
-						//std::string stackIndexPadded_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
-
-						const std::string tileIndexII_s{ std::to_string(tileIndexII) };
-						const std::string tileIndexIIpadded_s = std::string(2 - tileIndexII_s.length(), '0') + tileIndexII_s;		//2 digits in total
-
-						const std::string tileIndexJJ_s{ std::to_string(tileIndexJJ) };
-						const std::string tileIndexJJpadded_s = std::string(2 - tileIndexJJ_s.length(), '0') + tileIndexJJ_s;		//2 digits in total
-
-						shortName = sliceNumberPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + tileIndexIIpadded_s + "_" + tileIndexJJpadded_s;		//sliceNumber_stackIndex_wavelengthIndex
+						shortName = Util::zeroPadding(sliceNumber, 3) + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + tileIndexIIpadded + "_" + tileIndexJJpadded;		//sliceNumber_stackIndex_wavelengthIndex
 						longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_PLexp=" + Util::toString(scanPLexp / um, 0) + "um" +
 							"_x=" + Util::toString(tileCenterXY.XX / mm, 3) +
 							"_y=" + Util::toString(tileCenterXY.YY / mm, 3) +
@@ -610,7 +599,7 @@ namespace Routines
 						datalogStacks.record(shortName + ".tif;;\t(" + Util::toString(-tileCenterXY.YY/pixelSizeXY, 0) + "," +	//Note that in Fiji II and JJ are interchanged. Also note the negative signs
 																	   Util::toString(-tileCenterXY.XX/pixelSizeXY, 0) + "," +
 																	   Util::toString((std::min)(scanZi, scanZf)/pixelSizeZafterBinning, 0) + ")");
-						datalogStacks.record("#(" + tileIndexIIpadded_s + "," + tileIndexJJpadded_s + ")\t" + longName);
+						datalogStacks.record("#(" + tileIndexIIpadded + "," + tileIndexJJpadded + ")\t" + longName);
 						std::cout << "\n";
 					}
 					break;
@@ -683,17 +672,15 @@ namespace Routines
 					mesoscope.closeShutter();
 
 					//SAVE THE FILES
-					const std::string PANsliceNumber_s{ std::to_string(commandline.mAction.panoramicScan.readSliceNumber()) };
-					const std::string PANsliceNumberPadded_s = std::string(3 - PANsliceNumber_s.length(), '0') + PANsliceNumber_s;	//Paddle with zeros on the left. 3 digits in total
-
 					const std::string PANlongName{ mesoscope.readCurrentLaser_s(true) + Util::toString(PANwavelength_nm, 0) +
 						"nm_P=" + Util::toString(PANlaserPower / mW, 1) +
 						"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
 						"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
 						"_z=" + Util::toString(PANplaneZ / mm, 4) };
 					
-					panoramicScan.saveToFile(g_imagingFolderPath, "Panoramic_" + PANsliceNumberPadded_s, OVERRIDE::DIS);//For large tiffs, tifflib sometimes returns "no space for output buffer" error
-					datalogPanoramic.record(PANsliceNumberPadded_s + "\t" + PANlongName);
+					const std::string PANsliceNumberPadded{ Util::zeroPadding(commandline.mAction.panoramicScan.readSliceNumber(), 3) };
+					panoramicScan.saveToFile(g_imagingFolderPath, "Panoramic_" + PANsliceNumberPadded, OVERRIDE::DIS);//For large tiffs, tifflib sometimes returns "no space for output buffer" error
+					datalogPanoramic.record(PANsliceNumberPadded + "\t" + PANlongName);
 
 					//DETERMINE THE BOOLMAP
 					const LENGTH2 LOIxy_pix{ LOIxyz.XX / (2 * pixelSizeXY), LOIxyz.YY / pixelSizeXY };
@@ -701,7 +688,7 @@ namespace Routines
 																																//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
 					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };		//NOTE THE FACTOR OF 2 IN X
 					boolmap.fillBoolmapHoles();
-					boolmap.saveBoolmapToText(g_imagingFolderPath, "Boolmap_" + PANsliceNumberPadded_s, OVERRIDE::DIS);
+					boolmap.saveBoolmapToText(g_imagingFolderPath, "Boolmap_" + PANsliceNumberPadded, OVERRIDE::DIS);
 					boolmap.replaceInputBoolmapByUnion(vec_boolmap);															//Save the boolmap for the next iterations
 					
 					//boolmap.saveTiffWithBoolmapGridOverlay("GridOverlay", OVERRIDE::EN);//For debugging
@@ -761,28 +748,32 @@ namespace Routines
 		}
 	}
 
+	//Read the file names from "_TileConfiguration.txt"
+	//Create a configuration text file for each vibratome slice and each laser wavelength to be used by Fiji's GridStitcher
 	void correctTiffReadFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex)
 	{
+		//std::string postprocessInputPath{ "D:\\20191028_Liver20190812_01_sorted\\" };
+		const std::string postprocessInputPath{ "Z:\\_output_remote\\" };
+		const std::string postprocessOutputPath{ "D:\\_output_corrected\\" };
+
 		if (firstSliceNumber > lastSliceNumber)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first slice number must be <= last slice number");
 		if (vec_wavelengthIndex.size() == 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
 
-		//Generate a configuration text file, TileConfigurationCorrected_sliceNumer_wavelengthIndex, for each vibratome slice and laser wavelength to be used by Fiji's GridStitcher
-		std::vector<std::ofstream> vec_handle( (lastSliceNumber - firstSliceNumber + 1) * vec_wavelengthIndex.size());
+		//For Fiji's GridStitcher, generate a configuration text file for each vibratome slice and each laser wavelength
+		//The file format is "TileConfigurationCorrected_sliceNumer_wavelengthIndex"
+		std::vector<std::ofstream> vec_tileConfigTxt( (lastSliceNumber - firstSliceNumber + 1) * vec_wavelengthIndex.size());
 		for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
 			{		
-				const std::string iterSliceNumber_s{ Util::toString(iterSliceNumber,0) };
-				const std::string iterSliceNumberPadded_s = std::string(3 - iterSliceNumber_s.length(), '0') + iterSliceNumber_s;		//Pad the number to 3 digits in total
-
 				const unsigned int index{ (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec };
-				vec_handle.at(index).open(g_postprocessOutputPath + "_TileConfigurationCorrected_" + iterSliceNumberPadded_s + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
-				vec_handle.at(index) << "dim=3\n";//Needed for BigStitcher
+				vec_tileConfigTxt.at(index).open(postprocessOutputPath + "_TileConfigurationCorrected_" + Util::zeroPadding(iterSliceNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
+				vec_tileConfigTxt.at(index) << "dim=3\n";	//Needed at the start of the txt for GridStitcher
 			}
 
-		//Open the text file with the image parameters
-		std::ifstream input{ g_postprocessInputPath + "_TileConfiguration.txt" };
+		//Open the text file with the Tiff parameters
+		std::ifstream input{ postprocessInputPath + "_TileConfiguration.txt" };
 
 		if (!input)
 			throw std::runtime_error((std::string)__FUNCTION__ + ": The file _TileConfiguration.txt failed to open");
@@ -794,40 +785,35 @@ namespace Routines
 		while (getline(input, line))
 			if (line.front() != '#')	//Skip all the lines that are commented out with #
 			{
-				//Get the image parameters at the beginning of each text line
+				//Get the Tiff parameters at the beginning of each text line
+				//Tokenize with respect to '_'. //Convert the parameters to int
+				//The format is "sliceNumber_wavelengthIndex_tileIndexII_tileIndexJJ", e.g. "000_0_17_31"
 				std::stringstream fileParameters_ss(line.substr(0, line.find(".tif")));
-
-				// Tokenize with respect to '_'. The format is "sliceNumber_wavelengthIndex_tileIndexII_tileIndexJJ", e.g. "000_0_17_31"
 				std::string isolatedParameter;
-				std::vector<std::string> v_fileParameters;						//Push the parameters to a vector
-				while (getline(fileParameters_ss, isolatedParameter, '_'))
-					v_fileParameters.push_back(isolatedParameter);
-
-				//Convert the parameters to int
-				const int sliceNumber{ std::stoi(v_fileParameters.at(0)) };
-				const int wavelengthIndex{ std::stoi(v_fileParameters.at(1)) };
-				const int tileIndexII{ std::stoi(v_fileParameters.at(2)) };
-				const int tileIndexJJ{ std::stoi(v_fileParameters.at(3)) };
+				getline(fileParameters_ss, isolatedParameter, '_');				
+				const int sliceNumber{ std::stoi(isolatedParameter) };		//sliceNumber
+				getline(fileParameters_ss, isolatedParameter, '_');
+				const int wavelengthIndex{ std::stoi(isolatedParameter) };	//wavelengthIndex
+				getline(fileParameters_ss, isolatedParameter, '_');
+				const int tileIndexII{ std::stoi(isolatedParameter) };		//tileIndexII
+				getline(fileParameters_ss, isolatedParameter, '_');
+				const int tileIndexJJ{ std::stoi(isolatedParameter) };		//tileIndexJJ
 
 				//Iterate over the vibratome slices and laser wavelengths
 				for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
 					for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
 						if (sliceNumber == iterSliceNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
 						{
-							std::cout << "Slice number = " << sliceNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
+							image.loadTiffU8(postprocessInputPath + Util::zeroPadding(iterSliceNumber, 3) + "\\", fileParameters_ss.str());
+							image.correctRSdistortionGPU(150. * um);
+							image.flattenFieldGaussian(0.015);
+							image.suppressCrosstalk(0.20);
+							image.saveToFile(postprocessOutputPath, "corrected_" + fileParameters_ss.str(), TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
-							//Pad the slice number
-							const std::string iterSliceNumber_s{ Util::toString(iterSliceNumber,0) };
-							const std::string iterSliceNumberPadded_s = std::string(3 - iterSliceNumber_s.length(), '0') + iterSliceNumber_s;		//Pad the number to 3 digits in total
+							//Save the filename in the tileConfiguration text file
+							vec_tileConfigTxt.at( (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec ) << "corrected_" << line << "\n";
 
-							image.loadTiffU8(g_postprocessInputPath + iterSliceNumberPadded_s + "\\", fileParameters_ss.str());
-							//image.correctRSdistortionGPU(150. * um);
-							//image.flattenFieldGaussian(0.015);
-							//image.suppressCrosstalk(0.20);
-							//image.saveToFile(g_postprocessOutputPath, "corrected_" + fileParameters, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-
-							vec_handle.at( (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec ) << "corrected_" << line << "\n";
-
+							//std::cout << "Slice number = " << sliceNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
 							Util::pressESCforEarlyTermination();
 						}
 			}//if-line.front() != '#'
@@ -835,7 +821,7 @@ namespace Routines
 		//Close the text files
 		for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
-				vec_handle.at( (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec ).close();
+				vec_tileConfigTxt.at( (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec ).close();
 
 		input.close();
 		Util::pressAnyKeyToCont();
@@ -1498,11 +1484,7 @@ namespace TestRoutines
 	{
 		for (int iterSliceNumber = 0; iterSliceNumber <= 60; iterSliceNumber++)
 		{
-			//Paddle the numbers with zeros on the left
-			const std::string sliceNumber_s{ std::to_string(iterSliceNumber) };
-			const std::string sliceNumberPadded_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;		//3 digits in total
-
-			const std::string newFolderFullPath{ "D:\\20191028_Liver20190812_01_sorted2\\" + sliceNumberPadded_s };
+			const std::string newFolderFullPath{ "D:\\20191028_Liver20190812_01_sorted2\\" + Util::zeroPadding(iterSliceNumber, 3) };
 
 			//Create a folder labeled by the slice number
 			if (std::filesystem::exists(newFolderFullPath))

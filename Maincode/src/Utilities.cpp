@@ -120,7 +120,7 @@ namespace Util
 	{
 		std::string suffix;
 
-		for (int ii = 1; std::experimental::filesystem::exists(folderPath + filename + suffix + fileExtension); ii++)
+		for (int ii = 1; std::filesystem::exists(folderPath + filename + suffix + fileExtension); ii++)
 			suffix = " (" + std::to_string(ii) + ")";
 
 		return filename + suffix;
@@ -288,7 +288,7 @@ TiffU8::TiffU8(const std::string folderPath, const std::string filename) :
 		//std::cout << tiffTag << "\n";	//For debugging
 
 		std::string  keyword{ "slices=" };
-		std::string::size_type keywordPos{ tiffTag.find(keyword) };	//Find the keyword in the string
+		std::string::size_type keywordPos{ tiffTag.find(keyword) };								//Find the keyword in the string
 		if (keywordPos != std::string::npos)
 		{
 			//std::cout << "found at: " << keywordPos << '\n';	//For debugging
@@ -304,7 +304,7 @@ TiffU8::TiffU8(const std::string folderPath, const std::string filename) :
 			mNframes = std::stoi(tiffTag);
 		}
 	}	
-	//The pointer TIFFTAG_ImageJ can't be cleaned up with delete because it was passed by reference to TIFFGetField()
+	//The pointer TIFFTAG_ImageJ should not cleaned up with delete because it was passed by reference to TIFFGetField()
 
 	//For debugging
 	//std::cout << "Image pixel width = " << mWidthPerFrame_pix << "\n";
@@ -1129,5 +1129,94 @@ void TiffU8::flattenFieldGaussian(const double expFactor)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
 				mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
 					vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]);
+}
+
+void TiffU8::loadTiffU8(const std::string folderPath, const std::string filename)
+{
+	TIFF *tiffHandle{ TIFFOpen((folderPath + filename + ".tif").c_str(), "r") };
+
+	if (tiffHandle == nullptr)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Failed opening the Tiff file");
+
+	//Read the Tiff tags
+	int samplesPerPixel{ 0 }, bitsPerSample{ 0 };
+	if (!TIFFGetField(tiffHandle, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_SAMPLESPERPIXEL");
+	if (!TIFFGetField(tiffHandle, TIFFTAG_BITSPERSAMPLE, &bitsPerSample))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_BITSPERSAMPLE,");
+	if (!TIFFGetField(tiffHandle, TIFFTAG_IMAGELENGTH, &mHeightPerFrame_pix))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGELENGTH");
+	if (!TIFFGetField(tiffHandle, TIFFTAG_IMAGEWIDTH, &mWidthPerFrame_pix))
+		throw std::runtime_error((std::string)__FUNCTION__ + ": TIFFGetField failed reading TIFFTAG_IMAGEWIDTH");
+
+	//Reject unsupported file formats
+	if (samplesPerPixel != 1 || bitsPerSample != 8)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Only 8-bit grayscale Tiff supported");
+
+	if (mHeightPerFrame_pix % 2)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Odd number of rows not supported");
+
+	//Read the number of frames from the ImageJ tags
+	char* TIFFTAG_ImageJ;
+	if (TIFFGetField(tiffHandle, TIFFTAG_IMAGEDESCRIPTION, &TIFFTAG_ImageJ))
+	{
+		std::string tiffTag{ TIFFTAG_ImageJ };
+		//std::cout << tiffTag << "\n";	//For debugging
+
+		std::string  keyword{ "slices=" };
+		std::string::size_type keywordPos{ tiffTag.find(keyword) };								//Find the keyword in the string
+		if (keywordPos != std::string::npos)
+		{
+			//std::cout << "found at: " << keywordPos << '\n';	//For debugging
+			tiffTag.erase(tiffTag.begin(), tiffTag.begin() + keywordPos + keyword.length());	//Delete the beginning of the string until the end of the keyword
+			std::string::size_type keywordPos{ tiffTag.find("\n") };							//Find the first ocurrence of '\n' in the remaining string
+			if (keywordPos != std::string::npos)
+			{
+				//std::cout << "found at: " << keywordPos << '\n';								//For debugging
+				tiffTag.erase(tiffTag.begin() + keywordPos, tiffTag.end());						//Delete the end of the string starting from the found '\n'
+			}
+
+			//std::cout << std::stoi(tiffTag) << "\n";	//For debugging
+			mNframes = std::stoi(tiffTag);
+		}
+	}
+	//The pointer TIFFTAG_ImageJ should not be cleaned up with delete because it was passed by reference to TIFFGetField()
+
+	//For debugging
+	//std::cout << "Image pixel width = " << mWidthPerFrame_pix << "\n";
+	//std::cout << "Image pixel height = " << mHeightPerFrame_pix << "\n";
+	//std::cout << "Number of frames = " << mNframes << "\n";
+
+	if (mHeightPerFrame_pix <= 0 || mWidthPerFrame_pix <= 0 || mNframes <= 0)
+		throw std::runtime_error((std::string)__FUNCTION__ + ": The image pixel width, pixel height, and number of frames must be > 0");
+
+	mNpixPerFrame = mHeightPerFrame_pix * mWidthPerFrame_pix;
+	mNpixAllFrames = mNpixPerFrame * mNframes;
+
+	//Length in memory of one row of pixel in the image. Targeting U8 only. Alternatively, mBytesPerLine = TIFFScanlineSize(tiffHandle);
+	mBytesPerLine = mWidthPerFrame_pix * sizeof(U8);
+
+	U8* buffer{ (U8*)_TIFFmalloc(mBytesPerLine) };
+
+	if (buffer == NULL) //Check that the buffer memory was allocated
+	{
+		TIFFClose(tiffHandle);
+		throw std::runtime_error((std::string)__FUNCTION__ + ": Could not allocate memory for raster of TIFF image");
+	}
+
+	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
+	{
+		//Read the tiff one strip at a time
+		for (int iterRow_pix = 0; iterRow_pix < mHeightPerFrame_pix; iterRow_pix++)
+		{
+			if (TIFFReadScanline(tiffHandle, buffer, iterRow_pix, 0) < 0)
+				break;
+			std::memcpy(&mArray[(iterFrame * mHeightPerFrame_pix + iterRow_pix) * mBytesPerLine], buffer, mBytesPerLine);
+		}
+		TIFFReadDirectory(tiffHandle);
+	}
+
+	_TIFFfree(buffer);		//Release the memory
+	TIFFClose(tiffHandle);	//Close the tif file. I hope the pointer TIFFTAG_ImageJ is cleaned up here
 }
 #pragma endregion "TiffU8"

@@ -1,10 +1,10 @@
 #pragma once
+#include <filesystem>				//For creating directories
 #include <sstream>					//For std::ostringstream
 #include <iomanip>					//For std::setprecision
 #include <fstream>					//For std::ofstream
 #include <iostream>
 #include <Const.h>
-#include <experimental/filesystem>	//standard method in C++14 but not C++11
 #include <bitset>					//For std::bitset
 #include <tiffio.h>					//Tiff files				
 #include <windows.h>				//For using the ESC key
@@ -85,6 +85,9 @@ public:
 	void suppressCrosstalk(const double crosstalkRatio = 1.0);
 	void flattenFieldLinear(const double scaleFactor, const int lowerChan, const int higherChan);
 	void flattenFieldGaussian(const double expFactor);
+
+	void loadTiffU8(const std::string folderPath, const std::string filename);
+
 private:
 	U8* mArray;
 	int mHeightPerFrame_pix;

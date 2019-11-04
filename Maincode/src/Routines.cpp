@@ -263,7 +263,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -583,18 +583,18 @@ namespace Routines
 					if (Util::isBright(vec_boolmap, tileArraySizeIJ, { tileIndexII, tileIndexJJ }))
 					{
 						//Paddle the numbers with zeros on the left
-						std::string sliceNumber_s{ std::to_string(sliceNumber) };
-						std::string sliceNumberPadded_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;		//3 digits in total
+						const std::string sliceNumber_s{ std::to_string(sliceNumber) };
+						const std::string sliceNumberPadded_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;		//3 digits in total
 
 						//The stack saving is column by column
 						//std::string stackIndex_s{ std::to_string(stackIndex) };
 						//std::string stackIndexPadded_s = std::string(7 - stackIndex_s.length(), '0') + stackIndex_s;		//7 digits in total
 
-						std::string tileIndexII_s{ std::to_string(tileIndexII) };
-						std::string tileIndexIIpadded_s = std::string(2 - tileIndexII_s.length(), '0') + tileIndexII_s;		//2 digits in total
+						const std::string tileIndexII_s{ std::to_string(tileIndexII) };
+						const std::string tileIndexIIpadded_s = std::string(2 - tileIndexII_s.length(), '0') + tileIndexII_s;		//2 digits in total
 
-						std::string tileIndexJJ_s{ std::to_string(tileIndexJJ) };
-						std::string tileIndexJJpadded_s = std::string(2 - tileIndexJJ_s.length(), '0') + tileIndexJJ_s;		//2 digits in total
+						const std::string tileIndexJJ_s{ std::to_string(tileIndexJJ) };
+						const std::string tileIndexJJpadded_s = std::string(2 - tileIndexJJ_s.length(), '0') + tileIndexJJ_s;		//2 digits in total
 
 						shortName = sliceNumberPadded_s + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + tileIndexIIpadded_s + "_" + tileIndexJJpadded_s;		//sliceNumber_stackIndex_wavelengthIndex
 						longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_PLexp=" + Util::toString(scanPLexp / um, 0) + "um" +
@@ -683,8 +683,8 @@ namespace Routines
 					mesoscope.closeShutter();
 
 					//SAVE THE FILES
-					std::string PANsliceNumber_s{ std::to_string(commandline.mAction.panoramicScan.readSliceNumber()) };
-					std::string PANsliceNumberPadded_s = std::string(3 - PANsliceNumber_s.length(), '0') + PANsliceNumber_s;	//Paddle with zeros on the left. 3 digits in total
+					const std::string PANsliceNumber_s{ std::to_string(commandline.mAction.panoramicScan.readSliceNumber()) };
+					const std::string PANsliceNumberPadded_s = std::string(3 - PANsliceNumber_s.length(), '0') + PANsliceNumber_s;	//Paddle with zeros on the left. 3 digits in total
 
 					const std::string PANlongName{ mesoscope.readCurrentLaser_s(true) + Util::toString(PANwavelength_nm, 0) +
 						"nm_P=" + Util::toString(PANlaserPower / mW, 1) +
@@ -768,83 +768,74 @@ namespace Routines
 		if (vec_wavelengthIndex.size() == 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
 
-		//Open the text file with the filenames for the stacks
-		std::ifstream input{ g_postprocessInputPath + "_TileConfiguration.txt" };
-
-		if (!input)
-			throw std::runtime_error((std::string)__FUNCTION__ + ": The file _TileConfiguration.txt failed to open");
-
-
-		//Create a text file for each vibratome slice and laser wavelength
+		//Generate a configuration text file, TileConfigurationCorrected_sliceNumer_wavelengthIndex, for each vibratome slice and laser wavelength to be used by Fiji's GridStitcher
 		std::vector<std::ofstream> vec_handle( (lastSliceNumber - firstSliceNumber + 1) * vec_wavelengthIndex.size());
 		for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
-			{
-				//Generate TileConfiguration for Fiji's GridStitcher
-				std::string iterSliceNumber_s{ Util::toString(iterSliceNumber,0) };
-				std::string iterSliceNumberPadded_s = std::string(3 - iterSliceNumber_s.length(), '0') + iterSliceNumber_s;		//Pad the number to 3 digits in total
+			{		
+				const std::string iterSliceNumber_s{ Util::toString(iterSliceNumber,0) };
+				const std::string iterSliceNumberPadded_s = std::string(3 - iterSliceNumber_s.length(), '0') + iterSliceNumber_s;		//Pad the number to 3 digits in total
 
 				const unsigned int index{ (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec };
 				vec_handle.at(index).open(g_postprocessOutputPath + "_TileConfigurationCorrected_" + iterSliceNumberPadded_s + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
 				vec_handle.at(index) << "dim=3\n";//Needed for BigStitcher
 			}
 
+		//Open the text file with the image parameters
+		std::ifstream input{ g_postprocessInputPath + "_TileConfiguration.txt" };
+
+		if (!input)
+			throw std::runtime_error((std::string)__FUNCTION__ + ": The file _TileConfiguration.txt failed to open");
 		
+		//Read the text file with the stack parameters line by line
+		TiffU8 image{ 560, 300, 100 };
 		std::string line;
-		getline(input, line);//Skip the first line that contains "dim=3"
+		getline(input, line);			//Skip the first line that contains "dim=3"
 		while (getline(input, line))
-		{
-			if (line.front() != '#')
+			if (line.front() != '#')	//Skip all the lines that are commented out with #
 			{
-				std::string fileNumber = line.substr(0, line.find(".tif"));	//Get the file number at the beginning of each line in the text file
+				//Get the image parameters at the beginning of each text line
+				std::stringstream fileParameters_ss(line.substr(0, line.find(".tif")));
 
-				// Tokenizing wrt '_' 
-				std::vector<std::string> v_isolatedNumbers;					// Vector of strings with the stack parameters 
-				std::stringstream fileNumber_ss(fileNumber);
-				std::string isolatedNumber;
-				while (getline(fileNumber_ss, isolatedNumber, '_'))
-					v_isolatedNumbers.push_back(isolatedNumber);
+				// Tokenize with respect to '_'. The format is "sliceNumber_wavelengthIndex_tileIndexII_tileIndexJJ", e.g. "000_0_17_31"
+				std::string isolatedParameter;
+				std::vector<std::string> v_fileParameters;						//Push the parameters to a vector
+				while (getline(fileParameters_ss, isolatedParameter, '_'))
+					v_fileParameters.push_back(isolatedParameter);
 
-				const int sliceNumber{ std::stoi(v_isolatedNumbers.at(0)) };
-				const int wavelengthIndex{ std::stoi(v_isolatedNumbers.at(1)) };
-				const int tileIndexII{ std::stoi(v_isolatedNumbers.at(2)) };
-				const int tileIndexJJ{ std::stoi(v_isolatedNumbers.at(3)) };
+				//Convert the parameters to int
+				const int sliceNumber{ std::stoi(v_fileParameters.at(0)) };
+				const int wavelengthIndex{ std::stoi(v_fileParameters.at(1)) };
+				const int tileIndexII{ std::stoi(v_fileParameters.at(2)) };
+				const int tileIndexJJ{ std::stoi(v_fileParameters.at(3)) };
 
-				//Iterate over the vibratome slices
+				//Iterate over the vibratome slices and laser wavelengths
 				for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
-				{
-					//Iterate over the laser wavelengths
 					for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
-					{
 						if (sliceNumber == iterSliceNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
 						{
-							//std::cout << "Slice number = " << sliceNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
+							std::cout << "Slice number = " << sliceNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
 
-							TiffU8 image{ g_postprocessInputPath, fileNumber };
-							image.correctRSdistortionGPU(150. * um);
-							image.flattenFieldGaussian(0.015);
-							image.suppressCrosstalk(0.20);
-							image.saveToFile(g_postprocessOutputPath, "corrected_" + fileNumber, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+							//Pad the slice number
+							const std::string iterSliceNumber_s{ Util::toString(iterSliceNumber,0) };
+							const std::string iterSliceNumberPadded_s = std::string(3 - iterSliceNumber_s.length(), '0') + iterSliceNumber_s;		//Pad the number to 3 digits in total
 
-							const unsigned int index{ (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec };
-							vec_handle.at(index) << "corrected_" << line << "\n";
+							image.loadTiffU8(g_postprocessInputPath + iterSliceNumberPadded_s + "\\", fileParameters_ss.str());
+							//image.correctRSdistortionGPU(150. * um);
+							//image.flattenFieldGaussian(0.015);
+							//image.suppressCrosstalk(0.20);
+							//image.saveToFile(g_postprocessOutputPath, "corrected_" + fileParameters, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+
+							vec_handle.at( (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec ) << "corrected_" << line << "\n";
 						}
-
-					}//for-iterWavelengthIndex
-				}//for-iterSliceNumber
 			}//if-line.front() != '#'
-		}//while-getline
 		
-		input.close();
-
 		//Close the text files
 		for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
-			{
-				const unsigned int index{ (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec };
-				vec_handle.at(index).close();
-			}
+				vec_handle.at( (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec ).close();
 
+		input.close();
 		Util::pressAnyKeyToCont();
 	}
 }//namespace
@@ -1503,7 +1494,21 @@ namespace TestRoutines
 
 	void TestRoutines::createFolder()
 	{
-		std::filesystem::create_directory(g_imagingFolderPath + "aaa");
+		for (int iterSliceNumber = 0; iterSliceNumber <= 60; iterSliceNumber++)
+		{
+			//Paddle the numbers with zeros on the left
+			const std::string sliceNumber_s{ std::to_string(iterSliceNumber) };
+			const std::string sliceNumberPadded_s = std::string(3 - sliceNumber_s.length(), '0') + sliceNumber_s;		//3 digits in total
+
+			const std::string newFolderFullPath{ "D:\\20191028_Liver20190812_01_sorted2\\" + sliceNumberPadded_s };
+
+			//Create a folder labeled by the slice number
+			if (std::filesystem::exists(newFolderFullPath))
+				std::cout << "WARNING: the file " << newFolderFullPath << " already exist. Folder creation skipped\n";
+			else
+				std::filesystem::create_directory(newFolderFullPath);	
+		}
+		Util::pressAnyKeyToCont();
 	}
 
 	/*

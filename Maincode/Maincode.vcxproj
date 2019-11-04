@@ -23,7 +23,7 @@
     <ProjectGuid>{A2026E64-828B-4F57-B191-1DE79638AEEC}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>DscopeVS</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
     <ProjectName>MainCode</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

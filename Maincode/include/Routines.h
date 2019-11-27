@@ -50,6 +50,7 @@ namespace TestRoutines
 	void multithread();
 	void clipU8();
 	void dataLogger();
+	void createFolder();
 
 	//Postprocessing
 	void correctImage();
@@ -57,7 +58,6 @@ namespace TestRoutines
 	void quickStitcher();
 	void boolmap();
 	void vectorOfObjects();
-	void createFolder();
 	//void convexHull();
 
 	//Sequence

@@ -445,7 +445,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 0.000 * mm };
+		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 0.150 * mm };
 		//const LENGTH3 LOIxyz{ 0.300 * mm, 0.200 * mm, 0.000 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
@@ -748,12 +748,13 @@ namespace Routines
 		}
 	}
 
+	//Post-process the tiff stacks: RS, flatfield, and crosstalk correction
 	//Read the file names from "_TileConfiguration.txt"
-	//Create a configuration text file for each vibratome slice and each laser wavelength to be used by Fiji's GridStitcher
+	//Create a configuration text file for each vibratome slice and laser wavelength for Fiji's GridStitcher
 	void correctTiffReadFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex)
 	{
 		//std::string postprocessInputPath{ "D:\\20191028_Liver20190812_01_sorted\\" };
-		const std::string postprocessInputPath{ "Z:\\_output_remote\\" };
+		const std::string postprocessInputPath{ "D:\\_output_local\\" };
 		const std::string postprocessOutputPath{ "D:\\_output_corrected\\" };
 
 		if (firstSliceNumber > lastSliceNumber)
@@ -768,7 +769,8 @@ namespace Routines
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
 			{		
 				const unsigned int index{ (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec };
-				vec_tileConfigTxt.at(index).open(postprocessOutputPath + "_TileConfigurationCorrected_" + Util::zeroPadding(iterSliceNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
+				const std::string subFolderName{ "C" + Util::zeroPadding(iterSliceNumber, 3) + "\\" };
+				vec_tileConfigTxt.at(index).open(postprocessOutputPath + subFolderName + "_TileConfigurationCorrected_" + Util::zeroPadding(iterSliceNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
 				vec_tileConfigTxt.at(index) << "dim=3\n";	//Needed at the start of the txt for GridStitcher
 			}
 
@@ -806,12 +808,14 @@ namespace Routines
 						{
 							image.loadTiffU8(postprocessInputPath + Util::zeroPadding(iterSliceNumber, 3) + "\\", fileParameters_ss.str());
 							image.correctRSdistortionGPU(150. * um);
-							image.flattenFieldGaussian(0.015);
+							image.flattenFieldGaussian(0.015);//0.010 for DAPI; 0.015 for TDT
 							image.suppressCrosstalk(0.20);
-							image.saveToFile(postprocessOutputPath, "corrected_" + fileParameters_ss.str(), TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+
+							const std::string subFolderName{ "C" + Util::zeroPadding(iterSliceNumber, 3) + "\\" };
+							image.saveToFile(postprocessOutputPath, subFolderName + "corrected_" + fileParameters_ss.str(), TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 							//Save the filename in the tileConfiguration text file
-							vec_tileConfigTxt.at( (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec ) << "corrected_" << line << "\n";
+							vec_tileConfigTxt.at((iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec) << "corrected_" << line << "\n";
 
 							//std::cout << "Slice number = " << sliceNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
 							Util::pressESCforEarlyTermination();
@@ -824,7 +828,7 @@ namespace Routines
 				vec_tileConfigTxt.at( (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec ).close();
 
 		input.close();
-		Util::pressAnyKeyToCont();
+		//Util::pressAnyKeyToCont();
 	}
 }//namespace
 
@@ -1354,6 +1358,21 @@ namespace TestRoutines
 		Util::pressAnyKeyToCont();
 	}
 
+	void TestRoutines::createFolder()
+	{
+		for (int iterSliceNumber = 0; iterSliceNumber <= 60; iterSliceNumber++)
+		{
+			const std::string newFolderFullPath{ "D:\\_output_corrected\\C" + Util::zeroPadding(iterSliceNumber, 3) };
+
+			//Create a folder labeled by the slice number
+			if (std::filesystem::exists(newFolderFullPath))
+				std::cout << "WARNING: the file " << newFolderFullPath << " already exists. Folder creation skipped\n";
+			else
+				std::filesystem::create_directory(newFolderFullPath);
+		}
+		Util::pressAnyKeyToCont();
+	}
+
 	void correctImage()
 	{
 		std::string inputFilename{ "000_2_00_01" };
@@ -1477,21 +1496,6 @@ namespace TestRoutines
 		A a{ 1 };
 		aaa.push_back(a);
 
-		Util::pressAnyKeyToCont();
-	}
-
-	void TestRoutines::createFolder()
-	{
-		for (int iterSliceNumber = 0; iterSliceNumber <= 60; iterSliceNumber++)
-		{
-			const std::string newFolderFullPath{ "D:\\20191028_Liver20190812_01_sorted2\\" + Util::zeroPadding(iterSliceNumber, 3) };
-
-			//Create a folder labeled by the slice number
-			if (std::filesystem::exists(newFolderFullPath))
-				std::cout << "WARNING: the file " << newFolderFullPath << " already exist. Folder creation skipped\n";
-			else
-				std::filesystem::create_directory(newFolderFullPath);	
-		}
 		Util::pressAnyKeyToCont();
 	}
 
@@ -1750,7 +1754,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (20.920) * mm };
+		const double slicePlaneZ{ (23.100) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

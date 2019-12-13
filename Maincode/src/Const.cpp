@@ -70,7 +70,7 @@ namespace Constants
 	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.040 * V };		//VISION. Last calib 20191008
 	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.075 * V };	//VISION. I just copied the calib from Fidelity
 	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.320 * g_scannerCalib.voltagePerDistance, 0.110 * V };	//FIDELITY. Last calib 20191017
-	extern const int g_rescanner1Xchan_int{ 7 };																//When using 1X, direct the rescanner towards the selected channel of the PMT16X. It takes the values 0-15
+	extern const int g_rescanner1Xchan_int{ 1 };																//When using 1X, direct the rescanner towards the selected channel of the PMT16X. It takes the values 0-15
 																												//When comparing with Fiji, be aware that Fiji starts indexing from 1
 
 	//STAGES
@@ -89,14 +89,14 @@ namespace Constants
 	//For RI = 1.49, StepZ = 1 um, and DAPI, g_STAGEZtrigAcqDelayTopdown/Bottomup = 37 um
 	//For RI = 1.49, StepZ = 1 um, and TDT, g_STAGEZtrigAcqDelayTopdown/Bottomup = 25 um
 	extern const double	g_STAGEZtrigAcqDelay750nm{ 37 * ms };		//Delay the Z-stage triggering the acq sequence
-	extern const double	g_STAGEZtrigAcqDelay1040nm{ 25 * ms };		//Delay the Z-stage triggering the acq sequence
+	extern const double	g_STAGEZtrigAcqDelay1040nm{ 40 * ms };		//Delay the Z-stage triggering the acq sequence
 
 	extern const double	g_STAGEXtrigAcqDelay{ 113.3 * ms };			//Stage X. pixelSizeX = 1.0 um and travelX = 36 * 0.280 um
 
-	extern const POSITION3 g_chromaticShiftVision750nm{ 0.0 * um, 0.0 * um, 0. * um };//-5um
+	extern const POSITION3 g_chromaticShiftVision750nm{ 0.0 * um, 0.0 * um, 0. * um };
 	extern const POSITION3 g_chromaticShiftVision920nm{ 0, 0, 0 };
 	extern const POSITION3 g_chromaticShiftVision1040nm{ 0, 0, -1. * um };
-	extern const POSITION3 g_chromaticShiftFidelity1040nm{ 0.7 * um, 1.0 * um, -6. * um };//-4um
+	extern const POSITION3 g_chromaticShiftFidelity1040nm{ 0.0 * um, 0.8 * um, -6. * um };
 
 	//PMT
 	extern const int g_nChanPMT{ 16 };

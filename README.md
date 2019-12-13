@@ -39,3 +39,4 @@ Others:
 - Improve the dichroic mount to allow fine rotation
 - The oil in the sample container crawls up through the clamps
 - Add motorized actuators to the last corner mirror before the galvo scanner
+- When I ran the full Routines::sequencer() for a whole liver lobe (~ 19 hours), the RAM usage grouws from ~150 MB to ~2GB. I think the leak is in the panoramic views

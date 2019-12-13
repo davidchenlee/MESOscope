@@ -6,15 +6,15 @@ namespace Routines
 	void stepwiseScan(const FPGA &fpga)
 	{
 		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::AVG };				//Single frame. The same location is imaged stepwise and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANX };			//Scan in the X-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
-		//const RUNMODE acqMode{ RUNMODE::FIELD_ILLUM };		//Field illumination measurement for 16X using beads
+		//const RUNMODE acqMode{ RUNMODE::FIELD_ILLUM };	//Field illumination measurement for 16X using beads
 		
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
 		const int nFramesCont{ 1 };	
@@ -61,7 +61,7 @@ namespace Routines
 				sleepTime_ms = 100;
 			else
 				sleepTime_ms = 100;
-			nSameLocation = 20;
+			nSameLocation = 10;
 			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
 				stagePosXYZ.push_back(stackCenterXYZ);
 			break;
@@ -143,7 +143,7 @@ namespace Routines
 		//OPEN THE UNIBLITZ SHUTTERS
 		mesoscope.openShutter();				//The destructor will close the shutter automatically
 
-		//ACQUIRE FRAMES AT DIFFERENT Zs
+		//ACQUIRE FRAMES
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
 			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations  << "\n";
@@ -168,7 +168,7 @@ namespace Routines
 			image.acquire(saveAllPMT);
 			image.averageFrames();				//Average the frames imaged via continuous acquisition
 			//image.averageEvenOddFrames();		//For debugging
-			//image.correct(RScanner.mFFOV);
+			//image.correct(mesoscope.readFFOV());
 
 			if (acqMode == RUNMODE::SINGLE && !saveAllPMT)
 			{
@@ -179,6 +179,7 @@ namespace Routines
 				std::cout << "Saving the stack...\n";
 				image.save(g_imagingFolderPath, filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 			}
+
 			output.pushImage(image.data(), iterLocation);
 			Sleep(sleepTime_ms);
 
@@ -191,7 +192,7 @@ namespace Routines
 				"_x=" + Util::toString(stagePosXYZ.front().XX / mm, 3) + "_y=" + Util::toString(stagePosXYZ.front().YY / mm, 3) +
 				"_z=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_avg=" + Util::toString(nFramesCont * nSameLocation, 0));
 
-			output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
+			//output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
 			output.saveToFile(g_imagingFolderPath, filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 		}
@@ -263,7 +264,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -347,7 +348,7 @@ namespace Routines
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ fluorMarkerList.findFluorMarker("TDT") };	//Select a particular fluorescence channel
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };			//Initial scan direction of stage 
-		const double fullWidth{ 5.000 * mm };				//Total width of the tile array
+		const double fullWidth{ 8.000 * mm };				//Total width of the tile array
 
 		const double tileHeight{ 280. * um };
 		const double tileWidth{ 150. * um };				//Width of a strip
@@ -445,8 +446,8 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 0.150 * mm };
-		//const LENGTH3 LOIxyz{ 0.300 * mm, 0.200 * mm, 0.000 * mm };
+		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 4.500 * mm };
+		//const LENGTH3 LOIxyz{ 1.000 * mm, 1.000 * mm, 0.150 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
 		const SCANDIR ScanDirZini{ SCANDIR::UPWARD };
@@ -808,7 +809,7 @@ namespace Routines
 						{
 							image.loadTiffU8(postprocessInputPath + Util::zeroPadding(iterSliceNumber, 3) + "\\", fileParameters_ss.str());
 							image.correctRSdistortionGPU(150. * um);
-							image.flattenFieldGaussian(0.015);//0.010 for DAPI; 0.015 for TDT
+							image.flattenFieldGaussian(0.010);//0.010 for DAPI; 0.015 for TDT
 							image.suppressCrosstalk(0.20);
 
 							const std::string subFolderName{ "C" + Util::zeroPadding(iterSliceNumber, 3) + "\\" };
@@ -1457,14 +1458,14 @@ namespace TestRoutines
 	void boolmap()
 	{
 		//g_imagingFolderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
-		std::string inputFilename{ "000_panoramic" };
+		std::string inputFilename{ "Panoramic_000" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ g_imagingFolderPath, inputFilename };
 
 		//The tile array for the slow scan (overlay tile array) does not necessarily coincide with the tile array used in fast scanning
 		const PIXDIM2 overlayTileSize_pix{ 280, 300 };//Note that 560/2=280 is used here because contX uses PANpixelSizeX=1.0 um for speed and not 0.5 um
 		const TILEDIM2 overlayTileArraySizeIJ{ 40, 70 };
-		const TILEOVERLAP3 overlayOverlapIJK_frac{ 0.15, 0.10, 0.0 };
+		const TILEOVERLAP3 overlayOverlapIJK_frac{ 0.15, 0.10, 0.5 };
 		const double threshold{ 0.02 };
 		
 		Boolmap boolmap{ image, overlayTileArraySizeIJ, overlayTileSize_pix, overlayOverlapIJK_frac, threshold };
@@ -1754,7 +1755,7 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (23.100) * mm };
+		const double slicePlaneZ{ (20.700) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };

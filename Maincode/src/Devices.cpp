@@ -53,7 +53,7 @@ void Image::correct(const double FFOVfast)
 
 	if (mRTseq.mMultibeam)
 	{
-		mTiff.flattenFieldGaussian(0.015);
+		mTiff.flattenFieldGaussian(0.010);
 		mTiff.suppressCrosstalk(0.20);
 	}
 }

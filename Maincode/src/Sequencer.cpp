@@ -364,7 +364,7 @@ LENGTH2 PanoramicScan::castLOIxy_(const FFOV2 FFOV, const LENGTH2 LOIxy) const
 //Lay a tile array over the center of the tiff. LOI is the length of interest
 Boolmap::Boolmap(const TiffU8 &tiff, const TILEDIM2 tileArraySizeIJ, const PIXDIM2 tileSizeij_pix, const TILEOVERLAP3 overlapIJK_frac, const double threshold) :
 	mTiff{ tiff },
-	mTileArray{ tileSizeij_pix ,
+	mTileArray{ tileSizeij_pix,
 				{ tileArraySizeIJ.II, tileArraySizeIJ.JJ },
 				overlapIJK_frac },
 	mThreshold{ threshold },
@@ -372,7 +372,7 @@ Boolmap::Boolmap(const TiffU8 &tiff, const TILEDIM2 tileArraySizeIJ, const PIXDI
 	mPanoramicWidth_pix{ tiff.readWidthPerFrame_pix() },
 	mNpixPanoramic{ tiff.readHeightPerFrame_pix() * tiff.readWidthPerFrame_pix() },
 	mAnchorPixel_pix{ tiff.readHeightPerFrame_pix() / 2,
-					  tiff.readWidthPerFrame_pix() / 2}		//Set the anchor pixels to the center of the image
+					  tiff.readWidthPerFrame_pix() / 2}				//Set the anchor pixels to the center of the image
 {
 	if (tileSizeij_pix.ii <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel tile height must be > 0");
@@ -391,7 +391,9 @@ Boolmap::Boolmap(const PanoramicScan &panoramicScan, const TILEDIM2 tileArraySiz
 		   panoramicScan.readFullHeight_pix(),
 		   panoramicScan.readFullWidth_pix(),
 		   1 },
-	mTileArray{ tileSizeij_pix, { tileArraySizeIJ.II, tileArraySizeIJ.JJ }, overlapIJK_frac },
+	mTileArray{ tileSizeij_pix,
+				{ tileArraySizeIJ.II, tileArraySizeIJ.JJ },
+				overlapIJK_frac },
 	mThreshold{ threshold },
 	mPanoramicHeight_pix{ panoramicScan.readFullHeight_pix() },
 	mPanoramicWidth_pix{ panoramicScan.readFullWidth_pix() },

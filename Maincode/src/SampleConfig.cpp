@@ -2,7 +2,7 @@
 const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { -1. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };	//Soft limit of the stage for the oil container
 
-const extern POSITION3 g_stackCenterXYZ{ (46.300) * mm, (24.900) * mm, (19.200 + 0.000) * mm };//For Liver
+const extern POSITION3 g_stackCenterXYZ{ (46.300) * mm, (24.100) * mm, (19.465 + 0.030) * mm };//For Liver
 
 #pragma region "FluorMarkerList"
 FluorMarkerList::FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList) :
@@ -60,7 +60,7 @@ Sample::Sample(const std::string sampleName, const std::string immersionMedium, 
 	FluorMarkerList{ fluorMarkerList }
 {}
 
-Sample::Sample(const Sample& sample, const POSITION2 centerXY, const LENGTH3 LOIxyz, const double sampleSurfaceZ, const double sliceOffset) :
+Sample::Sample(const Sample& sample, const POSITION2 centerXY, const LENGTH3 LOIxyz, const double sampleSurfaceZ, const double cutOffset) :
 	mName{ sample.mName },
 	mImmersionMedium{ sample.mImmersionMedium },
 	mObjectiveCollar{ sample.mObjectiveCollar },
@@ -69,14 +69,14 @@ Sample::Sample(const Sample& sample, const POSITION2 centerXY, const LENGTH3 LOI
 	mCenterXY{ centerXY },
 	mLOIxyz_req{ LOIxyz },
 	mSurfaceZ{ sampleSurfaceZ },
-	mCutAboveBottomOfStack{ sliceOffset }
+	mCutAboveBottomOfStack{ cutOffset }
 {
 	if (mLOIxyz_req.XX <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length X must be > 0");
 	if (mLOIxyz_req.YY <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The sample length Y must be > 0");
 	if (mCutAboveBottomOfStack < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice offset must be >= 0");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The cut offset must be >= 0");
 }
 
 void Sample::printSampleParams(std::ofstream *fileHandle) const
@@ -89,7 +89,7 @@ void Sample::printSampleParams(std::ofstream *fileHandle) const
 	*fileHandle << "Sample center (stageX, stageY) = (" << mCenterXY.XX / mm << " mm, " << mCenterXY.YY / mm << " mm)\n";
 	*fileHandle << "Requested ROI size (stageX, stageY, stageZ) = (" << mLOIxyz_req.XX / mm << " mm, " << mLOIxyz_req.YY / mm << " mm, " << mLOIxyz_req.ZZ / mm << " mm)\n\n";
 
-	*fileHandle << "SLICE ************************************************************\n";
+	*fileHandle << "CUT ************************************************************\n";
 	*fileHandle << std::setprecision(1);
 	*fileHandle << "Blade-focal plane vertical offset = " << mBladeFocalplaneOffsetZ / um << " um\n";
 	*fileHandle << "Cut above the bottom of the stack = " << mCutAboveBottomOfStack / um << " um\n";

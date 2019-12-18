@@ -11,7 +11,7 @@ namespace Routines
 	void panoramicScan(const FPGA &fpga);
 	void sequencer(const FPGA &fpga, const int firstCommandIndex, const bool forceScanAllStacks, const RUN runSeq);
 	void liveScan(const FPGA &fpga);
-	void correctTiffReadFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex);
+	void correctTiffReadFromTileConfiguration(const int firstCutNumber, const int lastCutNumber, const std::vector<int> vec_wavelengthIndex);
 }
 
 //TESTS

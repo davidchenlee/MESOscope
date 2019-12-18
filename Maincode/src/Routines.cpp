@@ -512,12 +512,12 @@ namespace Routines
 				Sequencer::Commandline commandline{ sequence.readCommandline(iterCommandline) };
 
 				//These parameters must be accessible to all the switch-cases
-				int wavelength_nm, nFramesBinning, sliceNumber, tileIndexII, tileIndexJJ;
+				int wavelength_nm, nFramesBinning, cutNumber, tileIndexII, tileIndexJJ;
 				double scanZi, scanZf, scanPmin, scanPLexp;
 				switch (commandline.mActionID)
 				{
 				case Action::ID::MOV://Move the X and Y-stages to mStackCenterXY
-					sliceNumber = commandline.mAction.moveStage.readSliceNumber();
+					cutNumber = commandline.mAction.moveStage.readCutNumber();
 					tileIndexII = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::II);
 					tileIndexJJ = commandline.mAction.moveStage.readTileIndex(TileArray::Axis::JJ);
 					tileCenterXY = commandline.mAction.moveStage.readTileCenterXY();
@@ -569,8 +569,8 @@ namespace Routines
 						realtimeSeq.initialize(MAINTRIG::STAGEZ, wavelength_nm, iterScanDirZ);	//Use the scan direction determined dynamically
 						mesoscope.openShutter();												//Re-open the Uniblitz shutter if closed by the pockels destructor
 
-						//Print out the stackIndex starting from 1 (stackIndex indexes from 0, so add a 1) and the sliceNumber_s starting from 1 (sliceNumber_s indexes from 0, so add a 1)
-						std::cout << "Scanning slice = " << std::to_string(sliceNumber + 1) << "/" << sequence.readTotalNumberOfSlices() <<
+						//Print out the stackIndex starting from 1 (stackIndex indexes from 0, so add a 1) and the cutNumber_s starting from 1 (cutNumber_s indexes from 0, so add a 1)
+						std::cout << "Scanning cut = " << std::to_string(cutNumber + 1) << "/" << sequence.readTotalNumberOfCuts() <<
 							"\tstack = " << std::to_string(brightStackIndex + 1) << "/" << Util::determineNumberOf1s(vec_boolmap) <<
 							"\tStack index = (" << tileIndexII << "," << tileIndexJJ << ")\n";
 
@@ -586,7 +586,7 @@ namespace Routines
 						const std::string tileIndexIIpadded{ Util::zeroPadding(tileIndexII, 2) };
 						const std::string tileIndexJJpadded{ Util::zeroPadding(tileIndexJJ, 2) };
 
-						shortName = Util::zeroPadding(sliceNumber, 3) + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + tileIndexIIpadded + "_" + tileIndexJJpadded;		//sliceNumber_stackIndex_wavelengthIndex
+						shortName = Util::zeroPadding(cutNumber, 3) + "_" + Util::convertWavelengthToFluorMarker_s(wavelength_nm) + "_" + tileIndexIIpadded + "_" + tileIndexJJpadded;		//cutNumber_stackIndex_wavelengthIndex
 						longName = mesoscope.readCurrentLaser_s(true) + Util::toString(wavelength_nm, 0) + "nm_Pmin=" + Util::toString(scanPmin / mW, 1) + "mW_PLexp=" + Util::toString(scanPLexp / um, 0) + "um" +
 							"_x=" + Util::toString(tileCenterXY.XX / mm, 3) +
 							"_y=" + Util::toString(tileCenterXY.YY / mm, 3) +
@@ -604,13 +604,13 @@ namespace Routines
 						std::cout << "\n";
 					}
 					break;
-				case Action::ID::CUT://Move the stage to the vibratome and then cut a slice off
+				case Action::ID::CUT://Move the stage to the vibratome and then cut off the surface
 				{
 					mesoscope.closeShutter();
 
-					std::cout << "Cutting slice = " << std::to_string(sliceNumber + 1) << "/" << sequence.readTotalNumberOfSlices() << "\n";
-					const double planeZtoCut{ commandline.mAction.cutSlice.readStageZheightForFacingTheBlade() };
-					mesoscope.sliceTissue(planeZtoCut);
+					std::cout << "Cut number = " << std::to_string(cutNumber + 1) << "/" << sequence.readTotalNumberOfCuts() << "\n";
+					const double planeZtoCut{ commandline.mAction.cutTissue.readStageZheightForFacingTheBlade() };
+					mesoscope.cutTissue(planeZtoCut);
 
 					//Reset the scan direction
 					iterScanDirZ = ScanDirZini;
@@ -679,9 +679,9 @@ namespace Routines
 						"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
 						"_z=" + Util::toString(PANplaneZ / mm, 4) };
 					
-					const std::string PANsliceNumberPadded{ Util::zeroPadding(commandline.mAction.panoramicScan.readSliceNumber(), 3) };
-					panoramicScan.saveToFile(g_imagingFolderPath, "Panoramic_" + PANsliceNumberPadded, OVERRIDE::DIS);//For large tiffs, tifflib sometimes returns "no space for output buffer" error
-					datalogPanoramic.record(PANsliceNumberPadded + "\t" + PANlongName);
+					const std::string PANcutNumberPadded{ Util::zeroPadding(commandline.mAction.panoramicScan.readCutNumber(), 3) };
+					panoramicScan.saveToFile(g_imagingFolderPath, "Panoramic_" + PANcutNumberPadded, OVERRIDE::DIS);//For large tiffs, tifflib sometimes returns "no space for output buffer" error
+					datalogPanoramic.record(PANcutNumberPadded + "\t" + PANlongName);
 
 					//DETERMINE THE BOOLMAP
 					const LENGTH2 LOIxy_pix{ LOIxyz.XX / (2 * pixelSizeXY), LOIxyz.YY / pixelSizeXY };
@@ -689,7 +689,7 @@ namespace Routines
 																																//Note the factor of 2 because PANpixelSizeX=1.0*um whereas pixelSizeXY=0.5*um
 					Boolmap boolmap{ panoramicScan, tileArraySizeIJ, overlayTileSize_pix, stackOverlap_frac, threshold };		//NOTE THE FACTOR OF 2 IN X
 					boolmap.fillBoolmapHoles();
-					boolmap.saveBoolmapToText(g_imagingFolderPath, "Boolmap_" + PANsliceNumberPadded, OVERRIDE::DIS);
+					boolmap.saveBoolmapToText(g_imagingFolderPath, "Boolmap_" + PANcutNumberPadded, OVERRIDE::DIS);
 					boolmap.replaceInputBoolmapByUnion(vec_boolmap);															//Save the boolmap for the next iterations
 					
 					//boolmap.saveTiffWithBoolmapGridOverlay("GridOverlay", OVERRIDE::EN);//For debugging
@@ -751,27 +751,27 @@ namespace Routines
 
 	//Post-process the tiff stacks: RS, flatfield, and crosstalk correction
 	//Read the file names from "_TileConfiguration.txt"
-	//Create a configuration text file for each vibratome slice and laser wavelength for Fiji's GridStitcher
-	void correctTiffReadFromTileConfiguration(const int firstSliceNumber, const int lastSliceNumber, const std::vector<int> vec_wavelengthIndex)
+	//Create a configuration text file for each vibratome cut and laser wavelength for Fiji's GridStitcher
+	void correctTiffReadFromTileConfiguration(const int firstCutNumber, const int lastCutNumber, const std::vector<int> vec_wavelengthIndex)
 	{
-		//std::string postprocessInputPath{ "D:\\20191028_Liver20190812_01_sorted\\" };
-		const std::string postprocessInputPath{ "D:\\_output_local\\" };
-		const std::string postprocessOutputPath{ "D:\\_output_corrected\\" };
+		std::string postprocessInputPath{ "D:\\20191129_Liver20190812_03_lobe_sorted\\" };
+		//const std::string postprocessInputPath{ "D:\\_output_local\\" };
+		const std::string postprocessOutputPath{ "D:\\20191129_Liver20190812_03_lobe_corrected\\" };
 
-		if (firstSliceNumber > lastSliceNumber)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first slice number must be <= last slice number");
+		if (firstCutNumber > lastCutNumber)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first cut number must be <= last cut number");
 		if (vec_wavelengthIndex.size() == 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
 
-		//For Fiji's GridStitcher, generate a configuration text file for each vibratome slice and each laser wavelength
-		//The file format is "TileConfigurationCorrected_sliceNumer_wavelengthIndex"
-		std::vector<std::ofstream> vec_tileConfigTxt( (lastSliceNumber - firstSliceNumber + 1) * vec_wavelengthIndex.size());
-		for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
+		//For Fiji's GridStitcher, generate a configuration text file for each vibratome cut and each laser wavelength
+		//The file format is "TileConfigurationCorrected_cutNumber_wavelengthIndex"
+		std::vector<std::ofstream> vec_tileConfigTxt( (lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
+		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
 			{		
-				const unsigned int index{ (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec };
-				const std::string subFolderName{ "C" + Util::zeroPadding(iterSliceNumber, 3) + "\\" };
-				vec_tileConfigTxt.at(index).open(postprocessOutputPath + subFolderName + "_TileConfigurationCorrected_" + Util::zeroPadding(iterSliceNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
+				const unsigned int index{ (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec };
+				const std::string subFolderName{ "C" + Util::zeroPadding(iterCutNumber, 3) + "\\" };
+				vec_tileConfigTxt.at(index).open(postprocessOutputPath + subFolderName + "_TileConfigurationCorrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
 				vec_tileConfigTxt.at(index) << "dim=3\n";	//Needed at the start of the txt for GridStitcher
 			}
 
@@ -790,11 +790,11 @@ namespace Routines
 			{
 				//Get the Tiff parameters at the beginning of each text line
 				//Tokenize with respect to '_'. //Convert the parameters to int
-				//The format is "sliceNumber_wavelengthIndex_tileIndexII_tileIndexJJ", e.g. "000_0_17_31"
+				//The format is "cutNumber_wavelengthIndex_tileIndexII_tileIndexJJ", e.g. "000_0_17_31"
 				std::stringstream fileParameters_ss(line.substr(0, line.find(".tif")));
 				std::string isolatedParameter;
 				getline(fileParameters_ss, isolatedParameter, '_');				
-				const int sliceNumber{ std::stoi(isolatedParameter) };		//sliceNumber
+				const int cutNumber{ std::stoi(isolatedParameter) };		//cutNumber
 				getline(fileParameters_ss, isolatedParameter, '_');
 				const int wavelengthIndex{ std::stoi(isolatedParameter) };	//wavelengthIndex
 				getline(fileParameters_ss, isolatedParameter, '_');
@@ -802,31 +802,31 @@ namespace Routines
 				getline(fileParameters_ss, isolatedParameter, '_');
 				const int tileIndexJJ{ std::stoi(isolatedParameter) };		//tileIndexJJ
 
-				//Iterate over the vibratome slices and laser wavelengths
-				for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
+				//Iterate over the vibratome cuts and laser wavelengths
+				for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
 					for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
-						if (sliceNumber == iterSliceNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
+						if (cutNumber == iterCutNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
 						{
-							image.loadTiffU8(postprocessInputPath + Util::zeroPadding(iterSliceNumber, 3) + "\\", fileParameters_ss.str());
+							image.loadTiffU8(postprocessInputPath + Util::zeroPadding(iterCutNumber, 3) + "\\", fileParameters_ss.str());
 							image.correctRSdistortionGPU(150. * um);
-							image.flattenFieldGaussian(0.010);//0.010 for DAPI; 0.015 for TDT
+							image.flattenFieldGaussian(0.015);//0.010 for DAPI; 0.015 for TDT
 							image.suppressCrosstalk(0.20);
 
-							const std::string subFolderName{ "C" + Util::zeroPadding(iterSliceNumber, 3) + "\\" };
+							const std::string subFolderName{ "C" + Util::zeroPadding(iterCutNumber, 3) + "\\" };
 							image.saveToFile(postprocessOutputPath, subFolderName + "corrected_" + fileParameters_ss.str(), TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 							//Save the filename in the tileConfiguration text file
-							vec_tileConfigTxt.at((iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec) << "corrected_" << line << "\n";
+							vec_tileConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << "corrected_" << line << "\n";
 
-							//std::cout << "Slice number = " << sliceNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
+							//std::cout << "Cut number = " << cutNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
 							Util::pressESCforEarlyTermination();
 						}
-			}//if-line.front() != '#'
+			}//if(line.front() != '#')
 		
 		//Close the text files
-		for (int iterSliceNumber = firstSliceNumber; iterSliceNumber <= lastSliceNumber; iterSliceNumber++)
+		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
-				vec_tileConfigTxt.at( (iterSliceNumber - firstSliceNumber) * vec_wavelengthIndex.size() + iterVec ).close();
+				vec_tileConfigTxt.at( (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec ).close();
 
 		input.close();
 		//Util::pressAnyKeyToCont();
@@ -1361,11 +1361,11 @@ namespace TestRoutines
 
 	void TestRoutines::createFolder()
 	{
-		for (int iterSliceNumber = 0; iterSliceNumber <= 60; iterSliceNumber++)
+		for (int iterCutNumber = 0; iterCutNumber <= 52; iterCutNumber++)
 		{
-			const std::string newFolderFullPath{ "D:\\_output_corrected\\C" + Util::zeroPadding(iterSliceNumber, 3) };
+			const std::string newFolderFullPath{ "D:\\20191129_Liver20190812_03_lobe_corrected\\C" + Util::zeroPadding(iterCutNumber, 3) };
 
-			//Create a folder labeled by the slice number
+			//Create a folder labeled by the cut number
 			if (std::filesystem::exists(newFolderFullPath))
 				std::cout << "WARNING: the file " << newFolderFullPath << " already exists. Folder creation skipped\n";
 			else
@@ -1755,13 +1755,13 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double slicePlaneZ{ (20.700) * mm };
+		const double cutPlaneZ{ (20.700) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };
-		vibratome.sliceTissue(slicePlaneZ);
+		vibratome.cutTissue(cutPlaneZ);
 
-		const POSITION3 samplePosXYZ{ 10. * mm, 23. * mm, slicePlaneZ };
+		const POSITION3 samplePosXYZ{ 10. * mm, 23. * mm, cutPlaneZ };
 		stage.moveXYZ(samplePosXYZ);
 	}
 

@@ -124,13 +124,13 @@ namespace Action
 	class MoveStage final
 	{
 	public:
-		void setParam(const int sliceNumber, const TILEIJ tileIndicesIJ, const POSITION2 tileCenterXY);
-		int readSliceNumber() const;
+		void setParam(const int cutNumber, const TILEIJ tileIndicesIJ, const POSITION2 tileCenterXY);
+		int readCutNumber() const;
 		int readTileIndex(const TileArray::Axis axis) const;
 		POSITION2 readTileCenterXY() const;
 		double readTileCenter(AXIS axis) const;
 	private:
-		int mSliceNumber;			//Slice number
+		int mCutNumber;				//Cut number
 		TILEIJ mTileIndicesIJ;		//Indices of the tile array
 		POSITION2 mTileCenterXY;	//X and Y stage positions for the tile center
 	};
@@ -160,7 +160,7 @@ namespace Action
 		int mNframeBinning;
 	};
 
-	class CutSlice final
+	class CutTissue final
 	{
 	public:
 		void setParam(const double planeZtoCut, const double stageZheightForFacingTheBlade);
@@ -174,11 +174,11 @@ namespace Action
 	class PanoramicScan final
 	{
 	public:
-		void setParam(const int sliceNumber, const double distanceUnderTheSurface, const double stageZpos);
+		void setParam(const int cutNumber, const double distanceUnderTheSurface, const double stageZpos);
 		double readPlaneZ() const;
-		int readSliceNumber() const;
+		int readCutNumber() const;
 	private:
-		int mSliceNumber;				//Slice number
+		int mCutNumber;				//Cut number
 		double mPlaneZ;
 	};
 }
@@ -194,7 +194,7 @@ public:
 		union {
 			Action::MoveStage moveStage;
 			Action::AcqStack acqStack;
-			Action::CutSlice cutSlice;
+			Action::CutTissue cutTissue;
 			Action::PanoramicScan panoramicScan;
 		} mAction;
 
@@ -216,8 +216,8 @@ public:
 	std::string printHeaderUnits() const;
 	void printSequenceParams(std::ofstream *fileHandle) const;
 	void printToFile(const std::string folderPath, std::string fileName, const OVERRIDE override) const;
-	int readTotalNumberOfSlices() const;
-	int readNumberOfStacksPerSlice() const;
+	int readTotalNumberOfCuts() const;
+	int readNumberOfStacksPerCut() const;
 	int readTotalNumberOfStacks() const;
 	int readNtotalCommands() const;
 	Commandline readCommandline(const int iterCommandline) const;
@@ -232,16 +232,16 @@ private:
 	int mCommandCounter{ 0 };
 	ROI4 mROI;												//Effective ROI covered by the tile array. It could be slightly larger than the size specified by mSample.mLOIxyz_req
 	int mStackCounter{ 0 };									//Count the number of stacks
-	int mSliceCounter{ 0 };									//Count the number of slices
+	int mCutCounter{ 0 };									//Count the number of cuts
 	TileArray mTileArray;
 	SCANDIR3 mIterScanDirXYZ{ g_initialStageScanDirXYZ };	//Scan directions wrt the X-stage, Y-stage, and Z-stage axes	
 	double mIterScanZi;										//Stage Z position for a stack scan
 	double mIterSamplePlaneZtoCut;							//Sample plane to cut (height of the stage Z)
 	double mIterStageZheightForFacingTheBlade;				//Actual height of the stage Z for cutting the sample at mIterSamplePlaneZtoCut
 															//(It defers from mIterSamplePlaneZtoCut by the height offset of the blade wrt the imaging plane)
-	int mNtotalSlices;										//Number of vibratome slices in the entire sample
+	int mNtotalCuts;										//Number of vibratome cuts in the entire sample
 
-	void initializeVibratomeSlice_();
+	void initializeVibratome_();
 	TILEDIM2 determineTileArraySizeIJ_();
 	void initializeEffectiveROI_();
 	void reserveMemoryBlock_();
@@ -252,6 +252,6 @@ private:
 	void moveStage_(const TILEIJ tileIndicesIJ);
 	void acqStack_(const int indexFluorMarker);
 	void saveStack_();
-	void cutSlice_();
+	void cutTissue_();
 	void panoramicScan_(const double distanceUnderTheSurface);
 };

@@ -1015,19 +1015,19 @@ void Vibratome::pushStartStopButton() const
 	FPGAfunc::checkStatus(__FUNCTION__, NiFpga_WriteBool(mFpga.handle(), NiFpga_FPGAvi_ControlBool_VTstart, false));
 }
 
-void Vibratome::sliceTissue(const double planeZtoCut)
+void Vibratome::cutTissue(const double planeZtoCut)
 {
 	mStage.setVelXYZ(mStageConveyingVelXYZ);													//Change the velocity to move the sample to the vibratome
-	mStage.moveXYZ({ mStageInitialSlicePosXY.XX, mStageInitialSlicePosXY.YY, planeZtoCut });	//Position the sample in front of the vibratome's blade
+	mStage.moveXYZ({ mStageInitialBladePosXY.XX, mStageInitialBladePosXY.YY, planeZtoCut });	//Position the sample in front of the vibratome's blade
 	mStage.waitForMotionToStopAll();
 
 	mStage.setVelSingle(AXIS::YY, mSlicingVel);							//Change the y vel for slicing
 	pushStartStopButton();												//Turn on the vibratome
-	mStage.moveSingle(AXIS::YY, mStageFinalSlicePosY);					//Slice the sample: move the stage Y towards the blade
+	mStage.moveSingle(AXIS::YY, mStageFinalBladePosY);					//Slice the sample: move the stage Y towards the blade
 	mStage.waitForMotionToStopSingle(AXIS::YY);							//Wait until the motion ends
 	mStage.setVelSingle(AXIS::YY, mStageConveyingVelXYZ.YY);			//Set back the y vel to move the sample back to the microscope
 
-	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));			//Move the stage Y all the way to the end to push the cutoff slice forward, in case it gets stuck on the sample
+	//mStage.moveSingle(Y, mStage.mTravelRangeXYZ.at(Y).at(1));			//Move the stage Y all the way to the end to push the cutoff tissue forward, in case it gets stuck on the sample
 	//mStage.waitForMotionToStopSingle(Y);								//Wait until the motion ends
 
 	pushStartStopButton();												//Turn off the vibratome

@@ -1,0 +1,45 @@
+﻿
+Renamed 'sliceNumber' to 'cutNumber':
+-------------------------------------
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(797, 15)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(797, 63)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(808, 11)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(821, 44)
+
+Renamed 'lastSliceNumber' to 'lastCutNumber':
+---------------------------------------------
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(755, 82)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(761, 26)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(768, 50)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(769, 67)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(806, 69)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(827, 67)
+
+Renamed 'firstSliceNumber' to 'firstCutNumber':
+-----------------------------------------------
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(755, 54)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(761, 7)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(768, 66)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(769, 30)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(772, 50)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(806, 32)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(819, 48)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(827, 30)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(829, 46)
+
+Renamed 'iterSliceNumber' to 'iterCutNumber':
+---------------------------------------------
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(806, 14)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(806, 48)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(806, 82)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(808, 24)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(810, 66)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(815, 65)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(819, 30)
+
+Renamed 'iterSliceNumber' to 'iterCutNumber':
+---------------------------------------------
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(827, 12)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(827, 46)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(827, 80)
+D:\OwnCloud\Codes\MESOscope\Maincode\src\Routines.cpp(829, 28)

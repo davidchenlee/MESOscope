@@ -830,21 +830,21 @@ double Stack::readOverlap_frac(const TileArray::Axis axis) const
 #pragma endregion "Stack"
 
 #pragma region "Action"
-void Action::MoveStage::setParam(const int sliceNumber, const TILEIJ tileIndicesIJ, const POSITION2 tileCenterXY)
+void Action::MoveStage::setParam(const int cutNumber, const TILEIJ tileIndicesIJ, const POSITION2 tileCenterXY)
 {
-	if (sliceNumber < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice number must be >= 0");
+	if (cutNumber < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The cut number must be >= 0");
 	if (tileIndicesIJ.II < 0 || tileIndicesIJ.JJ < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The tile indices must be >= 0");
 
-	mSliceNumber = sliceNumber;
+	mCutNumber = cutNumber;
 	mTileIndicesIJ = tileIndicesIJ;
 	mTileCenterXY = tileCenterXY;
 }
 
-int Action::MoveStage::readSliceNumber() const
+int Action::MoveStage::readCutNumber() const
 {
-	return mSliceNumber;
+	return mCutNumber;
 }
 
 int Action::MoveStage::readTileIndex(const TileArray::Axis axis) const
@@ -952,7 +952,7 @@ int Action::AcqStack::readNframeBinning() const
 	return mNframeBinning;
 }
 
-void Action::CutSlice::setParam(const double planeZtoCut, const double stageZheightForFacingTheBlade)
+void Action::CutTissue::setParam(const double planeZtoCut, const double stageZheightForFacingTheBlade)
 {
 	if (planeZtoCut < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The Z stage height must be >= 0");
@@ -963,24 +963,24 @@ void Action::CutSlice::setParam(const double planeZtoCut, const double stageZhei
 	mStageZheightForFacingTheBlade = stageZheightForFacingTheBlade;
 }
 
-double Action::CutSlice::readPlaneZtoCut() const
+double Action::CutTissue::readPlaneZtoCut() const
 {
 	return mPlaneZtoCut;
 }
 
-double Action::CutSlice::readStageZheightForFacingTheBlade() const 
+double Action::CutTissue::readStageZheightForFacingTheBlade() const 
 {
 	return mStageZheightForFacingTheBlade;
 }
 
-void Action::PanoramicScan::setParam(const int sliceNumber, const double distanceUnderTheSurface, const double stageZpos)
+void Action::PanoramicScan::setParam(const int cutNumber, const double distanceUnderTheSurface, const double stageZpos)
 {
-	if (sliceNumber < 0)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": The slice number must be >= 0");
+	if (cutNumber < 0)
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": The cut number must be >= 0");
 	if (stageZpos < 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The Z stage height must be >= 0");
 
-	mSliceNumber = sliceNumber;
+	mCutNumber = cutNumber;
 	mPlaneZ = stageZpos + distanceUnderTheSurface;
 }
 
@@ -989,9 +989,9 @@ double Action::PanoramicScan::readPlaneZ() const
 	return mPlaneZ;
 }
 
-int Action::PanoramicScan::readSliceNumber() const
+int Action::PanoramicScan::readCutNumber() const
 {
-	return mSliceNumber;
+	return mCutNumber;
 }
 #pragma endregion "Action"
 
@@ -1005,7 +1005,7 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 	switch (mActionID)
 	{
 	case Action::ID::MOV:
-		*fileHandle << convertActionIDtoString_(mActionID) << "\t" << mAction.moveStage.readSliceNumber();
+		*fileHandle << convertActionIDtoString_(mActionID) << "\t" << mAction.moveStage.readCutNumber();
 		*fileHandle << "\t(" << mAction.moveStage.readTileIndex(TileArray::Axis::II) << "," << mAction.moveStage.readTileIndex(TileArray::Axis::JJ) << ")\t";
 		*fileHandle << std::setprecision(4);
 		*fileHandle << "(" << mAction.moveStage.readTileCenter(AXIS::XX) / mm << "," << mAction.moveStage.readTileCenter(AXIS::YY) / mm << ")\n";
@@ -1026,8 +1026,8 @@ void Sequencer::Commandline::printToFile(std::ofstream *fileHandle) const
 	case Action::ID::CUT:
 		*fileHandle << convertActionIDtoString_(mActionID);
 		*fileHandle << std::setprecision(3);
-		*fileHandle << "******Stage height for facing the VT = " << mAction.cutSlice.readStageZheightForFacingTheBlade() / mm << " mm";
-		*fileHandle << "******Equivalent sample plane Z = " << mAction.cutSlice.readPlaneZtoCut() / mm << " mm";
+		*fileHandle << "******Stage height for facing the VT = " << mAction.cutTissue.readStageZheightForFacingTheBlade() / mm << " mm";
+		*fileHandle << "******Equivalent sample plane Z = " << mAction.cutTissue.readPlaneZtoCut() / mm << " mm";
 		*fileHandle << "********\n";
 		break;
 	case Action::ID::PAN:
@@ -1047,7 +1047,7 @@ void Sequencer::Commandline::printParameters() const
 	{
 	case Action::ID::MOV:
 		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
-		std::cout << "Vibratome slice number = " << mAction.moveStage.readSliceNumber() << "\n";
+		std::cout << "Vibratome cut number = " << mAction.moveStage.readCutNumber() << "\n";
 		std::cout << "Tile ij = (" << mAction.moveStage.readTileIndex(TileArray::Axis::II) << "," << mAction.moveStage.readTileIndex(TileArray::Axis::JJ) << ")\n";
 		std::cout << "Tile center (stageX, stageY) = (" << mAction.moveStage.readTileCenter(AXIS::XX) / mm << "," << mAction.moveStage.readTileCenter(AXIS::YY) / mm << ") mm\n\n";
 		break;
@@ -1097,7 +1097,7 @@ Sequencer::Sequencer(const Sample sample, const Stack stack) :
 	mStack{ stack },
 	mTileArray{ stack.readTileHeight_pix(), stack.readTileWidth_pix(), determineTileArraySizeIJ_(), stack.readOverlapIJK_frac() }
 {
-	initializeVibratomeSlice_();
+	initializeVibratome_();
 	initializeEffectiveROI_();		//Calculate the effective ROI covered by all the tiles, which might be slightly larger than the requested ROI
 	reserveMemoryBlock_();			//Reserve memory for speed
 }
@@ -1111,7 +1111,7 @@ Sequencer::Sequencer(const Sample sample, const Stack stack) :
 void Sequencer::generateCommandList()
 {
 	std::cout << "Generating the command list..." << "\n";
-	for (int iterSlice = 0; iterSlice < mNtotalSlices; iterSlice++)
+	for (int iterCut = 0; iterCut < mNtotalCuts; iterCut++)
 	{
 		panoramicScan_(30. * um);																//Panoramic scan 30 um below the surface
 		panoramicScan_(100. * um);																//Panoramic scan 100 um below the surface
@@ -1139,8 +1139,8 @@ void Sequencer::generateCommandList()
 				mJJ -= Util::convertScandirToInt(mIterScanDirXYZ.YY);							//Increase/decrease the iterator in the Y-stage axis
 			}
 		}
-		if (iterSlice < mNtotalSlices - 1)														//Only need to cut the sample 'nVibratomeSlices -1' times
-			cutSlice_();
+		if (iterCut < mNtotalCuts - 1)														//Only need to cut the sample 'nVibratomeCuts -1' times
+			cutTissue_();
 	}
 }
 
@@ -1164,7 +1164,7 @@ POSITION2 Sequencer::convertTileIndicesIJToStagePosXY(const TILEIJ tileIndicesIJ
 
 std::string Sequencer::printHeader() const
 {
-	return 	"Action\tSlice#\tTileIJ\t(stageX,stageY)\tStackID\tWavlen\tstageZ<\tstageZ>\tPmin\tPLexp";
+	return 	"Action\tCut#\tTileIJ\t(stageX,stageY)\tStackID\tWavlen\tstageZ<\tstageZ>\tPmin\tPLexp";
 }
 
 std::string Sequencer::printHeaderUnits() const
@@ -1189,7 +1189,7 @@ void Sequencer::printSequenceParams(std::ofstream *fileHandle) const
 																			  mROI.XMAX / mm << " mm]\n";
 	*fileHandle << "Z position of the surface of the sample = " << mSample.mSurfaceZ / mm << " mm\n";
 	*fileHandle << std::setprecision(0);
-	*fileHandle << "Total # tissue slices = " << mNtotalSlices << "\n";
+	*fileHandle << "Total # tissue cuts = " << mNtotalCuts << "\n";
 	*fileHandle << "Tile array size (stageX, stageY) = (" << mTileArray.readTileArraySizeIJ(TileArray::Axis::II) << ", " <<
 															 mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) << ")\n";
 
@@ -1237,14 +1237,14 @@ void Sequencer::printToFile(const std::string folderPath, std::string filename, 
 	fileHandle->close();
 }
 
-int Sequencer::readNumberOfStacksPerSlice() const
+int Sequencer::readNumberOfStacksPerCut() const
 {
 	return mTileArray.readTileArraySizeIJ(TileArray::Axis::II) * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ);
 }
 
-int Sequencer::readTotalNumberOfSlices() const
+int Sequencer::readTotalNumberOfCuts() const
 {
-	return mNtotalSlices;
+	return mNtotalCuts;
 }
 
 int Sequencer::readTotalNumberOfStacks() const
@@ -1272,18 +1272,18 @@ TILEDIM2 Sequencer::readTileArraySizeIJ() const
 	return mTileArray.readTileArraySizeIJ();
 }
 
-void Sequencer::initializeVibratomeSlice_()
+void Sequencer::initializeVibratome_()
 {
 	mIterScanZi = mSample.mSurfaceZ; 	//Initialize the Z-stage with the position of the surface of the sample
 
 	mIterSamplePlaneZtoCut = mIterScanZi + mStack.readDepthZ() - mSample.mCutAboveBottomOfStack;
 	mIterStageZheightForFacingTheBlade = mIterSamplePlaneZtoCut + mSample.mBladeFocalplaneOffsetZ;
 
-	const int numberOfVibratomeSlices{ static_cast<int>(1 + std::ceil(1. / (1 - mStack.readOverlap_frac(TileArray::Axis::KK)) * (mSample.mLOIxyz_req.ZZ / mStack.readDepthZ() - 1))) };	//Total number of vibratome slices in the entire sample
-	if (numberOfVibratomeSlices > 1)
-		mNtotalSlices = numberOfVibratomeSlices;		
+	const int numberOfVibratomeCuts{ static_cast<int>(1 + std::ceil(1. / (1 - mStack.readOverlap_frac(TileArray::Axis::KK)) * (mSample.mLOIxyz_req.ZZ / mStack.readDepthZ() - 1))) };	//Total number of vibratome cuts in the entire sample
+	if (numberOfVibratomeCuts > 1)
+		mNtotalCuts = numberOfVibratomeCuts;		
 	else
-		mNtotalSlices = 1;
+		mNtotalCuts = 1;
 }
 
 //Calculate the number of tiles in the X-stage and Y-stage axes based on the length of interest (LOI) and the FFOV
@@ -1329,12 +1329,12 @@ void Sequencer::initializeEffectiveROI_()
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The ROI goes beyond the soft limits of the stage Y");
 }
 
-//Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT the slice
+//Reserve a memory block assuming 3 actions for every stack in each vibratome cut: MOV, ACQ, and SAV. Then CUT
 void Sequencer::reserveMemoryBlock_()
 {
-	const int nTotalTilesPerVibratomeSlice{ mTileArray.readTileArraySizeIJ(TileArray::Axis::II) * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) };	//Total number of tiles in a vibratome slice
-	const int nTotalTilesEntireSample{ mNtotalSlices * static_cast<int>(mSample.readFluorMarkerListSize()) * nTotalTilesPerVibratomeSlice };				//Total number of tiles in the entire sample. mNtotalSlices is fixed at 1
-	mCommandList.reserve(3 * nTotalTilesEntireSample + mNtotalSlices - 1);
+	const int nTotalTilesPerVibratomeCut{ mTileArray.readTileArraySizeIJ(TileArray::Axis::II) * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) };	//Total number of tiles in a vibratome cut
+	const int nTotalTilesEntireSample{ mNtotalCuts * static_cast<int>(mSample.readFluorMarkerListSize()) * nTotalTilesPerVibratomeCut };				//Total number of tiles in the entire sample. mNtotalCuts is fixed at 1
+	mCommandList.reserve(3 * nTotalTilesEntireSample + mNtotalCuts - 1);
 }
 
 //Reset the X-stage and Y-stage scan directions to the initial values
@@ -1385,7 +1385,7 @@ LENGTH3 Sequencer::determineEffectiveLOIxyz() const
 {
 	return { mROI.XMAX - mROI.XMIN,
 			 mROI.YMAX - mROI.YMIN,
-			 mStack.readDepthZ() * ((1 - mStack.readOverlap_frac(TileArray::Axis::KK)) * (mNtotalSlices - 1) + 1) };
+			 mStack.readDepthZ() * ((1 - mStack.readOverlap_frac(TileArray::Axis::KK)) * (mNtotalCuts - 1) + 1) };
 }
 
 //Move the stage to the position corresponding to the tile indices II and JJ 
@@ -1400,7 +1400,7 @@ void Sequencer::moveStage_(const TILEIJ tileIndicesIJ)
 	const POSITION2 tileCenterXY = convertTileIndicesIJToStagePosXY(tileIndicesIJ);
 
 	Commandline commandline{ Action::ID::MOV };
-	commandline.mAction.moveStage.setParam(mSliceCounter, tileIndicesIJ, tileCenterXY);
+	commandline.mAction.moveStage.setParam(mCutCounter, tileIndicesIJ, tileCenterXY);
 	mCommandList.push_back(commandline);
 	mCommandCounter++;	//Count the number of commands
 }
@@ -1435,13 +1435,13 @@ void Sequencer::saveStack_()
 	mCommandCounter++;	//Count the number of commands
 }
 
-void Sequencer::cutSlice_()
+void Sequencer::cutTissue_()
 {
 	//Move the sample to face the vibratome blade. Note the additional offset in the Z-stage axis
 	Commandline commandline{ Action::ID::CUT };
-	commandline.mAction.cutSlice.setParam(mIterSamplePlaneZtoCut, mIterStageZheightForFacingTheBlade);
+	commandline.mAction.cutTissue.setParam(mIterSamplePlaneZtoCut, mIterStageZheightForFacingTheBlade);
 	mCommandList.push_back(commandline);
-	mSliceCounter++;	//Count the number of vibratome slices
+	mCutCounter++;		//Count the number of vibratome cuts
 	mCommandCounter++;	//Count the number of commands
 
 	//Increase the height of the Z-stage and the height of the plane to cut in the next iteration		
@@ -1456,7 +1456,7 @@ void Sequencer::cutSlice_()
 void Sequencer::panoramicScan_(const double distanceUnderTheSurface)
 {
 	Commandline commandline{ Action::ID::PAN };
-	commandline.mAction.panoramicScan.setParam(mSliceCounter, distanceUnderTheSurface, mIterScanZi);
+	commandline.mAction.panoramicScan.setParam(mCutCounter, distanceUnderTheSurface, mIterScanZi);
 	mCommandList.push_back(commandline);
 	mCommandCounter++;
 }

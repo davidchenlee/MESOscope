@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
-			Routines::panoramicScan(fpga);
+			//Routines::panoramicScan(fpga);
 			//Routines::sequencer(fpga, 0, false, RUN::EN);
 			//Routines::liveScan(fpga);
 			//Routines::correctTiffReadFromTileConfiguration(0, 52, { 2, 2 });

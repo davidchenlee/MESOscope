@@ -70,7 +70,7 @@ namespace Constants
 	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.040 * V };		//VISION. Last calib 20191008
 	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.075 * V };	//VISION. I just copied the calib from Fidelity
 	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.320 * g_scannerCalib.voltagePerDistance, 0.110 * V };	//FIDELITY. Last calib 20191017
-	extern const int g_rescanner1Xchan_int{ 1 };																//When using 1X, direct the rescanner towards the selected channel of the PMT16X. It takes the values 0-15
+	extern const int g_rescanner1Xchan_int{ 6 };																//When using 1X, direct the rescanner towards the selected channel of the PMT16X. It takes the values 0-15
 																												//When comparing with Fiji, be aware that Fiji starts indexing from 1
 
 	//STAGES

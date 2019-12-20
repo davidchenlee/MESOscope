@@ -5,8 +5,8 @@ namespace Routines
 	//The "Swiss knife" of my routines
 	void stepwiseScan(const FPGA &fpga)
 	{
-		const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
+		const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
 		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANX };			//Scan in the X-stage axis stepwise
@@ -14,7 +14,7 @@ namespace Routines
 		//const RUNMODE acqMode{ RUNMODE::FIELD_ILLUM };	//Field illumination measurement for 16X using beads
 		
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
 		const int nFramesCont{ 1 };	
@@ -44,23 +44,19 @@ namespace Routines
 		double stepSizeX{ 0 };											//Step for lateral scanning
 		bool saveAllPMT{ false };										//Save all PMT16X channels in separate pages in a Tiff
 		double cLensPosIni{ 0 }, cLensPosFinal{ 0 }, cLensStep{ 0 };	//For debugging the collector lens
-		int sleepTime_ms{ 0 };											//Wait after every single shot to avoid overheating the sample
+		int sleepTime_ms{ 100 };										//Wait after every single shot to avoid overheating the sample
 		switch (acqMode)
 		{
 		case RUNMODE::SINGLE:
 			stagePosXYZ.push_back(stackCenterXYZ);
 			if (!g_multibeam) //No need for saving all the PMT channels for multibeam,
 			{
-				saveAllPMT = true;
+				//saveAllPMT = true;
 			}
 			break;
 		case RUNMODE::AVG:
 			//saveAllPMT = true;
 
-			if(g_multibeam)
-				sleepTime_ms = 100;
-			else
-				sleepTime_ms = 100;
 			nSameLocation = 10;
 			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
 				stagePosXYZ.push_back(stackCenterXYZ);
@@ -123,12 +119,7 @@ namespace Routines
 		mesoscope.configure(fluorMarker.mWavelength_nm);
 
 		//RS
-		mesoscope.ResonantScanner::isRunning();						//To make sure that the RS is running
-
-		//SCANNERS
-		const Galvo scanner{ realtimeSeq, FFOVslowPerBeamlet / 2.};
-		const Galvo rescanner{ realtimeSeq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
-		//const Galvo rescanner{ realtimeSeq, 0, fluorMarker.mWavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+		mesoscope.ResonantScanner::isRunning();		//To make sure that the RS is running
 
 		//STAGES
 		mesoscope.moveXYZ(stagePosXYZ.front());		//Move the stage to the initial position
@@ -146,6 +137,14 @@ namespace Routines
 		//ACQUIRE FRAMES
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
+			//Reload the imaging parameters because they are deleted after each individual sequence
+			realtimeSeq.reconfigure(heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesCont, g_multibeam);
+
+			//SCANNERS
+			const Galvo scanner{ realtimeSeq, FFOVslowPerBeamlet / 2. };
+			const Galvo rescanner{ realtimeSeq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+			//const Galvo rescanner{ realtimeSeq, 0, fluorMarker.mWavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
+
 			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations  << "\n";
 			mesoscope.moveXYZ(stagePosXYZ.at(iterLocation));
 			mesoscope.waitForMotionToStopAll();
@@ -192,7 +191,7 @@ namespace Routines
 				"_x=" + Util::toString(stagePosXYZ.front().XX / mm, 3) + "_y=" + Util::toString(stagePosXYZ.front().YY / mm, 3) +
 				"_z=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_avg=" + Util::toString(nFramesCont * nSameLocation, 0));
 
-			//output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
+			output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
 			output.saveToFile(g_imagingFolderPath, filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 		}
@@ -204,7 +203,7 @@ namespace Routines
 				"_zi=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_zf=" + Util::toString(stagePosXYZ.back().ZZ / mm, 4) + "_StepZ=" + Util::toString(pixelSizeZ / mm, 4) +
 				"_avg=" + Util::toString(nFramesCont * nSameLocation, 0) );
 
-			output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
+			//output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
 			output.saveToFile(g_imagingFolderPath, filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 		}
@@ -256,7 +255,7 @@ namespace Routines
 			datalog.record("Stack center X (mm) = ", stackCenterXYZ.XX / mm);
 			datalog.record("Stack center Y (mm) = ", stackCenterXYZ.YY / mm);
 		}
-		//pressAnyKeyToCont();
+		//Util::pressAnyKeyToCont();
 	}
 
 	//I triggered the stack acquisition using DO2 (stage motion) for both scan directions: top-down and bottom-up. In both cases the bead z-position looks almost identical with a difference of maybe only 1 plane (0.5 um)
@@ -264,7 +263,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -539,7 +538,7 @@ namespace Routines
 							//Set the number of frames considering that binning will be performed
 							nFramesBinning = acqStack.readNframeBinning();
 							const int nFramesBeforeBinning{ nFramesAfterBinning * nFramesBinning };
-							realtimeSeq.configureFrames(heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesBeforeBinning, g_multibeam);
+							realtimeSeq.reconfigure(heightPerBeamletPerFrame_pix, widthPerFrame_pix, nFramesBeforeBinning, g_multibeam);
 
 							//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix	
 							const double pixelSizeZbeforeBinning{ stackDepth / nFramesBeforeBinning };
@@ -597,7 +596,9 @@ namespace Routines
 						image.acquire();
 						image.binFrames(nFramesBinning);
 						image.save(g_imagingFolderPath, shortName, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
-						datalogStacks.record(shortName + ".tif;;\t(" + Util::toString(-tileCenterXY.YY/pixelSizeXY, 0) + "," +	//Note that in Fiji II and JJ are interchanged. Also note the negative signs
+
+						//Convert the absolute tile position to pixels to be called by Grid/collection stitcher in Fiji.
+						datalogStacks.record(shortName + ".tif;;\t(" + Util::toString(-tileCenterXY.YY/pixelSizeXY, 0) + "," +	//Note that in Fiji II and JJ are interchanged. Also note the minus sign to change the sign convention
 																	   Util::toString(-tileCenterXY.XX/pixelSizeXY, 0) + "," +
 																	   Util::toString((std::min)(scanZi, scanZf)/pixelSizeZafterBinning, 0) + ")");
 						datalogStacks.record("#(" + tileIndexIIpadded + "," + tileIndexJJpadded + ")\t" + longName);
@@ -628,7 +629,7 @@ namespace Routines
 
 					//CONTROL SEQUENCE. The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix
 					PanoramicScan panoramicScan{ { g_stackCenterXYZ.XX, g_stackCenterXYZ.YY }, { PANtileHeight, PANtileWidth }, { PANpixelSizeX, PANpixelSizeY }, { PANheight, PANwidth } };
-					realtimeSeq.configureFrames(2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix()/2, 0);
+					realtimeSeq.reconfigure(2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix()/2, 0);
 					mesoscope.configure(PANwavelength_nm);
 					mesoscope.setPower(PANlaserPower);
 

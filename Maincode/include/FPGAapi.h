@@ -78,7 +78,7 @@ public:
 	int mNpixPerBeamletAllFrames;							//Total number of pixels per beamlet in all the frames
 
 	RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga enableFIFOOUTfpga, const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam);
-	RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga enableFIFOOUTfpga);
+	//RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga enableFIFOOUTfpga);
 	~RTseq();
 	RTseq(const RTseq&) = delete;				//Disable copy-constructor
 	RTseq& operator=(const RTseq&) = delete;	//Disable assignment-constructor
@@ -91,9 +91,9 @@ public:
 	void pushAnalogSinglet(const RTCHAN chan, double timeStep, const double AO);
 	void pushLinearRamp(const RTCHAN chan, double timeStep, const double rampLength, const double Vi, const double Vf, const OVERRIDE override);
 
-	void configureFrames(const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam);
-	void initialize(const MAINTRIG mainTrigger, const int wavelength_nm = 750, const SCANDIR scanDirZ = SCANDIR::UPWARD);
+	void reconfigure(const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam);
 	void run();
+	void initialize(const MAINTRIG mainTrigger, const int wavelength_nm = 750, const SCANDIR scanDirZ = SCANDIR::UPWARD);
 	void downloadData();
 	U32* dataBufferA() const;
 	U32* dataBufferB() const;

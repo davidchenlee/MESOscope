@@ -9,7 +9,7 @@ Image::Image(const RTseq &realtimeSeq) :
 
 Image::~Image()
 {
-	//std::cout << "Image destructor called\n"; //For debugging
+	std::cout << "Image destructor called\n"; //For debugging
 }
 
 //Access the Tiff data in the Image object
@@ -53,7 +53,7 @@ void Image::correct(const double FFOVfast)
 
 	if (mRTseq.mMultibeam)
 	{
-		mTiff.flattenFieldGaussian(0.010);
+		mTiff.flattenFieldGaussian(0.015);
 		mTiff.suppressCrosstalk(0.20);
 	}
 }

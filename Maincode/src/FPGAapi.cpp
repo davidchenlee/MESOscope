@@ -607,16 +607,18 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga
 	}
 }
 
-//This constructor is meant to be used with RTseq::configureFrames()
+/*
+//This constructor is meant to be used with RTseq::reconfigure()
 RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga enableFIFOOUTfpga):
 	mVecOfqueue(mNchan),		//Initialize the size the vector containing the queues (= # of queues). Use round and not curly parenthesis here
 	mFpga{ fpga },
 	mLineclockInput{ lineclockInput },
 	mEnableFIFOOUTfpga{ enableFIFOOUTfpga }
 {}
+*/
 
 //Set mNframes
-void RTseq::configureFrames(const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam)
+void RTseq::reconfigure(const int heightPerBeamletPerFrame_pix, const int widthPerFrame_pix, const int nFrames, const bool multibeam)
 {
 	if (heightPerBeamletPerFrame_pix <= 0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The pixel height must be > 0");
@@ -709,6 +711,14 @@ void RTseq::pushLinearRamp(const RTCHAN chan, double timeStep, const double ramp
 	FPGAfunc::pushLinearRamp(mVecOfqueue.at(convertRTCHANtoU8_(chan)), timeStep, rampLength, Vi, Vf);
 }
 
+//Scan a single frame
+void RTseq::run()
+{
+	initialize(MAINTRIG::PC);										//Preset the parameters for the acquisition sequence
+	mFpga.triggerControlSequence();									//Trigger the ctl&acq sequence. If triggered too early, FIFOOUTfpga will probably overflow
+	downloadData();													//Retrieve the data from the FPGA
+}
+
 //Preset the parameters for the acquisition sequence
 void RTseq::initialize(const MAINTRIG mainTrigger, const int wavelength_nm, const SCANDIR stackScanDir)
 {
@@ -727,14 +737,6 @@ void RTseq::initialize(const MAINTRIG mainTrigger, const int wavelength_nm, cons
 	//Sleep(20);													//When continuous scanning, collectFIFOOUTpcGarbage() is being called late. Maybe this will fix it
 }
 	
-//Scan a single frame
-void RTseq::run()
-{
-	initialize(MAINTRIG::PC);										//Preset the parameters for the acquisition sequence
-	mFpga.triggerControlSequence();									//Trigger the ctl&acq sequence. If triggered too early, FIFOOUTfpga will probably overflow
-	downloadData();													//Retrieve the data from the FPGA
-}
-
 //Retrieve the data from the FPGA
 void RTseq::downloadData()
 {

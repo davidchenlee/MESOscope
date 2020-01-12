@@ -51,6 +51,7 @@ namespace TestRoutines
 	void clipU8();
 	void dataLogger();
 	void createFolder();
+	void createSubsetTiffReadFromTileConfiguration(const int firstCutNumber, const int lastCutNumber, const std::vector<int> vec_wavelengthIndex);
 
 	//Postprocessing
 	void correctImage();
@@ -58,7 +59,6 @@ namespace TestRoutines
 	void quickStitcher();
 	void boolmap();
 	void vectorOfObjects();
-	//void convexHull();
 
 	//Sequence
 	void sequencerConcurrentTest();

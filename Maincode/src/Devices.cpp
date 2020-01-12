@@ -9,7 +9,7 @@ Image::Image(const RTseq &realtimeSeq) :
 
 Image::~Image()
 {
-	std::cout << "Image destructor called\n"; //For debugging
+	//std::cout << "Image destructor called\n"; //For debugging
 }
 
 //Access the Tiff data in the Image object

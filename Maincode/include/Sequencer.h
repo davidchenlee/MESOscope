@@ -2,10 +2,6 @@
 #include "Utilities.h"
 #include "Devices.h"
 #include "SampleConfig.h"
-//#include <boost/geometry.hpp>									//conves hull
-//#include <boost/geometry/geometries/polygon.hpp>				//conves hull
-//#include <boost/geometry/geometries/adapted/boost_tuple.hpp>	//conves hull
-//BOOST_GEOMETRY_REGISTER_BOOST_TUPLE_CS(cs::cartesian)			//convex hull
 using namespace Constants;	
 
 void reverseSCANDIR(SCANDIR &scanDir);

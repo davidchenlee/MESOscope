@@ -77,6 +77,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>C:\Program Files (x86)\tiff-4.0.10\libtiff;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\Maincode\include;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <Link>
       <AdditionalDependencies>PI_GCS2_DLL.lib;PI_GCS2_DLL_x64.lib;tiff.lib;Thorlabs.MotionControl.KCube.StepperMotor.lib;openCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -107,6 +108,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>C:\Program Files (x86)\tiff-4.0.10\libtiff;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\Maincode\include;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

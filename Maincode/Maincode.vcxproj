@@ -94,6 +94,7 @@
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <DebugInformationFormat>None</DebugInformationFormat>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,6 +135,7 @@
       <AdditionalIncludeDirectories>C:\Program Files (x86)\tiff-4.0.10\libtiff;D:\OwnCloud\Codes\MESOscope\Maincode\ExternalDependencies;D:\OwnCloud\Codes\MESOscope\LabView\FPGA Bitfiles;D:\OwnCloud\Codes\MESOscope\Maincode\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include;C:\Program Files\boost\boost_1_71_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OpenMPSupport>true</OpenMPSupport>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

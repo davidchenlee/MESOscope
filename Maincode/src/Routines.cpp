@@ -766,27 +766,27 @@ namespace Routines
 
 		//For Fiji's GridStitcher, generate a configuration text file for each vibratome cut and each laser wavelength
 		//The file format is "TileConfigurationCorrected_cutNumber_wavelengthIndex"
-		std::vector<std::ofstream> vec_tileConfigTxt( (lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
+		std::vector<std::ofstream> vec_outputConfigTxt( (lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
 		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
 			{		
 				const unsigned int index{ (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec };
 				const std::string subFolderName{ "C" + Util::zeroPadding(iterCutNumber, 3) + "\\" };
-				vec_tileConfigTxt.at(index).open(postprocessOutputPath + subFolderName + "_TileConfigurationCorrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
-				vec_tileConfigTxt.at(index) << "dim=3\n";	//Needed at the start of the txt for GridStitcher
+				vec_outputConfigTxt.at(index).open(postprocessOutputPath + subFolderName + "_TileConfigurationCorrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
+				vec_outputConfigTxt.at(index) << "dim=3\n";	//Needed at the start of the txt for GridStitcher
 			}
 
 		//Open the text file with the Tiff parameters
-		std::ifstream input{ postprocessInputPath + "_TileConfiguration.txt" };
+		std::ifstream inputConfigTxt{ postprocessInputPath + "_TileConfiguration.txt" };
 
-		if (!input)
+		if (!inputConfigTxt)
 			throw std::runtime_error((std::string)__FUNCTION__ + ": The file _TileConfiguration.txt failed to open");
 		
 		//Read the text file with the stack parameters line by line
 		TiffU8 image{ 560, 300, 100 };
 		std::string line;
-		getline(input, line);			//Skip the first line that contains "dim=3"
-		while (getline(input, line))
+		getline(inputConfigTxt, line);			//Skip the first line that contains "dim=3"
+		while (getline(inputConfigTxt, line))
 			if (line.front() != '#')	//Skip all the lines that are commented out with #
 			{
 				//Get the Tiff parameters at the beginning of each text line
@@ -817,7 +817,7 @@ namespace Routines
 							image.saveToFile(postprocessOutputPath, subFolderName + "corrected_" + fileParameters_ss.str(), TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 							//Save the filename in the tileConfiguration text file
-							vec_tileConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << "corrected_" << line << "\n";
+							vec_outputConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << "corrected_" << line << "\n";
 
 							//std::cout << "Cut number = " << cutNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
 							Util::pressESCforEarlyTermination();
@@ -827,9 +827,9 @@ namespace Routines
 		//Close the text files
 		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
-				vec_tileConfigTxt.at( (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec ).close();
+				vec_outputConfigTxt.at( (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec ).close();
 
-		input.close();
+		inputConfigTxt.close();
 		//Util::pressAnyKeyToCont();
 	}
 }//namespace
@@ -1375,6 +1375,86 @@ namespace TestRoutines
 		Util::pressAnyKeyToCont();
 	}
 
+	//Select and postprocess only a subset of entire data to do some tests
+	//For example, an array of 2x2 stacks in XY and all the vibratome cuts in Z
+	void createSubsetTiffReadFromTileConfiguration(const int firstCutNumber, const int lastCutNumber, const std::vector<int> vec_wavelengthIndex)
+	{
+		std::string postprocessInputPath{ "D:\\20191129_Liver20190812_03_lobe_sorted\\" };
+		const std::string postprocessOutputPath{ "D:\\20191220_Liver20190812_03_subset_raw\\" };
+
+		if (firstCutNumber > lastCutNumber)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first cut number must be <= last cut number");
+		if (vec_wavelengthIndex.size() == 0)
+			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
+
+
+		//For Fiji's GridStitcher, generate a configuration text file for each vibratome cut and each laser wavelength
+		std::vector<std::ofstream> vec_outputConfigTxt((lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
+		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
+			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
+			{
+				const unsigned int index{ (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec };
+				vec_outputConfigTxt.at(index).open(postprocessOutputPath + "_TileConfiguration_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
+				vec_outputConfigTxt.at(index) << "dim=3\n";	//Needed at the start of the txt for GridStitcher
+			}
+
+		//Open the text file with the Tiff parameters
+		std::ifstream inputConfigTxt{ postprocessInputPath + "_TileConfiguration.txt" };
+
+		if (!inputConfigTxt)
+			throw std::runtime_error((std::string)__FUNCTION__ + ": The file _TileConfiguration.txt failed to open");
+
+		//Read the text file with the stack parameters line by line
+		TiffU8 image{ 560, 300, 100 };
+		std::string line;
+		getline(inputConfigTxt, line);			//Skip the first line that contains "dim=3"
+		while (getline(inputConfigTxt, line))
+			if (line.front() != '#')	//Skip all the lines that are commented out with #
+			{
+				//Get the Tiff parameters at the beginning of each text line
+				//Tokenize with respect to '_'. //Convert the parameters to int
+				//The format is "cutNumber_wavelengthIndex_tileIndexII_tileIndexJJ", e.g. "000_0_17_31"
+				std::stringstream fileParameters_ss(line.substr(0, line.find(".tif")));
+				std::string isolatedParameter;
+				getline(fileParameters_ss, isolatedParameter, '_');
+				const int cutNumber{ std::stoi(isolatedParameter) };		//cutNumber
+				getline(fileParameters_ss, isolatedParameter, '_');
+				const int wavelengthIndex{ std::stoi(isolatedParameter) };	//wavelengthIndex
+				getline(fileParameters_ss, isolatedParameter, '_');
+				const int tileIndexII{ std::stoi(isolatedParameter) };		//tileIndexII
+				getline(fileParameters_ss, isolatedParameter, '_');
+				const int tileIndexJJ{ std::stoi(isolatedParameter) };		//tileIndexJJ
+
+				//Iterate over the vibratome cuts and laser wavelengths
+				for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
+					for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
+						if (cutNumber == iterCutNumber && wavelengthIndex == vec_wavelengthIndex.at(iterVec))
+							if (tileIndexII >= 25 && tileIndexII <= 26 && tileIndexJJ >= 29 && tileIndexJJ <= 30) //Constrain the stacks to be selected
+							{
+								image.loadTiffU8(postprocessInputPath + Util::zeroPadding(iterCutNumber, 3) + "\\", fileParameters_ss.str());
+								//image.correctRSdistortionGPU(150. * um);
+								//image.flattenFieldGaussian(0.015);//0.010 for DAPI; 0.015 for TDT
+								//image.suppressCrosstalk(0.20);
+
+								image.saveToFile(postprocessOutputPath, fileParameters_ss.str(), TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+
+								//Save the filename in the tileConfiguration text file
+								vec_outputConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << line << "\n";
+
+								//std::cout << "Cut number = " << cutNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
+								Util::pressESCforEarlyTermination();
+							}
+			}//if(line.front() != '#')
+
+		//Close the text files
+		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
+			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
+				vec_outputConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec).close();
+
+		inputConfigTxt.close();
+		//Util::pressAnyKeyToCont();
+	}
+
 	void correctImage()
 	{
 		std::string inputFilename{ "000_2_00_01" };
@@ -1500,33 +1580,6 @@ namespace TestRoutines
 
 		Util::pressAnyKeyToCont();
 	}
-
-	/*
-	void convexHull()
-	{
-		typedef boost::tuple<double, double> point;
-		typedef boost::geometry::model::polygon<point> polygon;
-		
-		//polygon poly;
-		//boost::geometry::read_wkt("polygon((0.0 0.0, 0.0 1.0, 1.0 0.0, 1.0 1.0, 0.5 0.5, 0.1 0.0))", poly);
-
-		polygon poly;
-
-		boost::geometry::append(poly, point(0.0, 0.0));
-		boost::geometry::append(poly, point(0.0, 5.0));
-		boost::geometry::append(poly, point(5.0, 5.0));
-		boost::geometry::append(poly, point(5.0, 0.0));
-		boost::geometry::append(poly, point(0.0, 0.0));
-
-		polygon hull;
-		boost::geometry::convex_hull(poly, hull);
-
-		using boost::geometry::dsv;
-		std::cout << "polygon: " << dsv(poly) << std::endl
-				  << "hull: " << dsv(hull) << std::endl;
-
-		Util::pressAnyKeyToCont();
-	}*/
 	
 	void sequencerConcurrentTest()
 	{

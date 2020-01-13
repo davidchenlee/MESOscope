@@ -51,7 +51,7 @@ namespace TestRoutines
 	void clipU8();
 	void dataLogger();
 	void createFolder();
-	void createSubsetTiffReadFromTileConfiguration(const int firstCutNumber, const int lastCutNumber, const std::vector<int> vec_wavelengthIndex);
+	void filterTileConfigurationFile(const int firstCutNumber, const int lastCutNumber);
 
 	//Postprocessing
 	void correctImage();

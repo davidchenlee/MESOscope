@@ -10,10 +10,10 @@ int main(int argc, char* argv[])
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
-			Routines::panoramicScan(fpga);
+			//Routines::panoramicScan(fpga);
 			//Routines::sequencer(fpga, 0, false, RUN::EN);
 			//Routines::liveScan(fpga);
-			//Routines::correctTiffReadFromTileConfiguration(0, 52, { 2, 2 });
+			//Routines::correctTiffReadFromTileConfiguration(0, 0, { 0, 2 });
 
 			//TESTS
 			//TestRoutines::digitalLatency(fpga);
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::clipU8();
 			//TestRoutines::dataLogger();
 			//TestRoutines::createFolder();
-			//TestRoutines::createSubsetTiffReadFromTileConfiguration(4, 28, { 0, 2 });
+			TestRoutines::filterTileConfigurationFile(0, 0);
 
 			//TestRoutines::correctImage();
 			//TestRoutines::correctImageBatch();

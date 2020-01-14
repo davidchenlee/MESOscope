@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::clipU8();
 			//TestRoutines::dataLogger();
 			//TestRoutines::createFolder();
-			TestRoutines::filterTileConfigurationFile(0, 0);
+			TestRoutines::filterTileConfigurationFile(0, 52);
 
 			//TestRoutines::correctImage();
 			//TestRoutines::correctImageBatch();

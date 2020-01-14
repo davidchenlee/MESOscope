@@ -1446,23 +1446,8 @@ namespace TestRoutines
 
 							//Constrain the stacks. //Copy the entry to the tileConfiguration textfile
 							if (tileIndexII >= tileIndexIIminMax.at(0) && tileIndexII <= tileIndexIIminMax.at(1) && tileIndexJJ >= tileIndexJJminMax.at(0) && tileIndexJJ <= tileIndexJJminMax.at(1))
-							{
-								
 								vec_filteredConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << line << "\n";
 
-								/*
-								//Get the filename from the tileConfiguration textfile
-								std::stringstream filteredTiffFilename{ line.substr(0, line.find(";")) };
-
-								if (std::filesystem::exists(destinationPath + subFolderName + filteredTiffFilename.str()))
-									std::cout << "WARNING: the file " << filteredTiffFilename.str() << " already exists. File copying skipped\n";
-								else
-								{
-									std::filesystem::copy(sourcePath + subFolderName + filteredTiffFilename.str(), destinationPath + subFolderName + filteredTiffFilename.str());
-									std::cout << "the file " << filteredTiffFilename.str() << " was copied\n";
-								}
-								*/
-							}
 						}//if(line.front() != '#')
 
 					sourceConfigTxt.close();
@@ -1474,18 +1459,18 @@ namespace TestRoutines
 								Util::zeroPadding(tileIndexIIminMax.at(tt),2) + "_" +
 								Util::zeroPadding(tileIndexJJminMax.at(ss),2) };
 
+							vec_filteredConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << testTiffFilename << ".tif;;\t(" +
+								Util::toString(270 * (tileIndexJJminMax.at(ss) - 29) - 49800, 0) + "," +
+								Util::toString(476 * (tileIndexIIminMax.at(tt) - 32) - 86888, 0) + "," +
+								Util::toString(19200 + 50 * iterCutNumber, 0) + ")\n";
+
 							if (std::filesystem::exists(destinationPath + subFolderName + testTiffFilename + ".tif"))
 								std::cout << "WARNING: the file " << testTiffFilename << " already exists. Dummy stack creation skipped\n";
 							else
 							{
 								TiffU8 image{ 560, 300, 100 };
 								image.saveToFile(destinationPath + subFolderName, testTiffFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-								std::cout << tileIndexIIminMax.at(tt) << "_" << tileIndexJJminMax.at(ss) << std::endl;
-
-								vec_filteredConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << testTiffFilename << ".tif;;\t(" +
-									Util::toString(270 * (tileIndexJJminMax.at(ss) - 29) - 49800, 0) + "," +
-									Util::toString(476 * (tileIndexIIminMax.at(tt) - 32) - 86888, 0) + "," +
-									Util::toString(19200 + 50 * iterCutNumber, 0) + ")\n";
+								//std::cout << tileIndexIIminMax.at(tt) << "_" << tileIndexJJminMax.at(ss) << std::endl; //for debugging
 							}
 						}
 

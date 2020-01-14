@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 			//Routines::panoramicScan(fpga);
 			//Routines::sequencer(fpga, 0, false, RUN::EN);
 			//Routines::liveScan(fpga);
-			//Routines::correctTiffReadFromTileConfiguration(0, 0, { 0, 2 });
+			Routines::correctTiffReadFromTileConfiguration(0, 0, { 0 });
 
 			//TESTS
 			//TestRoutines::digitalLatency(fpga);
@@ -44,8 +44,8 @@ int main(int argc, char* argv[])
 			//TestRoutines::multithread();
 			//TestRoutines::clipU8();
 			//TestRoutines::dataLogger();
-			//TestRoutines::createFolder();
-			TestRoutines::filterTileConfigurationFile(0, 52);
+			//TestRoutines::createSubfolder();
+			//TestRoutines::filterTileConfigurationFile(0, 52);
 
 			//TestRoutines::correctImage();
 			//TestRoutines::correctImageBatch();

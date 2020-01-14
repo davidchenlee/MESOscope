@@ -50,7 +50,7 @@ namespace TestRoutines
 	void multithread();
 	void clipU8();
 	void dataLogger();
-	void createFolder();
+	void createSubfolder();
 	void filterTileConfigurationFile(const int firstCutNumber, const int lastCutNumber);
 
 	//Postprocessing

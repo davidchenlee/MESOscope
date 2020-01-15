@@ -12,15 +12,15 @@ namespace Routines
 		//const RUNMODE acqMode{ RUNMODE::SCANX };			//Scan in the X-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		//const RUNMODE acqMode{ RUNMODE::FIELD_ILLUM };	//Field illumination measurement for 16X using beads
-		
+
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
-		const int nFramesCont{ 1 };	
+		const int nFramesCont{ 1 };
 		const double stackDepthZ{ 100. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
-	
+
 		const double pixelSizeXY{ 0.5 * um };
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
@@ -83,13 +83,13 @@ namespace Routines
 			break;
 		}
 		case RUNMODE::COLLECTLENS:
-			if(g_multibeam)
+			if (g_multibeam)
 				throw std::invalid_argument((std::string)__FUNCTION__ + ": Collector-lens scanning available only for single beam");
 			saveAllPMT = true;
 			cLensPosIni = 0.0 * mm;
 			cLensPosFinal = 5.0 * mm;
 			cLensStep = 0.5 * mm;;
-			nSameLocation = static_cast<int>( std::floor((cLensPosFinal - cLensPosIni)/ cLensStep) ) + 1;
+			nSameLocation = static_cast<int>(std::floor((cLensPosFinal - cLensPosIni) / cLensStep)) + 1;
 			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
 				stagePosXYZ.push_back(stackCenterXYZ);
 			break;
@@ -100,7 +100,7 @@ namespace Routines
 			sleepTime_ms = 1000; //Avoid overheating the sample
 
 			stepSizeX = 17.5 * um;
-			const int nLocationsX{ 16+7 };
+			const int nLocationsX{ 16 + 7 };
 			for (int iterDiffX = 0; iterDiffX < nLocationsX; iterDiffX++)
 			{
 				nSameLocation = 10;
@@ -130,7 +130,7 @@ namespace Routines
 		const int nLocations{ static_cast<int>(stagePosXYZ.size()) };
 		TiffU8 output{ heightPerFrame_pix, widthPerFrame_pix, nLocations };
 		std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) + "nm" };
-		
+
 		//OPEN THE UNIBLITZ SHUTTERS
 		mesoscope.openShutter();				//The destructor will close the shutter automatically
 
@@ -145,13 +145,13 @@ namespace Routines
 			const Galvo rescanner{ realtimeSeq, FFOVslowPerBeamlet / 2., mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 			//const Galvo rescanner{ realtimeSeq, 0, fluorMarker.mWavelength_nm, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
-			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations  << "\n";
+			std::cout << "Frame: " << iterLocation + 1 << "/" << nLocations << "\n";
 			mesoscope.moveXYZ(stagePosXYZ.at(iterLocation));
 			mesoscope.waitForMotionToStopAll();
 			//stage.printPosXYZ();				//Print the stage position	
-			
+
 			mesoscope.setPower(Util::exponentialFunction(fluorMarker.mScanPmin, iterLocation * pixelSizeZ, fluorMarker.mScanPLexp));
-	
+
 			//Used to optimize the collector lens position
 			if (acqMode == RUNMODE::COLLECTLENS)
 			{
@@ -197,11 +197,11 @@ namespace Routines
 		}
 
 		if (acqMode == RUNMODE::SCANZ || acqMode == RUNMODE::SCANZCENTERED)
-		{	
-			filename.append( "_Pmin=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_PLexp=" + Util::toString(fluorMarker.mScanPLexp / um, 0) + "um" +
+		{
+			filename.append("_Pmin=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW_PLexp=" + Util::toString(fluorMarker.mScanPLexp / um, 0) + "um" +
 				"_x=" + Util::toString(stagePosXYZ.front().XX / mm, 3) + "_y=" + Util::toString(stagePosXYZ.front().YY / mm, 3) +
 				"_zi=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_zf=" + Util::toString(stagePosXYZ.back().ZZ / mm, 4) + "_StepZ=" + Util::toString(pixelSizeZ / mm, 4) +
-				"_avg=" + Util::toString(nFramesCont * nSameLocation, 0) );
+				"_avg=" + Util::toString(nFramesCont * nSameLocation, 0));
 
 			//output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
@@ -210,11 +210,11 @@ namespace Routines
 
 		if (acqMode == RUNMODE::SCANX || acqMode == RUNMODE::FIELD_ILLUM)
 		{
-			filename.append( "_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW" +
+			filename.append("_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) + "mW" +
 				"_xi=" + Util::toString(stagePosXYZ.front().XX / mm, 4) + "_xf=" + Util::toString(stagePosXYZ.back().XX / mm, 4) +
 				"_y=" + Util::toString(stagePosXYZ.front().YY / mm, 4) +
 				"_z=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_StepX=" + Util::toString(stepSizeX / mm, 4) +
-				"_avg=" + Util::toString(nFramesCont, 0) );
+				"_avg=" + Util::toString(nFramesCont, 0));
 
 			output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
@@ -268,7 +268,7 @@ namespace Routines
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
 		const double stackDepth{ 100. * um };
-		const double pixelSizeZafterBinning{ 1.0 * um  };
+		const double pixelSizeZafterBinning{ 1.0 * um };
 
 		const int nFrames{ static_cast<int>(nFramesBinning * stackDepth / pixelSizeZafterBinning) };	//Number of frames BEFORE binning for continuous acquisition
 		const double pixelSizeZbeforeBinning{ pixelSizeZafterBinning / nFramesBinning };				//Pixel size per z frame
@@ -308,12 +308,12 @@ namespace Routines
 
 		//STAGES
 		const double stageZi = determineInitialScanPos(stackCenterXYZ.ZZ, stackDepth, 0. * mm, scanDirZ);
-		const double stageZf = determineFinalScanPos(stackCenterXYZ.ZZ, stackDepth, 0.010 * mm, scanDirZ);						
+		const double stageZf = determineFinalScanPos(stackCenterXYZ.ZZ, stackDepth, 0.010 * mm, scanDirZ);
 		mesoscope.moveXYZ({ stackCenterXYZ.XX, stackCenterXYZ.YY, stageZi });		//Move the stage to the initial position
 		mesoscope.waitForMotionToStopAll();
 		Sleep(500);																	//Give the stages enough time to settle at the initial position
 		//Set the vel for imaging. Frame duration (i.e., a galvo swing) = halfPeriodLineclock * heightPerBeamletPerFrame_pix
-		mesoscope.setVelSingle(AXIS::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));		
+		mesoscope.setVelSingle(AXIS::ZZ, pixelSizeZbeforeBinning / (g_lineclockHalfPeriod * heightPerBeamletPerFrame_pix));
 
 		//EXECUTE THE CONTROL SEQUENCE
 		realtimeSeq.initialize(MAINTRIG::STAGEZ, fluorMarker.mWavelength_nm, scanDirZ);
@@ -333,7 +333,7 @@ namespace Routines
 			"um_x=" + Util::toString(stackCenterXYZ.XX / mm, 3) + "_y=" + Util::toString(stackCenterXYZ.YY / mm, 3) +
 			"_zi=" + Util::toString(stageZi / mm, 4) + "_zf=" + Util::toString(stageZf / mm, 4) + "_Step=" + Util::toString(pixelSizeZafterBinning / mm, 4) +
 			"_bin=" + Util::toString(nFramesBinning, 0) };
-		
+
 		std::cout << "Saving the stack...\n";
 		image.save(g_imagingFolderPath, filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 
@@ -385,7 +385,7 @@ namespace Routines
 		double stageXi, stageXf;		//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
-			const double travelOverhead{ 1.0 * mm};
+			const double travelOverhead{ 1.0 * mm };
 			stageXi = panoramicScan.determineInitialScanPosX(travelOverhead, iterScanDirX);
 			stageXf = panoramicScan.determineFinalScanPosX(travelOverhead, iterScanDirX);
 
@@ -409,24 +409,24 @@ namespace Routines
 			reverseSCANDIR(iterScanDirX);
 			Util::pressESCforEarlyTermination();
 		}
-			mesoscope.closeShutter();
+		mesoscope.closeShutter();
 
-			const std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) +
-				"nm_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) +
-				"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
-				"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
-				"_z=" + Util::toString(stackCenterXYZ.ZZ / mm, 4) };
-			std::cout << "Saving the stack...\n";
-			panoramicScan.saveToFile(g_imagingFolderPath, filename, OVERRIDE::DIS);
+		const std::string filename{ g_currentSample.readName() + "_" + mesoscope.readCurrentLaser_s(true) + Util::toString(fluorMarker.mWavelength_nm, 0) +
+			"nm_P=" + Util::toString(fluorMarker.mScanPmin / mW, 1) +
+			"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
+			"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
+			"_z=" + Util::toString(stackCenterXYZ.ZZ / mm, 4) };
+		std::cout << "Saving the stack...\n";
+		panoramicScan.saveToFile(g_imagingFolderPath, filename, OVERRIDE::DIS);
 
-			//Tile size for the slow scan. Do not call the tile size from panoramicScan because the tiles are long strips. 
-			const PIXDIM2 overlayTileSize_pix{ Util::intceil(tileHeight / pixelSizeX), Util::intceil(tileWidth / pixelSizeY) };
-			const TILEOVERLAP3 overlayTileOverlapXYZ_frac{ 0.0, 0.0, 0.0 };
-			const double threshold{ 0.02 };
+		//Tile size for the slow scan. Do not call the tile size from panoramicScan because the tiles are long strips. 
+		const PIXDIM2 overlayTileSize_pix{ Util::intceil(tileHeight / pixelSizeX), Util::intceil(tileWidth / pixelSizeY) };
+		const TILEOVERLAP3 overlayTileOverlapXYZ_frac{ 0.0, 0.0, 0.0 };
+		const double threshold{ 0.02 };
 
-			//Boolmap boolmap{ panoramicScan, overlayTileSize_pix, overlayTileOverlapXYZ_frac, threshold };
-			//boolmap.saveBoolmapToText("Boolmap_" + filename);
-			//boolmap.saveTiffWithBoolmapTileOverlay("TileArrayMap_" + filename);
+		//Boolmap boolmap{ panoramicScan, overlayTileSize_pix, overlayTileOverlapXYZ_frac, threshold };
+		//boolmap.saveBoolmapToText("Boolmap_" + filename);
+		//boolmap.saveTiffWithBoolmapTileOverlay("TileArrayMap_" + filename);
 	}
 
 	//Full sequence to image and cut an entire sample automatically. Note that the stack starts at stackCenterXYZ.at(Z) (i.e., the stack is not centered at stackCenterXYZ.at(Z))
@@ -599,10 +599,10 @@ namespace Routines
 
 						//Convert the absolute tile position to pixels to be called by 'Grid/collection stitcher' in Fiji.
 						//The format for 'Grid/collection stitcher' is filename;;(-JJ,-II,KK) in pixels
-						//Note that in Fiji the position of II and JJ are interchanged. Also note the minus sign because of the opposite sign convention
-						datalogStacks.record(shortName + ".tif;;\t(" + Util::toString(-tileCenterXY.YY/pixelSizeXY, 0) + "," +
-																	   Util::toString(-tileCenterXY.XX/pixelSizeXY, 0) + "," +
-																	   Util::toString((std::min)(scanZi, scanZf)/pixelSizeZafterBinning, 0) + ")");
+						//Note that in Fiji the position of II and JJ are interchanged. Also note the minus sign because of the opposite sign convention wrt the stages
+						datalogStacks.record(shortName + ".tif;;\t(" + Util::toString(-tileCenterXY.YY / pixelSizeXY, 0) + "," +
+							Util::toString(-tileCenterXY.XX / pixelSizeXY, 0) + "," +
+							Util::toString((std::min)(scanZi, scanZf) / pixelSizeZafterBinning, 0) + ")");
 						datalogStacks.record("#(" + tileIndexIIpadded + "," + tileIndexJJpadded + ")\t" + longName);
 						std::cout << "\n";
 					}
@@ -631,7 +631,7 @@ namespace Routines
 
 					//CONTROL SEQUENCE. The Image height is 2 (two galvo swings) and nFrames is stitchedHeight_pix/2. The total height of the final image is therefore stitchedHeight_pix
 					PanoramicScan panoramicScan{ { g_stackCenterXYZ.XX, g_stackCenterXYZ.YY }, { PANtileHeight, PANtileWidth }, { PANpixelSizeX, PANpixelSizeY }, { PANheight, PANwidth } };
-					realtimeSeq.reconfigure(2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix()/2, 0);
+					realtimeSeq.reconfigure(2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix() / 2, 0);
 					mesoscope.configure(PANwavelength_nm);
 					mesoscope.setPower(PANlaserPower);
 
@@ -681,7 +681,7 @@ namespace Routines
 						"mW_xi=" + Util::toString(stageXi / mm, 3) + "_xf=" + Util::toString(stageXf / mm, 3) +
 						"_yi=" + Util::toString(panoramicScan.readStageYposFront() / mm, 3) + "_yf=" + Util::toString(panoramicScan.readStageYposBack() / mm, 3) +
 						"_z=" + Util::toString(PANplaneZ / mm, 4) };
-					
+
 					const std::string PANcutNumberPadded{ Util::zeroPadding(commandline.mAction.panoramicScan.readCutNumber(), 3) };
 					panoramicScan.saveToFile(g_imagingFolderPath, "Panoramic_" + PANcutNumberPadded, OVERRIDE::DIS);//For large tiffs, tifflib sometimes returns "no space for output buffer" error
 					datalogPanoramic.record(PANcutNumberPadded + "\t" + PANlongName);
@@ -694,7 +694,7 @@ namespace Routines
 					boolmap.fillBoolmapHoles();
 					boolmap.saveBoolmapToText(g_imagingFolderPath, "Boolmap_" + PANcutNumberPadded, OVERRIDE::DIS);
 					boolmap.replaceInputBoolmapByUnion(vec_boolmap);															//Save the boolmap for the next iterations
-					
+
 					//boolmap.saveTiffWithBoolmapGridOverlay("GridOverlay", OVERRIDE::EN);//For debugging
 				}
 				break;
@@ -753,75 +753,124 @@ namespace Routines
 	}
 
 	//Post-process the tiff stacks (correct for nonlinear resonant scanning, uneven illumination, and crosstalk)
-	//Read the filenames from "_TileConfiguration.txt"
-	//Create a configuration text file for each vibratome cut and laser wavelength for 'Grid/collection stitcher' in Fiji
-	void correctTiffReadFromTileConfiguration(const int firstCutNumber, const int lastCutNumber, const std::vector<int> vec_wavelengthIndex)
+	//Read the filenames from the single configuration file "_TileConfiguration.txt"
+	//Then create a configuration textfile for each vibratome cut and laser wavelength for 'Grid/collection stitcher' in Fiji
+	void correctTiffReadFromTileConfiguration(const int firstCutNumber, const int lastCutNumber, std::vector<int> vec_wavelengthIndex)
 	{
+		const bool flag_gridStitcher{ false };
 		const std::string inputPath{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\" };
 		const std::string outputPath{ "D:\\20200114_Liver20190812_03_lobe_corrected\\" };
 
-		//Define the min and max tiles in each axis
+		//Constrain the min and max tiles on each axis
 		const std::vector<int> tileIndexIIminMax{ 7, 36 };		//{ IImin, IImax }
 		const std::vector<int> tileIndexJJminMax{ 11, 47 };		//{ JJmin, JJmax }
+
+		const int heightPerFrame_pix{ 560 };
+		const int widthPerFrame_pix{ 300 };
+		const int nFrames{ 100 };
+		const TILEOVERLAP3 stackOverlapXY_pix{ 270, 476, 50 };
 
 		if (firstCutNumber > lastCutNumber)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first cut number must be <= last cut number");
 		if (vec_wavelengthIndex.size() == 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
 
-
 		//Open the source textfile containing the Tiff parameters
+		//This is a single file. Read it line by line
 		std::ifstream inputConfigTxt{ inputPath + "_TileConfiguration.txt" };
-
 		if (!inputConfigTxt)
 			throw std::runtime_error((std::string)__FUNCTION__ + ": The file _TileConfiguration.txt failed to open");
 
-		//Generate a configuration text file for each vibratome cut and each laser wavelength for Fiji's GridStitcher
-		//The filename format is "_TileConfigurationCorrected_cutNumber_wavelengthIndex"
+		//Generate a configuration textfile for each vibratome cut and each laser wavelength for Fiji's stitcher
+		//Store the file handlers in a vector
 		std::vector<std::ofstream> vec_outputConfigTxt((lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
 		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
 			{
-				const unsigned int index{ (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec };
+				const unsigned int whichVectorPosition{ (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec };
 				const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
-				vec_outputConfigTxt.at(index).open(outputPath + subFolderName + "_TileConfigurationCorrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
-				vec_outputConfigTxt.at(index) << "dim=3\n";	//Needed at the start of the txt for GridStitcher
+
+				//The filename format is "_TileConfigurationCorrected_cutNumber_wavelengthIndex"
+				vec_outputConfigTxt.at(whichVectorPosition).open(outputPath + subFolderName + "_TileConfiguration_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
+				vec_outputConfigTxt.at(whichVectorPosition) << "dim=3\n";	//Needed at the start of the txt for GridStitcher
 			}
 
-		//Read the text file with the stack parameters line by line
-		TiffU8 image{ 560, 300, 100 };
+		std::vector<int> vec_stackCounter(vec_wavelengthIndex.size());
+
+		//Create dummy corner stacks to regularize the final size of the fused images (because each vibratome section has a different amount of tiles)
+		//and close the textfiles
+		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
+			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
+				for (int iterII = 0; iterII < 2; iterII++)
+					for (int iterJJ = 0; iterJJ < 2; iterJJ++)
+					{
+						//Create the dummy stack
+						const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
+						const std::string tiffFilenameSingleIndex{ "corrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + "_" + Util::zeroPadding(vec_stackCounter.at(iterVec), 3) };
+						TiffU8 image{ heightPerFrame_pix, widthPerFrame_pix, nFrames };
+						image.saveToFile(outputPath + subFolderName, tiffFilenameSingleIndex, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+
+						//Filename of the dummy stack
+						const std::string dummyTiffFilenameDoubleIndices{ Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + "_" +
+							Util::zeroPadding(tileIndexIIminMax.at(iterII),2) + "_" +
+							Util::zeroPadding(tileIndexJJminMax.at(iterJJ),2) };
+
+						//Save the filename in the tileConfiguration textfile
+						std::string configTxtEntry;
+						std::string postfixEntry;
+						if (flag_gridStitcher)   //For 'Grid/collection stitcher'
+						{
+							configTxtEntry = tiffFilenameSingleIndex + ".tif";
+							postfixEntry = "\n";
+						}
+						else    //For BigStitcher
+						{
+							configTxtEntry = Util::zeroPadding(vec_stackCounter.at(iterVec), 3);
+							postfixEntry = "#corrected_" + dummyTiffFilenameDoubleIndices + ".tif\n";
+						}
+
+						vec_outputConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << configTxtEntry << ";;\t(" +
+							Util::toString(stackOverlapXY_pix.II * tileIndexJJminMax.at(iterJJ), 0) + "," +		//The dummy tile position has been extrapolated from the other tiles, which was compute during runtime for GridStitcher
+							Util::toString(stackOverlapXY_pix.JJ * tileIndexIIminMax.at(iterII), 0) + "," +
+							Util::toString(50 * iterCutNumber, 0) + ")\t" + postfixEntry;
+
+						vec_stackCounter.at(iterVec)++;
+					}
+
+		//Read the textfile containing the stack parameters line by line
+		TiffU8 image{ heightPerFrame_pix, widthPerFrame_pix, nFrames };
 		std::string line;
-		getline(inputConfigTxt, line);										//Skip the first line that contains "dim=3"
+		getline(inputConfigTxt, line);													//Skip the first line that contains "dim=3"
 		while (getline(inputConfigTxt, line))
-		{
-			if (line.front() != '#')										//Skip all the lines that are commented out with #
+			if (line.front() != '#')													//Skip all the lines that are commented out with #
 			{
-				//Get the Tiff parameters at the beginning of each text line
-				//Tokenize with respect to '_'. Convert the parameters to int
+				//Get the Tiff parameters at the beginning of each text line. Tokenize with respect to '_'. Convert the parameters to int
 				//The format is "cutNumber_wavelengthIndex_tileIndexII_tileIndexJJ", e.g. "000_0_17_31"
-				std::stringstream tiffParameters_ss(line.substr(0, line.find(".tif")));
+				std::stringstream tiffFilenameDoubleIndices_ss(line.substr(0, line.find(".tif")));
 				std::string isolatedParameter;
-				getline(tiffParameters_ss, isolatedParameter, '_');			//cutNumber	
+				getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');			//cutNumber	
 				const int cutNumber{ std::stoi(isolatedParameter) };
-				getline(tiffParameters_ss, isolatedParameter, '_');			//wavelengthIndex
+				getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');			//wavelengthIndex
 				const int wavelengthIndex{ std::stoi(isolatedParameter) };
-				getline(tiffParameters_ss, isolatedParameter, '_');			//tileIndexII
+				getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');			//tileIndexII
 				const int tileIndexII{ std::stoi(isolatedParameter) };
-				getline(tiffParameters_ss, isolatedParameter, '_');			//tileIndexJJ
+				getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');			//tileIndexJJ
 				const int tileIndexJJ{ std::stoi(isolatedParameter) };
 
-				for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
+				if (cutNumber >= firstCutNumber && cutNumber <= lastCutNumber)
 				{
-					if (cutNumber >= firstCutNumber && cutNumber <= lastCutNumber && wavelengthIndex == iterVec)
+					//Constrain the stacks
+					if (tileIndexII >= tileIndexIIminMax.at(0) && tileIndexII <= tileIndexIIminMax.at(1) &&
+						tileIndexJJ >= tileIndexJJminMax.at(0) && tileIndexJJ <= tileIndexJJminMax.at(1))
 					{
-						//Constrain the stacks
-						if (tileIndexII >= tileIndexIIminMax.at(0) && tileIndexII <= tileIndexIIminMax.at(1) &&
-							tileIndexJJ >= tileIndexJJminMax.at(0) && tileIndexJJ <= tileIndexJJminMax.at(1))
+						//Proceed only if vec_wavelengthIndex contains wavelengthIndex
+						const std::vector<int>::iterator it = std::find(vec_wavelengthIndex.begin(), vec_wavelengthIndex.end(), wavelengthIndex);
+						if (it != vec_wavelengthIndex.end())
 						{
-							image.loadTiffU8(inputPath + Util::zeroPadding(cutNumber, 3) + "\\", tiffParameters_ss.str());
+							image.loadTiffU8(inputPath + Util::zeroPadding(cutNumber, 3) + "\\", tiffFilenameDoubleIndices_ss.str());
 							image.correctRSdistortionGPU(150. * um);
 
-							//For flattenFieldGaussian, use different parameters for different wavelengths
+							//For flattenFieldGaussian. Use a different parameter for different wavelengths
 							{
 								if (wavelengthIndex == 0)					//DAPI
 									image.flattenFieldGaussian(0.010);
@@ -832,58 +881,47 @@ namespace Routines
 							}
 							image.suppressCrosstalk(0.20);
 
+							//Save the stack
 							const std::string subFolderName{ Util::zeroPadding(cutNumber, 3) + "\\" };
-							image.saveToFile(outputPath + subFolderName, "corrected_" + tiffParameters_ss.str(), TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+							const int whichVectorPosition = std::distance(vec_wavelengthIndex.begin(), it); //Find the position of wavelengthIndex in vec_wavelengthIndex
+							const std::string tiffFilenameSingleIndex{ "corrected_" + Util::zeroPadding(cutNumber, 3) + "_" + Util::toString(wavelengthIndex, 0) + "_" + Util::zeroPadding(vec_stackCounter.at(whichVectorPosition), 3) };
+							image.saveToFile(outputPath + subFolderName, tiffFilenameSingleIndex, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
-							//Save the filename in the tileConfiguration text file
-							vec_outputConfigTxt.at((cutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << "corrected_" << line << "\n";
+							//Save the filename in the tileConfiguration textfile
+							std::string prefixEntry;
+							std::string postfixEntry;
+							if (flag_gridStitcher)  //For GridStitcher
+							{
+								prefixEntry = tiffFilenameSingleIndex + ".tif";
+								postfixEntry = "\n";
+							}
+							else   //For BigStitcher. I think the ID# has to start from 0
+							{
+								prefixEntry = Util::zeroPadding(vec_stackCounter.at(whichVectorPosition), 3);
+								postfixEntry = "#corrected_" + tiffFilenameDoubleIndices_ss.str() + ".tif\n";
+							}
+
+							vec_outputConfigTxt.at((cutNumber - firstCutNumber) * vec_wavelengthIndex.size() + whichVectorPosition) << prefixEntry << ";;\t(" +
+								Util::toString(stackOverlapXY_pix.II * tileIndexJJ, 0) + "," +		//Note that in Fiji, the roles of II and JJ are reversed 
+								Util::toString(stackOverlapXY_pix.JJ * tileIndexII, 0) + "," +
+								Util::toString(50 * cutNumber, 0) + ")\t" + postfixEntry;
 
 							//std::cout << "Cut number = " << cutNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
+							vec_stackCounter.at(whichVectorPosition)++;
 							Util::pressESCforEarlyTermination();
-						}//if(select tiles)
-					}//if(select cut and wavelength)
-				}//for(iterVec)
+						}
+					}//if(select tiles)
+				}//if(select cut and wavelength)
 			}//if(line.front() != '#')	
-		}//while()
 
 		//Close the source configuration textfile
 		inputConfigTxt.close();
 
-		//Create dummy corner black stacks to regularize the final size of the fused images (because each vibratome section has a different amount of tiles)
-		//and close the text files
+		//Close the textfiles
 		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
 			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
-			{
-				for (int tt = 0; tt < 2; tt++)
-					for (int ss = 0; ss < 2; ss++)
-					{
-						//Filename of the dummy stack
-						const std::string testTiffFilename{ Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + "_" +
-							Util::zeroPadding(tileIndexIIminMax.at(tt),2) + "_" +
-							Util::zeroPadding(tileIndexJJminMax.at(ss),2) };
-
-						//Add the such filename to the new tileConfigurationFiltered textfile
-						//The format for 'Grid/collection stitcher' is filename;;(JJ,II,KK) in pixels
-						vec_outputConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << "corrected_" + testTiffFilename << ".tif;;\t(" +
-							Util::toString(270 * (tileIndexJJminMax.at(ss) - 29) - 49800, 0) + "," +		//The dummy tile position has been extrapolated from the other tiles, which was compute during runtime for GridStitcher
-							Util::toString(476 * (tileIndexIIminMax.at(tt) - 32) - 86888, 0) + "," +
-							Util::toString(19200 + 50 * iterCutNumber, 0) + ")\n";
-
-						//Create the dummy stack only if it does not already exist
-						const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
-						if (std::filesystem::exists(inputPath + subFolderName + testTiffFilename + ".tif"))
-							std::cout << "WARNING: the file " << testTiffFilename << " already exists. Dummy stack creation skipped\n";
-						else
-						{
-							TiffU8 image{ 560, 300, 100 };
-							image.saveToFile(outputPath + subFolderName, "corrected_" + testTiffFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-							//std::cout << tileIndexIIminMax.at(tt) << "_" << tileIndexJJminMax.at(ss) << std::endl; //for debugging
-						}
-					}
-
-				//Close the text files
 				vec_outputConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec).close();
-			}
+
 		//Util::pressAnyKeyToCont();
 	}
 }//namespace
@@ -1070,7 +1108,7 @@ namespace TestRoutines
 			selectPower = 800. * mW;
 		}
 		else             //Singlebeam
-		{		
+		{
 			heightPerBeamletPerFrame_pix = heightPerFrame_pix;
 			FFOVslowPerBeamlet = FFOVslow;
 			selectPower = 50. * mW;
@@ -1174,11 +1212,11 @@ namespace TestRoutines
 		//shutterFidelity.close();
 	}
 
-//For keeping the pockels on to check the the laser power
-//0. Make sure that the function generator feeds the lineclock
-//1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter automatically
-//2. Set g_pockelsAutoOff to 0 for holding on the last value
-//3. Tune Vision's wavelength manually
+	//For keeping the pockels on to check the the laser power
+	//0. Make sure that the function generator feeds the lineclock
+	//1. Manually open the Vision shutter and Uniblitz shutter. The latter because the class destructor closes the shutter automatically
+	//2. Set g_pockelsAutoOff to 0 for holding on the last value
+	//3. Tune Vision's wavelength manually
 	void pockels(const FPGA &fpga)
 	{
 		//CREATE THE CONTROL SEQUENCE
@@ -1211,7 +1249,7 @@ namespace TestRoutines
 		//Pockels pockelsFidelity{ realtimeSeq, 1040, Laser::ID::FIDELITY };
 		//Pockels pockels{ pockelsFidelity };
 
-		for (double voltage_V = 0; voltage_V < 3.5; voltage_V +=0.2)
+		for (double voltage_V = 0; voltage_V < 3.5; voltage_V += 0.2)
 		{
 			std::cout << "Current voltage = " << voltage_V << " V\n";
 			pockels.pushVoltageSinglet(voltage_V * V);
@@ -1220,7 +1258,7 @@ namespace TestRoutines
 		}
 		//pockels.pushVoltageSinglet(8 * us, 0.1 * V, OVERRIDE::DIS);
 		//realtimeSeq.run();
-	
+
 		Util::pressAnyKeyToCont();
 	}
 
@@ -1236,7 +1274,7 @@ namespace TestRoutines
 
 		//POCKELS
 		const int wavelength_nm{ 1040 };
-		Pockels pockels{ realtimeSeq, wavelength_nm, Laser::ID::FIDELITY};
+		Pockels pockels{ realtimeSeq, wavelength_nm, Laser::ID::FIDELITY };
 
 		//Exponential ramp
 		pockels.exponentialPowerRampAcrossFrames(1.0*960. * mW, 1. * um, -300. * um);
@@ -1288,7 +1326,7 @@ namespace TestRoutines
 		const int wavelength_nm{ 1040 };
 		const double laserPower{ 50. * mW };
 		Mesoscope mesoscope{ realtimeSeq, Laser::ID::VISION };
-		mesoscope.configure( wavelength_nm);
+		mesoscope.configure(wavelength_nm);
 		mesoscope.setPower(laserPower);
 	}
 
@@ -1440,14 +1478,14 @@ namespace TestRoutines
 		//Define the wavelengths to be processed
 		const std::vector<int> vec_wavelengthIndex{ 0, 2 };
 
-		//Define the min and max tiles in each axis
+		//Constrain the min and max tiles in each axis
 		const std::vector<int> tileIndexIIminMax{ 7, 36 };		//{ IImin, IImax }
 		const std::vector<int> tileIndexJJminMax{ 11, 47 };		//{ JJmin, JJmax }
 
 		if (firstCutNumber > lastCutNumber)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first cut number must be <= last cut number");
 
-		//Generate a configuration text file for each vibratome cut and each laser wavelength for Fiji's GridStitcher
+		//Generate a configuration textfile for each vibratome cut and each laser wavelength for Fiji's GridStitcher
 		//The filename format is "_TileConfigurationCorrected_cutNumber_wavelengthIndex"
 		std::vector<std::ofstream> vec_filteredConfigTxt((lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
 
@@ -1475,8 +1513,7 @@ namespace TestRoutines
 				while (getline(sourceConfigTxt, line))
 					if (line.front() != '#')										//Skip all the lines that are commented out with #
 					{
-						//Get the Tiff parameters at the beginning of each text line
-						//Tokenize with respect to '_'. Convert the parameters to int
+						//Get the Tiff parameters at the beginning of each text line. Tokenize with respect to '_'. Convert the parameters to int
 						//The format is "cutNumber_wavelengthIndex_tileIndexII_tileIndexJJ", e.g. "000_0_17_31"
 						std::stringstream tiffParameters_ss(line.substr(0, line.find(".tif")));
 						std::string isolatedParameter;
@@ -1499,7 +1536,7 @@ namespace TestRoutines
 				//Close the source tileConfiguration
 				sourceConfigTxt.close();
 
-				//Create dummy corner black stacks to regularize the final size of the fused images (because each vibratome section has a different amount of tiles)
+				//Create dummy corner stacks to regularize the final size of the fused images (because each vibratome section has a different amount of tiles)
 				for (int tt = 0; tt < 2; tt++)
 					for (int ss = 0; ss < 2; ss++)
 					{
@@ -1530,7 +1567,7 @@ namespace TestRoutines
 				vec_filteredConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec).close();
 			}//for(iterVec)
 		}//for(iterCutNumber)
-	
+
 		Util::pressAnyKeyToCont();
 	}
 
@@ -1548,14 +1585,14 @@ namespace TestRoutines
 		//image.splitFrames(10);
 		//image.mirrorOddFrames();
 		//image.averageEvenOddFrames();
-		
+
 		//Declare and start a stopwatch
 		double duration;
 		auto t_start{ std::chrono::high_resolution_clock::now() };
 		//Stop the stopwatch
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
-		
+
 		//pressAnyKeyToCont();
 	}
 
@@ -1627,7 +1664,7 @@ namespace TestRoutines
 		const TILEDIM2 overlayTileArraySizeIJ{ 40, 70 };
 		const TILEOVERLAP3 overlayOverlapIJK_frac{ 0.15, 0.10, 0.5 };
 		const double threshold{ 0.02 };
-		
+
 		Boolmap boolmap{ image, overlayTileArraySizeIJ, overlayTileSize_pix, overlayOverlapIJK_frac, threshold };
 		boolmap.saveBoolmapToText(g_imagingFolderPath, "Boolmap", OVERRIDE::EN);
 		boolmap.saveTiffWithBoolmapTileOverlay(g_imagingFolderPath, "TileMap", OVERRIDE::EN);
@@ -1635,7 +1672,7 @@ namespace TestRoutines
 		boolmap.fillBoolmapHoles();
 		boolmap.saveBoolmapToText(g_imagingFolderPath, "Boolmap_filled", OVERRIDE::EN);
 		//boolmap.saveTiffWithBoolmapTileOverlay("TileMap_filled", OVERRIDE::EN);
-		
+
 		std::cout << "# bright stacks = " << boolmap.readNumberOfBrightStacks() << "\n";
 		Util::pressAnyKeyToCont();
 	}
@@ -1659,7 +1696,7 @@ namespace TestRoutines
 
 		Util::pressAnyKeyToCont();
 	}
-	
+
 	void sequencerConcurrentTest()
 	{
 		class FUNC
@@ -1679,7 +1716,7 @@ namespace TestRoutines
 
 		//ACQUISITION SETTINGS
 		const double pixelSizeXY{ 0.5 * um };
-		const int heightPerFrame_pix{ 560};
+		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };
 		const int nFramesCont{ 100 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
@@ -1779,7 +1816,7 @@ namespace TestRoutines
 	}
 	*/
 
-	//Generate a text file with the tile location for the BigStitcher
+	//Generate a textfile with the tile location for the BigStitcher
 	void generateLocationsForBigStitcher()
 	{
 		// X is vertical and Y is horizontal, to match the directions of the XYZ-stage
@@ -1826,9 +1863,9 @@ namespace TestRoutines
 		//PMT.setAllGains(255);
 		//PMT.readTemp();
 		PMT.readAllGains();
-		
+
 		//PMT.suppressGainsLinearly(0.4, RTseq::PMT16XCHAN::CH05, RTseq::PMT16XCHAN::CH10);
-		
+
 		/*
 		//To make the count from all the channels similar,
 		//rescan with frequency = 100 Hz and amplitude = 1.5V (which is larger than the size of the PMT16X
@@ -1871,7 +1908,7 @@ namespace TestRoutines
 		//CREATE THE CONTROL SEQUENCE
 		RTseq realtimeSeq{ fpga, LINECLOCK::FG, FIFOOUTfpga::EN, heightPerFrame_pix, widthPerFrame_pix, nFramesCont, g_multibeam };
 		Mesoscope mesoscope{ realtimeSeq, Laser::ID::VISION };
-		mesoscope.configure( wavelength_nm);
+		mesoscope.configure(wavelength_nm);
 		mesoscope.setPower(laserPower);
 
 		//SCANNERS

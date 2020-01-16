@@ -775,67 +775,32 @@ namespace Routines
 		if (vec_wavelengthIndex.size() == 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
 
-		//Open the source textfile containing the Tiff parameters
+		//Open the input configuration textfile containing the Tiff parameters
 		//This is a single file. Read it line by line
 		std::ifstream inputConfigTxt{ inputPath + "_TileConfiguration.txt" };
 		if (!inputConfigTxt)
 			throw std::runtime_error((std::string)__FUNCTION__ + ": The file _TileConfiguration.txt failed to open");
 
-		//Generate a configuration textfile for each vibratome cut and each laser wavelength for Fiji's stitcher
+		//Generate an output configuration textfile for each vibratome cut and each laser wavelength for Fiji's stitcher
 		//Store the file handlers in a vector
-		std::vector<std::ofstream> vec_outputConfigTxt((lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
+		std::vector<std::ofstream> vec_configTxtGridStitcher((lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
+		std::vector<std::ofstream> vec_configTxtBigStitcher((lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
+
 		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
-			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
+			for (std::vector<int>::size_type iterWavelengthIndex = 0; iterWavelengthIndex != vec_wavelengthIndex.size(); iterWavelengthIndex++)
 			{
-				const unsigned int whichVectorPosition{ (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec };
+				const unsigned int whichVectorPosition{ (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex };
 				const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
 
 				//The filename format is "_TileConfigurationCorrected_cutNumber_wavelengthIndex"
-				vec_outputConfigTxt.at(whichVectorPosition).open(outputPath + subFolderName + "_TileConfiguration_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
-				vec_outputConfigTxt.at(whichVectorPosition) << "dim=3\n";	//Needed at the start of the txt for GridStitcher
+				vec_configTxtGridStitcher.at(whichVectorPosition).open(outputPath + subFolderName + "_TileConfigurationGridSticher_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + ".txt");
+				vec_configTxtBigStitcher.at(whichVectorPosition).open(outputPath + subFolderName + "_TileConfigurationBigSitcher_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + ".txt");
+				vec_configTxtGridStitcher.at(whichVectorPosition) << "dim=3\n";	//Needed at the start of the txt for the stitcher
+				vec_configTxtBigStitcher.at(whichVectorPosition) << "dim=3\n";	//Needed at the start of the txt for the stitcher
 			}
 
-		std::vector<int> vec_stackCounter(vec_wavelengthIndex.size());
-
-		//Create dummy corner stacks to regularize the final size of the fused images (because each vibratome section has a different amount of tiles)
-		//and close the textfiles
-		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
-			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
-				for (int iterII = 0; iterII < 2; iterII++)
-					for (int iterJJ = 0; iterJJ < 2; iterJJ++)
-					{
-						//Create the dummy stack
-						const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
-						const std::string tiffFilenameSingleIndex{ "corrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + "_" + Util::zeroPadding(vec_stackCounter.at(iterVec), 3) };
-						TiffU8 image{ heightPerFrame_pix, widthPerFrame_pix, nFrames };
-						image.saveToFile(outputPath + subFolderName, tiffFilenameSingleIndex, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-
-						//Filename of the dummy stack
-						const std::string dummyTiffFilenameDoubleIndices{ Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + "_" +
-							Util::zeroPadding(tileIndexIIminMax.at(iterII),2) + "_" +
-							Util::zeroPadding(tileIndexJJminMax.at(iterJJ),2) };
-
-						//Save the filename in the tileConfiguration textfile
-						std::string configTxtEntry;
-						std::string postfixEntry;
-						if (flag_gridStitcher)   //For 'Grid/collection stitcher'
-						{
-							configTxtEntry = tiffFilenameSingleIndex + ".tif";
-							postfixEntry = "\n";
-						}
-						else    //For BigStitcher
-						{
-							configTxtEntry = Util::zeroPadding(vec_stackCounter.at(iterVec), 3);
-							postfixEntry = "#corrected_" + dummyTiffFilenameDoubleIndices + ".tif\n";
-						}
-
-						vec_outputConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << configTxtEntry << ";;\t(" +
-							Util::toString(stackOverlapXY_pix.II * tileIndexJJminMax.at(iterJJ), 0) + "," +		//The dummy tile position has been extrapolated from the other tiles, which was compute during runtime for GridStitcher
-							Util::toString(stackOverlapXY_pix.JJ * tileIndexIIminMax.at(iterII), 0) + "," +
-							Util::toString(50 * iterCutNumber, 0) + ")\t" + postfixEntry;
-
-						vec_stackCounter.at(iterVec)++;
-					}
+		//stackCouter for each cut and wavelength. The first index is the cutNumber, the second is the wavelength
+		std::vector<std::vector<int>> vec_cut_stackCounters(lastCutNumber - firstCutNumber + 1, std::vector<int> (vec_wavelengthIndex.size()));
 
 		//Read the textfile containing the stack parameters line by line
 		TiffU8 image{ heightPerFrame_pix, widthPerFrame_pix, nFrames };
@@ -884,44 +849,79 @@ namespace Routines
 							//Save the stack
 							const std::string subFolderName{ Util::zeroPadding(cutNumber, 3) + "\\" };
 							const int whichVectorPosition = std::distance(vec_wavelengthIndex.begin(), it); //Find the position of wavelengthIndex in vec_wavelengthIndex
-							const std::string tiffFilenameSingleIndex{ "corrected_" + Util::zeroPadding(cutNumber, 3) + "_" + Util::toString(wavelengthIndex, 0) + "_" + Util::zeroPadding(vec_stackCounter.at(whichVectorPosition), 3) };
+							const std::string tiffFilenameSingleIndex{ "corrected_" + Util::zeroPadding(cutNumber, 3) + "_" + Util::toString(wavelengthIndex, 0) + "_" + Util::zeroPadding(vec_cut_stackCounters[cutNumber][whichVectorPosition], 3) };
 							image.saveToFile(outputPath + subFolderName, tiffFilenameSingleIndex, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 							//Save the filename in the tileConfiguration textfile
-							std::string prefixEntry;
-							std::string postfixEntry;
-							if (flag_gridStitcher)  //For GridStitcher
-							{
-								prefixEntry = tiffFilenameSingleIndex + ".tif";
-								postfixEntry = "\n";
-							}
-							else   //For BigStitcher. I think the ID# has to start from 0
-							{
-								prefixEntry = Util::zeroPadding(vec_stackCounter.at(whichVectorPosition), 3);
-								postfixEntry = "#corrected_" + tiffFilenameDoubleIndices_ss.str() + ".tif\n";
-							}
-
-							vec_outputConfigTxt.at((cutNumber - firstCutNumber) * vec_wavelengthIndex.size() + whichVectorPosition) << prefixEntry << ";;\t(" +
+							std::string commonEntry{ ";;\t(" +
 								Util::toString(stackOverlapXY_pix.II * tileIndexJJ, 0) + "," +		//Note that in Fiji, the roles of II and JJ are reversed 
 								Util::toString(stackOverlapXY_pix.JJ * tileIndexII, 0) + "," +
-								Util::toString(50 * cutNumber, 0) + ")\t" + postfixEntry;
+								Util::toString(50 * cutNumber, 0) + ")\n" +
+								"#corrected_" + tiffFilenameDoubleIndices_ss.str() + ".tif\n" };
+
+							std::string gridStitcherEntry{ tiffFilenameSingleIndex + ".tif" + commonEntry };
+							std::string bigStitcherEntry{ Util::zeroPadding(vec_cut_stackCounters[cutNumber][whichVectorPosition], 3) + commonEntry };
+							vec_configTxtGridStitcher.at((cutNumber - firstCutNumber) * vec_wavelengthIndex.size() + whichVectorPosition) << gridStitcherEntry;
+							vec_configTxtBigStitcher.at((cutNumber - firstCutNumber) * vec_wavelengthIndex.size() + whichVectorPosition) << bigStitcherEntry;
 
 							//std::cout << "Cut number = " << cutNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
-							vec_stackCounter.at(whichVectorPosition)++;
+							vec_cut_stackCounters[cutNumber][whichVectorPosition]++;
 							Util::pressESCforEarlyTermination();
 						}
 					}//if(select tiles)
 				}//if(select cut and wavelength)
 			}//if(line.front() != '#')	
 
-		//Close the source configuration textfile
+		//Create dummy corner stacks to regularize the final size of the fused images (because each vibratome section has a different amount of tiles)
+		//and close the textfiles
+		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
+			for (std::vector<int>::size_type iterWavelengthIndex = 0; iterWavelengthIndex != vec_wavelengthIndex.size(); iterWavelengthIndex++)
+				for (int iterJJ = 0; iterJJ < 2; iterJJ++)
+					for (int iterII = 0; iterII < 2; iterII++)
+					{
+						const int dummyStackCounter{ 2 * iterJJ + iterII };
+						const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
+						const std::string tiffFilenameSingleIndex{ "corrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + "_" +
+							Util::zeroPadding(vec_cut_stackCounters[iterCutNumber][iterWavelengthIndex] + dummyStackCounter, 3) };
+
+						//Create the dummy stack only if it does not already exist
+						if (std::filesystem::exists(outputPath + subFolderName + tiffFilenameSingleIndex + ".tif"))
+							std::cout << "WARNING: the file " << tiffFilenameSingleIndex << " already exists. Dummy stack creation skipped\n";
+						else
+						{
+							//Create the dummy stack				
+							TiffU8 image{ heightPerFrame_pix, widthPerFrame_pix, nFrames };
+							image.saveToFile(outputPath + subFolderName, tiffFilenameSingleIndex, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+
+							//Save the filename in the tileConfiguration textfile
+							//Filename of the dummy stack
+							const std::string dummyTiffFilenameDoubleIndices{ Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + "_" +
+								Util::zeroPadding(tileIndexIIminMax.at(iterII),2) + "_" +
+								Util::zeroPadding(tileIndexJJminMax.at(iterJJ),2) };
+
+							std::string commonEntry{ ";;\t(" +
+								Util::toString(stackOverlapXY_pix.II * tileIndexJJminMax.at(iterJJ), 0) + "," +		//The dummy tile position has been extrapolated from the other tiles, which was compute during runtime for GridStitcher
+								Util::toString(stackOverlapXY_pix.JJ * tileIndexIIminMax.at(iterII), 0) + "," +
+								Util::toString(50 * iterCutNumber, 0) + ")\n" +
+								"#corrected_" + dummyTiffFilenameDoubleIndices + ".tif\n" };
+
+							std::string gridStitcherEntry{ tiffFilenameSingleIndex + ".tif" + commonEntry };
+							std::string bigStitcherEntry{ Util::zeroPadding(vec_cut_stackCounters[iterCutNumber][iterWavelengthIndex] + dummyStackCounter, 3) + commonEntry };
+							vec_configTxtGridStitcher.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex) << gridStitcherEntry;
+							vec_configTxtBigStitcher.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex) << bigStitcherEntry;
+						}//if(file already exists)
+					}//for(corner stacks)
+
+		//Close the input configuration textfile
 		inputConfigTxt.close();
 
-		//Close the textfiles
+		//Close the output configuration textfiles
 		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
-			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
-				vec_outputConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec).close();
-
+			for (std::vector<int>::size_type iterWavelengthIndex = 0; iterWavelengthIndex != vec_wavelengthIndex.size(); iterWavelengthIndex++)
+			{
+				vec_configTxtGridStitcher.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex).close();
+				vec_configTxtBigStitcher.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex).close();
+			}
 		//Util::pressAnyKeyToCont();
 	}
 }//namespace
@@ -1496,15 +1496,15 @@ namespace TestRoutines
 			const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
 
 			//Iterate over the laser wavelengths
-			for (std::vector<int>::size_type iterVec = 0; iterVec != vec_wavelengthIndex.size(); iterVec++)
+			for (std::vector<int>::size_type iterWavelengthIndex = 0; iterWavelengthIndex != vec_wavelengthIndex.size(); iterWavelengthIndex++)
 			{
 				//Generate a new 'filtered' configuration textfiles for GridStitcher. It will override existing files
-				const unsigned int index{ (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec };
-				vec_filteredConfigTxt.at(index).open(destinationPath + subFolderName + "_TileConfigurationFiltered_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt");
+				const unsigned int index{ (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex };
+				vec_filteredConfigTxt.at(index).open(destinationPath + subFolderName + "_TileConfigurationFiltered_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + ".txt");
 				vec_filteredConfigTxt.at(index) << "dim=3\n";						//Needed at the start of the txt for GridStitcher
 
 				//Open the source configuration textfile
-				std::ifstream sourceConfigTxt{ sourcePath + subFolderName + "_TileConfigurationCorrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + ".txt" };
+				std::ifstream sourceConfigTxt{ sourcePath + subFolderName + "_TileConfigurationCorrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + ".txt" };
 				if (!sourceConfigTxt)
 					throw std::runtime_error((std::string)__FUNCTION__ + ": The file _TileConfiguration.txt failed to open");
 
@@ -1529,7 +1529,7 @@ namespace TestRoutines
 
 						//Constrain the stacks and copy the entry to the new tileConfigurationFiltered textfile
 						if (tileIndexII >= tileIndexIIminMax.at(0) && tileIndexII <= tileIndexIIminMax.at(1) && tileIndexJJ >= tileIndexJJminMax.at(0) && tileIndexJJ <= tileIndexJJminMax.at(1))
-							vec_filteredConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << line << "\n";
+							vec_filteredConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex) << line << "\n";
 
 					}//if(line.front() != '#')
 
@@ -1541,13 +1541,13 @@ namespace TestRoutines
 					for (int ss = 0; ss < 2; ss++)
 					{
 						//Filename of the dummy stack
-						const std::string testTiffFilename{ "corrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterVec), 0) + "_" +
+						const std::string testTiffFilename{ "corrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + "_" +
 							Util::zeroPadding(tileIndexIIminMax.at(tt),2) + "_" +
 							Util::zeroPadding(tileIndexJJminMax.at(ss),2) };
 
 						//Add the such filename to the new tileConfigurationFiltered textfile
 						//The format for 'Grid/collection stitcher' is filename;;(JJ,II,KK) in pixels
-						vec_filteredConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec) << testTiffFilename << ".tif;;\t(" +
+						vec_filteredConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex) << testTiffFilename << ".tif;;\t(" +
 							Util::toString(270 * (tileIndexJJminMax.at(ss) - 29) - 49800, 0) + "," +		//The dummy tile position has been extrapolated from the other tiles, which was compute during runtime for GridStitcher
 							Util::toString(476 * (tileIndexIIminMax.at(tt) - 32) - 86888, 0) + "," +
 							Util::toString(19200 + 50 * iterCutNumber, 0) + ")\n";
@@ -1564,8 +1564,8 @@ namespace TestRoutines
 					}
 
 				//Close all the new tileConfigurationFiltered textfiles
-				vec_filteredConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterVec).close();
-			}//for(iterVec)
+				vec_filteredConfigTxt.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex).close();
+			}//for(iterWavelengthIndex)
 		}//for(iterCutNumber)
 
 		Util::pressAnyKeyToCont();

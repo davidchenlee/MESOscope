@@ -1122,9 +1122,9 @@ void TiffU8::flattenFieldGaussian(const double expFactor)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The scale factor must be in the range [0-0.1]");
 
 	std::vector<double> vec_upscalingFactors;	//Vector of upscaling factors
-	const double chanShift{ 7.5 };				//To center the channel index about 7.5 (0 to 7 on the left and 8 to 15 on the right)
-	for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
-		vec_upscalingFactors.push_back(std::exp(expFactor * (chanIndex - chanShift) * (chanIndex - chanShift)));
+	const double PMTchanOffset{ 7.5 };				//To center the channel index about 7.5 (0 to 7 on the left and 8 to 15 on the right)
+	for (int PMTchanIndex = 0; PMTchanIndex < g_nChanPMT; PMTchanIndex++)
+		vec_upscalingFactors.push_back(std::exp(expFactor * (PMTchanIndex - PMTchanOffset) * (PMTchanIndex - PMTchanOffset)));
 
 	//For debugging
 	//for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
@@ -1137,6 +1137,16 @@ void TiffU8::flattenFieldGaussian(const double expFactor)
 			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
 				mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
 					vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]);
+}
+
+void TiffU8::flattenFieldFluorescentSlide(const std::string FSlideFilename, const double upscaleFactor)
+{
+	TiffU8 FSlideTiff{ "", FSlideFilename };
+	
+	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
+		for (int iterPix = 0; iterPix < mNpixPerFrame; iterPix++)
+				mArray[iterFrame * mNpixPerFrame + iterPix] = Util::clipU8dual(upscaleFactor * mArray[iterFrame * mNpixPerFrame + iterPix] / FSlideTiff.data()[iterPix]);
+
 }
 
 void TiffU8::loadTiffU8(const std::string folderPath, const std::string filename)

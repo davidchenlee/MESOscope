@@ -13,7 +13,8 @@ int main(int argc, char* argv[])
 			//Routines::panoramicScan(fpga);
 			//Routines::sequencer(fpga, 0, false, RUN::EN);
 			//Routines::liveScan(fpga);
-			Routines::correctTiffReadFromTileConfiguration(0, 1, { 0, 2 });
+			Routines::correctTiffForBigStitcher(0, 52, { 0, 2 });
+			//Routines::correctTiffForGridStitcher(25, 25, { 2 });
 
 			//TESTS
 			//TestRoutines::digitalLatency(fpga);

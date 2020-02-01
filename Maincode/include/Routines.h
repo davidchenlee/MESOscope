@@ -11,8 +11,7 @@ namespace Routines
 	void panoramicScan(const FPGA &fpga);
 	void sequencer(const FPGA &fpga, const int firstCommandIndex, const bool forceScanAllStacks, const RUN runSeq);
 	void liveScan(const FPGA &fpga);
-	void correctTiffForBigStitcher(const int firstCutNumber, const int lastCutNumber, std::vector<int> vec_wavelengthIndex);
-	void correctTiffForGridStitcher(const int firstCutNumber, const int lastCutNumber, std::vector<int> vec_wavelengthIndex);
+	void correctTiffReadFromTileConfiguration(const int firstCutNumber, const int lastCutNumber, std::vector<int> vec_wavelengthIndex);
 }
 
 //TESTS
@@ -39,7 +38,7 @@ namespace TestRoutines
 	//Lasers
 	void shutter(const FPGA &fpga);
 	void pockels(const FPGA &fpga);
-	void semiAutoPockelsCalibration(const FPGA &fpga);
+	void semiAutomatedPockelsCalibration(const FPGA &fpga);
 	void pockelsRamp(const FPGA &fpga);
 	void lasers(const FPGA &fpga);
 	void virtualLasers(const FPGA &fpga);
@@ -56,16 +55,11 @@ namespace TestRoutines
 
 	//Postprocessing
 	void correctImage();
-	void correctImageBatch();
 	void quickStitcher();
 	void boolmap();
-	void vectorOfObjects();
 
 	//Sequence
 	void sequencerConcurrentTest();
-	//void locationSequence();
-	void generateLocationsForBigStitcher();
-	TILEIJ tileNumberToIndicesIJ(const int tileNumber);
 
 	//PMT16X
 	void PMT16Xconfig();

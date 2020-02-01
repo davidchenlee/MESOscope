@@ -263,7 +263,7 @@ namespace Routines
 	void contScanZ(const FPGA &fpga)
 	{
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };		//Select a particular laser
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
@@ -635,7 +635,7 @@ namespace Routines
 					mesoscope.configure(PANwavelength_nm);
 					mesoscope.setPower(PANlaserPower);
 
-					//SCANNERS. Keep them fixed at amplitude 0
+					//SCANNERS. Keep them fixed with amplitude 0
 					const Galvo scanner{ realtimeSeq, 0 };
 					const Galvo rescanner{ realtimeSeq, 0, mesoscope.readCurrentLaser(), mesoscope.readCurrentWavelength_nm() };
 
@@ -754,9 +754,10 @@ namespace Routines
 
 	//Post-process the tiff stacks: correct for nonlinear resonant scanning, uneven illumination, and crosstalk
 	//Read the filenames from the single configuration file "_TileConfiguration.txt"
-	//Then create a configuration textfile for each vibratome cut and laser wavelength for BigStitcher in Fiji
-	void correctTiffForBigStitcher(const int firstCutNumber, const int lastCutNumber, std::vector<int> vec_wavelengthIndex)
+	//Then create a configuration textfile for each vibratome cut and laser wavelength for 'Grid/collection stitcher' in Fiji
+	void correctTiffReadFromTileConfiguration(const int firstCutNumber, const int lastCutNumber, std::vector<int> vec_wavelengthIndex)
 	{
+		const bool flag_gridStitcher{ false };
 		const std::string inputPath{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\" };
 		const std::string outputPath{ "D:\\20200119_Liver20190812_03_lobe_corrected\\" };
 		//const std::string outputPath{ "Z:\\sharedDavidNoreen\\20200120_Liver20190812_03_lobe_corrected\\" };
@@ -775,201 +776,227 @@ namespace Routines
 		if (vec_wavelengthIndex.size() == 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
 
-		//Generate an output configuration textfile for each vibratome cut and each laser wavelength for both BigStitcher in Fiji
-		std::ofstream configTxtBigStitcher;
-		configTxtBigStitcher.open(outputPath + "_TileConfigurationBigStitcher" + ".txt");
-		configTxtBigStitcher << "dim=3\n";	//Needed at the start of the txt for the stitcher
-
-		int stackIndexingAll{ 0 };	//The BigStitcher loader indexes ALL the tifs continuously starting from 0. The order is set by filename
-		//Iterate over the wavelengths. Process together all the stacks with the same wavelengthIndex
-		for (std::vector<int>::size_type iterWavelengthIndex = 0; iterWavelengthIndex < vec_wavelengthIndex.size(); iterWavelengthIndex++)
-		{	
-			int stackIndexPerWavelength{ 0 };
-
-			//Iterate over the vibratome cuts
-			for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
+		//Generate an output configuration textfile for each vibratome cut and each laser wavelength for both BigStitcher and GridStitcher in Fiji
+		//Store the file handlers in a vector
+		std::vector<std::ofstream> vec_configTxtGridStitcher((lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
+		std::vector<std::ofstream> vec_configTxtBigStitcher((lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
+		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
+			for (std::vector<int>::size_type iterWavelengthIndex = 0; iterWavelengthIndex != vec_wavelengthIndex.size(); iterWavelengthIndex++)
 			{
+				const unsigned int whichVectorPosition{ (iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex };
 				const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
-				for (const auto & entry : std::filesystem::directory_iterator(inputPath + subFolderName))
-				{
-					//Get the Tiff parameters at the beginning of each text line. Tokenize with respect to '_'. Convert the parameters to int
-					//The format is "cutNumber_wavelengthIndex_tileIndexII_tileIndexJJ", e.g. "000_0_17_31"
-					std::string filename_s{ entry.path().filename().string() };
-					std::stringstream filename_ss(filename_s.substr(0, filename_s.find(".tif")));
-					std::string isolatedParameter;
-					getline(filename_ss, isolatedParameter, '_');		//cutNumber	
-					const int cutNumber{ std::stoi(isolatedParameter) };
-					getline(filename_ss, isolatedParameter, '_');		//wavelengthIndex
-					const int wavelengthIndex{ std::stoi(isolatedParameter) };
-					getline(filename_ss, isolatedParameter, '_');		//tileIndexII
-					const int tileIndexII{ std::stoi(isolatedParameter) };
-					getline(filename_ss, isolatedParameter, '_');		//tileIndexJJ
-					const int tileIndexJJ{ std::stoi(isolatedParameter) };
 
-					//For debugging
-					//std::cout << entry.path().filename() << std::endl;
-					//std::cout << "Cut number = " << cutNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";
+				//The filename format is "_TileConfigurationCorrected_cutNumber_wavelengthIndex"
+				vec_configTxtGridStitcher.at(whichVectorPosition).open(outputPath + subFolderName + "_TileConfigurationGridStitcher_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + ".txt");
+				vec_configTxtGridStitcher.at(whichVectorPosition) << "dim=3\n";	//Needed at the start of the txt for the stitcher
+				vec_configTxtBigStitcher.at(whichVectorPosition).open(outputPath + subFolderName + "_TileConfigurationBigStitcher_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + ".txt");
+				vec_configTxtBigStitcher.at(whichVectorPosition) << "dim=3\n";	//Needed at the start of the txt for the stitcher
+			}
 
-					//Constrain the stacks
-					if (tileIndexII >= tileIndexIIminMax.at(0) && tileIndexII <= tileIndexIIminMax.at(1) &&
-						tileIndexJJ >= tileIndexJJminMax.at(0) && tileIndexJJ <= tileIndexJJminMax.at(1))
-					{
-						//Process the stacks with wavelengthIndex = vec_wavelengthIndex.at(0) first, then vec_wavelengthIndex.at(1), vec_wavelengthIndex.at(2), etc
-						if (wavelengthIndex == vec_wavelengthIndex.at(iterWavelengthIndex))
-						{
-							TiffU8 image{ heightPerFrame_pix, widthPerFrame_pix, nFrames };
-							image.loadTiffU8(inputPath + Util::zeroPadding(cutNumber, 3) + "\\", filename_ss.str());
-							image.correctRSdistortionGPU(150. * um);
+		//Open the input configuration textfile containing the Tiff parameters
+		//This is a single file. Read it line by line
+		std::ifstream inputConfigTxt{ inputPath + "_TileConfiguration.txt" };
+		std::string line;
+		if (!inputConfigTxt)
+			throw std::runtime_error((std::string)__FUNCTION__ + ": The file _TileConfiguration.txt failed to open");
 
-							//For flattenFieldGaussian. Use a different parameter for different wavelengths
-							{
-								if (wavelengthIndex == 0)					//DAPI
-									image.flattenFieldGaussian(0.010);
-								else if (wavelengthIndex == 2)				//TDT
-									image.flattenFieldGaussian(0.015);
-								else
-									throw std::runtime_error((std::string)__FUNCTION__ + ": flattenFieldGaussian has not been calibrated for the wavelength index " + Util::toString(wavelengthIndex, 0));
-							}
-							/*
-							const std::string inputPathFSlide{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\Fslide_16X_fieldIllumination\\" };
-							if (wavelengthIndex == 0)
-								image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_V750nm_Pmin=96.0mW_Pexp=16000um_x=56.000_y=0.000_zi=16.6500_zf=16.6500_Step=0.0010_avg=10", 150);
-							else if (wavelengthIndex == 2)
-								image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_F1040nm_Pmin=48.0mW_Pexp=16000um_x=34.000_y=0.000_zi=16.6000_zf=16.6000_Step=0.0010_avg=10", 150);
-							*/
-
-							image.suppressCrosstalk(0.20);
-
-							//Stack
-							const std::string tiffFilenameSingleIndex{ Util::toString(wavelengthIndex, 0) + "_" + Util::zeroPadding(stackIndexPerWavelength, 5) };
-							image.saveToFile(outputPath, tiffFilenameSingleIndex, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-
-							//Configuration text file
-							std::string stackPosition_pix{ Util::toString(stackOverlapXY_pix.II * tileIndexJJ, 0) + "," +
-														   Util::toString(stackOverlapXY_pix.JJ * tileIndexII, 0) + "," +
-														   Util::toString(stackOverlapXY_pix.KK * cutNumber, 0) + ")" };
-
-							std::string configTxtEntry{ Util::zeroPadding(stackIndexingAll, 5) + ";;\t(" + stackPosition_pix + "\t#corrected_" + filename_s + "\n" };
-							configTxtBigStitcher << configTxtEntry;
-
-							stackIndexPerWavelength++;
-							stackIndexingAll++;
-							Util::pressESCforEarlyTermination();
-						}
-					}//if(select tiles)
-				}//for(directory_iterator)
-			}//for(iterCutNumber)
-		}//for(iterWavelengthIndex)
-	
-		//Close the configuration textfile
-		configTxtBigStitcher.close();
-		//Util::pressAnyKeyToCont();
-	}
-
-	void correctTiffForGridStitcher(const int firstCutNumber, const int lastCutNumber, std::vector<int> vec_wavelengthIndex)
-	{
-		const std::string inputPath{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\" };
-		const std::string outputPath{ "D:\\20200119_Liver20190812_03_lobe_corrected\\" };
-
-		//Constrain the min and max tiles on each axis
-		const std::vector<int> tileIndexIIminMax{ 7, 36 };		//{ IImin, IImax }
-		const std::vector<int> tileIndexJJminMax{ 11, 47 };		//{ JJmin, JJmax }
-
-		const int heightPerFrame_pix{ 560 };
-		const int widthPerFrame_pix{ 300 };
-		const int nFrames{ 100 };
-		const TILEOVERLAP3 stackOverlapXY_pix{ 270, 476, 50 };
-
-		if (firstCutNumber > lastCutNumber)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first cut number must be <= last cut number");
-		if (vec_wavelengthIndex.size() == 0)
-			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
-
-		//Generate an output configuration textfile for each vibratome cut and each laser wavelength for both GridStitcher in Fiji
-		std::ofstream configTxtGridStitcher;
-		configTxtGridStitcher.open(outputPath + "_TileConfigurationGridStitcher" + ".txt");
-		configTxtGridStitcher << "dim=3\n";	//Needed at the start of the txt for the stitcher
-
-		//Iterate over the wavelengths. Process together all the stacks with the same wavelengthIndex
-		for (std::vector<int>::size_type iterWavelengthIndex = 0; iterWavelengthIndex < vec_wavelengthIndex.size(); iterWavelengthIndex++)
+		//Count the total number of stacks in a ROI in every vibratome section/cut and wavelength
+		//Needed for BigStitcher for indexing all the tiles sequentially in the config txt file (e.g., the numbering for the second channel has to start after the last number of the first channel)
+		//The first index is the cutNumber, the second is the wavelength
+		std::vector<std::vector<int>> vec_nStack(lastCutNumber - firstCutNumber + 1, std::vector<int>(vec_wavelengthIndex.size()));
 		{
-			//Iterate over the vibratome cuts
-			for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
-			{
-				const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
-				for (const auto & entry : std::filesystem::directory_iterator(inputPath + subFolderName))
+			getline(inputConfigTxt, line);													//Skip the first line that contains "dim=3"
+			while (getline(inputConfigTxt, line))
+				if (line.front() != '#')													//Skip all the lines that are commented out with #
 				{
 					//Get the Tiff parameters at the beginning of each text line. Tokenize with respect to '_'. Convert the parameters to int
 					//The format is "cutNumber_wavelengthIndex_tileIndexII_tileIndexJJ", e.g. "000_0_17_31"
-					std::string filename_s{ entry.path().filename().string() };
-					std::stringstream filename_ss(filename_s.substr(0, filename_s.find(".tif")));
+					std::stringstream tiffFilenameDoubleIndices_ss(line.substr(0, line.find(".tif")));
 					std::string isolatedParameter;
-					getline(filename_ss, isolatedParameter, '_');		//cutNumber	
+					getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');		//cutNumber	
 					const int cutNumber{ std::stoi(isolatedParameter) };
-					getline(filename_ss, isolatedParameter, '_');		//wavelengthIndex
+					getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');		//wavelengthIndex
 					const int wavelengthIndex{ std::stoi(isolatedParameter) };
-					getline(filename_ss, isolatedParameter, '_');		//tileIndexII
+					getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');		//tileIndexII
 					const int tileIndexII{ std::stoi(isolatedParameter) };
-					getline(filename_ss, isolatedParameter, '_');		//tileIndexJJ
+					getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');		//tileIndexJJ
 					const int tileIndexJJ{ std::stoi(isolatedParameter) };
 
-					//For debugging
-					//std::cout << entry.path().filename() << std::endl;
-					//std::cout << "Cut number = " << cutNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";
-
-					//Constrain the stacks
-					if (tileIndexII >= tileIndexIIminMax.at(0) && tileIndexII <= tileIndexIIminMax.at(1) &&
-						tileIndexJJ >= tileIndexJJminMax.at(0) && tileIndexJJ <= tileIndexJJminMax.at(1))
+					if (cutNumber >= firstCutNumber && cutNumber <= lastCutNumber)
 					{
-						//Process the stacks with wavelengthIndex = vec_wavelengthIndex.at(0) first, then vec_wavelengthIndex.at(1), vec_wavelengthIndex.at(2), etc
-						if (wavelengthIndex == vec_wavelengthIndex.at(iterWavelengthIndex))
+						//Constrain the stacks
+						if (tileIndexII >= tileIndexIIminMax.at(0) && tileIndexII <= tileIndexIIminMax.at(1) &&
+							tileIndexJJ >= tileIndexJJminMax.at(0) && tileIndexJJ <= tileIndexJJminMax.at(1))
 						{
-							TiffU8 image{ heightPerFrame_pix, widthPerFrame_pix, nFrames };
-							image.loadTiffU8(inputPath + Util::zeroPadding(cutNumber, 3) + "\\", filename_ss.str() );
-							image.correctRSdistortionGPU(150. * um);
-
-							/*
-							//For flattenFieldGaussian. Use a different parameter for different wavelengths
+							//Proceed only if vec_wavelengthIndex contains wavelengthIndex
+							const std::vector<int>::iterator it = std::find(vec_wavelengthIndex.begin(), vec_wavelengthIndex.end(), wavelengthIndex);
+							if (it != vec_wavelengthIndex.end())
 							{
-								if (wavelengthIndex == 0)					//DAPI
-									image.flattenFieldGaussian(0.010);
-								else if (wavelengthIndex == 2)				//TDT
-									image.flattenFieldGaussian(0.015);
-								else
-									throw std::runtime_error((std::string)__FUNCTION__ + ": flattenFieldGaussian has not been calibrated for the wavelength index " + Util::toString(wavelengthIndex, 0));
+								const int whichVectorPosition = std::distance(vec_wavelengthIndex.begin(), it); //Find the position of wavelengthIndex in vec_wavelengthIndex
+								vec_nStack[cutNumber - firstCutNumber][whichVectorPosition]++;
 							}
-							*/
-							const std::string inputPathFSlide{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\Fslide_16X_fieldIllumination\\" };
-							if (wavelengthIndex == 0)
-								image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_V750nm_Pmin=96.0mW_Pexp=16000um_x=56.000_y=0.000_zi=16.6500_zf=16.6500_Step=0.0010_avg=10", 150);
-							else if (wavelengthIndex == 2)
-								image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_F1040nm_Pmin=48.0mW_Pexp=16000um_x=34.000_y=0.000_zi=16.6000_zf=16.6000_Step=0.0010_avg=10", 150);
-
-							image.suppressCrosstalk(0.20);
-
-							//Stack
-							const std::string tiffFilenameDoubleIndeces{ filename_ss.str() };
-							image.saveToFile(outputPath, tiffFilenameDoubleIndeces, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-
-							//Configuration text file
-							std::string stackPosition_pix{ Util::toString(stackOverlapXY_pix.II * tileIndexJJ, 0) + "," +
-														   Util::toString(stackOverlapXY_pix.JJ * tileIndexII, 0) + "," +
-														   Util::toString(stackOverlapXY_pix.KK * cutNumber, 0) + ")" };
-
-							std::string configTxtEntry{ filename_s + ";;\t(" + stackPosition_pix + "\n#corrected_" + filename_s + "\n" };
-							configTxtGridStitcher << configTxtEntry;
-
-							Util::pressESCforEarlyTermination();
 						}
-					}//if(select tiles)
-				}//for(directory_iterator)
-			}//for(iterCutNumber)
-		}//for(iterWavelengthIndex)
+					}
+				}
 
-		//Close the configuration textfile
-		configTxtGridStitcher.close();
+			//Count the number of blank corner to be created later. It is usually 4, but maybe some corner stacks already exist
+			//The count is needed to name the files sequentially for BigStitcher
+			for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
+				for (std::vector<int>::size_type iterWavelengthIndex = 0; iterWavelengthIndex != vec_wavelengthIndex.size(); iterWavelengthIndex++)
+					for (int iterJJ = 0; iterJJ < 2; iterJJ++)
+						for (int iterII = 0; iterII < 2; iterII++)
+						{
+							const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
+							const std::string tiffFilenameDoubleIndices{ "corrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + "_" +
+								Util::zeroPadding(iterII, 2) + "_" + Util::zeroPadding(iterJJ, 2) };
+
+							//Create the dummy stack only if it does not already exist
+							if (!std::filesystem::exists(inputPath + subFolderName + tiffFilenameDoubleIndices + ".tif"))
+								vec_nStack[iterCutNumber - firstCutNumber][iterWavelengthIndex]++;
+						}
+		}
+
+		//Apply the post-processing
+		{
+			//stack counter for each cut and wavelength. The first index is the cutNumber, the second is the wavelength
+			std::vector<std::vector<int>> vec_stackCounter(lastCutNumber - firstCutNumber + 1, std::vector<int>(vec_wavelengthIndex.size()));
+
+			//Read the textfile containing the stack parameters line by line
+			inputConfigTxt.clear();														//Go back to the beginning of the text
+			inputConfigTxt.seekg(0, std::ios::beg);										//Go back to the beginning of the text
+			getline(inputConfigTxt, line);												//Skip the first line that contains "dim=3"
+			while (getline(inputConfigTxt, line))
+				if (line.front() != '#')												//Skip all the lines that are commented out with #
+				{
+					//Get the Tiff parameters at the beginning of each text line. Tokenize with respect to '_'. Convert the parameters to int
+					//The format is "cutNumber_wavelengthIndex_tileIndexII_tileIndexJJ", e.g. "000_0_17_31"
+					std::stringstream tiffFilenameDoubleIndices_ss(line.substr(0, line.find(".tif")));
+					std::string isolatedParameter;
+					getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');		//cutNumber	
+					const int cutNumber{ std::stoi(isolatedParameter) };
+					getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');		//wavelengthIndex
+					const int wavelengthIndex{ std::stoi(isolatedParameter) };
+					getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');		//tileIndexII
+					const int tileIndexII{ std::stoi(isolatedParameter) };
+					getline(tiffFilenameDoubleIndices_ss, isolatedParameter, '_');		//tileIndexJJ
+					const int tileIndexJJ{ std::stoi(isolatedParameter) };
+
+					if (cutNumber >= firstCutNumber && cutNumber <= lastCutNumber)
+					{
+						//Constrain the stacks
+						if (tileIndexII >= tileIndexIIminMax.at(0) && tileIndexII <= tileIndexIIminMax.at(1) &&
+							tileIndexJJ >= tileIndexJJminMax.at(0) && tileIndexJJ <= tileIndexJJminMax.at(1))
+						{
+							//Proceed only if vec_wavelengthIndex contains wavelengthIndex
+							const std::vector<int>::iterator it = std::find(vec_wavelengthIndex.begin(), vec_wavelengthIndex.end(), wavelengthIndex);
+							if (it != vec_wavelengthIndex.end())
+							{
+								TiffU8 image{ heightPerFrame_pix, widthPerFrame_pix, nFrames };
+								image.loadTiffU8(inputPath + Util::zeroPadding(cutNumber, 3) + "\\", tiffFilenameDoubleIndices_ss.str());
+								image.correctRSdistortionGPU(150. * um);
+
+								//For flattenFieldGaussian. Use a different parameter for different wavelengths
+								{
+									if (wavelengthIndex == 0)					//DAPI
+										image.flattenFieldGaussian(0.010);
+									else if (wavelengthIndex == 2)				//TDT
+										image.flattenFieldGaussian(0.015);
+									else
+										throw std::runtime_error((std::string)__FUNCTION__ + ": flattenFieldGaussian has not been calibrated for the wavelength index " + Util::toString(wavelengthIndex, 0));
+								}
+								image.suppressCrosstalk(0.20);
+
+								//stack
+								const std::string subFolderName{ Util::zeroPadding(cutNumber, 3) + "\\" };
+								const int whichVectorPosition = std::distance(vec_wavelengthIndex.begin(), it); //Find the position of wavelengthIndex in vec_wavelengthIndex
+								const std::string tiffFilenameSingleIndex{ "corrected_" + Util::zeroPadding(cutNumber, 3) + "_" + Util::toString(wavelengthIndex, 0) + "_" +
+									Util::zeroPadding(vec_stackCounter[cutNumber - firstCutNumber][whichVectorPosition], 4) };
+								image.saveToFile(outputPath + subFolderName, tiffFilenameSingleIndex, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+
+								//tileConfiguration textfile
+								std::string commonEntry{ ";;\t(" +
+									Util::toString(stackOverlapXY_pix.II * tileIndexJJ, 0) + "," +		//Note that in Fiji, the roles of II and JJ are reversed 
+									Util::toString(stackOverlapXY_pix.JJ * tileIndexII, 0) + "," +
+									Util::toString(stackOverlapXY_pix.KK * cutNumber, 0) + ")\n" +
+									"#corrected_" + tiffFilenameDoubleIndices_ss.str() + ".tif\n" };
+
+								//For BigStitcher, index the tiles sequentially
+								int stackCounterWithOffset{ vec_stackCounter[cutNumber - firstCutNumber][whichVectorPosition] };
+								if (whichVectorPosition == 1)
+									stackCounterWithOffset += vec_nStack[cutNumber - firstCutNumber][0];
+
+								std::string gridStitcherEntry{ tiffFilenameSingleIndex + ".tif" + commonEntry };
+								std::string bigStitcherEntry{ Util::zeroPadding(stackCounterWithOffset, 4) + commonEntry };
+								vec_configTxtGridStitcher.at((cutNumber - firstCutNumber) * vec_wavelengthIndex.size() + whichVectorPosition) << gridStitcherEntry;
+								vec_configTxtBigStitcher.at((cutNumber - firstCutNumber) * vec_wavelengthIndex.size() + whichVectorPosition) << bigStitcherEntry;
+
+								vec_stackCounter[cutNumber - firstCutNumber][whichVectorPosition]++;
+
+								//std::cout << "Cut number = " << cutNumber << "\twavelengthIndex = " << wavelengthIndex << "\t(II,JJ) = (" << tileIndexII << "," << tileIndexJJ << ")\n";//For debugging
+								Util::pressESCforEarlyTermination();
+							}
+						}//if(select tiles)
+					}//if(select cut and wavelength)
+				}//if(line.front() != '#')	
+
+			//Create blank corner stacks to regularize the final size of the fused images because the vibratome sections have different numbers of tiles
+			for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
+				for (std::vector<int>::size_type iterWavelengthIndex = 0; iterWavelengthIndex != vec_wavelengthIndex.size(); iterWavelengthIndex++)
+					for (int iterJJ = 0; iterJJ < 2; iterJJ++)
+						for (int iterII = 0; iterII < 2; iterII++)
+						{
+							const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
+							const std::string tiffFilenameDoubleIndices{ "corrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + "_" + Util::zeroPadding(iterII, 2) + "_" + Util::zeroPadding(iterJJ, 2) };
+							const std::string tiffFilenameSingleIndex{ "corrected_" + Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + "_" + Util::zeroPadding(vec_stackCounter[iterCutNumber - firstCutNumber][iterWavelengthIndex], 4) };
+
+							//Create the dummy stack only if it does not already exist
+							if (std::filesystem::exists(inputPath + subFolderName + tiffFilenameDoubleIndices + ".tif"))
+								std::cout << "WARNING: the file " << tiffFilenameSingleIndex << " already exists. Dummy stack creation skipped\n";
+							else
+							{
+								//Stack				
+								TiffU8 image{ heightPerFrame_pix, widthPerFrame_pix, nFrames };
+								image.saveToFile(outputPath + subFolderName, tiffFilenameSingleIndex, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+
+								//tileConfiguration textfile
+								const std::string dummyTiffFilenameDoubleIndices{ Util::zeroPadding(iterCutNumber, 3) + "_" + Util::toString(vec_wavelengthIndex.at(iterWavelengthIndex), 0) + "_" +
+									Util::zeroPadding(tileIndexIIminMax.at(iterII),2) + "_" +
+									Util::zeroPadding(tileIndexJJminMax.at(iterJJ),2) };
+
+								std::string commonEntry{ ";;\t(" +
+									Util::toString(stackOverlapXY_pix.II * tileIndexJJminMax.at(iterJJ), 0) + "," +		//Note that in Fiji, the roles of II and JJ are reversed 
+									Util::toString(stackOverlapXY_pix.JJ * tileIndexIIminMax.at(iterII), 0) + "," +
+									Util::toString(stackOverlapXY_pix.KK * iterCutNumber, 0) + ")\n" +
+									"#corrected_" + dummyTiffFilenameDoubleIndices + ".tif\n" };
+
+								//For BigStitcher, index the tiles sequentially
+								int stackCounterWithOffset{ vec_stackCounter[iterCutNumber - firstCutNumber][iterWavelengthIndex] };
+								if (iterWavelengthIndex == 1)
+									stackCounterWithOffset += vec_nStack[iterCutNumber - firstCutNumber][iterWavelengthIndex];
+
+								std::string gridStitcherEntry{ tiffFilenameSingleIndex + ".tif" + commonEntry };
+								std::string bigStitcherEntry{ Util::zeroPadding(stackCounterWithOffset, 4) + commonEntry };
+								vec_configTxtGridStitcher.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex) << gridStitcherEntry;
+								vec_configTxtBigStitcher.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex) << bigStitcherEntry;
+
+								vec_stackCounter[iterCutNumber - firstCutNumber][iterWavelengthIndex]++;
+							}//if(file already exists)
+						}//for(corner stacks)
+		}
+
+		//Close the input configuration textfile
+		inputConfigTxt.close();
+
+		//Close the output configuration textfiles
+		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
+			for (std::vector<int>::size_type iterWavelengthIndex = 0; iterWavelengthIndex != vec_wavelengthIndex.size(); iterWavelengthIndex++)
+			{
+				vec_configTxtGridStitcher.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex).close();
+				vec_configTxtBigStitcher.at((iterCutNumber - firstCutNumber) * vec_wavelengthIndex.size() + iterWavelengthIndex).close();
+			}
 		//Util::pressAnyKeyToCont();
 	}
+
 
 }//namespace
 
@@ -1284,7 +1311,7 @@ namespace TestRoutines
 		//pressAnyKeyToCont();
 	}
 
-	void semiAutoPockelsCalibration(const FPGA &fpga)
+	void semiAutomatedPockelsCalibration(const FPGA &fpga)
 	{
 		//CREATE THE CONTROL SEQUENCE
 		RTseq realtimeSeq{ fpga, LINECLOCK::FG , FIFOOUTfpga::DIS, 560, 300, 1, g_multibeam };
@@ -1504,7 +1531,7 @@ namespace TestRoutines
 	{
 		for (int iterCutNumber = 0; iterCutNumber <= 52; iterCutNumber++)
 		{
-			const std::string newFolderFullPath{ "D:\\20200116_Liver20190812_03_lobe_corrected\\" + Util::zeroPadding(iterCutNumber, 3) };
+			const std::string newFolderFullPath{ "D:\\20200119_Liver20190812_03_lobe_corrected\\" + Util::zeroPadding(iterCutNumber, 3) };
 
 			//Create a folder labeled by the cut number
 			if (std::filesystem::exists(newFolderFullPath))
@@ -1643,21 +1670,6 @@ namespace TestRoutines
 		//pressAnyKeyToCont();
 	}
 
-	void correctImageBatch()
-	{
-		/*
-		for (int ii = 0; ii < 4; ii++)
-		{
-			std::string inputTiff{ "000_0_000000" + Util::toString(ii,0) };
-			std::string outputFilename{ "output_" + inputTiff };
-			TiffU8 image{ inputTiff };
-			image.correctRSdistortionGPU(150. * um);
-			image.flattenFieldGaussian(0.009);
-			image.suppressCrosstalk(0.20);
-			image.saveToFile(outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
-		}*/
-	}
-
 	void quickStitcher()
 	{
 		//RTseq realtimeSeq{ fpga };
@@ -1721,26 +1733,6 @@ namespace TestRoutines
 		//boolmap.saveTiffWithBoolmapTileOverlay("TileMap_filled", OVERRIDE::EN);
 
 		std::cout << "# bright stacks = " << boolmap.readNumberOfBrightStacks() << "\n";
-		Util::pressAnyKeyToCont();
-	}
-
-	void vectorOfObjects()
-	{
-		class A
-		{
-		public:
-			A(const int dummy)
-			{
-				mArray = new int[10];
-			}
-		private:
-			int* mArray;
-		};
-
-		std::vector<A> aaa{ A{2} };
-		A a{ 1 };
-		aaa.push_back(a);
-
 		Util::pressAnyKeyToCont();
 	}
 
@@ -1840,66 +1832,6 @@ namespace TestRoutines
 				saveFile.join();
 
 		}//if
-	}
-	/*
-	void locationSequence()
-	{
-		//ACQUISITION SETTINGS
-		const FFOV2 FFOV{ 200. * um, 150. * um };
-		const int nDiffZ{ 100 };											//Number of frames for continuous acquisition. If too big, the FPGA FIFO will overflow and the data transfer will fail
-		const double pixelSizeZ{ 0.5 * um };								//Step size in the Z-stage axis
-		const TILEOVERLAP3 stackOverlap_frac{ 0.05, 0.05, 0.05 };			//Stack overlap
-		const Stack stack{ FFOV, pixelSizeZ, nDiffZ, stackOverlap_frac };
-
-		//Create a sequence
-		Sequencer sequence{ g_currentSample, stack, {g_stackCenterXYZ.XX, g_stackCenterXYZ.YY}, { 2, 2 } }; //Last 2 parameters: stack center and number of stacks
-		std::vector<POSITION2> locationList{ sequence.generateLocationList() };
-
-		for (std::vector<int>::size_type iterLocation = 0; iterLocation < locationList.size(); iterLocation++)
-		{
-			std::cout << "x = " << locationList.at(iterLocation).XX / mm << "\ty = " << locationList.at(iterLocation).YY / mm << "\n";
-		}
-		pressAnyKeyToCont();
-	}
-	*/
-
-	//Generate a textfile with the tile location for the BigStitcher
-	void generateLocationsForBigStitcher()
-	{
-		// X is vertical and Y is horizontal, to match the directions of the XYZ-stage
-		const TILEDIM2 tileSize{ 2, 2 };
-		const int tileShiftX_pix{ 543 };
-		const int tileShiftY_pix{ 291 };
-
-		Logger datalog{ g_imagingFolderPath, g_currentSample.readName() + "_locations", OVERRIDE::EN };
-		datalog.record("dim=3"); //Needed for the BigStitcher
-
-		for (int tileNumber = 0; tileNumber < tileSize.II * tileSize.JJ; tileNumber++)
-			//for (int tileNumber = 0; tileNumber < 180; tileNumber++)
-		{
-			TILEIJ tileIndicesIJ = tileNumberToIndicesIJ(tileNumber);
-			int totalTileShiftX_pix{ -tileIndicesIJ.II * tileShiftX_pix };
-			int TotalTileShiftY_pix{ -tileIndicesIJ.JJ * tileShiftY_pix };
-			std::string line{ std::to_string(tileNumber) + ";;(" + std::to_string(TotalTileShiftY_pix) + "," + std::to_string(totalTileShiftX_pix) + ",0)" };	//In BigStitcher, X is horizontal and Y is vertical
-			//std::string line{ std::to_string(tileNumber) + "\t" + std::to_string(tileNumberToIndicesIJ(tileNumber).at(X)) + "\t" + std::to_string(tileNumberToIndicesIJ(tileNumber).at(Y)) }; //For debugging
-			datalog.record(line);
-		}
-	}
-
-	//Snake pattern starting from the bottom right of the sample and going up
-	TILEIJ tileNumberToIndicesIJ(const int tileNumber)
-	{
-		const TILEDIM2 tileSize{ 2, 2 };
-
-		int II;
-		int JJ{ tileNumber / tileSize.II };
-
-		if (JJ % 2)	//JJ is odd
-			II = tileSize.II - tileNumber % tileSize.II - 1;
-		else		//JJ is even
-			II = tileNumber % tileSize.II;
-
-		return { II, JJ };
 	}
 
 	void PMT16Xconfig()

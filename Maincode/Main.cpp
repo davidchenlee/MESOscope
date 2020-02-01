@@ -9,12 +9,11 @@ int main(int argc, char* argv[])
 		{
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
-			//Routines::contScanZ(fpga);
+			Routines::contScanZ(fpga);
 			//Routines::panoramicScan(fpga);
 			//Routines::sequencer(fpga, 0, false, RUN::EN);
 			//Routines::liveScan(fpga);
-			Routines::correctTiffForBigStitcher(0, 52, { 0, 2 });
-			//Routines::correctTiffForGridStitcher(25, 25, { 2 });
+			//Routines::correctTiffReadFromTileConfiguration(0, 52, { 0, 2 });
 
 			//TESTS
 			//TestRoutines::digitalLatency(fpga);
@@ -24,9 +23,9 @@ int main(int argc, char* argv[])
 			//TestRoutines::analogAndDigitalOut(fpga);
 			//TestRoutines::analogRamp(fpga);
 
-			//TestRoutines::galvosSync(fpga);
 			//TestRoutines::fineTuneScanGalvo(fpga);
 			//TestRoutines::resonantScanner(fpga);
+						//TestRoutines::galvosSync(fpga);
 			//TestRoutines::galvosLaserSync(fpga);
 
 			//TestRoutines::stagePosition();
@@ -34,7 +33,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::shutter(fpga);
 			//TestRoutines::pockels(fpga);
-			//TestRoutines::semiAutoPockelsCalibration(fpga);
+			//TestRoutines::semiAutomatedPockelsCalibration(fpga);
 			//TestRoutines::pockelsRamp(fpga);
 			//TestRoutines::lasers(fpga);
 			//TestRoutines::virtualLasers(fpga);
@@ -49,15 +48,10 @@ int main(int argc, char* argv[])
 			//TestRoutines::filterTileConfigurationFile(0, 52);
 
 			//TestRoutines::correctImage();
-			//TestRoutines::correctImageBatch();
 			//TestRoutines::quickStitcher();
 			//TestRoutines::boolmap();
-			//TestRoutines::vectorOfObjects();
-			//TestRoutines::convexHull();
 
 			//TestRoutines::sequencerConcurrentTest();
-			//TestRoutines::locationSequence();
-			//TestRoutines::generateLocationsForBigStitcher();
 
 			//TestRoutines::PMT16Xconfig();
 			//TestRoutines::PMT16Xdemultiplex(fpga);

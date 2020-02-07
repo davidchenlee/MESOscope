@@ -1647,13 +1647,29 @@ namespace TestRoutines
 
 	void correctImage()
 	{
-		std::string inputFilename{ "000_2_00_01" };
-		std::string outputFilename{ "output_" + inputFilename };
-		TiffU8 image{ g_imagingFolderPath, inputFilename };
-		image.correctRSdistortionGPU(150. * um);
-		image.flattenFieldGaussian(0.015);
-		image.suppressCrosstalk(0.20);
-		image.saveToFile(g_imagingFolderPath, outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
+		std::string folderPath{ "D:\\_output_local\\" };
+
+		std::string inputFilename{ "025_2_21_36" };
+		std::string outputFilename{ "FFXTRScorrected_" + inputFilename };
+
+		TiffU8 image{ folderPath, inputFilename };
+		//image.correctRSdistortionGPU(150. * um);
+		
+		image.suppressCrosstalk(0.33);
+	
+
+		//image.flattenFieldGaussian(0.010);
+		
+		const int wavelengthIndex{ 2 };
+		const int scaleupFactor{ 120 };
+		const std::string inputPathFSlide{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\Fslide_16X_fieldIllumination\\" };
+		if (wavelengthIndex == 0)
+			image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_V750nm_Pmin=96.0mW_Pexp=16000um_x=56.000_y=0.000_zi=16.6500_zf=16.6500_Step=0.0010_avg=10", scaleupFactor);
+		else if (wavelengthIndex == 2)
+			image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_F1040nm_Pmin=48.0mW_Pexp=16000um_x=34.000_y=0.000_zi=16.6000_zf=16.6000_Step=0.0010_avg=10", scaleupFactor);
+		
+
+		image.saveToFile(folderPath, outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 		//image.binFrames(5);
 		//image.splitFrames(10);
@@ -1667,34 +1683,31 @@ namespace TestRoutines
 		duration = std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now() - t_start).count();
 		std::cout << "Elapsed time: " << duration << " ms" << "\n";
 
-		//pressAnyKeyToCont();
+		//Util::pressAnyKeyToCont();
 	}
 
 	//Process all the tifs in a folder
 	void correctImageBatch()
 	{
-		const std::string commonFolderPath{ "D:\\OwnCloud\\Data\\20191018 Liver SeeDB DAPI TDT 1X for PMT16X crosstalk\\" };
+		const std::string commonFolderPath{ "D:\\OwnCloud\\Data\\20190816 Liver180712 16X affine transformation\\" };
 
-		for (int ii = 0; ii <= 100; ii += 10)
+		const std::string inputSubFolderPath{ "" };
+		const std::string outputSubFolderPath{ "" };
+
+		for (const auto & entry : std::filesystem::directory_iterator(commonFolderPath + inputSubFolderPath))
 		{
-			const std::string inputSubFolderPath{ "raw\\LocationC\\TDT\\" + std::to_string(ii) + "um\\" };
-			const std::string outputSubFolderPath{ "RScorrected\\LocationC\\TDT\\" + std::to_string(ii) + "um\\" };
+			std::string filename_s{ entry.path().filename().string() };
 
-			for (const auto & entry : std::filesystem::directory_iterator(commonFolderPath + inputSubFolderPath))
-			{
-				std::string filename_s{ entry.path().filename().string() };
+			//Only do the tif files
+			if (filename_s.find(".tif") != std::string::npos) {
 
-				//Only do the tif files
-				if (filename_s.find(".tif") != std::string::npos) {
+				//Remove the '.tif' extension from the filename
+				std::stringstream filename_ss(filename_s.substr(0, filename_s.find(".tif")));
+				//std::cout << filename_ss.str() << std::endl;//For debugging
 
-					//Remove the '.tif' extension from the filename
-					std::stringstream filename_ss(filename_s.substr(0, filename_s.find(".tif")));
-					//std::cout << filename_ss.str() << std::endl;//For debugging
-
-					TiffU8 image{ commonFolderPath + inputSubFolderPath, filename_ss.str() };
-					image.correctRSdistortionGPU(150. * um);
-					image.saveToFile(commonFolderPath + outputSubFolderPath, "RScorrected_" + filename_ss.str(), TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
-				}
+				TiffU8 image{ commonFolderPath + inputSubFolderPath, filename_ss.str() };
+				image.correctRSdistortionGPU(150. * um);
+				image.saveToFile(commonFolderPath + outputSubFolderPath, "RScorrected_" + filename_ss.str(), TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 			}
 		}
 

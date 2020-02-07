@@ -47,8 +47,8 @@ int main(int argc, char* argv[])
 			//TestRoutines::createSubfolder();
 			//TestRoutines::filterTileConfigurationFile(0, 52);
 
-			//TestRoutines::correctImage();
-			TestRoutines::correctImageBatch();
+			TestRoutines::correctImage();
+			//TestRoutines::correctImageBatch();
 			//TestRoutines::quickStitcher();
 			//TestRoutines::boolmap();
 

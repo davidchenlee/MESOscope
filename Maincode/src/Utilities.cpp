@@ -1044,9 +1044,8 @@ void TiffU8::correctFOVslowCPU(const double FFOVslow)
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }
 
-//NOTE THE FACTOR OF 2.0 THAT WAS ADDED BY EYE FOR THE TOP AND/OR BOTTOM CHANNELS OF THE TIFF
-//The PMT16X channels have some crosstalk. The image in every strip corresponding to a PMT16X channel is ghost-imaged on the neighbor top and bottom strips
-//To correct for this, substract a lineThicknessFactor of the neighbor top and neighbor bottom strips
+//The PMT16X channels have some crosstalk. Every strip (corresponding to a PMT16X channel) has ghost images from the neighboring strips
+//To reduce the crosstalk, substract from every strip a fraction of the neighboring strips
 void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 {
 	if (crosstalkRatio < 0 || crosstalkRatio > 1.0)
@@ -1056,22 +1055,36 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 	U8* correctedArray{ new U8[mNpixAllFrames] };
 
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
+	{
+		//For the first and last strips, calculate the average pixel intensity
+		double avgTop{ 0 };
+		double avgBottom{ 0 };
 		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
 		{
-			//Channel at the top of the tiff
+			avgTop += mArray[iterFrame * mNpixPerFrame + nPixPerFramePerBeamlet + iterPix];
+			avgBottom += mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 2) * nPixPerFramePerBeamlet + iterPix];
+		}
+		avgTop /= nPixPerFramePerBeamlet;
+		avgBottom /= nPixPerFramePerBeamlet;
+
+		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
+		{
+			//First strip (top of the tiff). Because there is only one neighboring strip, substract the average pixels intensity of such strip to match the overall brightness of the rest of the FOV
 			correctedArray[iterFrame * mNpixPerFrame + iterPix] = Util::clipU8dual(
-				mArray[iterFrame * mNpixPerFrame + iterPix] - 2.0 * crosstalkRatio * mArray[iterFrame * mNpixPerFrame + nPixPerFramePerBeamlet + iterPix]);
+				mArray[iterFrame * mNpixPerFrame + iterPix] - crosstalkRatio * (mArray[iterFrame * mNpixPerFrame + nPixPerFramePerBeamlet + iterPix] + avgTop) );
 
-			//Channel at the bottom of the tiff
-			correctedArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
-				mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] - 2.0 * crosstalkRatio * mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 2) * nPixPerFramePerBeamlet + iterPix]);
-
-			//All channels in between
+			//All strips in between
 			for (int chanIndex = 1; chanIndex < g_nChanPMT - 1; chanIndex++)
 				correctedArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
 					mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]
 					- crosstalkRatio * (mArray[iterFrame * mNpixPerFrame + (chanIndex - 1) * nPixPerFramePerBeamlet + iterPix] + mArray[iterFrame * mNpixPerFrame + (chanIndex + 1) * nPixPerFramePerBeamlet + iterPix]));
+
+			//Last strip (bottom of the tiff). Because there is only one neighboring strip, substract the average pixels intensity of such strip to match the overall brightness of the rest of the FOV
+			correctedArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
+				mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] - crosstalkRatio * (mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 2) * nPixPerFramePerBeamlet + iterPix] + avgBottom) );
 		}
+	}
+
 	delete[] mArray;			//Free the memory-block containing the old, uncorrected array
 	mArray = correctedArray;	//Reassign the pointer mArray to the newly corrected array
 }

@@ -1670,6 +1670,39 @@ namespace TestRoutines
 		//pressAnyKeyToCont();
 	}
 
+	//Process all the tifs in a folder
+	void correctImageBatch()
+	{
+		const std::string commonFolderPath{ "D:\\OwnCloud\\Data\\20191018 Liver SeeDB DAPI TDT 1X for PMT16X crosstalk\\" };
+
+		for (int ii = 0; ii <= 100; ii += 10)
+		{
+			const std::string inputSubFolderPath{ "raw\\LocationC\\TDT\\" + std::to_string(ii) + "um\\" };
+			const std::string outputSubFolderPath{ "RScorrected\\LocationC\\TDT\\" + std::to_string(ii) + "um\\" };
+
+			for (const auto & entry : std::filesystem::directory_iterator(commonFolderPath + inputSubFolderPath))
+			{
+				std::string filename_s{ entry.path().filename().string() };
+
+				//Only do the tif files
+				if (filename_s.find(".tif") != std::string::npos) {
+
+					//Remove the '.tif' extension from the filename
+					std::stringstream filename_ss(filename_s.substr(0, filename_s.find(".tif")));
+					//std::cout << filename_ss.str() << std::endl;//For debugging
+
+					TiffU8 image{ commonFolderPath + inputSubFolderPath, filename_ss.str() };
+					image.correctRSdistortionGPU(150. * um);
+					image.saveToFile(commonFolderPath + outputSubFolderPath, "RScorrected_" + filename_ss.str(), TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
+				}
+			}
+		}
+
+
+
+		Util::pressAnyKeyToCont();
+	}
+
 	void quickStitcher()
 	{
 		//RTseq realtimeSeq{ fpga };

@@ -1141,7 +1141,8 @@ void TiffU8::flattenFieldGaussian(const double expFactor)
 
 void TiffU8::flattenFieldFluorescentSlide(const std::string FSlideFilename, const double upscaleFactor)
 {
-	TiffU8 FSlideTiff{ "", FSlideFilename };
+	const std::string folderPath{ "" };
+	TiffU8 FSlideTiff{ folderPath, FSlideFilename };
 	
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
 		for (int iterPix = 0; iterPix < mNpixPerFrame; iterPix++)

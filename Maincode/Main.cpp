@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 		{
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
-			Routines::contScanZ(fpga);
+			//Routines::contScanZ(fpga);
 			//Routines::panoramicScan(fpga);
 			//Routines::sequencer(fpga, 0, false, RUN::EN);
 			//Routines::liveScan(fpga);
@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 
 			//TestRoutines::fineTuneScanGalvo(fpga);
 			//TestRoutines::resonantScanner(fpga);
-						//TestRoutines::galvosSync(fpga);
+			//TestRoutines::galvosSync(fpga);
 			//TestRoutines::galvosLaserSync(fpga);
 
 			//TestRoutines::stagePosition();
@@ -48,6 +48,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::filterTileConfigurationFile(0, 52);
 
 			//TestRoutines::correctImage();
+			TestRoutines::correctImageBatch();
 			//TestRoutines::quickStitcher();
 			//TestRoutines::boolmap();
 

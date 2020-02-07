@@ -3,7 +3,7 @@ const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { -1.
 const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };	//Soft limit of the stage for the oil container
 
 //const extern POSITION3 g_stackCenterXYZ{ (45.300) * mm, (24.100) * mm, (19.485 + 0.050) * mm };//For Liver
-const extern POSITION3 g_stackCenterXYZ{ (36.350) * mm, (16.250)* mm, (17.912) * mm };//For 4um beads
+const extern POSITION3 g_stackCenterXYZ{ (36.350) * mm, (16.250)* mm, (17.894) * mm };//For 4um beads
 
 #pragma region "FluorMarkerList"
 FluorMarkerList::FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList) :

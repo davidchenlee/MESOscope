@@ -55,6 +55,7 @@ namespace TestRoutines
 
 	//Postprocessing
 	void correctImage();
+	void correctImageBatch();
 	void quickStitcher();
 	void boolmap();
 

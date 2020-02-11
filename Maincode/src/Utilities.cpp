@@ -1146,21 +1146,30 @@ void TiffU8::flattenFieldGaussian(const double expFactor)
 	//Upscale mArray
 	const int nPixPerFramePerBeamlet{ mNpixPerFrame / g_nChanPMT };	//Number of pixels in a strip
 	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
-		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
-			for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
+		for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
+			for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
 				mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
 					vec_upscalingFactors.at(chanIndex) * mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix]);
 }
 
 void TiffU8::flattenFieldFluorescentSlide(const std::string FSlideFilename, const double upscaleFactor)
 {
-	const std::string folderPath{ "" };
-	TiffU8 FSlideTiff{ folderPath, FSlideFilename };
+	TiffU8 FSlideTiff{ "", FSlideFilename };
 	
-	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
-		for (int iterPix = 0; iterPix < mNpixPerFrame; iterPix++)
-				mArray[iterFrame * mNpixPerFrame + iterPix] = Util::clipU8dual(upscaleFactor * mArray[iterFrame * mNpixPerFrame + iterPix] / FSlideTiff.data()[iterPix]);
+	unsigned int* sum{ new unsigned int[g_nChanPMT]() };
+	const int nPixPerFramePerBeamlet{ mNpixPerFrame / g_nChanPMT };	//Number of pixels in a strip
 
+	//Calculate the sum of the values in each strip of the fluorescent slide
+	for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
+		for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
+			sum[chanIndex] += FSlideTiff.data()[chanIndex * nPixPerFramePerBeamlet + iterPix];
+
+	//Normalize each strip of the image by the corresponding averaged value in the fluorescent slide
+	for (int iterFrame = 0; iterFrame < mNframes; iterFrame++)
+		for (int chanIndex = 0; chanIndex < g_nChanPMT; chanIndex++)
+			for (int iterPix = 0; iterPix < nPixPerFramePerBeamlet; iterPix++)
+				mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
+					upscaleFactor * mArray[iterFrame * mNpixPerFrame + chanIndex * nPixPerFramePerBeamlet + iterPix] * nPixPerFramePerBeamlet / (1. * sum[chanIndex]) );
 }
 
 void TiffU8::loadTiffU8(const std::string folderPath, const std::string filename)

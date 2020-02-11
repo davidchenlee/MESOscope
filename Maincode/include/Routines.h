@@ -54,7 +54,7 @@ namespace TestRoutines
 	void filterTileConfigurationFile(const int firstCutNumber, const int lastCutNumber);
 
 	//Postprocessing
-	void correctImage();
+	void correctImageSingle();
 	void correctImageBatch();
 	void quickStitcher();
 	void boolmap();

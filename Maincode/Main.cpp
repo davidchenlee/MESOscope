@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 		{
 			//SEQUENCES
 			//Routines::stepwiseScan(fpga);
-			//Routines::contScanZ(fpga);
+			Routines::contScanZ(fpga);
 			//Routines::panoramicScan(fpga);
 			//Routines::sequencer(fpga, 0, false, RUN::EN);
 			//Routines::liveScan(fpga);
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::createSubfolder();
 			//TestRoutines::filterTileConfigurationFile(0, 52);
 
-			TestRoutines::correctImage();
+			//TestRoutines::correctImageSingle();
 			//TestRoutines::correctImageBatch();
 			//TestRoutines::quickStitcher();
 			//TestRoutines::boolmap();

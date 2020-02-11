@@ -6,15 +6,15 @@ namespace Routines
 	void stepwiseScan(const FPGA &fpga)
 	{
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
-		const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
+		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
-		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
+		const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANX };			//Scan in the X-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		//const RUNMODE acqMode{ RUNMODE::FIELD_ILLUM };	//Field illumination measurement for 16X using beads
 
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("TDT") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
 		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
 		const int nFramesCont{ 1 };
@@ -759,7 +759,7 @@ namespace Routines
 	{
 		const bool flag_gridStitcher{ false };
 		const std::string inputPath{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\" };
-		const std::string outputPath{ "D:\\20200119_Liver20190812_03_lobe_corrected\\" };
+		const std::string outputPath{ "D:\\20200210_Liver20190812_03_lobe_corrected\\" };
 		//const std::string outputPath{ "Z:\\sharedDavidNoreen\\20200120_Liver20190812_03_lobe_corrected\\" };
 
 		//Constrain the min and max tiles on each axis
@@ -801,7 +801,7 @@ namespace Routines
 			throw std::runtime_error((std::string)__FUNCTION__ + ": The file _TileConfiguration.txt failed to open");
 
 		//Count the total number of stacks in a ROI in every vibratome section/cut and wavelength
-		//Needed for BigStitcher for indexing all the tiles sequentially in the config txt file (e.g., the numbering for the second channel has to start after the last number of the first channel)
+		//Needed for indexing all the tiles sequentially in the config txt file for BigStitcher (e.g., the numbering for the second channel has to start after the last number of the first channel)
 		//The first index is the cutNumber, the second is the wavelength
 		std::vector<std::vector<int>> vec_nStack(lastCutNumber - firstCutNumber + 1, std::vector<int>(vec_wavelengthIndex.size()));
 		{
@@ -894,17 +894,21 @@ namespace Routines
 								TiffU8 image{ heightPerFrame_pix, widthPerFrame_pix, nFrames };
 								image.loadTiffU8(inputPath + Util::zeroPadding(cutNumber, 3) + "\\", tiffFilenameDoubleIndices_ss.str());
 								image.correctRSdistortionGPU(150. * um);
-
-								//For flattenFieldGaussian. Use a different parameter for different wavelengths
+				
+								const std::string inputPathFSlide{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\Fslide_16X_fieldIllumination\\" };
+								if (wavelengthIndex == 0)
 								{
-									if (wavelengthIndex == 0)					//DAPI
-										image.flattenFieldGaussian(0.010);
-									else if (wavelengthIndex == 2)				//TDT
-										image.flattenFieldGaussian(0.015);
-									else
-										throw std::runtime_error((std::string)__FUNCTION__ + ": flattenFieldGaussian has not been calibrated for the wavelength index " + Util::toString(wavelengthIndex, 0));
+									image.suppressCrosstalk(0.25);
+									image.flattenFieldGaussian(0.0120);
+									//image.flattenFieldFluorescentSlide(inputPathFSlide + "XTcorrected_FSlide16X_V750nm_Pmin=96.0mW_Pexp=16000um_x=56.000_y=0.000_zi=16.6500_zf=16.6500_Step=0.0010_avg=10", scaleupFactor);
 								}
-								image.suppressCrosstalk(0.20);
+								else if (wavelengthIndex == 2)
+								{
+									image.suppressCrosstalk(0.33);
+									image.flattenFieldGaussian(0.0180);	
+									//const int scaleupFactor{ 150 };
+									//image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_F1040nm_Pmin=48.0mW_Pexp=16000um_x=34.000_y=0.000_zi=16.6000_zf=16.6000_Step=0.0010_avg=10", scaleupFactor);
+								}
 
 								//stack
 								const std::string subFolderName{ Util::zeroPadding(cutNumber, 3) + "\\" };
@@ -1531,7 +1535,7 @@ namespace TestRoutines
 	{
 		for (int iterCutNumber = 0; iterCutNumber <= 52; iterCutNumber++)
 		{
-			const std::string newFolderFullPath{ "D:\\20200119_Liver20190812_03_lobe_corrected\\" + Util::zeroPadding(iterCutNumber, 3) };
+			const std::string newFolderFullPath{ "D:\\20200209_Liver20190812_03_lobe_corrected\\" + Util::zeroPadding(iterCutNumber, 3) };
 
 			//Create a folder labeled by the cut number
 			if (std::filesystem::exists(newFolderFullPath))
@@ -1645,30 +1649,31 @@ namespace TestRoutines
 		Util::pressAnyKeyToCont();
 	}
 
-	void correctImage()
+	void correctImageSingle()
 	{
 		std::string folderPath{ "D:\\_output_local\\" };
 
-		std::string inputFilename{ "025_2_21_36" };
-		std::string outputFilename{ "FFXTRScorrected_" + inputFilename };
+		std::string inputFilename{ "025_2_29_31" };
+		std::string outputFilename{ "XTRScorrected_" + inputFilename };
 
 		TiffU8 image{ folderPath, inputFilename };
-		//image.correctRSdistortionGPU(150. * um);
-		
-		image.suppressCrosstalk(0.33);
-	
+		image.correctRSdistortionGPU(150. * um);
 
-		//image.flattenFieldGaussian(0.010);
-		
 		const int wavelengthIndex{ 2 };
 		const int scaleupFactor{ 120 };
 		const std::string inputPathFSlide{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\Fslide_16X_fieldIllumination\\" };
 		if (wavelengthIndex == 0)
-			image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_V750nm_Pmin=96.0mW_Pexp=16000um_x=56.000_y=0.000_zi=16.6500_zf=16.6500_Step=0.0010_avg=10", scaleupFactor);
+		{
+			image.suppressCrosstalk(0.25);
+			//image.flattenFieldGaussian(0.010);	
+			//image.flattenFieldFluorescentSlide(inputPathFSlide + "XTcorrected_FSlide16X_V750nm_Pmin=96.0mW_Pexp=16000um_x=56.000_y=0.000_zi=16.6500_zf=16.6500_Step=0.0010_avg=10", scaleupFactor);
+		}
 		else if (wavelengthIndex == 2)
+		{
+			image.suppressCrosstalk(0.33);
+			//image.flattenFieldGaussian(0.015);	
 			image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_F1040nm_Pmin=48.0mW_Pexp=16000um_x=34.000_y=0.000_zi=16.6000_zf=16.6000_Step=0.0010_avg=10", scaleupFactor);
-		
-
+		}
 		image.saveToFile(folderPath, outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 
 		//image.binFrames(5);
@@ -1760,7 +1765,7 @@ namespace TestRoutines
 	void boolmap()
 	{
 		//g_imagingFolderPath = "D:\\OwnCloud\\Data\\_Image processing\\For boolmap test\\"; //Override the global folder path
-		std::string inputFilename{ "Panoramic_000" };
+		std::string inputFilename{ "Panoramic_025" };
 		std::string outputFilename{ "output" };
 		TiffU8 image{ g_imagingFolderPath, inputFilename };
 

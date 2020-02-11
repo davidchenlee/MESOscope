@@ -3,7 +3,7 @@ const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { -1.
 const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };	//Soft limit of the stage for the oil container
 
 //const extern POSITION3 g_stackCenterXYZ{ (45.300) * mm, (24.100) * mm, (19.485 + 0.050) * mm };//For Liver
-const extern POSITION3 g_stackCenterXYZ{ (36.350) * mm, (16.250)* mm, (17.894) * mm };//For 4um beads
+const extern POSITION3 g_stackCenterXYZ{ (36.350) * mm, (16.250)* mm, (17.940 - 0.057) * mm };//For 4um beads
 
 #pragma region "FluorMarkerList"
 FluorMarkerList::FluorMarkerList(const std::vector<FluorMarker> fluorMarkerList) :
@@ -143,7 +143,7 @@ double Sample::readStageSoftPosLimYMAX() const
 //This should really go in Routines.cpp but I'll leave here for now out of convenience to avoid scrolling up and down through Routines.cpp
 #if g_multibeam
 
-/*
+
 //This is used with beads
 #if 0 //slide
 const extern POSITION3 g_stackCenterXYZ{ (34.000) * mm, (0.000) * mm, (16.600) * mm };
@@ -156,10 +156,10 @@ const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", Petri
 																				   { "GFP", 920, Util::multiply16X(60. * mW), Util::multiply16X(2000. * um) },
 																				   { "TDT", 1040, Util::multiply16X(15. * mW), Util::multiply16X(2000. * um) } }} };
 #endif//fluorescent slide or beads
-*/
 
-const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "TDT", 1040, Util::multiply16X(60. * mW), 300. * um, 2 },
-																							          { "DAPI", 750, Util::multiply16X(10. * mW), 120. * um, 2 } }} };
+
+//const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "TDT", 1040, Util::multiply16X(60. * mW), 300. * um, 2 },
+//																							          { "DAPI", 750, Util::multiply16X(10. * mW), 120. * um, 2 } }} };
 
 #else//singlebeam
 

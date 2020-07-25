@@ -235,7 +235,7 @@ private:
 	double mIterSamplePlaneZtoCut;							//Sample plane to cut (height of the stage Z)
 	double mIterStageZheightForFacingTheBlade;				//Actual height of the stage Z for cutting the sample at mIterSamplePlaneZtoCut
 															//(It defers from mIterSamplePlaneZtoCut by the height offset of the blade wrt the imaging plane)
-	int mNtotalCuts;										//Number of vibratome cuts in the entire sample
+	int mNtotalCuts;										//Number of vibratome slices in the entire sample
 
 	void initializeVibratome_();
 	TILEDIM2 determineTileArraySizeIJ_();

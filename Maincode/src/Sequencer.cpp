@@ -1047,7 +1047,7 @@ void Sequencer::Commandline::printParameters() const
 	{
 	case Action::ID::MOV:
 		std::cout << "The command is " << convertActionIDtoString_(mActionID) << " with parameters: \n";
-		std::cout << "Vibratome cut number = " << mAction.moveStage.readCutNumber() << "\n";
+		std::cout << "vibratome slice number = " << mAction.moveStage.readCutNumber() << "\n";
 		std::cout << "Tile ij = (" << mAction.moveStage.readTileIndex(TileArray::Axis::II) << "," << mAction.moveStage.readTileIndex(TileArray::Axis::JJ) << ")\n";
 		std::cout << "Tile center (stageX, stageY) = (" << mAction.moveStage.readTileCenter(AXIS::XX) / mm << "," << mAction.moveStage.readTileCenter(AXIS::YY) / mm << ") mm\n\n";
 		break;
@@ -1279,7 +1279,7 @@ void Sequencer::initializeVibratome_()
 	mIterSamplePlaneZtoCut = mIterScanZi + mStack.readDepthZ() - mSample.mCutAboveBottomOfStack;
 	mIterStageZheightForFacingTheBlade = mIterSamplePlaneZtoCut + mSample.mBladeFocalplaneOffsetZ;
 
-	const int numberOfVibratomeCuts{ static_cast<int>(1 + std::ceil(1. / (1 - mStack.readOverlap_frac(TileArray::Axis::KK)) * (mSample.mLOIxyz_req.ZZ / mStack.readDepthZ() - 1))) };	//Total number of vibratome cuts in the entire sample
+	const int numberOfVibratomeCuts{ static_cast<int>(1 + std::ceil(1. / (1 - mStack.readOverlap_frac(TileArray::Axis::KK)) * (mSample.mLOIxyz_req.ZZ / mStack.readDepthZ() - 1))) };	//Total number of vibratome slices in the entire sample
 	if (numberOfVibratomeCuts > 1)
 		mNtotalCuts = numberOfVibratomeCuts;		
 	else
@@ -1329,10 +1329,10 @@ void Sequencer::initializeEffectiveROI_()
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The ROI goes beyond the soft limits of the stage Y");
 }
 
-//Reserve a memory block assuming 3 actions for every stack in each vibratome cut: MOV, ACQ, and SAV. Then CUT
+//Reserve a memory block assuming 3 actions for every stack in each vibratome slice: MOV, ACQ, and SAV. Then CUT
 void Sequencer::reserveMemoryBlock_()
 {
-	const int nTotalTilesPerVibratomeCut{ mTileArray.readTileArraySizeIJ(TileArray::Axis::II) * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) };	//Total number of tiles in a vibratome cut
+	const int nTotalTilesPerVibratomeCut{ mTileArray.readTileArraySizeIJ(TileArray::Axis::II) * mTileArray.readTileArraySizeIJ(TileArray::Axis::JJ) };	//Total number of tiles in a vibratome slice
 	const int nTotalTilesEntireSample{ mNtotalCuts * static_cast<int>(mSample.readFluorMarkerListSize()) * nTotalTilesPerVibratomeCut };				//Total number of tiles in the entire sample. mNtotalCuts is fixed at 1
 	mCommandList.reserve(3 * nTotalTilesEntireSample + mNtotalCuts - 1);
 }
@@ -1441,7 +1441,7 @@ void Sequencer::cutTissue_()
 	Commandline commandline{ Action::ID::CUT };
 	commandline.mAction.cutTissue.setParam(mIterSamplePlaneZtoCut, mIterStageZheightForFacingTheBlade);
 	mCommandList.push_back(commandline);
-	mCutCounter++;		//Count the number of vibratome cuts
+	mCutCounter++;		//Count the number of vibratome slices
 	mCommandCounter++;	//Count the number of commands
 
 	//Increase the height of the Z-stage and the height of the plane to cut in the next iteration		

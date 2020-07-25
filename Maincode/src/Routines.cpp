@@ -15,16 +15,16 @@ namespace Routines
 
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
-		const Laser::ID whichLaser{ Laser::ID::AUTO };
+		const Laser::ID whichLaser{ Laser::ID::VISION };
 		const POSITION3 stackCenterXYZ{ g_stackCenterXYZ };;
 		const int nFramesCont{ 1 };
 		const double stackDepthZ{ 100. * um };								//Stack deepth in the Z-stage axis
 		const double pixelSizeZ{ 1.0 * um };
 
-		const double pixelSizeXY{ 0.5 * um };
+		const double pixelSizeSlowAxis{ 0.5 * um };
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
-		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };			//Full FOV in the slow axis
+		const double FFOVslow{ heightPerFrame_pix * pixelSizeSlowAxis };			//Full FOV in the slow axis
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -56,19 +56,19 @@ namespace Routines
 			break;
 		case RUNMODE::AVG:
 			//saveAllPMT = true;
-
-			nSameLocation = 10;
 			for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
 				stagePosXYZ.push_back(stackCenterXYZ);
 			break;
 		case RUNMODE::SCANZ:
 			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / pixelSizeZ); iterDiffZ++)
-				stagePosXYZ.push_back({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ + iterDiffZ * pixelSizeZ });
+				for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
+					stagePosXYZ.push_back({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ + iterDiffZ * pixelSizeZ });
 			break;
 		case RUNMODE::SCANZCENTERED:
 			//Generate the discrete scan sequence for the stages
 			for (int iterDiffZ = 0; iterDiffZ < static_cast<int>(stackDepthZ / pixelSizeZ); iterDiffZ++)
-				stagePosXYZ.push_back({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ - 0.5 * stackDepthZ + iterDiffZ * pixelSizeZ });
+				for (int iterSameZ = 0; iterSameZ < nSameLocation; iterSameZ++)
+					stagePosXYZ.push_back({ stackCenterXYZ.XX, stackCenterXYZ.YY, stackCenterXYZ.ZZ - 0.5 * stackDepthZ + iterDiffZ * pixelSizeZ });
 			break;
 		case RUNMODE::SCANX:
 		{
@@ -203,7 +203,7 @@ namespace Routines
 				"_zi=" + Util::toString(stagePosXYZ.front().ZZ / mm, 4) + "_zf=" + Util::toString(stagePosXYZ.back().ZZ / mm, 4) + "_StepZ=" + Util::toString(pixelSizeZ / mm, 4) +
 				"_avg=" + Util::toString(nFramesCont * nSameLocation, 0));
 
-			//output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
+			output.binFrames(nSameLocation);		//Divide the images in bins and return the binned image
 			std::cout << "Saving the stack...\n";
 			output.saveToFile(g_imagingFolderPath, filename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::DIS);
 		}
@@ -250,7 +250,7 @@ namespace Routines
 			datalog.record("Height Y (slow) (pix) = ", heightPerFrame_pix);
 			datalog.record("Width X (fast) (pix) = ", widthPerFrame_pix);
 			datalog.record("Resolution X (fast) (um/pix) = ", mesoscope.ResonantScanner::readSampleRes() / um);
-			datalog.record("Resolution Y (slow) (um/pix) = ", pixelSizeXY / um);
+			datalog.record("Resolution Y (slow) (um/pix) = ", pixelSizeSlowAxis / um);
 			datalog.record("\nSTAGE--------------------------------------------------------");
 			datalog.record("Stack center X (mm) = ", stackCenterXYZ.XX / mm);
 			datalog.record("Stack center Y (mm) = ", stackCenterXYZ.YY / mm);
@@ -754,12 +754,12 @@ namespace Routines
 
 	//Post-process the tiff stacks: correct for nonlinear resonant scanning, uneven illumination, and crosstalk
 	//Read the filenames from the single configuration file "_TileConfiguration.txt"
-	//Then create a configuration textfile for each vibratome cut and laser wavelength for 'Grid/collection stitcher' in Fiji
+	//Then create a configuration textfile for each vibratome slice and laser wavelength for 'Grid/collection stitcher' in Fiji
 	void correctTiffReadFromTileConfiguration(const int firstCutNumber, const int lastCutNumber, std::vector<int> vec_wavelengthIndex)
 	{
 		const bool flag_gridStitcher{ false };
 		const std::string inputPath{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\" };
-		const std::string outputPath{ "D:\\20200210_Liver20190812_03_lobe_corrected\\" };
+		const std::string outputPath{ "D:\\20200309_Liver20190812_03_lobe_corrected\\" };
 		//const std::string outputPath{ "Z:\\sharedDavidNoreen\\20200120_Liver20190812_03_lobe_corrected\\" };
 
 		//Constrain the min and max tiles on each axis
@@ -776,7 +776,7 @@ namespace Routines
 		if (vec_wavelengthIndex.size() == 0)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": At least one wavelength must be input as argument");
 
-		//Generate an output configuration textfile for each vibratome cut and each laser wavelength for both BigStitcher and GridStitcher in Fiji
+		//Generate an output configuration textfile for each vibratome slice and each laser wavelength for both BigStitcher and GridStitcher in Fiji
 		//Store the file handlers in a vector
 		std::vector<std::ofstream> vec_configTxtGridStitcher((lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
 		std::vector<std::ofstream> vec_configTxtBigStitcher((lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
@@ -1546,8 +1546,8 @@ namespace TestRoutines
 		Util::pressAnyKeyToCont();
 	}
 
-	//Given a collection of stacks organized in subfolders for the cuts, generate a tileConfigurationFiltered file with a subset.
-	//Create dummy stacks if necessary for stitching
+	//Given a collection of stacks (organized in subfolders for each vibratome slice), choose a subset of stacks and generate a tileConfigurationFiltered file
+	//Create dummy corner stacks to standarize the final size of the fused images (because each vibratome section has a different amount of tiles)
 	void filterTileConfigurationFile(const int firstCutNumber, const int lastCutNumber)
 	{
 		const std::string sourcePath{ "D:\\20191129_Liver20190812_03_lobe_corrected\\" };
@@ -1563,14 +1563,14 @@ namespace TestRoutines
 		if (firstCutNumber > lastCutNumber)
 			throw std::invalid_argument((std::string)__FUNCTION__ + ": The first cut number must be <= last cut number");
 
-		//Generate a configuration textfile for each vibratome cut and each laser wavelength for Fiji's GridStitcher
+		//Generate a configuration textfile for each vibratome slice and each laser wavelength for Fiji's GridStitcher
 		//The filename format is "_TileConfigurationCorrected_cutNumber_wavelengthIndex"
 		std::vector<std::ofstream> vec_filteredConfigTxt((lastCutNumber - firstCutNumber + 1) * vec_wavelengthIndex.size());
 
-		//Iterate over the vibratome cuts
+		//Iterate over the vibratome slices
 		for (int iterCutNumber = firstCutNumber; iterCutNumber <= lastCutNumber; iterCutNumber++)
 		{
-			//Subfolder with the cut number
+			//Subfolder with the slice number
 			const std::string subFolderName{ Util::zeroPadding(iterCutNumber, 3) + "\\" };
 
 			//Iterate over the laser wavelengths
@@ -1614,7 +1614,7 @@ namespace TestRoutines
 				//Close the source tileConfiguration
 				sourceConfigTxt.close();
 
-				//Create dummy corner stacks to regularize the final size of the fused images (because each vibratome section has a different amount of tiles)
+				//Create dummy corner stacks to standarize the final size of the fused images (because each vibratome section has a different amount of tiles)
 				for (int tt = 0; tt < 2; tt++)
 					for (int ss = 0; ss < 2; ss++)
 					{
@@ -1653,13 +1653,13 @@ namespace TestRoutines
 	{
 		std::string folderPath{ "D:\\_output_local\\" };
 
-		std::string inputFilename{ "025_2_29_31" };
-		std::string outputFilename{ "XTRScorrected_" + inputFilename };
+		std::string inputFilename{ "AVG_Liver_V750nm_Pmin=144.0mW_Pexp=120um_x=46.300_y=25.550_zi=19.8300_zf=19.8300_Step=0.0010_avg=20" };
+		std::string outputFilename{ "corrected_" + inputFilename };
 
 		TiffU8 image{ folderPath, inputFilename };
-		image.correctRSdistortionGPU(150. * um);
+		//image.correctRSdistortionGPU(30. * um);//<----------------------------------CHANGED!!!!!
 
-		const int wavelengthIndex{ 2 };
+		const int wavelengthIndex{ 0 };//<----------------------------------CHANGED!!!!!
 		const int scaleupFactor{ 120 };
 		const std::string inputPathFSlide{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\Fslide_16X_fieldIllumination\\" };
 		if (wavelengthIndex == 0)
@@ -1672,7 +1672,7 @@ namespace TestRoutines
 		{
 			image.suppressCrosstalk(0.33);
 			//image.flattenFieldGaussian(0.015);	
-			image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_F1040nm_Pmin=48.0mW_Pexp=16000um_x=34.000_y=0.000_zi=16.6000_zf=16.6000_Step=0.0010_avg=10", scaleupFactor);
+			//image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_F1040nm_Pmin=48.0mW_Pexp=16000um_x=34.000_y=0.000_zi=16.6000_zf=16.6000_Step=0.0010_avg=10", scaleupFactor);
 		}
 		image.saveToFile(folderPath, outputFilename, TIFFSTRUCT::MULTIPAGE, OVERRIDE::EN);
 

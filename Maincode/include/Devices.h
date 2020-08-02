@@ -154,8 +154,8 @@ private:
 class Vibratome
 {
 public:
-	const POSITION2 mStageInitialBladePosXY{ -57. * mm, 6. * mm };	//Position the stages in front oh the vibratome's blade
-	const double mStageFinalBladePosY{ 20. * mm };					//Final position of the Y-stage after slicing
+	const POSITION2 mStageInitialBladePosXY{ -57. * mm, 8. * mm };	//Position the stages in front oh the vibratome's blade
+	const double mStageFinalBladePosY{ 30. * mm };					//Final position of the Y-stage after slicing
 
 	Vibratome(const FPGA &fpga, Stage &stage);
 	Vibratome(const Vibratome&) = delete;							//Disable copy-constructor

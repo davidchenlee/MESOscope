@@ -3,7 +3,7 @@ Code in C++ for controlling the NI USB-7852R card
 
 ## To do:
 ### C++
-Caution on:
+Caution:
 - In Routines::Sequencer, when calling Boolmap boolmap{ panoramicScan,...) and the used RAM reaches ~ 1GB, the memory allocation through new in TiffU8::TiffU8() throws an error.
 I think this has to do with the 2GB memory limitation in x86. When saving the panoramic scan, Tifflib was throwing "No Space for output buffer" error. Maybe this is related issue. Setting /LARGEADDRESSAWARE on VS solved the problem
 - There is still a memory leak, 1.5 GB after running Routines::Sequence() for 4 hours

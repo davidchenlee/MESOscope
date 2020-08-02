@@ -51,7 +51,7 @@ namespace Routines
 			stagePosXYZ.push_back(stackCenterXYZ);
 			if (!g_multibeam) //No need for saving all the PMT channels for multibeam,
 			{
-				//saveAllPMT = true;
+				saveAllPMT = true;
 			}
 			break;
 		case RUNMODE::AVG:
@@ -264,7 +264,7 @@ namespace Routines
 	{
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
-		const Laser::ID whichLaser{ Laser::ID::AUTO };
+		const Laser::ID whichLaser{ Laser::ID::VISION };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
 		const double stackDepth{ 100. * um };
@@ -278,7 +278,7 @@ namespace Routines
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };										//Full FOV in the slow axis
 
 		POSITION3 stackCenterXYZ{ g_stackCenterXYZ };
-		//stackCenterXYZ.ZZ -= nFrames * pixelSizeZbeforeBinning /2;//Center the stack<--------------------For beads!
+		stackCenterXYZ.ZZ -= nFrames * pixelSizeZbeforeBinning /2;//Center the stack<--------------------For beads!
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -342,10 +342,10 @@ namespace Routines
 
 	void panoramicScan(const FPGA &fpga)
 	{
-		FluorMarkerList fluorMarkerList{ {{"TDT", 1040, 30. * mW }, { "DAPI", 750, 6.5 * mW }} };
+		FluorMarkerList fluorMarkerList{ {{"TDT", 1040, 30. * mW }, { "DAPI", 750, 30.0 * mW }} };
 
 		//ACQUISITION SETTINGS
-		const FluorMarkerList::FluorMarker fluorMarker{ fluorMarkerList.findFluorMarker("TDT") };	//Select a particular fluorescence channel
+		const FluorMarkerList::FluorMarker fluorMarker{ fluorMarkerList.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
 		SCANDIR iterScanDirX{ SCANDIR::RIGHTWARD };			//Initial scan direction of stage 
 		const double fullWidth{ 8.000 * mm };				//Total width of the tile array
 
@@ -1955,13 +1955,13 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double cutPlaneZ{ (20.700) * mm };
+		const double cutPlaneZ{ (22.300) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };
 		vibratome.cutTissue(cutPlaneZ);
 
-		const POSITION3 samplePosXYZ{ 10. * mm, 23. * mm, cutPlaneZ };
+		const POSITION3 samplePosXYZ{ -65. * mm, 6. * mm, cutPlaneZ };
 		stage.moveXYZ(samplePosXYZ);
 	}
 

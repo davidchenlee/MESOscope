@@ -109,7 +109,7 @@ namespace Constants
 
 	//COLLECTOR LENS
 	//A smaller value moves the lens closer to the galvo rescanner
-	extern const double g_cLensPos750nm{ 5.0 * mm };				//10.0 mm for RI = 1.51; 5.0 mm for RI ~ 1.465
+	extern const double g_cLensPos750nm{ 5.0 * mm };	//<-----CHANGED!			//10.0 mm for RI = 1.51; 5.0 mm for RI ~ 1.465
 	extern const double g_cLensPos920nm{ 6.0 * mm };				//6.0 mm for RI = 1.51
 	extern const double g_cLensPos1040nm{ 0.5 * mm };				//0.5 mm for RI = 1.51
 }

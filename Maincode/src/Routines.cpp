@@ -7,8 +7,8 @@ namespace Routines
 	{
 		//const RUNMODE acqMode{ RUNMODE::SINGLE };			//Single frame. The same location is imaged continuously if nFramesCont>1 (the galvo is scanned back and forth at the same location) and the average is returned
 		//const RUNMODE acqMode{ RUNMODE::AVG };			//Single frame. The same location is imaged stepwise and the average is returned
-		//const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
-		const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
+		const RUNMODE acqMode{ RUNMODE::SCANZ };			//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the starting position
+		//const RUNMODE acqMode{ RUNMODE::SCANZCENTERED };	//Scan in the Z-stage axis stepwise with stackCenterXYZ.at(STAGEZ) as the center of the stack
 		//const RUNMODE acqMode{ RUNMODE::SCANX };			//Scan in the X-stage axis stepwise
 		//const RUNMODE acqMode{ RUNMODE::COLLECTLENS };	//For optimizing the collector lens
 		//const RUNMODE acqMode{ RUNMODE::FIELD_ILLUM };	//Field illumination measurement for 16X using beads
@@ -40,7 +40,7 @@ namespace Routines
 		}
 
 		std::vector<POSITION3> stagePosXYZ;								//Vector with the sample locations to image
-		int nSameLocation{ 1 };											//Number of frames at the same location
+		int nSameLocation{ 10 };											//Number of frames at the same location
 		double stepSizeX{ 0 };											//Step for lateral scanning
 		bool saveAllPMT{ false };										//Save all PMT16X channels in separate pages in a Tiff
 		double cLensPosIni{ 0 }, cLensPosFinal{ 0 }, cLensStep{ 0 };	//For debugging the collector lens
@@ -264,7 +264,7 @@ namespace Routines
 	{
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ g_currentSample.findFluorMarker("DAPI") };		//Select a particular laser
-		const Laser::ID whichLaser{ Laser::ID::VISION };
+		const Laser::ID whichLaser{ Laser::ID::AUTO };
 		const SCANDIR scanDirZ{ SCANDIR::UPWARD };														//Scan direction for imaging in Z
 		const int nFramesBinning{ fluorMarker.nFramesBinning };											//For binning
 		const double stackDepth{ 100. * um };
@@ -278,7 +278,7 @@ namespace Routines
 		const double FFOVslow{ heightPerFrame_pix * pixelSizeXY };										//Full FOV in the slow axis
 
 		POSITION3 stackCenterXYZ{ g_stackCenterXYZ };
-		stackCenterXYZ.ZZ -= nFrames * pixelSizeZbeforeBinning /2;//Center the stack<--------------------For beads!
+		//stackCenterXYZ.ZZ -= nFrames * pixelSizeZbeforeBinning /2;//Center the stack<--------------------For beads!
 
 		int heightPerBeamletPerFrame_pix;
 		double FFOVslowPerBeamlet;
@@ -342,7 +342,7 @@ namespace Routines
 
 	void panoramicScan(const FPGA &fpga)
 	{
-		FluorMarkerList fluorMarkerList{ {{"TDT", 1040, 30. * mW }, { "DAPI", 750, 30.0 * mW }} };
+		FluorMarkerList fluorMarkerList{ {{"TDT", 1040, 30. * mW }, { "DAPI", 750, 15. * mW }} };
 
 		//ACQUISITION SETTINGS
 		const FluorMarkerList::FluorMarker fluorMarker{ fluorMarkerList.findFluorMarker("DAPI") };	//Select a particular fluorescence channel
@@ -362,7 +362,6 @@ namespace Routines
 		RTseq realtimeSeq{ fpga, LINECLOCK::RS, FIFOOUTfpga::EN, 2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix() / 2, 0 };
 		Mesoscope mesoscope{ realtimeSeq, Laser::ID::AUTO };
 		mesoscope.configure(fluorMarker.mWavelength_nm);
-		mesoscope.setPower(fluorMarker.mScanPmin);
 
 		//RS
 		mesoscope.ResonantScanner::isRunning();				//To make sure that the RS is running
@@ -385,6 +384,10 @@ namespace Routines
 		double stageXi, stageXf;		//Stage final position
 		for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 		{
+			//Reload the imaging parameters because they are deleted after each individual sequence
+			realtimeSeq.reconfigure(2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix() / 2, 0);
+			mesoscope.setPower(fluorMarker.mScanPmin);
+
 			const double travelOverhead{ 1.0 * mm };
 			stageXi = panoramicScan.determineInitialScanPosX(travelOverhead, iterScanDirX);
 			stageXf = panoramicScan.determineFinalScanPosX(travelOverhead, iterScanDirX);
@@ -445,7 +448,7 @@ namespace Routines
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
 		const FFOV2 FFOV{ heightPerFrame_pix * pixelSizeXY, widthPerFrame_pix * pixelSizeXY };			//Full FOV in the (slow axis, fast axis)
-		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 4.500 * mm };
+		const LENGTH3 LOIxyz{ 10.000 * mm, 8.000 * mm, 0.050 * mm };
 		//const LENGTH3 LOIxyz{ 1.000 * mm, 1.000 * mm, 0.150 * mm };
 		const double cutAboveBottomOfStack{ 50. * um };													//Distance to cut above the bottom of the stack
 		const double sampleSurfaceZ{ g_stackCenterXYZ.ZZ };
@@ -459,8 +462,8 @@ namespace Routines
 		const double PANheight{ 53 * PANtileHeight };													//Total height of the panoramic scan = height of the strip (long vertical tile). If changed, the X-stage timing must be recalibrated
 		const double PANpixelSizeX{ 1.0 * um };															//WARNING: the image becomes distorted at the edges of the strip when PANpixelSizeX > 1 um (check this again)
 		const double PANpixelSizeY{ pixelSizeXY };
-		const double PANlaserPower{ 30. * mW };
-		const int PANwavelength_nm{ 1040 };
+		const double PANlaserPower{ 15. * mW };			// <---------------------------------------------------------CHANGED
+		const int PANwavelength_nm{ 750 };				// <---------------------------------------------------------CHANGED
 		const double threshold{ 0.02 };
 
 		int heightPerBeamletPerFrame_pix;
@@ -488,9 +491,9 @@ namespace Routines
 		if (runSeq == RUN::EN)
 		{
 			//CONTROL SEQUENCE
-			RTseq realtimeSeq{ fpga, LINECLOCK::RS, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, 100, 1 };
+			RTseq realtimeSeq{ fpga, LINECLOCK::RS, FIFOOUTfpga::EN, heightPerBeamletPerFrame_pix, widthPerFrame_pix, 100, 0 };
 			Mesoscope mesoscope{ realtimeSeq, Laser::ID::AUTO };
-			mesoscope.configure(1040);								//Initialize the laser wavelength for determining the initial chromatic shift correction of the stages
+			mesoscope.configure(750);	// <-------------------CHANGED							//Initialize the laser wavelength for determining the initial chromatic shift correction of the stages
 
 			//RS
 			mesoscope.ResonantScanner::isRunning();					//To make sure that the RS is running
@@ -633,7 +636,6 @@ namespace Routines
 					PanoramicScan panoramicScan{ { g_stackCenterXYZ.XX, g_stackCenterXYZ.YY }, { PANtileHeight, PANtileWidth }, { PANpixelSizeX, PANpixelSizeY }, { PANheight, PANwidth } };
 					realtimeSeq.reconfigure(2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix() / 2, 0);
 					mesoscope.configure(PANwavelength_nm);
-					mesoscope.setPower(PANlaserPower);
 
 					//SCANNERS. Keep them fixed with amplitude 0
 					const Galvo scanner{ realtimeSeq, 0 };
@@ -651,6 +653,10 @@ namespace Routines
 					double stageXi, stageXf;		//Stage final position
 					for (int iterLocation = 0; iterLocation < nLocations; iterLocation++)
 					{
+						//Reload the imaging parameters because they are deleted after each individual sequence
+						realtimeSeq.reconfigure(2, panoramicScan.readTileWidth_pix(), panoramicScan.readTileHeight_pix() / 2, 0);
+						mesoscope.setPower(PANlaserPower);
+
 						const double travelOverhead{ 1.0 * mm };
 						stageXi = panoramicScan.determineInitialScanPosX(travelOverhead, iterScanDirX);
 						stageXf = panoramicScan.determineFinalScanPosX(travelOverhead, iterScanDirX);
@@ -758,13 +764,15 @@ namespace Routines
 	void correctTiffReadFromTileConfiguration(const int firstCutNumber, const int lastCutNumber, std::vector<int> vec_wavelengthIndex)
 	{
 		const bool flag_gridStitcher{ false };
-		const std::string inputPath{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\" };
-		const std::string outputPath{ "D:\\20200309_Liver20190812_03_lobe_corrected\\" };
+		const std::string inputPath{ "D:\\_output_local\\raw\\" };
+		const std::string outputPath{ "D:\\_output_local\\corrected\\" };
 		//const std::string outputPath{ "Z:\\sharedDavidNoreen\\20200120_Liver20190812_03_lobe_corrected\\" };
 
 		//Constrain the min and max tiles on each axis
-		const std::vector<int> tileIndexIIminMax{ 7, 36 };		//{ IImin, IImax }
-		const std::vector<int> tileIndexJJminMax{ 11, 47 };		//{ JJmin, JJmax }
+		//const std::vector<int> tileIndexIIminMax{ 7, 36 };		//{ IImin, IImax }	 // <-----CHANGED
+		//const std::vector<int> tileIndexJJminMax{ 11, 47 };		//{ JJmin, JJmax }	// <-----CHANGED
+		const std::vector<int> tileIndexIIminMax{ 19, 21 };		//{ IImin, IImax }	 // <-----CHANGED
+		const std::vector<int> tileIndexJJminMax{ 28, 30 };		//{ JJmin, JJmax }	// <-----CHANGED
 
 		const int heightPerFrame_pix{ 560 };
 		const int widthPerFrame_pix{ 300 };
@@ -898,8 +906,8 @@ namespace Routines
 								const std::string inputPathFSlide{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\Fslide_16X_fieldIllumination\\" };
 								if (wavelengthIndex == 0)
 								{
-									image.suppressCrosstalk(0.25);
-									image.flattenFieldGaussian(0.0120);
+									//image.suppressCrosstalk(0.25);//<-----CHANGED
+									//image.flattenFieldGaussian(0.0120);//<-----CHANGED
 									//image.flattenFieldFluorescentSlide(inputPathFSlide + "XTcorrected_FSlide16X_V750nm_Pmin=96.0mW_Pexp=16000um_x=56.000_y=0.000_zi=16.6500_zf=16.6500_Step=0.0010_avg=10", scaleupFactor);
 								}
 								else if (wavelengthIndex == 2)
@@ -1653,24 +1661,24 @@ namespace TestRoutines
 	{
 		std::string folderPath{ "D:\\_output_local\\" };
 
-		std::string inputFilename{ "AVG_Liver_V750nm_Pmin=144.0mW_Pexp=120um_x=46.300_y=25.550_zi=19.8300_zf=19.8300_Step=0.0010_avg=20" };
+		std::string inputFilename{ "Planarian16X_V750nm_Pmin=320.0mW_PLexp=2000um_x=45.431_y=22.615_zi=18.2700_zf=18.3690_StepZ=0.0010_avg=10" };
 		std::string outputFilename{ "corrected_" + inputFilename };
 
 		TiffU8 image{ folderPath, inputFilename };
-		//image.correctRSdistortionGPU(30. * um);//<----------------------------------CHANGED!!!!!
+		image.correctRSdistortionGPU(150. * um);
 
-		const int wavelengthIndex{ 0 };//<----------------------------------CHANGED!!!!!
+		const int wavelengthIndex{ 0 };
 		const int scaleupFactor{ 120 };
 		const std::string inputPathFSlide{ "D:\\20191129_Liver20190812_03_lobe_raw_sorted\\Fslide_16X_fieldIllumination\\" };
 		if (wavelengthIndex == 0)
 		{
-			image.suppressCrosstalk(0.25);
-			//image.flattenFieldGaussian(0.010);	
+			//image.suppressCrosstalk(0.25);
+			image.flattenFieldGaussian(0.010);	
 			//image.flattenFieldFluorescentSlide(inputPathFSlide + "XTcorrected_FSlide16X_V750nm_Pmin=96.0mW_Pexp=16000um_x=56.000_y=0.000_zi=16.6500_zf=16.6500_Step=0.0010_avg=10", scaleupFactor);
 		}
 		else if (wavelengthIndex == 2)
 		{
-			image.suppressCrosstalk(0.33);
+			//image.suppressCrosstalk(0.33);
 			//image.flattenFieldGaussian(0.015);	
 			//image.flattenFieldFluorescentSlide(inputPathFSlide + "FSlide16X_F1040nm_Pmin=48.0mW_Pexp=16000um_x=34.000_y=0.000_zi=16.6000_zf=16.6000_Step=0.0010_avg=10", scaleupFactor);
 		}
@@ -1955,13 +1963,13 @@ namespace TestRoutines
 
 	void vibratome(const FPGA &fpga)
 	{
-		const double cutPlaneZ{ (22.300) * mm };
+		const double cutPlaneZ{ (18.200) * mm };
 
 		Stage stage{ 5. * mmps, 5. * mmps, 0.5 * mmps , ContainerPosLimit };
 		Vibratome vibratome{ fpga, stage };
 		vibratome.cutTissue(cutPlaneZ);
 
-		const POSITION3 samplePosXYZ{ -65. * mm, 6. * mm, cutPlaneZ };
+		const POSITION3 samplePosXYZ{ -55. * mm, 5. * mm, cutPlaneZ };
 		stage.moveXYZ(samplePosXYZ);
 	}
 

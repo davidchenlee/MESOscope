@@ -8,12 +8,12 @@ int main(int argc, char* argv[])
 		try
 		{
 			//SEQUENCES
-			Routines::stepwiseScan(fpga);
+			//Routines::stepwiseScan(fpga);
 			//Routines::contScanZ(fpga);
 			//Routines::panoramicScan(fpga);
 			//Routines::sequencer(fpga, 0, false, RUN::EN);
 			//Routines::liveScan(fpga);
-			//Routines::correctTiffReadFromTileConfiguration(0, 52, { 0, 2 });
+			//Routines::correctTiffReadFromTileConfiguration(0, 0, { 0 });
 
 			//TESTS
 			//TestRoutines::digitalLatency(fpga);
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 			//TestRoutines::createSubfolder();
 			//TestRoutines::filterTileConfigurationFile(0, 52);
 
-			//TestRoutines::correctImageSingle();
+			TestRoutines::correctImageSingle();
 			//TestRoutines::correctImageBatch();
 			//TestRoutines::quickStitcher();
 			//TestRoutines::boolmap();

@@ -2,8 +2,8 @@
 const extern std::vector<LIMIT2> PetridishPosLimit{ { 27. * mm, 57. * mm}, { -1. * mm, 30. * mm}, { 15. * mm, 24. * mm} };		//Soft limit of the stage for the petridish
 const extern std::vector<LIMIT2> ContainerPosLimit{ { -65. * mm, 65. * mm}, { 1.99 * mm, 30. * mm}, { 10. * mm, 24. * mm} };	//Soft limit of the stage for the oil container
 
-//const extern POSITION3 g_stackCenterXYZ{ (43.000) * mm, (21.000) * mm, (22.300 - 1.750 + 2.800) * mm };
-const extern POSITION3 g_stackCenterXYZ{ (37.5) * mm, (26.950)* mm, (17.893) * mm };//For 4um beads
+const extern POSITION3 g_stackCenterXYZ{ (46.000 - 0.569) * mm, (21.500 + 1.115) * mm, (18.270 + 0.000) * mm };
+//const extern POSITION3 g_stackCenterXYZ{ (37.5) * mm, (26.925)* mm, (17.843) * mm };//For 4um beads
 //const extern POSITION3 g_stackCenterXYZ{ (46.889 - 0.068 - 0.250 - 0.180 - 0.082 - 0.197 - 0.117) * mm, (16.519 + 0.034 )* mm, (19.000 - 0.018) * mm };//For 0.1um beads
 
 #pragma region "FluorMarkerList"
@@ -153,9 +153,9 @@ const extern Sample g_currentSample{ "FSlide16X", "SiliconeOil", "1.51", Petridi
 																				   { "TDT", 1040, Util::multiply16X(3. * mW), Util::multiply16X(2000. * um) } }} };
 
 #else //beads
-const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, Util::multiply16X(45. * mW), Util::multiply16X(2000. * um) },
-																				   { "GFP", 920, Util::multiply16X(60. * mW), Util::multiply16X(2000. * um) },
-																				   { "TDT", 1040, Util::multiply16X(15. * mW), Util::multiply16X(2000. * um) } }} };
+//const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, Util::multiply16X(45. * mW), Util::multiply16X(2000. * um) },
+//																				   { "GFP", 920, Util::multiply16X(60. * mW), Util::multiply16X(2000. * um) },
+//																				   { "TDT", 1040, Util::multiply16X(15. * mW), Util::multiply16X(2000. * um) } }} };
 
 //const extern Sample g_currentSample{ "Beads01um16X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, Util::multiply16X(30. * mW), Util::multiply16X(2000. * um) },
 //																				                { "TDT", 1040, Util::multiply16X(15. * mW), Util::multiply16X(2000. * um) } }} };
@@ -165,11 +165,16 @@ const extern Sample g_currentSample{ "Beads4um16X", "SiliconeOil", "1.51", Petri
 //const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit, {{ { "TDT", 1040, Util::multiply16X(60. * mW), 300. * um, 2 },
 //																							          { "DAPI", 750, Util::multiply16X(10. * mW), 120. * um, 2 } }} };
 
+const extern Sample g_currentSample{ "Planarian16X", "MineralOil", "1.465", ContainerPosLimit, {{{ "DAPI", 750, Util::multiply16X(20. * mW), 2000. * um, 2 } }} };
+
 #else//singlebeam
 
-const extern Sample g_currentSample{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 30. * mW, 2000. * um, 1},
-																				  { "GFP", 920, 50. * mW, 2000. * um, 1},
-																				  { "TDT", 1040, 30. * mW, 2000. * um, 1}}} };
+//const extern Sample g_currentSample{ "Beads4um1X", "SiliconeOil", "1.51", PetridishPosLimit, {{{"DAPI", 750, 30. * mW, 2000. * um, 1},
+//																				  { "GFP", 920, 50. * mW, 2000. * um, 1},
+//																				  { "TDT", 1040, 30. * mW, 2000. * um, 1}}} };
+
+const extern Sample g_currentSample{ "Planarian1X", "MineralOil", "1.465", PetridishPosLimit, {{{"DAPI", 750, 15. * mW, 2000. * um, 1},
+																								{"ALEXA", 1040, 30. * mW, 2000. * um, 4}}} };
 
 /*
 const extern Sample g_currentSample{ "Liver", "SiliconeMineralOil5050", "1.49", ContainerPosLimit,  {{{ "TDT", 1040, 28. * mW, 160. * um, 1 },

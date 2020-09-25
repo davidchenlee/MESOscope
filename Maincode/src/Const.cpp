@@ -58,7 +58,7 @@ namespace Constants
 	//GALVO SCANNERS
 	extern const double g_scannerDelay{ 150 * us };								//Adjust g_scannerDelay until the bead position in a fordward scan coincides with that of a backward scan
 	extern const double g_rescannerDelay{ 0. * us };							//This does not seem to be very sensitive. Look at the rescanner's ramp on the scope and sync it with the scanner's ramp
-	extern const GALVOcalib g_scannerCalib{ 0.02417210 * V / um , 0.0 * V };	//Calibration factor and offset of the galvo scanner. A higher voltage steers the excitation beam towards the negative dir of the X-stage. Last calib 31/7/2018 
+	extern const GALVOcalib g_scannerCalib{ 0.023748 * V / um , 0.0 * V };		//Calibration factor and offset of the galvo scanner. A higher voltage steers the excitation beam towards the negative dir of the X-stage. Last calib 9/8/2020
 
 	//Calibration factor to sync the rescanner with the scanner to keep the fluorescence emission aligned to the detector
 	//To find 'mVoltagePerDistance', take a single 1X image of beads4um, save all the PMT16X channels, and adjust the parameter until all the beads are contained in the targeted PMT16X channel
@@ -66,10 +66,10 @@ namespace Constants
 	//If 'mVoltagePerDistance' is too large, the top beads in the Tiff leak through the i-1 channel and the bottom beads leak through the i+1 channels
 	//If 'mVoltageOffset' is too large, the bead signal shifts towards channel 1
 	//The format is GALVOcalib { double voltagePerDistance, double voltageOffset };
-	extern const GALVOcalib g_rescannerCalibV750nm{ 0.310 * g_scannerCalib.voltagePerDistance, 0.075 * V };		//VISION
+	extern const GALVOcalib g_rescannerCalibV750nm{ 0.300 * g_scannerCalib.voltagePerDistance, 0.080 * V };		//VISION
 	extern const GALVOcalib g_rescannerCalibV920nm{ 0.305 * g_scannerCalib.voltagePerDistance, 0.040 * V };		//VISION
 	extern const GALVOcalib g_rescannerCalibV1040nm{ 0.315 * g_scannerCalib.voltagePerDistance, 0.075 * V };	//VISION
-	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.320 * g_scannerCalib.voltagePerDistance, 0.110 * V };	//FIDELITY
+	extern const GALVOcalib g_rescannerCalibF1040nm{ 0.320 * g_scannerCalib.voltagePerDistance, 0.090 * V };	//FIDELITY
 	extern const int g_rescanner1Xchan_int{ 6 };																//When using 1X, direct the rescanner towards the selected channel of the PMT16X (index 0-15)
 																												//When comparing with Fiji, be aware that Fiji starts indexing from 1
 
@@ -77,16 +77,11 @@ namespace Constants
 	//Initial scan directions wrt the X-stage, Y-stage, and Z-stage axes. Note that the image formation has the opposite direction
 	extern const SCANDIR3 g_initialStageScanDirXYZ{ SCANDIR::LEFTWARD, SCANDIR::OUTWARD, SCANDIR::UPWARD };
 
-	//STAGE Z: Calibrate contScan
+	//STAGE Z: Calibrate contScan for 16X scanning
 	//1. Do a centered Z scan on beads
 	//2. Adjust the delay until the beads are centered at the middle of the Z stack. Larger g_STAGEZtrigAcqDelayTopdown/Bottomup moves the bead closer to the surface of the stack
-	
-	//The calibration seems to depend on the correction collar of the objective
-	//For RI = 1.51 and StepZ = 1 um, g_STAGEZtrigAcqDelayTopdown/Bottomup = 37 um
-	//For RI = 1.49, StepZ = 1 um, and DAPI, g_STAGEZtrigAcqDelayTopdown/Bottomup = 37 um
-	//For RI = 1.49, StepZ = 1 um, and TDT, g_STAGEZtrigAcqDelayTopdown/Bottomup = 25 um
-	extern const double	g_STAGEZtrigAcqDelay750nm{ 37 * ms };		//Delay the Z-stage triggering the acq sequence
-	extern const double	g_STAGEZtrigAcqDelay1040nm{ 40 * ms };		//Delay the Z-stage triggering the acq sequence
+	extern const double	g_STAGEZtrigAcqDelay750nm{ 76 * ms };		//Delay the Z-stage triggering the acq sequence
+	extern const double	g_STAGEZtrigAcqDelay1040nm{ 75 * ms };		//Delay the Z-stage triggering the acq sequence
 
 	//STAGE X: Calibrate contScan (panoramic scan)
 	extern const double	g_STAGEXtrigAcqDelay{ 113.3 * ms };			//Stage X. pixelSizeX = 1.0 um and travelX = 36 * 0.280 um
@@ -109,7 +104,7 @@ namespace Constants
 
 	//COLLECTOR LENS
 	//A smaller value moves the lens closer to the galvo rescanner
-	extern const double g_cLensPos750nm{ 5.0 * mm };	//<-----CHANGED!			//10.0 mm for RI = 1.51; 5.0 mm for RI ~ 1.465
+	extern const double g_cLensPos750nm{ 10.0 * mm };				//10.0 mm for RI = 1.51
 	extern const double g_cLensPos920nm{ 6.0 * mm };				//6.0 mm for RI = 1.51
-	extern const double g_cLensPos1040nm{ 0.5 * mm };				//0.5 mm for RI = 1.51
+	extern const double g_cLensPos1040nm{ 1.0 * mm };				//1.0 mm for RI = 1.51
 }

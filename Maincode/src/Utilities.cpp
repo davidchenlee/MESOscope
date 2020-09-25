@@ -1046,7 +1046,7 @@ void TiffU8::correctFOVslowCPU(const double FFOVslow)
 
 //The PMT16X channels have some crosstalk. Every strip (corresponding to a PMT16X channel) has ghost images from the neighboring strips
 //To reduce the crosstalk, substract from every strip a fraction of the neighboring strips
-void TiffU8::suppressCrosstalk(const double crosstalkRatio)
+void TiffU8::suppressCrosstalk(const double crosstalkRatio, const double fineTuningTop, const double fineTuningBottom)
 {
 	if (crosstalkRatio < 0 || crosstalkRatio > 1.0)
 		throw std::invalid_argument((std::string)__FUNCTION__ + ": The crosstalk ratio must be in the range [0, 1.0]");
@@ -1071,7 +1071,9 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 		{
 			//First strip (top of the tiff). Because there is only one neighboring strip, substract the average pixels intensity of such strip to match the overall brightness of the rest of the FOV
 			correctedArray[iterFrame * mNpixPerFrame + iterPix] = Util::clipU8dual(
-				mArray[iterFrame * mNpixPerFrame + iterPix] - crosstalkRatio * (mArray[iterFrame * mNpixPerFrame + nPixPerFramePerBeamlet + iterPix] + avgTop) );
+				mArray[iterFrame * mNpixPerFrame + iterPix] +
+				- crosstalkRatio * (mArray[iterFrame * mNpixPerFrame + nPixPerFramePerBeamlet + iterPix])
+				- crosstalkRatio * fineTuningTop * avgTop );
 
 			//All strips in between
 			for (int chanIndex = 1; chanIndex < g_nChanPMT - 1; chanIndex++)
@@ -1081,7 +1083,9 @@ void TiffU8::suppressCrosstalk(const double crosstalkRatio)
 
 			//Last strip (bottom of the tiff). Because there is only one neighboring strip, substract the average pixels intensity of such strip to match the overall brightness of the rest of the FOV
 			correctedArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] = Util::clipU8dual(
-				mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] - crosstalkRatio * (mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 2) * nPixPerFramePerBeamlet + iterPix] + avgBottom) );
+				mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 1) * nPixPerFramePerBeamlet + iterPix] +
+				- crosstalkRatio * (mArray[iterFrame * mNpixPerFrame + (g_nChanPMT - 2) * nPixPerFramePerBeamlet + iterPix])
+				- crosstalkRatio * fineTuningBottom * avgBottom);
 		}
 	}
 

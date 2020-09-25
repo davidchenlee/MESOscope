@@ -1779,7 +1779,7 @@ double Pockels::convertPowerToVolt_(const double power) const
 
 		//FIDELITY. Calibrated 201908
 	case RTseq::RTCHAN::FIDELITY:
-		powerAmplitude = 1601 * mW;
+		powerAmplitude = 1600 * mW;
 		powerMin = 23.0 * mW;
 		angularFreq = 0.284 / V;
 		Vphase = -0.193 * V;

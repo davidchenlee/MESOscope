@@ -599,7 +599,7 @@ RTseq::RTseq(const FPGA &fpga, const LINECLOCK lineclockInput, const FIFOOUTfpga
 
 	//Currently compiling for x86 only. The max 32-bit memory that can be assigned is 2^32/32 = 134217728
 	if (mNpixPerBeamletAllFrames > 134217728)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Overflow of the number of pixels over all the frames");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Number of pixels over all the frames overflow");
 	else
 	{
 		mBufferA = new U32[mNpixPerBeamletAllFrames];
@@ -640,7 +640,7 @@ void RTseq::reconfigure(const int heightPerBeamletPerFrame_pix, const int widthP
 
 	//Currently compiling for x86 only. The max 32-bit memory that can be assigned is 2^32/32 = 134217728
 	if (mNpixPerBeamletAllFrames > 134217728)
-		throw std::invalid_argument((std::string)__FUNCTION__ + ": Overflow of the number of pixels over all the frames");
+		throw std::invalid_argument((std::string)__FUNCTION__ + ": Number of pixels over all the frames overflow");
 	else
 	{
 		delete[] mBufferA;

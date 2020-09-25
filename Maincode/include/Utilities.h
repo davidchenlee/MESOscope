@@ -83,7 +83,7 @@ public:
 	void correctRSdistortionGPU(const double FFOVfast);
 	void correctRSdistortionCPU(const double FFOVfast);
 	void correctFOVslowCPU(const double FFOVfast);
-	void suppressCrosstalk(const double crosstalkRatio = 1.0);
+	void suppressCrosstalk(const double crosstalkRatio = 1.0, const double fineTuningTop = 1.0, const double fineTuningBottom = 1.0);
 	void flattenFieldLinear(const double scaleFactor, const int lowerChan, const int higherChan);
 	void flattenFieldGaussian(const double expFactor);
 	void flattenFieldFluorescentSlide(const std::string FSlideFilename, const double upscaleFactor);

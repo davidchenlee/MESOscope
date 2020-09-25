@@ -59,7 +59,7 @@ private:
 	const RTseq &mRTseq;									//Needed to retrieve mRTseq.mWidthPerFrame_pix to calculate the fill factor
 	const double mVMAX{ 5. * V };							//Max control voltage allowed
 	const double mDelay{ 10. * ms };
-	const double mVoltagePerDistance{ 0.00595 * V / um };	//Calibration factor. Last calibrated 
+	const double mVoltagePerDistance{ 0.005891 * V / um };	//Calibration factor. Last calibrated 9/8/2020
 	double mFullScan;										//Full scan = distance between turning points
 	double mControlVoltage;									//Control voltage 0-5V
 	double mFillFactor;										//Fill factor: how much of an RS swing is covered by the pixels
@@ -154,7 +154,7 @@ private:
 class Vibratome
 {
 public:
-	const POSITION2 mStageInitialBladePosXY{ -55. * mm, 5. * mm };	//Position the stages in front oh the vibratome's blade
+	const POSITION2 mStageInitialBladePosXY{ -54. * mm, 5. * mm };	//Position the stages in front oh the vibratome's blade
 	const double mStageFinalBladePosY{ 28. * mm };					//Final position of the Y-stage after slicing
 
 	Vibratome(const FPGA &fpga, Stage &stage);
@@ -309,7 +309,7 @@ private:
 	int mWavelength_nm;							//Laser wavelength
 	const double mTimeStep{ 8. * us };			//mTimeStep does not have any effect because the pockels AO is kept constant throughout each frame (see LV)
 	const Shutter mShutter;
-	const double mMaxPower1X{ 150. * mW };		//Softlimit for the laser power 1X
+	const double mMaxPower1X{ 200. * mW };		//Softlimit for the laser power 1X
 	const double mMaxPower16X{ 1600. * mW };	//Softlimit for the laser power 16X
 
 	double convertPowerToVolt_(const double power) const;
